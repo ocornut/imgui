@@ -1079,7 +1079,7 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_ColumnsWidthFixed               = 1 << 14,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAutoResize policy (if Resizable is off). Read description above for more details.
     ImGuiTableFlags_SameWidths                      = 1 << 15,  // Make all columns the same widths which is useful with Fixed columns policy (but granted by default with Stretch policy + no resize). Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible and disable ImGuiTableFlags_Resizable.
     ImGuiTableFlags_NoHostExtendY                   = 1 << 16,  // Disable extending table past the limit set by outer_size.y. Only meaningful when neither ScrollX nor ScrollY are set (data below the limit will be clipped and not visible)
-    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 17,  // Disable keeping column always minimally visible when ScrollX is off and table gets too small.
+    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 17,  // Disable keeping column always minimally visible when ScrollX is off and table gets too small. Not recommended if columns are resizable.
     ImGuiTableFlags_PreciseWidths                   = 1 << 18,  // Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.
     // Clipping
     ImGuiTableFlags_NoClip                          = 1 << 19,  // Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with TableSetupScrollFreeze().

@@ -2325,6 +2325,7 @@ namespace ImGui
     IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API float         TableGetMinColumnWidth();
+    IMGUI_API float         TableGetMaxColumnWidth(const ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
     IMGUI_API void          TableRemove(ImGuiTable* table);

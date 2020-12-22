@@ -703,7 +703,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 3] Fix column flags. Calculate ideal width for columns. Count how many fixed/stretch columns we have and sum of weights.
     const float min_column_width = TableGetMinColumnWidth();
-    const float min_column_distance = min_column_width + table->CellPaddingX * 2.0f + table->CellSpacingX1 + table->CellSpacingX2;
     int count_fixed = 0;                    // Number of columns that have fixed sizing policy (not stretched sizing policy) (this is NOT the opposite of count_resizable!)
     int count_resizable = 0;                // Number of columns the user can resize (this is NOT the opposite of count_fixed!)
     float sum_weights_stretched = 0.0f;     // Sum of all weights for weighted columns.
@@ -895,42 +894,20 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (is_hovering_table && g.IO.MousePos.x >= column->ClipRect.Min.x && g.IO.MousePos.x < column->ClipRect.Max.x)
             table->HoveredColumnBody = (ImGuiTableColumnIdx)column_n;
 
-        // Maximum width
-        float max_width = FLT_MAX;
-        if (table->Flags & ImGuiTableFlags_ScrollX)
-        {
-            // Frozen columns can't reach beyond visible width else scrolling will naturally break.
-            if (order_n < table->FreezeColumnsRequest)
-            {
-                max_width = (table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - order_n) * min_column_distance) - offset_x;
-                max_width = max_width - table->OuterPaddingX - table->CellPaddingX - table->CellSpacingX2;
-            }
-        }
-        else if ((table->Flags & ImGuiTableFlags_NoKeepColumnsVisible) == 0)
-        {
-            // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make
-            // sure they are all visible. Because of this we also know that all of the columns will always fit in
-            // table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
-            // FIXME-TABLE: This is solved incorrectly but also quite a difficult problem to fix as we also want ClipRect width to match.
-            // See "table_width_distrib" and "table_width_keep_visible" tests
-            max_width = table->WorkRect.Max.x - (table->ColumnsEnabledCount - column->IndexWithinEnabledSet - 1) * min_column_distance - offset_x;
-            //max_width -= table->CellSpacingX1;
-            max_width -= table->CellSpacingX2;
-            max_width -= table->CellPaddingX * 2.0f;
-            max_width -= table->OuterPaddingX;
-        }
+        // Lock start position
+        column->MinX = offset_x;
+
+        // Lock width based on start position and minimum/maximum width for this position
+        float max_width = TableGetMaxColumnWidth(table, column_n);
         column->WidthGiven = ImMin(column->WidthGiven, max_width);
-
-        // Minimum width
         column->WidthGiven = ImMax(column->WidthGiven, ImMin(column->WidthRequest, min_column_width));
+        column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
 
-        // Lock all our positions
+        // Lock other positions
         // - ClipRect.Min.x: Because merging draw commands doesn't compare min boundaries, we make ClipRect.Min.x match left bounds to be consistent regardless of merging.
         // - ClipRect.Max.x: using WorkMaxX instead of MaxX (aka including padding) makes things more consistent when resizing down, tho slightly detrimental to visibility in very-small column.
         // - ClipRect.Max.x: using MaxX makes it easier for header to receive hover highlight with no discontinuity and display sorting arrow.
         // - FIXME-TABLE: We want equal width columns to have equal (ClipRect.Max.x - WorkMinX) width, which means ClipRect.max.x cannot stray off host_clip_rect.Max.x else right-most column may appear shorter.
-        column->MinX = offset_x;
-        column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
         column->WorkMinX = column->MinX + table->CellPaddingX + table->CellSpacingX1;
         column->WorkMaxX = column->MaxX - table->CellPaddingX - table->CellSpacingX2; // Expected max
         column->ItemWidth = ImFloor(column->WidthGiven * 0.65f);
@@ -1835,6 +1812,7 @@ void ImGui::TableEndCell(ImGuiTable* table)
 // [SECTION] Tables: Columns width management
 //-------------------------------------------------------------------------
 // - TableGetMinColumnWidth() [Internal]
+// - TableGetMaxColumnWidth() [Internal]
 // - TableSetColumnWidth()
 // - TableSetColumnWidthAutoSingle() [Internal]
 // - TableSetColumnWidthAutoAll() [Internal]
@@ -1849,6 +1827,37 @@ float ImGui::TableGetMinColumnWidth()
     return g.Style.FramePadding.x * 1.0f;
 }
 
+// Maximum column content width given current layout. Use column->MinX so this value on a per-column basis.
+float ImGui::TableGetMaxColumnWidth(const ImGuiTable* table, int column_n)
+{
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    float max_width = FLT_MAX;
+    const float min_column_distance = TableGetMinColumnWidth() + table->CellPaddingX * 2.0f + table->CellSpacingX1 + table->CellSpacingX2;
+    if (table->Flags & ImGuiTableFlags_ScrollX)
+    {
+        // Frozen columns can't reach beyond visible width else scrolling will naturally break.
+        if (column->DisplayOrder < table->FreezeColumnsRequest)
+        {
+            max_width = (table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - column->DisplayOrder) * min_column_distance) - column->MinX;
+            max_width = max_width - table->OuterPaddingX - table->CellPaddingX - table->CellSpacingX2;
+        }
+    }
+    else if ((table->Flags & ImGuiTableFlags_NoKeepColumnsVisible) == 0)
+    {
+        // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make
+        // sure they are all visible. Because of this we also know that all of the columns will always fit in
+        // table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
+        // FIXME-TABLE: This is solved incorrectly but also quite a difficult problem to fix as we also want ClipRect width to match.
+        // See "table_width_distrib" and "table_width_keep_visible" tests
+        max_width = table->WorkRect.Max.x - (table->ColumnsEnabledCount - column->IndexWithinEnabledSet - 1) * min_column_distance - column->MinX;
+        //max_width -= table->CellSpacingX1;
+        max_width -= table->CellSpacingX2;
+        max_width -= table->CellPaddingX * 2.0f;
+        max_width -= table->OuterPaddingX;
+    }
+    return max_width;
+}
+
 // 'width' = inner column width, without padding
 void ImGui::TableSetColumnWidth(int column_n, float width)
 {
@@ -1859,14 +1868,11 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
     ImGuiTableColumn* column_0 = &table->Columns[column_n];
     float column_0_width = width;
 
-    // Constraints
-    const float min_width = TableGetMinColumnWidth();
-    float max_width_0 = FLT_MAX;
-    if (!(table->Flags & ImGuiTableFlags_ScrollX))
-        max_width_0 = (table->WorkRect.Max.x - column_0->MinX) - (table->ColumnsEnabledCount - (column_0->IndexWithinEnabledSet + 1)) * min_width;
-    column_0_width = ImClamp(column_0_width, min_width, max_width_0);
-
+    // Apply constraints early
     // Compare both requested and actual given width to avoid overwriting requested width when column is stuck (minimum size, bounded)
+    const float min_width = TableGetMinColumnWidth();
+    const float max_width = TableGetMaxColumnWidth(table, column_n);
+    column_0_width = ImClamp(column_0_width, min_width, max_width);
     if (column_0->WidthGiven == column_0_width || column_0->WidthRequest == column_0_width)
         return;
 
