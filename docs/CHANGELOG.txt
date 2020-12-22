@@ -132,6 +132,8 @@ Other Changes:
  VERSION 1.79 (Released 2020-10-08)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.79
+
 Breaking Changes:
 
 - Fonts: Removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied
@@ -223,6 +225,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.78 (Released 2020-08-18)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.78
 
 Breaking Changes:
 
