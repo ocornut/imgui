@@ -98,6 +98,25 @@ Index of this file:
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
+// COLUMNS SIZING POLICIES
+//-----------------------------------------------------------------------------
+// About overriding column width/weight with TableSetupColumn():
+// We use a default parameter of 'init_width_or_weight == -1'.
+//   - With ImGuiTableColumnFlags_WidthAuto,     init_width       (ignored)  --> width is automatic
+//   - With ImGuiTableColumnFlags_WidthFixed,    init_width  <= 0 (default)  --> width is automatic
+//   - With ImGuiTableColumnFlags_WidthFixed,    init_width  >  0 (explicit) --> width is custom
+//   - With ImGuiTableColumnFlags_WidthStretch,  init_weight <= 0 (default)  --> weight is 1.0f
+//   - With ImGuiTableColumnFlags_WidthStretch,  init_weight >  0 (explicit) --> weight is custom
+// Widths are specified _without_ CellPadding. If you specify a width of 100.0f, the column will be cover (100.0f + Padding * 2.0f)
+// and you can fit a 100.0f wide item in it without clipping and with full padding.
+//-----------------------------------------------------------------------------
+// About default width policy (if you don't specify a ImGuiTableColumnFlags_WidthXXXX flag)
+//   - When Table policy ImGuiTableFlags_ColumnsWidthStretch                                                --> default Column policy is ImGuiTableColumnFlags_WidthStretch
+//   - When Table policy ImGuiTableFlags_ColumnsWidthFixed and (Table is Resizable or init_width > 0)       --> default Column policy is ImGuiTableColumnFlags_WidthFixed
+//   - When Table policy ImGuiTableFlags_ColumnsWidthFixed and (Table is not Resizable and init_width <= 0) --> default Column policy is ImGuiTableColumnFlags_WidthAuto
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
 // TABLES CLIPPING/CULLING
 //-----------------------------------------------------------------------------
 // About clipping/culling of Rows in Tables:
@@ -730,19 +749,17 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             float width_auto = content_width_body;
             if (!(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
                 width_auto = ImMax(width_auto, content_width_headers);
-            width_auto = ImMax(width_auto, min_column_width);
-
-            // Non-resizable columns also submit their requested width
-            if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && column->InitStretchWeightOrWidth > 0.0f)
-                if (!(table->Flags & ImGuiTableFlags_Resizable) || (column->Flags & ImGuiTableColumnFlags_NoResize))
-                    width_auto = ImMax(width_auto, column->InitStretchWeightOrWidth);
-
-            column->WidthAuto = width_auto;
+            column->WidthAuto = ImMax(width_auto, min_column_width);
         }
         column->IsPreserveWidthAuto = false;
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAuto))
         {
+            // Non-resizable columns keep their requested width
+            if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && column->InitStretchWeightOrWidth > 0.0f)
+                if (!(table->Flags & ImGuiTableFlags_Resizable) || (column->Flags & ImGuiTableColumnFlags_NoResize))
+                    column->WidthRequest = column->WidthAuto = ImMax(column->WidthAuto, column->InitStretchWeightOrWidth);
+
             // Process auto-fit for non-stretched columns
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
             if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAuto) && column->IsVisibleX))
@@ -1258,12 +1275,7 @@ void    ImGui::EndTable()
     outer_window->DC.CurrentTableIdx = g.CurrentTable ? g.Tables.GetIndex(g.CurrentTable) : -1;
 }
 
-// We use a default parameter of 'init_width_or_weight == -1',
-// - with ImGuiTableColumnFlags_WidthFixed,    width  <= 0 --> init width == auto
-// - with ImGuiTableColumnFlags_WidthFixed,    width  >  0 --> init width == manual
-// - with ImGuiTableColumnFlags_WidthStretch,  weight <  0 --> init weight == 1.0f
-// - with ImGuiTableColumnFlags_WidthStretch,  weight >= 0 --> init weight == custom
-// Widths are specified _without_ CellPadding. So if you specify a width of 100.0f the column will be 100.0f+Padding*2.0f and you can fit a 100.0-wide item in it.
+// See "COLUMN SIZING POLICIES" comments at the top of this file 
 void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
     ImGuiContext& g = *GImGui;
@@ -1281,7 +1293,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     table->DeclColumnsCount++;
 
     // When passing a width automatically enforce WidthFixed policy
-    // (whereas TableSetupColumnFlags would default to WidthAuto)
+    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not Resizable)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
         if ((table->Flags & ImGuiTableFlags_ColumnsWidthFixed) && (init_width_or_weight > 0.0f))
             flags |= ImGuiTableColumnFlags_WidthFixed;
