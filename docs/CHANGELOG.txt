@@ -63,7 +63,6 @@ Breaking Changes:
 - Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply
   to other data structures. (#2636)
 
-
 Other Changes:
 
 - Tables: added new Tables Beta API as a replacement for old Columns. (#2957, #125)
@@ -112,6 +111,9 @@ Other Changes:
 - Misc: Made EndFrame() assertion for key modifiers being unchanged during the frame (added in 1.76) more
   lenient, allowing full mid-frame releases. This is to accommodate the use of mid-frame modal native
   windows calls, which leads backends such as GLFW to send key clearing events on focus loss. (#3575)
+- Style: Changed default style.WindowRounding value to 0.0f (matches default for multi-viewports).
+- Style: Reduced the size of the resizing grip, made alpha less prominent.
+- Style: Classic: Increase the default alpha value of WindowBg to be closer to other styles.
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
