@@ -111,9 +111,9 @@ Index of this file:
 // and you can fit a 100.0f wide item in it without clipping and with full padding.
 //-----------------------------------------------------------------------------
 // About default width policy (if you don't specify a ImGuiTableColumnFlags_WidthXXXX flag)
-//   - When Table policy ImGuiTableFlags_ColumnsWidthStretch                                                --> default Column policy is ImGuiTableColumnFlags_WidthStretch
-//   - When Table policy ImGuiTableFlags_ColumnsWidthFixed and (Table is Resizable or init_width > 0)       --> default Column policy is ImGuiTableColumnFlags_WidthFixed
-//   - When Table policy ImGuiTableFlags_ColumnsWidthFixed and (Table is not Resizable and init_width <= 0) --> default Column policy is ImGuiTableColumnFlags_WidthAuto
+//   - When Table policy ImGuiTableFlags_SizingPolicyStretch                                                --> default Column policy is ImGuiTableColumnFlags_WidthStretch
+//   - When Table policy ImGuiTableFlags_SizingPolicyFixed and (Table is Resizable or init_width > 0)       --> default Column policy is ImGuiTableColumnFlags_WidthFixed
+//   - When Table policy ImGuiTableFlags_SizingPolicyFixed and (Table is not Resizable and init_width <= 0) --> default Column policy is ImGuiTableColumnFlags_WidthAuto
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -214,8 +214,8 @@ static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/tim
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
     // Adjust flags: set default sizing policy
-    if ((flags & (ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ColumnsWidthFixed)) == 0)
-        flags |= ((flags & ImGuiTableFlags_ScrollX) || (outer_window->Flags & ImGuiWindowFlags_AlwaysAutoResize)) ? ImGuiTableFlags_ColumnsWidthFixed : ImGuiTableFlags_ColumnsWidthStretch;
+    if ((flags & (ImGuiTableFlags_SizingPolicyStretch | ImGuiTableFlags_SizingPolicyFixed)) == 0)
+        flags |= ((flags & ImGuiTableFlags_ScrollX) || (outer_window->Flags & ImGuiWindowFlags_AlwaysAutoResize)) ? ImGuiTableFlags_SizingPolicyFixed : ImGuiTableFlags_SizingPolicyStretch;
 
     // Adjust flags: disable Resizable when using SameWidths (done above enforcing BordersInnerV)
     if (flags & ImGuiTableFlags_SameWidths)
@@ -587,7 +587,7 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
     {
         // FIXME-TABLE: Inconsistent to promote columns to WidthAuto
-        if (table->Flags & ImGuiTableFlags_ColumnsWidthFixed)
+        if (table->Flags & ImGuiTableFlags_SizingPolicyFixed)
             flags |= ((table->Flags & ImGuiTableFlags_Resizable) && !(flags & ImGuiTableColumnFlags_NoResize)) ? ImGuiTableColumnFlags_WidthFixed : ImGuiTableColumnFlags_WidthAuto;
         else
             flags |= ImGuiTableColumnFlags_WidthStretch;
@@ -1295,7 +1295,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     // When passing a width automatically enforce WidthFixed policy
     // (whereas TableSetupColumnFlags would default to WidthAuto if table is not Resizable)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
-        if ((table->Flags & ImGuiTableFlags_ColumnsWidthFixed) && (init_width_or_weight > 0.0f))
+        if ((table->Flags & ImGuiTableFlags_SizingPolicyFixed) && (init_width_or_weight > 0.0f))
             flags |= ImGuiTableColumnFlags_WidthFixed;
 
     TableSetupColumnFlags(table, column, flags);
