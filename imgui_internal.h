@@ -1275,9 +1275,11 @@ struct ImGuiContext
     float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
-    ImGuiID                 HoveredId;                          // Hovered widget
+    ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
     bool                    HoveredIdAllowOverlap;
+    bool                    HoveredIdUsingMouseWheel;           // Hovered widget will use mouse wheel. Blocks scrolling the underlying window.
+    bool                    HoveredIdPreviousFrameUsingMouseWheel;
     bool                    HoveredIdDisabled;                  // At least one widget passed the rect test, but has been discarded by disabled flag or popup inhibit. May be true even if HoveredId == 0.
     float                   HoveredIdTimer;                     // Measure contiguous hovering time
     float                   HoveredIdNotActiveTimer;            // Measure contiguous hovering time where the item has not been active
@@ -1290,6 +1292,7 @@ struct ImGuiContext
     bool                    ActiveIdHasBeenPressedBefore;       // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
     bool                    ActiveIdHasBeenEditedBefore;        // Was the value associated to the widget Edited over the course of the Active state.
     bool                    ActiveIdHasBeenEditedThisFrame;
+    bool                    ActiveIdUsingMouseWheel;            // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
     ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
     ImU32                   ActiveIdUsingNavInputMask;          // Active widget will want to read those nav inputs.
     ImU64                   ActiveIdUsingKeyInputMask;          // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
@@ -1501,6 +1504,7 @@ struct ImGuiContext
 
         HoveredId = HoveredIdPreviousFrame = 0;
         HoveredIdAllowOverlap = false;
+        HoveredIdUsingMouseWheel = HoveredIdPreviousFrameUsingMouseWheel = false;
         HoveredIdDisabled = false;
         HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
         ActiveId = 0;
@@ -1512,6 +1516,7 @@ struct ImGuiContext
         ActiveIdHasBeenPressedBefore = false;
         ActiveIdHasBeenEditedBefore = false;
         ActiveIdHasBeenEditedThisFrame = false;
+        ActiveIdUsingMouseWheel = false;
         ActiveIdUsingNavDirMask = 0x00;
         ActiveIdUsingNavInputMask = 0x00;
         ActiveIdUsingKeyInputMask = 0x00;
@@ -2267,6 +2272,7 @@ namespace ImGui
 
     // Inputs
     // FIXME: Eventually we should aim to move e.g. IsActiveIdUsingKey() into IsKeyXXX functions.
+    IMGUI_API void          SetItemUsingMouseWheel();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingNavInput(ImGuiNavInput input)                { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavInputMask & (1 << input)) != 0; }
     inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; IM_ASSERT(key < 64); return (g.ActiveIdUsingKeyInputMask & ((ImU64)1 << key)) != 0; }

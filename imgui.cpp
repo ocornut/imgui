@@ -3026,6 +3026,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 
     // Clear declaration of inputs claimed by the widget
     // (Please note that this is WIP and not all keys/inputs are thoroughly declared by all widgets yet)
+    g.ActiveIdUsingMouseWheel = false;
     g.ActiveIdUsingNavDirMask = 0x00;
     g.ActiveIdUsingNavInputMask = 0x00;
     g.ActiveIdUsingKeyInputMask = 0x00;
@@ -3041,6 +3042,7 @@ void ImGui::SetHoveredID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdUsingMouseWheel = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
 }
@@ -3606,6 +3608,9 @@ void ImGui::UpdateMouseWheel()
     if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
         return;
 
+    if ((g.ActiveId != 0 && g.ActiveIdUsingMouseWheel) || (g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrameUsingMouseWheel))
+        return;
+
     ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
     if (!window || window->Collapsed)
         return;
@@ -3839,8 +3844,10 @@ void ImGui::NewFrame()
     if (g.HoveredId && g.ActiveId != g.HoveredId)
         g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
+    g.HoveredIdPreviousFrameUsingMouseWheel = g.HoveredIdUsingMouseWheel;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdUsingMouseWheel = false;
     g.HoveredIdDisabled = false;
 
     // Update ActiveId data (clear reference to active widget if the widget isn't alive anymore)
@@ -4768,10 +4775,21 @@ bool ImGui::IsItemEdited()
 void ImGui::SetItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
-    if (g.HoveredId == g.CurrentWindow->DC.LastItemId)
+    ImGuiID id = g.CurrentWindow->DC.LastItemId;
+    if (g.HoveredId == id)
         g.HoveredIdAllowOverlap = true;
-    if (g.ActiveId == g.CurrentWindow->DC.LastItemId)
+    if (g.ActiveId == id)
         g.ActiveIdAllowOverlap = true;
+}
+
+void ImGui::SetItemUsingMouseWheel()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiID id = g.CurrentWindow->DC.LastItemId;
+    if (g.HoveredId == id)
+        g.HoveredIdUsingMouseWheel = true;
+    if (g.ActiveId == id)
+        g.ActiveIdUsingMouseWheel = true;
 }
 
 ImVec2 ImGui::GetItemRectMin()
