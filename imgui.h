@@ -74,11 +74,6 @@ Index of this file:
 #endif
 
 // nodiscard attribute
-#if !defined(IM_NODISCARD) && defined(__has_cpp_attribute)
-#if __has_cpp_attribute(nodiscard)
-#define IM_NODISCARD [[nodiscard]]
-#endif
-#endif
 #if !defined(IM_NODISCARD) && defined(__has_attribute)
 #if __has_attribute(warn_unused_result)
 #define IM_NODISCARD __attribute__((warn_unused_result))
@@ -87,6 +82,11 @@ Index of this file:
 #if !defined(IM_NODISCARD) && defined(__GNUC__)
 #if __GNUC__ >= 3 && __GNUC_MINOR__ >= 4
 #define IM_NODISCARD __attribute__((warn_unused_result))
+#endif
+#endif
+#if !defined(IM_NODISCARD) && defined(__has_cpp_attribute)
+#if __has_cpp_attribute(nodiscard)
+#define IM_NODISCARD [[nodiscard]]
 #endif
 #endif
 #if !defined(IM_NODISCARD) && defined(_Check_return_)
