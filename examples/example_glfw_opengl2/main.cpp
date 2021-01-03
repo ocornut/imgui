@@ -136,7 +136,7 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
 
         // If you are using this code with non-legacy OpenGL header/contexts (which you should not, prefer using imgui_impl_opengl3.cpp!!),
-        // you may need to backup/reset/restore current shader using the commented lines below.
+        // you may need to backup/reset/restore other state, e.g. for current shader using the commented lines below.
         //GLint last_program;
         //glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
         //glUseProgram(0);
