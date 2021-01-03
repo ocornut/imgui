@@ -56,7 +56,7 @@ List of Platforms Backends:
     imgui_impl_osx.mm         ; macOS native API (not as feature complete as glfw/sdl backends)
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (absolutely not recommended in 2020!)
+    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (this is prehistoric software and absolutely not recommended today!)
 
 List of Renderer Backends:
 

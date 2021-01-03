@@ -198,9 +198,9 @@ This is quite long and tedious, because: DirectX12.
 
 **Building**
 
-Unfortunately in 2020 it is still tedious to create and maintain portable build files using external
+Unfortunately nowadays it is still tedious to create and maintain portable build files using external
 libraries (the kind we're using here to create a window and render 3D triangles) without relying on
-third party software. For most examples here we choose to provide:
+third party software and build systems. For most examples here we choose to provide:
  - Makefiles for Linux/OSX
  - Batch files for Visual Studio 2008+
  - A .sln project file for Visual Studio 2012+
