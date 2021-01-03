@@ -2286,7 +2286,7 @@ bool ImGuiListClipper::Step()
     {
         // While we are in frozen row state, keep displaying items one by one, unclipped
         // FIXME: Could be stored as a table-agnostic state.
-        if (table != NULL && !table->IsUnfrozen)
+        if (table != NULL && !table->IsUnfrozenRows)
         {
             DisplayStart = ItemsFrozen;
             DisplayEnd = ItemsFrozen + 1;
