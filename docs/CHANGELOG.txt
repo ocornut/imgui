@@ -90,6 +90,7 @@ Other Changes:
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
+- Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
@@ -117,8 +118,8 @@ Other Changes:
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
-- Backends: OpenGL2: Backup and restore GL_SHADE_MODAL and disable GL_NORMAL_ARRAY state to increase compatibility
-  with legacy code. (#3671)
+- Backends: OpenGL2: Backup and restore GL_SHADE_MODEL and disable GL_NORMAL_ARRAY state to increase 
+  compatibility with legacy code. (#3671)
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]

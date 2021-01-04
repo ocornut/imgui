@@ -1713,6 +1713,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     }
 
     EndCombo();
+    if (value_changed)
+        MarkItemEdited(g.CurrentWindow->DC.LastItemId);
+
     return value_changed;
 }
 
