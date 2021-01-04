@@ -123,6 +123,7 @@ Other Changes:
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
+- Backends: DX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically. (#3696) [@Mattiwatti]
 - Backends: Win32: Fix setting of io.DisplaySize to invalid/uninitialized data after hwnd has been closed.
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
 - Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
