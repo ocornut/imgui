@@ -108,8 +108,8 @@ Breaking Changes:
 
 - Added imgui_tables.cpp file! Manually constructed project files will need the new file added!
 - Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
-- Renamed ImDrawList::AddBezierCurve() to ImDrawList::AddBezierCubic(). Kept inline redirection function (will obsolete). 
-- Renamed ImDrawList::PathBezierCurveTo() to ImDrawList::PathBezierCubicCurveTo(). Kept inline redirection function (will obsolete). 
+- Renamed ImDrawList::AddBezierCurve() to ImDrawList::AddBezierCubic(). Kept inline redirection function (will obsolete).
+- Renamed ImDrawList::PathBezierCurveTo() to ImDrawList::PathBezierCubicCurveTo(). Kept inline redirection function (will obsolete).
 - Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2018):
   - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
   - ImGui::IsAnyWindowFocused()                 -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
@@ -136,8 +136,8 @@ Other Changes:
 
 - Tables: added new Tables Beta API as a replacement for old Columns. (#2957, #125)
   Check out 'Demo->Tables' for many demos + API comments in imgui.h for details.
-  - Added 16 functions: BeginTable(), EndTable(), 
-                        TableNextRow(), TableNextColumn(), TableSetColumnIndex(), TableGetColumnIndex(), TableGetRowIndex(), 
+  - Added 16 functions: BeginTable(), EndTable(),
+                        TableNextRow(), TableNextColumn(), TableSetColumnIndex(), TableGetColumnIndex(), TableGetRowIndex(),
                         TableSetupColumn(), TableSetupScrollFreeze(),
                         TableHeadersRow(), TableHeader(), TableSetBgColor(), TableGetSortSpecs(),
                         TableGetColumnCount(), TableGetColumnName(), TableGetColumnFlags().
@@ -159,12 +159,13 @@ Other Changes:
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
+- Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
 - Metrics: Rebranded as "Dear ImGui Metrics/Debugger" to clarify its purpose.
-- ImDrawList: Added ImDrawList::AddQuadBezierCurve(), ImDrawList::PathQuadBezierCurveTo() quadratic bezier 
+- ImDrawList: Added ImDrawList::AddQuadBezierCurve(), ImDrawList::PathQuadBezierCurveTo() quadratic bezier
   helpers. (#3127, #3664, #3665) [@aiekick]
 - Fonts: Updated GetGlyphRangesJapanese() to include a larger 2999 ideograms selection of Joyo/Jinmeiyo
   kanjis, from the previous 1946 ideograms selection. This will consume a some more memory but be generally
@@ -180,10 +181,16 @@ Other Changes:
 - Misc: Made EndFrame() assertion for key modifiers being unchanged during the frame (added in 1.76) more
   lenient, allowing full mid-frame releases. This is to accommodate the use of mid-frame modal native
   windows calls, which leads backends such as GLFW to send key clearing events on focus loss. (#3575)
+- Style: Changed default style.WindowRounding value to 0.0f (matches default for multi-viewports).
+- Style: Reduced the size of the resizing grip, made alpha less prominent.
+- Style: Classic: Increase the default alpha value of WindowBg to be closer to other styles.
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
+- Backends: OpenGL2: Backup and restore GL_SHADE_MODEL and disable GL_NORMAL_ARRAY state to increase 
+  compatibility with legacy code. (#3671)
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
+- Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
 - Backends: Win32: Fix setting of io.DisplaySize to invalid/uninitialized data after hwnd has been closed.
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
