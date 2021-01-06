@@ -770,7 +770,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
         else
         {
-            IM_ASSERT(column->Flags & ImGuiTableColumnFlags_WidthStretch);
+            IM_ASSERT_PARANOID(column->Flags & ImGuiTableColumnFlags_WidthStretch);
 
             // Revert or initialize weight (when column->StretchWeight < 0.0f normally it means there has been no init value so it'll always default to 1.0f)
             if (column->AutoFitQueue != 0x00 || column->StretchWeight < 0.0f) 
@@ -788,7 +788,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     }
     table->ColumnsEnabledFixedCount = (ImGuiTableColumnIdx)count_fixed;
 
-    // [Part 4] Apply "same widths" feature.
+    // [Part 4] Apply "all same widths" feature.
     // - When all columns are fixed or columns are of mixed type: use the maximum auto width.
     // - When all columns are stretch: use same weight.
     const bool mixed_same_widths = (table->Flags & ImGuiTableFlags_SameWidths) && count_fixed > 0;
@@ -2343,10 +2343,11 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
             const bool is_frozen_separator = (table->FreezeColumnsCount != -1 && table->FreezeColumnsCount == order_n + 1);
 
-            if (column->MaxX > table->InnerClipRect.Max.x && !is_resized)// && is_hovered)
+            if (column->MaxX > table->InnerClipRect.Max.x && !is_resized)
                 continue;
-            if (column->NextEnabledColumn == -1 && !is_resizable && (table->Flags & ImGuiTableFlags_SameWidths) == 0)
-                continue;
+            if (column->NextEnabledColumn == -1 && !is_resizable)
+                if ((table->Flags & ImGuiTableFlags_SameWidths) == 0 || table->IsOuterRectAutoFitX)
+                    continue;
             if (column->MaxX <= column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
                 continue;
 
