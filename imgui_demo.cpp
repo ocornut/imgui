@@ -3350,6 +3350,49 @@ static void PopStyleCompact()
     ImGui::PopStyleVar(2);
 }
 
+// Show a combo box with a choice of sizing policies
+static void EditTableSizingFlags(ImGuiTableFlags* p_flags)
+{
+    struct EnumDesc { ImGuiTableFlags Value; const char* Name; const char* Tooltip; };
+    static const EnumDesc policies[] =
+    {
+        { ImGuiTableFlags_None,               "Default",                            "Use default sizing policy:\n- ImGuiTableFlags_SizingFixedFit if ScrollX is on or if host window has ImGuiWindowFlags_AlwaysAutoResize.\n- ImGuiTableFlags_SizingStretchSame otherwise." },
+        { ImGuiTableFlags_SizingFixedFit,     "ImGuiTableFlags_SizingFixedFit",     "Columns default to _WidthFixed (if resizable) or _WidthAuto (if not resizable), matching contents width." },
+        { ImGuiTableFlags_SizingFixedSame,    "ImGuiTableFlags_SizingFixedSame",    "Columns are all the same width, matching the maximum contents width.\nImplicitly disable ImGuiTableFlags_Resizable and enable ImGuiTableFlags_NoKeepColumnsVisible." },
+        { ImGuiTableFlags_SizingStretchProp,  "ImGuiTableFlags_SizingStretchProp",  "Columns default to _WidthStretch with weights proportional to their widths." },
+        { ImGuiTableFlags_SizingStretchSame,  "ImGuiTableFlags_SizingStretchSame",  "Columns default to _WidthStretch with same weights." }
+    };
+    int idx;
+    for (idx = 0; idx < IM_ARRAYSIZE(policies); idx++)
+        if (policies[idx].Value == (*p_flags & ImGuiTableFlags_SizingMask_))
+            break;
+    const char* preview_text = (idx < IM_ARRAYSIZE(policies)) ? policies[idx].Name + (idx > 0 ? strlen("ImGuiTableFlags") : 0) : "";
+    if (ImGui::BeginCombo("Sizing Policy", preview_text))
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(policies); n++)
+            if (ImGui::Selectable(policies[n].Name, idx == n))
+                *p_flags = (*p_flags & ~ImGuiTableFlags_SizingMask_) | policies[n].Value;
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
+        for (int m = 0; m < IM_ARRAYSIZE(policies); m++)
+        {
+            ImGui::Separator();
+            ImGui::Text("%s:", policies[m].Name);
+            ImGui::Separator();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().IndentSpacing * 0.5f);
+            ImGui::TextUnformatted(policies[m].Tooltip);
+        }
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags)
 {
     ImGui::CheckboxFlags("_DefaultHide", p_flags, ImGuiTableColumnFlags_DefaultHide);
@@ -3835,6 +3878,55 @@ static void ShowDemoWindowTables()
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Sizing policies"))
     {
+        static bool fixed_fill = true;
+        static ImGuiTableFlags flags1 = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_RowBg | ImGuiTableFlags_ContextMenuInBody;
+        PushStyleCompact();
+        ImGui::Checkbox("fill", &fixed_fill);
+        ImGui::SameLine(); HelpMarker(
+            "Value passed to outer_size only affects tables with _SizingFixedFit or _SizingFixedSame sizing policies.\n\n"
+            " - outer_size.x == 0: table fit to columns total contents.\n"
+            " - outer_size.x == -FLT_MIN: table fill until right-most edge.");
+        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags1, ImGuiTableFlags_Resizable);
+        PopStyleCompact();
+
+        ImVec2 outer_size = ImVec2(fixed_fill ? -FLT_MIN : 0.0f, 0.0f);
+        static ImGuiTableFlags sizing_policy_flags[4] = { ImGuiTableFlags_SizingFixedFit, ImGuiTableFlags_SizingFixedSame, ImGuiTableFlags_SizingStretchProp, ImGuiTableFlags_SizingStretchSame };
+        for (int table_n = 0; table_n < 4; table_n++)
+        {
+            ImGui::PushID(table_n);
+            ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 30);
+            EditTableSizingFlags(&sizing_policy_flags[table_n]);
+
+            // To make it easier to understand the different sizing policy,
+            // For each policy: we display one table where the columns have equal contents width, and one where the columns have different contents width.
+            if (ImGui::BeginTable("##table1", 3, sizing_policy_flags[table_n] | flags1, outer_size))
+            {
+                for (int row = 0; row < 3; row++)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn(); ImGui::Text("Oh dear");
+                    ImGui::TableNextColumn(); ImGui::Text("Oh dear");
+                    ImGui::TableNextColumn(); ImGui::Text("Oh dear");
+                }
+                ImGui::EndTable();
+            }
+            if (ImGui::BeginTable("##table2", 3, sizing_policy_flags[table_n] | flags1, outer_size))
+            {
+                for (int row = 0; row < 3; row++)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn(); ImGui::Text("AAAA");
+                    ImGui::TableNextColumn(); ImGui::Text("BBBBBBBB");
+                    ImGui::TableNextColumn(); ImGui::Text("CCCCCCCCCCCC");
+                }
+                ImGui::EndTable();
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Advanced");
+        ImGui::SameLine();
         HelpMarker("This section allows you to interact and see the effect of various sizing policies depending on whether Scroll is enabled and the contents of your columns.");
 
         enum ContentsType { CT_ShowWidth, CT_ShortText, CT_LongText, CT_Button, CT_FillButton, CT_InputText };
@@ -3843,7 +3935,9 @@ static void ShowDemoWindowTables()
         static int column_count = 3;
 
         PushStyleCompact();
+        ImGui::PushID("Advanced");
         ImGui::PushItemWidth(TEXT_BASE_WIDTH * 30);
+        EditTableSizingFlags(&flags);
         ImGui::Combo("Contents", &contents_type, "Show width\0Short Text\0Long Text\0Button\0Fill Button\0InputText\0");
         if (contents_type == CT_FillButton)
         {
@@ -3851,12 +3945,6 @@ static void ShowDemoWindowTables()
             HelpMarker("Be mindful that using right-alignment (e.g. size.x = -FLT_MIN) creates a feedback loop where contents width can feed into auto-column width can feed into contents width.");
         }
         ImGui::DragInt("Columns", &column_count, 0.1f, 1, 64, "%d", ImGuiSliderFlags_AlwaysClamp);
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingStretchSame", &flags, ImGuiTableFlags_SizingStretchSame))
-            flags &= ~ImGuiTableFlags_SizingFixedFit;       // Can't specify both sizing polices so we clear the other
-        ImGui::SameLine(); HelpMarker("Default if _ScrollX if disabled. Makes columns use _WidthStretch policy by default.");
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingFixedFit", &flags, ImGuiTableFlags_SizingFixedFit))
-            flags &= ~ImGuiTableFlags_SizingStretchSame;     // Can't specify both sizing polices so we clear the other
-        ImGui::SameLine(); HelpMarker("Default if _ScrollX if enabled. Makes columns use _WidthFixed by default, or _WidthFixedResize if _Resizable is not set.");
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_PreciseWidths", &flags, ImGuiTableFlags_PreciseWidths);
         ImGui::SameLine(); HelpMarker("Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.");
@@ -3864,10 +3952,11 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", &flags, ImGuiTableFlags_ScrollY);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
         ImGui::PopItemWidth();
+        ImGui::PopID();
         PopStyleCompact();
 
-        ImVec2 outer_size(-FLT_MIN, TEXT_BASE_HEIGHT * 7);
-        if (ImGui::BeginTable("##table1", column_count, flags, outer_size))
+        outer_size = ImVec2(-FLT_MIN, TEXT_BASE_HEIGHT * 7);
+        if (ImGui::BeginTable("##table2", column_count, flags, outer_size))
         {
             for (int cell = 0; cell < 10 * column_count; cell++)
             {
@@ -4757,19 +4846,13 @@ static void ShowDemoWindowTables()
 
             if (ImGui::TreeNodeEx("Sizing:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingStretchSame", &flags, ImGuiTableFlags_SizingStretchSame))
-                    flags &= ~ImGuiTableFlags_SizingFixedFit;   // Can't specify both sizing polices so we clear the other
-                ImGui::SameLine(); HelpMarker("[Default if ScrollX is off]\nFit all columns within available width (or specified inner_width). Fixed and Stretch columns allowed.");
-                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingFixedFit", &flags, ImGuiTableFlags_SizingFixedFit))
-                    flags &= ~ImGuiTableFlags_SizingStretchSame; // Can't specify both sizing polices so we clear the other
-                ImGui::SameLine(); HelpMarker("[Default if ScrollX is on]\nEnlarge as needed: enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rectangle. Only Fixed columns allowed. Stretched columns will calculate their width assuming no scrolling.");
+                EditTableSizingFlags(&flags);
                 ImGui::SameLine(); HelpMarker("In the Advanced demo we override the policy of each column so those table-wide settings have less effect that typical.");
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoHostExtendY", &flags, ImGuiTableFlags_NoHostExtendY);
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags, ImGuiTableFlags_NoKeepColumnsVisible);
                 ImGui::SameLine(); HelpMarker("Only available if ScrollX is disabled.");
                 ImGui::CheckboxFlags("ImGuiTableFlags_PreciseWidths", &flags, ImGuiTableFlags_PreciseWidths);
                 ImGui::SameLine(); HelpMarker("Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.");
-                ImGui::CheckboxFlags("ImGuiTableFlags_SameWidths", &flags, ImGuiTableFlags_SameWidths);
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
                 ImGui::SameLine(); HelpMarker("Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with ScrollFreeze options.");
                 ImGui::TreePop();
