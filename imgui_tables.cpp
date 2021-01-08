@@ -5,6 +5,8 @@
 
 Index of this file:
 
+// [SECTION] Commentary
+// [SECTION] Header mess
 // [SECTION] Tables: Main code
 // [SECTION] Tables: Row changes
 // [SECTION] Tables: Columns changes
@@ -23,6 +25,10 @@ Index of this file:
 // Navigating this file:
 // - In Visual Studio IDE: CTRL+comma ("Edit.NavigateTo") can follow symbols in comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
 // - With Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols in comments.
+
+//-----------------------------------------------------------------------------
+// [SECTION] Commentary
+//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // Typical tables call flow: (root level is generally public API):
@@ -150,6 +156,10 @@ Index of this file:
 // - Scrolling tables with a known outer size can be clipped earlier as BeginTable() will return false.
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
+// [SECTION] Header mess
+//-----------------------------------------------------------------------------
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -168,10 +178,6 @@ Index of this file:
 #else
 #include <stdint.h>     // intptr_t
 #endif
-
-//-------------------------------------------------------------------------
-// Warnings
-//-------------------------------------------------------------------------
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -597,8 +603,13 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
         else
             flags |= ImGuiTableColumnFlags_WidthStretch;
     }
-    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_)); // Check that only 1 of each set is used.
-    if (flags & ImGuiTableColumnFlags_WidthAuto)
+    else
+    {
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_)); // Check that only 1 of each set is used.
+    }
+    
+    // Resize
+    if ((flags & ImGuiTableColumnFlags_WidthAuto) != 0 || (table->Flags & ImGuiTableFlags_Resizable) == 0)
         flags |= ImGuiTableColumnFlags_NoResize;
 
     // Sorting
@@ -652,7 +663,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 1] Apply/lock Enabled and Order states. Calculate auto/ideal width for columns. 
     // Process columns in their visible orders as we are building the Prev/Next indices.
     int last_visible_column_idx = -1;
-    bool want_auto_fit = false;
+    bool has_auto_fit_request = false;
+    bool has_resizable = false;
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
@@ -660,11 +672,10 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             table->IsDefaultDisplayOrder = false;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
-        // Clear column settings if not submitted by user.
-        // Currently we make it mandatory to call TableSetupColumn() every frame.
-        // It would easily work without but we're ready to guarantee it since e.g. names need resubmission anyway.
-        // In theory we could be calling TableSetupColumn() here with dummy values it should yield the same effect.
-        if (column_n >= table->DeclColumnsCount)
+        // Clear column setup if not submitted by user. Currently we make it mandatory to call TableSetupColumn() every frame.
+        // It would easily work without but we're not ready to guarantee it since e.g. names need resubmission anyway.
+        // We take a slight shortcut but in theory we could be calling TableSetupColumn() here with dummy values, it should yield the same effect.
+        if (table->DeclColumnsCount <= column_n)
         {
             TableSetupColumnFlags(table, column, ImGuiTableColumnFlags_None);
             column->NameOffset = -1;
@@ -672,6 +683,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             column->InitStretchWeightOrWidth = -1.0f;
         }
 
+        // Update Enabled state, mark settings/sortspecs dirty
         if (!(table->Flags & ImGuiTableFlags_Hideable) || (column->Flags & ImGuiTableColumnFlags_NoHide))
             column->IsEnabledNextFrame = true;
         if (column->IsEnabled != column->IsEnabledNextFrame)
@@ -684,16 +696,11 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_SortMulti))
             table->IsSortSpecsDirty = true;
 
-        bool start_auto_fit = false;
-        if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAuto))
-            start_auto_fit = column->WidthRequest < 0.0f;
-        else
-            start_auto_fit = column->StretchWeight < 0.0f;
+        // Auto-fit unsized columns
+        const bool start_auto_fit = (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAuto)) ? (column->WidthRequest < 0.0f) : (column->StretchWeight < 0.0f);
         if (start_auto_fit)
             column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
 
-        ImU64 index_mask = (ImU64)1 << column_n;
-        ImU64 display_order_mask = (ImU64)1 << column->DisplayOrder;
         if (!column->IsEnabled)
         {
             column->IndexWithinEnabledSet = -1;
@@ -705,10 +712,9 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->NextEnabledColumn = -1;
         if (last_visible_column_idx != -1)
             table->Columns[last_visible_column_idx].NextEnabledColumn = (ImGuiTableColumnIdx)column_n;
-        column->IndexWithinEnabledSet = table->ColumnsEnabledCount;
-        table->ColumnsEnabledCount++;
-        table->EnabledMaskByIndex |= index_mask;
-        table->EnabledMaskByDisplayOrder |= display_order_mask;
+        column->IndexWithinEnabledSet = table->ColumnsEnabledCount++;
+        table->EnabledMaskByIndex |= (ImU64)1 << column_n;
+        table->EnabledMaskByDisplayOrder |= (ImU64)1 << column->DisplayOrder;
         last_visible_column_idx = column_n;
         IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
 
@@ -717,8 +723,11 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (!column->IsPreserveWidthAuto)
             column->WidthAuto = TableGetColumnWidthAuto(table, column);
 
+        const bool column_is_resizable = (column->Flags & ImGuiTableColumnFlags_NoResize) == 0;
+        if (column_is_resizable)
+            has_resizable = true;
         if (column->AutoFitQueue != 0x00)
-            want_auto_fit = true;
+            has_auto_fit_request = true;
     }
     if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         table->IsSortSpecsDirty = true;
@@ -726,16 +735,15 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     IM_ASSERT(table->RightMostEnabledColumn >= 0);
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
-    // to avoid the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
+    // to avoid the column fitting having to wait until the first visible frame of the child container (may or not be a good thing).
     // FIXME-TABLE: for always auto-resizing columns may not want to do that all the time.
-    if (want_auto_fit && table->OuterWindow != table->InnerWindow)
+    if (has_auto_fit_request && table->OuterWindow != table->InnerWindow)
         table->InnerWindow->SkipItems = false;
-    if (want_auto_fit)
+    if (has_auto_fit_request)
         table->IsSettingsDirty = true;
 
     // [Part 3] Fix column flags. Count how many fixed/stretch columns we have and sum of weights.
     int count_fixed = 0;                    // Number of columns that have fixed sizing policy (not stretched sizing policy) (this is NOT the opposite of count_resizable!)
-    int count_resizable = 0;                // Number of columns the user can resize (this is NOT the opposite of count_fixed!)
     float sum_width_requests = 0.0f;        // Sum of all width for fixed and auto-resize columns, excluding width contributed by Stretch columns but including spacing/padding.
     float max_width_auto = 0.0f;            // Largest auto-width (used for SameWidths feature)
     float stretch_sum_weights = 0.0f;       // Sum of all weights for stretch columns.
@@ -745,10 +753,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (!(table->EnabledMaskByIndex & ((ImU64)1 << column_n)))
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
-
-        // Count resizable columns
-        if ((column->Flags & ImGuiTableColumnFlags_NoResize) == 0)
-            count_resizable++;
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAuto))
         {
@@ -775,8 +779,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
         else
         {
-            IM_ASSERT_PARANOID(column->Flags & ImGuiTableColumnFlags_WidthStretch);
-
             if (column->AutoFitQueue != 0x00 || column->StretchWeight < 0.0f) 
                 column->StretchWeight = (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : 1.0f;
 
@@ -1004,7 +1006,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (g.IO.MousePos.x >= unused_x1)
             table->HoveredColumnBody = (ImGuiTableColumnIdx)table->ColumnsCount;
     }
-    if (count_resizable == 0 && (table->Flags & ImGuiTableFlags_Resizable))
+    if (has_resizable == false && (table->Flags & ImGuiTableFlags_Resizable))
         table->Flags &= ~ImGuiTableFlags_Resizable;
 
     // [Part 9] Lock actual OuterRect/WorkRect right-most position.
@@ -1318,20 +1320,21 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     if (flags & ImGuiTableColumnFlags_WidthStretch)
         IM_ASSERT(init_width_or_weight != 0.0f && "Need to provide a valid weight!");
     column->InitStretchWeightOrWidth = init_width_or_weight;
-    if (table->IsInitializing && column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
-    {
-        // Init width or weight
-        if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
-            column->WidthRequest = init_width_or_weight;
-        if (flags & ImGuiTableColumnFlags_WidthStretch)
-            column->StretchWeight = (init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
-
-        // Disable auto-fit if an explicit width/weight has been specified
-        if (init_width_or_weight > 0.0f)
-            column->AutoFitQueue = 0x00;
-    }
     if (table->IsInitializing)
     {
+        // Init width or weight
+        if (column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
+        {
+            if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
+                column->WidthRequest = init_width_or_weight;
+            if (flags & ImGuiTableColumnFlags_WidthStretch)
+                column->StretchWeight = (init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
+
+            // Disable auto-fit if an explicit width/weight has been specified
+            if (init_width_or_weight > 0.0f)
+                column->AutoFitQueue = 0x00;
+        }
+
         // Init default visibility/sort state
         if ((flags & ImGuiTableColumnFlags_DefaultHide) && (table->SettingsLoadedFlags & ImGuiTableFlags_Hideable) == 0)
             column->IsEnabled = column->IsEnabledNextFrame = false;
@@ -1995,7 +1998,7 @@ void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
-        if (!column->IsEnabled && !(column->Flags & ImGuiTableColumnFlags_WidthStretch)) // Can reset weight of hidden stretch column
+        if (!column->IsEnabled && !(column->Flags & ImGuiTableColumnFlags_WidthStretch)) // Cannot reset weight of hidden stretch column
             continue;
         column->CannotSkipItemsQueue = (1 << 0);
         column->AutoFitQueue = (1 << 1);
@@ -2638,6 +2641,10 @@ void ImGui::TableHeadersRow()
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableHeadersRow() after BeginTable()!");
+
+    // Layout if not already done (this is automatically done by TableNextRow, we do it here solely to facilitate stepping in debugger as it is frequent to step in TableUpdateLayout)
+    if (!table->IsLayoutLocked)
+        TableUpdateLayout(table);
 
     // Open row
     const float row_y1 = GetCursorScreenPos().y;
@@ -3327,6 +3334,8 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     if (!is_active) { PopStyleColor(); }
     if (IsItemHovered())
         GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
+    if (IsItemVisible() && table->HoveredColumnBody != -1)
+        GetForegroundDrawList()->AddRect(GetItemRectMin(), GetItemRectMax(), IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
     bool clear_settings = SmallButton("Clear settings");
