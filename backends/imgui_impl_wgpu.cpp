@@ -404,12 +404,12 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             else
             {
                 // Apply Scissor, Bind texture, Draw
-                ImVec4 clip_rect;
-                clip_rect.x = (pcmd->ClipRect.x - clip_off.x);
-                clip_rect.y = (pcmd->ClipRect.y - clip_off.y);
-                clip_rect.z = (pcmd->ClipRect.z - clip_off.x);
-                clip_rect.w = (pcmd->ClipRect.w - clip_off.y);
-                wgpuRenderPassEncoderSetScissorRect(pass_encoder, clip_rect.x, clip_rect.y, clip_rect.z - clip_rect.x, clip_rect.w - clip_rect.y);
+                uint32_t clip_rect[4];
+                clip_rect[0] = static_cast<uint32_t>(pcmd->ClipRect.x - clip_off.x);
+                clip_rect[1] = static_cast<uint32_t>(pcmd->ClipRect.y - clip_off.y);
+                clip_rect[2] = static_cast<uint32_t>(pcmd->ClipRect.z - clip_off.x);
+                clip_rect[3] = static_cast<uint32_t>(pcmd->ClipRect.w - clip_off.y);
+                wgpuRenderPassEncoderSetScissorRect(pass_encoder, clip_rect[0], clip_rect[1], clip_rect[2] - clip_rect[0], clip_rect[3] - clip_rect[1]);
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
             }
         }
