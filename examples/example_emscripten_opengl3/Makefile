@@ -78,8 +78,16 @@ LDFLAGS += --shell-file shell_minimal.html
 all: $(EXE)
 	@echo Build complete for $(EXE)
 
+web:
+	mkdir -p web
+
+serve: all web
+	cp -f example_emscripten_opengl3.html web/index.html
+		cp -f example_emscripten_opengl3.{js,wasm} web/
+		cd web/ && python -m http.server
+
 $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 clean:
-	rm -f $(EXE) $(OBJS) *.js *.wasm *.wasm.pre
+	rm -rf $(EXE) $(OBJS) *.js *.wasm *.wasm.pre web
