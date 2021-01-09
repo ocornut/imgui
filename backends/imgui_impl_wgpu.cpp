@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Binding (e.g. GLFW)
 
 // Implemented features:
-//  [ ] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
@@ -13,6 +13,7 @@
 // (minor and older changes stripped away, please see git history for details)
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_wgpu.h"
 
 // CRT
@@ -43,7 +44,13 @@ struct RenderResources
     // Resources bind-group to bind the common resources to pipeline
     WGPUBindGroup CommonBindGroup;
 
-    // Resources bind-group to bind the font/image resource to pipeline
+    // Bind group layout for image textures
+    WGPUBindGroupLayout ImageBindGroupLayout;
+
+    // Resources bind-group to bind the font/image resources to pipeline
+    ImPool<WGPUBindGroup> ImageBindGroups;
+
+    // Default font-resource of ImGui
     WGPUBindGroup ImageBindGroup;
 };
 static RenderResources g_resources;
@@ -246,6 +253,7 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.Sampler);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
+    SafeRelease(res.ImageBindGroupLayout);
     SafeRelease(res.ImageBindGroup);
 };
 
@@ -271,6 +279,19 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(uint32_
     stage_desc.module = wgpuDeviceCreateShaderModule(g_wgpuDevice, &desc);
     stage_desc.entryPoint = "main";
     return stage_desc;
+}
+
+static WGPUBindGroup ImGui_ImplWGPU_CreateImageBindGroup(WGPUBindGroupLayout layout, WGPUTextureView texture)
+{
+    WGPUBindGroupEntry image_bg_entries[] = {
+        { 0, 0, 0, 0, 0, texture },
+    };
+
+    WGPUBindGroupDescriptor image_bg_descriptor = {};
+    image_bg_descriptor.layout = layout;
+    image_bg_descriptor.entryCount = sizeof(image_bg_entries) / sizeof(WGPUBindGroupEntry);
+    image_bg_descriptor.entries = image_bg_entries;
+    return wgpuDeviceCreateBindGroup(g_wgpuDevice, &image_bg_descriptor);
 }
 
 static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPassEncoder ctx, FrameResources* fr)
@@ -302,7 +323,6 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     wgpuRenderPassEncoderSetIndexBuffer(ctx, fr->IndexBuffer, sizeof(ImDrawIdx) == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, fr->IndexBufferSize * sizeof(ImDrawIdx));
     wgpuRenderPassEncoderSetPipeline(ctx, g_pipelineState);
     wgpuRenderPassEncoderSetBindGroup(ctx, 0, g_resources.CommonBindGroup, 0, NULL);
-    wgpuRenderPassEncoderSetBindGroup(ctx, 1, g_resources.ImageBindGroup, 0, NULL);
 
     // Setup blend factor
     WGPUColor blend_color = { 0.f, 0.f, 0.f, 0.f };
@@ -403,6 +423,19 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             }
             else
             {
+                // Bind custom texture
+                auto* bind_group = g_resources.ImageBindGroups.GetByKey(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)));
+                if (bind_group) {
+                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, *bind_group, 0, NULL);
+                }
+                else {
+                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(g_resources.ImageBindGroupLayout, (WGPUTextureView) pcmd->TextureId);
+                    auto* entry = g_resources.ImageBindGroups.GetOrAddByKey(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)));
+                    *entry = image_bind_group;
+
+                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
+                }
+
                 // Apply Scissor, Bind texture, Draw
                 uint32_t clip_rect[4];
                 clip_rect[0] = static_cast<uint32_t>(pcmd->ClipRect.x - clip_off.x);
@@ -510,7 +543,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
 
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(g_resources.FontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (ImTextureID)g_resources.FontTexture;
+    io.Fonts->TexID = (ImTextureID)g_resources.FontTextureView;
 }
 
 static void ImGui_ImplWGPU_CreateUniformBuffer()
@@ -659,26 +692,22 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
         { 0, g_resources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
         { 1, 0, 0, 0, g_resources.Sampler, 0 },
     };
-    WGPUBindGroupEntry image_bg_entries[] = {
-        { 0, 0, 0, 0, 0, g_resources.FontTextureView },
-    };
 
     WGPUBindGroupDescriptor common_bg_descriptor = {};
     common_bg_descriptor.layout = bg_layouts[0];
     common_bg_descriptor.entryCount = sizeof(common_bg_entries) / sizeof(WGPUBindGroupEntry);
     common_bg_descriptor.entries = common_bg_entries;
     g_resources.CommonBindGroup = wgpuDeviceCreateBindGroup(g_wgpuDevice, &common_bg_descriptor);
+    g_resources.ImageBindGroupLayout = bg_layouts[1];
 
-    WGPUBindGroupDescriptor image_bg_descriptor = {};
-    image_bg_descriptor.layout = bg_layouts[1];
-    image_bg_descriptor.entryCount = sizeof(image_bg_entries) / sizeof(WGPUBindGroupEntry);
-    image_bg_descriptor.entries = image_bg_entries;
-    g_resources.ImageBindGroup = wgpuDeviceCreateBindGroup(g_wgpuDevice, &image_bg_descriptor);
+    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], g_resources.FontTextureView);
+    g_resources.ImageBindGroup = image_bind_group;
+    auto* entry = g_resources.ImageBindGroups.GetOrAddByKey(ImHashData(&g_resources.FontTextureView, sizeof(ImTextureID)));
+    *entry = image_bind_group;
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
     SafeRelease(bg_layouts[0]);
-    SafeRelease(bg_layouts[1]);
 
     return true;
 }
@@ -718,6 +747,8 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     g_resources.Sampler = NULL;
     g_resources.Uniforms = NULL;
     g_resources.CommonBindGroup = NULL;
+    g_resources.ImageBindGroupLayout = NULL;
+    g_resources.ImageBindGroups.Reserve(100);
     g_resources.ImageBindGroup = NULL;
 
     // Create buffers with a default size (they will later be grown as needed)
