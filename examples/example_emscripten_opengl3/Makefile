@@ -79,12 +79,12 @@ all: $(EXE)
 	@echo Build complete for $(EXE)
 
 web:
-	mkdir -p web
+	mkdir -p $@
 
 serve: all web
-	cp -f example_emscripten_opengl3.html web/index.html
-		cp -f example_emscripten_opengl3.{js,wasm} web/
-		cd web/ && python -m http.server
+	cp -f $(EXE) $(word 2,$^)/index.html
+		cp -f $(basename $(EXE)).{js,wasm} $(word 2,$^)
+		cd $(word 2,$^) && python3 -m http.server
 
 $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
