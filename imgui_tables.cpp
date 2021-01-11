@@ -1240,15 +1240,10 @@ void    ImGui::EndTable()
     IM_ASSERT_USER_ERROR(outer_window->DC.ItemWidthStack.Size >= table->HostBackupItemWidthStackSize, "Too many PopItemWidth!");
     PopID();
 
-    // Layout in outer window
+    // Restore window data that we modified
     const float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
     const float backup_outer_max_pos_x = outer_window->DC.CursorMaxPos.x;
     const float backup_inner_max_pos_x = inner_window->DC.CursorMaxPos.x;
-    float max_pos_x = backup_inner_max_pos_x;
-    if (table->RightMostEnabledColumn != -1)
-        max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].MaxX);
-    if (table->ResizedColumn != -1)
-        max_pos_x = ImMax(max_pos_x, table->ResizeLockMinContentsX2);
     inner_window->WorkRect = table->HostBackupWorkRect;
     inner_window->ParentWorkRect = table->HostBackupParentWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
@@ -1256,28 +1251,37 @@ void    ImGui::EndTable()
     outer_window->DC.ItemWidth = table->HostBackupItemWidth;
     outer_window->DC.ItemWidthStack.Size = table->HostBackupItemWidthStackSize;
     outer_window->DC.ColumnsOffset = table->HostBackupColumnsOffset;
+
+    // Layout in outer window
+    // (FIXME: To allow auto-fit and allow desirable effect of SameLine() we dissociate 'used' vs 'ideal' size by overriding
+    // CursorPosPrevLine and CursorMaxPos manually. That should be a more general layout feature, see same problem e.g. #3414)
     const float outer_width = table->IsOuterRectAutoFitX ? table->WorkRect.GetWidth() : table->ColumnsAutoFitWidth;
+    const float outer_height = table->OuterRect.GetHeight();
     if (inner_window != outer_window)
     {
         EndChild();
     }
     else
     {
-        ImVec2 item_size(outer_width, table->OuterRect.GetHeight());
-        ItemSize(item_size);
+        ItemSize(ImVec2(outer_width, outer_height));
+        outer_window->DC.CursorPosPrevLine.x = table->OuterRect.Max.x;
     }
 
     // Override EndChild/ItemSize max extent with our own to enable auto-resize on the X axis when possible
     // FIXME-TABLE: This can be improved (e.g. for Fixed columns we don't want to auto AutoFitWidth? or propagate window auto-fit to table?)
     if (table->Flags & ImGuiTableFlags_ScrollX)
     {
-        inner_window->DC.CursorMaxPos.x = max_pos_x; // Set contents width for scrolling
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, backup_outer_cursor_pos_x + table->ColumnsGivenWidth + inner_window->ScrollbarSizes.x); // For scrolling
+        float max_pos_x = backup_inner_max_pos_x;
+        if (table->RightMostEnabledColumn != -1)
+            max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].MaxX);
+        if (table->ResizedColumn != -1)
+            max_pos_x = ImMax(max_pos_x, table->ResizeLockMinContentsX2);
+        inner_window->DC.CursorMaxPos.x = max_pos_x; // For inner scrolling
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, backup_outer_cursor_pos_x + table->ColumnsGivenWidth + inner_window->ScrollbarSizes.x); // For outer scrolling
     }
     else
     {
         outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, table->WorkRect.Min.x + outer_width); // For auto-fit
-        outer_window->DC.CursorPosPrevLine.x = table->WorkRect.Max.x; // For consistent reaction to SameLine() // FIXME: Should be a feature of layout/ItemAdd
     }
 
     // Save settings
