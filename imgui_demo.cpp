@@ -5552,6 +5552,9 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef _MSC_VER
         ImGui::Text("define: _MSC_VER=%d", _MSC_VER);
 #endif
+#ifdef _MSVC_LANG
+        ImGui::Text("define: _MSVC_LANG=%d", (int)_MSVC_LANG);
+#endif
 #ifdef __MINGW32__
         ImGui::Text("define: __MINGW32__");
 #endif
