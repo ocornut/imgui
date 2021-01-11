@@ -11,8 +11,8 @@
 To run on a local machine:
 - Generally you may need a local webserver. Quoting [https://emscripten.org/docs/getting_started](https://emscripten.org/docs/getting_started/Tutorial.html#generating-html):<br>
 _"Unfortunately several browsers (including Chrome, Safari, and Internet Explorer) do not support file:// [XHR](https://emscripten.org/docs/site/glossary.html#term-xhr) requests, and can’t load extra files needed by the HTML (like a .wasm file, or packaged file data as mentioned lower down). For these browsers you’ll need to serve the files using a [local webserver](https://emscripten.org/docs/getting_started/FAQ.html#faq-local-webserver) and then open http://localhost:8000/hello.html."_
-- Emscripten SDK has a handy `emrun` command: `emrun example_emscripten_opengl3.html` which will spawn a temporary local webserver. See https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html for details.
-- Otherwise you may use Python builtin webserver: `python -m http.server` in Python 3 or `python -m SimpleHTTPServer` in Python 2. After doing that, you can visit http://localhost:8000/.
+- Emscripten SDK has a handy `emrun` command: `emrun web/example_emscripten_opengl3.html --browser firefox` which will spawn a temporary local webserver (in Firefox). See https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html for details.
+- Otherwise you may use Python builtin webserver: `python -m http.server -d web` in Python 3 (or run shortcut `make serve`) or `cd web && python -m SimpleHTTPServer` in Python 2. After doing that, you can visit http://localhost:8000/.
 
 ## Obsolete features:
 
