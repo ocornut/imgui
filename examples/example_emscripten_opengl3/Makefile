@@ -15,7 +15,8 @@
 
 CC = emcc
 CXX = em++
-EXE = example_emscripten_opengl3.html
+WEB_DIR = web
+EXE = $(WEB_DIR)/example_emscripten_opengl3.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -78,16 +79,14 @@ LDFLAGS += --shell-file shell_minimal.html
 all: $(EXE)
 	@echo Build complete for $(EXE)
 
-web:
-	mkdir -p $@
+$(WEB_DIR):
+	mkdir $@
 
-serve: all web
-	cp -f $(EXE) $(word 2,$^)/index.html
-		cp -f $(basename $(EXE)).{js,wasm} $(word 2,$^)
-		cd $(word 2,$^) && python3 -m http.server
+serve: all
+	python3 -m http.server -d $(WEB_DIR)
 
-$(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
+$(EXE): $(OBJS) $(WEB_DIR)
+	$(CXX) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean:
-	rm -rf $(EXE) $(OBJS) *.js *.wasm *.wasm.pre web
+	rm -rf $(EXE) $(OBJS) *.js *.wasm *.wasm.pre $(WEB_DIR)
