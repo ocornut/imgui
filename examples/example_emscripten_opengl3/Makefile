@@ -7,16 +7,16 @@
 # (On Windows, you may need to execute emsdk_env.bat or encmdprompt.bat ahead)
 #
 # Running `make` will produce three files:
-#  - example_emscripten_opengl3.html
-#  - example_emscripten_opengl3.js
-#  - example_emscripten_opengl3.wasm
+#  - web/index.html
+#  - web/index.js
+#  - web/index.wasm
 #
 # All three are needed to run the demo.
 
 CC = emcc
 CXX = em++
 WEB_DIR = web
-EXE = $(WEB_DIR)/example_emscripten_opengl3.html
+EXE = $(WEB_DIR)/index.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -89,4 +89,4 @@ $(EXE): $(OBJS) $(WEB_DIR)
 	$(CXX) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean:
-	rm -rf $(EXE) $(OBJS) *.js *.wasm *.wasm.pre $(WEB_DIR)
+	rm -rf $(OBJS) $(WEB_DIR)
