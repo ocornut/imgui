@@ -13,7 +13,6 @@
 // (minor and older changes stripped away, please see git history for details)
 
 #include "imgui.h"
-#include "imgui_internal.h"
 #include "imgui_impl_wgpu.h"
 
 // CRT
@@ -21,6 +20,9 @@
 
 // WebGPU
 #include <webgpu/webgpu.h>
+
+// ImGui prototypes
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
 
 // WebGPU data
 static WGPUDevice                      g_wgpuDevice = NULL;
@@ -48,7 +50,7 @@ struct RenderResources
     WGPUBindGroupLayout ImageBindGroupLayout;
 
     // Resources bind-group to bind the font/image resources to pipeline
-    ImPool<WGPUBindGroup> ImageBindGroups;
+    ImGuiStorage ImageBindGroups;
 
     // Default font-resource of ImGui
     WGPUBindGroup ImageBindGroup;
@@ -424,14 +426,13 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             else
             {
                 // Bind custom texture
-                auto* bind_group = g_resources.ImageBindGroups.GetByKey(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)));
+                auto bind_group = g_resources.ImageBindGroups.GetVoidPtr(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)));
                 if (bind_group) {
-                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, *bind_group, 0, NULL);
+                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, NULL);
                 }
                 else {
                     WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(g_resources.ImageBindGroupLayout, (WGPUTextureView) pcmd->TextureId);
-                    auto* entry = g_resources.ImageBindGroups.GetOrAddByKey(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)));
-                    *entry = image_bind_group;
+                    g_resources.ImageBindGroups.SetVoidPtr(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)), image_bind_group);
 
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
                 }
@@ -702,8 +703,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], g_resources.FontTextureView);
     g_resources.ImageBindGroup = image_bind_group;
-    auto* entry = g_resources.ImageBindGroups.GetOrAddByKey(ImHashData(&g_resources.FontTextureView, sizeof(ImTextureID)));
-    *entry = image_bind_group;
+    g_resources.ImageBindGroups.SetVoidPtr(ImHashData(&g_resources.FontTextureView, sizeof(ImTextureID)), image_bind_group);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
@@ -748,7 +748,7 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     g_resources.Uniforms = NULL;
     g_resources.CommonBindGroup = NULL;
     g_resources.ImageBindGroupLayout = NULL;
-    g_resources.ImageBindGroups.Reserve(100);
+    g_resources.ImageBindGroups.Data.reserve(100);
     g_resources.ImageBindGroup = NULL;
 
     // Create buffers with a default size (they will later be grown as needed)
