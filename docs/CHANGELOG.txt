@@ -74,7 +74,7 @@ Other Changes:
                         TableGetColumnCount(), TableGetColumnName(), TableGetColumnFlags().
   - Added 2 structures: ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs.
   - Added 2 enums:      ImGuiSortDirection, ImGuiTableBgTarget.
-  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flags).
+  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flag).
   - Added 5 colors:     ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
   - Added 1 style var:  ImGuiStyleVar_CellPadding.
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.

@@ -130,6 +130,16 @@ Index of this file:
 //   - when using ImGuiTableFlags_SizingFixedSame with mixed columns, only the Fixed/Auto columns will match their widths to the maximum contents width.
 //   - when using ImGuiTableFlags_SizingStretchSame with mixed columns, only the Stretch columns will match their weight/widths.
 //-----------------------------------------------------------------------------
+// About using column width:
+// If a column is manual resizable or has a width specified with TableSetupColumn():
+//   - you may use GetContentRegionAvail().x to query the width available in a given column.
+//   - right-side alignment features such as SetNextItemWidth(-x) or PushItemWidth(-x) will rely on this width.
+// If the column is not resizable and has no width specified with TableSetupColumn():
+//   - its width will be automatic and be the set to the max of items submitted.
+//   - therefore you generally cannot have ALL items of the columns use e.g. SetNextItemWidth(-FLT_MIN).
+//   - but if the column has one or more item of known/fixed size, this will become the reference width used by SetNextItemWidth(-FLT_MIN).
+//-----------------------------------------------------------------------------
+
 
 //-----------------------------------------------------------------------------
 // TABLES CLIPPING/CULLING
@@ -143,6 +153,10 @@ Index of this file:
 //   So, if you want to use the clipper, make sure to either enable _Resizable, either setup columns explicitly with _WidthFixed.
 //-----------------------------------------------------------------------------
 // About clipping/culling of Columns in Tables:
+// - Both TableSetColumnIndex() and TableNextColumn() return true when the column is visible or performing
+//   width measurements. Otherwise, you may skip submitting the contents of a cell/column, BUT ONLY if you know
+//   it is not going to contribute to row height.
+//   In many situations, you may skip submitting contents for every columns but one (e.g. the first one).
 // - Case A: column is not hidden by user, and at least partially in sight (most common case).
 // - Case B: column is clipped / out of sight (because of scrolling or parent ClipRect): TableNextColumn() return false as a hint but we still allow layout output.
 // - Case C: column is hidden explicitly by the user (e.g. via the context menu, or _DefaultHide column flag, etc.).
@@ -1455,17 +1469,17 @@ int ImGui::TableGetHoveredColumn()
     return (int)table->HoveredColumnBody;
 }
 
-void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
+void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
+    IM_ASSERT(target != ImGuiTableBgTarget_None);
 
     if (color == IM_COL32_DISABLE)
         color = 0;
 
     // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
-    switch (bg_target)
+    switch (target)
     {
     case ImGuiTableBgTarget_CellBg:
     {
@@ -1488,7 +1502,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int colum
         if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
             return;
         IM_ASSERT(column_n == -1);
-        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
+        int bg_idx = (target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
         table->RowBgColor[bg_idx] = color;
         break;
     }
