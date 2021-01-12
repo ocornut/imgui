@@ -142,6 +142,9 @@ Other Changes:
 - Style: Changed default style.WindowRounding value to 0.0f (matches default for multi-viewports).
 - Style: Reduced the size of the resizing grip, made alpha less prominent.
 - Style: Classic: Increase the default alpha value of WindowBg to be closer to other styles.
+- Fonts: Ease Freetype integration with IMGUI_ENABLE_FREETYPE: When enabled, it Will use the library to rasterize font by default.
+  Also renamed IMGUI_DISABLE_STB_TRUETYPE to IMGUI_ENABLE_STB_TRUETYPE, and making it the default rasterizer
+  if IMGUI_ENABLE_FREETYPE is not defined. [@Xipiryon]
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]

@@ -83,6 +83,11 @@ Index of this file:
 #error Use IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #endif
 
+// Enable stb_truetype by default unless Freetype is enable. User can compile both by defining both IMGUI_ENABLE_FREETYPE and IMGUI_ENABLE_STB_TRUETYPE
+#ifndef IMGUI_ENABLE_FREETYPE
+#define IMGUI_ENABLE_STB_TRUETYPE
+#endif
+
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations
 //-----------------------------------------------------------------------------

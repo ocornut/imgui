@@ -32,7 +32,11 @@ Index of this file:
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
+
 #include "imgui_internal.h"
+#ifdef IMGUI_ENABLE_FREETYPE
+#include "misc/freetype/imgui_freetype.h"
+#endif
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #if !defined(alloca)
@@ -131,6 +135,7 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #endif
 
+#ifdef  IMGUI_ENABLE_STB_TRUETYPE
 #ifndef STB_TRUETYPE_IMPLEMENTATION                         // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
 #ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)   ((void)(u), IM_ALLOC(x))
@@ -151,6 +156,7 @@ namespace IMGUI_STB_NAMESPACE
 #include IMGUI_STB_TRUETYPE_FILENAME
 #else
 #include "imstb_truetype.h"
+#endif
 #endif
 #endif
 
@@ -1710,25 +1716,13 @@ void ImGui::ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int ve
 
 ImFontConfig::ImFontConfig()
 {
-    FontData = NULL;
-    FontDataSize = 0;
+    memset(this, 0, sizeof(*this));
     FontDataOwnedByAtlas = true;
-    FontNo = 0;
-    SizePixels = 0.0f;
     OversampleH = 3; // FIXME: 2 may be a better default?
     OversampleV = 1;
-    PixelSnapH = false;
-    GlyphExtraSpacing = ImVec2(0.0f, 0.0f);
-    GlyphOffset = ImVec2(0.0f, 0.0f);
-    GlyphRanges = NULL;
-    GlyphMinAdvanceX = 0.0f;
     GlyphMaxAdvanceX = FLT_MAX;
-    MergeMode = false;
-    RasterizerFlags = 0x00;
     RasterizerMultiply = 1.0f;
     EllipsisChar = (ImWchar)-1;
-    memset(Name, 0, sizeof(Name));
-    DstFont = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -1785,18 +1779,17 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 
 ImFontAtlas::ImFontAtlas()
 {
-    Locked = false;
-    Flags = ImFontAtlasFlags_None;
-    TexID = (ImTextureID)NULL;
-    TexDesiredWidth = 0;
+    memset(this, 0, sizeof(*this));
     TexGlyphPadding = 1;
-
-    TexPixelsAlpha8 = NULL;
-    TexPixelsRGBA32 = NULL;
-    TexWidth = TexHeight = 0;
-    TexUvScale = ImVec2(0.0f, 0.0f);
-    TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     PackIdMouseCursors = PackIdLines = -1;
+
+#ifdef IMGUI_ENABLE_FREETYPE
+    Builder = "freetype";
+#else
+#   ifdef IMGUI_ENABLE_STB_TRUETYPE
+    Builder = "stb_truetype";
+#   endif
+#endif
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -2081,7 +2074,17 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    return ImFontAtlasBuildWithStbTruetype(this);
+#ifdef IMGUI_ENABLE_FREETYPE
+    if (strcmp(Builder, "freetype") == 0)
+        return ImGuiFreeType::BuildFontAtlas(this, 0);
+#endif
+    // Not doing "#else" here, since we could have both
+    // IMGUI_ENABLE_FREETYPE and IMGUI_ENABLE_STB_TRUETYPE defined.
+#ifdef IMGUI_ENABLE_STB_TRUETYPE
+    if (strcmp(Builder, "stb_truetype") == 0)
+        return ImFontAtlasBuildWithStbTruetype(this);
+#endif
+    return false;
 }
 
 void    ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_brighten_factor)
@@ -2101,6 +2104,7 @@ void    ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsig
             data[i] = table[data[i]];
 }
 
+#ifdef IMGUI_ENABLE_STB_TRUETYPE
 // Temporary data for one source font (multiple source fonts can be merged into one destination ImFont)
 // (C++03 doesn't allow instancing ImVector<> with function-local types so we declare the type here.)
 struct ImFontBuildSrcData
@@ -2390,6 +2394,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     ImFontAtlasBuildFinish(atlas);
     return true;
 }
+#endif
 
 void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
 {
