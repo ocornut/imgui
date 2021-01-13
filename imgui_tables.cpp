@@ -80,13 +80,15 @@ Index of this file:
 //   - outer_size.x = 0.0f  ->  Auto width. Generally use all available width. When NOT using scrolling and NOT using any Stretch column, use only necessary width, otherwise same as -FLT_MIN.
 //   - outer_size.x > 0.0f  ->  Fixed width.
 //   Y with ScrollX/ScrollY disabled: we output table directly in current window
-//   - outer_size.y < 0.0f  ->  Bottom-align (but will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y = 0.0f  ->  No minimum height (but will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y > 0.0f  ->  Set Minimum height (but will auto extend, unless NoHostExtendV is set)
+//   - outer_size.y < 0.0f  ->  Bottom-align (but will auto extend, unless _NoHostExtendY is set). Not meaningful is parent window can vertically scroll.
+//   - outer_size.y = 0.0f  ->  No minimum height (but will auto extend, unless _NoHostExtendY is set)
+//   - outer_size.y > 0.0f  ->  Set Minimum height (but will auto extend, unless _NoHostExtenY is set)
 //   Y with ScrollX/ScrollY enabled: using a child window for scrolling
-//   - outer_size.y < 0.0f  ->  Bottom-align
+//   - outer_size.y < 0.0f  ->  Bottom-align. Not meaningful is parent window can vertically scroll.
 //   - outer_size.y = 0.0f  ->  Bottom-align, consistent with BeginChild(). Not recommended unless table is last item in parent window.
 //   - outer_size.y > 0.0f  ->  Set Exact height. Recommended when using Scrolling on any axis.
+// In theory ImGuiTableFlags_NoHostExtendY could be the default and any non-scrolling tables with outer_size.y != 0.0f would use exact height.
+// This would be consistent but perhaps less useful and more confusing (as vertically clipped items are not easily noticeable)
 //-----------------------------------------------------------------------------
 // About 'inner_width':
 //   With ScrollX disabled:
@@ -1176,6 +1178,7 @@ void    ImGui::EndTable()
     inner_window->DC.PrevLineSize = table->HostBackupPrevLineSize;
     inner_window->DC.CurrLineSize = table->HostBackupCurrLineSize;
     inner_window->DC.CursorMaxPos = table->HostBackupCursorMaxPos;
+
     if (inner_window != outer_window)
     {
         // Both OuterRect/InnerRect are valid from BeginTable
@@ -1183,10 +1186,10 @@ void    ImGui::EndTable()
     }
     else if (!(flags & ImGuiTableFlags_NoHostExtendY))
     {
-        // Patch OuterRect/InnerRect height
-        table->OuterRect.Max.y = table->InnerRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->DC.CursorPos.y);
-        inner_window->DC.CursorMaxPos.y = table->RowPosY2;
+        table->OuterRect.Max.y = table->InnerRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->DC.CursorPos.y); // Patch OuterRect/InnerRect height
+        outer_window->DC.CursorMaxPos.y = table->RowPosY2;
     }
+
     table->WorkRect.Max.y = ImMax(table->WorkRect.Max.y, table->OuterRect.Max.y);
     table->LastOuterHeight = table->OuterRect.GetHeight();
 
@@ -2353,7 +2356,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     const float border_size = TABLE_BORDER_SIZE;
     const float draw_y1 = table->InnerRect.Min.y;
     const float draw_y2_body = table->InnerRect.Max.y;
-    const float draw_y2_head = table->IsUsingHeaders ? ((table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight) : draw_y1;
+    const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight) : draw_y1;
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
