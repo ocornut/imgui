@@ -1047,7 +1047,7 @@ enum ImGuiTabItemFlags_
 //      The typical use of mixing sizing policies is: any number of LEADING Fixed columns, followed by one or two TRAILING Stretch columns.
 //      (this is because the visible order of columns have subtle but necessary effects on how they react to manual resizing).
 // - When ScrollX is on:
-//    - Table defaults to ImGuiTableFlags_SizingFixedFit -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed or ImGuiTableColumnFlags_WidthAuto.
+//    - Table defaults to ImGuiTableFlags_SizingFixedFit -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed
 //    - Columns sizing policy allowed: Fixed/Auto mostly.
 //    - Fixed Columns can be enlarged as needed. Table will show an horizontal scrollbar if needed.
 //    - When using auto-resizing (non-resizable) fixed columns, querying the content width to use item right-alignment e.g. SetNextItemWidth(-FLT_MIN) doesn't make sense, would create a feedback loop.
@@ -1118,7 +1118,6 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_DefaultSort               = 1 << 1,   // Default as a sorting column.
     ImGuiTableColumnFlags_WidthStretch              = 1 << 2,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is _SizingStretchSame or _SizingStretchProp).
     ImGuiTableColumnFlags_WidthFixed                = 1 << 3,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is _SizingFixedFit and table is resizable).
-    ImGuiTableColumnFlags_WidthAuto                 = 1 << 4,   // Column will not stretch and keep resizing based on submitted contents (default if table sizing policy is _SizingFixedFit and table is not resizable, or policy is _SizingFixedSame). Generally compatible with using right-most fitting widgets (e.g. SetNextItemWidth(-FLT_MIN))
     ImGuiTableColumnFlags_NoResize                  = 1 << 5,   // Disable manual resizing.
     ImGuiTableColumnFlags_NoReorder                 = 1 << 6,   // Disable manual reordering this column, this will also prevent other columns from crossing over this column.
     ImGuiTableColumnFlags_NoHide                    = 1 << 7,   // Disable ability to hide/disable this column.
@@ -1139,10 +1138,15 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_IsHovered                 = 1 << 23,  // Status: is hovered by mouse
 
     // [Internal] Combinations and masks
-    ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAuto,
+    ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed,
     ImGuiTableColumnFlags_IndentMask_               = ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_IndentDisable,
     ImGuiTableColumnFlags_StatusMask_               = ImGuiTableColumnFlags_IsEnabled | ImGuiTableColumnFlags_IsVisible | ImGuiTableColumnFlags_IsSorted | ImGuiTableColumnFlags_IsHovered,
     ImGuiTableColumnFlags_NoDirectResize_           = 1 << 30   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
+
+    // Obsolete names (will be removed soon)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    //ImGuiTableColumnFlags_WidthAuto               = ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, // Column will not stretch and keep resizing based on submitted contents.
+#endif
 };
 
 // Flags for ImGui::TableNextRow()
