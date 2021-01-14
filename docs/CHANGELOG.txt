@@ -81,6 +81,7 @@ Other Changes:
 - Tab Bar: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
 - Tab Bar: Do not display a tooltip if the name already fits over a given tab. (#3521)
 - Tab Bar: Fixed minor/unlikely bug skipping over a button when scrolling left with arrows.
+- Tab Bar: Requested ideal content size (for auto-fit) doesn't affect horizontal scrolling. (#3414)
 - Drag and Drop: Fix losing drop source ActiveID (and often source tooltip) when opening a TreeNode()
   or CollapsingHeader() while dragging. (#1738)
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
@@ -90,7 +91,7 @@ Other Changes:
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
-- Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
+- Combo: Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
