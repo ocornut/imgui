@@ -1614,7 +1614,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         if (popup_window->WasActive)
         {
             // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
-            ImVec2 size_expected = CalcWindowExpectedSize(popup_window);
+            ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
             if (flags & ImGuiComboFlags_PopupAlignLeft)
                 popup_window->AutoPosLastDirection = ImGuiDir_Left; // "Below, Toward Left"
             else

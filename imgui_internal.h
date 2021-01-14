@@ -1637,7 +1637,8 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec2                  CursorPos;              // Current emitting position, in absolute coordinates.
     ImVec2                  CursorPosPrevLine;
     ImVec2                  CursorStartPos;         // Initial position after Begin(), generally ~ window position + WindowPadding.
-    ImVec2                  CursorMaxPos;           // Used to implicitly calculate the size of our contents, always growing during the frame. Used to calculate window->ContentSize at the beginning of next frame
+    ImVec2                  CursorMaxPos;           // Used to implicitly calculate ContentSize at the beginning of next frame. Always growing during the frame.
+    ImVec2                  IdealMaxPos;            // Used to implicitly calculate ContentSizeIdeal.
     ImVec2                  CurrLineSize;
     ImVec2                  PrevLineSize;
     float                   CurrLineTextBaseOffset; // Baseline offset (0.0f by default on a new line, generally == style.FramePadding.y when a framed item has been added).
@@ -1695,6 +1696,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  ContentSize;                        // Size of contents/scrollable client area (calculated from the extents reach of the cursor) from previous frame. Does not include window decoration or window padding.
+    ImVec2                  ContentSizeIdeal;
     ImVec2                  ContentSizeExplicit;                // Size of contents/scrollable client area explicitly request by the user via SetNextWindowContentSize().
     ImVec2                  WindowPadding;                      // Window padding at the time of Begin().
     float                   WindowRounding;                     // Window rounding at the time of Begin(). May be clamped lower to avoid rendering artifacts with title bar, menu bar etc.
@@ -2146,7 +2148,7 @@ namespace ImGui
     IMGUI_API ImGuiWindow*  FindWindowByID(ImGuiID id);
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window);
-    IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
+    IMGUI_API ImVec2        CalcWindowNextAutoFitSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
