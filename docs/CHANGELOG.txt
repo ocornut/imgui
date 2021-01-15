@@ -143,7 +143,7 @@ Other Changes:
                         TableGetColumnCount(), TableGetColumnName(), TableGetColumnFlags().
   - Added 2 structures: ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs.
   - Added 2 enums:      ImGuiSortDirection, ImGuiTableBgTarget.
-  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flags).
+  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flag).
   - Added 5 colors:     ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
   - Added 1 style var:  ImGuiStyleVar_CellPadding.
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
@@ -192,11 +192,13 @@ Other Changes:
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
+- Backends: DX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically. (#3696) [@Mattiwatti]
 - Backends: Win32: Fix setting of io.DisplaySize to invalid/uninitialized data after hwnd has been closed.
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
 - Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
 - Examples: Apple+Metal: Forward events down so OS key combination like Cmd+Q can work. (#3554) [@rokups]
 - Examples: Emscripten: Renamed example_emscripten/ to example_emscripten_opengl3/. (#3632)
+- Examples: Emscripten: Added 'make serve' helper to spawn a web-server on localhost. (#3705) [@Horki]
 - Examples: DirectX12: Move ImGui::Render() call above the first barrier to clarify its lack of effect on the graphics pipe.
 - CI: Fix testing for Windows DLL builds. (#3603, #3601) [@iboB]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
