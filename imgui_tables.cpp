@@ -1234,7 +1234,13 @@ void    ImGui::EndTable()
     table->ColumnsAutoFitWidth = width_spacings + (table->CellPaddingX * 2.0f) * table->ColumnsEnabledCount;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         if (table->EnabledMaskByIndex & ((ImU64)1 << column_n))
-            table->ColumnsAutoFitWidth += TableGetColumnWidthAuto(table, &table->Columns[column_n]);
+        {
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && !(column->Flags & ImGuiTableColumnFlags_NoResize))
+                table->ColumnsAutoFitWidth += column->WidthRequest;
+            else
+                table->ColumnsAutoFitWidth += TableGetColumnWidthAuto(table, column);
+        }
 
     // Update scroll
     if ((table->Flags & ImGuiTableFlags_ScrollX) == 0 && inner_window != outer_window)
@@ -1457,7 +1463,7 @@ ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
 // Return the resizing ID for the right-side of the given column.
 ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no)
 {
-    IM_ASSERT(column_n < table->ColumnsCount);
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
     ImGuiID id = table->ID + 1 + (instance_no * table->ColumnsCount) + column_n;
     return id;
 }
