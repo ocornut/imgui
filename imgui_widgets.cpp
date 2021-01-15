@@ -692,7 +692,13 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-    RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+
+    ImRect render_text_pos = ImRect(bb.Min + style.FramePadding, bb.Max - style.FramePadding);
+    if (g.LogEnabled)
+        LogRenderedText(&render_text_pos.Min, "[");
+    RenderTextClipped(render_text_pos.Min, render_text_pos.Max ,label, NULL, &label_size, style.ButtonTextAlign, &bb);
+    if (g.LogEnabled)
+        LogRenderedText(&render_text_pos.Min, "]");
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
@@ -1097,10 +1103,12 @@ bool ImGui::Checkbox(const char* label, bool* v)
         RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
     }
 
+
+        ImVec2 render_text_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
     if (g.LogEnabled)
-        LogRenderedText(&total_bb.Min, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
+        LogRenderedText(&render_text_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
     if (label_size.x > 0.0f)
-        RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
+        RenderText(render_text_pos, label);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
@@ -1198,10 +1206,11 @@ bool ImGui::RadioButton(const char* label, bool active)
         window->DrawList->AddCircle(center, radius, GetColorU32(ImGuiCol_Border), 16, style.FrameBorderSize);
     }
 
+    ImVec2 render_text_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
     if (g.LogEnabled)
-        LogRenderedText(&total_bb.Min, active ? "(x)" : "( )");
+        LogRenderedText(&render_text_pos, active ? "(x)" : "( )");
     if (label_size.x > 0.0f)
-        RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
+        RenderText(render_text_pos, label);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return pressed;
@@ -1385,7 +1394,11 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
             // Draw
             window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x, bb.Min.y), GetColorU32(ImGuiCol_Separator));
             if (g.LogEnabled)
+            {
                 LogRenderedText(&bb.Min, "--------------------------------");
+                LogRenderedTextNewLine(); // Separator isn't tall enough to trigger a new line automatically in LogRenderText
+            }
+
         }
         if (columns)
         {
@@ -5799,11 +5812,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (g.LogEnabled)
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
-            const char log_prefix[] = "\n##";
-            const char log_suffix[] = "##";
-            LogRenderedText(&text_pos, log_prefix, log_prefix + 3);
+            const char log_prefix[] = "##";
+            LogRenderedText(&text_pos, log_prefix, log_prefix + 2);
             RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
-            LogRenderedText(&text_pos, log_suffix, log_suffix + 2);
+            LogRenderedText(&text_pos, log_prefix, log_prefix + 2);
         }
         else
         {

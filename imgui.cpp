@@ -7572,7 +7572,7 @@ void ImGui::BeginGroup()
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     if (g.LogEnabled)
-        g.LogLinePosY = -FLT_MAX; // To enforce Log carriage return
+        LogRenderedTextNewLine();
 }
 
 void ImGui::EndGroup()
@@ -7593,7 +7593,7 @@ void ImGui::EndGroup()
     window->DC.CurrLineSize = group_data.BackupCurrLineSize;
     window->DC.CurrLineTextBaseOffset = group_data.BackupCurrLineTextBaseOffset;
     if (g.LogEnabled)
-        g.LogLinePosY = -FLT_MAX; // To enforce Log carriage return
+        LogRenderedTextNewLine();
 
     if (!group_data.EmitItem)
     {
@@ -9867,7 +9867,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     if (!text_end)
         text_end = FindRenderedTextEnd(text, text_end);
 
-    const bool log_new_line = ref_pos && (ref_pos->y > g.LogLinePosY + 1);
+    const bool log_new_line = ref_pos && (ref_pos->y > g.LogLinePosY + g.Style.FramePadding.y + 1);
     if (ref_pos)
         g.LogLinePosY = ref_pos->y;
     if (log_new_line)
@@ -9895,6 +9895,9 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
             else
                 LogText(" %.*s", char_count, line_start);
             g.LogLineFirstItem = false;
+
+            if (*line_end == '\n')
+                LogRenderedTextNewLine();
         }
         else if (log_new_line)
         {
@@ -9907,6 +9910,13 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
             break;
         text_remaining = line_end + 1;
     }
+}
+
+void ImGui::LogRenderedTextNewLine()
+{
+    // To enforce Log carriage return
+    ImGuiContext& g = *GImGui;
+    g.LogLinePosY = -FLT_MAX;
 }
 
 // Start logging/capturing text output

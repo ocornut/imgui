@@ -30,6 +30,15 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.81 (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Log/Capture: Fix various new line/spacing issue by using same render text position when there are both
+  RenderText and LogRenderedText call in widget code.
+  Also Buttons are now enclosed in bracket. [@Xipiryon]
 
 -----------------------------------------------------------------------
  VERSION 1.81 WIP (In Progress)
