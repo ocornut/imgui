@@ -11931,6 +11931,50 @@ void ImGui::DestroyPlatformWindows()
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
+// Typical Docking call flow: (root level is generally public API):
+//-----------------------------------------------------------------------------
+// - NewFrame()                               new dear imgui frame
+//    | DockContextUpdateUndocking()          - process queued undocking requests
+//    | - DockContextProcessUndockWindow()    - process one window undocking request
+//    | - DockContextProcessUndockNode()      - process one whole node undocking request
+//    | DockContextUpdateDocking()            - process queue docking requests, create floating dock nodes
+//    | - update g.HoveredDockNode            - [debug] update node hovered by mouse
+//    | - DockContextProcessDock()            - process one docking request
+//    | - DockNodeUpdate()
+//    |   - DockNodeUpdateForRootNode()
+//    |     - DockNodeUpdateVisibleFlagAndInactiveChilds()
+//    |     - DockNodeFindInfo()
+//    |   - destroy unused node or tab bar
+//    |   - create dock node host window
+//    |      - Begin() etc.
+//    |   - DockNodeStartMouseMovingWindow()
+//    |   - DockNodeTreeUpdatePosSize()
+//    |   - DockNodeTreeUpdateSplitter()
+//    |   - draw node background
+//    |   - DockNodeUpdateTabBar()            - create/update tab bar for a docking node
+//    |     - DockNodeAddTabBar()
+//    |     - DockNodeUpdateWindowMenu()
+//    |     - DockNodeCalcTabBarLayout()
+//    |     - BeginTabBarEx()
+//    |     - TabItemEx() calls
+//    |     - EndTabBar()
+//    |   - BeginDockableDragDropTarget()
+//    |      - DockNodeUpdate()               - recurse into child nodes...
+//-----------------------------------------------------------------------------
+// - DockSpace()                              user submit a dockspace into a window
+//    | Begin(Child)                          - create a child window
+//    | DockNodeUpdate()                      - call main dock node update function
+//    | End(Child)
+//    | ItemSize()
+//-----------------------------------------------------------------------------
+// - Begin()
+//    | BeginDocked()
+//    | BeginDockableDragDropSource()
+//    | BeginDockableDragDropTarget()
+//    | - DockNodePreviewDockRender()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
 // Docking: Internal Types
 //-----------------------------------------------------------------------------
 // - ImGuiDockRequestType
@@ -12191,7 +12235,9 @@ void ImGui::DockContextUpdateDocking(ImGuiContext* ctx)
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
         return;
 
-    // Store hovered dock node. We could in theory use DockNodeTreeFindVisibleNodeByPos() on the root host dock node, but using ->DockNode is a good shortcut.
+    // [DEBUG] Store hovered dock node.
+    // We could in theory use DockNodeTreeFindVisibleNodeByPos() on the root host dock node, but using ->DockNode is a good shortcut.
+    // Note this is mostly a debug thing and isn't actually used for docking target, because docking involve more detailed filtering.
     g.HoveredDockNode = NULL;
     if (ImGuiWindow* hovered_window = g.HoveredWindowUnderMovingWindow)
     {
@@ -13582,6 +13628,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         if (window->LastFrameActive + 1 >= g.FrameCount || !node_was_active)
         {
             ImGuiTabItemFlags tab_item_flags = 0;
+            tab_item_flags |= window->WindowClass.TabItemFlagsOverrideSet;
             if (window->Flags & ImGuiWindowFlags_UnsavedDocument)
                 tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
             if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
