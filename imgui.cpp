@@ -2488,6 +2488,11 @@ struct ImGuiStyleVarInfo
     void*           GetVarPtr(ImGuiStyle* style) const { return (void*)((unsigned char*)style + Offset); }
 };
 
+static const ImGuiCol GWindowDockStyleColors[ImGuiWindowDockStyleCol_COUNT] =
+{
+    ImGuiCol_Text, ImGuiCol_Tab, ImGuiCol_TabHovered, ImGuiCol_TabActive, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocusedActive
+};
+
 static const ImGuiStyleVarInfo GStyleVarInfo[] =
 {
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },               // ImGuiStyleVar_Alpha
@@ -4059,7 +4064,7 @@ void ImGui::NewFrame()
 
     // Undocking
     // (needs to be before UpdateMouseMovingWindowNewFrame so the window is already offset and following the mouse on the detaching frame)
-    DockContextUpdateUndocking(&g);
+    DockContextNewFrameUpdateUndocking(&g);
 
     // Find hovered window
     // (needs to be before UpdateMouseMovingWindowNewFrame so we fill g.HoveredWindowUnderMovingWindow on the mouse release frame)
@@ -4123,7 +4128,7 @@ void ImGui::NewFrame()
     ClosePopupsOverWindow(g.NavWindow, false);
 
     // Docking
-    DockContextUpdateDocking(&g);
+    DockContextNewFrameUpdateDocking(&g);
 
     // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
     UpdateDebugToolItemPicker();
@@ -11934,10 +11939,10 @@ void ImGui::DestroyPlatformWindows()
 // Typical Docking call flow: (root level is generally public API):
 //-----------------------------------------------------------------------------
 // - NewFrame()                               new dear imgui frame
-//    | DockContextUpdateUndocking()          - process queued undocking requests
+//    | DockContextNewFrameUpdateUndocking()  - process queued undocking requests
 //    | - DockContextProcessUndockWindow()    - process one window undocking request
 //    | - DockContextProcessUndockNode()      - process one whole node undocking request
-//    | DockContextUpdateDocking()            - process queue docking requests, create floating dock nodes
+//    | DockContextNewFrameUpdateUndocking()  - process queue docking requests, create floating dock nodes
 //    | - update g.HoveredDockNode            - [debug] update node hovered by mouse
 //    | - DockContextProcessDock()            - process one docking request
 //    | - DockNodeUpdate()
@@ -12124,8 +12129,8 @@ namespace ImGui
 // - DockContextShutdown()
 // - DockContextClearNodes()
 // - DockContextRebuildNodes()
-// - DockContextUpdateUndocking()
-// - DockContextUpdateDocking()
+// - DockContextNewFrameUpdateUndocking()
+// - DockContextNewFrameUpdateDocking()
 // - DockContextFindNodeByID()
 // - DockContextBindNodeToWindow()
 // - DockContextGenNodeID()
@@ -12184,7 +12189,7 @@ void ImGui::DockContextRebuildNodes(ImGuiContext* ctx)
 }
 
 // Docking context update function, called by NewFrame()
-void ImGui::DockContextUpdateUndocking(ImGuiContext* ctx)
+void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
 {
     ImGuiContext& g = *ctx;
     ImGuiDockContext* dc  = &ctx->DockContext;
@@ -12228,7 +12233,7 @@ void ImGui::DockContextUpdateUndocking(ImGuiContext* ctx)
 }
 
 // Docking context update function, called by NewFrame()
-void ImGui::DockContextUpdateDocking(ImGuiContext* ctx)
+void ImGui::DockContextNewFrameUpdateDocking(ImGuiContext* ctx)
 {
     ImGuiContext& g = *ctx;
     ImGuiDockContext* dc  = &ctx->DockContext;
@@ -13321,8 +13326,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
             node->LastFocusedNodeId = g.NavWindow->RootWindowDockStop->DockNode->ID;
 
-    // We need to draw a background at the root level if requested by ImGuiDockNodeFlags_PassthruCentralNode, but we will only know the correct pos/size after
-    // processing the resizing splitters. So we are using the DrawList channel splitting facility to submit drawing primitives out of order!
+    // We need to draw a background at the root level if requested by ImGuiDockNodeFlags_PassthruCentralNode, but we will only know the correct pos/size
+    // _after_ processing the resizing splitters. So we are using the DrawList channel splitting facility to submit drawing primitives out of order!
     const bool render_dockspace_bg = node->IsRootNode() && host_window && (node_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0;
     if (render_dockspace_bg)
     {
@@ -13561,6 +13566,17 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     ImVec2 window_menu_button_pos;
     DockNodeCalcTabBarLayout(node, &title_bar_rect, &tab_bar_rect, &window_menu_button_pos);
 
+    // Submit new tabs and apply NavWindow focus back to the tab bar. They will be added as Unsorted and sorted below based on relative DockOrder value.
+    const int tabs_count_old = tab_bar->Tabs.Size;
+    for (int window_n = 0; window_n < node->Windows.Size; window_n++)
+    {
+        ImGuiWindow* window = node->Windows[window_n];
+        if (g.NavWindow && g.NavWindow->RootWindowDockStop == window)
+            tab_bar->SelectedTabId = window->ID;
+        if (TabBarFindTabByID(tab_bar, window->ID) == NULL)
+            TabBarAddTab(tab_bar, ImGuiTabItemFlags_Unsorted, window);
+    }
+
     // Title bar
     if (is_focused)
         node->LastFrameFocused = g.FrameCount;
@@ -13574,17 +13590,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             OpenPopup("#WindowMenu");
         if (IsItemActive())
             focus_tab_id = tab_bar->SelectedTabId;
-    }
-
-    // Submit new tabs and apply NavWindow focus back to the tab bar. They will be added as Unsorted and sorted below based on relative DockOrder value.
-    const int tabs_count_old = tab_bar->Tabs.Size;
-    for (int window_n = 0; window_n < node->Windows.Size; window_n++)
-    {
-        ImGuiWindow* window = node->Windows[window_n];
-        if (g.NavWindow && g.NavWindow->RootWindowDockStop == window)
-            tab_bar->SelectedTabId = window->ID;
-        if (TabBarFindTabByID(tab_bar, window->ID) == NULL)
-            TabBarAddTab(tab_bar, ImGuiTabItemFlags_Unsorted, window);
     }
 
     // If multiple tabs are appearing on the same frame, sort them based on their persistent DockOrder value
@@ -13618,6 +13623,11 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     BeginTabBarEx(tab_bar, tab_bar_rect, tab_bar_flags, node);
     //host_window->DrawList->AddRect(tab_bar_rect.Min, tab_bar_rect.Max, IM_COL32(255,0,255,255));
 
+    // Backup style colors
+    ImVec4 backup_style_cols[ImGuiWindowDockStyleCol_COUNT];
+    for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+        backup_style_cols[color_n] = g.Style.Colors[GWindowDockStyleColors[color_n]];
+
     // Submit actual tabs
     node->VisibleWindow = NULL;
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
@@ -13633,6 +13643,10 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
             if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
                 tab_item_flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
+
+            // Apply stored style overrides for the window
+            for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+                g.Style.Colors[GWindowDockStyleColors[color_n]] = ColorConvertU32ToFloat4(window->DockStyle.Colors[color_n]);
 
             bool tab_open = true;
             TabItemEx(tab_bar, window->Name, window->HasCloseButton ? &tab_open : NULL, tab_item_flags, window);
@@ -13650,6 +13664,10 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 host_window->NavLastIds[1] = window->ID;
         }
     }
+
+    // Restore style colors
+    for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+        g.Style.Colors[GWindowDockStyleColors[color_n]] = backup_style_cols[color_n];
 
     // Notify root of visible window (used to display title in OS task bar)
     if (node->VisibleWindow)
@@ -13999,7 +14017,6 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         overlay_draw_lists[overlay_draw_lists_count++] = GetForegroundDrawList(root_payload->Viewport);
 
     // Draw main preview rectangle
-    const ImU32 overlay_col_tabs = GetColorU32(ImGuiCol_TabActive);
     const ImU32 overlay_col_main = GetColorU32(ImGuiCol_DockingPreview, is_transparent_payload ? 0.60f : 0.40f);
     const ImU32 overlay_col_drop = GetColorU32(ImGuiCol_DockingPreview, is_transparent_payload ? 0.90f : 0.70f);
     const ImU32 overlay_col_drop_hovered = GetColorU32(ImGuiCol_DockingPreview, is_transparent_payload ? 1.20f : 1.00f);
@@ -14054,6 +14071,9 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
             ImVec2 tab_size = TabItemCalcSize(payload_window->Name, payload_window->HasCloseButton);
             ImRect tab_bb(tab_pos.x, tab_pos.y, tab_pos.x + tab_size.x, tab_pos.y + tab_size.y);
             tab_pos.x += tab_size.x + g.Style.ItemInnerSpacing.x;
+            const ImU32 overlay_col_text = GetColorU32(payload_window->DockStyle.Colors[ImGuiWindowDockStyleCol_Text]);
+            const ImU32 overlay_col_tabs = GetColorU32(payload_window->DockStyle.Colors[ImGuiWindowDockStyleCol_TabActive]);
+            PushStyleColor(ImGuiCol_Text, overlay_col_text);
             for (int overlay_n = 0; overlay_n < overlay_draw_lists_count; overlay_n++)
             {
                 ImGuiTabItemFlags tab_flags = ImGuiTabItemFlags_Preview | ((payload_window->Flags & ImGuiWindowFlags_UnsavedDocument) ? ImGuiTabItemFlags_UnsavedDocument : 0);
@@ -14064,6 +14084,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
                 if (!tab_bar_rect.Contains(tab_bb))
                     overlay_draw_lists[overlay_n]->PopClipRect();
             }
+            PopStyleColor();
         }
     }
 
@@ -15142,7 +15163,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace node can be maintained alive while being inactive with ImGuiDockNodeFlags_KeepAliveOnly.
     if (node->LastFrameAlive < g.FrameCount)
     {
-        // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextUpdateDocking()
+        // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextNewFrameUpdateDocking()
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
         if (root_node->LastFrameAlive < g.FrameCount)
         {
@@ -15155,6 +15176,10 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         }
         return;
     }
+
+    // Store style overrides
+    for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+        window->DockStyle.Colors[color_n] = ColorConvertFloat4ToU32(g.Style.Colors[GWindowDockStyleColors[color_n]]);
 
     // Fast path return. It is common for windows to hold on a persistent DockId but be the only visible window,
     // and never create neither a host window neither a tab bar.
@@ -15227,6 +15252,10 @@ void ImGui::BeginDockableDragDropSource(ImGuiWindow* window)
     {
         SetDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, &window, sizeof(window));
         EndDragDropSource();
+
+        // Store style overrides
+        for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+            window->DockStyle.Colors[color_n] = ColorConvertFloat4ToU32(g.Style.Colors[GWindowDockStyleColors[color_n]]);
     }
 }
 

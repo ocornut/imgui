@@ -1247,6 +1247,26 @@ struct ImGuiDockNode
     ImRect                  Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
 };
 
+// List of colors that are stored at the time of Begin() into Docked Windows.
+// We currently store the packed colors in a simple array window->DockStyle.Colors[].
+// A better solution may involve appending into a log of colors in ImGuiContext + store offsets into those arrays in ImGuiWindow,
+// but it would be more complex as we'd need to double-buffer both as e.g. drop target may refer to window from last frame.
+enum ImGuiWindowDockStyleCol
+{
+    ImGuiWindowDockStyleCol_Text,
+    ImGuiWindowDockStyleCol_Tab,
+    ImGuiWindowDockStyleCol_TabHovered,
+    ImGuiWindowDockStyleCol_TabActive,
+    ImGuiWindowDockStyleCol_TabUnfocused,
+    ImGuiWindowDockStyleCol_TabUnfocusedActive,
+    ImGuiWindowDockStyleCol_COUNT
+};
+
+struct ImGuiWindowDockStyle
+{
+    ImU32 Colors[ImGuiWindowDockStyleCol_COUNT];
+};
+
 struct ImGuiDockContext
 {
     ImGuiStorage                    Nodes;          // Map ID -> ImGuiDockNode*: Active nodes
@@ -1970,15 +1990,16 @@ struct IMGUI_API ImGuiWindow
     bool                    MemoryCompacted;                    // Set when window extraneous data have been garbage collected
 
     // Docking
+    bool                    DockIsActive        :1;             // When docking artifacts are actually visible. When this is set, DockNode is guaranteed to be != NULL. ~~ (DockNode != NULL) && (DockNode->Windows.Size > 1).
+    bool                    DockTabIsVisible    :1;             // Is our window visible this frame? ~~ is the corresponding tab selected?
+    bool                    DockTabWantClose    :1;
+    short                   DockOrder;                          // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
+    ImGuiWindowDockStyle    DockStyle;
     ImGuiDockNode*          DockNode;                           // Which node are we docked into. Important: Prefer testing DockIsActive in many cases as this will still be set when the dock node is hidden.
     ImGuiDockNode*          DockNodeAsHost;                     // Which node are we owning (for parent windows)
     ImGuiID                 DockId;                             // Backup of last valid DockNode->ID, so single window remember their dock node id even when they are not bound any more
     ImGuiItemStatusFlags    DockTabItemStatusFlags;
     ImRect                  DockTabItemRect;
-    short                   DockOrder;                          // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
-    bool                    DockIsActive        :1;             // When docking artifacts are actually visible. When this is set, DockNode is guaranteed to be != NULL. ~~ (DockNode != NULL) && (DockNode->Windows.Size > 1).
-    bool                    DockTabIsVisible    :1;             // Is our window visible this frame? ~~ is the corresponding tab selected?
-    bool                    DockTabWantClose    :1;
 
 public:
     ImGuiWindow(ImGuiContext* context, const char* name);
@@ -2504,8 +2525,8 @@ namespace ImGui
     IMGUI_API void          DockContextShutdown(ImGuiContext* ctx);
     IMGUI_API void          DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_settings_refs); // Use root_id==0 to clear all
     IMGUI_API void          DockContextRebuildNodes(ImGuiContext* ctx);
-    IMGUI_API void          DockContextUpdateUndocking(ImGuiContext* ctx);
-    IMGUI_API void          DockContextUpdateDocking(ImGuiContext* ctx);
+    IMGUI_API void          DockContextNewFrameUpdateUndocking(ImGuiContext* ctx);
+    IMGUI_API void          DockContextNewFrameUpdateDocking(ImGuiContext* ctx);
     IMGUI_API ImGuiID       DockContextGenNodeID(ImGuiContext* ctx);
     IMGUI_API void          DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer);
     IMGUI_API void          DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
