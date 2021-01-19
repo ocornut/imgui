@@ -1289,28 +1289,44 @@ void    ImGui::EndTable()
     // Layout in outer window
     // (FIXME: To allow auto-fit and allow desirable effect of SameLine() we dissociate 'used' vs 'ideal' size by overriding
     // CursorPosPrevLine and CursorMaxPos manually. That should be a more general layout feature, see same problem e.g. #3414)
-    const float outer_width = table->IsOuterRectMinFitX ? table->WorkRect.GetWidth() : table->ColumnsAutoFitWidth;
-    const float outer_height = table->OuterRect.GetHeight();
     if (inner_window != outer_window)
     {
         EndChild();
     }
     else
     {
-        ItemSize(ImVec2(outer_width, outer_height));
-        outer_window->DC.CursorPosPrevLine.x = table->OuterRect.Max.x;
+        ItemSize(table->OuterRect.GetSize());
+        ItemAdd(table->OuterRect, 0);
     }
 
-    // Override declared contents width to enable auto-resize on the X axis when possible.
-    // FIXME-TABLE: This can be improved (e.g. for Fixed columns we don't want to auto AutoFitWidth? or propagate window auto-fit to table?)
-    if (table->Flags & ImGuiTableFlags_ScrollX)
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, table->OuterRect.Min.x + table->ColumnsGivenWidth + inner_window->ScrollbarSizes.x); // For outer scrolling
+    // Override declared contents width/height to enable auto-resize while not needlessly adding a scrollbar
+    if (table->IsOuterRectMinFitX)
+    {
+        // FIXME-TABLE: Could we remove this section?
+        IM_ASSERT((table->Flags & ImGuiTableFlags_ScrollX) == 0);
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth);
+    }
+    else if (table->UserOuterSize.x <= 0.0f)
+    {
+        const float decoration_size = (table->Flags & ImGuiTableFlags_ScrollX) ? inner_window->ScrollbarSizes.x : 0.0f;
+        outer_window->DC.IdealMaxPos.x = ImMax(outer_window->DC.IdealMaxPos.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth + decoration_size - table->UserOuterSize.x);
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, ImMin(table->OuterRect.Max.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth));
+    }
     else
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, table->WorkRect.Min.x + outer_width); // For auto-fit
-
-    // Override declared contents height
-    if (inner_window == outer_window && !(flags & ImGuiTableFlags_NoHostExtendY))
-        outer_window->DC.CursorMaxPos.y = ImMax(outer_window->DC.CursorMaxPos.y, inner_content_max_y);
+    {
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, table->OuterRect.Max.x);
+    }
+    if (table->UserOuterSize.y <= 0.0f)
+    {
+        const float decoration_size = (table->Flags & ImGuiTableFlags_ScrollY) ? inner_window->ScrollbarSizes.y : 0.0f;
+        outer_window->DC.IdealMaxPos.y = ImMax(outer_window->DC.IdealMaxPos.y, inner_content_max_y + decoration_size - table->UserOuterSize.y);
+        outer_window->DC.CursorMaxPos.y = ImMax(backup_outer_max_pos.y, ImMin(table->OuterRect.Max.y, inner_content_max_y));
+    }
+    else
+    {
+        // OuterRect.Max.y may already have been pushed downward from the initial value (unless ImGuiTableFlags_NoHostExtendY is set)
+        outer_window->DC.CursorMaxPos.y = ImMax(backup_outer_max_pos.y, table->OuterRect.Max.y);
+    }
 
     // Save settings
     if (table->IsSettingsDirty)
