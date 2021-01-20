@@ -92,6 +92,7 @@ Other Changes:
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
 - Combo: Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
+- DragFloat, DragInt: very slightly increased mouse drag threshold + expressing it as a factor of default value.
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)

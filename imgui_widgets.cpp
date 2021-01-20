@@ -86,6 +86,10 @@ Index of this file:
 // Data
 //-------------------------------------------------------------------------
 
+// Widgets
+static const float          DRAGDROP_HOLD_TO_OPEN_TIMER = 0.70f;    // Time for drag-hold to activate items accepting the ImGuiButtonFlags_PressedOnDragDropHold button behavior.
+static const float          DRAG_MOUSE_THRESHOLD_FACTOR = 0.50f;    // Multiplier for the default value of io.MouseDragThreshold to make DragFloat/DragInt react faster to mouse drags.
+
 // Those MIN/MAX values are not define because we need to point to them
 static const signed char    IM_S8_MIN  = -128;
 static const signed char    IM_S8_MAX  = 127;
@@ -516,10 +520,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.DragDropActive && (flags & ImGuiButtonFlags_PressedOnDragDropHold) && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
         if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         {
-            const float DRAG_DROP_HOLD_TIMER = 0.70f;
             hovered = true;
             SetHoveredID(id);
-            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAG_DROP_HOLD_TIMER, 0.00f))
+            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAGDROP_HOLD_TO_OPEN_TIMER, 0.00f))
             {
                 pressed = true;
                 g.DragDropHoldJustPressedId = id;
@@ -2108,7 +2111,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 
     // Inputs accumulates into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
     float adjust_delta = 0.0f;
-    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && g.IO.MouseDragMaxDistanceSqr[0] > 1.0f * 1.0f)
+    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
     {
         adjust_delta = g.IO.MouseDelta[axis];
         if (g.IO.KeyAlt)
@@ -2271,7 +2274,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
-    // Tabbing or CTRL-clicking on Drag turns it into an input box
+    // Tabbing or CTRL-clicking on Drag turns it into an InputText
     const bool hovered = ItemHoverable(frame_bb, id);
     const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
@@ -2292,6 +2295,17 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
                 FocusableItemUnregister(window);
             }
         }
+#if 0
+        // Experimental: simple click (without moving) turns Drag into an InputText
+        // FIXME: Currently polling ImGuiConfigFlags_IsTouchScreen, may either poll an hypothetical ImGuiBackendFlags_HasKeyboard and/or an explicit drag settings.
+        if (temp_input_allowed && !temp_input_is_active && !(g.IO.ConfigFlags & ImGuiConfigFlags_IsTouchScreen))
+            if (g.ActiveId == id && hovered && g.IO.MouseReleased[0] && !IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
+            {
+                g.NavInputId = id;
+                temp_input_is_active = true;
+                FocusableItemUnregister(window);
+            }
+#endif
     }
 
     if (temp_input_is_active)
