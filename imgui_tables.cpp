@@ -76,7 +76,7 @@ Index of this file:
 // Its meaning needs to differ slightly depending of if we are using ScrollX/ScrollY flags.
 // Default value is ImVec2(-FLT_MIN, 0.0f). When binding this in a scripting language please follow this default value.
 //   X
-//   - outer_size.x < 0.0f  ->  Right-align from window/work-rect right-most edge. With -FLT_MIN will right-align exactly on right-most edge. With -1.0f will right-align one pixel away from right-most edge.
+//   - outer_size.x < 0.0f  ->  Right-align from window/work-rect right-most edge. With -FLT_MIN will right-align exactly on right-most edge.
 //   - outer_size.x = 0.0f  ->  Auto width. Generally use all available width. When NOT using scrolling and NOT using any Stretch column, use only necessary width, otherwise same as -FLT_MIN.
 //   - outer_size.x > 0.0f  ->  Fixed width.
 //   Y with ScrollX/ScrollY disabled: we output table directly in current window
@@ -93,7 +93,7 @@ Index of this file:
 // About 'inner_width':
 //   With ScrollX disabled:
 //   - inner_width          ->  *ignored*
-//   With ScrollX enable:
+//   With ScrollX enabled:
 //   - inner_width  < 0.0f  ->  *illegal* fit in known width (right align from outer_size.x) <-- weird
 //   - inner_width  = 0.0f  ->  fit in outer_width: Fixed size columns will take space they need (if avail, otherwise shrink down), Stretch columns becomes Fixed columns.
 //   - inner_width  > 0.0f  ->  override scrolling width, generally to be larger than outer_size.x. Fixed column take space they need (if avail, otherwise shrink down), Stretch columns share remaining space!
@@ -1175,7 +1175,7 @@ void    ImGui::EndTable()
 
     // Context menu in columns body
     if (flags & ImGuiTableFlags_ContextMenuInBody)
-        if (table->HoveredColumnBody != -1 && !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+        if (table->HoveredColumnBody != -1 && !IsAnyItemHovered() && IsMouseReleased(ImGuiMouseButton_Right))
             TableOpenContextMenu((int)table->HoveredColumnBody);
 
     // Finalize table height
@@ -1303,6 +1303,7 @@ void    ImGui::EndTable()
     if (table->IsOuterRectMinFitX)
     {
         // FIXME-TABLE: Could we remove this section?
+        // ColumnsAutoFitWidth may be one frame ahead here since for Fixed+NoResize is calculated from latest contents
         IM_ASSERT((table->Flags & ImGuiTableFlags_ScrollX) == 0);
         outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth);
     }
