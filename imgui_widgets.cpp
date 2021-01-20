@@ -2295,17 +2295,15 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
                 FocusableItemUnregister(window);
             }
         }
-#if 0
         // Experimental: simple click (without moving) turns Drag into an InputText
         // FIXME: Currently polling ImGuiConfigFlags_IsTouchScreen, may either poll an hypothetical ImGuiBackendFlags_HasKeyboard and/or an explicit drag settings.
-        if (temp_input_allowed && !temp_input_is_active && !(g.IO.ConfigFlags & ImGuiConfigFlags_IsTouchScreen))
+        if (g.IO.ConfigDragClickToInputText && temp_input_allowed && !temp_input_is_active)
             if (g.ActiveId == id && hovered && g.IO.MouseReleased[0] && !IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
             {
                 g.NavInputId = id;
                 temp_input_is_active = true;
                 FocusableItemUnregister(window);
             }
-#endif
     }
 
     if (temp_input_is_active)

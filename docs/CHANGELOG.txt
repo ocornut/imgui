@@ -93,6 +93,8 @@ Other Changes:
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
 - Combo: Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
 - DragFloat, DragInt: very slightly increased mouse drag threshold + expressing it as a factor of default value.
+- DragFloat, DragInt: added experimental io.ConfigDragClickToInputText feature to enable turning DragXXX widgets
+  into text input with a simple mouse click-release (without moving). (#3737)
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
