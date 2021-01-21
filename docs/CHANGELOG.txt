@@ -101,12 +101,12 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.80 (In Progress)
+ VERSION 1.80 (Released 2021-01-21)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
-- Added imgui_tables.cpp file! Manually constructed project files will need the new file added!
+- Added imgui_tables.cpp file! Manually constructed project files will need the new file added! (#3740)
 - Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
 - Renamed ImDrawList::AddBezierCurve() to ImDrawList::AddBezierCubic(). Kept inline redirection function (will obsolete).
 - Renamed ImDrawList::PathBezierCurveTo() to ImDrawList::PathBezierCubicCurveTo(). Kept inline redirection function (will obsolete).
@@ -127,39 +127,49 @@ Breaking Changes:
 - If you were still using the old names, while you are cleaning up, considering enabling
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
-- Columns: renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* in prevision of
-  incoming Tables API. Keep redirection enums (will obsolete). (#125, #513, #913, #1204, #1444, #2142, #2707)
-- Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply
+- Internals: Columns: renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* to reduce 
+  confusion with Tables API. Keep redirection enums (will obsolete). (#125, #513, #913, #1204, #1444, #2142, #2707)
+- Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature now applies
   to other data structures. (#2636)
 
 Other Changes:
 
-- Tables: added new Tables Beta API as a replacement for old Columns. (#2957, #125)
-  Check out 'Demo->Tables' for many demos + API comments in imgui.h for details.
-  - Added 16 functions: BeginTable(), EndTable(),
-                        TableNextRow(), TableNextColumn(), TableSetColumnIndex(), TableGetColumnIndex(), TableGetRowIndex(),
-                        TableSetupColumn(), TableSetupScrollFreeze(),
-                        TableHeadersRow(), TableHeader(), TableSetBgColor(), TableGetSortSpecs(),
-                        TableGetColumnCount(), TableGetColumnName(), TableGetColumnFlags().
-  - Added 2 structures: ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs.
-  - Added 2 enums:      ImGuiSortDirection, ImGuiTableBgTarget.
-  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flag).
-  - Added 5 colors:     ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
-  - Added 1 style var:  ImGuiStyleVar_CellPadding.
+- Tables: added new Tables Beta API as a replacement for old Columns. (#3740, #2957, #125)
+  Check out 'Demo->Tables' for many demos.
+  Read API comments in imgui.h for details. Read extra commentary in imgui_tables.cpp.
+  - Added 16 functions: 
+     - BeginTable(), EndTable()
+     - TableNextRow(), TableNextColumn(), TableSetColumnIndex()
+     - TableSetupColumn(), TableSetupScrollFreeze()
+     - TableHeadersRow(), TableHeader()
+     - TableGetRowIndex(), TableGetColumnCount(), TableGetColumnIndex(), TableGetColumnName(), TableGetColumnFlags()
+     - TableGetSortSpecs(), TableSetBgColor()
+  - Added 3 flags sets: 
+    - ImGuiTableFlags (29 flags for: features, decorations, sizing policies, padding, clipping, scrolling, sorting etc.)
+    - ImGuiTableColumnFlags (24 flags for: width policies, default settings, sorting options, indentation options etc.)
+    - ImGuiTableRowFlags (1 flag for: header row)
+  - Added 2 structures: ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs
+  - Added 2 enums: ImGuiSortDirection, ImGuiTableBgTarget
+  - Added 1 style variable: ImGuiStyleVar_CellPadding
+  - Added 5 style colors: ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
 - Tab Bar: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
 - Tab Bar: Do not display a tooltip if the name already fits over a given tab. (#3521)
 - Tab Bar: Fixed minor/unlikely bug skipping over a button when scrolling left with arrows.
+- Tab Bar: Requested ideal content size (for auto-fit) doesn't affect horizontal scrolling. (#3414)
 - Drag and Drop: Fix losing drop source ActiveID (and often source tooltip) when opening a TreeNode()
   or CollapsingHeader() while dragging. (#1738)
-- Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
+- Drag and Drop: Fix drag and drop to tie same-size drop targets by chosen the later one. Fixes dragging
   into a full-window-sized dockspace inside a zero-padded window. (#3519, #2717) [@Black-Cat]
-- Checkbox: Added CheckboxFlags() helper with int* type.
+- Checkbox: Added CheckboxFlags() helper with int* type (internals have a template version, not exposed).
 - Clipper: Fixed incorrect end-list positioning when using ImGuiListClipper with 1 item (bug in 1.79). (#3663) [@nyorain]
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
-- InputText: Fixed swiching from single to multi-line while preserving same ID.
-- Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
+- InputText: Fixed switching from single to multi-line while preserving same ID.
+- Combo: Fixed using IsItemEdited() after Combo() not matching the return value from Combo(). (#2034)
+- DragFloat, DragInt: very slightly increased mouse drag threshold + expressing it as a factor of default value.
+- DragFloat, DragInt: added experimental io.ConfigDragClickToInputText feature to enable turning DragXXX widgets
+  into text input with a simple mouse click-release (without moving). (#3737)
 - Nav: Fixed IsItemFocused() from returning false when Nav highlight is hidden because mouse has moved.
   It's essentially been always the case but it doesn't make much sense. Instead we will aim at exposing
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
@@ -191,7 +201,7 @@ Other Changes:
   compatibility with legacy code. (#3671)
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)
-- Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
+- Backends: Vulkan: Added support for specifying which sub-pass to reference during VkPipeline creation. (@3579) [@bdero]
 - Backends: DX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically. (#3696) [@Mattiwatti]
 - Backends: Win32: Fix setting of io.DisplaySize to invalid/uninitialized data after hwnd has been closed.
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
@@ -201,8 +211,9 @@ Other Changes:
 - Examples: Emscripten: Added 'make serve' helper to spawn a web-server on localhost. (#3705) [@Horki]
 - Examples: DirectX12: Move ImGui::Render() call above the first barrier to clarify its lack of effect on the graphics pipe.
 - CI: Fix testing for Windows DLL builds. (#3603, #3601) [@iboB]
-- Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
-- Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
+- Docs: Improved the wiki and added a https://github.com/ocornut/imgui/wiki/Useful-Widgets page. [@Xipiryon]
+- Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md, and improved them.
+- Docs: Consistently renamed all occurrences of "binding" and "back-end" to "backend" in comments and docs.
 
 
 -----------------------------------------------------------------------
