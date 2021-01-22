@@ -37,8 +37,9 @@ HOW TO UPDATE?
 
 Other Changes:
 
-- ImDrawList: fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
+- ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
+- Backends: Metal: Fixed texture storage mode when building on Mac Catalyst. (#3748) [@Belinsky-L-V]
 
 
 -----------------------------------------------------------------------
