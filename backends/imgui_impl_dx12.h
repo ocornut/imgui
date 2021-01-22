@@ -17,6 +17,11 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4471) // a forward declaration of an unscoped enumeration must have an underlying type
+#endif
+
 enum DXGI_FORMAT;
 struct ID3D12Device;
 struct ID3D12DescriptorHeap;
@@ -37,3 +42,8 @@ IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3
 // Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
+
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
+

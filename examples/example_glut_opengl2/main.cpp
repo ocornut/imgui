@@ -2,8 +2,8 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
-// !!! If someone or something is teaching you GLUT in 2020, you are being abused. Please show some resistance. !!!
+// !!! GLUT/FreeGLUT IS OBSOLETE PREHISTORIC SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT today, you are being abused. Please show some resistance. !!!
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
 #include "imgui.h"

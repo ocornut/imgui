@@ -17,7 +17,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-01-11: DirectX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically.
 //  2020-09-16: DirectX12: Avoid rendering calls with zero-sized scissor rectangle since it generates a validation layer warning.
 //  2020-09-08: DirectX12: Clarified support for building on 32-bit systems by redefining ImTextureID.
 //  2019-10-18: DirectX12: *BREAKING CHANGE* Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
@@ -536,8 +537,34 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
+        // Load d3d12.dll and D3D12SerializeRootSignature() function address dynamically to facilitate using with D3D12On7.
+        // See if any version of d3d12.dll is already loaded in the process. If so, give preference to that.
+        static HINSTANCE d3d12_dll = ::GetModuleHandleA("d3d12.dll");
+        if (d3d12_dll == NULL)
+        {
+            // Attempt to load d3d12.dll from local directories. This will only succeed if
+            // (1) the current OS is Windows 7, and
+            // (2) there exists a version of d3d12.dll for Windows 7 (D3D12On7) in one of the following directories.
+            // See https://github.com/ocornut/imgui/pull/3696 for details.
+            const char* localD3d12Paths[] = { ".\\d3d12.dll", ".\\d3d12on7\\d3d12.dll", ".\\12on7\\d3d12.dll" }; // A. current directory, B. used by some games, C. used in Microsoft D3D12On7 sample
+            for (int i = 0; i < IM_ARRAYSIZE(localD3d12Paths); i++)
+                if ((d3d12_dll = ::LoadLibraryA(localD3d12Paths[i])) != NULL)
+                    break;
+
+            // If failed, we are on Windows >= 10.
+            if (d3d12_dll == NULL)
+                d3d12_dll = ::LoadLibraryA("d3d12.dll");
+
+            if (d3d12_dll == NULL)
+                return false;
+        }
+
+        PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
+        if (D3D12SerializeRootSignatureFn == NULL)
+            return false;
+
         ID3DBlob* blob = NULL;
-        if (D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL) != S_OK)
+        if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL) != S_OK)
             return false;
 
         g_pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&g_pRootSignature));

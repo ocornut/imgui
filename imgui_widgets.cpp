@@ -1,4 +1,4 @@
-// dear imgui, v1.80 WIP
+// dear imgui, v1.80
 // (widgets code)
 
 /*
@@ -85,6 +85,10 @@ Index of this file:
 //-------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------
+
+// Widgets
+static const float          DRAGDROP_HOLD_TO_OPEN_TIMER = 0.70f;    // Time for drag-hold to activate items accepting the ImGuiButtonFlags_PressedOnDragDropHold button behavior.
+static const float          DRAG_MOUSE_THRESHOLD_FACTOR = 0.50f;    // Multiplier for the default value of io.MouseDragThreshold to make DragFloat/DragInt react faster to mouse drags.
 
 // Those MIN/MAX values are not define because we need to point to them
 static const signed char    IM_S8_MIN  = -128;
@@ -516,10 +520,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.DragDropActive && (flags & ImGuiButtonFlags_PressedOnDragDropHold) && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
         if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         {
-            const float DRAG_DROP_HOLD_TIMER = 0.70f;
             hovered = true;
             SetHoveredID(id);
-            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAG_DROP_HOLD_TIMER, 0.00f))
+            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAGDROP_HOLD_TO_OPEN_TIMER, 0.00f))
             {
                 pressed = true;
                 g.DragDropHoldJustPressedId = id;
@@ -1070,7 +1073,10 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id))
+    {
+        IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
         return false;
+    }
 
     bool hovered, held;
     bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
@@ -1142,6 +1148,16 @@ bool ImGui::CheckboxFlags(const char* label, int* flags, int flags_value)
 }
 
 bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
+{
+    return CheckboxFlagsT(label, flags, flags_value);
+}
+
+bool ImGui::CheckboxFlags(const char* label, ImS64* flags, ImS64 flags_value)
+{
+    return CheckboxFlagsT(label, flags, flags_value);
+}
+
+bool ImGui::CheckboxFlags(const char* label, ImU64* flags, ImU64 flags_value)
 {
     return CheckboxFlagsT(label, flags, flags_value);
 }
@@ -1608,7 +1624,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         if (popup_window->WasActive)
         {
             // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
-            ImVec2 size_expected = CalcWindowExpectedSize(popup_window);
+            ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
             if (flags & ImGuiComboFlags_PopupAlignLeft)
                 popup_window->AutoPosLastDirection = ImGuiDir_Left; // "Below, Toward Left"
             else
@@ -1707,6 +1723,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     }
 
     EndCombo();
+    if (value_changed)
+        MarkItemEdited(g.CurrentWindow->DC.LastItemId);
+
     return value_changed;
 }
 
@@ -2099,7 +2118,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 
     // Inputs accumulates into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
     float adjust_delta = 0.0f;
-    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && g.IO.MouseDragMaxDistanceSqr[0] > 1.0f * 1.0f)
+    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
     {
         adjust_delta = g.IO.MouseDelta[axis];
         if (g.IO.KeyAlt)
@@ -2262,7 +2281,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
-    // Tabbing or CTRL-clicking on Drag turns it into an input box
+    // Tabbing or CTRL-clicking on Drag turns it into an InputText
     const bool hovered = ItemHoverable(frame_bb, id);
     const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
@@ -2283,6 +2302,15 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
                 FocusableItemUnregister(window);
             }
         }
+        // Experimental: simple click (without moving) turns Drag into an InputText
+        // FIXME: Currently polling ImGuiConfigFlags_IsTouchScreen, may either poll an hypothetical ImGuiBackendFlags_HasKeyboard and/or an explicit drag settings.
+        if (g.IO.ConfigDragClickToInputText && temp_input_allowed && !temp_input_is_active)
+            if (g.ActiveId == id && hovered && g.IO.MouseReleased[0] && !IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
+            {
+                g.NavInputId = id;
+                temp_input_is_active = true;
+                FocusableItemUnregister(window);
+            }
     }
 
     if (temp_input_is_active)
@@ -5892,21 +5920,25 @@ bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags)
     return TreeNodeBehavior(window->GetID(label), flags | ImGuiTreeNodeFlags_CollapsingHeader, label);
 }
 
-bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags flags)
+// p_visible == NULL                        : regular collapsing header
+// p_visible != NULL && *p_visible == true  : show a small close button on the corner of the header, clicking the button will set *p_visible = false
+// p_visible != NULL && *p_visible == false : do not show the header at all
+// Do not mistake this with the Open state of the header itself, which you can adjust with SetNextItemOpen() or ImGuiTreeNodeFlags_DefaultOpen.
+bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
-    if (p_open && !*p_open)
+    if (p_visible && !*p_visible)
         return false;
 
     ImGuiID id = window->GetID(label);
     flags |= ImGuiTreeNodeFlags_CollapsingHeader;
-    if (p_open)
+    if (p_visible)
         flags |= ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_ClipLabelForTrailingButton;
     bool is_open = TreeNodeBehavior(id, flags, label);
-    if (p_open != NULL)
+    if (p_visible != NULL)
     {
         // Create a small overlapping close button
         // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
@@ -5918,7 +5950,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
         float button_y = window->DC.LastItemRect.Min.y;
         ImGuiID close_button_id = GetIDWithSeed("#CLOSE", NULL, id);
         if (CloseButton(close_button_id, ImVec2(button_x, button_y)))
-            *p_open = false;
+            *p_visible = false;
         last_item_backup.Restore();
     }
 
@@ -6159,7 +6191,9 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 // FIXME: In principle this function should be called EndListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 void ImGui::ListBoxFooter()
 {
-    ImGuiWindow* parent_window = GetCurrentWindow()->ParentWindow;
+    ImGuiWindow * window = GetCurrentWindow();
+    IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) && "Mismatched ListBoxHeader/ListBoxFooter calls. Did you test the return value of ListBoxHeader()?");
+    ImGuiWindow* parent_window = window->ParentWindow;
     const ImRect bb = parent_window->DC.LastItemRect;
     const ImGuiStyle& style = GetStyle();
 
@@ -6220,6 +6254,11 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
 // - PlotEx() [Internal]
 // - PlotLines()
 // - PlotHistogram()
+//-------------------------------------------------------------------------
+// Plot/Graph widgets are not very good.
+// Consider writing your own, or using a third-party one, see:
+// - ImPlot https://github.com/epezent/implot
+// - others https://github.com/ocornut/imgui/wiki/Useful-Widgets
 //-------------------------------------------------------------------------
 
 int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 frame_size)
@@ -7257,7 +7296,8 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     // Actual layout in host window (we don't do it in BeginTabBar() so as not to waste an extra frame)
     ImGuiWindow* window = g.CurrentWindow;
     window->DC.CursorPos = tab_bar->BarRect.Min;
-    ItemSize(ImVec2(tab_bar->WidthAllTabsIdeal, tab_bar->BarRect.GetHeight()), tab_bar->FramePadding.y);
+    ItemSize(ImVec2(tab_bar->WidthAllTabs, tab_bar->BarRect.GetHeight()), tab_bar->FramePadding.y);
+    window->DC.IdealMaxPos.x = ImMax(window->DC.IdealMaxPos.x, tab_bar->BarRect.Min.x + tab_bar->WidthAllTabsIdeal);
 }
 
 // Dockable uses Name/ID in the global namespace. Non-dockable items use the ID stack.
@@ -7756,7 +7796,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         g.ActiveIdWindow = docked_window;
 
     // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs to be hovered)
-    if (!held)
+    if (g.ActiveId != id)
         SetItemAllowOverlap();
 
     // Drag and drop a single floating window node moves it
