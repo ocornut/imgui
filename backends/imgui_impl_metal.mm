@@ -238,7 +238,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                                                                                                 height:(NSUInteger)height
                                                                                              mipmapped:NO];
     textureDescriptor.usage = MTLTextureUsageShaderRead;
-#if TARGET_OS_OSX
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
     textureDescriptor.storageMode = MTLStorageModeManaged;
 #else
     textureDescriptor.storageMode = MTLStorageModeShared;
