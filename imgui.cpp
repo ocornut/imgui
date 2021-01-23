@@ -3346,11 +3346,19 @@ void ImGui::DestroyContext(ImGuiContext* ctx)
 }
 
 // No specific ordering/dependency support, will see as needed
-void ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
+ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
 {
     ImGuiContext& g = *ctx;
     IM_ASSERT(hook->Callback != NULL);
     g.Hooks.push_back(*hook);
+    g.Hooks.back().Handle = ++g.HookHandleNext;
+    return g.HookHandleNext;
+}
+
+void ImGui::RemContextHook(ImGuiContext* ctx, ImGuiID hook_to_remove)
+{
+    ImGuiContext& g = *ctx;
+    g.HooksPendingRemoval.push_back(hook_to_remove);
 }
 
 // Call context hooks (used by e.g. test engine)
@@ -3779,8 +3787,19 @@ ImGuiKeyModFlags ImGui::GetMergedKeyModFlags()
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
-    ImGuiContext& g = *GImGui;
 
+    ImGuiContext& g = *GImGui;
+    
+	// Remove pending delete hooks before frame start.
+    // This deferred removal avoid issues of removal while iterating the hook vector
+    while (!g.HooksPendingRemoval.empty())
+    {
+        ImGuiID hookToRemove = g.HooksPendingRemoval.back();
+        g.HooksPendingRemoval.pop_back();
+        for (int n = 0; n < g.Hooks.Size; n++)
+            if (g.Hooks[n].Handle == hookToRemove)
+                g.Hooks.erase(&g.Hooks[n]);
+    }
     CallContextHooks(&g, ImGuiContextHookType_NewFramePre);
 
     // Check and assert for various common IO and Configuration mistakes

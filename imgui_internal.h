@@ -1227,6 +1227,7 @@ enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookTy
 struct ImGuiContextHook
 {
     ImGuiContextHookType        Type;
+    ImGuiID                     Handle;
     ImGuiID                     Owner;
     ImGuiContextHookCallback    Callback;
     void*                       UserData;
@@ -1453,6 +1454,8 @@ struct ImGuiContext
     ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
     ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
+    ImVector<ImGuiID>                   HooksPendingRemoval;    // Hooks waiting to be removed
+    ImGuiID                             HookHandleNext;         // Next available hook handle
 
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
@@ -2184,7 +2187,8 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
 
     // Generic context hooks
-    IMGUI_API void          AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API void          RemContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Settings
