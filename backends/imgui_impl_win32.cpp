@@ -19,15 +19,11 @@
 #include <windows.h>
 #include <tchar.h>
 
-// Using XInput library for gamepad (with recent Windows SDK this may leads to executables which won't run on Windows 7)
+// Using XInput library for gamepad
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 #include <XInput.h>
-#else
-#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
-#endif
-#if defined(_MSC_VER) && !defined(IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT)
-#pragma comment(lib, "xinput")
-//#pragma comment(lib, "Xinput9_1_0")
+typedef DWORD (WINAPI *PFN_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
+typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 #endif
 
 // CHANGELOG
@@ -64,6 +60,14 @@ static INT64                g_TicksPerSecond = 0;
 static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 static bool                 g_HasGamepad = false;
 static bool                 g_WantUpdateHasGamepad = true;
+
+// XInput Data
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+static XINPUT_STATE                 g_XInputState;
+static HMODULE                      g_hXInputDLL = NULL;
+static PFN_XInputGetCapabilities    g_fXInputGetCapabilities = NULL;
+static PFN_XInputGetState           g_fXInputGetState = NULL;
+#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -104,13 +108,51 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.KeyMap[ImGuiKey_X] = 'X';
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
-
+    
+    // Gamepad, dynamically load XInput library
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    const wchar_t* _XinputLibraryName[] = {
+        L"xinput1_4.dll",   // Windows 8+
+        L"xinput1_3.dll",   // DirectX SDK
+        L"xinput9_1_0.dll", // Windows Vista, Windows 7
+        L"xinput1_2.dll",   // DirectX SDK
+        L"xinput1_1.dll",   // DirectX SDK
+        NULL,
+    };
+    for (size_t idx = 0; _XinputLibraryName[idx]; idx += 1)
+    {
+        if (HMODULE dll = ::LoadLibraryW(_XinputLibraryName[idx]))
+        {
+            g_hXInputDLL = dll;
+            g_fXInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
+            g_fXInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+            break;
+        }
+    }
+    ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE));
+#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    
     return true;
 }
 
 void    ImGui_ImplWin32_Shutdown()
 {
-    g_hWnd = (HWND)0;
+    // Gamepad, unload XInput library
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    if (g_hXInputDLL)
+        ::FreeLibrary(g_hXInputDLL);
+    ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE));
+    g_hXInputDLL = NULL;
+    g_fXInputGetCapabilities = NULL;
+    g_fXInputGetState = NULL;
+#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    
+    g_hWnd = NULL;
+    g_Time = 0;
+    g_TicksPerSecond = 0;
+    g_LastMouseCursor = ImGuiMouseCursor_COUNT;
+    g_HasGamepad = false;
+    g_WantUpdateHasGamepad = true;
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()
@@ -175,25 +217,30 @@ static void ImGui_ImplWin32_UpdateGamepads()
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
-
+    
     // Calling XInputGetState() every frame on disconnected gamepads is unfortunately too slow.
     // Instead we refresh gamepad availability by calling XInputGetCapabilities() _only_ after receiving WM_DEVICECHANGE.
     if (g_WantUpdateHasGamepad)
     {
-        XINPUT_CAPABILITIES caps;
-        g_HasGamepad = (XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS);
         g_WantUpdateHasGamepad = false;
+        XINPUT_CAPABILITIES caps;
+        if (g_fXInputGetCapabilities)
+            g_HasGamepad = (g_fXInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS);
+        else
+            g_HasGamepad = false;
+        if (!g_HasGamepad)
+            ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE)); // clear if no gamepad
     }
-
-    XINPUT_STATE xinput_state;
+    
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-    if (g_HasGamepad && XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
+    if (g_HasGamepad && g_fXInputGetState && (g_fXInputGetState(0, &g_XInputState) == ERROR_SUCCESS))
     {
-        const XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
+        const XINPUT_GAMEPAD& gamepad = g_XInputState.Gamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-
         #define MAP_BUTTON(NAV_NO, BUTTON_ENUM)     { io.NavInputs[NAV_NO] = (gamepad.wButtons & BUTTON_ENUM) ? 1.0f : 0.0f; }
-        #define MAP_ANALOG(NAV_NO, VALUE, V0, V1)   { float vn = (float)(VALUE - V0) / (float)(V1 - V0); if (vn > 1.0f) vn = 1.0f; if (vn > 0.0f && io.NavInputs[NAV_NO] < vn) io.NavInputs[NAV_NO] = vn; }
+        #define MAP_ANALOG(NAV_NO, VALUE, V0, V1)   { float vn = (float)(VALUE - V0) / (float)(V1 - V0);\
+                                                        if (vn > 1.0f) vn = 1.0f;\
+                                                        if (vn > 0.0f && io.NavInputs[NAV_NO] < vn) io.NavInputs[NAV_NO] = vn; }
         MAP_BUTTON(ImGuiNavInput_Activate,      XINPUT_GAMEPAD_A);              // Cross / A
         MAP_BUTTON(ImGuiNavInput_Cancel,        XINPUT_GAMEPAD_B);              // Circle / B
         MAP_BUTTON(ImGuiNavInput_Menu,          XINPUT_GAMEPAD_X);              // Square / X
