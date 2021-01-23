@@ -269,18 +269,16 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 #else
     const bool focused = glfwGetWindowAttrib(g_Window, GLFW_FOCUSED) != 0;
 #endif
-    if (focused)
+    if (io.WantSetMousePos)
     {
-        if (io.WantSetMousePos)
-        {
+        if (focused)
             glfwSetCursorPos(g_Window, (double)mouse_pos_backup.x, (double)mouse_pos_backup.y);
-        }
-        else
-        {
-            double mouse_x, mouse_y;
-            glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-            io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
-        }
+    }
+    else
+    {
+        double mouse_x, mouse_y;
+        glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
+        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
     }
 }
 

@@ -252,7 +252,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS)
-    SDL_Window* focused_window = SDL_GetKeyboardFocus();
+    SDL_Window* focused_window = SDL_GetMouseFocus();
     if (g_Window == focused_window)
     {
         if (g_MouseCanUseGlobalState)
