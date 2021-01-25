@@ -35,10 +35,21 @@ HOW TO UPDATE?
  VERSION 1.81 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas() extra flags, now stored in ImFontAtlas::FontBuilderFlags.
+- imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags. 
+- imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API. 
+
 Other Changes:
 
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no 
   close button in the window. (#3731)
+- imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
+  - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications 
+    other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
+  - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
+    compiled in along with the FreeType one, otherwise it is enabled by default.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with 
@@ -142,9 +153,6 @@ Other Changes:
 - Style: Changed default style.WindowRounding value to 0.0f (matches default for multi-viewports).
 - Style: Reduced the size of the resizing grip, made alpha less prominent.
 - Style: Classic: Increase the default alpha value of WindowBg to be closer to other styles.
-- Fonts: Ease Freetype integration with IMGUI_ENABLE_FREETYPE: When enabled, it Will use the library to rasterize font by default.
-  Also renamed IMGUI_DISABLE_STB_TRUETYPE to IMGUI_ENABLE_STB_TRUETYPE, and making it the default rasterizer
-  if IMGUI_ENABLE_FREETYPE is not defined. [@Xipiryon]
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]

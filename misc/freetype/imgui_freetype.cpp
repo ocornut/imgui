@@ -1,25 +1,30 @@
-// dear imgui: wrapper to use FreeType (instead of stb_truetype)
+// dear imgui: FreeType font builder (used as a replacement for the stb_truetype builder)
+// (code)
+
 // Get latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
-// Original code by @vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained and v0.60+ by @ocornut.
+// Original code by @vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained since 2019 by @ocornut.
 
-// Changelog:
-// - v0.50: (2017/08/16) imported from https://github.com/Vuhdo/imgui_freetype into http://www.github.com/ocornut/imgui_club, updated for latest changes in ImFontAtlas, minor tweaks.
-// - v0.51: (2017/08/26) cleanup, optimizations, support for ImFontConfig::RasterizerFlags, ImFontConfig::RasterizerMultiply.
-// - v0.52: (2017/09/26) fixes for imgui internal changes.
-// - v0.53: (2017/10/22) minor inconsequential change to match change in master (removed an unnecessary statement).
-// - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member.
-// - v0.55: (2018/02/04) moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
-// - v0.56: (2018/06/08) added support for ImFontConfig::GlyphMinAdvanceX, GlyphMaxAdvanceX.
-// - v0.60: (2019/01/10) re-factored to match big update in STB builder. fixed texture height waste. fixed redundant glyphs when merging. support for glyph padding.
-// - v0.61: (2019/01/15) added support for imgui allocators + added FreeType only override function SetAllocatorFunctions().
-// - v0.62: (2019/02/09) added RasterizerFlags::Monochrome flag to disable font anti-aliasing (combine with ::MonoHinting for best results!)
-// - v0.63: (2020/06/04) fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2021/01/26: simplified integration by using '#define IMGUI_ENABLE_FREETYPE'.
+//              renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API. removed ImGuiFreeType::BuildFontAtlas().
+//  2020/06/04: fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
+//  2019/02/09: added RasterizerFlags::Monochrome flag to disable font anti-aliasing (combine with ::MonoHinting for best results!)
+//  2019/01/15: added support for imgui allocators + added FreeType only override function SetAllocatorFunctions().
+//  2019/01/10: re-factored to match big update in STB builder. fixed texture height waste. fixed redundant glyphs when merging. support for glyph padding.
+//  2018/06/08: added support for ImFontConfig::GlyphMinAdvanceX, GlyphMaxAdvanceX.
+//  2018/02/04: moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
+//  2018/01/22: fix for addition of ImFontAtlas::TexUvscale member.
+//  2017/10/22: minor inconsequential change to match change in master (removed an unnecessary statement).
+//  2017/09/26: fixes for imgui internal changes.
+//  2017/08/26: cleanup, optimizations, support for ImFontConfig::RasterizerFlags, ImFontConfig::RasterizerMultiply.
+//  2017/08/16: imported from https://github.com/Vuhdo/imgui_freetype into http://www.github.com/ocornut/imgui_club, updated for latest changes in ImFontAtlas, minor tweaks.
 
-// Gamma Correct Blending:
-//  FreeType assumes blending in linear space rather than gamma space.
-//  See https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph
-//  For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
-//  The default imgui styles will be impacted by this change (alpha values will need tweaking).
+// About Gamma Correct Blending:
+// - FreeType assumes blending in linear space rather than gamma space.
+// - See https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph
+// - For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
+// - The default dear imgui styles will be impacted by this change (alpha values will need tweaking).
 
 // FIXME: cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
 
@@ -40,6 +45,23 @@
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #endif
+
+//-------------------------------------------------------------------------
+// Data
+//-------------------------------------------------------------------------
+
+// Default memory allocators
+static void* ImGuiFreeTypeDefaultAllocFunc(size_t size, void* user_data) { IM_UNUSED(user_data); return IM_ALLOC(size); }
+static void  ImGuiFreeTypeDefaultFreeFunc(void* ptr, void* user_data) { IM_UNUSED(user_data); IM_FREE(ptr); }
+
+// Current memory allocators
+static void* (*GImGuiFreeTypeAllocFunc)(size_t size, void* user_data) = ImGuiFreeTypeDefaultAllocFunc;
+static void  (*GImGuiFreeTypeFreeFunc)(void* ptr, void* user_data) = ImGuiFreeTypeDefaultFreeFunc;
+static void* GImGuiFreeTypeAllocatorUserData = NULL;
+
+//-------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------
 
 namespace
 {
@@ -118,7 +140,7 @@ namespace
     // From SDL_ttf: Handy routines for converting from fixed point
     #define FT_CEIL(X)  (((X + 63) & -64) / 64)
 
-    bool FreeTypeFont::InitFont(FT_Library ft_library, const ImFontConfig& cfg, unsigned int extra_user_flags)
+    bool FreeTypeFont::InitFont(FT_Library ft_library, const ImFontConfig& cfg, unsigned int extra_font_builder_flags)
     {
         FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)cfg.FontData, (uint32_t)cfg.FontDataSize, (uint32_t)cfg.FontNo, &Face);
         if (error != 0)
@@ -131,22 +153,22 @@ namespace
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
         // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
-        UserFlags = cfg.RasterizerFlags | extra_user_flags;
+        UserFlags = cfg.FontBuilderFlags | extra_font_builder_flags;
         LoadFlags = FT_LOAD_NO_BITMAP;
-        if (UserFlags & ImGuiFreeType::NoHinting)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_NoHinting)
             LoadFlags |= FT_LOAD_NO_HINTING;
-        if (UserFlags & ImGuiFreeType::NoAutoHint)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_NoAutoHint)
             LoadFlags |= FT_LOAD_NO_AUTOHINT;
-        if (UserFlags & ImGuiFreeType::ForceAutoHint)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_ForceAutoHint)
             LoadFlags |= FT_LOAD_FORCE_AUTOHINT;
-        if (UserFlags & ImGuiFreeType::LightHinting)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_LightHinting)
             LoadFlags |= FT_LOAD_TARGET_LIGHT;
-        else if (UserFlags & ImGuiFreeType::MonoHinting)
+        else if (UserFlags & ImGuiFreeTypeBuilderFlags_MonoHinting)
             LoadFlags |= FT_LOAD_TARGET_MONO;
         else
             LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
-        if (UserFlags & ImGuiFreeType::Monochrome)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_Monochrome)
             RenderMode = FT_RENDER_MODE_MONO;
         else
             RenderMode = FT_RENDER_MODE_NORMAL;
@@ -200,9 +222,9 @@ namespace
         IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE);
 
         // Apply convenience transform (this is not picking from real "Bold"/"Italic" fonts! Merely applying FreeType helper transform. Oblique == Slanting)
-        if (UserFlags & ImGuiFreeType::Bold)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_Bold)
             FT_GlyphSlot_Embolden(slot);
-        if (UserFlags & ImGuiFreeType::Oblique)
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_Oblique)
         {
             FT_GlyphSlot_Oblique(slot);
             //FT_BBox bbox;
@@ -320,7 +342,7 @@ struct ImFontBuildDstDataFT
     ImBitVector         GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
 };
 
-bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, unsigned int extra_flags)
+bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, unsigned int extra_flags)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
@@ -605,50 +627,41 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     return true;
 }
 
-// Default memory allocators
-static void* ImFreeTypeDefaultAllocFunc(size_t size, void* user_data)   { IM_UNUSED(user_data); return IM_ALLOC(size); }
-static void  ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)      { IM_UNUSED(user_data); IM_FREE(ptr); }
-
-// Current memory allocators
-static void* (*GImFreeTypeAllocFunc)(size_t size, void* user_data) = ImFreeTypeDefaultAllocFunc;
-static void  (*GImFreeTypeFreeFunc)(void* ptr, void* user_data) = ImFreeTypeDefaultFreeFunc;
-static void* GImFreeTypeAllocatorUserData = NULL;
-
 // FreeType memory allocation callbacks
 static void* FreeType_Alloc(FT_Memory /*memory*/, long size)
 {
-    return GImFreeTypeAllocFunc((size_t)size, GImFreeTypeAllocatorUserData);
+    return GImGuiFreeTypeAllocFunc((size_t)size, GImGuiFreeTypeAllocatorUserData);
 }
 
 static void FreeType_Free(FT_Memory /*memory*/, void* block)
 {
-    GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+    GImGuiFreeTypeFreeFunc(block, GImGuiFreeTypeAllocatorUserData);
 }
 
 static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size, void* block)
 {
     // Implement realloc() as we don't ask user to provide it.
     if (block == NULL)
-        return GImFreeTypeAllocFunc((size_t)new_size, GImFreeTypeAllocatorUserData);
+        return GImGuiFreeTypeAllocFunc((size_t)new_size, GImGuiFreeTypeAllocatorUserData);
 
     if (new_size == 0)
     {
-        GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+        GImGuiFreeTypeFreeFunc(block, GImGuiFreeTypeAllocatorUserData);
         return NULL;
     }
 
     if (new_size > cur_size)
     {
-        void* new_block = GImFreeTypeAllocFunc((size_t)new_size, GImFreeTypeAllocatorUserData);
+        void* new_block = GImGuiFreeTypeAllocFunc((size_t)new_size, GImGuiFreeTypeAllocatorUserData);
         memcpy(new_block, block, (size_t)cur_size);
-        GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+        GImGuiFreeTypeFreeFunc(block, GImGuiFreeTypeAllocatorUserData);
         return new_block;
     }
 
     return block;
 }
 
-bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
+static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas)
 {
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
     FT_MemoryRec_ memory_rec = {};
@@ -666,15 +679,22 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
     // If you don't call FT_Add_Default_Modules() the rest of code may work, but FreeType won't use our custom allocator.
     FT_Add_Default_Modules(ft_library);
 
-    bool ret = ImFontAtlasBuildWithFreeType(ft_library, atlas, extra_flags);
+    bool ret = ImFontAtlasBuildWithFreeTypeEx(ft_library, atlas, atlas->FontBuilderFlags);
     FT_Done_Library(ft_library);
 
     return ret;
 }
 
+const ImFontBuilderIO* ImGuiFreeType::GetBuilderForFreeType()
+{
+    static ImFontBuilderIO io;
+    io.FontBuilder_Build = ImFontAtlasBuildWithFreeType;
+    return &io;
+}
+
 void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data)
 {
-    GImFreeTypeAllocFunc = alloc_func;
-    GImFreeTypeFreeFunc = free_func;
-    GImFreeTypeAllocatorUserData = user_data;
+    GImGuiFreeTypeAllocFunc = alloc_func;
+    GImGuiFreeTypeFreeFunc = free_func;
+    GImGuiFreeTypeAllocatorUserData = user_data;
 }
