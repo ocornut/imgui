@@ -4740,6 +4740,12 @@ ImDrawData* ImGui::GetDrawData()
     return viewport->DrawDataP.Valid ? &viewport->DrawDataP : NULL;
 }
 
+ImTextureUpdateData ImGui::GetTextureUpdateData()
+{
+    ImGuiContext& g = *GImGui;
+    return g.IO.Fonts->GetTextureUpdateData();
+}
+
 double ImGui::GetTime()
 {
     return GImGui->Time;
@@ -5066,6 +5072,7 @@ void ImGui::NewFrame()
     SetupDrawListSharedData();
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
+    g.IO.Fonts->ClearTransientTextures();
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (ImGuiViewportP* viewport : g.Viewports)
@@ -7951,7 +7958,7 @@ void  ImGui::PopFont()
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
     SetCurrentFont(font);
-    g.CurrentWindow->DrawList->_SetTexture(ImTexture(font->ContainerAtlas->TexID));
+    g.CurrentWindow->DrawList->_SetTexture(ImTexture(font->ContainerAtlas));
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
