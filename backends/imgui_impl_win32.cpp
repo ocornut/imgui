@@ -19,7 +19,7 @@
 #include <windows.h>
 #include <tchar.h>
 
-// Using XInput library for gamepad
+// Using XInput for gamepad (will load DLL dynamically)
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 #include <XInput.h>
 typedef DWORD (WINAPI *PFN_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
@@ -28,6 +28,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-01-25: Inputs: Dynamically loading XInput DLL.
 //  2020-12-04: Misc: Fixed setting of io.DisplaySize to invalid/uninitialized data when after hwnd has been closed.
 //  2020-03-03: Inputs: Calling AddInputCharacterUTF16() to support surrogate pairs leading to codepoint >= 0x10000 (for more complete CJK inputs)
 //  2020-02-17: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(), ImGui_ImplWin32_GetDpiScaleForMonitor() helper functions.
@@ -61,13 +62,12 @@ static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 static bool                 g_HasGamepad = false;
 static bool                 g_WantUpdateHasGamepad = true;
 
-// XInput Data
+// XInput DLL and functions
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-static XINPUT_STATE                 g_XInputState;
-static HMODULE                      g_hXInputDLL = NULL;
-static PFN_XInputGetCapabilities    g_fXInputGetCapabilities = NULL;
-static PFN_XInputGetState           g_fXInputGetState = NULL;
-#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+static HMODULE                      g_XInputDLL = NULL;
+static PFN_XInputGetCapabilities    g_XInputGetCapabilities = NULL;
+static PFN_XInputGetState           g_XInputGetState = NULL;
+#endif
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -108,28 +108,25 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.KeyMap[ImGuiKey_X] = 'X';
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
-    
-    // Gamepad, dynamically load XInput library
+
+    // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    const wchar_t* _XinputLibraryName[] = {
-        L"xinput1_4.dll",   // Windows 8+
-        L"xinput1_3.dll",   // DirectX SDK
-        L"xinput9_1_0.dll", // Windows Vista, Windows 7
-        L"xinput1_2.dll",   // DirectX SDK
-        L"xinput1_1.dll",   // DirectX SDK
-        NULL,
-    };
-    for (size_t idx = 0; _XinputLibraryName[idx]; idx += 1)
+    const char* xinput_dll_names[] =
     {
-        if (HMODULE dll = ::LoadLibraryW(_XinputLibraryName[idx]))
+        "xinput1_4.dll",   // Windows 8+
+        "xinput1_3.dll",   // DirectX SDK
+        "xinput9_1_0.dll", // Windows Vista, Windows 7
+        "xinput1_2.dll",   // DirectX SDK
+        "xinput1_1.dll"    // DirectX SDK
+    };
+    for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
+        if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n]))
         {
-            g_hXInputDLL = dll;
-            g_fXInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
-            g_fXInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+            g_XInputDLL = dll;
+            g_XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
+            g_XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
             break;
         }
-    }
-    ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE));
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     
     return true;
@@ -137,14 +134,13 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
 
 void    ImGui_ImplWin32_Shutdown()
 {
-    // Gamepad, unload XInput library
+    // Unload XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    if (g_hXInputDLL)
-        ::FreeLibrary(g_hXInputDLL);
-    ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE));
-    g_hXInputDLL = NULL;
-    g_fXInputGetCapabilities = NULL;
-    g_fXInputGetState = NULL;
+    if (g_XInputDLL)
+        ::FreeLibrary(g_XInputDLL);
+    g_XInputDLL = NULL;
+    g_XInputGetCapabilities = NULL;
+    g_XInputGetState = NULL;
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     
     g_hWnd = NULL;
@@ -217,30 +213,25 @@ static void ImGui_ImplWin32_UpdateGamepads()
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
-    
+
     // Calling XInputGetState() every frame on disconnected gamepads is unfortunately too slow.
     // Instead we refresh gamepad availability by calling XInputGetCapabilities() _only_ after receiving WM_DEVICECHANGE.
     if (g_WantUpdateHasGamepad)
     {
-        g_WantUpdateHasGamepad = false;
         XINPUT_CAPABILITIES caps;
-        if (g_fXInputGetCapabilities)
-            g_HasGamepad = (g_fXInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS);
-        else
-            g_HasGamepad = false;
-        if (!g_HasGamepad)
-            ZeroMemory(&g_XInputState, sizeof(XINPUT_STATE)); // clear if no gamepad
+        g_HasGamepad = g_XInputGetCapabilities ? (g_XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
+        g_WantUpdateHasGamepad = false;
     }
-    
+
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-    if (g_HasGamepad && g_fXInputGetState && (g_fXInputGetState(0, &g_XInputState) == ERROR_SUCCESS))
+    XINPUT_STATE xinput_state;
+    if (g_HasGamepad && g_XInputGetState && g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
     {
-        const XINPUT_GAMEPAD& gamepad = g_XInputState.Gamepad;
+        const XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+
         #define MAP_BUTTON(NAV_NO, BUTTON_ENUM)     { io.NavInputs[NAV_NO] = (gamepad.wButtons & BUTTON_ENUM) ? 1.0f : 0.0f; }
-        #define MAP_ANALOG(NAV_NO, VALUE, V0, V1)   { float vn = (float)(VALUE - V0) / (float)(V1 - V0);\
-                                                        if (vn > 1.0f) vn = 1.0f;\
-                                                        if (vn > 0.0f && io.NavInputs[NAV_NO] < vn) io.NavInputs[NAV_NO] = vn; }
+        #define MAP_ANALOG(NAV_NO, VALUE, V0, V1)   { float vn = (float)(VALUE - V0) / (float)(V1 - V0); if (vn > 1.0f) vn = 1.0f; if (vn > 0.0f && io.NavInputs[NAV_NO] < vn) io.NavInputs[NAV_NO] = vn; }
         MAP_BUTTON(ImGuiNavInput_Activate,      XINPUT_GAMEPAD_A);              // Cross / A
         MAP_BUTTON(ImGuiNavInput_Cancel,        XINPUT_GAMEPAD_B);              // Circle / B
         MAP_BUTTON(ImGuiNavInput_Menu,          XINPUT_GAMEPAD_X);              // Square / X

@@ -39,6 +39,8 @@ Other Changes:
 
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
+- Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with 
+  old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Metal: Fixed texture storage mode when building on Mac Catalyst. (#3748) [@Belinsky-L-V]
 
 
