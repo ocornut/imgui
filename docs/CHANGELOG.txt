@@ -32,8 +32,20 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.8X (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- ImDrawList: fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
+  Would lead to a buffer read overflow.
+
+
+-----------------------------------------------------------------------
  VERSION 1.80 (Released 2021-01-21)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.80
 
 Breaking Changes:
 
