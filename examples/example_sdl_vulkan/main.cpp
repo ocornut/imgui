@@ -489,13 +489,16 @@ int main(int, char**)
             }
         }
 
-        if (io.Fonts->IsDirty())
-            UpdateFontsTexture(wd);
+        ImGui::UpdateFontDemo();
 
         // Start the Dear ImGui frame
+        if (io.Fonts->IsDirty())
+            UpdateFontsTexture(wd);
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
+
+        ImGui::ShowFontDemoWindow();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)

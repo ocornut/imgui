@@ -41,10 +41,14 @@
 
 -(void)updateAndDrawDemoView
 {
+    ImGui::UpdateFontDemo();
+
     // Start the Dear ImGui frame
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplOSX_NewFrame(self);
     ImGui::NewFrame();
+
+    ImGui::ShowFontDemoWindow();
 
     // Our state (make them static = more or less global) as a convenience to keep the example terse.
     static bool show_demo_window = true;

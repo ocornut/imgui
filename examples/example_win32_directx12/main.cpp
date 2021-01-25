@@ -138,9 +138,7 @@ int main(int, char**)
         if (done)
             break;
 
-        // Start the Dear ImGui frame
-        ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+        ImGui::UpdateFontDemo();
 
         // Upload Fonts
         if (io.Fonts->IsDirty())
@@ -149,7 +147,12 @@ int main(int, char**)
             ImGui_ImplDX12_UpdateFontsTexture();
         }
 
+        // Start the Dear ImGui frame
+        ImGui_ImplDX12_NewFrame();
+        ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::ShowFontDemoWindow();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)

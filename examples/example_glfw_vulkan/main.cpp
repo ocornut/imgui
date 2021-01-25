@@ -28,7 +28,7 @@
 
 //#define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
-#define IMGUI_VULKAN_DEBUG_REPORT
+//#define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
@@ -492,6 +492,8 @@ int main(int, char**)
             }
         }
 
+        ImGui::UpdateFontDemo();
+
         // Upload Fonts
         if (io.Fonts->IsDirty())
             UpdateFontsTexture(wd);
@@ -536,6 +538,8 @@ int main(int, char**)
 
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::ShowFontDemoWindow();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
