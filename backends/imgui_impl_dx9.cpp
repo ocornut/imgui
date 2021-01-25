@@ -49,9 +49,7 @@ struct ImGui_ImplDX9_Data
     LPDIRECT3DDEVICE9           pd3dDevice;
     LPDIRECT3DVERTEXBUFFER9     pVB;
     LPDIRECT3DINDEXBUFFER9      pIB;
-    LPDIRECT3DTEXTURE9          FontTexture;
-    int                         FontTextureWidth;
-    int                         FontTextureHeight;
+    ImVector<LPDIRECT3DTEXTURE9>FontTextures;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
@@ -80,6 +78,8 @@ static ImGui_ImplDX9_Data* ImGui_ImplDX9_GetBackendData()
 }
 
 // Functions
+static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(const ImTextureData& texture_data);
+
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
@@ -335,22 +335,19 @@ static bool ImGui_ImplDX9_CheckFormatSupport(IDirect3DDevice9* pDevice, D3DFORMA
     return support;
 }
 
-static bool ImGui_ImplDX9_UpdateFontsTexture()
+static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture, const ImTextureData& texture_data)
 {
-    // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-
-    unsigned char* pixels;
-    int width, height, bytes_per_pixel;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
-    io.Fonts->MarkClean();
+    unsigned char*     pixels          = (unsigned char*)texture_data.TexPixels;
+    int                width           = texture_data.TexWidth;
+    int                height          = texture_data.TexHeight;
 
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     const bool rgba_support = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
-    if (!rgba_support && io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
+    if (!rgba_support && texture_data.TexFormat == ImTextureFormat_RGBA32)
     {
+        int bytes_per_pixel = 4;
         ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
         for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + (size_t)width * height; dst < dst_end; src++, dst++)
             *dst = IMGUI_COL_TO_DX9_ARGB(*src);
@@ -360,24 +357,22 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
     const bool rgba_support = false;
 #endif
 
+    D3DSURFACE_DESC surface_desc = {};
+    if (texture)
+        texture->GetLevelDesc(0, &surface_desc);
+
     // Upload texture to graphics system
-    if (bd->FontTexture == nullptr || bd->FontTextureWidth != width || bd->FontTextureHeight != height)
+    if (texture == nullptr || surface_desc.Width != (UINT)width || surface_desc.Height != (UINT)height)
     {
-        // (Re-)create texture
-        if (bd->FontTexture)
-            bd->FontTexture->Release();
-        io.Fonts->SetTexID(0);
-        bd->FontTexture = nullptr;
-        if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
+        // Create texture
+        texture = nullptr;
+        if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, nullptr) < 0)
             return false;
 
         // Store size
-        bd->FontTextureWidth = width;
-        bd->FontTextureHeight = height;
+        surface_desc.Width  = width;
+        surface_desc.Height = height;
     }
-
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)bd->FontTexture);
 
     {
         D3DLOCKED_RECT tex_locked_rect;
@@ -386,7 +381,7 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
         dirty_rect.right = width;
         dirty_rect.top = 0;
         dirty_rect.bottom = height;
-        if (bd->FontTexture->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
+        if (texture->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
             return false;
 
         if (tex_locked_rect.Pitch == (width * 4))
@@ -409,16 +404,16 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
                 read_ptr += src_stride;
             }
         }
-        bd->FontTexture->UnlockRect(0);
+        texture->UnlockRect(0);
     }
 
     // Upload the dirty region
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!rgba_support && io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
+    if (!rgba_support && texture_data.TexFormat == ImTextureFormat_RGBA32)
         ImGui::MemFree(pixels);
 #endif
 
-    return true;
+    return texture;
 }
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
@@ -426,8 +421,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
     if (!bd || !bd->pd3dDevice)
         return false;
-    if (!ImGui_ImplDX9_UpdateFontsTexture())
-        return false;
+
     return true;
 }
 
@@ -438,20 +432,81 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         return;
     if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
-    if (bd->FontTexture) { bd->FontTexture->Release(); bd->FontTexture = nullptr; ImGui::GetIO().Fonts->SetTexID(0); } // We copied bd->pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    for (int i = 0; i < bd->FontTextures.Size; ++i)
+        bd->FontTextures[i]->Release();
+    bd->FontTextures.resize(0);
 }
 
 void ImGui_ImplDX9_NewFrame()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplDX9_Init()?");
-
-    if (!bd->FontTexture)
-        ImGui_ImplDX9_CreateDeviceObjects();
-
     ImGuiIO& io = ImGui::GetIO();
-    if (io.Fonts->IsDirty())
-        ImGui_ImplDX9_UpdateFontsTexture(); // We ignore the return value because if it fails that almost certainly means the device is invalid, and the font will get reinitialised by ImGui_ImplDX9_CreateDeviceObjects() later
+
+    if (bd->FontTextures.empty())
+    {
+        if (io.Fonts->TexData.TexPixels == nullptr || io.Fonts->IsDirty())
+        {
+            if (io.Fonts->ConfigData.empty())
+                io.Fonts->AddFontDefault();
+            io.Fonts->Build();
+        }
+    }
+}
+
+static void ImGui_ImplDX9_DeleteTextures(ImVector<LPDIRECT3DTEXTURE9>& textures)
+{
+    if (textures.empty())
+        return;
+
+    for (int i = 0; i < textures.Size; ++i)
+        textures[i]->Release();
+}
+
+static void ImGui_ImplDX9_UpdateTextures(ImVector<LPDIRECT3DTEXTURE9>& textures, const ImVector<ImTextureData*>& textures_data)
+{
+    ImVector<LPDIRECT3DTEXTURE9> discarded = textures;
+
+    bool recreate_all = textures.empty();
+
+    for (int i = 0; i < textures_data.Size; ++i)
+    {
+        ImTextureData* texture_data = textures_data[i];
+
+        LPDIRECT3DTEXTURE9 current_texture = (LPDIRECT3DTEXTURE9)texture_data->GetTexID();
+        if (current_texture == nullptr || recreate_all || texture_data->IsDirty())
+        {
+            texture_data->EnsureFormat(ImTextureFormat_RGBA32);
+
+            LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_UpdateTexture(current_texture, *texture_data);
+            if (current_texture != nullptr && new_texture != current_texture)
+                textures.find_erase_unsorted(current_texture);
+
+            if (new_texture != nullptr && new_texture != current_texture)
+                textures.push_back(new_texture);
+
+            discarded.find_erase_unsorted(new_texture);
+
+            texture_data->SetTexID(new_texture);
+            texture_data->MarkClean();
+        }
+        else if (current_texture)
+            discarded.find_erase_unsorted(current_texture);
+    }
+
+    ImGui_ImplDX9_DeleteTextures(discarded);
+
+    for (int i = 0; i < discarded.Size; ++i)
+        textures.find_erase_unsorted(discarded[i]);
+}
+
+void ImGui_ImplDX9_UpdateTextures()
+{
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    ImTextureUpdateData texture_update_data = ImGui::GetTextureUpdateData();
+
+    ImGui_ImplDX9_UpdateTextures(bd->FontTextures, texture_update_data.Textures);
 }
 
 //-----------------------------------------------------------------------------
