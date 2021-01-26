@@ -48,9 +48,74 @@
 //  2016-10-18: Vulkan: Add location decorators & change to use structs as in/out in glsl, update embedded spv (produced with glslangValidator -x). Null the released resources.
 //  2016-08-27: Vulkan: Fix Vulkan example for use when a depth buffer is active.
 
-#include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include <stdio.h>
+
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+#define IMGUI_VULKAN_FUNCTIONS_DEF(func) static PFN_##func func;
+#define IMGUI_VULKAN_FUNCTIONS_MAP(IMGUI_VULKAN_FUNCTIONS_MAP_MACRO) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkAllocateCommandBuffers) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkAllocateDescriptorSets) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkAllocateMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkBindBufferMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkBindImageMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdBindDescriptorSets) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdBindIndexBuffer) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdBindPipeline) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdBindVertexBuffers) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdCopyBufferToImage) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdDrawIndexed) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdPipelineBarrier) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdPushConstants) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdSetScissor) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCmdSetViewport) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateBuffer) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateCommandPool) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateDescriptorSetLayout) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateFence) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateFramebuffer) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateGraphicsPipelines) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateImage) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateImageView) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreatePipelineLayout) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateRenderPass) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateSampler) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateSemaphore) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateShaderModule) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkCreateSwapchainKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyBuffer) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyCommandPool) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyDescriptorSetLayout) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyFence) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyFramebuffer) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyImage) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyImageView) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyPipeline) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyPipelineLayout) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyRenderPass) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroySampler) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroySemaphore) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroyShaderModule) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroySurfaceKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDestroySwapchainKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkDeviceWaitIdle) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkFlushMappedMemoryRanges) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkFreeCommandBuffers) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkFreeMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetBufferMemoryRequirements) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetImageMemoryRequirements) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetPhysicalDeviceMemoryProperties) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetPhysicalDeviceSurfaceCapabilitiesKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetPhysicalDeviceSurfaceFormatsKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetPhysicalDeviceSurfacePresentModesKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkGetSwapchainImagesKHR) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkMapMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkUnmapMemory) \
+    IMGUI_VULKAN_FUNCTIONS_MAP_MACRO(vkUpdateDescriptorSets)
+
+IMGUI_VULKAN_FUNCTIONS_MAP(IMGUI_VULKAN_FUNCTIONS_DEF)
+#undef IMGUI_VULKAN_FUNCTIONS_DEF
+#endif
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
 // [Please zero-clear before use!]
@@ -888,6 +953,18 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass)
 {
+
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+    IM_ASSERT(info->GetVulkanProcAddressFn != NULL);
+#define IMGUI_VULKAN_FUNCTIONS_LOAD(func) \
+    func = reinterpret_cast<decltype(func)>(info->GetVulkanProcAddressFn(info->user_data, #func)); \
+    if(NULL == func) { \
+        return false; \
+    }
+    IMGUI_VULKAN_FUNCTIONS_MAP(IMGUI_VULKAN_FUNCTIONS_LOAD)
+#undef IMGUI_VULKAN_FUNCTIONS_LOAD
+#endif
+
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_vulkan";

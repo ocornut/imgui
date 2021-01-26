@@ -22,25 +22,44 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+
+// In order to be able to use a customized Vulkan loader instead of the default one, you can uncomment the
+// underlying definition in here (not in your code) or define it as a compilation flag in your build system.
+// After enabling this, the user has to provide 'GetVulkanProcAddressFn' (and 'user_data' if it was needed) in
+// the 'ImGui_ImplVulkan_InitInfo' so the implementation can resolve function addresses with that.
+// If you have no idea what it is, leave it alone!
+//#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+#define VK_NO_PROTOTYPES 1
+#endif
 #include <vulkan/vulkan.h>
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance          Instance;
-    VkPhysicalDevice    PhysicalDevice;
-    VkDevice            Device;
-    uint32_t            QueueFamily;
-    VkQueue             Queue;
-    VkPipelineCache     PipelineCache;
-    VkDescriptorPool    DescriptorPool;
-    uint32_t            Subpass;
-    uint32_t            MinImageCount;          // >= 2
-    uint32_t            ImageCount;             // >= MinImageCount
-    VkSampleCountFlagBits        MSAASamples;   // >= VK_SAMPLE_COUNT_1_BIT
-    const VkAllocationCallbacks* Allocator;
-    void                (*CheckVkResultFn)(VkResult err);
+    VkInstance                     Instance;
+    VkPhysicalDevice               PhysicalDevice;
+    VkDevice                       Device;
+    uint32_t                       QueueFamily;
+    VkQueue                        Queue;
+    VkPipelineCache                PipelineCache;
+    VkDescriptorPool               DescriptorPool;
+    uint32_t                       Subpass;
+    uint32_t                       MinImageCount;          // >= 2
+    uint32_t                       ImageCount;             // >= MinImageCount
+    VkSampleCountFlagBits          MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT
+    const VkAllocationCallbacks*   Allocator;
+    void                         (*CheckVkResultFn)(VkResult err);
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+    // This function pointer is needed when the default Vulkan loader is disabled(not applicable).
+    // For more information look at comments before '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES' 
+    PFN_vkVoidFunction           (*GetVulkanProcAddressFn)(void *user_data, const char* pName);
+    // This pointer is going to be fed to the 'GetVulkanProcAddressFn', you can use it for
+    // accessing contex/object that is maybe needed for the function call.
+    void *user_data;
+#endif
 };
 
 // Called by user code
