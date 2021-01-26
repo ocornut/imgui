@@ -25,6 +25,7 @@
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748)
 //  2024-05-07: OpenGL: Update loader for Linux to support EGL/GLVND. (#7562)
 //  2024-04-16: OpenGL: Detect ES3 contexts on desktop based on version string, to e.g. avoid calling glPolygonMode() on them. (#7447)
+//  XXXX-XX-XX: OpenGL: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2024-01-09: OpenGL: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" and variants, fixing regression on distros missing a symlink.
 //  2023-11-08: OpenGL: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead of "libGL.so.1", accommodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 //  2023-10-05: OpenGL: Rename symbols in our internal loader so that LTO compilation with another copy of gl3w is possible. (#6875, #6668, #4445)
@@ -249,6 +250,8 @@ static ImGui_ImplOpenGL3_Data* ImGui_ImplOpenGL3_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL3_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+static void ImGui_ImplOpenGL3_UpdateFontsTexture();
+
 // OpenGL vertex attribute state (for ES 1.0 and ES 2.0 only)
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
 struct ImGui_ImplOpenGL3_VtxAttribState
@@ -341,6 +344,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     if (bd->GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We can update font atlas texture when requested.
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to nullptr if unsure.
@@ -404,8 +408,8 @@ void    ImGui_ImplOpenGL3_NewFrame()
 
     if (!bd->ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
-    if (!bd->FontTexture)
-        ImGui_ImplOpenGL3_CreateFontsTexture();
+    if (ImGui::GetIO().Fonts->IsDirty())
+        ImGui_ImplOpenGL3_UpdateFontsTexture();
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
@@ -663,21 +667,23 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     (void)bd; // Not all compilation paths use this
 }
 
-bool ImGui_ImplOpenGL3_CreateFontsTexture()
+static void ImGui_ImplOpenGL3_UpdateFontsTexture()
 {
+    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    IM_ASSERT(bd->FontTexture != 0); // Update expect texture to already been created
 
     // Build texture atlas
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+    io.Fonts->MarkClean();
 
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     GLint last_texture;
     GL_CALL(glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture));
-    GL_CALL(glGenTextures(1, &bd->FontTexture));
     GL_CALL(glBindTexture(GL_TEXTURE_2D, bd->FontTexture));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
@@ -691,6 +697,15 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
 
     // Restore state
     GL_CALL(glBindTexture(GL_TEXTURE_2D, last_texture));
+}
+
+bool ImGui_ImplOpenGL3_CreateFontsTexture()
+{
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+
+    IM_ASSERT(bd->FontTexture == 0);
+    GL_CALL(glGenTextures(1, &bd->FontTexture));
+    ImGui_ImplOpenGL3_UpdateFontsTexture();
 
     return true;
 }
