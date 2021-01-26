@@ -23,6 +23,13 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 
+// In order to be able to use a customized Vulkan loader instead of the default one, you can uncomment the
+// underlying definition in here (not in your code) or define it as a compilation flag in your build system.
+// After enabling this, the user has to provide 'GetVulkanProcAddressFn' (and 'user_data' if it was needed) in
+// the 'ImGui_ImplVulkan_InitInfo' so the implementation can resolve function addresses with that.
+// If you have no idea what it is, leave it alone!
+//#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+
 #ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
 #define VK_NO_PROTOTYPES 1
 #endif
@@ -46,15 +53,11 @@ struct ImGui_ImplVulkan_InitInfo
     const VkAllocationCallbacks*   Allocator;
     void                         (*CheckVkResultFn)(VkResult err);
 #ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-    /// User has to provide this function pointer in case that default linkage of Vulkan is disabled.
-    /// You can disable default Vulkan linkage by uncommenting '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES'
-    /// in the 'imconfig.h' file or by adding 'IMGUI_IMPL_VULKAN_NO_PROTOTYPES' to your compilation
-    /// flags in your project.
-    /// If you do not have a problem with default Vulkan loader or you have no idea what it is
-    /// leave it alone.
+    // This function pointer is needed when the default Vulkan loader is disabled(not applicable).
+    // For more information look at comments before '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES' 
     PFN_vkVoidFunction           (*GetVulkanProcAddressFn)(void *user_data, const char* pName);
-    /// In case user wants to pass a contex/object to upper field this field is going to be needed.
-    /// Otherwise, leave it alone.
+    // This pointer is going to be fed to the 'GetVulkanProcAddressFn', you can use it for
+    // accessing contex/object that is maybe needed for the function call.
     void *user_data;
 #endif
 };

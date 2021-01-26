@@ -100,10 +100,6 @@
 //---- Debug Tools: Enable slower asserts
 //#define IMGUI_DEBUG_PARANOID
 
-//---- Disable default Vulkan symbol loader, then the user has the freedom to implement cutomized loader,
-// (for more information go to the Vulkan implementation)
-//#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-
 //---- Tip: You can add extra functions within the ImGui:: namespace, here or in your own headers files.
 /*
 namespace ImGui
