@@ -37,6 +37,8 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no 
+  close button in the window. (#3731)
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with 
