@@ -1223,10 +1223,11 @@ struct IMGUI_API ImGuiStackSizes
 //-----------------------------------------------------------------------------
 
 typedef void (*ImGuiContextHookCallback)(ImGuiContext* ctx, ImGuiContextHook* hook);
-enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown };
+enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown, ImGuiContextHookType_PendingRemoval_ };
 
 struct ImGuiContextHook
 {
+    ImGuiID                     HookId;     // A unique ID assigned by AddContextHook()
     ImGuiContextHookType        Type;
     ImGuiID                     Owner;
     ImGuiContextHookCallback    Callback;
@@ -1454,6 +1455,7 @@ struct ImGuiContext
     ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
     ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
+    ImGuiID                             HookIdNext;             // Next available HookId
 
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
@@ -2185,7 +2187,8 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
 
     // Generic context hooks
-    IMGUI_API void          AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API void          RemoveContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Settings
