@@ -22,25 +22,41 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+#define VK_NO_PROTOTYPES 1
+#endif
 #include <vulkan/vulkan.h>
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance          Instance;
-    VkPhysicalDevice    PhysicalDevice;
-    VkDevice            Device;
-    uint32_t            QueueFamily;
-    VkQueue             Queue;
-    VkPipelineCache     PipelineCache;
-    VkDescriptorPool    DescriptorPool;
-    uint32_t            Subpass;
-    uint32_t            MinImageCount;          // >= 2
-    uint32_t            ImageCount;             // >= MinImageCount
-    VkSampleCountFlagBits        MSAASamples;   // >= VK_SAMPLE_COUNT_1_BIT
-    const VkAllocationCallbacks* Allocator;
-    void                (*CheckVkResultFn)(VkResult err);
+    VkInstance                     Instance;
+    VkPhysicalDevice               PhysicalDevice;
+    VkDevice                       Device;
+    uint32_t                       QueueFamily;
+    VkQueue                        Queue;
+    VkPipelineCache                PipelineCache;
+    VkDescriptorPool               DescriptorPool;
+    uint32_t                       Subpass;
+    uint32_t                       MinImageCount;          // >= 2
+    uint32_t                       ImageCount;             // >= MinImageCount
+    VkSampleCountFlagBits          MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT
+    const VkAllocationCallbacks*   Allocator;
+    void                         (*CheckVkResultFn)(VkResult err);
+#ifdef IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+    /// User has to provide this function pointer in case that default linkage of Vulkan is disabled.
+    /// You can disable default Vulkan linkage by uncommenting '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES'
+    /// in the 'imconfig.h' file or by adding 'IMGUI_IMPL_VULKAN_NO_PROTOTYPES' to your compilation
+    /// flags in your project.
+    /// If you do not have a problem with default Vulkan loader or you have no idea what it is
+    /// leave it alone.
+    PFN_vkVoidFunction           (*GetVulkanProcAddressFn)(void *user_data, const char* pName);
+    /// In case user wants to pass a contex/object to upper field this field is going to be needed.
+    /// Otherwise, leave it alone.
+    void *user_data;
+#endif
 };
 
 // Called by user code
