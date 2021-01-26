@@ -339,6 +339,36 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 
+static void UpdateFontsTexture(ImGui_ImplVulkanH_Window* wd)
+{
+    // Use any command queue
+    VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+    VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
+
+    VkResult err = vkResetCommandPool(g_Device, command_pool, 0);
+    check_vk_result(err);
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    err = vkBeginCommandBuffer(command_buffer, &begin_info);
+    check_vk_result(err);
+
+    ImGui_ImplVulkan_UpdateFontsTexture(command_buffer);
+
+    VkSubmitInfo end_info = {};
+    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    end_info.commandBufferCount = 1;
+    end_info.pCommandBuffers = &command_buffer;
+    err = vkEndCommandBuffer(command_buffer);
+    check_vk_result(err);
+    err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+    check_vk_result(err);
+
+    err = vkDeviceWaitIdle(g_Device);
+    check_vk_result(err);
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+}
+
 int main(int, char**)
 {
     // Setup SDL
@@ -381,6 +411,7 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -418,34 +449,7 @@ int main(int, char**)
     //IM_ASSERT(font != NULL);
 
     // Upload Fonts
-    {
-        // Use any command queue
-        VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
-        VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
-
-        err = vkResetCommandPool(g_Device, command_pool, 0);
-        check_vk_result(err);
-        VkCommandBufferBeginInfo begin_info = {};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        err = vkBeginCommandBuffer(command_buffer, &begin_info);
-        check_vk_result(err);
-
-        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-
-        VkSubmitInfo end_info = {};
-        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        end_info.commandBufferCount = 1;
-        end_info.pCommandBuffers = &command_buffer;
-        err = vkEndCommandBuffer(command_buffer);
-        check_vk_result(err);
-        err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
-        check_vk_result(err);
-
-        err = vkDeviceWaitIdle(g_Device);
-        check_vk_result(err);
-        ImGui_ImplVulkan_DestroyFontUploadObjects();
-    }
+    UpdateFontsTexture(wd);
 
     // Our state
     bool show_demo_window = true;
@@ -484,6 +488,9 @@ int main(int, char**)
                 g_SwapChainRebuild = false;
             }
         }
+
+        if (io.Fonts->IsDirty())
+            UpdateFontsTexture(wd);
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();

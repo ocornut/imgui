@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-XX-YY: OpenGL: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2021-04-06: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater.
 //  2021-02-18: OpenGL: Change blending equation to preserve alpha in output buffer.
 //  2021-01-03: OpenGL: Backup, setup and restore GL_STENCIL_TEST state.
@@ -152,6 +153,8 @@ static GLint        g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;       
 static GLuint       g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 
+static void ImGui_ImplOpenGL3_UpdateFontsTexture();
+
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
@@ -179,6 +182,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     if (g_GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We can update font atlas texture when requested.
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
@@ -242,6 +246,9 @@ void    ImGui_ImplOpenGL3_NewFrame()
 {
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
+
+    if (ImGui::GetIO().Fonts->IsDirty())
+        ImGui_ImplOpenGL3_UpdateFontsTexture();
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
@@ -454,18 +461,20 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
 
-bool ImGui_ImplOpenGL3_CreateFontsTexture()
+static void ImGui_ImplOpenGL3_UpdateFontsTexture()
 {
+    IM_ASSERT(g_FontTexture != 0); // Update expect texture to already been created
+
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+    io.Fonts->MarkClean();
 
     // Upload texture to graphics system
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -479,6 +488,15 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
+}
+
+bool ImGui_ImplOpenGL3_CreateFontsTexture()
+{
+    IM_ASSERT(g_FontTexture == 0);
+
+    glGenTextures(1, &g_FontTexture);
+
+    ImGui_ImplOpenGL3_UpdateFontsTexture();
 
     return true;
 }

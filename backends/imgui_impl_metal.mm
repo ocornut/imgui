@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-XX-YY: Metal: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2021-02-18: Metal: Change blending equation to preserve alpha in output buffer.
 //  2021-01-25: Metal: Fixed texture storage mode when building on Mac Catalyst.
 //  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
@@ -53,10 +54,13 @@
 @property (nonatomic, strong) FramebufferDescriptor *framebufferDescriptor; // framebuffer descriptor for current frame; transient
 @property (nonatomic, strong) NSMutableDictionary *renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
 @property (nonatomic, strong, nullable) id<MTLTexture> fontTexture;
+@property (nonatomic, assign) int fontWidth;
+@property (nonatomic, assign) int fontHeight;
 @property (nonatomic, strong) NSMutableArray<MetalBuffer *> *bufferCache;
 @property (nonatomic, assign) NSTimeInterval lastBufferCachePurge;
 - (void)makeDeviceObjectsWithDevice:(id<MTLDevice>)device;
 - (void)makeFontTextureWithDevice:(id<MTLDevice>)device;
+- (void)updateFontTexture;
 - (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
 - (void)enqueueReusableBuffer:(MetalBuffer *)buffer;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device;
@@ -81,6 +85,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -100,6 +105,14 @@ void ImGui_ImplMetal_Shutdown()
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
 {
     IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    if (io.Fonts->IsDirty())
+    {
+        [g_sharedMetalContext updateFontTexture];
+        io.Fonts->SetTexID((__bridge void *)g_sharedMetalContext.fontTexture); // ImTextureID == void*
+    }
 
     g_sharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 }
@@ -246,9 +259,28 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     textureDescriptor.storageMode = MTLStorageModeShared;
 #endif
     id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
-    [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
     self.fontTexture = texture;
+    self.fontWidth   = width;
+    self.fontHeight  = height;
+
+    [self updateFontTexture];
 }
+
+- (void)updateFontTexture
+{
+    ImGuiIO &io = ImGui::GetIO();
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    io.Fonts->MarkClean();
+
+    if (width != self.fontWidth || height != self.fontHeight)
+        [self makeFontTextureWithDevice:self.fontTexture.device];
+
+    [self.fontTexture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
+}
+
+
 
 - (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
 {

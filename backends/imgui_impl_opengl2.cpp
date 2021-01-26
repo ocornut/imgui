@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-01-26: OpenGL: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2021-01-03: OpenGL: Backup, setup and restore GL_SHADE_MODEL state, disable GL_STENCIL_TEST and disable GL_NORMAL_ARRAY client state to increase compatibility with legacy OpenGL applications.
 //  2020-01-23: OpenGL: Backup, setup and restore GL_TEXTURE_ENV to increase compatibility with legacy OpenGL applications.
 //  2019-04-30: OpenGL: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
@@ -56,12 +57,15 @@
 // OpenGL Data
 static GLuint       g_FontTexture = 0;
 
+static void ImGui_ImplOpenGL2_UpdateFontsTexture();
+
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl2";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We can update font atlas texture when requested.
     return true;
 }
 
@@ -74,6 +78,9 @@ void    ImGui_ImplOpenGL2_NewFrame()
 {
     if (!g_FontTexture)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
+
+    if (ImGui::GetIO().Fonts->IsDirty())
+        ImGui_ImplOpenGL2_UpdateFontsTexture();
 }
 
 static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height)
@@ -209,8 +216,10 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, last_tex_env_mode);
 }
 
-bool ImGui_ImplOpenGL2_CreateFontsTexture()
+static void ImGui_ImplOpenGL2_UpdateFontsTexture()
 {
+    IM_ASSERT(g_FontTexture != 0); // Update expect texture to already been created
+
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -220,7 +229,6 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
     // Upload texture to graphics system
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -232,6 +240,15 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
+}
+
+bool ImGui_ImplOpenGL2_CreateFontsTexture()
+{
+    IM_ASSERT(g_FontTexture == 0);
+
+    glGenTextures(1, &g_FontTexture);
+
+    ImGui_ImplOpenGL2_UpdateFontsTexture();
 
     return true;
 }

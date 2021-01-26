@@ -347,6 +347,40 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 
+static void UpdateFontsTexture(ImGui_ImplVulkanH_Window* wd)
+{
+    // We don't want to trample on the previous frame if it is still in-flight
+    VkResult err = vkDeviceWaitIdle(g_Device);
+    check_vk_result(err);
+
+    // Use any command queue
+    VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+    VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
+
+    err = vkResetCommandPool(g_Device, command_pool, 0);
+    check_vk_result(err);
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    err = vkBeginCommandBuffer(command_buffer, &begin_info);
+    check_vk_result(err);
+
+    ImGui_ImplVulkan_UpdateFontsTexture(command_buffer);
+
+    VkSubmitInfo end_info = {};
+    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    end_info.commandBufferCount = 1;
+    end_info.pCommandBuffers = &command_buffer;
+    err = vkEndCommandBuffer(command_buffer);
+    check_vk_result(err);
+    err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+    check_vk_result(err);
+
+    err = vkDeviceWaitIdle(g_Device);
+    check_vk_result(err);
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+}
+
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -410,6 +444,8 @@ int main(int, char**)
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // Set flag to indicate that we can reload textures when requested.
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -425,35 +461,7 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
-    // Upload Fonts
-    {
-        // Use any command queue
-        VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
-        VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
-
-        err = vkResetCommandPool(g_Device, command_pool, 0);
-        check_vk_result(err);
-        VkCommandBufferBeginInfo begin_info = {};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        err = vkBeginCommandBuffer(command_buffer, &begin_info);
-        check_vk_result(err);
-
-        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-
-        VkSubmitInfo end_info = {};
-        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        end_info.commandBufferCount = 1;
-        end_info.pCommandBuffers = &command_buffer;
-        err = vkEndCommandBuffer(command_buffer);
-        check_vk_result(err);
-        err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
-        check_vk_result(err);
-
-        err = vkDeviceWaitIdle(g_Device);
-        check_vk_result(err);
-        ImGui_ImplVulkan_DestroyFontUploadObjects();
-    }
+    UpdateFontsTexture(wd);
 
     // Our state
     bool show_demo_window = true;
@@ -484,8 +492,48 @@ int main(int, char**)
             }
         }
 
+        // Upload Fonts
+        if (io.Fonts->IsDirty())
+            UpdateFontsTexture(wd);
+
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
+
+        // Upload Fonts
+        if (io.Fonts->IsDirty())
+        {
+            // We don't want to trample on the previous frame if it is still in-flight
+            err = vkDeviceWaitIdle(g_Device);
+            check_vk_result(err);
+
+            // Use any command queue
+            VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+            VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
+
+            err = vkResetCommandPool(g_Device, command_pool, 0);
+            check_vk_result(err);
+            VkCommandBufferBeginInfo begin_info = {};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            err = vkBeginCommandBuffer(command_buffer, &begin_info);
+            check_vk_result(err);
+
+            ImGui_ImplVulkan_UpdateFontsTexture(command_buffer);
+
+            VkSubmitInfo end_info = {};
+            end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            end_info.commandBufferCount = 1;
+            end_info.pCommandBuffers = &command_buffer;
+            err = vkEndCommandBuffer(command_buffer);
+            check_vk_result(err);
+            err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+            check_vk_result(err);
+
+            err = vkDeviceWaitIdle(g_Device);
+            check_vk_result(err);
+            ImGui_ImplVulkan_DestroyFontUploadObjects();
+        }
+
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 

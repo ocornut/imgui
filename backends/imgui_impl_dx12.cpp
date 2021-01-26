@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-XX-XX: *BREAKING CHANGE*: DirectX12: Changed ImGui_ImplDX12_CreateFontsTexture() to ImGui_ImplDX12_UpdateFontsTexture(), which should be called at the start of the frame when ImGui::GetIO().Fonts->IsDirty() is true to reupload the font texture. ImGuiBackendFlags_RendererHasTexReload should be set once this is implemented.
 //  2021-02-18: DirectX12: Change blending equation to preserve alpha in output buffer.
 //  2021-01-11: DirectX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically.
 //  2020-09-16: DirectX12: Avoid rendering calls with zero-sized scissor rectangle since it generates a validation layer warning.
@@ -49,6 +50,8 @@ static DXGI_FORMAT                  g_RTVFormat = DXGI_FORMAT_UNKNOWN;
 static ID3D12Resource*              g_pFontTextureResource = NULL;
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_hFontSrvCpuDescHandle = {};
 static D3D12_GPU_DESCRIPTOR_HANDLE  g_hFontSrvGpuDescHandle = {};
+static int                          g_FontTextureWidth = 0;
+static int                          g_FontTextureHeight = 0;
 
 struct FrameResources
 {
@@ -252,16 +255,20 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     }
 }
 
-static void ImGui_ImplDX12_CreateFontsTexture()
+void ImGui_ImplDX12_UpdateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    io.Fonts->MarkClean();
 
-    // Upload texture to graphics system
+    bool need_barrier_before_copy = true; // Do we need a resource barrier before we copy new data in?
+
+    if ((!g_pFontTextureResource) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
     {
+        // Either we have no texture or the size has changed, so (re-)create the texture
         D3D12_HEAP_PROPERTIES props;
         memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
         props.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -286,8 +293,35 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
             D3D12_RESOURCE_STATE_COPY_DEST, NULL, IID_PPV_ARGS(&pTexture));
 
+        // Create SRV
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = desc.MipLevels;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, g_hFontSrvCpuDescHandle);
+        SafeRelease(g_pFontTextureResource);
+        g_pFontTextureResource = pTexture;
+
+        g_FontTextureWidth = width;
+        g_FontTextureHeight = height;
+
+        need_barrier_before_copy = false; // Because this is a newly-created texture it will be in D3D12_RESOURCE_STATE_COMMON and thus we don't need a barrier
+    }
+
+    // Store our identifier
+    static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
+    io.Fonts->SetTexID((ImTextureID)g_hFontSrvGpuDescHandle.ptr);
+
+    // Upload texture
+    {
         UINT uploadPitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
         UINT uploadSize = height * uploadPitch;
+
+        D3D12_RESOURCE_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
         desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
         desc.Alignment = 0;
         desc.Width = uploadSize;
@@ -300,6 +334,8 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+        D3D12_HEAP_PROPERTIES props;
+        memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
         props.Type = D3D12_HEAP_TYPE_UPLOAD;
         props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
@@ -327,17 +363,11 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
 
         D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-        dstLocation.pResource = pTexture;
+        dstLocation.pResource = g_pFontTextureResource;
         dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         dstLocation.SubresourceIndex = 0;
 
-        D3D12_RESOURCE_BARRIER barrier = {};
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.pResource   = pTexture;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        // Create temporary command list and execute immediately
 
         ID3D12Fence* fence = NULL;
         hr = g_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
@@ -363,8 +393,30 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         hr = g_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, NULL, IID_PPV_ARGS(&cmdList));
         IM_ASSERT(SUCCEEDED(hr));
 
+        if (need_barrier_before_copy)
+        {
+            D3D12_RESOURCE_BARRIER barrier = {};
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource = g_pFontTextureResource;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+            cmdList->ResourceBarrier(1, &barrier);
+        }
+
         cmdList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, NULL);
-        cmdList->ResourceBarrier(1, &barrier);
+
+        {
+            D3D12_RESOURCE_BARRIER barrier = {};
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource = g_pFontTextureResource;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            cmdList->ResourceBarrier(1, &barrier);
+        }
 
         hr = cmdList->Close();
         IM_ASSERT(SUCCEEDED(hr));
@@ -382,23 +434,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         CloseHandle(event);
         fence->Release();
         uploadBuffer->Release();
-
-        // Create texture view
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = desc.MipLevels;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, g_hFontSrvCpuDescHandle);
-        SafeRelease(g_pFontTextureResource);
-        g_pFontTextureResource = pTexture;
     }
-
-    // Store our identifier
-    static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->SetTexID((ImTextureID)g_hFontSrvGpuDescHandle.ptr);
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
@@ -628,7 +664,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (result_pipeline_state != S_OK)
         return false;
 
-    ImGui_ImplDX12_CreateFontsTexture();
+    ImGui_ImplDX12_UpdateFontsTexture();
 
     return true;
 }
@@ -660,6 +696,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx12";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    // Note that we explicitly do *not* set ImGuiBackendFlags_RendererHasTexReload here, because in DX12 that requires support in the caller as well, so we leave setting it (or not) up to that code.
 
     g_pd3dDevice = device;
     g_RTVFormat = rtv_format;
