@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-XX-XX: OpenGL: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-12-08: OpenGL: Fixed mishandling of the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -79,6 +80,8 @@ static ImGui_ImplOpenGL2_Data* ImGui_ImplOpenGL2_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL2_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+static void ImGui_ImplOpenGL2_UpdateFontsTexture();
+
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
@@ -89,6 +92,7 @@ bool    ImGui_ImplOpenGL2_Init()
     ImGui_ImplOpenGL2_Data* bd = IM_NEW(ImGui_ImplOpenGL2_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl2";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We can update font atlas texture when requested.
 
     return true;
 }
@@ -112,6 +116,9 @@ void    ImGui_ImplOpenGL2_NewFrame()
 
     if (!bd->FontTexture)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
+
+    if (ImGui::GetIO().Fonts->IsDirty())
+        ImGui_ImplOpenGL2_UpdateFontsTexture();
 }
 
 static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height)
@@ -242,11 +249,13 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, last_tex_env_mode);
 }
 
-bool ImGui_ImplOpenGL2_CreateFontsTexture()
+static void ImGui_ImplOpenGL2_UpdateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+
+    IM_ASSERT(bd->FontTexture != 0); // Update expect texture to already been created
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
@@ -255,7 +264,6 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &bd->FontTexture);
     glBindTexture(GL_TEXTURE_2D, bd->FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -267,6 +275,14 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
+}
+
+bool ImGui_ImplOpenGL2_CreateFontsTexture()
+{
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    IM_ASSERT(bd->FontTexture == 0);
+    glGenTextures(1, &bd->FontTexture);
+    ImGui_ImplOpenGL2_UpdateFontsTexture();
 
     return true;
 }

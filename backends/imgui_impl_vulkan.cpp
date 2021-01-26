@@ -45,6 +45,7 @@
 //              ImGui_ImplVulkan_CreateFontsTexture() is automatically called by NewFrame() the first time.
 //              You can call ImGui_ImplVulkan_CreateFontsTexture() again to recreate the font atlas texture.
 //              Added ImGui_ImplVulkan_DestroyFontsTexture() but you probably never need to call this.
+//  2023-XX-XX: *BREAKING CHANGE*: Vulkan: Changed ImGui_ImplVulkan_CreateFontsTexture() to ImGui_ImplVulkan_UpdateFontsTexture(), which should be called at the start of the frame when ImGui::GetIO().Fonts->IsDirty() is true to reupload the font texture. ImGuiBackendFlags_RendererHasTexReload should be set once this is implemented.
 //  2023-07-04: Vulkan: Added optional support for VK_KHR_dynamic_rendering. User needs to set init_info->UseDynamicRendering = true and init_info->ColorAttachmentFormat.
 //  2023-01-02: Vulkan: Fixed sampler passed to ImGui_ImplVulkan_AddTexture() not being honored + removed a bunch of duplicate code.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
@@ -230,8 +231,11 @@ struct ImGui_ImplVulkan_Data
     VkImage                     FontImage;
     VkImageView                 FontView;
     VkDescriptorSet             FontDescriptorSet;
+
     VkCommandPool               FontCommandPool;
     VkCommandBuffer             FontCommandBuffer;
+    int                         FontTextureWidth;
+    int                         FontTextureHeight;
 
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
@@ -612,7 +616,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 }
 
-bool ImGui_ImplVulkan_CreateFontsTexture()
+bool ImGui_ImplVulkan_UpdateFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -659,54 +663,79 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    io.Fonts->MarkClean();
+
+    if ((!bd->FontView) || (bd->FontTextureWidth != width) || (bd->FontTextureHeight != height))
+    {
+        // Either we have no texture or the size has changed, so (re-)create the texture
+        //if (bd->FontView) { vkDestroyImageView(v->Device, bd->FontView, v->Allocator); bd->FontView = VK_NULL_HANDLE; }
+        //if (bd->FontImage) { vkDestroyImage(v->Device, bd->FontImage, v->Allocator); bd->FontImage = VK_NULL_HANDLE; }
+        //if (bd->FontMemory) { vkFreeMemory(v->Device, bd->FontMemory, v->Allocator); bd->FontMemory = VK_NULL_HANDLE; }
+
+        // Create the Image:
+        {
+            VkImageCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            info.imageType = VK_IMAGE_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.extent.width = width;
+            info.extent.height = height;
+            info.extent.depth = 1;
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.samples = VK_SAMPLE_COUNT_1_BIT;
+            info.tiling = VK_IMAGE_TILING_OPTIMAL;
+            info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            err = vkCreateImage(v->Device, &info, v->Allocator, &bd->FontImage);
+            check_vk_result(err);
+            VkMemoryRequirements req;
+            vkGetImageMemoryRequirements(v->Device, bd->FontImage, &req);
+            VkMemoryAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
+            alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
+            err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &bd->FontMemory);
+            check_vk_result(err);
+            err = vkBindImageMemory(v->Device, bd->FontImage, bd->FontMemory, 0);
+            check_vk_result(err);
+        }
+
+        // Create the Image View:
+        {
+            VkImageViewCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            info.image = bd->FontImage;
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            info.subresourceRange.levelCount = 1;
+            info.subresourceRange.layerCount = 1;
+            err = vkCreateImageView(v->Device, &info, v->Allocator, &bd->FontView);
+            check_vk_result(err);
+        }
+
+        // Create the Descriptor Set:
+        bd->FontDescriptorSet = (VkDescriptorSet)ImGui_ImplVulkan_AddTexture(bd->FontSampler, bd->FontView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        // Update the Descriptor Set:
+        {
+            VkDescriptorImageInfo desc_image[1] = {};
+            desc_image[0].sampler = bd->FontSampler;
+            desc_image[0].imageView = bd->FontView;
+            desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkWriteDescriptorSet write_desc[1] = {};
+            write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_desc[0].dstSet = bd->FontDescriptorSet;
+            write_desc[0].descriptorCount = 1;
+            write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_desc[0].pImageInfo = desc_image;
+            vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, nullptr);
+        }
+    }
+
     size_t upload_size = width * height * 4 * sizeof(char);
-
-    // Create the Image:
-    {
-        VkImageCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        info.imageType = VK_IMAGE_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        info.extent.width = width;
-        info.extent.height = height;
-        info.extent.depth = 1;
-        info.mipLevels = 1;
-        info.arrayLayers = 1;
-        info.samples = VK_SAMPLE_COUNT_1_BIT;
-        info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        err = vkCreateImage(v->Device, &info, v->Allocator, &bd->FontImage);
-        check_vk_result(err);
-        VkMemoryRequirements req;
-        vkGetImageMemoryRequirements(v->Device, bd->FontImage, &req);
-        VkMemoryAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
-        alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
-        err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &bd->FontMemory);
-        check_vk_result(err);
-        err = vkBindImageMemory(v->Device, bd->FontImage, bd->FontMemory, 0);
-        check_vk_result(err);
-    }
-
-    // Create the Image View:
-    {
-        VkImageViewCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        info.image = bd->FontImage;
-        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        info.subresourceRange.levelCount = 1;
-        info.subresourceRange.layerCount = 1;
-        err = vkCreateImageView(v->Device, &info, v->Allocator, &bd->FontView);
-        check_vk_result(err);
-    }
-
-    // Create the Descriptor Set:
-    bd->FontDescriptorSet = (VkDescriptorSet)ImGui_ImplVulkan_AddTexture(bd->FontSampler, bd->FontView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     // Create the Upload Buffer:
     VkDeviceMemory upload_buffer_memory;
@@ -737,7 +766,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         char* map = nullptr;
         err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)(&map));
         check_vk_result(err);
-        memcpy(map, pixels, upload_size);
+        memcpy(map, pixels, upload_size); // Fast path for full image upload
         VkMappedMemoryRange range[1] = {};
         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[0].memory = upload_buffer_memory;
@@ -765,9 +794,14 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         VkBufferImageCopy region = {};
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.layerCount = 1;
+        region.imageOffset.x = 0;
+        region.imageOffset.y = 0;
         region.imageExtent.width = width;
         region.imageExtent.height = height;
         region.imageExtent.depth = 1;
+        region.bufferOffset = 0;
+        region.bufferRowLength = width;
+        region.bufferImageHeight = height;
         vkCmdCopyBufferToImage(bd->FontCommandBuffer, upload_buffer, bd->FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
         VkImageMemoryBarrier use_barrier[1] = {};
@@ -787,6 +821,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)bd->FontDescriptorSet);
+    bd->FontTextureWidth = width;
+    bd->FontTextureHeight = height;
 
     // End command buffer
     VkSubmitInfo end_info = {};
@@ -1097,6 +1133,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_vulkan";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    // Note that we explicitly do *not* set ImGuiBackendFlags_RendererHasTexReload here, because in Vulkan that requires support in the caller as well, so we leave setting it (or not) up to that code.
 
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);
     IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
@@ -1133,8 +1170,10 @@ void ImGui_ImplVulkan_NewFrame()
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplVulkan_Init()?");
 
-    if (!bd->FontDescriptorSet)
-        ImGui_ImplVulkan_CreateFontsTexture();
+    // Upload Fonts
+    ImGuiIO& io = ImGui::GetIO();
+    if (!bd->FontDescriptorSet || io.Fonts->IsDirty())
+        ImGui_ImplVulkan_UpdateFontsTexture();
 }
 
 void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)

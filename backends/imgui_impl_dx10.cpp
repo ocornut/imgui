@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-XX-XX: DirectX10: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: DirectX10: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
@@ -57,6 +58,9 @@ struct ImGui_ImplDX10_Data
     ID3D10Buffer*               pVertexConstantBuffer;
     ID3D10PixelShader*          pPixelShader;
     ID3D10SamplerState*         pFontSampler;
+    ID3D10Texture2D*            pFontTexture;
+    int                         FontTextureWidth;
+    int                         FontTextureHeight;
     ID3D10ShaderResourceView*   pFontTextureView;
     ID3D10RasterizerState*      pRasterizerState;
     ID3D10BlendState*           pBlendState;
@@ -296,46 +300,73 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
-static void ImGui_ImplDX10_CreateFontsTexture()
+static void ImGui_ImplDX10_UpdateFontsTexture()
 {
     // Build texture atlas
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
+
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    io.Fonts->MarkClean();
 
-    // Upload texture to graphics system
+    if ((!bd->pFontTextureView) || (bd->FontTextureWidth != width) || (bd->FontTextureHeight != height))
     {
-        D3D10_TEXTURE2D_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
-        desc.Width = width;
-        desc.Height = height;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D10_USAGE_DEFAULT;
-        desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
+        // Either we have no texture or the size has changed, so (re-)create the texture
 
-        ID3D10Texture2D* pTexture = nullptr;
-        D3D10_SUBRESOURCE_DATA subResource;
-        subResource.pSysMem = pixels;
-        subResource.SysMemPitch = desc.Width * 4;
-        subResource.SysMemSlicePitch = 0;
-        bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
-        IM_ASSERT(pTexture != nullptr);
+        // Release old texture
+        if (bd->pFontTextureView) { bd->pFontTextureView->Release(); bd->pFontTextureView = nullptr; ImGui::GetIO().Fonts->SetTexID(0); } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+        if (bd->pFontTexture) { bd->pFontTexture->Release(); bd->pFontTexture = nullptr; }
 
-        // Create texture view
-        D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
-        ZeroMemory(&srv_desc, sizeof(srv_desc));
-        srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Texture2D.MipLevels = desc.MipLevels;
-        srv_desc.Texture2D.MostDetailedMip = 0;
-        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srv_desc, &bd->pFontTextureView);
-        pTexture->Release();
+        // Create new texture
+        {
+            D3D10_TEXTURE2D_DESC desc;
+            ZeroMemory(&desc, sizeof(desc));
+            desc.Width = width;
+            desc.Height = height;
+            desc.MipLevels = 1;
+            desc.ArraySize = 1;
+            desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            desc.SampleDesc.Count = 1;
+            desc.Usage = D3D10_USAGE_DEFAULT;
+            desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+            desc.CPUAccessFlags = 0;
+
+            D3D10_SUBRESOURCE_DATA subResource;
+            subResource.pSysMem = pixels;
+            subResource.SysMemPitch = desc.Width * 4;
+            subResource.SysMemSlicePitch = 0;
+            bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &bd->pFontTexture);
+            IM_ASSERT(bd->pFontTexture != nullptr);
+
+            // Create texture view
+            D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
+            ZeroMemory(&srv_desc, sizeof(srv_desc));
+            srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+            srv_desc.Texture2D.MipLevels = desc.MipLevels;
+            srv_desc.Texture2D.MostDetailedMip = 0;
+            bd->pd3dDevice->CreateShaderResourceView(bd->pFontTexture, &srv_desc, &bd->pFontTextureView);
+        }
+
+        // Store size
+        bd->FontTextureWidth = width;
+        bd->FontTextureHeight = height;
+    }
+    else
+    {
+        // Upload new atlas data
+
+        D3D10_BOX box;
+        box.left = 0;
+        box.right = width;
+        box.top = 0;
+        box.bottom = height;
+        box.front = 0;
+        box.back = 1;
+
+        bd->pd3dDevice->UpdateSubresource(bd->pFontTexture, 0, &box, pixels, bd->FontTextureWidth * 4, 0);
     }
 
     // Store our identifier
@@ -343,6 +374,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
 
     // Create texture sampler
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+    if (!bd->pFontSampler)
     {
         D3D10_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
@@ -507,7 +539,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         bd->pd3dDevice->CreateDepthStencilState(&desc, &bd->pDepthStencilState);
     }
 
-    ImGui_ImplDX10_CreateFontsTexture();
+    ImGui_ImplDX10_UpdateFontsTexture();
 
     return true;
 }
@@ -520,6 +552,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
 
     if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = nullptr; }
     if (bd->pFontTextureView)       { bd->pFontTextureView->Release(); bd->pFontTextureView = nullptr; ImGui::GetIO().Fonts->SetTexID(0); } // We copied bd->pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    if (bd->pFontTexture)           { bd->pFontTexture->Release(); bd->pFontTexture = nullptr; }
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }
@@ -541,6 +574,7 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx10";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We support font atlas texture reloading (IsDirty() check in ImGui_ImplDX10_NewFrame)
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;
@@ -582,6 +616,10 @@ void ImGui_ImplDX10_NewFrame()
 
     if (!bd->pFontSampler)
         ImGui_ImplDX10_CreateDeviceObjects();
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.Fonts->IsDirty())
+        ImGui_ImplDX10_UpdateFontsTexture();
 }
 
 //-----------------------------------------------------------------------------
