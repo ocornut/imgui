@@ -38,24 +38,25 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas() extra flags, now stored in ImFontAtlas::FontBuilderFlags.
-- imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags. 
-- imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API. 
+- imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
+- imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
 
 Other Changes:
 
 - Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
-- Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no 
+- Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no
   close button in the window. (#3731)
 - imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
-  - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications 
+  - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
   - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
     compiled in along with the FreeType one, otherwise it is enabled by default.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
-- Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with 
+- Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Metal: Fixed texture storage mode when building on Mac Catalyst. (#3748) [@Belinsky-L-V]
+- Backends: OSX: Fixed mouse position not being reported when mouse buttons other than left one are down. (#3762) [@rokups]
 
 
 -----------------------------------------------------------------------
@@ -87,7 +88,7 @@ Breaking Changes:
 - If you were still using the old names, while you are cleaning up, considering enabling
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
-- Internals: Columns: renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* to reduce 
+- Internals: Columns: renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* to reduce
   confusion with Tables API. Keep redirection enums (will obsolete). (#125, #513, #913, #1204, #1444, #2142, #2707)
 - Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature now applies
   to other data structures. (#2636)
@@ -97,14 +98,14 @@ Other Changes:
 - Tables: added new Tables Beta API as a replacement for old Columns. (#3740, #2957, #125)
   Check out 'Demo->Tables' for many demos.
   Read API comments in imgui.h for details. Read extra commentary in imgui_tables.cpp.
-  - Added 16 functions: 
+  - Added 16 functions:
      - BeginTable(), EndTable()
      - TableNextRow(), TableNextColumn(), TableSetColumnIndex()
      - TableSetupColumn(), TableSetupScrollFreeze()
      - TableHeadersRow(), TableHeader()
      - TableGetRowIndex(), TableGetColumnCount(), TableGetColumnIndex(), TableGetColumnName(), TableGetColumnFlags()
      - TableGetSortSpecs(), TableSetBgColor()
-  - Added 3 flags sets: 
+  - Added 3 flags sets:
     - ImGuiTableFlags (29 flags for: features, decorations, sizing policies, padding, clipping, scrolling, sorting etc.)
     - ImGuiTableColumnFlags (24 flags for: width policies, default settings, sorting options, indentation options etc.)
     - ImGuiTableRowFlags (1 flag for: header row)
@@ -157,7 +158,7 @@ Other Changes:
 - Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
-- Backends: OpenGL2: Backup and restore GL_SHADE_MODEL and disable GL_NORMAL_ARRAY state to increase 
+- Backends: OpenGL2: Backup and restore GL_SHADE_MODEL and disable GL_NORMAL_ARRAY state to increase
   compatibility with legacy code. (#3671)
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: OpenGL2, OpenGL3: Backup and restore GL_STENCIL_TEST enable state. (#3668)

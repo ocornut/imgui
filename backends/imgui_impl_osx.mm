@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-01-27: Inputs: Added a fix for mouse position not being reported when mouse buttons other than left one are down.
 //  2020-10-28: Inputs: Added a fix for handling keypad-enter key.
 //  2020-05-25: Inputs: Added a fix for missing trackpad clicks when done with "soft tap".
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
@@ -226,7 +227,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         return io.WantCaptureMouse;
     }
 
-    if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged)
+    if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged || event.type == NSEventTypeRightMouseDragged || event.type == NSEventTypeOtherMouseDragged)
     {
         NSPoint mousePoint = event.locationInWindow;
         mousePoint = [view convertPoint:mousePoint fromView:nil];
