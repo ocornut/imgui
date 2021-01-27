@@ -1518,7 +1518,11 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &present_index;
     err = vkQueuePresentKHR(v->Queue, &info);
-    check_vk_result(err);
+    if(err == VK_ERROR_OUT_OF_DATE_KHR{
+        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &data->Window, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
+    }else{
+        check_vk_result(err);
+    }
 
     wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount;         // This is for the next vkWaitForFences()
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
