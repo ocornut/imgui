@@ -55,6 +55,8 @@ Other Changes:
   Would lead to a buffer read overflow.
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
+- Backends: Vulkan: Add support for custom Vulkan function loader and VK_NO_PROTOTYPES. (#3759, #3227) [@Hossein-Noroozpour]
+  User needs to call ImGui_ImplVulkan_LoadFunctions() with their custom loader prior to other functions.
 - Backends: Metal: Fixed texture storage mode when building on Mac Catalyst. (#3748) [@Belinsky-L-V]
 - Backends: OSX: Fixed mouse position not being reported when mouse buttons other than left one are down. (#3762) [@rokups]
 
