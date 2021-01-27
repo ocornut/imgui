@@ -4262,18 +4262,18 @@ static void ShowDemoWindowTables()
                     ImGui::TableNextColumn();
                     ImGui::Text("B0 Cell 0");
                     ImGui::TableNextColumn();
-                    ImGui::Text("B0 Cell 1");
+                    ImGui::Text("B1 Cell 0");
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rows_height);
                     ImGui::TableNextColumn();
-                    ImGui::Text("B1 Cell 0");
+                    ImGui::Text("B0 Cell 1");
                     ImGui::TableNextColumn();
                     ImGui::Text("B1 Cell 1");
 
                     ImGui::EndTable();
                 }
             }
-            ImGui::TableNextColumn(); ImGui::Text("A0 Cell 1");
             ImGui::TableNextColumn(); ImGui::Text("A1 Cell 0");
+            ImGui::TableNextColumn(); ImGui::Text("A0 Cell 1");
             ImGui::TableNextColumn(); ImGui::Text("A1 Cell 1");
             ImGui::EndTable();
         }
