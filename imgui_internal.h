@@ -1692,10 +1692,10 @@ struct IMGUI_API ImGuiWindowTempData
     // Local parameters stacks
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
     ImGuiItemFlags          ItemFlags;              // == g.ItemFlagsStack.back()
-    float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
-    float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
-    ImVector<float>         ItemWidthStack;
-    ImVector<float>         TextWrapPosStack;
+    float                   ItemWidth;              // Current item width (>0.0: width in pixels, <0.0: align xx pixels to the right of window).
+    float                   TextWrapPos;            // Current text wrap pos.
+    ImVector<float>         ItemWidthStack;         // Store item widths to restore (attention: .back() is not == ItemWidth)
+    ImVector<float>         TextWrapPosStack;       // Store text wrap pos to restore (attention: .back() is not == TextWrapPos)
     ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting
 };
 

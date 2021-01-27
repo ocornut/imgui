@@ -43,6 +43,7 @@ Breaking Changes:
 
 Other Changes:
 
+- Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no 
   close button in the window. (#3731)
 - imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
