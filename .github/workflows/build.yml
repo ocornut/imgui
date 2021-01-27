@@ -11,6 +11,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@376515093de803c897e7e6d576553c3104267e17
 
@@ -51,9 +52,11 @@ jobs:
         shell: bash
         run: |
           cat > example_single_file.cpp <<'EOF'
+
           #define IMGUI_IMPLEMENTATION
           #include "misc/single_file/imgui_single_file.h"
           #include "examples/example_null/main.cpp"
+
           EOF
           g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
 
@@ -61,10 +64,12 @@ jobs:
         shell: bash
         run: |
           cat > example_single_file.cpp <<'EOF'
+
           #define IMGUI_DISABLE_WIN32_FUNCTIONS
           #define IMGUI_IMPLEMENTATION
           #include "misc/single_file/imgui_single_file.h"
           #include "examples/example_null/main.cpp"
+
           EOF
           g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
 
@@ -72,6 +77,7 @@ jobs:
         shell: cmd
         run: |
           call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
+
           echo #ifdef _EXPORT                                  >  example_single_file.cpp
           echo #  define IMGUI_API __declspec(dllexport)       >> example_single_file.cpp
           echo #else                                           >> example_single_file.cpp
@@ -79,6 +85,7 @@ jobs:
           echo #endif                                          >> example_single_file.cpp
           echo #define IMGUI_IMPLEMENTATION                    >> example_single_file.cpp
           echo #include "misc/single_file/imgui_single_file.h" >> example_single_file.cpp
+
           cl.exe /D_USRDLL /D_WINDLL /D_EXPORT /I. example_single_file.cpp /LD /FeImGui.dll /link
           cl.exe /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
 
@@ -196,76 +203,91 @@ jobs:
     - name: Build example_null (single file build)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with ImWchar32)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_USE_WCHAR32
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with large ImDrawIdx)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define ImDrawIdx unsigned int
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_METRICS_WINDOW)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_DISABLE_DEMO_WINDOWS
         #define IMGUI_DISABLE_METRICS_WINDOW
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_DISABLE_FILE_FUNCTIONS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_USE_BGRA_PACKED_COLOR
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         struct MyVec2 { float x; float y; MyVec2(float x, float y) : x(x), y(y) { } };
         struct MyVec4 { float x; float y; float z; float w;
         MyVec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) { } };
@@ -278,16 +300,19 @@ jobs:
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (without c++ runtime, Clang)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_IMPLEMENTATION
         #define IMGUI_DISABLE_DEMO_WINDOWS
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         clang++ -I. -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
@@ -320,18 +345,22 @@ jobs:
     - name: Build example_null (single file build)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         clang++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (without c++ runtime)
       run: |
         cat > example_single_file.cpp <<'EOF'
+
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
+
         EOF
         clang++ -I. -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
