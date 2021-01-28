@@ -6,18 +6,20 @@
 # This Makefile assumes you have loaded emscripten's environment.
 # (On Windows, you may need to execute emsdk_env.bat or encmdprompt.bat ahead)
 #
-# Running `make` will produce two files:
-#  - example_emscripten_wgpu.js
-#  - example_emscripten_wgpu.wasm
+# Running `make` will produce three files:
+#  - web/index.html (current stored in the repository)
+#  - web/index.js
+#  - web/index.wasm
 #
 # All three are needed to run the demo.
 
 CC = emcc
 CXX = em++
-EXE = example_emscripten_wgpu.js
+WEB_DIR = web
+EXE = $(WEB_DIR)/index.js
 IMGUI_DIR = ../..
 SOURCES = main.cpp
-SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_wgpu.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
@@ -47,7 +49,7 @@ endif
 ## FINAL BUILD FLAGS
 ##---------------------------------------------------------------------
 
-CPPFLAGS += -I$(IMGUI_DIR)/ -I$(IMGUI_DIR)/backends
+CPPFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 #CPPFLAGS += -g
 CPPFLAGS += -Wall -Wformat -Os
 CPPFLAGS += $(EMS)
@@ -61,9 +63,6 @@ LIBS += $(EMS)
 %.o:%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../%.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
-
 %.o:$(IMGUI_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
@@ -73,8 +72,14 @@ LIBS += $(EMS)
 all: $(EXE)
 	@echo Build complete for $(EXE)
 
-$(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
+$(WEB_DIR):
+	mkdir $@
+
+serve: all
+	python3 -m http.server -d $(WEB_DIR)
+
+$(EXE): $(OBJS) $(WEB_DIR)
+	$(CXX) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean:
-	rm -f $(EXE) $(OBJS) *.js *.wasm *.wasm.pre
+	rm -f $(EXE) $(OBJS) $(WEB_DIR)/*.js $(WEB_DIR)/*.wasm $(WEB_DIR)/*.wasm.pre

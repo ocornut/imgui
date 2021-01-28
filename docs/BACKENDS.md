@@ -80,35 +80,7 @@ The [example_emscripten_opengl3](https://github.com/ocornut/imgui/tree/master/ex
 
 ### Backends for third-party frameworks, graphics API or other languages
 
-See https://github.com/ocornut/imgui/wiki/Bindings
-- AGS/Adventure Game Studio
-- Amethyst
-- bsf
-- Cinder
-- Cocos2d-x
-- Diligent Engine
-- Flexium,
-- GML/Game Maker Studio2
-- GTK3+OpenGL3
-- Irrlicht Engine
-- LÖVE+LUA
-- Magnum
-- NanoRT
-- Nim Game Lib,
-- Ogre
-- openFrameworks
-- OSG/OpenSceneGraph
-- Orx
-- px_render
-- Qt/QtDirect3D
-- SFML
-- Sokol
-- Unity
-- Unreal Engine 4
-- vtk
-- Win32 GDI
-etc.
-
+See https://github.com/ocornut/imgui/wiki/Bindings for the full list.
 
 ### Recommended Backends
 

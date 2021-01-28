@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
-    <title>Dear ImGui Emscripten example</title>
+    <title>Dear ImGui Emscripten+WebGPU example</title>
     <style>
         body { margin: 0; background-color: black }
         .emscripten {
@@ -71,7 +71,7 @@
       {
           const js = document.createElement('script');
           js.async = true;
-          js.src = "example_emscripten_wgpu.js";
+          js.src = "index.js";
           document.body.appendChild(js);
       }
       })();

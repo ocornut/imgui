@@ -3,10 +3,6 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// This is mostly the same code as the SDL2 + OpenGL3 example, simply with the modifications needed to run on Emscripten.
-// It is possible to combine both code into a single source file that will compile properly on Desktop and using Emscripten.
-// See https://github.com/ocornut/imgui/pull/2492 as an example on how to do just that.
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_wgpu.h"
@@ -22,7 +18,6 @@
 static WGPUDevice    wgpu_device = NULL;
 static WGPUSurface   wgpu_surface = NULL;
 static WGPUSwapChain wgpu_swap_chain = NULL;
-
 static int           wgpu_swap_chain_width = 0;
 static int           wgpu_swap_chain_height = 0;
 
@@ -31,11 +26,11 @@ static bool show_demo_window = true;
 static bool show_another_window = false;
 static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-// Forward declartions
-bool init_wgpu();
-void main_loop(void* window);
-void print_glfw_error(int error, const char* description);
-void print_wgpu_error(WGPUErrorType error_type, const char* message, void*);
+// Forward declarations
+static bool init_wgpu();
+static void main_loop(void* window);
+static void print_glfw_error(int error, const char* description);
+static void print_wgpu_error(WGPUErrorType error_type, const char* message, void*);
 
 int main(int, char**)
 {
@@ -48,13 +43,15 @@ int main(int, char**)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+WebGPU example", NULL, NULL);
-    if (!window) {
+    if (!window)
+    {
         glfwTerminate();
         return 1;
     }
 
     // Initialize the WebGPU environment
-    if (!init_wgpu()) {
+    if (!init_wgpu())
+    {
         if (window)
             glfwDestroyWindow(window);
         glfwTerminate();
@@ -99,7 +96,7 @@ int main(int, char**)
     //IM_ASSERT(font != NULL);
 #endif
 
-    // This function will directly return and extit he main function.
+    // This function will directly return and exit the main function.
     // Make sure that no required objects get cleaned up.
     // This way we can use the browsers 'requestAnimationFrame' to control the rendering.
     emscripten_set_main_loop_arg(main_loop, window, 0, false);
@@ -107,31 +104,31 @@ int main(int, char**)
     return 0;
 }
 
-bool init_wgpu()
+static bool init_wgpu()
 {
     wgpu_device = emscripten_webgpu_get_device();
     if (!wgpu_device)
         return false;
 
-    wgpuDeviceSetUncapturedErrorCallback(wgpu_device, print_wgpu_error, nullptr);
+    wgpuDeviceSetUncapturedErrorCallback(wgpu_device, print_wgpu_error, NULL);
 
-    // Use C++ wrapper due to malbehaviour in Emscripten.
+    // Use C++ wrapper due to misbehavior in Emscripten.
     // Some offset computation for wgpuInstanceCreateSurface in JavaScript
     // seem to be inline with struct alignments in the C++ structure
-    wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc{};
+    wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
     html_surface_desc.selector = "#canvas";
 
-    wgpu::SurfaceDescriptor surface_desc{};
+    wgpu::SurfaceDescriptor surface_desc = {};
     surface_desc.nextInChain = &html_surface_desc;
 
     // Use 'null' instance
-    wgpu::Instance instance{};
+    wgpu::Instance instance = {};
     wgpu_surface = instance.CreateSurface(&surface_desc).Release();
 
     return true;
 }
 
-void main_loop(void* window)
+static void main_loop(void* window)
 {
     glfwPollEvents();
 
@@ -202,7 +199,7 @@ void main_loop(void* window)
         ImGui::End();
     }
     
-    // Render the generated ImGui frame
+    // Rendering
     ImGui::Render();
 
     WGPURenderPassColorAttachmentDescriptor color_attachments = {};
@@ -213,7 +210,7 @@ void main_loop(void* window)
     WGPURenderPassDescriptor render_pass_desc = {};
     render_pass_desc.colorAttachmentCount = 1;
     render_pass_desc.colorAttachments = &color_attachments;
-    render_pass_desc.depthStencilAttachment = nullptr;
+    render_pass_desc.depthStencilAttachment = NULL;
 
     WGPUCommandEncoderDescriptor enc_desc = {};
     WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(wgpu_device, &enc_desc);
@@ -228,30 +225,21 @@ void main_loop(void* window)
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
 }
 
-void print_glfw_error(int error, const char* description)
+static void print_glfw_error(int error, const char* description)
 {
     printf("Glfw Error %d: %s\n", error, description);
 }
 
-void print_wgpu_error(WGPUErrorType error_type, const char* message, void*)
+static void print_wgpu_error(WGPUErrorType error_type, const char* message, void*)
 {
     const char* error_type_lbl = "";
-    switch (error_type) {
-    case WGPUErrorType_Validation:
-        error_type_lbl = "Validation";
-        break;
-    case WGPUErrorType_OutOfMemory:
-        error_type_lbl = "Out of memory";
-        break;
-    case WGPUErrorType_Unknown:
-        error_type_lbl = "Unknown";
-        break;
-    case WGPUErrorType_DeviceLost:
-        error_type_lbl = "Device lost";
-        break;
-    default:
-        error_type_lbl = "Unknown";
+    switch (error_type)
+    {
+    case WGPUErrorType_Validation:  error_type_lbl = "Validation"; break;
+    case WGPUErrorType_OutOfMemory: error_type_lbl = "Out of memory"; break;
+    case WGPUErrorType_Unknown:     error_type_lbl = "Unknown"; break;
+    case WGPUErrorType_DeviceLost:  error_type_lbl = "Device lost"; break;
+    default:                        error_type_lbl = "Unknown";
     }
-
     printf("%s error: %s\n", error_type_lbl, message);
 }

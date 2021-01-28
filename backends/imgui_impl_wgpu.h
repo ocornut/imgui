@@ -1,5 +1,6 @@
 // dear imgui: Renderer for WebGPU
 // This needs to be used along with a Platform Binding (e.g. GLFW)
+// (Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID!
@@ -10,12 +11,9 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #pragma once
-#include "imgui.h"      // IMGUI_IMPL_API
-
-// WebGPU
+#include "imgui.h"          // IMGUI_IMPL_API
 #include <webgpu/webgpu.h>
 
-// cmd_list is the command list that the implementation will use to render imgui draw lists.
 IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format);
 IMGUI_IMPL_API void ImGui_ImplWGPU_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplWGPU_NewFrame();
