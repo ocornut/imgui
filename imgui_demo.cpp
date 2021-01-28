@@ -4249,7 +4249,7 @@ static void ShowDemoWindowTables()
             ImGui::TableHeadersRow();
 
             ImGui::TableNextColumn();
-            ImGui::Text("A0 Cell 0");
+            ImGui::Text("A0 Row 0");
             {
                 float rows_height = TEXT_BASE_HEIGHT * 2;
                 if (ImGui::BeginTable("table_nested2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
@@ -4260,21 +4260,21 @@ static void ShowDemoWindowTables()
 
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rows_height);
                     ImGui::TableNextColumn();
-                    ImGui::Text("B0 Cell 0");
+                    ImGui::Text("B0 Row 0");
                     ImGui::TableNextColumn();
-                    ImGui::Text("B0 Cell 1");
+                    ImGui::Text("B1 Row 0");
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rows_height);
                     ImGui::TableNextColumn();
-                    ImGui::Text("B1 Cell 0");
+                    ImGui::Text("B0 Row 1");
                     ImGui::TableNextColumn();
-                    ImGui::Text("B1 Cell 1");
+                    ImGui::Text("B1 Row 1");
 
                     ImGui::EndTable();
                 }
             }
-            ImGui::TableNextColumn(); ImGui::Text("A0 Cell 1");
-            ImGui::TableNextColumn(); ImGui::Text("A1 Cell 0");
-            ImGui::TableNextColumn(); ImGui::Text("A1 Cell 1");
+            ImGui::TableNextColumn(); ImGui::Text("A1 Row 0");
+            ImGui::TableNextColumn(); ImGui::Text("A0 Row 1");
+            ImGui::TableNextColumn(); ImGui::Text("A1 Row 1");
             ImGui::EndTable();
         }
         ImGui::TreePop();

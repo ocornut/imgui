@@ -37,7 +37,9 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas() extra flags, now stored in ImFontAtlas::FontBuilderFlags.
+- imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
+  Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
+  The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
 - imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
 - imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
 
