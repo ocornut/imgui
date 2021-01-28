@@ -126,7 +126,7 @@ namespace
         void                    SetPixelHeight(int pixel_height); // Change font pixel size. All following calls to RasterizeGlyph() will use this size
         const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
         const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
-        void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint8_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = NULL);
+        void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = NULL);
         ~FreeTypeFont()         { CloseFont(); }
 
         // [Internals]
@@ -172,6 +172,9 @@ namespace
             RenderMode = FT_RENDER_MODE_MONO;
         else
             RenderMode = FT_RENDER_MODE_NORMAL;
+
+        if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
+            LoadFlags |= FT_LOAD_COLOR;
 
         return true;
     }
@@ -253,7 +256,7 @@ namespace
         return ft_bitmap;
     }
 
-    void FreeTypeFont::BlitGlyph(const FT_Bitmap* ft_bitmap, uint8_t* dst, uint32_t dst_pitch, unsigned char* multiply_table)
+    void FreeTypeFont::BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table)
     {
         IM_ASSERT(ft_bitmap != NULL);
         const uint32_t w = ft_bitmap->width;
@@ -268,13 +271,18 @@ namespace
                 if (multiply_table == NULL)
                 {
                     for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
-                        memcpy(dst, src, w);
+                    {
+                        for (uint32_t x = 0; x < w; x++)
+                            dst[x] = IM_COL32(255, 255, 255, src[x]);
+                    }
                 }
                 else
                 {
                     for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                    {
                         for (uint32_t x = 0; x < w; x++)
-                            dst[x] = multiply_table[src[x]];
+                            dst[x] = IM_COL32(255, 255, 255, multiply_table[src[x]]);
+                    }
                 }
                 break;
             }
@@ -290,9 +298,41 @@ namespace
                     {
                         if ((x & 7) == 0)
                             bits = *bits_ptr++;
-                        dst[x] = (bits & 0x80) ? color1 : color0;
+                        dst[x] = IM_COL32(255, 255, 255, (bits & 0x80) ? color1 : color0);
                     }
                 }
+                break;
+            }
+        case FT_PIXEL_MODE_BGRA:
+            {
+                #define DE_MULTIPLY(color, alpha) (ImU32)(255.0f * (float)color / (float)alpha + 0.5f)
+
+                if (multiply_table == NULL)
+                {
+                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                    {
+                        for (uint32_t x = 0; x < w; x++)
+                            dst[x] = IM_COL32(
+                                DE_MULTIPLY(src[x * 4 + 2], src[x * 4 + 3]),
+                                DE_MULTIPLY(src[x * 4 + 1], src[x * 4 + 3]),
+                                DE_MULTIPLY(src[x * 4],     src[x * 4 + 3]),
+                                src[x * 4 + 3]);
+                    }
+                }
+                else
+                {
+                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                    {
+                        for (uint32_t x = 0; x < w; x++)
+                            dst[x] = IM_COL32(
+                                multiply_table[DE_MULTIPLY(src[x * 4 + 2], src[x * 4 + 3])],
+                                multiply_table[DE_MULTIPLY(src[x * 4 + 1], src[x * 4 + 3])],
+                                multiply_table[DE_MULTIPLY(src[x * 4],     src[x * 4 + 3])],
+                                multiply_table[src[x * 4 + 3]]);
+                    }
+                }
+
+                #undef DE_MULTIPLY
                 break;
             }
         default:
@@ -318,7 +358,7 @@ struct ImFontBuildSrcGlyphFT
 {
     GlyphInfo           Info;
     uint32_t            Codepoint;
-    unsigned char*      BitmapData;         // Point within one of the dst_tmp_bitmap_buffers[] array
+    unsigned int*       BitmapData;         // Point within one of the dst_tmp_bitmap_buffers[] array
 };
 
 struct ImFontBuildSrcDataFT
@@ -498,7 +538,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             IM_ASSERT(ft_bitmap);
 
             // Allocate new temporary chunk if needed
-            const int bitmap_size_in_bytes = src_glyph.Info.Width * src_glyph.Info.Height;
+            const int bitmap_size_in_bytes = src_glyph.Info.Width * src_glyph.Info.Height * 4;
             if (buf_bitmap_current_used_bytes + bitmap_size_in_bytes > BITMAP_BUFFERS_CHUNK_SIZE)
             {
                 buf_bitmap_current_used_bytes = 0;
@@ -506,9 +546,9 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             }
 
             // Blit rasterized pixels to our temporary buffer and keep a pointer to it.
-            src_glyph.BitmapData = buf_bitmap_buffers.back() + buf_bitmap_current_used_bytes;
+            src_glyph.BitmapData = (unsigned int*)(buf_bitmap_buffers.back() + buf_bitmap_current_used_bytes);
             buf_bitmap_current_used_bytes += bitmap_size_in_bytes;
-            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width * 1, multiply_enabled ? multiply_table : NULL);
+            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width, multiply_enabled ? multiply_table : NULL);
 
             src_tmp.Rects[glyph_i].w = (stbrp_coord)(src_glyph.Info.Width + padding);
             src_tmp.Rects[glyph_i].h = (stbrp_coord)(src_glyph.Info.Height + padding);
@@ -555,8 +595,16 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     // 7. Allocate texture
     atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
-    atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
-    memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+    if (extra_flags & ImGuiFreeTypeBuilderFlags_LoadColor)
+    {
+        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight * 4);
+        memset(atlas->TexPixelsRGBA32, 0, atlas->TexWidth * atlas->TexHeight * 4);
+    }
+    else
+    {
+        atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
+        memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+    }
 
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
@@ -596,10 +644,21 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             // Blit from temporary buffer to final texture
             size_t blit_src_stride = (size_t)src_glyph.Info.Width;
             size_t blit_dst_stride = (size_t)atlas->TexWidth;
-            unsigned char* blit_src = src_glyph.BitmapData;
-            unsigned char* blit_dst = atlas->TexPixelsAlpha8 + (ty * blit_dst_stride) + tx;
-            for (int y = info.Height; y > 0; y--, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
-                memcpy(blit_dst, blit_src, blit_src_stride);
+            unsigned int* blit_src = src_glyph.BitmapData;
+            if (atlas->TexPixelsAlpha8 != NULL)
+            {
+                unsigned char* blit_dst = atlas->TexPixelsAlpha8 + (ty * blit_dst_stride) + tx;
+                for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
+                    for (int x = 0; x < info.Width; x++)
+                        blit_dst[x] = (unsigned char)((blit_src[x] >> IM_COL32_A_SHIFT) & 0xFF);
+            }
+            else
+            {
+                unsigned int* blit_dst = atlas->TexPixelsRGBA32 + (ty * blit_dst_stride) + tx;
+                for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
+                    for (int x = 0; x < info.Width; x++)
+                        blit_dst[x] = blit_src[x];
+            }
 
             // Register glyph
             float x0 = info.OffsetX + font_off_x;

@@ -25,7 +25,8 @@ enum ImGuiFreeTypeBuilderFlags
     ImGuiFreeTypeBuilderFlags_MonoHinting   = 1 << 4,   // Strong hinting algorithm that should only be used for monochrome output.
     ImGuiFreeTypeBuilderFlags_Bold          = 1 << 5,   // Styling: Should we artificially embolden the font?
     ImGuiFreeTypeBuilderFlags_Oblique       = 1 << 6,   // Styling: Should we slant the font, emulating italic style?
-    ImGuiFreeTypeBuilderFlags_Monochrome    = 1 << 7    // Disable anti-aliasing. Combine this with MonoHinting for best results!
+    ImGuiFreeTypeBuilderFlags_Monochrome    = 1 << 7,   // Disable anti-aliasing. Combine this with MonoHinting for best results!
+    ImGuiFreeTypeBuilderFlags_LoadColor     = 1 << 8    // Enable FreeType color-layered glyphs
 };
 
 namespace ImGuiFreeType
