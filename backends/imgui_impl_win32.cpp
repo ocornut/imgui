@@ -20,20 +20,17 @@
 #include <windows.h>
 #include <tchar.h>
 
-// Using XInput library for gamepad (with recent Windows SDK this may leads to executables which won't run on Windows 7)
+// Using XInput for gamepad (will load DLL dynamically)
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 #include <XInput.h>
-#else
-#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
-#endif
-#if defined(_MSC_VER) && !defined(IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT)
-#pragma comment(lib, "xinput")
-//#pragma comment(lib, "Xinput9_1_0")
+typedef DWORD (WINAPI *PFN_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
+typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 #endif
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-01-25: Inputs: Dynamically loading XInput DLL.
 //  2020-12-04: Misc: Fixed setting of io.DisplaySize to invalid/uninitialized data when after hwnd has been closed.
 //  2020-03-03: Inputs: Calling AddInputCharacterUTF16() to support surrogate pairs leading to codepoint >= 0x10000 (for more complete CJK inputs)
 //  2020-02-17: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(), ImGui_ImplWin32_GetDpiScaleForMonitor() helper functions.
@@ -72,6 +69,13 @@ static bool                 g_WantUpdateMonitors = true;
 static void ImGui_ImplWin32_InitPlatformInterface();
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
+
+// XInput DLL and functions
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+static HMODULE                      g_XInputDLL = NULL;
+static PFN_XInputGetCapabilities    g_XInputGetCapabilities = NULL;
+static PFN_XInputGetState           g_XInputGetState = NULL;
+#endif
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -120,13 +124,48 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
+    // Dynamically load XInput library
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    const char* xinput_dll_names[] =
+    {
+        "xinput1_4.dll",   // Windows 8+
+        "xinput1_3.dll",   // DirectX SDK
+        "xinput9_1_0.dll", // Windows Vista, Windows 7
+        "xinput1_2.dll",   // DirectX SDK
+        "xinput1_1.dll"    // DirectX SDK
+    };
+    for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
+        if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n]))
+        {
+            g_XInputDLL = dll;
+            g_XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
+            g_XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+            break;
+        }
+#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    
     return true;
 }
 
 void    ImGui_ImplWin32_Shutdown()
 {
     ImGui_ImplWin32_ShutdownPlatformInterface();
-    g_hWnd = (HWND)0;
+
+    // Unload XInput library
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    if (g_XInputDLL)
+        ::FreeLibrary(g_XInputDLL);
+    g_XInputDLL = NULL;
+    g_XInputGetCapabilities = NULL;
+    g_XInputGetState = NULL;
+#endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    
+    g_hWnd = NULL;
+    g_Time = 0;
+    g_TicksPerSecond = 0;
+    g_LastMouseCursor = ImGuiMouseCursor_COUNT;
+    g_HasGamepad = false;
+    g_WantUpdateHasGamepad = true;
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()
@@ -235,13 +274,13 @@ static void ImGui_ImplWin32_UpdateGamepads()
     if (g_WantUpdateHasGamepad)
     {
         XINPUT_CAPABILITIES caps;
-        g_HasGamepad = (XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS);
+        g_HasGamepad = g_XInputGetCapabilities ? (g_XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
         g_WantUpdateHasGamepad = false;
     }
 
-    XINPUT_STATE xinput_state;
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-    if (g_HasGamepad && XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
+    XINPUT_STATE xinput_state;
+    if (g_HasGamepad && g_XInputGetState && g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
     {
         const XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;

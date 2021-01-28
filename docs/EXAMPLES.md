@@ -98,6 +98,10 @@ Emcripten + SDL2 + OpenGL3+/ES2/ES3 example. <BR>
 Note that other examples based on SDL or GLFW + OpenGL could easily be modified to work with Emscripten.
 We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
 
+[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
+Emcripten + GLFW + WebGPU example. <BR>
+= main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
+
 [example_glfw_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_metal/) <BR>
 GLFW (Mac) + Metal example. <BR>
 = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm
