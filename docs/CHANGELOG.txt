@@ -53,10 +53,13 @@ Other Changes:
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
   - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
     compiled in along with the FreeType one, otherwise it is enabled by default.
+- imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR 
+  tables only). Enable the ImGuiFreeTypeBuilderFlags_LoadColor on a given font. Atlas always output directly
+  as RGBA8 in this situation. Likely to make sense with IMGUI_USE_WCHAR32. (#3369) [@pshurgal]
 - Fonts: Fixed CalcTextSize() width rounding so it behaves more like a ceil. This is in order for text wrapping
   to have enough space when provided width precisely calculated with CalcTextSize().x. (#3776)
   Note that the rounding of either positions and widths are technically undesirable (e.g. #3437, #791) but
-  variety of code is currently on it so we are first fixing current behavior before we'll eventually chhnge it.
+  variety of code is currently on it so we are first fixing current behavior before we'll eventually change it.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
