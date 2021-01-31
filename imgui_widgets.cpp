@@ -2589,7 +2589,7 @@ template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 TYPE ImGui::ScaleValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, TYPE v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_halfsize)
 {
     if (v_min == v_max)
-        return (TYPE)0.0f;
+        return (TYPE)v_min;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
 
     TYPE result;
