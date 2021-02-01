@@ -1460,6 +1460,21 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
+// For the getter you can use (TableGetColumnFlags() & ImGuiTableColumnFlags_IsEnabled)
+void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL);
+    if (!table)
+        return;
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    ImGuiTableColumn* column = &table->Columns[column_n];
+    column->IsEnabledNextFrame = enabled;
+}
+
 // We allow querying for an extra column in order to poll the IsHovered state of the right-most section
 ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
 {

@@ -194,15 +194,16 @@ See [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors) page.
 Sponsors
 --------
 
-Ongoing Dear ImGui development is financially supported by users and private sponsors, recently:
+Ongoing Dear ImGui development is currently financially supported by users and private sponsors:
 
 *Platinum-chocolate sponsors*
 - [Blizzard](https://careers.blizzard.com/en-us/openings/engineering/all/all/all/1), [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui/)
 
 *Double-chocolate and Salty caramel sponsors*
-- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Arkane Studios](https://www.arkane-studios.com), [Dotemu](http://www.dotemu.com), [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Hexagon](https://hexagonxalt.com/the-technology/xalt-visualization), [Kylotonn](https://www.kylotonn.com), [Media Molecule](http://www.mediamolecule.com), [Mesh Consultants](https://www.meshconsultants.ca), [Mobigame](http://www.mobigame.net), [Nadeo](https://www.nadeo.com), [Next Level Games](https://www.nextlevelgames.com), [RAD Game Tools](http://www.radgametools.com/), [Supercell](http://www.supercell.com), [Remedy Entertainment](https://www.remedygames.com/), [Unit 2 Games](https://unit2games.com/)
+- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Aras Pranckevičius](https://aras-p.info), [Arkane Studios](https://www.arkane-studios.com), [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Kylotonn](https://www.kylotonn.com), [Next Level Games](https://www.nextlevelgames.com), [RAD Game Tools](http://www.radgametools.com/), [Supercell](http://www.supercell.com)
 
-From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations. Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors).
+Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors) for past sponsors.
+From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations. 
 
 **THANK YOU to all past and present supporters for helping to keep this project alive and thriving!**
 
