@@ -9217,7 +9217,7 @@ bool ImGui::BeginMenuEx(ImStrv label, ImStrv icon, bool enabled)
         // (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
         //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
-        float icon_w = !icon.empty() ? CalcTextSize(icon, NULL).x : 0.0f;
+        float icon_w = !icon.empty() ? CalcTextSize(icon).x : 0.0f;
         float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
         float min_w = window->DC.MenuColumns.DeclColumns(icon_w, label_size.x, 0.0f, checkmark_w); // Feedback to next frame
         float extra_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);

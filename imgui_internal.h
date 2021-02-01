@@ -3299,7 +3299,7 @@ namespace ImGui
     // Menus
     IMGUI_API bool          BeginViewportSideBar(ImStrv name, ImGuiViewport* viewport, ImGuiDir dir, float size, ImGuiWindowFlags window_flags);
     IMGUI_API bool          BeginMenuEx(ImStrv label, ImStrv icon, bool enabled = true);
-    IMGUI_API bool          MenuItemEx(ImStrv label, ImStrv icon, ImStrv shortcut = NULL, bool selected = false, bool enabled = true);
+    IMGUI_API bool          MenuItemEx(ImStrv label, ImStrv icon, ImStrv shortcut = ImStrv(), bool selected = false, bool enabled = true);
 
     // Combos
     IMGUI_API bool          BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags flags);

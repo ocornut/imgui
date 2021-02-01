@@ -658,10 +658,10 @@ namespace ImGui
     IMGUI_API bool          CheckboxFlags(ImStrv label, unsigned int* flags, unsigned int flags_value);
     IMGUI_API bool          RadioButton(ImStrv label, bool active);                         // use with e.g. if (RadioButton("one", my_value==1)) { my_value = 1; }
     IMGUI_API bool          RadioButton(ImStrv label, int* v, int v_button);                // shortcut to handle the above pattern when value is an integer
-    IMGUI_API void          ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-FLT_MIN, 0), ImStrv overlay = NULL);
+    IMGUI_API void          ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-FLT_MIN, 0), ImStrv overlay = ImStrv());
     IMGUI_API void          Bullet();                                                       // draw a small circle + keep the cursor on the same line. advance cursor x position by GetTreeNodeToLabelSpacing(), same distance that TreeNode() uses
     IMGUI_API bool          TextLink(ImStrv label);                                         // hyperlink text button, return true when clicked
-    IMGUI_API bool          TextLinkOpenURL(ImStrv label, ImStrv url = NULL);               // hyperlink text button, automatically open file/url when clicked
+    IMGUI_API bool          TextLinkOpenURL(ImStrv label, ImStrv url = ImStrv());           // hyperlink text button, automatically open file/url when clicked
 
     // Widgets: Images
     // - Read about ImTextureID/ImTextureRef  here: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
@@ -698,14 +698,14 @@ namespace ImGui
     IMGUI_API bool          DragFloat2(ImStrv label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStrv format = "%.3f", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          DragFloat3(ImStrv label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStrv format = "%.3f", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          DragFloat4(ImStrv label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStrv format = "%.3f", ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          DragFloatRange2(ImStrv label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStrv format = "%.3f", ImStrv format_max = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          DragFloatRange2(ImStrv label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStrv format = "%.3f", ImStrv format_max = ImStrv(), ImGuiSliderFlags flags = 0);
     IMGUI_API bool          DragInt(ImStrv label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImGuiSliderFlags flags = 0);  // If v_min >= v_max we have no bound
     IMGUI_API bool          DragInt2(ImStrv label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          DragInt3(ImStrv label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          DragInt4(ImStrv label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          DragIntRange2(ImStrv label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImStrv format_max = NULL, ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL, ImStrv format = NULL, ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL, ImStrv format = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          DragIntRange2(ImStrv label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStrv format = "%d", ImStrv format_max = ImStrv(), ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL, ImStrv format = ImStrv(), ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL, ImStrv format = ImStrv(), ImGuiSliderFlags flags = 0);
 
     // Widgets: Regular Sliders
     // - CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped by default and can go off-bounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
@@ -722,11 +722,11 @@ namespace ImGui
     IMGUI_API bool          SliderInt2(ImStrv label, int v[2], int v_min, int v_max, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          SliderInt3(ImStrv label, int v[3], int v_min, int v_max, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          SliderInt4(ImStrv label, int v[4], int v_min, int v_max, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format = NULL, ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          SliderScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, ImStrv format = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format = ImStrv(), ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, ImStrv format = ImStrv(), ImGuiSliderFlags flags = 0);
     IMGUI_API bool          VSliderFloat(ImStrv label, const ImVec2& size, float* v, float v_min, float v_max, ImStrv format = "%.3f", ImGuiSliderFlags flags = 0);
     IMGUI_API bool          VSliderInt(ImStrv label, const ImVec2& size, int* v, int v_min, int v_max, ImStrv format = "%d", ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format = ImStrv(), ImGuiSliderFlags flags = 0);
 
     // Widgets: Input with Keyboard
     // - If you want to use InputText() with std::string or any custom dynamic string type, see misc/cpp/imgui_stdlib.h and comments in imgui_demo.cpp.
@@ -744,8 +744,8 @@ namespace ImGui
     IMGUI_API bool          InputInt3(ImStrv label, int v[3], ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputInt4(ImStrv label, int v[4], ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputDouble(ImStrv label, double* v, double step = 0.0, double step_fast = 0.0, ImStrv format = "%.6f", ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_step = NULL, const void* p_step_fast = NULL, ImStrv format = NULL, ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_step = NULL, const void* p_step_fast = NULL, ImStrv format = NULL, ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_step = NULL, const void* p_step_fast = NULL, ImStrv format = ImStrv(), ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_step = NULL, const void* p_step_fast = NULL, ImStrv format = ImStrv(), ImGuiInputTextFlags flags = 0);
 
     // Widgets: Color Editor/Picker (tip: the ColorEdit* functions have a little color square that can be left-clicked to open a picker, and right-clicked to open an option menu.)
     // - Note that in C++ a 'float v[X]' function argument is the _same_ as 'float* v', the array syntax is just a way to document the number of elements that are expected to be accessible.
@@ -810,17 +810,17 @@ namespace ImGui
 
     // Widgets: Data Plotting
     // - Consider using ImPlot (https://github.com/epezent/implot) which is much better!
-    IMGUI_API void          PlotLines(ImStrv label, const float* values, int values_count, int values_offset = 0, ImStrv overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float));
-    IMGUI_API void          PlotLines(ImStrv label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, ImStrv overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0));
-    IMGUI_API void          PlotHistogram(ImStrv label, const float* values, int values_count, int values_offset = 0, ImStrv overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float));
-    IMGUI_API void          PlotHistogram(ImStrv label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, ImStrv overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0));
+    IMGUI_API void          PlotLines(ImStrv label, const float* values, int values_count, int values_offset = 0, ImStrv overlay_text = ImStrv(), float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float));
+    IMGUI_API void          PlotLines(ImStrv label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, ImStrv overlay_text = ImStrv(), float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0));
+    IMGUI_API void          PlotHistogram(ImStrv label, const float* values, int values_count, int values_offset = 0, ImStrv overlay_text = ImStrv(), float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0), int stride = sizeof(float));
+    IMGUI_API void          PlotHistogram(ImStrv label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, ImStrv overlay_text = ImStrv(), float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0, 0));
 
     // Widgets: Value() Helpers.
     // - Those are merely shortcut to calling Text() with a format string. Output single value in "name: value" format (tip: freely declare more in your code to handle your types. you can add functions to the ImGui namespace)
     IMGUI_API void          Value(ImStrv prefix, bool b);
     IMGUI_API void          Value(ImStrv prefix, int v);
     IMGUI_API void          Value(ImStrv prefix, unsigned int v);
-    IMGUI_API void          Value(ImStrv prefix, float v, ImStrv float_format = NULL);
+    IMGUI_API void          Value(ImStrv prefix, float v, ImStrv float_format = ImStrv());
 
     // Widgets: Menus
     // - Use BeginMenuBar() on a window ImGuiWindowFlags_MenuBar to append to its menu bar.
@@ -833,8 +833,8 @@ namespace ImGui
     IMGUI_API void          EndMainMenuBar();                                                   // only call EndMainMenuBar() if BeginMainMenuBar() returns true!
     IMGUI_API bool          BeginMenu(ImStrv label, bool enabled = true);                       // create a sub-menu entry. only call EndMenu() if this returns true!
     IMGUI_API void          EndMenu();                                                          // only call EndMenu() if BeginMenu() returns true!
-    IMGUI_API bool          MenuItem(ImStrv label, ImStrv shortcut = NULL, bool selected = false, bool enabled = true);  // return true when activated.
-    IMGUI_API bool          MenuItem(ImStrv label, ImStrv shortcut, bool* p_selected, bool enabled = true);              // return true when activated + toggle (*p_selected) if p_selected != NULL
+    IMGUI_API bool          MenuItem(ImStrv label, ImStrv shortcut = ImStrv(), bool selected = false, bool enabled = true); // return true when activated.
+    IMGUI_API bool          MenuItem(ImStrv label, ImStrv shortcut, bool* p_selected, bool enabled = true);                 // return true when activated + toggle (*p_selected) if p_selected != NULL
 
     // Tooltips
     // - Tooltips are windows following the mouse. They do not take focus away.
@@ -877,7 +877,7 @@ namespace ImGui
     //  - IMPORTANT: Notice that for OpenPopupOnItemClick() we exceptionally default flags to 1 (== ImGuiPopupFlags_MouseButtonRight) for backward compatibility with older API taking 'int mouse_button = 1' parameter
     IMGUI_API void          OpenPopup(ImStrv str_id, ImGuiPopupFlags popup_flags = 0);                          // call to mark popup as open (don't call every frame!).
     IMGUI_API void          OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags = 0);                             // id overload to facilitate calling from nested stacks
-    IMGUI_API void          OpenPopupOnItemClick(ImStrv str_id = NULL, ImGuiPopupFlags popup_flags = 1);        // helper to open popup when clicked on last item. Default to ImGuiPopupFlags_MouseButtonRight == 1. (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors)
+    IMGUI_API void          OpenPopupOnItemClick(ImStrv str_id = ImStrv(), ImGuiPopupFlags popup_flags = 1);    // helper to open popup when clicked on last item. Default to ImGuiPopupFlags_MouseButtonRight == 1. (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors)
     IMGUI_API void          CloseCurrentPopup();                                                                // manually close the popup we have begin-ed into.
 
     // Popups: open+begin combined functions helpers
@@ -885,15 +885,15 @@ namespace ImGui
     //  - They are convenient to easily create context menus, hence the name.
     //  - IMPORTANT: Notice that BeginPopupContextXXX takes ImGuiPopupFlags just like OpenPopup() and unlike BeginPopup(). For full consistency, we may add ImGuiWindowFlags to the BeginPopupContextXXX functions in the future.
     //  - IMPORTANT: Notice that we exceptionally default their flags to 1 (== ImGuiPopupFlags_MouseButtonRight) for backward compatibility with older API taking 'int mouse_button = 1' parameter, so if you add other flags remember to re-add the ImGuiPopupFlags_MouseButtonRight.
-    IMGUI_API bool          BeginPopupContextItem(ImStrv str_id = NULL, ImGuiPopupFlags popup_flags = 1);       // open+begin popup when clicked on last item. Use str_id==NULL to associate the popup to previous item. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
-    IMGUI_API bool          BeginPopupContextWindow(ImStrv str_id = NULL, ImGuiPopupFlags popup_flags = 1);     // open+begin popup when clicked on current window.
-    IMGUI_API bool          BeginPopupContextVoid(ImStrv str_id = NULL, ImGuiPopupFlags popup_flags = 1);       // open+begin popup when clicked in void (where there are no windows).
+    IMGUI_API bool          BeginPopupContextItem(ImStrv str_id = ImStrv(), ImGuiPopupFlags popup_flags = 1);   // open+begin popup when clicked on last item. Use str_id==NULL to associate the popup to previous item. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
+    IMGUI_API bool          BeginPopupContextWindow(ImStrv str_id = ImStrv(), ImGuiPopupFlags popup_flags = 1); // open+begin popup when clicked on current window.
+    IMGUI_API bool          BeginPopupContextVoid(ImStrv str_id = ImStrv(), ImGuiPopupFlags popup_flags = 1);   // open+begin popup when clicked in void (where there are no windows).
 
     // Popups: query functions
     //  - IsPopupOpen(): return true if the popup is open at the current BeginPopup() level of the popup stack.
     //  - IsPopupOpen() with ImGuiPopupFlags_AnyPopupId: return true if any popup is open at the current BeginPopup() level of the popup stack.
     //  - IsPopupOpen() with ImGuiPopupFlags_AnyPopupId + ImGuiPopupFlags_AnyPopupLevel: return true if any popup is open.
-    IMGUI_API bool          IsPopupOpen(ImStrv str_id, ImGuiPopupFlags flags = 0);                               // return true if the popup is open.
+    IMGUI_API bool          IsPopupOpen(ImStrv str_id, ImGuiPopupFlags flags = 0);                              // return true if the popup is open.
 
     // Tables
     // - Full-featured replacement for old Columns API.
@@ -954,7 +954,7 @@ namespace ImGui
 
     // Legacy Columns API (prefer using Tables!)
     // - You can also use SameLine(pos_x) to mimic simplified columns.
-    IMGUI_API void          Columns(int count = 1, ImStrv id = NULL, bool borders = true);
+    IMGUI_API void          Columns(int count = 1, ImStrv id = ImStrv(), bool borders = true);
     IMGUI_API void          NextColumn();                                                       // next column, defaults to current row or next row if the current row is finished
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
     IMGUI_API float         GetColumnWidth(int column_index = -1);                              // get column width (in pixels). pass -1 to use current column
@@ -975,7 +975,7 @@ namespace ImGui
     // Logging/Capture
     // - All text output from the interface can be captured into tty/file/clipboard. By default, tree nodes are automatically opened during logging.
     IMGUI_API void          LogToTTY(int auto_open_depth = -1);                                 // start logging to tty (stdout)
-    IMGUI_API void          LogToFile(int auto_open_depth = -1, ImStrv filename = NULL);        // start logging to file
+    IMGUI_API void          LogToFile(int auto_open_depth = -1, ImStrv filename = ImStrv());    // start logging to file
     IMGUI_API void          LogToClipboard(int auto_open_depth = -1);                           // start logging to OS clipboard
     IMGUI_API void          LogFinish();                                                        // stop logging (close file, etc.)
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
@@ -4070,7 +4070,7 @@ namespace ImGui
     //static inline bool  ListBoxHeader(const char* label, int items_count, int height_in_items = -1) { float height = GetTextLineHeightWithSpacing() * ((height_in_items < 0 ? ImMin(items_count, 7) : height_in_items) + 0.25f) + GetStyle().FramePadding.y * 2.0f; return BeginListBox(label, ImVec2(0.0f, height)); } // Helper to calculate size from items_count and height_in_items
     //static inline void  ListBoxFooter()                                                             { EndListBox(); }
     //-- OBSOLETED in 1.79 (from August 2020)
-    //static inline void  OpenPopupContextItem(ImStrv str_id = NULL, ImGuiMouseButton mb = 1)       { OpenPopupOnItemClick(str_id, mb); } // Bool return value removed. Use IsWindowAppearing() in BeginPopup() instead. Renamed in 1.77, renamed back in 1.79. Sorry!
+    //static inline void  OpenPopupContextItem(ImStrv str_id = ImStrv(), ImGuiMouseButton mb = 1)   { OpenPopupOnItemClick(str_id, mb); } // Bool return value removed. Use IsWindowAppearing() in BeginPopup() instead. Renamed in 1.77, renamed back in 1.79. Sorry!
     //-- OBSOLETED in 1.78 (from June 2020): Old drag/sliders functions that took a 'float power > 1.0f' argument instead of ImGuiSliderFlags_Logarithmic. See github.com/ocornut/imgui/issues/3361 for details.
     //IMGUI_API bool      DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power = 1.0f)                                                            // OBSOLETED in 1.78 (from June 2020)
     //IMGUI_API bool      DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power = 1.0f);                                          // OBSOLETED in 1.78 (from June 2020)
