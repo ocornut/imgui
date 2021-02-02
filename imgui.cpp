@@ -6207,6 +6207,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
         CalcWindowContentSizes(window, &window->ContentSize, &window->ContentSizeIdeal);
+
+        // FIXME: These flags are decremented before they are used. This means that in order to have these fields produce their intended behaviors
+        // for one frame we must set them to at least 2, which is counter-intuitive. HiddenFramesCannotSkipItems is a more complicated case because
+        // it has a single usage before this code block and may be set below before it is finally checked.
         if (window->HiddenFramesCanSkipItems > 0)
             window->HiddenFramesCanSkipItems--;
         if (window->HiddenFramesCannotSkipItems > 0)
@@ -12892,20 +12896,16 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 // This is mostly used for automation.
 bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, bool split_outer, ImVec2* out_pos)
 {
-    if (split_outer)
-    {
-        IM_ASSERT(0);
-    }
-    else
-    {
-        ImGuiDockPreviewData split_data;
-        DockNodePreviewDockSetup(target, target_node, payload, &split_data, false, split_outer);
-        if (split_data.DropRectsDraw[split_dir+1].IsInverted())
-            return false;
-        *out_pos = split_data.DropRectsDraw[split_dir+1].GetCenter();
-        return true;
-    }
-    return false;
+    // In DockNodePreviewDockSetup() for a root central node instead of showing both "inner" and "outer" drop rects
+    // (which would be functionally identical) we only show the outer one. Reflect this here.
+    if (target_node && target_node->ParentNode == NULL && target_node->IsCentralNode() && split_dir != ImGuiDir_None)
+        split_outer = true;
+    ImGuiDockPreviewData split_data;
+    DockNodePreviewDockSetup(target, target_node, payload, &split_data, false, split_outer);
+    if (split_data.DropRectsDraw[split_dir+1].IsInverted())
+        return false;
+    *out_pos = split_data.DropRectsDraw[split_dir+1].GetCenter();
+    return true;
 }
 
 //-----------------------------------------------------------------------------
