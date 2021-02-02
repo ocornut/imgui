@@ -50,12 +50,13 @@ Other Changes:
   close button in the window. (#3731)
 - SliderInt: Fixed click/drag when v_min==v_max from setting the value to zero. (#3774) [@erwincoumans]
   Would also repro with DragFloat() when using ImGuiSliderFlags_Logarithmic with v_min==v_max.
-- imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
+- Menus: Fixed an issue with child-menu auto sizing (issue introduced in 1.80 on 2021/01/25) (#3779)
+- Fonts: imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
   - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
   - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
     compiled in along with the FreeType one, otherwise it is enabled by default.
-- imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR 
+- Fonts: imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR 
   tables only). Enable the ImGuiFreeTypeBuilderFlags_LoadColor on a given font. Atlas always output directly
   as RGBA8 in this situation. Likely to make sense with IMGUI_USE_WCHAR32. (#3369) [@pshurgal]
 - Fonts: Fixed CalcTextSize() width rounding so it behaves more like a ceil. This is in order for text wrapping
