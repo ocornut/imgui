@@ -13369,7 +13369,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Register a hit-test hole in the window unless we are currently dragging a window that is compatible with our dockspace
-    const ImGuiDockNode* central_node = node->CentralNode;
+    ImGuiDockNode* central_node = node->CentralNode;
     const bool central_node_hole = node->IsRootNode() && host_window && (node_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0 && central_node != NULL && central_node->IsEmpty();
     bool central_node_hole_register_hit_test_hole = central_node_hole;
     if (central_node_hole)
@@ -13378,14 +13378,22 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
                 central_node_hole_register_hit_test_hole = false;
     if (central_node_hole_register_hit_test_hole)
     {
-        // Add a little padding to match the "resize from edges" behavior and allow grabbing the splitter easily.
+        // We add a little padding to match the "resize from edges" behavior and allow grabbing the splitter easily.
+        // (But we only add it if there's something else on the other side of the hole, otherwise for e.g. fullscreen
+        // covering passthru node we'd have a gap on the edge not covered by the hole)
         IM_ASSERT(node->IsDockSpace()); // We cannot pass this flag without the DockSpace() api. Testing this because we also setup the hole in host_window->ParentNode
-        ImRect central_hole(central_node->Pos, central_node->Pos + central_node->Size);
-        central_hole.Expand(ImVec2(-WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS, -WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS));
-        if (central_node_hole && !central_hole.IsInverted())
+        ImGuiDockNode* root_node = DockNodeGetRootNode(central_node);
+        ImRect root_rect(root_node->Pos, root_node->Pos + root_node->Size);
+        ImRect hole_rect(central_node->Pos, central_node->Pos + central_node->Size);
+        if (hole_rect.Min.x > root_rect.Min.x) { hole_rect.Min.x += WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS; }
+        if (hole_rect.Max.x < root_rect.Max.x) { hole_rect.Max.x -= WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS; }
+        if (hole_rect.Min.y > root_rect.Min.y) { hole_rect.Min.y += WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS; }
+        if (hole_rect.Max.y < root_rect.Max.y) { hole_rect.Max.y -= WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS; }
+        //GetForegroundDrawList()->AddRect(hole_rect.Min, hole_rect.Max, IM_COL32(255, 0, 0, 255));
+        if (central_node_hole && !hole_rect.IsInverted())
         {
-            SetWindowHitTestHole(host_window, central_hole.Min, central_hole.Max - central_hole.Min);
-            SetWindowHitTestHole(host_window->ParentWindow, central_hole.Min, central_hole.Max - central_hole.Min);
+            SetWindowHitTestHole(host_window, hole_rect.Min, hole_rect.Max - hole_rect.Min);
+            SetWindowHitTestHole(host_window->ParentWindow, hole_rect.Min, hole_rect.Max - hole_rect.Min);
         }
     }
 
