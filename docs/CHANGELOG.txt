@@ -37,11 +37,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
+- imgui_freetype:
+  - Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
   Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
-  The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
-- imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
-- imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
+  - The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
+  - Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
+  - Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
 
 Other Changes:
 
@@ -54,6 +55,7 @@ Other Changes:
 - InputText: Fixed slightly off ScrollX tracking, noticeable with large values of FramePadding.x. (#3781)
 - InputText: Multiline: Fixed padding/cliprect not precisely matching single-line version. (#3781)
 - InputText: Multiline: Fixed FramePadding.y worth of vertical offset when aiming with mouse.
+- ListBox: Tweaked default height calculation.
 - Fonts: imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
   - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.

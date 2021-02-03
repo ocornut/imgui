@@ -695,7 +695,7 @@ static void ShowDemoWindowWidgets()
             ImGui::ListBox("listbox\n(single select)", &item_current, items, IM_ARRAYSIZE(items), 4);
 
             //static int listbox_item_current2 = 2;
-            //ImGui::SetNextItemWidth(-1);
+            //ImGui::SetNextItemWidth(-FLT_MIN);
             //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         }
 
@@ -3146,7 +3146,7 @@ static void ShowDemoWindowPopups()
         {
             if (ImGui::Selectable("Set to zero")) value = 0.0f;
             if (ImGui::Selectable("Set to PI")) value = 3.1415f;
-            ImGui::SetNextItemWidth(-1);
+            ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::DragFloat("##Value", &value, 0.1f, 0.0f, 0.0f);
             ImGui::EndPopup();
         }
@@ -7478,7 +7478,7 @@ void ShowExampleAppDocuments(bool* p_open)
             if (ImGui::BeginPopupModal("Save?"))
             {
                 ImGui::Text("Save change to the following items?");
-                ImGui::SetNextItemWidth(-1.0f);
+                ImGui::SetNextItemWidth(-FLT_MIN);
                 if (ImGui::ListBoxHeader("##", close_queue_unsaved_documents, 6))
                 {
                     for (int n = 0; n < close_queue.Size; n++)
