@@ -37,9 +37,15 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- ListBox helpers: 
+  - Renamed ListBoxHeader(const char* label, ImVec2 size) to BeginListBox().
+  - Renamed ListBoxFooter() to EndListBox().
+  - Removed ListBoxHeader(const char* label, int items_count, int height_in_items = -1) in favor of specifying size. 
+    In the redirection function, made vertical padding consistent regardless of (items_count <= height_in_items) or not.
+  - Kept inline redirection function for all threes (will obsolete).
 - imgui_freetype:
   - Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
-  Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
+    Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
   - The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
   - Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
   - Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
@@ -56,8 +62,6 @@ Other Changes:
 - InputText: Multiline: Fixed padding/cliprect not precisely matching single-line version. (#3781)
 - InputText: Multiline: Fixed FramePadding.y worth of vertical offset when aiming with mouse.
 - ListBox: Tweaked default height calculation.
-- ListBoxHeader: In version taking height in number of items, made vertical padding consistent regardless 
-  of if (items_count <= height_in_items) or not.
 - Fonts: imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
   - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.

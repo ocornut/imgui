@@ -185,12 +185,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - combo: flag for BeginCombo to not return true when unchanged (#1182)
  - combo: a way/helper to customize the combo preview (#1658)
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
- - listbox: refactor and clean the begin/end api
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
  - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?) (wip stash)
  - listbox: user may want to initial scroll to focus on the one selected value?
- - listbox: expose hovered item for a basic ListBox
+ - listbox: expose hovered item for a simplified ListBox api
  - listbox: keyboard navigation.
  - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
