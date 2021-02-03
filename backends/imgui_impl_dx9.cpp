@@ -253,7 +253,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     g_FontTexture->UnlockRect(0);
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)g_FontTexture;
+    io.Fonts->SetTexID((ImTextureID)g_FontTexture);
 
     return true;
 }
@@ -273,7 +273,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         return;
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
-    if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->SetTexID(NULL); } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 
 void ImGui_ImplDX9_NewFrame()

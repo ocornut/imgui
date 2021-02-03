@@ -194,7 +194,7 @@ bool ImGui_Marmalade_CreateDeviceObjects()
     g_FontTexture->Upload();
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)g_FontTexture;
+    io.Fonts->SetTexID((ImTextureID)g_FontTexture);
 
     return true;
 }
@@ -209,8 +209,8 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 
     if (g_FontTexture)
     {
+        ImGui::GetIO().Fonts->SetTexID(0);
         delete g_FontTexture;
-        ImGui::GetIO().Fonts->TexID = 0;
         g_FontTexture = NULL;
     }
 }

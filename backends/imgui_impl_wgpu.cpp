@@ -532,7 +532,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
 
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(g_resources.FontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (ImTextureID)g_resources.FontTextureView;
+    io.Fonts->SetTexID((ImTextureID)g_resources.FontTextureView);
 }
 
 static void ImGui_ImplWGPU_CreateUniformBuffer()
@@ -722,7 +722,7 @@ void ImGui_ImplWGPU_InvalidateDeviceObjects()
     SafeRelease(g_resources);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    io.Fonts->SetTexID(NULL); // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 
     for (unsigned int i = 0; i < g_numFramesInFlight; i++)
         SafeRelease(g_pFrameResources[i]);
