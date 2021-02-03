@@ -6177,15 +6177,9 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
 // FIXME: In principle this function should be called BeginListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_items)
 {
-    // Size default to hold ~7.25 items.
-    // We add +25% worth of item height to allow the user to see at a glance if there are more items up/down, without looking at the scrollbar.
-    // We don't add this extra bit if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.
-    // I am expecting that someone will come and complain about this behavior in a remote future, then we can advise on a better solution.
+    // If height_in_items == -1, default height is maximum 7.
     ImGuiContext& g = *GImGui;
-    if (height_in_items < 0)
-        height_in_items = ImMin(items_count, 7);
-    float height_in_items_f = (height_in_items < items_count) ? (height_in_items + 0.25f) : (height_in_items + 0.00f);
-
+    float height_in_items_f = (height_in_items < 0 ? ImMin(items_count, 7) : height_in_items) + 0.25f;
     ImVec2 size;
     size.x = 0.0f;
     size.y = GetTextLineHeightWithSpacing() * height_in_items_f + g.Style.FramePadding.y * 2.0f;

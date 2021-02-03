@@ -56,6 +56,8 @@ Other Changes:
 - InputText: Multiline: Fixed padding/cliprect not precisely matching single-line version. (#3781)
 - InputText: Multiline: Fixed FramePadding.y worth of vertical offset when aiming with mouse.
 - ListBox: Tweaked default height calculation.
+- ListBoxHeader: In version taking height in number of items, made vertical padding consistent regardless 
+  of if (items_count <= height_in_items) or not.
 - Fonts: imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
   - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.

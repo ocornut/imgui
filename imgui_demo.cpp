@@ -7475,19 +7475,20 @@ void ShowExampleAppDocuments(bool* p_open)
         {
             if (!ImGui::IsPopupOpen("Save?"))
                 ImGui::OpenPopup("Save?");
-            if (ImGui::BeginPopupModal("Save?"))
+            if (ImGui::BeginPopupModal("Save?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::Text("Save change to the following items?");
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                if (ImGui::ListBoxHeader("##", close_queue_unsaved_documents, 6))
+                float item_height = ImGui::GetTextLineHeightWithSpacing();
+                if (ImGui::BeginChildFrame(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height)))
                 {
                     for (int n = 0; n < close_queue.Size; n++)
                         if (close_queue[n]->Dirty)
                             ImGui::Text("%s", close_queue[n]->Name);
-                    ImGui::ListBoxFooter();
+                    ImGui::EndChildFrame();
                 }
 
-                if (ImGui::Button("Yes", ImVec2(80, 0)))
+                ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
+                if (ImGui::Button("Yes", button_size))
                 {
                     for (int n = 0; n < close_queue.Size; n++)
                     {
@@ -7499,7 +7500,7 @@ void ShowExampleAppDocuments(bool* p_open)
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("No", ImVec2(80, 0)))
+                if (ImGui::Button("No", button_size))
                 {
                     for (int n = 0; n < close_queue.Size; n++)
                         close_queue[n]->DoForceClose();
@@ -7507,7 +7508,7 @@ void ShowExampleAppDocuments(bool* p_open)
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(80, 0)))
+                if (ImGui::Button("Cancel", button_size))
                 {
                     close_queue.clear();
                     ImGui::CloseCurrentPopup();
