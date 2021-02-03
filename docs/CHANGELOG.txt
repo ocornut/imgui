@@ -247,7 +247,7 @@ Other Changes:
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
 - InputText: Made pressing Down arrow on the last line when it doesn't have a carriage return not move to
   the end of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio.
-  Note that some other text editors instead would move the crusor to the end of the line). [@Xipiryon]
+  Note that some other text editors instead would move the cursor to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
@@ -275,7 +275,7 @@ Other Changes:
   tabs reordered in the tab list popup. [@Xipiryon]
 - Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
   a fully clipped column. (#3475) [@szreder]
-- Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
+- Popups, Tooltips: Fix edge cases issues with positioning popups and tooltips when they are larger than
   viewport on either or both axises. [@Rokups]
 - Fonts: AddFontDefault() adjust its vertical offset based on floor(size/13) instead of always +1.
   Was previously done by altering DisplayOffset.y but wouldn't work for DPI scaled font.
@@ -439,7 +439,7 @@ Other Changes:
 - Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(),
   allowing to check if any popup is open at the current level, if a given popup is open at any popup
   level, if any popup is open at all.
-- Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
+- Popups: Fix an edge case where programmatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
 - Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)
 - Popups: Clarified some of the comments and function prototypes.
@@ -1576,7 +1576,7 @@ Other Changes:
 - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese
   characters. (#1859) [@JX-Master, @ocornut]
 - Examples: OSX: Added imgui_impl_osx.mm backend to be used along with e.g. imgui_impl_opengl2.cpp. (#281, #1870) [@pagghiu, @itamago, @ocornut]
-- Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
+- Examples: GLFW: Made it possible to Shutdown/Init the backend again (by resetting the time storage properly). (#1827) [@ice1000]
 - Examples: Win32: Fixed handling of mouse wheel messages to support sub-unit scrolling messages (typically sent by track-pads). (#1874) [@zx64]
 - Examples: SDL+Vulkan: Added SDL+Vulkan example.
 - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag. Added clipboard support.
@@ -2351,7 +2351,7 @@ Other Changes:
 - Combo(): Right-most button stays highlighted when pop-up is open.
 - Combo(): Display pop-up above if there's isn't enough space below / or select largest side. (#505)
 - DragFloat(), SliderFloat(), InputFloat(): fixed cases of erroneously returning true repeatedly after a text input modification (e.g. "0.0" --> "0.000" would keep returning true). (#564)
-- DragFloat(): Always apply value when mouse is held/widget active, so that an always-reseting variable (e.g. non saved local) can be passed.
+- DragFloat(): Always apply value when mouse is held/widget active, so that an always-resetting variable (e.g. non saved local) can be passed.
 - InputText(): OS X friendly behaviors: Word movement uses ALT key; Shortcuts uses CMD key; Double-clicking text select a single word; Jumping to next word sets cursor to end of current word instead of beginning of current word. (@zhiayang), (#473)
 - InputText(): Added BufTextLen in ImGuiTextEditCallbackData. Requesting user to maintain it if buffer is modified. Zero-ing structure properly before use. (#541)
 - CheckboxFlags(): Added support for testing/setting multiple flags at the same time. (@DMartinek) (#555)
