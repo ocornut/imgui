@@ -456,58 +456,24 @@ ImGui::End();
 - You can also create your own empty window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
 - You can create your own ImDrawList instance. You'll need to initialize them with `ImGui::GetDrawListSharedData()`, or create your own instancing ImDrawListSharedData, and then call your renderer function with your own ImDrawList or ImDrawData data.
 
-##### [Return to Index](#index)
-
 ### Q: How can I make an ImGui window fill the entire viewport?
 
-This can be achived by:
-1. Setting the ImGui window position to the top left of the window
-2. Setting the ImGui window size to the same size as the window
-3. And then optionally use flags to remove ImGui window decorations
-
-*Note: the first two steps are different between the `docking` and `master` branches.*
-
-**If you're on the `docking` branch:**
-
-```cpp
-const auto viewport = ImGui::GetMainViewport();
-ImGui::SetNextWindowPos(viewport->Pos);
-ImGui::SetNextWindowSize(viewport->Size);
-if (ImGui::Begin("My Window")) {
-    // ...
-}
-ImGui::End();
-```
+This can be achieved by setting the ImGui window position and size to match the viewport window. So right before calling `ImGui::Begin`, do the following:
 
 **If you're on the `master` branch:**
 
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-int display_w, display_h;
-glfwGetFramebufferSize(window, &display_w, &display_h);
-ImGui::SetNextWindowPos({ 0, 0 });
-ImGui::SetNextWindowSize({ io.DisplaySize.x, io.DisplaySize.y });
-if (ImGui::Begin("My Window")) {
-// ...
-}
-ImGui::End();
+ImGui::SetNextWindowPos(ImVec2(0, 0));
+ImGui::SetNextWindowSize(io.DisplaySize);
 ```
 
-**OPTIONAL: flags to remove the ImGui window deocrations**
-
-You can additionally pass any combination of the following window flags into `ImGui::Begin` to configure the window's behaviour. A few common ones for full viewport windows are:
+**If you're on the `docking` branch:***
 
 ```cpp
-ImGuiWindowFlags_NoTitleBar // Disable title-bar
-ImGuiWindowFlags_NoResize // Disable user resizing with the lower-right grip
-ImGuiWindowFlags_NoMove // Disable user moving the window
-ImGuiWindowFlags_NoCollapse // Disable user collapsing window by double-clicking on it
-ImGuiWindowFlags_NoBackground // Disable drawing background color (WindowBg, etc.) and outside border.
-                              //Similar to using SetNextWindowBgAlpha(0.0f).
-ImGuiWindowFlags_NoBringToFrontOnFocus // Disable bringing window to front when taking focus
-                                       // (e.g. clicking on it or programmatically giving it focus)
-ImGuiWindowFlags_NoDecoration = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse
+const ImGuiViewport* viewport = ImGui::GetMainViewport();
+ImGui::SetNextWindowPos(viewport->Pos);
+ImGui::SetNextWindowSize(viewport->Size);
 ```
 
 ##### [Return to Index](#index)
