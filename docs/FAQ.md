@@ -28,6 +28,7 @@ or view this file with any Markdown viewer.
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
 | [How can I display custom shapes? (using low-level ImDrawList API)](#q-how-can-i-display-custom-shapes-using-low-level-imdrawlist-api) |
+| [How can I make an ImGui window fill the entire viewport (platform window)?](#q-how-can-i-make-an-imgui-window-fill-the-entire-viewport) |
 | **Q&A: Fonts, Text** |
 | [How should I handle DPI in my application?](#q-how-should-i-handle-dpi-in-my-application) |
 | [How can I load a different font than the default?](#q-how-can-i-load-a-different-font-than-the-default) |
@@ -457,7 +458,59 @@ ImGui::End();
 
 ##### [Return to Index](#index)
 
----
+### Q: How can I make an ImGui window fill the entire viewport?
+
+This can be achived by:
+1. Setting the ImGui window position to the top left of the window
+2. Setting the ImGui window size to the same size as the window
+3. And then optionally use flags to remove ImGui window decorations
+
+*Note: the first two steps are different between the `docking` and `master` branches.*
+
+**If you're on the `docking` branch:**
+
+```cpp
+const auto viewport = ImGui::GetMainViewport();
+ImGui::SetNextWindowPos(viewport->Pos);
+ImGui::SetNextWindowSize(viewport->Size);
+if (ImGui::Begin("My Window")) {
+    // ...
+}
+ImGui::End();
+```
+
+**If you're on the `master` branch:**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+int display_w, display_h;
+glfwGetFramebufferSize(window, &display_w, &display_h);
+ImGui::SetNextWindowPos({ 0, 0 });
+ImGui::SetNextWindowSize({ io.DisplaySize.x, io.DisplaySize.y });
+if (ImGui::Begin("My Window")) {
+// ...
+}
+ImGui::End();
+```
+
+**OPTIONAL: flags to remove the ImGui window deocrations**
+
+You can additionally pass any combination of the following window flags into `ImGui::Begin` to configure the window's behaviour. A few common ones for full viewport windows are:
+
+```cpp
+ImGuiWindowFlags_NoTitleBar // Disable title-bar
+ImGuiWindowFlags_NoResize // Disable user resizing with the lower-right grip
+ImGuiWindowFlags_NoMove // Disable user moving the window
+ImGuiWindowFlags_NoCollapse // Disable user collapsing window by double-clicking on it
+ImGuiWindowFlags_NoBackground // Disable drawing background color (WindowBg, etc.) and outside border.
+                              //Similar to using SetNextWindowBgAlpha(0.0f).
+ImGuiWindowFlags_NoBringToFrontOnFocus // Disable bringing window to front when taking focus
+                                       // (e.g. clicking on it or programmatically giving it focus)
+ImGuiWindowFlags_NoDecoration = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse
+```
+
+##### [Return to Index](#index)
 
 # Q&A: Fonts, Text
 
