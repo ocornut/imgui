@@ -78,6 +78,7 @@ Other Changes:
 - Log/Capture: Improved the ascii look of various widgets, making large dumps more easily human readable.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
+- Demo: Added 'Examples->Fullscreen Window' demo. (#3789)
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Vulkan: Add support for custom Vulkan function loader and VK_NO_PROTOTYPES. (#3759, #3227) [@Hossein-Noroozpour]
