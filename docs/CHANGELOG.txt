@@ -76,7 +76,10 @@ Other changes:
 (FIXME: This need a fuller explanation!)
 
 - Added ImGuiPlatformIO structure and GetPlatformIO().
-  Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for backends supporting multi-viewports.
+  - Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for backends supporting multi-viewports.
+  - Backend sets functions in ImGuiPlatformIO to manipulate platform windows.
+  - ImGuiPlatformIO::Monitors is a list of platform monitors (input from backend)
+  - ImGuiPlatformIO::Viewports is a list of viewports (output from dear imgui)
 - Added ImGuiPlatformMonitor to feed OS monitor information in the ImGuiPlatformIO::Monitors.
 - Added GetMainViewport().
 - Added GetWindowViewport(), SetNextWindowViewport().
@@ -88,7 +91,7 @@ Other changes:
 - Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
 - Added io.ConfigViewportsNoAutoMerge, io.ConfigViewportsNoTaskBarIcon, io.ConfigViewportsNoDecoration, io.ConfigViewportsNoDefaultParent options.
 - Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
-- Added io.MainViewport, io.Viewports, io.MouseHoveredViewport (MouseHoveredViewport is optional _even_ for multi-viewport support).
+- Added io.MouseHoveredViewport (optional _even_ for multi-viewport support, tied to ImGuiBackendFlags_HasMouseHoveredViewport flag).
 - Added ImGuiViewport structure, ImGuiViewportFlags flags.
 - Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
