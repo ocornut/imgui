@@ -37,10 +37,10 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- ListBox helpers: 
+- ListBox helpers:
   - Renamed ListBoxHeader(const char* label, ImVec2 size) to BeginListBox().
   - Renamed ListBoxFooter() to EndListBox().
-  - Removed ListBoxHeader(const char* label, int items_count, int height_in_items = -1) in favor of specifying size. 
+  - Removed ListBoxHeader(const char* label, int items_count, int height_in_items = -1) in favor of specifying size.
     In the redirection function, made vertical padding consistent regardless of (items_count <= height_in_items) or not.
   - Kept inline redirection function for all threes (will obsolete).
 - imgui_freetype:
@@ -67,7 +67,7 @@ Other Changes:
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
   - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
     compiled in along with the FreeType one, otherwise it is enabled by default.
-- Fonts: imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR 
+- Fonts: imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR
   tables only). Enable the ImGuiFreeTypeBuilderFlags_LoadColor on a given font. Atlas always output directly
   as RGBA8 in this situation. Likely to make sense with IMGUI_USE_WCHAR32. (#3369) [@pshurgal]
 - Fonts: Fixed CalcTextSize() width rounding so it behaves more like a ceil. This is in order for text wrapping
@@ -78,6 +78,8 @@ Other Changes:
 - Log/Capture: Improved the ascii look of various widgets, making large dumps more easily human readable.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
+- ImDrawList: Clarified PathArcTo() need for a_min <= a_max with an assert.
+- ImDrawList: Fixed PathArcToFast() handling of a_min > a_max.
 - Demo: Added 'Examples->Fullscreen Window' demo. (#3789)
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
@@ -88,8 +90,8 @@ Other Changes:
 - Backends: WebGPU: Added enderer backend for WebGPU support (imgui_impl_wgpu.cpp) (#3632) [@bfierz]
   Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.
 - Examples: WebGPU: Added Emscripten+WebGPU example. (#3632) [@bfierz]
-- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything, 
-  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're 
+- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything,
+  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're
   adding it for consistency. (#3632)
 
 
