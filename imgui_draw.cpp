@@ -384,7 +384,7 @@ void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        const int segment_count = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError);
+        const int segment_count = (i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0;
         CircleSegmentCounts[i] = (ImU8)ImMin(segment_count, 255);
     }
 }
