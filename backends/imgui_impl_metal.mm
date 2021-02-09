@@ -116,7 +116,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     [g_sharedMetalContext makeFontTextureWithDevice:device];
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture; // ImTextureID == void*
+    io.Fonts->SetTexID((__bridge void *)g_sharedMetalContext.fontTexture); // ImTextureID == void*
 
     return (g_sharedMetalContext.fontTexture != nil);
 }
@@ -125,7 +125,7 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     g_sharedMetalContext.fontTexture = nil;
-    io.Fonts->TexID = nullptr;
+    io.Fonts->SetTexID(nullptr);
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)

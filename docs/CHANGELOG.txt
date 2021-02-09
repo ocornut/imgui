@@ -109,24 +109,50 @@ Other changes:
 
 Breaking Changes:
 
-- imgui_freetype: Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
-  Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
-  The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
-- imgui_freetype: Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
-- imgui_freetyoe: Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
+- ListBox helpers:
+  - Renamed ListBoxHeader(const char* label, ImVec2 size) to BeginListBox().
+  - Renamed ListBoxFooter() to EndListBox().
+  - Removed ListBoxHeader(const char* label, int items_count, int height_in_items = -1) in favor of specifying size.
+    In the redirection function, made vertical padding consistent regardless of (items_count <= height_in_items) or not.
+  - Kept inline redirection function for all threes (will obsolete).
+- imgui_freetype:
+  - Removed ImGuiFreeType::BuildFontAtlas(). Kept inline redirection function.
+    Prefer using '#define IMGUI_ENABLE_FREETYPE', but there's a runtime selection path available too.
+  - The shared extra flags parameters (very rarely used) are now stored in ImFontAtlas::FontBuilderFlags.
+  - Renamed ImFontConfig::RasterizerFlags (used by FreeType) to ImFontConfig::FontBuilderFlags.
+  - Renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API.
 
 Other Changes:
 
 - Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no
   close button in the window. (#3731)
-- imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
+- SliderInt: Fixed click/drag when v_min==v_max from setting the value to zero. (#3774) [@erwincoumans]
+  Would also repro with DragFloat() when using ImGuiSliderFlags_Logarithmic with v_min==v_max.
+- Menus: Fixed an issue with child-menu auto sizing (issue introduced in 1.80 on 2021/01/25) (#3779)
+- InputText: Fixed slightly off ScrollX tracking, noticeable with large values of FramePadding.x. (#3781)
+- InputText: Multiline: Fixed padding/cliprect not precisely matching single-line version. (#3781)
+- InputText: Multiline: Fixed FramePadding.y worth of vertical offset when aiming with mouse.
+- ListBox: Tweaked default height calculation.
+- Fonts: imgui_freetype: Facilitated using FreeType integration: [@Xipiryon, @ocornut]
   - Use '#define IMGUI_ENABLE_FREETYPE' in imconfig.h should make it work with no other modifications
     other than compiling misc/freetype/imgui_freetype.cpp and linking with FreeType.
   - Use '#define IMGUI_ENABLE_STB_TRUETYPE' if you somehow need the stb_truetype rasterizer to be
     compiled in along with the FreeType one, otherwise it is enabled by default.
+- Fonts: imgui_freetype: Added support for colored glyphs as supported by Freetype 2.10+ (for .ttf using CPAL/COLR
+  tables only). Enable the ImGuiFreeTypeBuilderFlags_LoadColor on a given font. Atlas always output directly
+  as RGBA8 in this situation. Likely to make sense with IMGUI_USE_WCHAR32. (#3369) [@pshurgal]
+- Fonts: Fixed CalcTextSize() width rounding so it behaves more like a ceil. This is in order for text wrapping
+  to have enough space when provided width precisely calculated with CalcTextSize().x. (#3776)
+  Note that the rounding of either positions and widths are technically undesirable (e.g. #3437, #791) but
+  variety of code is currently on it so we are first fixing current behavior before we'll eventually change it.
+- Log/Capture: Fix various new line/spacing issue when logging widgets. [@Xipiryon, @ocornut]
+- Log/Capture: Improved the ascii look of various widgets, making large dumps more easily human readable.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
+- ImDrawList: Clarified PathArcTo() need for a_min <= a_max with an assert.
+- ImDrawList: Fixed PathArcToFast() handling of a_min > a_max.
+- Demo: Added 'Examples->Fullscreen Window' demo. (#3789)
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Vulkan: Add support for custom Vulkan function loader and VK_NO_PROTOTYPES. (#3759, #3227) [@Hossein-Noroozpour]
@@ -136,8 +162,8 @@ Other Changes:
 - Backends: WebGPU: Added enderer backend for WebGPU support (imgui_impl_wgpu.cpp) (#3632) [@bfierz]
   Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.
 - Examples: WebGPU: Added Emscripten+WebGPU example. (#3632) [@bfierz]
-- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything, 
-  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're 
+- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything,
+  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're
   adding it for consistency. (#3632)
 
 
@@ -304,7 +330,7 @@ Other Changes:
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
 - InputText: Made pressing Down arrow on the last line when it doesn't have a carriage return not move to
   the end of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio.
-  Note that some other text editors instead would move the crusor to the end of the line). [@Xipiryon]
+  Note that some other text editors instead would move the cursor to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
@@ -332,7 +358,7 @@ Other Changes:
   tabs reordered in the tab list popup. [@Xipiryon]
 - Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
   a fully clipped column. (#3475) [@szreder]
-- Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
+- Popups, Tooltips: Fix edge cases issues with positioning popups and tooltips when they are larger than
   viewport on either or both axises. [@Rokups]
 - Fonts: AddFontDefault() adjust its vertical offset based on floor(size/13) instead of always +1.
   Was previously done by altering DisplayOffset.y but wouldn't work for DPI scaled font.
@@ -496,7 +522,7 @@ Other Changes:
 - Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(),
   allowing to check if any popup is open at the current level, if a given popup is open at any popup
   level, if any popup is open at all.
-- Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
+- Popups: Fix an edge case where programmatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
 - Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)
 - Popups: Clarified some of the comments and function prototypes.
@@ -1634,7 +1660,7 @@ Other Changes:
 - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese
   characters. (#1859) [@JX-Master, @ocornut]
 - Examples: OSX: Added imgui_impl_osx.mm backend to be used along with e.g. imgui_impl_opengl2.cpp. (#281, #1870) [@pagghiu, @itamago, @ocornut]
-- Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
+- Examples: GLFW: Made it possible to Shutdown/Init the backend again (by resetting the time storage properly). (#1827) [@ice1000]
 - Examples: Win32: Fixed handling of mouse wheel messages to support sub-unit scrolling messages (typically sent by track-pads). (#1874) [@zx64]
 - Examples: SDL+Vulkan: Added SDL+Vulkan example.
 - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag. Added clipboard support.
@@ -2409,7 +2435,7 @@ Other Changes:
 - Combo(): Right-most button stays highlighted when pop-up is open.
 - Combo(): Display pop-up above if there's isn't enough space below / or select largest side. (#505)
 - DragFloat(), SliderFloat(), InputFloat(): fixed cases of erroneously returning true repeatedly after a text input modification (e.g. "0.0" --> "0.000" would keep returning true). (#564)
-- DragFloat(): Always apply value when mouse is held/widget active, so that an always-reseting variable (e.g. non saved local) can be passed.
+- DragFloat(): Always apply value when mouse is held/widget active, so that an always-resetting variable (e.g. non saved local) can be passed.
 - InputText(): OS X friendly behaviors: Word movement uses ALT key; Shortcuts uses CMD key; Double-clicking text select a single word; Jumping to next word sets cursor to end of current word instead of beginning of current word. (@zhiayang), (#473)
 - InputText(): Added BufTextLen in ImGuiTextEditCallbackData. Requesting user to maintain it if buffer is modified. Zero-ing structure properly before use. (#541)
 - CheckboxFlags(): Added support for testing/setting multiple flags at the same time. (@DMartinek) (#555)

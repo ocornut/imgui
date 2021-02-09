@@ -19,6 +19,8 @@
 #include <limits.h>
 #include <webgpu/webgpu.h>
 
+#define HAS_EMSCRIPTEN_VERSION(major, minor, tiny) (__EMSCRIPTEN_major__ > (major) || (__EMSCRIPTEN_major__ == (major) && __EMSCRIPTEN_minor__ > (minor)) || (__EMSCRIPTEN_major__ == (major) && __EMSCRIPTEN_minor__ == (minor) && __EMSCRIPTEN_tiny__ >= (tiny)))
+
 // Dear ImGui prototypes from imgui_internal.h
 extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
 
@@ -495,7 +497,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         textureCopyView.texture = g_resources.FontTexture;
         textureCopyView.mipLevel = 0;
         textureCopyView.origin = { 0, 0, 0 };
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
         textureCopyView.aspect = WGPUTextureAspect_All;
 #endif
 
@@ -522,12 +524,15 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         sampler_desc.addressModeU = WGPUAddressMode_Repeat;
         sampler_desc.addressModeV = WGPUAddressMode_Repeat;
         sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
+        sampler_desc.maxAnisotropy = 1;
+#endif
         g_resources.Sampler = wgpuDeviceCreateSampler(g_wgpuDevice, &sampler_desc);
     }
 
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(g_resources.FontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (ImTextureID)g_resources.FontTextureView;
+    io.Fonts->SetTexID((ImTextureID)g_resources.FontTextureView);
 }
 
 static void ImGui_ImplWGPU_CreateUniformBuffer()
@@ -559,15 +564,28 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};
     common_bg_layout_entries[0].binding = 0;
     common_bg_layout_entries[0].visibility = WGPUShaderStage_Vertex;
+#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
+    common_bg_layout_entries[0].buffer.type = WGPUBufferBindingType_Uniform;
+#else
     common_bg_layout_entries[0].type = WGPUBindingType_UniformBuffer;
+#endif
     common_bg_layout_entries[1].binding = 1;
     common_bg_layout_entries[1].visibility = WGPUShaderStage_Fragment;
+#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
+    common_bg_layout_entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
+#else
     common_bg_layout_entries[1].type = WGPUBindingType_Sampler;
+#endif
 
     WGPUBindGroupLayoutEntry image_bg_layout_entries[1] = {};
     image_bg_layout_entries[0].binding = 0;
     image_bg_layout_entries[0].visibility = WGPUShaderStage_Fragment;
+#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
+    image_bg_layout_entries[0].texture.sampleType = WGPUTextureSampleType_Float;
+    image_bg_layout_entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+#else
     image_bg_layout_entries[0].type = WGPUBindingType_SampledTexture;
+#endif
 
     WGPUBindGroupLayoutDescriptor common_bg_layout_desc = {};
     common_bg_layout_desc.entryCount = 2;
@@ -620,8 +638,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     {
         color_state.format = g_renderTargetFormat;
         color_state.alphaBlend.operation = WGPUBlendOperation_Add;
-        color_state.alphaBlend.srcFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        color_state.alphaBlend.dstFactor = WGPUBlendFactor_Zero;
+        color_state.alphaBlend.srcFactor = WGPUBlendFactor_SrcAlpha;
+        color_state.alphaBlend.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
         color_state.colorBlend.operation = WGPUBlendOperation_Add;
         color_state.colorBlend.srcFactor = WGPUBlendFactor_SrcAlpha;
         color_state.colorBlend.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
@@ -704,7 +722,7 @@ void ImGui_ImplWGPU_InvalidateDeviceObjects()
     SafeRelease(g_resources);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    io.Fonts->SetTexID(NULL); // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 
     for (unsigned int i = 0; i < g_numFramesInFlight; i++)
         SafeRelease(g_pFrameResources[i]);
