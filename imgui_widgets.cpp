@@ -6575,7 +6575,7 @@ void ImGui::EndMenuBar()
 bool ImGui::BeginMainMenuBar()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiViewportP* viewport = (ImGuiViewportP*)GetMainViewport();
+    ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
     ImGuiWindow* menu_bar_window = FindWindowByName("##MainMenuBar");
 
     // For the main menu bar, which cannot be moved, we honor g.Style.DisplaySafeAreaPadding to ensure text can be visible on a TV set.

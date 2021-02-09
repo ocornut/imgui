@@ -333,7 +333,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     // We specify a default position/size in case there's no data in the .ini file.
     // We only do it to make the demo applications a little more welcoming, but typically this isn't required.
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(main_viewport->GetWorkPos().x + 650, main_viewport->GetWorkPos().y + 20), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
 
@@ -7031,7 +7031,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
     if (corner != -1)
     {
         window_flags |= ImGuiWindowFlags_NoMove;
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImVec2 work_area_pos = viewport->GetWorkPos();   // Instead of using viewport->Pos we use GetWorkPos() to avoid menu bars, if any!
         ImVec2 work_area_size = viewport->GetWorkSize();
         ImVec2 window_pos = ImVec2((corner & 1) ? (work_area_pos.x + work_area_size.x - DISTANCE) : (work_area_pos.x + DISTANCE), (corner & 2) ? (work_area_pos.y + work_area_size.y - DISTANCE) : (work_area_pos.y + DISTANCE));
@@ -7368,7 +7368,7 @@ void ShowExampleAppDockSpace(bool* p_open)
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
     if (opt_fullscreen)
     {
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->GetWorkPos());
         ImGui::SetNextWindowSize(viewport->GetWorkSize());
         ImGui::SetNextWindowViewport(viewport->ID);
