@@ -3583,7 +3583,10 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
                 MarkIniSettingsDirty(moving_window);
                 SetWindowPos(moving_window, pos, ImGuiCond_Always);
                 if (moving_window->ViewportOwned) // Synchronize viewport immediately because some overlays may relies on clipping rectangle before we Begin() into the window.
+                {
                     moving_window->Viewport->Pos = pos;
+                    moving_window->Viewport->UpdateWorkRect();
+                }
             }
             FocusWindow(g.MovingWindow);
         }
@@ -6340,6 +6343,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 viewport_rect_changed = true;
                 window->Viewport->Size = window->Size;
             }
+            window->Viewport->UpdateWorkRect();
 
             // The viewport may have changed monitor since the global update in UpdateViewportsNewFrame()
             // Either a SetNextWindowPos() call in the current frame or a SetWindowPos() call in the previous frame may have this effect.
@@ -6467,6 +6471,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->Viewport->Pos = window->Pos;
             if (!window->Viewport->PlatformRequestResize)
                 window->Viewport->Size = window->Size;
+            window->Viewport->UpdateWorkRect();
             viewport_rect = window->Viewport->GetMainRect();
         }
 
@@ -11398,6 +11403,7 @@ static void ImGui::UpdateViewportsNewFrame()
             // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
             if (!(viewport->Flags & ImGuiViewportFlags_Minimized) && platform_funcs_available)
             {
+                // Viewport->WorkPos and WorkSize will be updated below
                 if (viewport->PlatformRequestMove)
                     viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
                 if (viewport->PlatformRequestResize)
@@ -11412,6 +11418,7 @@ static void ImGui::UpdateViewportsNewFrame()
         viewport->WorkOffsetMin = viewport->CurrWorkOffsetMin;
         viewport->WorkOffsetMax = viewport->CurrWorkOffsetMax;
         viewport->CurrWorkOffsetMin = viewport->CurrWorkOffsetMax = ImVec2(0.0f, 0.0f);
+        viewport->UpdateWorkRect();
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
         viewport->Alpha = 1.0f;
@@ -11573,6 +11580,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
 
     viewport->Window = window;
     viewport->LastFrameActive = g.FrameCount;
+    viewport->UpdateWorkRect();
     IM_ASSERT(window == NULL || viewport->ID == window->ID);
 
     if (window != NULL)
@@ -14658,8 +14666,8 @@ ImGuiID ImGui::DockSpaceOverViewport(const ImGuiViewport* viewport, ImGuiDockNod
     if (viewport == NULL)
         viewport = GetMainViewport();
 
-    SetNextWindowPos(viewport->GetWorkPos());
-    SetNextWindowSize(viewport->GetWorkSize());
+    SetNextWindowPos(viewport->WorkPos);
+    SetNextWindowSize(viewport->WorkSize);
     SetNextWindowViewport(viewport->ID);
 
     ImGuiWindowFlags host_window_flags = 0;
@@ -16524,7 +16532,7 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y,
             viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
             viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
-        if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = ImVec2(200,200); } }
+        if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200, 200); viewport->UpdateWorkRect(); if (viewport->Window) viewport->Window->Pos = viewport->Pos; } }
         BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s", viewport->Flags,
             (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
             (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs"     : "",
