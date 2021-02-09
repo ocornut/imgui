@@ -1324,8 +1324,8 @@ struct ImGuiViewportP : public ImGuiViewport
     ImGuiViewportP()                { Idx = -1; LastFrameActive = LastFrameDrawLists[0] = LastFrameDrawLists[1] = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; PlatformWindowCreated = false; Window = NULL; DrawLists[0] = DrawLists[1] = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
     ~ImGuiViewportP()               { if (DrawLists[0]) IM_DELETE(DrawLists[0]); if (DrawLists[1]) IM_DELETE(DrawLists[1]); }
     ImRect  GetMainRect() const     { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
-    ImRect  GetWorkRect() const     { return ImRect(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y, Pos.x + Size.x + WorkOffsetMax.x, Pos.y + Size.y + WorkOffsetMax.y); }
-    void    UpdateWorkRect()        { WorkPos = Pos + WorkOffsetMin; WorkSize = ImVec2(ImMax(0.0f, Size.x - WorkOffsetMin.x + WorkOffsetMax.x), ImMax(0.0f, Size.y - WorkOffsetMin.y + WorkOffsetMax.y)); }
+    ImRect  GetWorkRect() const     { return ImRect(WorkPos.x, WorkPos.y, WorkPos.x + WorkSize.x, WorkPos.y + WorkSize.y); }
+    void    UpdateWorkRect()        { WorkPos = ImVec2(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y); WorkSize = ImVec2(ImMax(0.0f, Size.x - WorkOffsetMin.x + WorkOffsetMax.x), ImMax(0.0f, Size.y - WorkOffsetMin.y + WorkOffsetMax.y)); }
     void    ClearRequestFlags()     { PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
 };
 
