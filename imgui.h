@@ -31,7 +31,8 @@ Index of this file:
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
-// [SECTION] Platform interface for multi-viewport support (ImGuiPlatformIO, ImGuiPlatformMonitor, ImGuiViewportFlags, ImGuiViewport)
+// [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
+// [SECTION] Platform interface for multi-viewport support (ImGuiPlatformIO, ImGuiPlatformMonitor)
 
 */
 
@@ -326,11 +327,11 @@ namespace ImGui
     IMGUI_API bool          IsWindowHovered(ImGuiHoveredFlags flags=0); // is current window hovered (and typically: not blocked by a popup/modal)? see flags for options. NB: If you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that! Please read the FAQ!
     IMGUI_API ImDrawList*   GetWindowDrawList();                        // get draw list associated to the current window, to append your own drawing primitives
     IMGUI_API float         GetWindowDpiScale();                        // get DPI scale currently associated to the current window's viewport.
-    IMGUI_API ImGuiViewport*GetWindowViewport();                        // get viewport currently associated to the current window.
     IMGUI_API ImVec2        GetWindowPos();                             // get current window position in screen space (useful if you want to do your own drawing via the DrawList API)
     IMGUI_API ImVec2        GetWindowSize();                            // get current window size
     IMGUI_API float         GetWindowWidth();                           // get current window width (shortcut for GetWindowSize().x)
     IMGUI_API float         GetWindowHeight();                          // get current window height (shortcut for GetWindowSize().y)
+    IMGUI_API ImGuiViewport*GetWindowViewport();                        // get viewport currently associated to the current window.
 
     // Prefer using SetNextXXX functions (before Begin) rather that SetXXX functions (after Begin).
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0, const ImVec2& pivot = ImVec2(0, 0)); // set next window position. call before Begin(). use pivot=(0.5f,0.5f) to center on given point, etc.
@@ -2823,6 +2824,62 @@ struct ImFont
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Viewports
+//-----------------------------------------------------------------------------
+
+// Flags stored in ImGuiViewport::Flags, giving indications to the platform backends.
+enum ImGuiViewportFlags_
+{
+    ImGuiViewportFlags_None                     = 0,
+    ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform decorations: title bar, borders, etc. (generally set all windows, but if ImGuiConfigFlags_ViewportsDecoration is set we only set this on popups/tooltips)
+    ImGuiViewportFlags_NoTaskBarIcon            = 1 << 1,   // Platform Window: Disable platform task bar icon (generally set on popups/tooltips, or all windows if ImGuiConfigFlags_ViewportsNoTaskBarIcon is set)
+    ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 2,   // Platform Window: Don't take focus when created.
+    ImGuiViewportFlags_NoFocusOnClick           = 1 << 3,   // Platform Window: Don't take focus when clicked on.
+    ImGuiViewportFlags_NoInputs                 = 1 << 4,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_NoRendererClear          = 1 << 5,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead (because we will fill it entirely).
+    ImGuiViewportFlags_TopMost                  = 1 << 6,   // Platform Window: Display on top (for tooltips only).
+    ImGuiViewportFlags_Minimized                = 1 << 7,   // Platform Window: Window is minimized, can skip render. When minimized we tend to avoid using the viewport pos/size for clipping window or testing if they are contained in the viewport.
+    ImGuiViewportFlags_NoAutoMerge              = 1 << 8,   // Platform Window: Avoid merging this window into another host window. This can only be set via ImGuiWindowClass viewport flags override (because we need to now ahead if we are going to create a viewport in the first place!).
+    ImGuiViewportFlags_CanHostOtherWindows      = 1 << 9    // Main viewport: can host multiple imgui windows (secondary viewports are associated to a single window).
+};
+
+// The viewports created and managed by Dear ImGui. The role of the platform backend is to create the platform/OS windows corresponding to each viewport.
+// - Main Area = entire viewport.
+// - Work Area = entire viewport minus sections optionally used by menu bars, status bars. Windows are generally trying to stay within this area.
+struct ImGuiViewport
+{
+    ImGuiID             ID;                     // Unique identifier for the viewport
+    ImGuiViewportFlags  Flags;                  // See ImGuiViewportFlags_
+    ImVec2              Pos;                    // Main Area: Position of the viewport (the imgui coordinates are the same as OS desktop/native coordinates)
+    ImVec2              Size;                   // Main Area: Size of the viewport.
+    ImVec2              WorkOffsetMin;          // Work Area: Offset from Pos to top-left corner of Work Area. Generally (0,0) or (0,+main_menu_bar_height). Work Area is Full Area but without menu-bars/status-bars (so WorkArea always fit inside Pos/Size!)
+    ImVec2              WorkOffsetMax;          // Work Area: Offset from Pos+Size to bottom-right corner of Work Area. Generally (0,0) or (0,-status_bar_height).
+    float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
+    ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform backend to setup a parent/child relationship between platform windows.
+    ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
+
+    // Our design separate the Renderer and Platform backends to facilitate combining default backends with each others.
+    // When our create your own backend for a custom engine, it is possible that both Renderer and Platform will be handled
+    // by the same system and you may not need to use all the UserData/Handle fields.
+    // The library never uses those fields, they are merely storage to facilitate backend implementation.
+    void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, framebuffers etc.). generally set by your Renderer_CreateWindow function.
+    void*               PlatformUserData;       // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context). generally set by your Platform_CreateWindow function.
+    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GLFWWindow*, SDL_Window*)
+    void*               PlatformHandleRaw;      // void* to hold lower-level, platform-native window handle (e.g. the HWND) when using an abstraction layer like GLFW or SDL (where PlatformHandle would be a SDL_Window*)
+    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
+    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resized by the OS / host window manager, authoritative size will be OS window size)
+    bool                PlatformRequestClose;   // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
+
+    ImGuiViewport()     { memset(this, 0, sizeof(*this)); }
+    ~ImGuiViewport()    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
+
+    // Access work-area rectangle with GetWorkXXX functions (see comments above)
+    ImVec2              GetCenter()             { return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
+    ImVec2              GetWorkPos()            { return ImVec2(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y); }
+    ImVec2              GetWorkSize()           { return ImVec2(Size.x - WorkOffsetMin.x + WorkOffsetMax.x, Size.y - WorkOffsetMin.y + WorkOffsetMax.y); } // This not clamped
+};
+
+//-----------------------------------------------------------------------------
 // [SECTION] Platform interface for multi-viewport support
 //-----------------------------------------------------------------------------
 // [BETA] (Optional) This is completely optional, for advanced users!
@@ -2942,58 +2999,6 @@ struct ImGuiPlatformMonitor
     ImVec2  WorkPos, WorkSize;      // Coordinates without task bars / side bars / menu bars. Used to avoid positioning popups/tooltips inside this region. If you don't have this info, please copy the value for MainPos/MainSize.
     float   DpiScale;               // 1.0f = 96 DPI
     ImGuiPlatformMonitor()          { MainPos = MainSize = WorkPos = WorkSize = ImVec2(0, 0); DpiScale = 1.0f; }
-};
-
-// Flags stored in ImGuiViewport::Flags, giving indications to the platform backends.
-enum ImGuiViewportFlags_
-{
-    ImGuiViewportFlags_None                     = 0,
-    ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform decorations: title bar, borders, etc. (generally set all windows, but if ImGuiConfigFlags_ViewportsDecoration is set we only set this on popups/tooltips)
-    ImGuiViewportFlags_NoTaskBarIcon            = 1 << 1,   // Platform Window: Disable platform task bar icon (generally set on popups/tooltips, or all windows if ImGuiConfigFlags_ViewportsNoTaskBarIcon is set)
-    ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 2,   // Platform Window: Don't take focus when created.
-    ImGuiViewportFlags_NoFocusOnClick           = 1 << 3,   // Platform Window: Don't take focus when clicked on.
-    ImGuiViewportFlags_NoInputs                 = 1 << 4,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
-    ImGuiViewportFlags_NoRendererClear          = 1 << 5,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead (because we will fill it entirely).
-    ImGuiViewportFlags_TopMost                  = 1 << 6,   // Platform Window: Display on top (for tooltips only).
-    ImGuiViewportFlags_Minimized                = 1 << 7,   // Platform Window: Window is minimized, can skip render. When minimized we tend to avoid using the viewport pos/size for clipping window or testing if they are contained in the viewport.
-    ImGuiViewportFlags_NoAutoMerge              = 1 << 8,   // Platform Window: Avoid merging this window into another host window. This can only be set via ImGuiWindowClass viewport flags override (because we need to now ahead if we are going to create a viewport in the first place!).
-    ImGuiViewportFlags_CanHostOtherWindows      = 1 << 9    // Main viewport: can host multiple imgui windows (secondary viewports are associated to a single window).
-};
-
-// The viewports created and managed by Dear ImGui. The role of the platform backend is to create the platform/OS windows corresponding to each viewport.
-// - Main Area = entire viewport.
-// - Work Area = entire viewport minus sections optionally used by menu bars, status bars. Some positioning code will prefer to use this. Window are also trying to stay within this area.
-struct ImGuiViewport
-{
-    ImGuiID             ID;                     // Unique identifier for the viewport
-    ImGuiViewportFlags  Flags;                  // See ImGuiViewportFlags_
-    ImVec2              Pos;                    // Main Area: Position of the viewport (the imgui coordinates are the same as OS desktop/native coordinates)
-    ImVec2              Size;                   // Main Area: Size of the viewport.
-    ImVec2              WorkOffsetMin;          // Work Area: Offset from Pos to top-left corner of Work Area. Generally (0,0) or (0,+main_menu_bar_height). Work Area is Full Area but without menu-bars/status-bars (so WorkArea always fit inside Pos/Size!)
-    ImVec2              WorkOffsetMax;          // Work Area: Offset from Pos+Size to bottom-right corner of Work Area. Generally (0,0) or (0,-status_bar_height).
-    float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
-    ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform backend to setup a parent/child relationship between platform windows.
-    ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
-
-    // Our design separate the Renderer and Platform backends to facilitate combining default backends with each others.
-    // When our create your own backend for a custom engine, it is possible that both Renderer and Platform will be handled
-    // by the same system and you may not need to use all the UserData/Handle fields.
-    // The library never uses those fields, they are merely storage to facilitate backend implementation.
-    void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, framebuffers etc.). generally set by your Renderer_CreateWindow function.
-    void*               PlatformUserData;       // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context). generally set by your Platform_CreateWindow function.
-    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GLFWWindow*, SDL_Window*)
-    void*               PlatformHandleRaw;      // void* to hold lower-level, platform-native window handle (e.g. the HWND) when using an abstraction layer like GLFW or SDL (where PlatformHandle would be a SDL_Window*)
-    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
-    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resized by the OS / host window manager, authoritative size will be OS window size)
-    bool                PlatformRequestClose;   // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
-
-    ImGuiViewport()     { memset(this, 0, sizeof(*this)); }
-    ~ImGuiViewport()    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
-
-    // Access work-area rectangle with GetWorkXXX functions (see comments above)
-    ImVec2              GetCenter()             { return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
-    ImVec2              GetWorkPos()            { return ImVec2(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y); }
-    ImVec2              GetWorkSize()           { return ImVec2(Size.x - WorkOffsetMin.x + WorkOffsetMax.x, Size.y - WorkOffsetMin.y + WorkOffsetMax.y); } // This not clamped
 };
 
 #if defined(__clang__)
