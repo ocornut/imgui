@@ -104,7 +104,7 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.81 WIP (In Progress)
+ VERSION 1.81 (Released 2021-02-10)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -162,15 +162,15 @@ Other Changes:
   Note that the rounding of either positions and widths are technically undesirable (e.g. #3437, #791) but
   variety of code is currently on it so we are first fixing current behavior before we'll eventually change it.
 - Log/Capture: Fix various new line/spacing issue when logging widgets. [@Xipiryon, @ocornut]
-- Log/Capture: Improved the ascii look of various widgets, making large dumps more easily human readable.
+- Log/Capture: Improved the ASCII look of various widgets, making large dumps more easily human readable.
 - ImDrawList: Fixed AddCircle()/AddCircleFilled() with (rad > 0.0f && rad < 1.0f && num_segments == 0). (#3738)
   Would lead to a buffer read overflow.
 - ImDrawList: Clarified PathArcTo() need for a_min <= a_max with an assert.
 - ImDrawList: Fixed PathArcToFast() handling of a_min > a_max.
-- Metrics: Backported "Viewports" debug visualizer from 'docking' branch.
+- Metrics: Back-ported "Viewports" debug visualizer from 'docking' branch.
 - Demo: Added 'Examples->Fullscreen Window' demo using GetMainViewport() values. (#3789)
 - Demo: 'Simple Overlay' demo now moves under main menu-bar (if any) using GetMainViewport()'s work area.
-- Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
+- Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilitate compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Vulkan: Add support for custom Vulkan function loader and VK_NO_PROTOTYPES. (#3759, #3227) [@Hossein-Noroozpour]
   User needs to call ImGui_ImplVulkan_LoadFunctions() with their custom loader prior to other functions.
@@ -179,9 +179,7 @@ Other Changes:
 - Backends: WebGPU: Added enderer backend for WebGPU support (imgui_impl_wgpu.cpp) (#3632) [@bfierz]
   Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.
 - Examples: WebGPU: Added Emscripten+WebGPU example. (#3632) [@bfierz]
-- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything,
-  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're
-  adding it for consistency. (#3632)
+- Backends: GLFW: Added ImGui_ImplGlfw_InitForOther() initialization call to use with non OpenGL API. (#3632)
 
 
 -----------------------------------------------------------------------
