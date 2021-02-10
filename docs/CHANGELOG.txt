@@ -107,9 +107,7 @@ Other Changes:
 - Backends: WebGPU: Added enderer backend for WebGPU support (imgui_impl_wgpu.cpp) (#3632) [@bfierz]
   Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.
 - Examples: WebGPU: Added Emscripten+WebGPU example. (#3632) [@bfierz]
-- Backends: GLFW: Added ImGui_ImplGlfw_InitForWebGPU() init point. It currently has strictly no effect on anything,
-  but because some multi-viewport renderers require knowledge of the render stack in the Platform back-end, we're
-  adding it for consistency. (#3632)
+- Backends: GLFW: Added ImGui_ImplGlfw_InitForOther() init point to use with non OpenGL API. (#3632)
 
 
 -----------------------------------------------------------------------
