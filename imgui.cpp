@@ -11839,7 +11839,7 @@ void ImGui::UpdatePlatformWindows()
             // This is useful for our platform z-order heuristic when io.MouseHoveredViewport is not available.
             if (viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
                 viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
-        }
+            }
 
         // Clear request flags
         viewport->ClearRequestFlags();
@@ -11860,8 +11860,14 @@ void ImGui::UpdatePlatformWindows()
         }
 
         // Store a tag so we can infer z-order easily from all our windows
-        if (focused_viewport && focused_viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
-            focused_viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
+        // We compare PlatformLastFocusedViewportId so newly created viewports with _NoFocusOnAppearing flag
+        // will keep the front most stamp instead of losing it back to their parent viewport.
+        if (focused_viewport && g.PlatformLastFocusedViewportId != focused_viewport->ID)
+        {
+            if (focused_viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
+                focused_viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
+            g.PlatformLastFocusedViewportId = focused_viewport->ID;
+        }
     }
 }
 
@@ -15852,6 +15858,13 @@ static void RenderViewportsThumbnails()
     ImGui::Dummy(bb_full.GetSize() * SCALE);
 }
 
+static int IMGUI_CDECL ViewportComparerByFrontMostStampCount(const void* lhs, const void* rhs)
+{
+    const ImGuiViewportP* a = *(const ImGuiViewportP* const *)lhs;
+    const ImGuiViewportP* b = *(const ImGuiViewportP* const *)rhs;
+    return b->LastFrontMostStampCount - a->LastFrontMostStampCount;
+}
+
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
 static void MetricsHelpMarker(const char* desc)
 {
@@ -16056,6 +16069,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     mon.MainPos.x, mon.MainPos.y, mon.MainPos.x + mon.MainSize.x, mon.MainPos.y + mon.MainSize.y, mon.MainSize.x, mon.MainSize.y,
                     mon.WorkPos.x, mon.WorkPos.y, mon.WorkPos.x + mon.WorkSize.x, mon.WorkPos.y + mon.WorkSize.y, mon.WorkSize.x, mon.WorkSize.y);
             }
+            TreePop();
+        }
+
+        if (TreeNode("Inferred order (front-to-back)"))
+        {
+            static ImVector<ImGuiViewportP*> viewports;
+            viewports.resize(g.Viewports.Size);
+            memcpy(viewports.Data, g.Viewports.Data, g.Viewports.size_in_bytes());
+            if (viewports.Size > 1)
+                ImQsort(viewports.Data, viewports.Size, sizeof(ImGuiViewport*), ViewportComparerByFrontMostStampCount);
+            for (int i = 0; i < viewports.Size; i++)
+                BulletText("Viewport #%d, ID: 0x%08X, FrontMostStampCount = %08d, Window: \"%s\"", viewports[i]->Idx, viewports[i]->ID, viewports[i]->LastFrontMostStampCount, viewports[i]->Window ? viewports[i]->Window->Name : "N/A");
             TreePop();
         }
 
@@ -16557,11 +16582,17 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
             viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
         if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200, 200); viewport->UpdateWorkRect(); if (viewport->Window) viewport->Window->Pos = viewport->Pos; } }
-        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s", viewport->Flags,
-            (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
-            (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs"     : "",
-            (flags & ImGuiViewportFlags_NoRendererClear)     ? " NoRendererClear"     : "", (flags & ImGuiViewportFlags_Minimized)    ? " Minimized"    : "",
-            (flags & ImGuiViewportFlags_NoAutoMerge)         ? " NoAutoMerge"         : "");
+        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
+            (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
+            (flags & ImGuiViewportFlags_NoTaskBarIcon) ? " NoTaskBarIcon" : "",
+            (flags & ImGuiViewportFlags_NoFocusOnAppearing) ? " NoFocusOnAppearing" : "",
+            (flags & ImGuiViewportFlags_NoFocusOnClick) ? " NoFocusOnClick" : "",
+            (flags & ImGuiViewportFlags_NoInputs) ? " NoInputs" : "",
+            (flags & ImGuiViewportFlags_NoRendererClear) ? " NoRendererClear" : "",
+            (flags & ImGuiViewportFlags_TopMost) ? " TopMost" : "",
+            (flags & ImGuiViewportFlags_Minimized) ? " Minimized" : "",
+            (flags & ImGuiViewportFlags_NoAutoMerge) ? " NoAutoMerge" : "",
+            (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "");
         for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
             for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
                 DebugNodeDrawList(NULL, viewport, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
