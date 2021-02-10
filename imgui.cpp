@@ -311,10 +311,11 @@ CODE
                  // We are using scissoring to clip some objects. All low-level graphics API should supports it.
                  // - If your engine doesn't support scissoring yet, you may ignore this at first. You will get some small glitches
                  //   (some elements visible outside their bounds) but you can fix that once everything else works!
-                 // - Clipping coordinates are provided in imgui coordinates space (from draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize)
-                 //   In a single viewport application, draw_data->DisplayPos will always be (0,0) and draw_data->DisplaySize will always be == io.DisplaySize.
-                 //   However, in the interest of supporting multi-viewport applications in the future (see 'viewport' branch on github),
-                 //   always subtract draw_data->DisplayPos from clipping bounds to convert them to your viewport space.
+                 // - Clipping coordinates are provided in imgui coordinates space:
+                 //   - For a given viewport, draw_data->DisplayPos == viewport->Pos and draw_data->DisplaySize == viewport->Size
+                 //   - In a single viewport application, draw_data->DisplayPos == (0,0) and draw_data->DisplaySize == io.DisplaySize, but always use GetMainViewport()->Pos/Size instead of hardcoding those values.
+                 //   - In the interest of supporting multi-viewport applications (see 'docking' branch on github),
+                 //     always subtract draw_data->DisplayPos from clipping bounds to convert them to your viewport space.
                  // - Note that pcmd->ClipRect contains Min+Max bounds. Some graphics API may use Min+Max, other may use Min+Size (size being Max-Min)
                  ImVec2 pos = draw_data->DisplayPos;
                  MyEngineScissor((int)(pcmd->ClipRect.x - pos.x), (int)(pcmd->ClipRect.y - pos.y), (int)(pcmd->ClipRect.z - pos.x), (int)(pcmd->ClipRect.w - pos.y));
@@ -4220,7 +4221,6 @@ void ImGui::Initialize(ImGuiContext* context)
     TableSettingsInstallHandler(context);
 #endif // #ifdef IMGUI_HAS_TABLE
 
-#ifdef IMGUI_HAS_DOCK
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
@@ -4229,9 +4229,10 @@ void ImGui::Initialize(ImGuiContext* context)
     g.Viewports.push_back(viewport);
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
 
-    // Extensions
+#ifdef IMGUI_HAS_DOCK
+    // Initialize Docking
     DockContextInitialize(&g);
-#endif // #ifdef IMGUI_HAS_DOCK
+#endif
 
     g.Initialized = true;
 }
@@ -4691,8 +4692,9 @@ void ImGui::Render()
             AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
         SetupViewportDrawData(viewport, &viewport->DrawDataBuilder.Layers[0]);
-        g.IO.MetricsRenderVertices += viewport->DrawData->TotalVtxCount;
-        g.IO.MetricsRenderIndices += viewport->DrawData->TotalIdxCount;
+        ImDrawData* draw_data = viewport->DrawData;
+        g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
+        g.IO.MetricsRenderIndices += draw_data->TotalIdxCount;
     }
 
     CallContextHooks(&g, ImGuiContextHookType_RenderPost);
@@ -15804,7 +15806,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
 
-static void RenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb)
+void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -15823,18 +15825,17 @@ static void RenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewp
 
         ImRect thumb_r = thumb_window->Rect();
         ImRect title_r = thumb_window->TitleBarRect();
-        ImRect thumb_r_scaled = ImRect(ImFloor(off + thumb_r.Min * scale), ImFloor(off +  thumb_r.Max * scale));
-        ImRect title_r_scaled = ImRect(ImFloor(off + title_r.Min * scale), ImFloor(off +  ImVec2(title_r.Max.x, title_r.Min.y) * scale) + ImVec2(0,5)); // Exaggerate title bar height
-        thumb_r_scaled.ClipWithFull(bb);
-        title_r_scaled.ClipWithFull(bb);
+        thumb_r = ImRect(ImFloor(off + thumb_r.Min * scale), ImFloor(off +  thumb_r.Max * scale));
+        title_r = ImRect(ImFloor(off + title_r.Min * scale), ImFloor(off +  ImVec2(title_r.Max.x, title_r.Min.y) * scale) + ImVec2(0,5)); // Exaggerate title bar height
+        thumb_r.ClipWithFull(bb);
+        title_r.ClipWithFull(bb);
         const bool window_is_focused = (g.NavWindow && thumb_window->RootWindowForTitleBarHighlight == g.NavWindow->RootWindowForTitleBarHighlight);
-        window->DrawList->AddRectFilled(thumb_r_scaled.Min, thumb_r_scaled.Max, ImGui::GetColorU32(ImGuiCol_WindowBg, alpha_mul));
-        window->DrawList->AddRectFilled(title_r_scaled.Min, title_r_scaled.Max, ImGui::GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
-        window->DrawList->AddRect(thumb_r_scaled.Min, thumb_r_scaled.Max, ImGui::GetColorU32(ImGuiCol_Border, alpha_mul));
-        if (ImGuiWindow* window_for_title = GetWindowForTitleDisplay(thumb_window))
-            window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r_scaled.Min, ImGui::GetColorU32(ImGuiCol_Text, alpha_mul), window_for_title->Name, ImGui::FindRenderedTextEnd(window_for_title->Name));
+        window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
+        window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
+        window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
+        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
     }
-    draw_list->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_Border, alpha_mul));
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
 }
 
 static void RenderViewportsThumbnails()
@@ -15844,7 +15845,7 @@ static void RenderViewportsThumbnails()
 
     // We don't display full monitor bounds (we could, but it often looks awkward), instead we display just enough to cover all of our viewports.
     float SCALE = 1.0f / 8.0f;
-    ImRect bb_full;
+    ImRect bb_full(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
     for (int n = 0; n < g.Viewports.Size; n++)
         bb_full.Add(g.Viewports[n]->GetMainRect());
     ImVec2 p = window->DC.CursorPos;
@@ -15853,7 +15854,7 @@ static void RenderViewportsThumbnails()
     {
         ImGuiViewportP* viewport = g.Viewports[n];
         ImRect viewport_draw_bb(off + (viewport->Pos) * SCALE, off + (viewport->Pos + viewport->Size) * SCALE);
-        RenderViewportThumbnail(window->DrawList, viewport, viewport_draw_bb);
+        ImGui::DebugRenderViewportThumbnail(window->DrawList, viewport, viewport_draw_bb);
     }
     ImGui::Dummy(bb_full.GetSize() * SCALE);
 }
@@ -16582,7 +16583,10 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
             viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
         if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200, 200); viewport->UpdateWorkRect(); if (viewport->Window) viewport->Window->Pos = viewport->Pos; } }
-        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
+        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
+            (flags & ImGuiViewportFlags_IsPlatformWindow) ? " IsPlatformWindow" : "",
+            (flags & ImGuiViewportFlags_IsPlatformMonitor) ? " IsPlatformMonitor" : "",
+            (flags & ImGuiViewportFlags_OwnedByApp) ? " OwnedByApp" : "",
             (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
             (flags & ImGuiViewportFlags_NoTaskBarIcon) ? " NoTaskBarIcon" : "",
             (flags & ImGuiViewportFlags_NoFocusOnAppearing) ? " NoFocusOnAppearing" : "",

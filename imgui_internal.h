@@ -1293,8 +1293,6 @@ struct ImGuiDockContext
 // [SECTION] Viewport support
 //-----------------------------------------------------------------------------
 
-#ifdef IMGUI_HAS_VIEWPORT
-
 // ImGuiViewport Private/Internals fields (cardinal sin: we are using inheritance!)
 // Every instance of ImGuiViewport is in fact a ImGuiViewportP.
 struct ImGuiViewportP : public ImGuiViewport
@@ -1328,8 +1326,6 @@ struct ImGuiViewportP : public ImGuiViewport
     void    UpdateWorkRect()        { WorkPos = ImVec2(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y); WorkSize = ImVec2(ImMax(0.0f, Size.x - WorkOffsetMin.x + WorkOffsetMax.x), ImMax(0.0f, Size.y - WorkOffsetMin.y + WorkOffsetMax.y)); }
     void    ClearRequestFlags()     { PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
 };
-
-#endif // #ifdef IMGUI_HAS_VIEWPORT
 
 //-----------------------------------------------------------------------------
 // [SECTION] Settings support
@@ -2790,6 +2786,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeWindowSettings(ImGuiWindowSettings* settings);
     IMGUI_API void          DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label);
     IMGUI_API void          DebugNodeViewport(ImGuiViewportP* viewport);
+    IMGUI_API void          DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb);
 
 } // namespace ImGui
 

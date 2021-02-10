@@ -124,6 +124,21 @@ Breaking Changes:
 
 Other Changes:
 
+- Viewports Added ImGui::GetMainViewport() as a way to get the bounds and work area of the host display. (#3789, #1542)
+  - In 'master' branch or without multi-viewports feature enabled:
+    - GetMainViewport()->Pos is always == (0,0)
+    - GetMainViewport()->Size is always == io.DisplaySize
+  - In 'docking' branch and with the multi-viewports feature enabled:
+    - GetMainViewport() will return information from your host Platform Window.
+    - In the future, we will support a "no main viewport" mode and this may return bounds of your main monitor.
+  - For forward compatibility with multi-viewports/multi-monitors:
+     - Code using (0,0) as a way to signify "upper-left of the host window" should use GetMainViewport()->Pos.
+     - Code using io.DisplaySize as a way to signify "size of the host window" should use GetMainViewport()->Size.
+  - We are also exposing a work area in ImGuiViewport ('WorkPos', 'WorkSize' vs 'Pos', 'Size' for full area):
+     - For a Platform Window, the work area is generally the full area minus space used by menu-bars. 
+     - For a Platform Monitor, the work area is generally the full area minus space used by task-bars.
+  - All of this has been the case in 'docking' branch for a long time. What we've done is merely merging 
+    a small chunk of the multi-viewport logic into 'master' to standardize some concepts ahead of time.
 - Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no
   close button in the window. (#3731)
@@ -152,7 +167,9 @@ Other Changes:
   Would lead to a buffer read overflow.
 - ImDrawList: Clarified PathArcTo() need for a_min <= a_max with an assert.
 - ImDrawList: Fixed PathArcToFast() handling of a_min > a_max.
-- Demo: Added 'Examples->Fullscreen Window' demo. (#3789)
+- Metrics: Backported "Viewports" debug visualizer from 'docking' branch.
+- Demo: Added 'Examples->Fullscreen Window' demo using GetMainViewport() values. (#3789)
+- Demo: 'Simple Overlay' demo now moves under main menu-bar (if any) using GetMainViewport()'s work area.
 - Backends: Win32: Dynamically loading XInput DLL instead of linking with it, facilite compiling with
   old WindowSDK versions or running on Windows 7. (#3646, #3645, #3248, #2716) [@Demonese]
 - Backends: Vulkan: Add support for custom Vulkan function loader and VK_NO_PROTOTYPES. (#3759, #3227) [@Hossein-Noroozpour]
