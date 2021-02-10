@@ -20,7 +20,7 @@ Dear ImGui is designed to **enable fast iterations** and to **empower programmer
 
 Dear ImGui is particularly suited to integration in games engine (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard.
 
-| [Usage](#usage) - [How it works](#how-it-works) - [Releases](#releases) - [Demo](#demo) - [Integration](#integration) |
+| [Usage](#usage) - [How it works](#how-it-works) - [Releases & Changelogs](#releases--changelogs) - [Demo](#demo) - [Integration](#integration) |
 :----------------------------------------------------------: |
 | [Upcoming changes](#upcoming-changes) - [Gallery](#gallery) - [Support, FAQ](#support-frequently-asked-questions-faq) -  [How to help](#how-to-help) - [Sponsors](#sponsors) - [Credits](#credits) - [License](#license) |
 | [Wiki](https://github.com/ocornut/imgui/wiki) - [Languages & frameworks backends/bindings](https://github.com/ocornut/imgui/wiki/Bindings) - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) - [User quotes](https://github.com/ocornut/imgui/wiki/Quotes) |
@@ -93,9 +93,10 @@ Dear ImGui outputs vertex buffers and command lists that you can easily render i
 
 _A common misunderstanding is to mistake immediate mode gui for immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes as the gui functions are called. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
 
-### Releases
+### Releases & Changelogs
 
 See [Releases](https://github.com/ocornut/imgui/releases) page.
+Reading the changelogs is a good way to keep up to date with the things Dear ImGui has to offer, and maybe will give you ideas of some features that you've been ignoring until now!
 
 ### Demo
 
