@@ -4226,6 +4226,7 @@ void ImGui::Initialize(ImGuiContext* context)
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
     viewport->PlatformWindowCreated = true;
+    viewport->Flags = ImGuiViewportFlags_OwnedByApp;
     g.Viewports.push_back(viewport);
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
 
@@ -11393,7 +11394,7 @@ static void ImGui::UpdateViewportsNewFrame()
         main_viewport_pos = main_viewport->Pos;    // Preserve last pos/size when minimized (FIXME: We don't do the same for Size outside of the viewport path)
         main_viewport_size = main_viewport->Size;
     }
-    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_pos, main_viewport_size, ImGuiViewportFlags_CanHostOtherWindows);
+    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_pos, main_viewport_size, ImGuiViewportFlags_OwnedByApp | ImGuiViewportFlags_CanHostOtherWindows);
 
     g.CurrentDpiScale = 0.0f;
     g.CurrentViewport = NULL;
@@ -11563,6 +11564,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
 
+    flags |= ImGuiViewportFlags_IsPlatformWindow;
     if (window != NULL)
     {
         if (g.MovingWindow && g.MovingWindow->RootWindow == window)
@@ -16583,8 +16585,8 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
             viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
         if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200, 200); viewport->UpdateWorkRect(); if (viewport->Window) viewport->Window->Pos = viewport->Pos; } }
-        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
-            (flags & ImGuiViewportFlags_IsPlatformWindow) ? " IsPlatformWindow" : "",
+        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
+            //(flags & ImGuiViewportFlags_IsPlatformWindow) ? " IsPlatformWindow" : "", // Omitting because it is the standard
             (flags & ImGuiViewportFlags_IsPlatformMonitor) ? " IsPlatformMonitor" : "",
             (flags & ImGuiViewportFlags_OwnedByApp) ? " OwnedByApp" : "",
             (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
