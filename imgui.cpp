@@ -12838,7 +12838,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     AuthorityForPos = AuthorityForSize = ImGuiDataAuthority_DockNode;
     AuthorityForViewport = ImGuiDataAuthority_Auto;
     IsVisible = true;
-    IsFocused = HasCloseButton = HasWindowMenuButton = EnableCloseButton = false;
+    IsFocused = HasCloseButton = HasWindowMenuButton = false;
     WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarUpdate = WantHiddenTabBarToggle = false;
     MarkedForPosSizeWrite = false;
 }
@@ -13148,6 +13148,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         }
         else
         {
+            // FIXME-DOCKING: Missing policies for conflict resolution, hence the "Experimental" tag on this.
             node->LocalFlags &= ~window->WindowClass.DockNodeFlagsOverrideClear;
             node->LocalFlags |= window->WindowClass.DockNodeFlagsOverrideSet;
         }
@@ -13272,7 +13273,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         node->State = ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow;
         node->WantCloseAll = false;
         node->WantCloseTabId = 0;
-        node->HasCloseButton = node->HasWindowMenuButton = node->EnableCloseButton = false;
+        node->HasCloseButton = node->HasWindowMenuButton = false;
         node->LastFrameActive = g.FrameCount;
 
         if (node->WantMouseMove && node->Windows.Size == 1)
@@ -13307,6 +13308,19 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
     const ImGuiDockNodeFlags node_flags = node->GetMergedFlags();
 
+    // Decide if the node will have a close button and a window menu button
+    node->HasWindowMenuButton = (node->Windows.Size > 0) && (node_flags & ImGuiDockNodeFlags_NoWindowMenuButton) == 0;
+    node->HasCloseButton = false;
+    for (int window_n = 0; window_n < node->Windows.Size; window_n++)
+    {
+        // FIXME-DOCK: Setting DockIsActive here means that for single active window in a leaf node, DockIsActive will be cleared until the next Begin() call.
+        ImGuiWindow* window = node->Windows[window_n];
+        node->HasCloseButton |= window->HasCloseButton;
+        window->DockIsActive = (node->Windows.Size > 1);
+    }
+    if (node_flags & ImGuiDockNodeFlags_NoCloseButton)
+        node->HasCloseButton = false;
+
     // Bind or create host window
     ImGuiWindow* host_window = NULL;
     bool beginned_into_host_window = false;
@@ -13314,25 +13328,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     {
         // [Explicit root dockspace node]
         IM_ASSERT(node->HostWindow);
-        node->EnableCloseButton = false;
-        node->HasCloseButton = (node_flags & ImGuiDockNodeFlags_NoCloseButton) == 0;
-        node->HasWindowMenuButton = (node_flags & ImGuiDockNodeFlags_NoWindowMenuButton) == 0;
         host_window = node->HostWindow;
     }
     else
     {
         // [Automatic root or child nodes]
-        node->EnableCloseButton = false;
-        node->HasCloseButton = (node->Windows.Size > 0) && (node_flags & ImGuiDockNodeFlags_NoCloseButton) == 0;
-        node->HasWindowMenuButton = (node->Windows.Size > 0) && (node_flags & ImGuiDockNodeFlags_NoWindowMenuButton) == 0;
-        for (int window_n = 0; window_n < node->Windows.Size; window_n++)
-        {
-            // FIXME-DOCK: Setting DockIsActive here means that for single active window in a leaf node, DockIsActive will be cleared until the next Begin() call.
-            ImGuiWindow* window = node->Windows[window_n];
-            window->DockIsActive = (node->Windows.Size > 1);
-            node->EnableCloseButton |= window->HasCloseButton;
-        }
-
         if (node->IsRootNode() && node->IsVisible)
         {
             ImGuiWindow* ref_window = (node->Windows.Size > 0) ? node->Windows[0] : NULL;
@@ -13638,7 +13638,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
     const ImGuiDockNodeFlags node_flags = node->GetMergedFlags();
     const bool has_window_menu_button = (node_flags & ImGuiDockNodeFlags_NoWindowMenuButton) == 0 && (style.WindowMenuButtonPosition != ImGuiDir_None);
-    const bool has_close_button = (node_flags & ImGuiDockNodeFlags_NoCloseButton) == 0;
 
     // In a dock node, the Collapse Button turns into the Window Menu button.
     // FIXME-DOCK FIXME-OPT: Could we recycle popups id across multiple dock nodes?
@@ -13764,12 +13763,15 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
     // Close button (after VisibleWindow was updated)
     // Note that VisibleWindow may have been overrided by CTRL+Tabbing, so VisibleWindow->ID may be != from tab_bar->SelectedTabId
-    if (has_close_button && node->VisibleWindow)
+    const bool close_button_is_enabled = node->HasCloseButton && node->VisibleWindow && node->VisibleWindow->HasCloseButton;
+    const bool close_button_is_visible = node->HasCloseButton;
+    //const bool close_button_is_visible = close_button_is_enabled; // Most people would expect this behavior of not even showing the button (leaving a hole since we can't claim that space as other windows in the tba bar have one)
+    if (close_button_is_visible)
     {
-        if (!node->VisibleWindow->HasCloseButton)
+        if (!close_button_is_enabled)
         {
             PushItemFlag(ImGuiItemFlags_Disabled, true);
-            PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text] * ImVec4(1.0f,1.0f,1.0f,0.5f));
+            PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text] * ImVec4(1.0f,1.0f,1.0f,0.4f));
         }
         const float button_sz = g.FontSize;
         if (CloseButton(host_window->GetID("#CLOSE"), title_bar_rect.GetTR() + ImVec2(-style.FramePadding.x * 2.0f - button_sz, 0.0f)))
@@ -13780,7 +13782,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             }
         //if (IsItemActive())
         //    focus_tab_id = tab_bar->SelectedTabId;
-        if (!node->VisibleWindow->HasCloseButton)
+        if (!close_button_is_enabled)
         {
             PopStyleColor();
             PopItemFlag();

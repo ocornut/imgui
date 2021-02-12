@@ -1233,9 +1233,8 @@ struct ImGuiDockNode
     ImGuiDataAuthority      AuthorityForViewport    :3;
     bool                    IsVisible               :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsFocused               :1;
-    bool                    HasCloseButton          :1;
+    bool                    HasCloseButton          :1; // Provide space for a close button (if any of the docked window has one). Note that button may be hidden on window without one.
     bool                    HasWindowMenuButton     :1;
-    bool                    EnableCloseButton       :1;
     bool                    WantCloseAll            :1; // Set when closing all tabs at once.
     bool                    WantLockSizeOnce        :1;
     bool                    WantMouseMove           :1; // After a node extraction we need to transition toward moving the newly created host window
