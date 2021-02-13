@@ -75,9 +75,13 @@ Other Changes:
   This can currently only ever be set by the Freetype renderer.
 - imgui_freetype: Added ImGuiFreeTypeBuilderFlags_Bitmap flag to request Freetype loading bitmap data.
   This may have an effect on size and must be called with correct size values. (#3879) [@metarutaiga]
+- ImDrawList: PathArcTo() now supports "int num_segments = 0" (new default) and adaptively tesselate.
+  The adapative tesselation uses look up tables, tends to be faster than old PathArcTo() while maintaining
+  quality for large arcs (tesselation quality derived from "style.CircleTessellationMaxError") (#3491) [@thedmd]
+- ImDrawList: PathArcToFast() also adaptively tesselate efficiently. This means that large rounded corners
+  in e.g. hi-dpi settings will generally look better. (#3491) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
-- ImDrawList: AddCircle, AddCircleFilled(): New default for style.
 - Backends: Android: Added native Android backend. (#3446) [@duddel]
 - Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with
   alpha compositing and transparent windows. (#2766, #3447 etc.).
