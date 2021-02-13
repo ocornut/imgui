@@ -78,6 +78,25 @@ Index of this file:
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 
+
+#include "imgui_internal.h"
+#include <chrono>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
+static uint64_t ImTimeGetInMicroseconds()
+{
+# if !defined(__APPLE__)
+    // Trying std::chrono out of unfettered optimism that it may actually work..
+    using namespace std;
+    chrono::microseconds ms = chrono::duration_cast<chrono::microseconds>(chrono::high_resolution_clock::now().time_since_epoch());
+    return (uint64_t)ms.count();
+# else
+    return 0;
+# endif
+}
+
+
 // System includes
 #include <ctype.h>          // toupper
 #include <limits.h>         // INT_MIN, INT_MAX
@@ -264,7 +283,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_simple_overlay = false;
     static bool show_app_fullscreen = false;
     static bool show_app_window_titles = false;
-    static bool show_app_custom_rendering = false;
+    static bool show_app_custom_rendering = true;
 
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);
@@ -6018,7 +6037,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Rendering"))
+        static int flags = ImGuiTabItemFlags_SetSelected;
+
+        if (ImGui::BeginTabItem("Rendering", nullptr, flags))
         {
             ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
             ImGui::SameLine();
@@ -7336,6 +7357,527 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddLine(ImVec2(origin.x + points[n].x, origin.y + points[n].y), ImVec2(origin.x + points[n + 1].x, origin.y + points[n + 1].y), IM_COL32(255, 255, 0, 255), 2.0f);
             draw_list->PopClipRect();
 
+            ImGui::EndTabItem();
+        }
+
+        static int flags = ImGuiTabItemFlags_SetSelected;
+
+        if (ImGui::BeginTabItem("Adaptive Arc", NULL, flags))
+        {
+            flags = 0;
+
+            ImGui::PushItemWidth(-ImGui::GetFontSize() * 10);
+
+            struct Helpers
+            {
+                static void PathRect2(ImDrawList* draw_list, const ImVec2& a, const ImVec2& b, float rounding, ImDrawCornerFlags rounding_corners)
+                {
+                    rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((rounding_corners & ImDrawCornerFlags_Top)  == ImDrawCornerFlags_Top)  || ((rounding_corners & ImDrawCornerFlags_Bot)   == ImDrawCornerFlags_Bot)   ? 0.5f : 1.0f ) - 1.0f);
+                    rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((rounding_corners & ImDrawCornerFlags_Left) == ImDrawCornerFlags_Left) || ((rounding_corners & ImDrawCornerFlags_Right) == ImDrawCornerFlags_Right) ? 0.5f : 1.0f ) - 1.0f);
+
+                    if (rounding <= 0.0f || rounding_corners == 0)
+                    {
+                        draw_list->PathLineTo(a);
+                        draw_list->PathLineTo(ImVec2(b.x, a.y));
+                        draw_list->PathLineTo(b);
+                        draw_list->PathLineTo(ImVec2(a.x, b.y));
+                    }
+                    else
+                    {
+                        const float rounding_tl = (rounding_corners & ImDrawCornerFlags_TopLeft) ? rounding : 0.0f;
+                        const float rounding_tr = (rounding_corners & ImDrawCornerFlags_TopRight) ? rounding : 0.0f;
+                        const float rounding_br = (rounding_corners & ImDrawCornerFlags_BotRight) ? rounding : 0.0f;
+                        const float rounding_bl = (rounding_corners & ImDrawCornerFlags_BotLeft) ? rounding : 0.0f;
+                        draw_list->PathArcToFast2(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
+                        draw_list->PathArcToFast2(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
+                        draw_list->PathArcToFast2(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
+                        draw_list->PathArcToFast2(ImVec2(a.x + rounding_bl, b.y - rounding_bl), rounding_bl, 3, 6);
+                    }
+                };
+            };
+
+            static int N = 1000;//1;//100;
+            static int M = 1;
+            static float set_radius = 160;//72.0f * 1.5f;
+            static float thickness = 8;//3.0f;
+            static float margin = 4.0f;
+            static float arc_start = 0.0f;
+            static float arc_length = IM_PI * 2.0f;
+            static bool show_stats = true;
+            static bool arc_step_override = false;
+            static int arc_step_override_v = 10;
+            static ImVec4 col_fg = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+            static ImVec4 col_bg = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            ImGui::DragFloat("Radius", &set_radius, 0.5f, 0.5f, 144.0f * 2.0f, "%.0f");
+            ImGui::DragFloat("Thickness", &thickness, 0.05f, 1.0f, 8.0f, "%.02f");
+            float arc_start_deg = arc_start * 180.0f / IM_PI;
+            float arc_length_deg = arc_length * 180.0f / IM_PI;
+            ImGui::DragFloat("Arc Start", &arc_start_deg, 1.0f, 0.0f, 360.0f, "%.0f deg");
+            ImGui::DragFloat("Arc Length", &arc_length_deg, 1.0f, 0.0f, 360.0f, "%.0f deg");
+            arc_start = arc_start_deg * IM_PI / 180.0f;
+            arc_length = arc_length_deg * IM_PI / 180.0f;
+            ImGui::Checkbox("##arcsegmentoverride", &arc_step_override);
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::SliderInt("Arc Step", &arc_step_override_v, 1, 80))
+                arc_step_override = true;
+            if (ImGui::DragInt("Repeats", &N, 1.0f, 1, 5000) && N < 1)
+                N = 1;
+            ImGui::Checkbox("Show Stats", &show_stats);
+
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+            ImGui::Columns(2);
+# if defined(IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+            ImGui::Text("ArcFast Lookup Table Size: %d", IM_ARRAYSIZE(draw_list->_Data->ArcFastVtx));
+            ImGui::Text("ArcFast Radius Cutoff: %.2f", draw_list->_Data->ArcFastExRadiusCutoff);
+# endif
+            ImGui::Text("Radius: %.2f", set_radius);
+# if defined(IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+            ImGui::SameLine();
+            if (set_radius < draw_list->_Data->ArcFastExRadiusCutoff)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+                ImGui::TextUnformatted("(adaptive)");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+                ImGui::TextUnformatted("(fallback)");
+                ImGui::PopStyleColor();
+            }
+# endif
+            ImGui::NextColumn();
+
+            static ImGuiTextBuffer stats;
+            static bool  bench_enabled = false;
+            static float bench_radius = 0.0f;
+            static float bench_min_radius = 0.0f;
+            static float bench_max_radius = 50.0f;
+            static float bench_radius_step = 1.0f;
+            static int   bench_N = 1000;
+            static int   bench_M = 50;
+
+            static float bench_last_radius = 0.0f;
+            static int   bench_last_N      = 0;
+
+            if (bench_enabled)
+            {
+                bench_radius += bench_radius_step;
+                if (bench_radius > bench_max_radius)
+                {
+                    bench_enabled = false;
+                    bench_radius  = bench_last_radius;
+                    N             = bench_last_N;
+                    M             = 1;
+
+                    char filename[250];
+                    //time_t now = time(NULL);
+                    //auto timenow = gmtime(&now);
+                    //strftime(filename, sizeof(filename), "bench_stats_%Y%m%d_%H%M%S.csv", timenow);
+                    strcpy(filename, "bench_stats.csv");
+
+                    for (int i = 0; i < stats.Buf.Size; ++i)
+                    {
+                        char& c = stats.Buf[i];
+                        if (c == '.')
+                            c = ',';
+                    }
+
+                    FILE* file = fopen(filename, "wb");
+                    fputs(stats.c_str(), file);
+                    fclose(file);
+                }
+            }
+
+            struct TestData
+            {
+                ImVec2 CanvasPosition;
+                ImVec2 CanvasSize;
+                ImVec2 CanvasCenter;
+                float  Radius;
+                float  AngleStart;
+                float  AngleEnd;
+                int    Step;
+                int    StepCount;
+
+                bool   OutClosed;
+                bool   OutFilled;
+
+                TestData()
+                    : Radius(1.0f)
+                    , AngleStart(0.0f)
+                    , AngleEnd(0.0f)
+                    , Step(0)
+                    , StepCount(0)
+                    , OutClosed(false)
+                    , OutFilled(false)
+                {
+                }
+            };
+
+            struct Test
+            {
+                bool        Enable;
+                const char* Name;
+                int         Steps;
+
+                Test(bool enable, const char* name, int steps)
+                    : Enable(enable)
+                    , Name(name)
+                    , Steps(steps)
+                {
+                }
+
+                virtual void Run(ImDrawList* draw_list, TestData& data, int _N) { IM_UNUSED(draw_list); IM_UNUSED(data); IM_UNUSED(_N); };
+            };
+
+            ImVector<Test*> tests;
+
+# define DEFINE_TEST(VAR, ENABLED, NAME, STEPS, TEST)                                                           \
+            static struct VAR##Test: Test                                                                       \
+            {                                                                                                   \
+                VAR##Test(bool enabled, const char* name, int steps): Test(enabled, name, steps) {}             \
+                virtual void Run TEST                                                                           \
+            } test_##VAR(ENABLED, NAME, STEPS);                                                                 \
+            tests.push_back(&test_##VAR)
+
+            DEFINE_TEST(_PathArcToFastEx, true, "_PathArcToFastEx", 4, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->_PathArcToFastEx(data.CanvasCenter, data.Radius,
+                        (int)(data.AngleStart * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / (IM_PI * 2.0f)),
+                        (int)(data.AngleEnd   * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / (IM_PI * 2.0f)),
+                        arc_step_override ? arc_step_override_v : 0
+                    );
+                }
+            });
+
+            DEFINE_TEST(PathArcToFast2, true, "PathArcToFast2 - using _PathArcToFastEx", 4, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathArcToFast2(data.CanvasCenter, data.Radius,
+                        (int)(data.AngleStart * 12 / (IM_PI * 2.0f)),
+                        (int)(data.AngleEnd * 12 / (IM_PI * 2.0f))
+                    );
+                }
+            });
+
+            DEFINE_TEST(PathArcToFast, true, "PathArcToFast - current", 4, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathArcToFast(data.CanvasCenter, data.Radius,
+                        (int)(data.AngleStart * 12 / (IM_PI * 2.0f)),
+                        (int)(data.AngleEnd * 12 / (IM_PI * 2.0f))
+                    );
+                }
+            });
+
+            DEFINE_TEST(PathArcTo2, true, "PathArcTo2 - using _PathArcToFastEx", 4, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathArcTo2(data.CanvasCenter, data.Radius, data.AngleStart, data.AngleEnd, 0);
+                }
+            });
+
+            DEFINE_TEST(PathArcTo, true, "PathArcTo - current", 4, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathArcTo(data.CanvasCenter, data.Radius, data.AngleStart, data.AngleEnd);
+                }
+            });
+
+            DEFINE_TEST(PathRect2, true,  "PathRect2 - using _PathArcToFastEx", 1, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                const ImVec2 a = ImVec2(data.CanvasCenter.x - data.Radius, data.CanvasCenter.y - data.Radius);
+                const ImVec2 b = ImVec2(data.CanvasCenter.x + data.Radius, data.CanvasCenter.y + data.Radius);
+
+                const float r = data.Radius * 0.5f;
+
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    Helpers::PathRect2(draw_list, a, b, r, ImDrawCornerFlags_All);
+                }
+
+                data.OutClosed = true;
+                data.OutFilled = false;
+            });
+
+            DEFINE_TEST(PathRect, true, "PathRect - current", 1, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                const ImVec2 a = ImVec2(data.CanvasCenter.x - data.Radius, data.CanvasCenter.y - data.Radius);
+                const ImVec2 b = ImVec2(data.CanvasCenter.x + data.Radius, data.CanvasCenter.y + data.Radius);
+
+                const float r = data.Radius * 0.5f;
+
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathRect(a, b, r, ImDrawCornerFlags_All);
+                }
+
+                data.OutClosed = true;
+                data.OutFilled = false;
+            });
+
+            DEFINE_TEST(PathRect2Filled, true,  "PathRect2 (filled) - using _PathArcToFastEx", 1, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                const ImVec2 a = ImVec2(data.CanvasCenter.x - data.Radius, data.CanvasCenter.y - data.Radius);
+                const ImVec2 b = ImVec2(data.CanvasCenter.x + data.Radius, data.CanvasCenter.y + data.Radius);
+
+                const float r = data.Radius * 0.5f;
+
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    Helpers::PathRect2(draw_list, a, b, r, ImDrawCornerFlags_All);
+                }
+
+                data.OutClosed = true;
+                data.OutFilled = true;
+            });
+
+            DEFINE_TEST(PathRectFilled, true, "PathRect (filled) - current", 1, (ImDrawList* draw_list, TestData& data, int _N)
+            {
+                const ImVec2 a = ImVec2(data.CanvasCenter.x - data.Radius, data.CanvasCenter.y - data.Radius);
+                const ImVec2 b = ImVec2(data.CanvasCenter.x + data.Radius, data.CanvasCenter.y + data.Radius);
+
+                const float r = data.Radius * 0.5f;
+
+                for (int n = 0; n < _N; ++n)
+                {
+                    draw_list->_Path.resize(0);
+                    draw_list->PathRect(a, b, r, ImDrawCornerFlags_All);
+                }
+
+                data.OutClosed = true;
+                data.OutFilled = true;
+            });
+
+# undef DEFINE_TEST
+
+            int total_step_count = 0;
+            for (int test_index = 0; test_index < tests.Size; ++test_index)
+            {
+                Test& test = *tests[test_index];
+                if (test.Enable)
+                    total_step_count += test.Steps;
+            }
+
+            if (!bench_enabled)
+            {
+                if (ImGui::Button("Benchmark & Save CSV"))
+                {
+                    bench_enabled       = true;
+                    bench_last_radius   = set_radius;
+                    bench_last_N        = N;
+
+                    bench_radius        = bench_min_radius;
+                    N                   = bench_N;
+                    M                   = bench_M;
+
+                    //int seg = arc_segments_override ? arc_segments_override_v : 10;
+                    stats.clear();
+                    stats.appendf(
+                        "Thickness;Start Angle;Arc Step;Repeats;ArcFastExRadiusCutoff\n"
+                        "%f;%f;%f;%d;%f\n\n",
+                        thickness, arc_start, arc_length, N, draw_list->_Data->ArcFastExRadiusCutoff);
+
+                    stats.append("Radius;");
+                    for (int test_index = 0; test_index < tests.Size; ++test_index)
+                    {
+                        Test& test = *tests[test_index];
+                        if (!test.Enable)
+                            continue;
+
+                        for (int step_index = 0; step_index < test.Steps; ++step_index)
+                            stats.appendf("%s;;", test.Name);
+                    }
+                    stats.append("\n");
+                    stats.append(";");
+                    for (int test_index = 0; test_index < tests.Size; ++test_index)
+                    {
+                        Test& test = *tests[test_index];
+                        if (!test.Enable)
+                            continue;
+
+                        for (int step_index = 0; step_index < test.Steps; ++step_index)
+                            stats.append("N;Duration;");
+                    }
+                    stats.append("\n");
+                }
+                if (ImGui::DragInt("Bench Samples", &bench_N, 1.0f, 1, 5000) && bench_N < 1)
+                    bench_N = 1;
+                if (ImGui::DragInt("Bench Repeats", &bench_M, 1.0f, 1, 5000) && bench_M < 1)
+                    bench_M = 1;
+            }
+            else
+            {
+                ImGui::TextUnformatted("Collecting data...");
+            }
+
+            if (bench_enabled)
+                set_radius = bench_radius;
+
+            ImGui::EndColumns();
+
+            ImGui::Spacing();
+
+            ImGui::BeginChild("BenchView", ImVec2(0.0f, 0.0f), false, ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+
+            margin = 4.0f + thickness;
+
+            ImVector<uint64_t> total_vertex_count_stats;
+            //uint64_t path_duration_stats[ROWS * 4] = {};
+            //uint64_t stroke_duration_stats[ROWS * 4] = {};
+            ImVector<uint64_t> total_duration_stats;
+            total_vertex_count_stats.resize(total_step_count, 0);
+            total_duration_stats.resize(total_step_count, 0);
+
+            ImVec2 startCursor = ImGui::GetCursorScreenPos();
+
+            ImDrawList* test_draw_list = ImGui::GetWindowDrawList();
+
+            for (int z = 0; z < M; ++z)
+            {
+                ImGui::SetCursorScreenPos(startCursor);
+
+                uint64_t* total_vertex_count_stats_out = total_vertex_count_stats.Data;
+                uint64_t* total_duration_stats_out     = total_duration_stats.Data;
+
+                for (int test_index = 0; test_index < tests.Size; ++test_index)
+                {
+                    Test& test = *tests[test_index];
+                    if (!test.Enable)
+                        continue;
+
+                    TestData test_data;
+                    test_data.StepCount = test.Steps;
+                    for (int step_index = 0; step_index < test.Steps; ++step_index)
+                    {
+                        test_data.Step       = step_index;
+                        test_data.Radius     = set_radius;
+                        test_data.AngleStart = arc_start;
+                        test_data.AngleEnd   = arc_start + (step_index + 1.0f) / test.Steps * arc_length;
+
+                        if (step_index == 0)
+                        {
+                            ImGui::Spacing();
+                            ImGui::TextUnformatted(test.Name);
+                        }
+                        else
+                            ImGui::SameLine();
+
+                        ImVec2 cursor           = ImGui::GetCursorScreenPos();
+
+                        ImVec2 widget_position  = cursor;
+                        ImVec2 widget_size      = ImVec2(set_radius * 2.0f + margin * 2.0f, set_radius * 2.0f + margin * 2.0f);
+
+                        test_data.CanvasPosition  = ImVec2(cursor.x + margin, cursor.y + margin);
+                        test_data.CanvasSize      = ImVec2(set_radius * 2.0f, set_radius * 2.0f);
+                        test_data.CanvasCenter    = ImVec2(test_data.CanvasPosition.x + test_data.CanvasSize.x * 0.5f, test_data.CanvasPosition.y + test_data.CanvasSize.y * 0.5f);
+
+                        //test_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines;
+
+                        test_draw_list->AddRectFilled(widget_position, ImVec2(widget_position.x + widget_size.x, widget_position.y + widget_size.y), ImColor(col_bg));
+
+                        test_draw_list->AddCircle(test_data.CanvasCenter, test_data.Radius + 0.5f, IM_COL32(255, 192, 192, 255), 0, thickness);
+
+                        test_data.OutClosed = false;
+                        test_data.OutFilled = false;
+
+                        uint64_t path_start = ImTimeGetInMicroseconds();
+                        test.Run(test_draw_list, test_data, N);
+                        uint64_t path_end = ImTimeGetInMicroseconds();
+
+                        uint64_t path_duration = path_end - path_start;
+
+                        int path_vertices = test_draw_list->_Path.Size;
+
+                        test_draw_list->AddDrawCmd();
+
+                        int             path_size           = test_draw_list->_Path.Size;
+                        unsigned int    element_count       = test_draw_list->CmdBuffer.Data[test_draw_list->CmdBuffer.Size - 1].ElemCount;
+                        int             vertex_buffer_size  = test_draw_list->VtxBuffer.Size;
+                        int             index_buffer_size   = test_draw_list->IdxBuffer.Size;
+                        unsigned int    current_index       = test_draw_list->_VtxCurrentIdx;
+
+                        uint64_t stroke_start = ImTimeGetInMicroseconds();
+                        for (int n = 0; n < N; ++n)
+                        {
+                            test_draw_list->_Path.Size      = path_size;
+                            test_draw_list->CmdBuffer.Data[test_draw_list->CmdBuffer.Size - 1].ElemCount = element_count;
+                            test_draw_list->VtxBuffer.Size  = vertex_buffer_size;
+                            test_draw_list->_VtxWritePtr    = test_draw_list->VtxBuffer.Data + vertex_buffer_size;
+                            test_draw_list->IdxBuffer.Size  = index_buffer_size;
+                            test_draw_list->_IdxWritePtr    = test_draw_list->IdxBuffer.Data + index_buffer_size;
+                            test_draw_list->_VtxCurrentIdx  = current_index;
+
+                            if (test_data.OutFilled)
+                                test_draw_list->PathFillConvex(ImColor(col_fg));
+                            else
+                                test_draw_list->PathStroke(ImColor(col_fg), test_data.OutClosed, thickness);
+                        }
+                        uint64_t stroke_end = ImTimeGetInMicroseconds();
+                        uint64_t stroke_duration = stroke_end - stroke_start;
+
+                        *total_duration_stats_out++ += path_duration + stroke_duration;
+                        *total_vertex_count_stats_out++ += (uint64_t)path_vertices;
+
+                        ImGui::BeginGroup();
+                        ImGui::Dummy(widget_size);
+                        if (show_stats)
+                        {
+                            ImGui::Text("Vertices: %d", path_vertices);
+                            ImGui::Text("Path:   %8.3f us", (float)path_duration / N);
+                            if (test_data.OutFilled)
+                                ImGui::Text("Fill:   %8.3f us", (float)stroke_duration / N);
+                            else
+                                ImGui::Text("Stroke: %8.3f us", (float)stroke_duration / N);
+                            ImGui::Text("Total:  %8.3f us", (float)(path_duration + stroke_duration) / N);
+                        }
+                        ImGui::EndGroup();
+                    }
+                }
+            }
+
+            if (bench_enabled)
+            {
+                stats.appendf("%f;", bench_radius);
+
+                uint64_t* total_vertex_count_stats_in = total_vertex_count_stats.Data;
+                uint64_t* total_duration_stats_in     = total_duration_stats.Data;
+
+                for (int test_index = 0; test_index < tests.Size; ++test_index)
+                {
+                    Test& test = *tests[test_index];
+                    if (!test.Enable)
+                        continue;
+
+                    for (int step_index = 0; step_index < test.Steps; ++step_index)
+                    {
+                        stats.appendf("%" PRIu64 ";", *total_vertex_count_stats_in++ / (uint64_t)M);
+                        stats.appendf("%" PRIu64 ";", *total_duration_stats_in++     / (uint64_t)M);
+                    }
+                }
+
+                stats.append("\n");
+            }
+
+            ImGui::EndChild();
+
+            ImGui::PopItemWidth();
             ImGui::EndTabItem();
         }
 
