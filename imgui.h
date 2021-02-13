@@ -2463,6 +2463,7 @@ struct ImDrawList
     IMGUI_API void  _OnChangedClipRect();
     IMGUI_API void  _OnChangedTextureID();
     IMGUI_API void  _OnChangedVtxOffset();
+    IMGUI_API int   _CalcCircleAutoSegmentCount(float radius, bool anti_aliased) const;
 };
 
 // All draw data to render a Dear ImGui frame
