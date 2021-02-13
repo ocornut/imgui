@@ -632,10 +632,20 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    ImClamp(IM_ROUNDUP_TO_EVEN((int)ImCeil(IM_PI / ImAcos(1 - ImMin((_MAXERROR), (_RAD)) / (_RAD)))), IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
 
+// Raw equation from IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC rewritten for 'r' and 'error'.
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))))
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_ERROR(_N,_RAD)     ((1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))) / (_RAD))
+
 // ImDrawList: You may set this to higher values (e.g. 2 or 3) to increase tessellation of fast rounded corners path.
 #ifndef IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER
 #define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
 #endif
+
+// ImDrawList: Lookup table size for adaptive arc drawing, cover quarter of the circle.
+#ifndef IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE
+#define IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE                   12          // Number of samples in lookup table.
+#endif
+#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          (4 * IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE) // Sample index _PathArcToFastEx() for 360 angle.
 
 // Data shared between all ImDrawList instances
 // You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
@@ -651,8 +661,11 @@ struct IMGUI_API ImDrawListSharedData
 
     // [Internal] Lookup tables
     ImVec2          ArcFastVtx[12 * IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER];  // FIXME: Bake rounded corners fill/borders in atlas
+    ImVec2          ArcFastExVtx[IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];  // Sample points on the quarter of the circle.
+    float           ArcFastExRadiusCutoff;                                // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
     const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
+
 
     ImDrawListSharedData();
     void SetCircleTessellationMaxError(float max_error);

@@ -374,18 +374,32 @@ ImDrawListSharedData::ImDrawListSharedData()
         const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
+
+    // Sample quarter of the circle.
+    for (int i = 0; i < IM_ARRAYSIZE(ArcFastExVtx); i++)
+    {
+        const float a = ((float)i * 0.5f * IM_PI) / (float)IM_ARRAYSIZE(ArcFastExVtx);
+        ArcFastExVtx[i] = ImVec2(ImCos(a), ImSin(a));
+    }
+
+    ArcFastExRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
     if (CircleSegmentMaxError == max_error)
         return;
+
+    IM_ASSERT(max_error > 0.0f);
+
     CircleSegmentMaxError = max_error;
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
         CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
     }
+
+    ArcFastExRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 // Initialize before use in a new frame. We always have a command ready in the buffer.
@@ -551,6 +565,7 @@ int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
     else
         return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
 }
+
 
 // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
 void ImDrawList::PushClipRect(ImVec2 cr_min, ImVec2 cr_max, bool intersect_with_current_clip_rect)
@@ -1025,8 +1040,155 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
+int ImDrawList::_CalcArcAutoSegmentStepSize(float radius) const
+{
+    if (radius <= 0.0f || radius > _Data->ArcFastExRadiusCutoff)
+        return 0;
+
+    const int n = _CalcCircleAutoSegmentCount(radius);
+
+    const int step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / n;
+
+    return step;
+}
+
+void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
+{
+    if (radius < 0.0f)
+        return;
+
+    if (radius == 0.0f)
+    {
+        _Path.push_back(center);
+        return;
+    }
+    IM_ASSERT(a_min_sample <= a_max_sample);
+
+    if (a_step <= 0)
+        a_step = _CalcArcAutoSegmentStepSize(radius);
+
+    // Make sure we never do steps larger than one quarter of the circle
+    a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE);
+
+    // Normalize a_min_sample to always start lie in [0..IM_DRAWLIST_ARCFAST_SAMPLE_MAX] range.
+    if (a_min_sample < 0)
+    {
+        int normalized_sample = a_min_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        if (normalized_sample < 0)
+            normalized_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        a_max_sample += (normalized_sample - a_min_sample);
+        a_min_sample = normalized_sample;
+    }
+
+    const int  sample_range     = a_max_sample - a_min_sample;
+    const int  a_next_step      = a_step;
+          int  samples          = sample_range + 1;
+          bool extra_max_sample = false;
+
+    if (a_step > 1)
+    {
+        samples            = sample_range / a_step + 1;
+        const int overstep = sample_range % a_step;
+
+        if (overstep > 0)
+        {
+            extra_max_sample = true;
+            ++samples;
+
+            // When we have overstep to avoid awkwardly looking one long line and
+            // one tiny one at the end, distribute first step range evenly between
+            // them by reducing first step size.
+            if (sample_range > 0)
+                a_step -= (a_step - overstep) / 2;
+        }
+    }
+
+    _Path.resize(_Path.Size + samples);
+    ImVec2* out_ptr = _Path.Data + (_Path.Size - samples);
+
+    ImVec2 s;
+    int sample_index = a_min_sample;
+    for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
+    {
+        // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed to
+        // a will not wrap over range twice or more
+        if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+            sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+        if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
+        {
+            s = _Data->ArcFastExVtx[sample_index];
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            s.x = -c.y;
+            s.y =  c.x;
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            s.x = -c.x;
+            s.y = -c.y;
+        }
+        else
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            s.x =  c.y;
+            s.y = -c.x;
+        }
+
+        out_ptr->x = center.x + s.x * radius;
+        out_ptr->y = center.y + s.y * radius;
+
+        ++out_ptr;
+    }
+
+    if (extra_max_sample)
+    {
+        int normalized_max_sample = a_max_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        if (normalized_max_sample < 0)
+            normalized_max_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+        sample_index = normalized_max_sample;
+
+        if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
+        {
+            s = _Data->ArcFastExVtx[sample_index];
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            s.x = -c.y;
+            s.y =  c.x;
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            s.x = -c.x;
+            s.y = -c.y;
+        }
+        else
+        {
+            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            s.x =  c.y;
+            s.y = -c.x;
+        }
+
+        out_ptr->x = center.x + s.x * radius;
+        out_ptr->y = center.y + s.y * radius;
+
+        ++out_ptr;
+    }
+
+    IM_ASSERT(_Path.Data + _Path.Size == out_ptr);
+}
+
 void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
 {
+    if (radius < 0.0f)
+        return;
+
     if (radius == 0.0f)
     {
         _Path.push_back(center);
@@ -1049,8 +1211,29 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
     }
 }
 
+void ImDrawList::PathArcToFast2(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
+{
+    if (radius < 0.0f)
+        return;
+
+    if (radius == 0.0f)
+    {
+        _Path.push_back(center);
+        return;
+    }
+    IM_ASSERT(a_min_of_12 <= a_max_of_12);
+
+    _PathArcToFastEx(center, radius,
+        a_min_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12,
+        a_max_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12,
+        0);
+}
+
 void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
+    if (radius < 0.0f)
+        return;
+
     if (radius == 0.0f)
     {
         _Path.push_back(center);
@@ -1065,6 +1248,57 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     {
         const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
         _Path.push_back(ImVec2(center.x + ImCos(a) * radius, center.y + ImSin(a) * radius));
+    }
+}
+
+void ImDrawList::PathArcTo2(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
+{
+    if (radius < 0.0f)
+        return;
+
+    if (radius == 0.0f)
+    {
+        _Path.push_back(center);
+        return;
+    }
+    IM_ASSERT(a_min <= a_max);
+
+    if (num_segments <= 0 && (radius <= _Data->ArcFastExRadiusCutoff))
+    {
+        // Determine first and last sample in lookup table that belong to the arc.
+        const int a_min_sample = (int)ImCeil(IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f));
+        const int a_max_sample = (int)(      IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (IM_PI * 2.0f));
+        const int a_mid_samples = ImMax(a_max_sample - a_min_sample, 0);
+
+        const float a_min_segment_angle = a_min_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        const float a_max_segment_angle = a_max_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+        const bool a_emit_start = (a_min_segment_angle - a_min) > 0.0f;
+        const bool a_emit_end   = (a_max - a_max_segment_angle) > 0.0f;
+
+        _Path.reserve(_Path.Size + (a_mid_samples + 1 + (a_emit_start ? 1 : 0) + (a_emit_end ? 1 : 0)));
+
+        if (a_emit_start)
+            _Path.push_back(ImVec2(center.x + ImCos(a_min) * radius, center.y + ImSin(a_min) * radius));
+
+        if (a_max_sample >= a_min_sample)
+            _PathArcToFastEx(center, radius, a_min_sample, a_max_sample, 0);
+
+        if (a_emit_end)
+            _Path.push_back(ImVec2(center.x + ImCos(a_max) * radius, center.y + ImSin(a_max) * radius));
+    }
+    else
+    {
+        if (num_segments <= 0)
+        {
+            const float arc_length           = a_max - a_min;
+            const int   circle_segment_count = _CalcCircleAutoSegmentCount(radius);
+            const int   arc_segment_count    = ImMax((int)ImCeil(circle_segment_count * arc_length / (IM_PI * 2.0f)), (int)(2.0f * IM_PI / arc_length));
+
+            num_segments = arc_segment_count;
+        }
+
+        PathArcTo(center, radius, a_min, a_max, num_segments);
     }
 }
 
@@ -2533,7 +2767,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = 0x00;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = 0xFF;
 
@@ -2545,7 +2779,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = IM_COL32_BLACK_TRANS;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
