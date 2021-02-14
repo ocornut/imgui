@@ -21,5 +21,10 @@ The default Dear ImGui styles will be impacted by this change (alpha values will
 See https://gist.github.com/ocornut/b3a9ecf13502fd818799a452969649ad
 
 ### Known issues
-- `cfg.OversampleH`, `OversampleV` are ignored (but perhaps not so necessary with this rasterizer).
 
+- Oversampling settins are ignored but also not so much necessary with the higher quality rendering.
+
+### Comparaison
+
+Small, thin anti-aliased fonts are typically benefiting a lots from Freetype's hinting:
+![comparing_font_rasterizers](https://user-images.githubusercontent.com/8225057/107550178-fef87f00-6bd0-11eb-8d09-e2edb2f0ccfc.gif)
