@@ -376,7 +376,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     }
 }
 
-void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
+void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
     if (CircleSegmentMaxError == max_error)
         return;
@@ -384,8 +384,7 @@ void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        CircleSegmentCounts[i]            = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
-        AntiAliasedCircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError * IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_AA_ERROR_SCALE_FACTOR) : 0);
+        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
     }
 }
 
@@ -543,27 +542,17 @@ void ImDrawList::_OnChangedVtxOffset()
     curr_cmd->VtxOffset = _CmdHeader.VtxOffset;
 }
 
-int ImDrawList::_CalcCircleAutoSegmentCount(float radius, bool anti_aliased) const
+int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     int num_segments = 0;
 
-    const int  radius_idx      = (int)ImCeil(radius); // Use ceil to never reduce accuracy
+    const int  radius_idx = (int)ImCeil(radius); // Use ceil to never reduce accuracy
 
     // Automatic segment count
     if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
-    {
-        if (anti_aliased)
-            num_segments = _Data->AntiAliasedCircleSegmentCounts[radius_idx]; // Use cached value
-        else
-            num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
-    }
+        num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
-    {
-        if (anti_aliased)
-            num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError * IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_AA_ERROR_SCALE_FACTOR);
-        else
-            num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
-    }
+        num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
 
     return num_segments;
 }
@@ -1311,7 +1300,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if (num_segments <= 0)
     {
         // Automatic segment count
-        num_segments = _CalcCircleAutoSegmentCount(radius, (Flags & ImDrawListFlags_AntiAliasedLines) != 0);
+        num_segments = _CalcCircleAutoSegmentCount(radius);
     }
     else
     {
@@ -1337,7 +1326,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     if (num_segments <= 0)
     {
         // Automatic segment count
-        num_segments = _CalcCircleAutoSegmentCount(radius, (Flags & ImDrawListFlags_AntiAliasedFill) != 0);
+        num_segments = _CalcCircleAutoSegmentCount(radius);
     }
     else
     {

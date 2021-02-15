@@ -6030,7 +6030,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
 
             // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
-            ImGui::DragFloat("Circle Segment Max Error", &style.CircleSegmentMaxError, 0.01f, 0.10f, 10.0f, "%.2f");
+            ImGui::DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.01f, 0.10f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             if (ImGui::IsItemActive())
             {
                 ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
@@ -6045,12 +6045,11 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 {
                     const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (9.0f - 1.0f);
 
-                    const int segment_count              = draw_list->_CalcCircleAutoSegmentCount(rad, false);
-                    const int anti_aliased_segment_count = draw_list->_CalcCircleAutoSegmentCount(rad, true);
+                    const int segment_count = draw_list->_CalcCircleAutoSegmentCount(rad);
 
                     ImGui::BeginGroup();
                     ImGui::Text("R: %.f", rad);
-                    ImGui::Text("N: %d", draw_list->Flags & ImDrawListFlags_AntiAliasedLines ? anti_aliased_segment_count : segment_count);
+                    ImGui::Text("N: %d", segment_count);
 
                     const float circle_diameter = rad * 2.0f;
                     const float canvas_width    = IM_MAX(min_widget_width, circle_diameter);
@@ -6060,7 +6059,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     draw_list->AddCircle(ImVec2(p.x + offset_x, p.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
 
                     ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
-                    ImGui::Text("N: %d", draw_list->Flags & ImDrawListFlags_AntiAliasedFill ? anti_aliased_segment_count : segment_count);
+                    ImGui::Text("N: %d", segment_count);
 
                     const ImVec2 p2             = ImGui::GetCursorScreenPos();
                     draw_list->AddCircleFilled(ImVec2(p2.x + offset_x, p2.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
