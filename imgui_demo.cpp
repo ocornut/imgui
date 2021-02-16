@@ -4856,6 +4856,9 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    // In this example we'll expose most table flags and settings.
+    // For specific flags and settings refer to the corresponding section for more detailed explanation.
+    // This section is mostly useful to experiment with combining certain flags or settings with each others.
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // [DEBUG]
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
@@ -4994,7 +4997,7 @@ static void ShowDemoWindowTables()
             ImGui::TreePop();
         }
 
-        // Recreate/reset item list if we changed the number of items
+        // Update item list if we changed the number of items
         static ImVector<MyItem> items;
         static ImVector<int> selection;
         static bool items_need_sort = false;
@@ -5016,6 +5019,7 @@ static void ShowDemoWindowTables()
         ImVec2 table_scroll_cur, table_scroll_max; // For debug display
         const ImDrawList* table_draw_list = NULL;  // "
 
+        // Submit table
         const float inner_width_to_use = (flags & ImGuiTableFlags_ScrollX) ? inner_width_with_scroll : 0.0f;
         if (ImGui::BeginTable("table_advanced", 6, flags, outer_size_enabled ? outer_size_value : ImVec2(0, 0), inner_width_to_use))
         {
@@ -5074,9 +5078,9 @@ static void ShowDemoWindowTables()
                     const bool item_is_selected = selection.contains(item->ID);
                     ImGui::PushID(item->ID);
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, row_min_height);
-                    ImGui::TableNextColumn();
 
                     // For the demo purpose we can select among different type of items submitted in the first column
+                    ImGui::TableSetColumnIndex(0);
                     char label[32];
                     sprintf(label, "%04d", item->ID);
                     if (contents_type == CT_Text)
@@ -5107,14 +5111,14 @@ static void ShowDemoWindowTables()
                         }
                     }
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(1))
                         ImGui::TextUnformatted(item->Name);
 
                     // Here we demonstrate marking our data set as needing to be sorted again if we modified a quantity,
                     // and we are currently sorting on the column showing the Quantity.
                     // To avoid triggering a sort while holding the button, we only trigger it when the button has been released.
                     // You will probably need a more advanced system in your code if you want to automatically sort when a specific entry changes.
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(2))
                     {
                         if (ImGui::SmallButton("Chop")) { item->Quantity += 1; }
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
@@ -5123,16 +5127,16 @@ static void ShowDemoWindowTables()
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
                     }
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(3))
                         ImGui::Text("%d", item->Quantity);
 
-                    ImGui::TableNextColumn();
+                    ImGui::TableSetColumnIndex(4);
                     if (show_wrapped_text)
                         ImGui::TextWrapped("Lorem ipsum dolor sit amet");
                     else
                         ImGui::Text("Lorem ipsum dolor sit amet");
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(5))
                         ImGui::Text("1234");
 
                     ImGui::PopID();
