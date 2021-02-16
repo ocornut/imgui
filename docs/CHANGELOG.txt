@@ -35,6 +35,11 @@ HOW TO UPDATE?
  VERSION 1.82 WIP (In Progresss)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if 
+  scheduled builds builds are not required. [@rokups]
+
 
 -----------------------------------------------------------------------
  VERSION 1.81 (Released 2021-02-10)
@@ -68,9 +73,9 @@ Other Changes:
      - Code using (0,0) as a way to signify "upper-left of the host window" should use GetMainViewport()->Pos.
      - Code using io.DisplaySize as a way to signify "size of the host window" should use GetMainViewport()->Size.
   - We are also exposing a work area in ImGuiViewport ('WorkPos', 'WorkSize' vs 'Pos', 'Size' for full area):
-     - For a Platform Window, the work area is generally the full area minus space used by menu-bars. 
+     - For a Platform Window, the work area is generally the full area minus space used by menu-bars.
      - For a Platform Monitor, the work area is generally the full area minus space used by task-bars.
-  - All of this has been the case in 'docking' branch for a long time. What we've done is merely merging 
+  - All of this has been the case in 'docking' branch for a long time. What we've done is merely merging
     a small chunk of the multi-viewport logic into 'master' to standardize some concepts ahead of time.
 - Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no
