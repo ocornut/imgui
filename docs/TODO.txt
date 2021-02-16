@@ -213,12 +213,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - combo: flag for BeginCombo to not return true when unchanged (#1182)
  - combo: a way/helper to customize the combo preview (#1658)
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
- - listbox: refactor and clean the begin/end api
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
  - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?) (wip stash)
  - listbox: user may want to initial scroll to focus on the one selected value?
- - listbox: expose hovered item for a basic ListBox
+ - listbox: expose hovered item for a simplified ListBox api
  - listbox: keyboard navigation.
  - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
@@ -275,12 +274,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
  - style editor: color child window height expressed in multiple of line height.
 
+ - log: improve logging of ArrowButton, ListBox, TabItem
+ - log: carry on indent / tree depth when opening a child window
+ - log: enabling log ends up pushing and growing vertices buffers because we don't distinguish layout vs render clipping
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons() all together.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
- - log: enabling log ends up pushing and growing vertices buffersbecause we don't distinguish layout vs render clipping
 
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs

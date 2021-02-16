@@ -70,11 +70,13 @@ If you get an assert stating "Could not load font file!", your font filename is 
 
 **Load multiple fonts:**
 ```cpp
+// Init
 ImGuiIO& io = ImGui::GetIO();
 ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
 ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
-
-// Select font at runtime
+```
+```cpp
+// In application loop: select font at runtime
 ImGui::Text("Hello"); // use the default font (which is the first loaded font)
 ImGui::PushFont(font2);
 ImGui::Text("Hello with another font");
@@ -145,19 +147,18 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 **Font Atlas too large?**
 
 - If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
-- In particular, using a large range such as `GetGlyphRangesChineseSimplifiedCommon()` is not recommended unless you set `OversampleH`/`OversampleV` to 1 and use a small font size.
-- Mind the fact that some graphics drivers have texture size limitation.
-- If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+- Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
 Some solutions:
 
 1. Reduce glyphs ranges by calculating them from source localization data.
-   You can use the `ImFontGlyphRangesBuilder` for this purpose, this will be the biggest win!
-2. You may reduce oversampling, e.g. `font_config.OversampleH = font_config.OversampleV = 1`, this will largely reduce your texture size.
+   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
+2. You may reduce oversampling, e.g. `font_config.OversampleH = 2`, this will largely reduce your texture size.
+   Note that while OversampleH = 2 looks visibly very close to 3 in most situations, with OversampleH = 1 the quality drop will be noticeable.
 3. Set `io.Fonts.TexDesiredWidth` to specify a texture width to minimize texture height (see comment in `ImFontAtlas::Build()` function).
 4. Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 5. Read about oversampling [here](https://github.com/nothings/stb/blob/master/tests/oversample).
-6. To support the extended range of unicode beyond 0xFFFF (e.g. emoticons, dingbats, symbols, shapes, ancient languages, etc...) add `#define IMGUI_USE_WCHAR32`in your `imconfig.h`
+6. To support the extended range of unicode beyond 0xFFFF (e.g. emoticons, dingbats, symbols, shapes, ancient languages, etc...) add `#define IMGUI_USE_WCHAR32`in your `imconfig.h`.
 
 ##### [Return to Index](#index)
 

@@ -35,6 +35,7 @@ examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
 examples/example_emscripten_opengl3/web/*
+examples/example_emscripten_wgpu/web/*
 
 ## JetBrains IDE artifacts
 .idea

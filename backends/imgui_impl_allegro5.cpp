@@ -206,7 +206,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
         return false;
 
     // Store our identifier
-    io.Fonts->TexID = (void*)cloned_img;
+    io.Fonts->SetTexID((void*)cloned_img);
     g_Texture = cloned_img;
 
     // Create an invisible mouse cursor
@@ -222,8 +222,9 @@ void ImGui_ImplAllegro5_InvalidateDeviceObjects()
 {
     if (g_Texture)
     {
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->SetTexID(NULL);
         al_destroy_bitmap(g_Texture);
-        ImGui::GetIO().Fonts->TexID = NULL;
         g_Texture = NULL;
     }
     if (g_MouseCursorInvisible)

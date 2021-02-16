@@ -1,4 +1,4 @@
-// dear imgui, v1.80
+// dear imgui, v1.81
 // (tables and columns code)
 
 /*
@@ -126,12 +126,12 @@ Index of this file:
 //   - with Table policy ImGuiTableFlags_SizingFixedSame     --> default Column policy is ImGuiTableColumnFlags_WidthFixed, default Width is max of all contents width
 //   - with Table policy ImGuiTableFlags_SizingStretchSame   --> default Column policy is ImGuiTableColumnFlags_WidthStretch, default Weight is 1.0f
 //   - with Table policy ImGuiTableFlags_SizingStretchWeight --> default Column policy is ImGuiTableColumnFlags_WidthStretch, default Weight is proportional to contents
-// Default Width and default Weight can be overriden when calling TableSetupColumn().
+// Default Width and default Weight can be overridden when calling TableSetupColumn().
 //-----------------------------------------------------------------------------
 // About mixing Fixed/Auto and Stretch columns together:
 //   - the typical use of mixing sizing policies is: any number of LEADING Fixed columns, followed by one or two TRAILING Stretch columns.
 //   - using mixed policies with ScrollX does not make much sense, as using Stretch columns with ScrollX does not make much sense in the first place!
-//     that is, unless 'inner_width' is passed to BeginTable() to explicitely provide a total width to layout columns in.
+//     that is, unless 'inner_width' is passed to BeginTable() to explicitly provide a total width to layout columns in.
 //   - when using ImGuiTableFlags_SizingFixedSame with mixed columns, only the Fixed/Auto columns will match their widths to the maximum contents width.
 //   - when using ImGuiTableFlags_SizingStretchSame with mixed columns, only the Stretch columns will match their weight/widths.
 //-----------------------------------------------------------------------------
@@ -1367,7 +1367,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     // Assert when passing a width or weight if policy is entirely left to default, to avoid storing width into weight and vice-versa.
     // Give a grace to users of ImGuiTableFlags_ScrollX.
     if (table->IsDefaultSizingPolicy && (flags & ImGuiTableColumnFlags_WidthMask_) == 0 && (flags & ImGuiTableFlags_ScrollX) == 0)
-        IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitely in either Table or Column.");
+        IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
 
     // When passing a width automatically enforce WidthFixed policy
     // (whereas TableSetupColumnFlags would default to WidthAuto if table is not Resizable)
@@ -1458,6 +1458,21 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
     if (column->NameOffset == -1)
         return "";
     return &table->ColumnsNames.Buf[column->NameOffset];
+}
+
+// For the getter you can use (TableGetColumnFlags() & ImGuiTableColumnFlags_IsEnabled)
+void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL);
+    if (!table)
+        return;
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    ImGuiTableColumn* column = &table->Columns[column_n];
+    column->IsEnabledNextFrame = enabled;
 }
 
 // We allow querying for an extra column in order to poll the IsHovered state of the right-most section
@@ -1638,6 +1653,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
 
     if (table->CurrentColumn != -1)
         TableEndCell(table);
+
+    // Logging
+    if (g.LogEnabled)
+        LogRenderedText(NULL, "|");
 
     // Position cursor at the bottom of our row so it can be used for e.g. clipping calculation. However it is
     // likely that the next call to TableBeginCell() will reposition the cursor to take account of vertical padding.
@@ -1874,6 +1893,14 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         // FIXME-TABLE: Could avoid this if draw channel is dummy channel?
         SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
         table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
+    }
+
+    // Logging
+    ImGuiContext& g = *GImGui;
+    if (g.LogEnabled && !column->IsSkipItems)
+    {
+        LogRenderedText(&window->DC.CursorPos, "|");
+        g.LogLinePosY = FLT_MAX;
     }
 }
 
