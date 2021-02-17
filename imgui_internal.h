@@ -617,10 +617,29 @@ struct IMGUI_API ImChunkStream
 //-----------------------------------------------------------------------------
 
 // ImDrawList: Helper function to calculate a circle's segment count given its radius and a "maximum error" value.
-// FIXME: the minimum number of auto-segment may be undesirably high for very small radiuses (e.g. 1.0f)
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     12
+//
+// Estimation of number of circle segment based on error is derived using method described in
+// this post (https://stackoverflow.com/a/2244088/15194693).
+// Number of segments (N) is calculated using equation:
+//
+//            +-                     -+
+//            |           pi          |
+//   N = ceil | --------------------- |     where r > 0, error <= r
+//            |  acos(1 - error / r)  |
+//            +-                     -+
+//
+// Note:
+//     Equation is significantly simpler that one in the post thanks for choosing segment
+//     that is perpendicular to X axis. Follow steps in the article from this starting condition
+//     and you will get this result.
+//
+// Rendering circles with an odd number of segments, while mathematically correct will produce
+// asymmetrical results on the raster grid. Therefore we're rounding N to next even number.
+// (7 became 8, 11 became 12, but 8 will still be 8).
+//
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     4
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    ImClamp((int)((IM_PI * 2.0f) / ImAcos(((_RAD) - (_MAXERROR)) / (_RAD))), IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    ImClamp((((int)ImCeil(IM_PI / ImAcos(1 - ImMin((_MAXERROR), (_RAD)) / (_RAD))) + 1) / 2) * 2, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
 
 // ImDrawList: You may set this to higher values (e.g. 2 or 3) to increase tessellation of fast rounded corners path.
 #ifndef IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER
@@ -641,11 +660,11 @@ struct IMGUI_API ImDrawListSharedData
 
     // [Internal] Lookup tables
     ImVec2          ArcFastVtx[12 * IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER];  // FIXME: Bake rounded corners fill/borders in atlas
-    ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
-    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
+    ImU8            CircleSegmentCounts[64];                // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
+    const ImVec4*   TexUvLines;                             // UV of anti-aliased lines in the atlas
 
     ImDrawListSharedData();
-    void SetCircleSegmentMaxError(float max_error);
+    void SetCircleTessellationMaxError(float max_error);
 };
 
 struct ImDrawDataBuilder

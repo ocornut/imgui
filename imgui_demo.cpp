@@ -6034,22 +6034,44 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
 
             // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
-            ImGui::DragFloat("Circle Segment Max Error", &style.CircleSegmentMaxError, 0.01f, 0.10f, 10.0f, "%.2f");
+            ImGui::DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.005f, 0.10f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             if (ImGui::IsItemActive())
             {
                 ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
                 ImGui::BeginTooltip();
-                ImVec2 p = ImGui::GetCursorScreenPos();
+                ImGui::TextUnformatted("N - number of segments");
+                ImGui::TextUnformatted("R - radius");
+                ImGui::Spacing();
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                float RAD_MIN = 10.0f, RAD_MAX = 80.0f;
-                float off_x = 10.0f;
-                for (int n = 0; n < 7; n++)
+                const float min_widget_width = ImGui::CalcTextSize("N: MM\nR: MM.MM").x;
+                float RAD_MIN = 5.0f, RAD_MAX = 80.0f;
+                for (int n = 0; n < 9; n++)
                 {
-                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (7.0f - 1.0f);
-                    draw_list->AddCircle(ImVec2(p.x + off_x + rad, p.y + RAD_MAX), rad, ImGui::GetColorU32(ImGuiCol_Text), 0);
-                    off_x += 10.0f + rad * 2.0f;
+                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (9.0f - 1.0f);
+
+                    const int segment_count = draw_list->_CalcCircleAutoSegmentCount(rad);
+
+                    ImGui::BeginGroup();
+                    ImGui::Text("R: %.f", rad);
+                    ImGui::Text("N: %d", segment_count);
+
+                    const float circle_diameter = rad * 2.0f;
+                    const float canvas_width    = IM_MAX(min_widget_width, circle_diameter);
+                    const float offset_x        = floorf(canvas_width * 0.5f);
+                    const float offset_y        = floorf(RAD_MAX);
+                    const ImVec2 p              = ImGui::GetCursorScreenPos();
+                    draw_list->AddCircle(ImVec2(p.x + offset_x, p.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+
+                    ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+                    ImGui::Text("N: %d", segment_count);
+
+                    const ImVec2 p2             = ImGui::GetCursorScreenPos();
+                    draw_list->AddCircleFilled(ImVec2(p2.x + offset_x, p2.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+
+                    ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+                    ImGui::EndGroup();
+                    ImGui::SameLine();
                 }
-                ImGui::Dummy(ImVec2(off_x, RAD_MAX * 2.0f));
                 ImGui::EndTooltip();
             }
             ImGui::SameLine();

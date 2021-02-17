@@ -376,7 +376,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     }
 }
 
-void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
+void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
     if (CircleSegmentMaxError == max_error)
         return;
@@ -384,8 +384,7 @@ void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        const int segment_count = (i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0;
-        CircleSegmentCounts[i] = (ImU8)ImMin(segment_count, 255);
+        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
     }
 }
 
@@ -541,6 +540,21 @@ void ImDrawList::_OnChangedVtxOffset()
     }
     IM_ASSERT(curr_cmd->UserCallback == NULL);
     curr_cmd->VtxOffset = _CmdHeader.VtxOffset;
+}
+
+int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
+{
+    int num_segments = 0;
+
+    const int  radius_idx = (int)ImCeil(radius); // Use ceil to never reduce accuracy
+
+    // Automatic segment count
+    if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
+        num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
+    else
+        num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
+
+    return num_segments;
 }
 
 // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
@@ -1286,11 +1300,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if (num_segments <= 0)
     {
         // Automatic segment count
-        const int radius_idx = (int)radius;
-        if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
-            num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
-        else
-            num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
+        num_segments = _CalcCircleAutoSegmentCount(radius);
     }
     else
     {
@@ -1316,11 +1326,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     if (num_segments <= 0)
     {
         // Automatic segment count
-        const int radius_idx = (int)radius;
-        if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
-            num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
-        else
-            num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
+        num_segments = _CalcCircleAutoSegmentCount(radius);
     }
     else
     {
