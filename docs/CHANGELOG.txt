@@ -35,8 +35,16 @@ HOW TO UPDATE?
  VERSION 1.82 WIP (In Progresss)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+ - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
+   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
+
 Other Changes:
 
+- ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
+  with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
+- ImDrawList: AddCircle, AddCircleFilled(): New default for style.
 - CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if 
   scheduled builds builds are not required. [@rokups]
 

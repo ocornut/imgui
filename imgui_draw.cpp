@@ -544,17 +544,12 @@ void ImDrawList::_OnChangedVtxOffset()
 
 int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
-    int num_segments = 0;
-
-    const int  radius_idx = (int)ImCeil(radius); // Use ceil to never reduce accuracy
-
     // Automatic segment count
+    const int radius_idx = (int)(radius + 0.999f); // ceil to never reduce accuracy
     if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
-        num_segments = _Data->CircleSegmentCounts[radius_idx]; // Use cached value
+        return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
-        num_segments = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
-
-    return num_segments;
+        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
 }
 
 // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
