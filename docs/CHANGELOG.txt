@@ -37,8 +37,8 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
- - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
-   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
+- Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
+  to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
 
 Other Changes:
 
