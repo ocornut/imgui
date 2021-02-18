@@ -39,12 +39,15 @@ Breaking Changes:
 
 - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
+- Backends: Win32: Pragma linking with dwmapi.lib (Vista-era, ~9 kb). MinGW users will need to link with -ldwmapi.
 
 Other Changes:
 
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): New default for style.
+- Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with 
+  alpha compositing and transparent windows. (#2766, #3447 etc.).
 - Backends: OpenGL, Vulkan, DX9, DX10, DX11, DX12, Metal, WebGPU, Allegro: Rework blending equation to
   preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently
   accross all backends), facilitating compositing of the output buffer with another buffer.

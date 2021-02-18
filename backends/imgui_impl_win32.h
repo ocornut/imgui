@@ -18,10 +18,6 @@ IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
 IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
-// Configuration
-// - Disable gamepad support
-//#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-
 // Win32 message handler your application need to call.
 // - Intentionally commented out in a '#if 0' block to avoid dragging dependencies on <windows.h> from this helper.
 // - You should COPY the line below into your .cpp code to forward declare the function and then you can call it.
@@ -38,3 +34,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 IMGUI_IMPL_API void     ImGui_ImplWin32_EnableDpiAwareness();
 IMGUI_IMPL_API float    ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd);       // HWND hwnd
 IMGUI_IMPL_API float    ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor); // HMONITOR monitor
+
+// Transparency related helpers (optional) [experimental]
+// - Use to enable alpha compositing transparency with the desktop.
+// - Use together with e.g. clearing your framebuffer with zero-alpha.
+IMGUI_IMPL_API void     ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd);   // HWND hwnd
