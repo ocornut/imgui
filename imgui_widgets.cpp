@@ -3286,7 +3286,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
         DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialTextA.Data, data_type, p_data, NULL);
         if (p_clamp_min || p_clamp_max)
         {
-            if (DataTypeCompare(data_type, p_clamp_min, p_clamp_max) > 0)
+            if (p_clamp_min && p_clamp_max && DataTypeCompare(data_type, p_clamp_min, p_clamp_max) > 0)
                 ImSwap(p_clamp_min, p_clamp_max);
             DataTypeClamp(data_type, p_data, p_clamp_min, p_clamp_max);
         }
