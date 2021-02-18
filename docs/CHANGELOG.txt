@@ -104,6 +104,30 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.82 WIP (In Progresss)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
+  to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
+
+Other Changes:
+
+- ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
+  with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
+- ImDrawList: AddCircle, AddCircleFilled(): New default for style.
+- Backends: OpenGL, Vulkan, DX9, DX10, DX11, DX12, Metal, WebGPU, Allegro: Rework blending equation to
+  preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently
+  accross all backends), facilitating compositing of the output buffer with another buffer.
+  (#2693, #2764, #2766, #2873, #3447, #3813, #3816) [@ocornut, @thedmd, @ShawnM427, @Ubpa, @aiekick]
+- Examples: Reworked setup of clear color to be compatible with transparent values.
+- CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if
+  scheduled builds builds are not required. [@rokups]
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.81 (Released 2021-02-10)
 -----------------------------------------------------------------------
 
@@ -135,9 +159,9 @@ Other Changes:
      - Code using (0,0) as a way to signify "upper-left of the host window" should use GetMainViewport()->Pos.
      - Code using io.DisplaySize as a way to signify "size of the host window" should use GetMainViewport()->Size.
   - We are also exposing a work area in ImGuiViewport ('WorkPos', 'WorkSize' vs 'Pos', 'Size' for full area):
-     - For a Platform Window, the work area is generally the full area minus space used by menu-bars. 
+     - For a Platform Window, the work area is generally the full area minus space used by menu-bars.
      - For a Platform Monitor, the work area is generally the full area minus space used by task-bars.
-  - All of this has been the case in 'docking' branch for a long time. What we've done is merely merging 
+  - All of this has been the case in 'docking' branch for a long time. What we've done is merely merging
     a small chunk of the multi-viewport logic into 'master' to standardize some concepts ahead of time.
 - Tables: Fixed PopItemWidth() or multi-components items not restoring per-colum ItemWidth correctly. (#3760)
 - Window: Fixed minor title bar text clipping issue when FramePadding is small/zero and there are no

@@ -1,4 +1,4 @@
-// dear imgui, v1.81
+// dear imgui, v1.82 WIP
 // (demo code)
 
 // Help:
@@ -4913,6 +4913,9 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    // In this example we'll expose most table flags and settings.
+    // For specific flags and settings refer to the corresponding section for more detailed explanation.
+    // This section is mostly useful to experiment with combining certain flags or settings with each others.
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // [DEBUG]
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
@@ -5051,7 +5054,7 @@ static void ShowDemoWindowTables()
             ImGui::TreePop();
         }
 
-        // Recreate/reset item list if we changed the number of items
+        // Update item list if we changed the number of items
         static ImVector<MyItem> items;
         static ImVector<int> selection;
         static bool items_need_sort = false;
@@ -5073,6 +5076,7 @@ static void ShowDemoWindowTables()
         ImVec2 table_scroll_cur, table_scroll_max; // For debug display
         const ImDrawList* table_draw_list = NULL;  // "
 
+        // Submit table
         const float inner_width_to_use = (flags & ImGuiTableFlags_ScrollX) ? inner_width_with_scroll : 0.0f;
         if (ImGui::BeginTable("table_advanced", 6, flags, outer_size_enabled ? outer_size_value : ImVec2(0, 0), inner_width_to_use))
         {
@@ -5131,9 +5135,9 @@ static void ShowDemoWindowTables()
                     const bool item_is_selected = selection.contains(item->ID);
                     ImGui::PushID(item->ID);
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, row_min_height);
-                    ImGui::TableNextColumn();
 
                     // For the demo purpose we can select among different type of items submitted in the first column
+                    ImGui::TableSetColumnIndex(0);
                     char label[32];
                     sprintf(label, "%04d", item->ID);
                     if (contents_type == CT_Text)
@@ -5164,14 +5168,14 @@ static void ShowDemoWindowTables()
                         }
                     }
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(1))
                         ImGui::TextUnformatted(item->Name);
 
                     // Here we demonstrate marking our data set as needing to be sorted again if we modified a quantity,
                     // and we are currently sorting on the column showing the Quantity.
                     // To avoid triggering a sort while holding the button, we only trigger it when the button has been released.
                     // You will probably need a more advanced system in your code if you want to automatically sort when a specific entry changes.
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(2))
                     {
                         if (ImGui::SmallButton("Chop")) { item->Quantity += 1; }
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
@@ -5180,16 +5184,16 @@ static void ShowDemoWindowTables()
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
                     }
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(3))
                         ImGui::Text("%d", item->Quantity);
 
-                    ImGui::TableNextColumn();
+                    ImGui::TableSetColumnIndex(4);
                     if (show_wrapped_text)
                         ImGui::TextWrapped("Lorem ipsum dolor sit amet");
                     else
                         ImGui::Text("Lorem ipsum dolor sit amet");
 
-                    if (ImGui::TableNextColumn())
+                    if (ImGui::TableSetColumnIndex(5))
                         ImGui::Text("1234");
 
                     ImGui::PopID();
@@ -6108,22 +6112,42 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
 
             // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
-            ImGui::DragFloat("Circle Segment Max Error", &style.CircleSegmentMaxError, 0.01f, 0.10f, 10.0f, "%.2f");
+            ImGui::DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.005f, 0.10f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             if (ImGui::IsItemActive())
             {
                 ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
                 ImGui::BeginTooltip();
-                ImVec2 p = ImGui::GetCursorScreenPos();
+                ImGui::TextUnformatted("(R = radius, N = number of segments)");
+                ImGui::Spacing();
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                float RAD_MIN = 10.0f, RAD_MAX = 80.0f;
-                float off_x = 10.0f;
-                for (int n = 0; n < 7; n++)
+                const float min_widget_width = ImGui::CalcTextSize("N: MMM\nR: MMM").x;
+                for (int n = 0; n < 8; n++)
                 {
-                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (7.0f - 1.0f);
-                    draw_list->AddCircle(ImVec2(p.x + off_x + rad, p.y + RAD_MAX), rad, ImGui::GetColorU32(ImGuiCol_Text), 0);
-                    off_x += 10.0f + rad * 2.0f;
+                    const float RAD_MIN = 5.0f;
+                    const float RAD_MAX = 70.0f;
+                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (8.0f - 1.0f);
+
+                    ImGui::BeginGroup();
+
+                    ImGui::Text("R: %.f\nN: %d", rad, draw_list->_CalcCircleAutoSegmentCount(rad));
+
+                    const float canvas_width = IM_MAX(min_widget_width, rad * 2.0f);
+                    const float offset_x     = floorf(canvas_width * 0.5f);
+                    const float offset_y     = floorf(RAD_MAX);
+
+                    const ImVec2 p1 = ImGui::GetCursorScreenPos();
+                    draw_list->AddCircle(ImVec2(p1.x + offset_x, p1.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+                    ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+
+                    /*
+                    const ImVec2 p2 = ImGui::GetCursorScreenPos();
+                    draw_list->AddCircleFilled(ImVec2(p2.x + offset_x, p2.y + offset_y), rad, ImGui::GetColorU32(ImGuiCol_Text));
+                    ImGui::Dummy(ImVec2(canvas_width, RAD_MAX * 2));
+                    */
+
+                    ImGui::EndGroup();
+                    ImGui::SameLine();
                 }
-                ImGui::Dummy(ImVec2(off_x, RAD_MAX * 2.0f));
                 ImGui::EndTooltip();
             }
             ImGui::SameLine();

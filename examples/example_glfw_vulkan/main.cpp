@@ -530,7 +530,10 @@ int main(int, char**)
         ImGui::Render();
         ImDrawData* main_draw_data = ImGui::GetDrawData();
         const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
-        memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+        wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+        wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+        wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+        wd->ClearValue.color.float32[3] = clear_color.w;
         if (!main_is_minimized)
             FrameRender(wd, main_draw_data);
 

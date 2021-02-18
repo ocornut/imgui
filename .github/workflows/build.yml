@@ -3,8 +3,16 @@ name: build
 on:
   push:
   pull_request:
-  schedule:
-    - cron:  '0 9 * * *'
+  workflow_run:
+    # Use a workflow as a trigger of scheduled builds. Forked repositories can disable scheduled builds by disabling
+    # "scheduled" workflow, while maintaining ability to perform local CI builds.
+    workflows:
+      - scheduled
+    branches:
+      - master
+      - docking
+    types:
+      - requested
 
 jobs:
   Windows:
@@ -98,22 +106,22 @@ jobs:
       - name: Build Win32 example_glfw_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_glfw_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_opengl3
         shell: cmd
@@ -122,7 +130,7 @@ jobs:
       - name: Build Win32 example_sdl_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_directx11/example_sdl_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_win32_directx9
         shell: cmd
@@ -135,12 +143,12 @@ jobs:
       - name: Build Win32 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_glfw_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_glfw_opengl3
         shell: cmd
@@ -153,17 +161,17 @@ jobs:
       - name: Build x64 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl3/example_sdl_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_directx11
         shell: cmd
@@ -172,17 +180,17 @@ jobs:
       - name: Build x64 example_win32_directx9
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx10
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx12
         shell: cmd
@@ -344,17 +352,17 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
 
   MacOS:
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -392,7 +400,7 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_glfw_metal
       run: make -C examples/example_glfw_metal
@@ -402,7 +410,7 @@ jobs:
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
@@ -414,7 +422,7 @@ jobs:
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -460,7 +468,7 @@ jobs:
         discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
         github-token: ${{ github.token }}
         action-task: discord-jobs
-        discord-filter: "'{{ github.branch }}'.match(/master|docking|tables/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
+        discord-filter: "'{{ github.branch }}'.match(/master|docking/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
         discord-username: GitHub Actions
         discord-job-new-failure-message: ''
         discord-job-fixed-failure-message: ''
