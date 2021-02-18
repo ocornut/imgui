@@ -6404,9 +6404,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->WindowClass.ViewportFlagsOverrideClear)
                 viewport_flags &= ~window->WindowClass.ViewportFlagsOverrideClear;
 
-            // We also tell the backend that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
+            // We can also tell the backend that clearing the platform window won't be necessary,
+            // as our window background is filling the viewport and we have disabled BgAlpha.
+            // FIXME: Work on support for per-viewport transparency (#2766)
             if (!(flags & ImGuiWindowFlags_NoBackground))
-                viewport_flags &= ~ImGuiViewportFlags_NoRendererClear;
+                viewport_flags |= ImGuiViewportFlags_NoRendererClear;
 
             window->Viewport->Flags = viewport_flags;
         }
