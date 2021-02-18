@@ -36,6 +36,7 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 DOCKING FEATURES
+(see https://github.com/ocornut/imgui/wiki/Docking for quick intro)
 
 - Added Docking system: [BETA] (#2109, #351)
   - Added ImGuiConfigFlags_DockingEnable flag to enable Docking.
@@ -54,7 +55,8 @@ DOCKING FEATURES
   - Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors.
   - Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes.
 
-MULTI-VIEWPORT FEATURES (was previously 'viewport' branch, merged into 'docking')
+MULTI-VIEWPORT FEATURES
+(see https://github.com/ocornut/imgui/wiki/Multi-Viewports for quick intro)
 
 Breaking Changes:
 
@@ -65,10 +67,6 @@ Breaking Changes:
    - Likewise io.MousePos and GetMousePos() will use OS coordinates.
      If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
      e.g. subtract GetWindowViewport()->Pos.
-- Render function: the ImDrawData structure now contains 'DisplayPos' and 'DisplaySize' fields.
-  To support multi-viewport, you need to use those values when creating your orthographic projection matrix.
-  Use 'draw_data->DisplaySize' instead of 'io.DisplaySize', and 'draw_data->DisplayPos' instead of (0,0) as the upper-left point.
-  You need to subtract 'draw_data->DisplayPos' from your scissor rectangles to convert them from global coordinates to frame-buffer coordinates.
 - IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 - IO: Removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (they were marked obsoleted, used to clip within the (0,0)..(DisplaySize) range).
 
@@ -81,26 +79,24 @@ Other changes:
   - ImGuiPlatformIO::Monitors is a list of platform monitors (input from backend)
   - ImGuiPlatformIO::Viewports is a list of viewports (output from dear imgui)
 - Added ImGuiPlatformMonitor to feed OS monitor information in the ImGuiPlatformIO::Monitors.
-- Added GetMainViewport().
 - Added GetWindowViewport(), SetNextWindowViewport().
 - Added GetWindowDpiScale().
 - Added GetOverlayDrawList(ImGuiViewport* viewport).
   The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
-- Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
+- Added UpdatePlatformWindows(), RenderPlatformWindowsDefault(), DestroyPlatformWindows() for usage in application setup.
 - Added FindViewportByID(), FindViewportByPlatformHandle() for usage by backends.
 - Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
-- Added io.ConfigViewportsNoAutoMerge, io.ConfigViewportsNoTaskBarIcon, io.ConfigViewportsNoDecoration, io.ConfigViewportsNoDefaultParent options.
+- Added io.ConfigViewportsNoAutoMerge option.
+- Added io.ConfigViewportsNoTaskBarIcon option.
+- Added io.ConfigViewportsNoDecoration option.
+- Added io.ConfigViewportsNoDefaultParent option.
 - Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
 - Added io.MouseHoveredViewport (optional _even_ for multi-viewport support, tied to ImGuiBackendFlags_HasMouseHoveredViewport flag).
-- Added ImGuiViewport structure, ImGuiViewportFlags flags.
+- Expanded ImGuiViewport structure, ImGuiViewportFlags flags.
 - Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
-- Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
+- Examples: Renderer: OpenGL2, OpenGL3, DirectX9, DirectX10, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
 - Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
-- Examples: Win32: Added DPI-related helpers to access DPI features without requiring the latest Windows SDK at compile time,
-  and without requiring Windows 10 at runtime.
-- Examples: Vulkan: Added various optional helpers in imgui_impl_vulkan.h (they are used for multi-viewport support)
-  to make the examples main.cpp easier to read.
 
 
 -----------------------------------------------------------------------
