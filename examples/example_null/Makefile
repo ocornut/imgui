@@ -61,6 +61,7 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	ECHO_MESSAGE = "MinGW"
 	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Wextra -Wpedantic
+		LIBS += -limm32
 	endif
 	CFLAGS = $(CXXFLAGS)
 endif
