@@ -59,6 +59,7 @@ Other Changes:
 - Examples: Reworked setup of clear color to be compatible with transparent values.
 - CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if
   scheduled builds builds are not required. [@rokups]
+- Log/Capture: Added LogTextV, a va_list variant of LogText. [@PathogenDavid]
 
 
 -----------------------------------------------------------------------

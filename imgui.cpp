@@ -9911,14 +9911,8 @@ void ImGui::EndDragDropTarget()
 //-----------------------------------------------------------------------------
 
 // Pass text data straight to log (without being displayed)
-void ImGui::LogText(const char* fmt, ...)
+static inline void LogTextV(ImGuiContext& g, const char* fmt, va_list args)
 {
-    ImGuiContext& g = *GImGui;
-    if (!g.LogEnabled)
-        return;
-
-    va_list args;
-    va_start(args, fmt);
     if (g.LogFile)
     {
         g.LogBuffer.Buf.resize(0);
@@ -9929,7 +9923,27 @@ void ImGui::LogText(const char* fmt, ...)
     {
         g.LogBuffer.appendfv(fmt, args);
     }
+}
+
+void ImGui::LogText(const char* fmt, ...)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.LogEnabled)
+        return;
+
+    va_list args;
+    va_start(args, fmt);
+    LogTextV(g, fmt, args);
     va_end(args);
+}
+
+void ImGui::LogTextV(const char* fmt, va_list args)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.LogEnabled)
+        return;
+
+    LogTextV(g, fmt, args);
 }
 
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
