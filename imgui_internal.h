@@ -1897,7 +1897,7 @@ struct ImGuiTabBar
     ImGuiTabBarFlags    Flags;
     ImGuiID             ID;                     // Zero for tab-bars used by docking
     ImGuiID             SelectedTabId;          // Selected tab/window
-    ImGuiID             NextSelectedTabId;
+    ImGuiID             NextSelectedTabId;      // Next selected tab/window. Will also trigger a scrolling animation
     ImGuiID             VisibleTabId;           // Can occasionally be != SelectedTabId (e.g. when previewing contents for CTRL+TAB preview)
     int                 CurrFrameVisible;
     int                 PrevFrameVisible;
