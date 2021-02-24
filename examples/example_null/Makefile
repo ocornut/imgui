@@ -57,12 +57,12 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+ifeq ($(OS), Windows_NT)
 	ECHO_MESSAGE = "MinGW"
 	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Wextra -Wpedantic
-		LIBS += -limm32
 	endif
+	LIBS += -limm32
 	CFLAGS = $(CXXFLAGS)
 endif
 

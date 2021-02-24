@@ -78,12 +78,12 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
-   ECHO_MESSAGE = "MinGW"
-   LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+ifeq ($(OS), Windows_NT)
+    ECHO_MESSAGE = "MinGW"
+    LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-   CXXFLAGS += `pkg-config --cflags sdl2`
-   CFLAGS = $(CXXFLAGS)
+    CXXFLAGS += `pkg-config --cflags sdl2`
+    CFLAGS = $(CXXFLAGS)
 endif
 
 ##---------------------------------------------------------------------
