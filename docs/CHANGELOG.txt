@@ -5,11 +5,11 @@ This document holds the user-facing changelog that we also use in release notes.
 We generally fold multiple commits pertaining to the same topic as a single entry.
 Changes to backends are also included within the individual .cpp files of each backend.
 
-RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
-REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
-COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
-FAQ                             https://www.dearimgui.org/faq/
-WIKI                            https://github.com/ocornut/imgui/wiki
+RELEASE NOTES:          https://github.com/ocornut/imgui/releases
+REPORT ISSUES:          https://github.com/ocornut/imgui/issues
+DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
+FAQ                     https://www.dearimgui.org/faq/
+WIKI                    https://github.com/ocornut/imgui/wiki
 
 WHEN TO UPDATE?
 
