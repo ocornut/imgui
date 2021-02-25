@@ -2242,6 +2242,7 @@ ImGuiListClipper::ImGuiListClipper()
 {
     memset(this, 0, sizeof(*this));
     ItemsCount = -1;
+    ItemForced = -1;
 }
 
 ImGuiListClipper::~ImGuiListClipper()
@@ -2279,7 +2280,12 @@ void ImGuiListClipper::End()
     if (ItemsCount < INT_MAX && DisplayStart >= 0)
         SetCursorPosYAndSetupForPrevLine(StartPosY + (ItemsCount - ItemsFrozen) * ItemsHeight, ItemsHeight);
     ItemsCount = -1;
-    StepNo = 3;
+    StepNo = 5;
+}
+
+void ImGuiListClipper::ForceDisplay(int item_index)
+{
+    ItemForced = item_index;
 }
 
 bool ImGuiListClipper::Step()
@@ -2352,27 +2358,70 @@ bool ImGuiListClipper::Step()
         return false;
     }
 
-    // Step 2: calculate the actual range of elements to display, and position the cursor before the first element
+    // Step 2: calculate the actual range of visible elements, and check for a forced element before the visible start
+    // If there is a forced element before the visible start, position the cursor before that element, otherwise fall through to next step
     if (StepNo == 2)
     {
         IM_ASSERT(ItemsHeight > 0.0f);
 
         int already_submitted = DisplayEnd;
-        ImGui::CalcListClipping(ItemsCount - already_submitted, ItemsHeight, &DisplayStart, &DisplayEnd);
-        DisplayStart += already_submitted;
-        DisplayEnd += already_submitted;
+        ImGui::CalcListClipping(ItemsCount - already_submitted, ItemsHeight, &VisibleStart, &VisibleEnd);
+        VisibleStart += already_submitted;
+        VisibleEnd += already_submitted;
+
+        StepNo = 3;
+
+        if ((ItemForced >= already_submitted) && (ItemForced < VisibleStart))
+        {
+            DisplayStart = ItemForced;
+            DisplayEnd = ItemForced + 1;
+
+            // Seek cursor
+            if (DisplayStart > already_submitted)
+                SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
+
+            return true;
+        }
+    }
+
+    // Step 3: display the visible elements calculated in step 2
+    if (StepNo == 3)
+    {
+        int already_submitted = DisplayEnd;
+        DisplayStart = VisibleStart;
+        DisplayEnd = VisibleEnd;
 
         // Seek cursor
         if (DisplayStart > already_submitted)
             SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
 
-        StepNo = 3;
+        StepNo = 4;
         return true;
     }
 
-    // Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
+    // Step 4: if there is a forced element after the visible end, display it, otherwise fall through to step 5
+    if (StepNo == 4)
+    {
+        int already_submitted = DisplayEnd;
+
+        StepNo = 5;
+
+        if ((ItemForced >= already_submitted) && (ItemForced < ItemsCount))
+        {
+            DisplayStart = ItemForced;
+            DisplayEnd = ItemForced + 1;
+
+            // Seek cursor
+            if (DisplayStart > already_submitted)
+                SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
+
+            return true;
+        }
+    }
+
+    // Step 5: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
-    if (StepNo == 3)
+    if (StepNo == 5)
     {
         // Seek cursor
         if (ItemsCount < INT_MAX)

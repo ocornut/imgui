@@ -2143,6 +2143,7 @@ struct ImGuiStorage
 // Usage:
 //   ImGuiListClipper clipper;
 //   clipper.Begin(1000);         // We have 1000 elements, evenly spaced.
+//   clipper.ForceDisplay(42);    // Optional, force element with given index to be displayed (use f.e. if you need to update a tooltip for a drop source)
 //   while (clipper.Step())
 //       for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
 //           ImGui::Text("line number %d", i);
@@ -2159,6 +2160,9 @@ struct ImGuiListClipper
 
     // [Internal]
     int     ItemsCount;
+    int     ItemForced;
+    int     VisibleStart;
+    int     VisibleEnd;
     int     StepNo;
     int     ItemsFrozen;
     float   ItemsHeight;
@@ -2171,6 +2175,7 @@ struct ImGuiListClipper
     // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
     IMGUI_API void Begin(int items_count, float items_height = -1.0f);  // Automatically called by constructor if you passed 'items_count' or by Step() in Step 1.
     IMGUI_API void End();                                               // Automatically called on the last call of Step() that returns false.
+    IMGUI_API void ForceDisplay(int item_index);                        // Optionally call before the first call to Step() if you need a single item to be displayed, f.e. to update a drag&drop tooltip.
     IMGUI_API bool Step();                                              // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
