@@ -134,7 +134,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
             break;
         }
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    
+
     return true;
 }
 
@@ -148,7 +148,7 @@ void    ImGui_ImplWin32_Shutdown()
     g_XInputGetCapabilities = NULL;
     g_XInputGetState = NULL;
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    
+
     g_hWnd = NULL;
     g_Time = 0;
     g_TicksPerSecond = 0;

@@ -6294,6 +6294,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Update the Hidden flag
         window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0) || (window->HiddenFramesForRenderOnly > 0);
 
+        // Disable inputs for requested number of frames
+        if (window->DisableInputsFrames > 0)
+        {
+            window->DisableInputsFrames--;
+            window->Flags |= ImGuiWindowFlags_NoInputs;
+        }
+
         // Update the SkipItems flag, used to early out of all items functions (no layout required)
         bool skip_items = false;
         if (window->Collapsed || !window->Active || window->Hidden)
