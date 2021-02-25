@@ -913,7 +913,7 @@ static void ShowDemoWindowWidgets()
             // so you can safely copy & paste garbled characters into another application.
             ImGui::TextWrapped(
                 "CJK text will only appears if the font was loaded with the appropriate CJK character ranges. "
-                "Call io.Font->AddFontFromFileTTF() manually to load extra character ranges. "
+                "Call io.Fonts->AddFontFromFileTTF() manually to load extra character ranges. "
                 "Read docs/FONTS.md for details.");
             ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)"); // Normally we would use u8"blah blah" with the proper characters directly in the string.
             ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
