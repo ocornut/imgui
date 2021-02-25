@@ -1970,6 +1970,7 @@ struct IMGUI_API ImGuiWindow
     ImS8                    HiddenFramesCanSkipItems;           // Hide the window for N frames
     ImS8                    HiddenFramesCannotSkipItems;        // Hide the window for N frames while allowing items to be submitted so we can measure their size
     ImS8                    HiddenFramesForRenderOnly;          // Hide the window until frame N at Render() time only
+    ImS8                    DisableInputsFrames;                // Disable window interactions for N frames
     ImGuiCond               SetWindowPosAllowFlags : 8;         // store acceptable condition flags for SetNextWindowPos() use.
     ImGuiCond               SetWindowSizeAllowFlags : 8;        // store acceptable condition flags for SetNextWindowSize() use.
     ImGuiCond               SetWindowCollapsedAllowFlags : 8;   // store acceptable condition flags for SetNextWindowCollapsed() use.
