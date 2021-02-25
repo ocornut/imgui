@@ -12131,14 +12131,14 @@ struct ImGuiDockNodeSettings
     ImGuiID             ID;
     ImGuiID             ParentNodeId;
     ImGuiID             ParentWindowId;
-    ImGuiID             SelectedWindowId;
+    ImGuiID             SelectedTabId;
     signed char         SplitAxis;
     char                Depth;
     ImGuiDockNodeFlags  Flags;                  // NB: We save individual flags one by one in ascii format (ImGuiDockNodeFlags_SavedFlagsMask_)
     ImVec2ih            Pos;
     ImVec2ih            Size;
     ImVec2ih            SizeRef;
-    ImGuiDockNodeSettings() { ID = ParentNodeId = ParentWindowId = SelectedWindowId = 0; SplitAxis = ImGuiAxis_None; Depth = 0; Flags = ImGuiDockNodeFlags_None; }
+    ImGuiDockNodeSettings() { memset(this, 0, sizeof(*this)); SplitAxis = ImGuiAxis_None; }
 };
 
 //-----------------------------------------------------------------------------
@@ -12515,7 +12515,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
             node->ParentNode->ChildNodes[0] = node;
         else if (node->ParentNode && node->ParentNode->ChildNodes[1] == NULL)
             node->ParentNode->ChildNodes[1] = node;
-        node->SelectedTabId = settings->SelectedWindowId;
+        node->SelectedTabId = settings->SelectedTabId;
         node->SplitAxis = (ImGuiAxis)settings->SplitAxis;
         node->LocalFlags |= (settings->Flags & ImGuiDockNodeFlags_SavedFlagsMask_);
 
@@ -15563,7 +15563,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     if (sscanf(line, " HiddenTabBar=%d%n", &x, &r) == 1)            { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_HiddenTabBar; }
     if (sscanf(line, " NoWindowMenuButton=%d%n", &x, &r) == 1)      { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoWindowMenuButton; }
     if (sscanf(line, " NoCloseButton=%d%n", &x, &r) == 1)           { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoCloseButton; }
-    if (sscanf(line, " Selected=0x%08X%n", &node.SelectedWindowId,&r) == 1) { line += r; }
+    if (sscanf(line, " Selected=0x%08X%n", &node.SelectedTabId,&r) == 1) { line += r; }
     if (node.ParentNodeId != 0)
         if (ImGuiDockNodeSettings* parent_settings = DockSettingsFindNodeSettings(ctx, node.ParentNodeId))
             node.Depth = parent_settings->Depth + 1;
@@ -15577,7 +15577,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.ID = node->ID;
     node_settings.ParentNodeId = node->ParentNode ? node->ParentNode->ID : 0;
     node_settings.ParentWindowId = (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow) ? node->HostWindow->ParentWindow->ID : 0;
-    node_settings.SelectedWindowId = node->SelectedTabId;
+    node_settings.SelectedTabId = node->SelectedTabId;
     node_settings.SplitAxis = (signed char)(node->IsSplitNode() ? node->SplitAxis : ImGuiAxis_None);
     node_settings.Depth = (char)depth;
     node_settings.Flags = (node->LocalFlags & ImGuiDockNodeFlags_SavedFlagsMask_);
@@ -15643,8 +15643,8 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" NoWindowMenuButton=1");
         if (node_settings->Flags & ImGuiDockNodeFlags_NoCloseButton)
             buf->appendf(" NoCloseButton=1");
-        if (node_settings->SelectedWindowId)
-            buf->appendf(" Selected=0x%08X", node_settings->SelectedWindowId);
+        if (node_settings->SelectedTabId)
+            buf->appendf(" Selected=0x%08X", node_settings->SelectedTabId);
 
 #if IMGUI_DEBUG_INI_SETTINGS
         // [DEBUG] Include comments in the .ini file to ease debugging
@@ -16205,14 +16205,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 ImGuiDockNodeSettings* settings = &dc->NodesSettings[n];
                 const char* selected_tab_name = NULL;
-                if (settings->SelectedWindowId)
+                if (settings->SelectedTabId)
                 {
-                    if (ImGuiWindow* window = FindWindowByID(settings->SelectedWindowId))
+                    if (ImGuiWindow* window = FindWindowByID(settings->SelectedTabId))
                         selected_tab_name = window->Name;
-                    else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedWindowId))
+                    else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedTabId))
                         selected_tab_name = window_settings->GetName();
                 }
-                BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentNodeId, settings->SelectedWindowId, selected_tab_name ? selected_tab_name : settings->SelectedWindowId ? "N/A" : "");
+                BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentNodeId, settings->SelectedTabId, selected_tab_name ? selected_tab_name : settings->SelectedTabId ? "N/A" : "");
             }
             TreePop();
         }
