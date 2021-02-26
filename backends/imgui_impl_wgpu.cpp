@@ -303,10 +303,8 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     wgpuRenderPassEncoderSetViewport(ctx, 0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y, 0, 1);
 
     // Bind shader and vertex buffers
-    unsigned int stride = sizeof(ImDrawVert);
-    unsigned int offset = 0;
-    wgpuRenderPassEncoderSetVertexBuffer(ctx, 0, fr->VertexBuffer, offset, fr->VertexBufferSize * stride);
-    wgpuRenderPassEncoderSetIndexBuffer(ctx, fr->IndexBuffer, sizeof(ImDrawIdx) == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, fr->IndexBufferSize * sizeof(ImDrawIdx));
+    wgpuRenderPassEncoderSetVertexBuffer(ctx, 0, fr->VertexBuffer, 0, 0);
+    wgpuRenderPassEncoderSetIndexBuffer(ctx, fr->IndexBuffer, sizeof(ImDrawIdx) == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, 0);
     wgpuRenderPassEncoderSetPipeline(ctx, g_pipelineState);
     wgpuRenderPassEncoderSetBindGroup(ctx, 0, g_resources.CommonBindGroup, 0, NULL);
 
@@ -331,7 +329,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == NULL || fr->VertexBufferSize < draw_data->TotalVtxCount)
     {
-        SafeRelease(fr->VertexBuffer);
+        if (fr->VertexBuffer)
+            wgpuBufferDestroy(fr->VertexBuffer);
         SafeRelease(fr->VertexBufferHost);
         fr->VertexBufferSize = draw_data->TotalVtxCount + 5000;
 
@@ -351,7 +350,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     }
     if (fr->IndexBuffer == NULL || fr->IndexBufferSize < draw_data->TotalIdxCount)
     {
-        SafeRelease(fr->IndexBuffer);
+        if (fr->IndexBuffer)
+            wgpuBufferDestroy(fr->IndexBuffer);
         SafeRelease(fr->IndexBufferHost);
         fr->IndexBufferSize = draw_data->TotalIdxCount + 10000;
 
@@ -439,18 +439,6 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     }
 }
 
-static WGPUBuffer ImGui_ImplWGPU_CreateBufferFromData(const WGPUDevice& device, const void* data, uint64_t size, WGPUBufferUsage usage)
-{
-    WGPUBufferDescriptor descriptor = {};
-    descriptor.size = size;
-    descriptor.usage = usage | WGPUBufferUsage_CopyDst;
-    WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &descriptor);
-
-    WGPUQueue queue = wgpuDeviceGetDefaultQueue(g_wgpuDevice);
-    wgpuQueueWriteBuffer(queue, buffer, 0, data, size);
-    return buffer;
-}
-
 static void ImGui_ImplWGPU_CreateFontsTexture()
 {
     // Build texture atlas
@@ -486,34 +474,19 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
 
     // Upload texture data
     {
-        WGPUBuffer staging_buffer = ImGui_ImplWGPU_CreateBufferFromData(g_wgpuDevice, pixels, (uint32_t)(width * size_pp * height), WGPUBufferUsage_CopySrc);
-
-        WGPUBufferCopyView bufferCopyView = {};
-        bufferCopyView.buffer = staging_buffer;
-        bufferCopyView.layout.offset = 0;
-        bufferCopyView.layout.bytesPerRow = width * size_pp;
-        bufferCopyView.layout.rowsPerImage = height;
-
-        WGPUTextureCopyView textureCopyView = {};
-        textureCopyView.texture = g_resources.FontTexture;
-        textureCopyView.mipLevel = 0;
-        textureCopyView.origin = { 0, 0, 0 };
+        WGPUTextureCopyView dst_view = {};
+        dst_view.texture = g_resources.FontTexture;
+        dst_view.mipLevel = 0;
+        dst_view.origin = { 0, 0, 0 };
 #if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
-        textureCopyView.aspect = WGPUTextureAspect_All;
+        dst_view.aspect = WGPUTextureAspect_All;
 #endif
-
-        WGPUExtent3D copySize = { (uint32_t)width, (uint32_t)height, 1 };
-
-        WGPUCommandEncoderDescriptor enc_desc = {};
-        WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(g_wgpuDevice, &enc_desc);
-        wgpuCommandEncoderCopyBufferToTexture(encoder, &bufferCopyView, &textureCopyView, &copySize);
-        WGPUCommandBufferDescriptor cmd_buf_desc = {};
-        WGPUCommandBuffer copy = wgpuCommandEncoderFinish(encoder, &cmd_buf_desc);
-        WGPUQueue queue = wgpuDeviceGetDefaultQueue(g_wgpuDevice);
-        wgpuQueueSubmit(queue, 1, &copy);
-
-        wgpuCommandEncoderRelease(encoder);
-        wgpuBufferRelease(staging_buffer);
+        WGPUTextureDataLayout layout = {};
+        layout.offset = 0;
+        layout.bytesPerRow = width * size_pp;
+        layout.rowsPerImage = height;
+        WGPUExtent3D size = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
+        wgpuQueueWriteTexture(wgpuDeviceGetDefaultQueue(g_wgpuDevice), &dst_view, pixels, (uint32_t)(width * size_pp * height), &layout, &size);
     }
 
     // Create the associated sampler
