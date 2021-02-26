@@ -62,6 +62,7 @@ Other Changes:
   preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently
   accross all backends), facilitating compositing of the output buffer with another buffer.
   (#2693, #2764, #2766, #2873, #3447, #3813, #3816) [@ocornut, @thedmd, @ShawnM427, @Ubpa, @aiekick]
+- Backends: DX9: Fix to support IMGUI_USE_BGRA_PACKED_COLOR. (#3844) [@Xiliusha]
 - Examples: Reworked setup of clear color to be compatible with transparent values.
 - CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if
   scheduled builds builds are not required. [@rokups]

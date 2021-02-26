@@ -7,8 +7,6 @@
 #include "imgui_impl_dx10.h"
 #include <d3d10_1.h>
 #include <d3d10.h>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
 #include <tchar.h>
 
 // Data
