@@ -5858,7 +5858,7 @@ static void ExportSize_ImVec2(const char* name, ImVec2& size_to_export, ImVec2& 
 // [Internal] export sizes style to current Log target
 static void ExportSizes(ImGuiStyle& style_to_export, ImGuiStyle& ref_style, bool export_only_modified)
 {
-    ImGui::LogText("auto& style = ImGui::GetStyle();" IM_NEWLINE);
+    ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" IM_NEWLINE);
 
     {
         ImGui::LogText(IM_NEWLINE "// Main" IM_NEWLINE);
