@@ -1212,7 +1212,7 @@ enum ImGuiDockNodeState
 };
 
 // sizeof() 116~160
-struct ImGuiDockNode
+struct IMGUI_API ImGuiDockNode
 {
     ImGuiID                 ID;
     ImGuiDockNodeFlags      SharedFlags;                // Flags shared by all nodes of a same dockspace hierarchy (inherited from the root node)
@@ -2106,7 +2106,7 @@ struct ImGuiTabItem
 };
 
 // Storage for a tab bar (sizeof() 152 bytes)
-struct ImGuiTabBar
+struct IMGUI_API ImGuiTabBar
 {
     ImVector<ImGuiTabItem> Tabs;
     ImGuiTabBarFlags    Flags;
