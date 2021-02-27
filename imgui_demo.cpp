@@ -5828,6 +5828,116 @@ static void NodeFont(ImFont* font)
     ImGui::TreePop();
 }
 
+// [Internal] export colors style to current Log target
+static void ExportColors(ImGuiStyle& style_to_export, ImGuiStyle& ref_style, bool export_only_modified)
+{
+    ImGui::LogText("ImVec4* colors = ImGui::GetStyle().Colors;" IM_NEWLINE);
+    for (auto i = 0; i < ImGuiCol_COUNT; i++)
+    {
+        const auto& col = style_to_export.Colors[i];
+        const auto name = ImGui::GetStyleColorName(i);
+        if (!export_only_modified || memcmp(&col, &ref_style.Colors[i], sizeof(ImVec4)) != 0)
+            ImGui::LogText("colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
+    }
+}
+
+// [Internal] export one size float style to current Log target
+static void ExportSize_Float(const char* name, float& size_to_export, float& ref_size, bool export_only_modified)
+{
+    if (!export_only_modified || memcmp(&size_to_export, &ref_size, sizeof(float)) != 0)
+        ImGui::LogText("style.%s%*s= %.2ff;" IM_NEWLINE, name, 25 - (int)strlen(name), "", size_to_export);
+}
+
+// [Internal] export one size ImVec2 style to current Log target
+static void ExportSize_ImVec2(const char* name, ImVec2& size_to_export, ImVec2& ref_size, bool export_only_modified)
+{
+    if (!export_only_modified || memcmp(&size_to_export, &ref_size, sizeof(ImVec2)) != 0)
+        ImGui::LogText("style.%s%*s= ImVec2(%.2ff, %.2ff);" IM_NEWLINE, name, 25 - (int)strlen(name), "", size_to_export.x, size_to_export.y);
+}
+
+// [Internal] export sizes style to current Log target
+static void ExportSizes(ImGuiStyle& style_to_export, ImGuiStyle& ref_style, bool export_only_modified)
+{
+    ImGui::LogText("auto& style = ImGui::GetStyle();" IM_NEWLINE);
+
+    {
+        ImGui::LogText(IM_NEWLINE "// Main" IM_NEWLINE);
+
+        ExportSize_ImVec2("WindowPadding", style_to_export.WindowPadding, ref_style.WindowPadding, export_only_modified);
+        ExportSize_ImVec2("FramePadding", style_to_export.FramePadding, ref_style.FramePadding, export_only_modified);
+        ExportSize_ImVec2("ItemSpacing", style_to_export.ItemSpacing, ref_style.ItemSpacing, export_only_modified);
+        ExportSize_ImVec2("ItemInnerSpacing", style_to_export.ItemInnerSpacing, ref_style.ItemInnerSpacing, export_only_modified);
+        ExportSize_ImVec2("TouchExtraPadding", style_to_export.TouchExtraPadding, ref_style.TouchExtraPadding, export_only_modified);
+        ExportSize_Float("IndentSpacing", style_to_export.IndentSpacing, ref_style.IndentSpacing, export_only_modified);
+        ExportSize_Float("ScrollbarSize", style_to_export.ScrollbarSize, ref_style.ScrollbarSize, export_only_modified);
+        ExportSize_Float("GrabMinSize", style_to_export.GrabMinSize, ref_style.GrabMinSize, export_only_modified);
+    }
+
+    {
+        ImGui::LogText(IM_NEWLINE "// Borders" IM_NEWLINE);
+
+        ExportSize_Float("WindowBorderSize", style_to_export.WindowBorderSize, ref_style.WindowBorderSize, export_only_modified);
+        ExportSize_Float("ChildBorderSize", style_to_export.ChildBorderSize, ref_style.ChildBorderSize, export_only_modified);
+        ExportSize_Float("PopupBorderSize", style_to_export.PopupBorderSize, ref_style.PopupBorderSize, export_only_modified);
+        ExportSize_Float("FrameBorderSize", style_to_export.FrameBorderSize, ref_style.FrameBorderSize, export_only_modified);
+        ExportSize_Float("TabBorderSize", style_to_export.TabBorderSize, ref_style.TabBorderSize, export_only_modified);
+    }
+
+    {
+        ImGui::LogText(IM_NEWLINE "// Rounding" IM_NEWLINE);
+
+        ExportSize_Float("WindowRounding", style_to_export.WindowRounding, ref_style.WindowRounding, export_only_modified);
+        ExportSize_Float("ChildRounding", style_to_export.ChildRounding, ref_style.ChildRounding, export_only_modified);
+        ExportSize_Float("FrameRounding", style_to_export.FrameRounding, ref_style.FrameRounding, export_only_modified);
+        ExportSize_Float("PopupRounding", style_to_export.PopupRounding, ref_style.PopupRounding, export_only_modified);
+        ExportSize_Float("ScrollbarRounding", style_to_export.ScrollbarRounding, ref_style.ScrollbarRounding, export_only_modified);
+        ExportSize_Float("GrabRounding", style_to_export.GrabRounding, ref_style.GrabRounding, export_only_modified);
+        ExportSize_Float("TabRounding", style_to_export.TabRounding, ref_style.TabRounding, export_only_modified);
+    }
+
+    {
+        ImGui::LogText(IM_NEWLINE "// Alignment" IM_NEWLINE);
+
+        ExportSize_ImVec2("WindowTitleAlign", style_to_export.WindowTitleAlign, ref_style.WindowTitleAlign, export_only_modified);
+
+        // for this one we could just save ImGuiDir number, but its more redable to have ImGuiDir_ name
+        if (!export_only_modified || memcmp(&style_to_export.WindowMenuButtonPosition, &ref_style.WindowMenuButtonPosition, sizeof(ImGuiDir)) != 0)
+        {
+            const char* dirName = 0;
+            switch (style_to_export.WindowMenuButtonPosition)
+            {
+            case ImGuiDir_None: dirName = "ImGuiDir_None"; break;
+            case ImGuiDir_Left: dirName = "ImGuiDir_Left"; break;
+            case ImGuiDir_Right: dirName = "ImGuiDir_Right"; break;
+            };
+
+            ImGui::LogText("style.%s%*s= %s;" IM_NEWLINE, "WindowMenuButtonPosition", 25 - (int)strlen("WindowMenuButtonPosition"), "", dirName);
+        }
+
+        // for this one we could just save ImGuiDir number, but its more redable to have ImGuiDir_ name
+        if (!export_only_modified || memcmp(&style_to_export.ColorButtonPosition, &ref_style.ColorButtonPosition, sizeof(ImGuiDir)) != 0)
+        {
+            const char* dirName = 0;
+            switch (style_to_export.ColorButtonPosition)
+            {
+            case ImGuiDir_Left: dirName = "ImGuiDir_Left"; break;
+            case ImGuiDir_Right: dirName = "ImGuiDir_Right"; break;
+            };
+
+            ImGui::LogText("style.%s%*s= %s;" IM_NEWLINE, "ColorButtonPosition", 25 - (int)strlen("ColorButtonPosition"), "", dirName);
+        }
+
+        ExportSize_ImVec2("ButtonTextAlign", style_to_export.ButtonTextAlign, ref_style.ButtonTextAlign, export_only_modified);
+        ExportSize_ImVec2("SelectableTextAlign", style_to_export.SelectableTextAlign, ref_style.SelectableTextAlign, export_only_modified);
+    }
+
+    {
+        ImGui::LogText(IM_NEWLINE "// Safe Area Padding" IM_NEWLINE);
+
+        ExportSize_ImVec2("DisplaySafeAreaPadding", style_to_export.DisplaySafeAreaPadding, ref_style.DisplaySafeAreaPadding, export_only_modified);
+    }
+}
+
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
     // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
@@ -5871,10 +5981,52 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     ImGui::Separator();
 
+    static auto output_dest = 0;
+    static auto output_only_modified = true;
+    if (ImGui::Button("Export Sizes and Colors"))
+    {
+        if (output_dest == 0)
+            ImGui::LogToClipboard();
+        else
+            ImGui::LogToTTY();
+
+        ExportColors(style, *ref, output_only_modified);
+
+        ImGui::LogText(IM_NEWLINE);
+
+        ExportSizes(style, *ref, output_only_modified);
+
+        ImGui::LogFinish();
+    }
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120); ImGui::Combo("##output_type_size_and_colors", &output_dest, "To Clipboard\0To TTY\0");
+    ImGui::SameLine(); ImGui::Checkbox("Only Modified##size_and_colors", &output_only_modified);
+    ImGui::SameLine();
+    HelpMarker("Export Sizes and Colors style");
+
+    ImGui::Separator();
+
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
     {
         if (ImGui::BeginTabItem("Sizes"))
         {
+            static auto output_dest_sizes = 0;
+            static auto output_only_modified_sizes = true;
+            if (ImGui::Button("Export"))
+            {
+                if (output_dest_sizes == 0)
+                    ImGui::LogToClipboard();
+                else
+                    ImGui::LogToTTY();
+
+                ExportSizes(style, *ref, output_only_modified_sizes);
+
+                ImGui::LogFinish();
+            }
+            ImGui::SameLine(); ImGui::SetNextItemWidth(120); ImGui::Combo("##output_type", &output_dest_sizes, "To Clipboard\0To TTY\0");
+            ImGui::SameLine(); ImGui::Checkbox("Only Modified", &output_only_modified_sizes);
+
+            ImGui::Separator();
+
             ImGui::Text("Main");
             ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
@@ -5918,27 +6070,23 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
         if (ImGui::BeginTabItem("Colors"))
         {
-            static int output_dest = 0;
-            static bool output_only_modified = true;
+            static auto output_dest_colors = 0;
+            static auto output_only_modified_colors = true;
             if (ImGui::Button("Export"))
             {
-                if (output_dest == 0)
+                if (output_dest_colors == 0)
                     ImGui::LogToClipboard();
                 else
                     ImGui::LogToTTY();
-                ImGui::LogText("ImVec4* colors = ImGui::GetStyle().Colors;" IM_NEWLINE);
-                for (int i = 0; i < ImGuiCol_COUNT; i++)
-                {
-                    const ImVec4& col = style.Colors[i];
-                    const char* name = ImGui::GetStyleColorName(i);
-                    if (!output_only_modified || memcmp(&col, &ref->Colors[i], sizeof(ImVec4)) != 0)
-                        ImGui::LogText("colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE,
-                            name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
-                }
+
+                ExportColors(style, *ref, output_only_modified_colors);
+
                 ImGui::LogFinish();
             }
-            ImGui::SameLine(); ImGui::SetNextItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0");
-            ImGui::SameLine(); ImGui::Checkbox("Only Modified Colors", &output_only_modified);
+            ImGui::SameLine(); ImGui::SetNextItemWidth(120); ImGui::Combo("##output_type", &output_dest_colors, "To Clipboard\0To TTY\0");
+            ImGui::SameLine(); ImGui::Checkbox("Only Modified", &output_only_modified_colors);
+
+            ImGui::Separator();
 
             static ImGuiTextFilter filter;
             filter.Draw("Filter colors", ImGui::GetFontSize() * 16);
