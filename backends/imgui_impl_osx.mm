@@ -37,6 +37,10 @@ static bool           g_MouseCursorHidden = false;
 static bool           g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
 static bool           g_MouseDown[ImGuiMouseButton_COUNT] = {};
 
+#define MAX_CHARACTERS_PER_FRAME 32
+static int            g_InputCharacterCount = 0;
+static unsigned int   g_InputCharacters[MAX_CHARACTERS_PER_FRAME];
+
 // Undocumented methods for creating cursors.
 @interface NSCursor()
 + (id)_windowResizeNorthWestSouthEastCursor;
@@ -184,6 +188,11 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
+    // Send input characters
+    for (int n = 0; n < g_InputCharacterCount; n++)
+        io.AddInputCharacter(g_InputCharacters[n]);
+    g_InputCharacterCount = 0;
+
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
 }
 
@@ -274,7 +283,10 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         {
             int c = [str characterAtIndex:i];
             if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
-                io.AddInputCharacter((unsigned int)c);
+            {
+                if (g_InputCharacterCount < MAX_CHARACTERS_PER_FRAME)
+                    g_InputCharacters[g_InputCharacterCount++] = (unsigned int)c;
+            }
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);
