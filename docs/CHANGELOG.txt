@@ -51,6 +51,8 @@ Other Changes:
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
 - Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
+- ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
+  This can currently only ever be set by the Freetype renderer.
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): New default for style.
