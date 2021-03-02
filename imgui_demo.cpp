@@ -7388,10 +7388,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                         const float rounding_tr = (rounding_corners & ImDrawCornerFlags_TopRight) ? rounding : 0.0f;
                         const float rounding_br = (rounding_corners & ImDrawCornerFlags_BotRight) ? rounding : 0.0f;
                         const float rounding_bl = (rounding_corners & ImDrawCornerFlags_BotLeft) ? rounding : 0.0f;
-                        draw_list->PathArcToFast2(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
-                        draw_list->PathArcToFast2(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
-                        draw_list->PathArcToFast2(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
-                        draw_list->PathArcToFast2(ImVec2(a.x + rounding_bl, b.y - rounding_bl), rounding_bl, 3, 6);
+                        draw_list->PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
+                        draw_list->PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
+                        draw_list->PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
+                        draw_list->PathArcToFast(ImVec2(a.x + rounding_bl, b.y - rounding_bl), rounding_bl, 3, 6);
                     }
                 };
             };
@@ -7429,12 +7429,12 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::Columns(2);
 # if defined(IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
             ImGui::Text("ArcFast Lookup Table Size: %d", IM_ARRAYSIZE(draw_list->_Data->ArcFastVtx));
-            ImGui::Text("ArcFast Radius Cutoff: %.2f", draw_list->_Data->ArcFastExRadiusCutoff);
+            ImGui::Text("ArcFast Radius Cutoff: %.2f", draw_list->_Data->ArcFastRadiusCutoff);
 # endif
             ImGui::Text("Radius: %.2f", set_radius);
 # if defined(IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
             ImGui::SameLine();
-            if (set_radius < draw_list->_Data->ArcFastExRadiusCutoff)
+            if (set_radius < draw_list->_Data->ArcFastRadiusCutoff)
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
                 ImGui::TextUnformatted("(adaptive)");
@@ -7560,7 +7560,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 for (int n = 0; n < _N; ++n)
                 {
                     draw_list->_Path.resize(0);
-                    draw_list->PathArcToFast2(data.CanvasCenter, data.Radius,
+                    draw_list->PathArcToFast(data.CanvasCenter, data.Radius,
                         (int)(data.AngleStart * 12 / (IM_PI * 2.0f)),
                         (int)(data.AngleEnd * 12 / (IM_PI * 2.0f))
                     );
@@ -7584,7 +7584,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 for (int n = 0; n < _N; ++n)
                 {
                     draw_list->_Path.resize(0);
-                    draw_list->PathArcTo2(data.CanvasCenter, data.Radius, data.AngleStart, data.AngleEnd, 0);
+                    draw_list->PathArcTo(data.CanvasCenter, data.Radius, data.AngleStart, data.AngleEnd, 0);
                 }
             });
 
@@ -7692,7 +7692,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     stats.appendf(
                         "Thickness;Start Angle;Arc Step;Repeats;ArcFastExRadiusCutoff\n"
                         "%f;%f;%f;%d;%f\n\n",
-                        thickness, arc_start, arc_length, N, draw_list->_Data->ArcFastExRadiusCutoff);
+                        thickness, arc_start, arc_length, N, draw_list->_Data->ArcFastRadiusCutoff);
 
                     stats.append("Radius;");
                     for (int test_index = 0; test_index < tests.Size; ++test_index)
