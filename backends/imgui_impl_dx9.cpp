@@ -45,6 +45,12 @@ struct CUSTOMVERTEX
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
+#ifdef IMGUI_USE_BGRA_PACKED_COLOR
+#define IMGUI_COL_TO_DX9_ARGB(_COL)     (_COL)
+#else
+#define IMGUI_COL_TO_DX9_ARGB(_COL)     (((_COL) & 0xFF00FF00) | (((_COL) & 0xFF0000) >> 16) | (((_COL) & 0xFF) << 16))
+#endif
+
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
     // Setup viewport
@@ -157,11 +163,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             vtx_dst->pos[0] = vtx_src->pos.x;
             vtx_dst->pos[1] = vtx_src->pos.y;
             vtx_dst->pos[2] = 0.0f;
-#ifdef IMGUI_USE_BGRA_PACKED_COLOR
-            vtx_dst->col = vtx_src->col;
-#else
-            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000) >> 16) | ((vtx_src->col & 0xFF) << 16); // RGBA --> ARGB for DirectX9
-#endif
+            vtx_dst->col = IMGUI_COL_TO_DX9_ARGB(vtx_src->col);
             vtx_dst->uv[0] = vtx_src->uv.x;
             vtx_dst->uv[1] = vtx_src->uv.y;
             vtx_dst++;
@@ -247,6 +249,13 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
+
+    // Convert RGBA32 to BGRA32 as the earlier is not well supported by DX9 devices
+#ifndef IMGUI_USE_BGRA_PACKED_COLOR
+    if (io.Fonts->TexPixelsUseColors)
+        for (ImU32* p = (ImU32*)pixels, *p_end = p + width * height; p < p_end; p++)
+            *p = IMGUI_COL_TO_DX9_ARGB(*p);
+#endif
 
     // Upload texture to graphics system
     g_FontTexture = NULL;
