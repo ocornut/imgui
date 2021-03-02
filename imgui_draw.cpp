@@ -369,20 +369,15 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 ImDrawListSharedData::ImDrawListSharedData()
 {
     memset(this, 0, sizeof(*this));
+
+    // Sample quarter of the circle.
     for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        const float a = ((float)i * 0.5f * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
 
-    // Sample quarter of the circle.
-    for (int i = 0; i < IM_ARRAYSIZE(ArcFastExVtx); i++)
-    {
-        const float a = ((float)i * 0.5f * IM_PI) / (float)IM_ARRAYSIZE(ArcFastExVtx);
-        ArcFastExVtx[i] = ImVec2(ImCos(a), ImSin(a));
-    }
-
-    ArcFastExRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
@@ -399,7 +394,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
         CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
     }
 
-    ArcFastExRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 // Initialize before use in a new frame. We always have a command ready in the buffer.
@@ -1042,7 +1037,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
 int ImDrawList::_CalcArcAutoSegmentStepSize(float radius) const
 {
-    if (radius <= 0.0f || radius > _Data->ArcFastExRadiusCutoff)
+    if (radius <= 0.0f || radius > _Data->ArcFastRadiusCutoff)
         return 0;
 
     const int n = _CalcCircleAutoSegmentCount(radius);
@@ -1117,23 +1112,23 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
         if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
         {
-            s = _Data->ArcFastExVtx[sample_index];
+            s = _Data->ArcFastVtx[sample_index];
         }
         else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
             s.x = -c.y;
             s.y =  c.x;
         }
         else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
             s.x = -c.x;
             s.y = -c.y;
         }
         else
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
             s.x =  c.y;
             s.y = -c.x;
         }
@@ -1154,23 +1149,23 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
         if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
         {
-            s = _Data->ArcFastExVtx[sample_index];
+            s = _Data->ArcFastVtx[sample_index];
         }
         else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
             s.x = -c.y;
             s.y =  c.x;
         }
         else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
             s.x = -c.x;
             s.y = -c.y;
         }
         else
         {
-            const ImVec2& c = _Data->ArcFastExVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
             s.x =  c.y;
             s.y = -c.x;
         }
@@ -1184,7 +1179,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
     IM_ASSERT(_Path.Data + _Path.Size == out_ptr);
 }
 
-void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
+void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
     if (radius < 0.0f)
         return;
@@ -1194,24 +1189,19 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min_of_12 <= a_max_of_12);
+    IM_ASSERT(a_min <= a_max);
 
-    // For legacy reason the PathArcToFast() always takes angles where 2*PI is represented by 12,
-    // but it is possible to set IM_DRAWLIST_ARCFAST_TESSELATION_MULTIPLIER to a higher value. This should compile to a no-op otherwise.
-#if IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER != 1
-    a_min_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
-    a_max_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
-#endif
-
-    _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
-    for (int a = a_min_of_12; a <= a_max_of_12; a++)
+    // Note that we are adding a point at both a_min and a_max.
+    // If you are trying to draw a full closed circle you don't want the overlapping points!
+    _Path.reserve(_Path.Size + (num_segments + 1));
+    for (int i = 0; i <= num_segments; i++)
     {
-        const ImVec2& c = _Data->ArcFastVtx[a % IM_ARRAYSIZE(_Data->ArcFastVtx)];
-        _Path.push_back(ImVec2(center.x + c.x * radius, center.y + c.y * radius));
+        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+        _Path.push_back(ImVec2(center.x + ImCos(a) * radius, center.y + ImSin(a) * radius));
     }
 }
 
-void ImDrawList::PathArcToFast2(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
+void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
 {
     if (radius < 0.0f)
         return;
@@ -1241,29 +1231,7 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     }
     IM_ASSERT(a_min <= a_max);
 
-    // Note that we are adding a point at both a_min and a_max.
-    // If you are trying to draw a full closed circle you don't want the overlapping points!
-    _Path.reserve(_Path.Size + (num_segments + 1));
-    for (int i = 0; i <= num_segments; i++)
-    {
-        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
-        _Path.push_back(ImVec2(center.x + ImCos(a) * radius, center.y + ImSin(a) * radius));
-    }
-}
-
-void ImDrawList::PathArcTo2(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
-{
-    if (radius < 0.0f)
-        return;
-
-    if (radius == 0.0f)
-    {
-        _Path.push_back(center);
-        return;
-    }
-    IM_ASSERT(a_min <= a_max);
-
-    if (num_segments <= 0 && (radius <= _Data->ArcFastExRadiusCutoff))
+    if (num_segments <= 0 && (radius <= _Data->ArcFastRadiusCutoff))
     {
         // Determine first and last sample in lookup table that belong to the arc.
         const int a_min_sample = (int)ImCeil(IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f));
@@ -1298,7 +1266,7 @@ void ImDrawList::PathArcTo2(const ImVec2& center, float radius, float a_min, flo
             num_segments = arc_segment_count;
         }
 
-        PathArcTo(center, radius, a_min, a_max, num_segments);
+        _PathArcToN(center, radius, a_min, a_max, num_segments);
     }
 }
 

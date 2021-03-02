@@ -636,14 +636,9 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))))
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_ERROR(_N,_RAD)     ((1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))) / (_RAD))
 
-// ImDrawList: You may set this to higher values (e.g. 2 or 3) to increase tessellation of fast rounded corners path.
-#ifndef IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER
-#define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
-#endif
-
 // ImDrawList: Lookup table size for adaptive arc drawing, cover quarter of the circle.
 #ifndef IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE
-#define IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE                   12          // Number of samples in lookup table.
+#define IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE                   12 // Number of samples in lookup table.
 #endif
 #define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          (4 * IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE) // Sample index _PathArcToFastEx() for 360 angle.
 
@@ -660,9 +655,8 @@ struct IMGUI_API ImDrawListSharedData
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
     // [Internal] Lookup tables
-    ImVec2          ArcFastVtx[12 * IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER];  // FIXME: Bake rounded corners fill/borders in atlas
-    ImVec2          ArcFastExVtx[IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];  // Sample points on the quarter of the circle.
-    float           ArcFastExRadiusCutoff;                                // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
+    ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];  // Sample points on the quarter of the circle.
+    float           ArcFastRadiusCutoff;                                // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
     const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
 
