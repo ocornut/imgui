@@ -50,6 +50,7 @@ Other Changes:
   with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
+- Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
 - Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
 - ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
   This can currently only ever be set by the Freetype renderer.
