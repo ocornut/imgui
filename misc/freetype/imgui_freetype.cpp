@@ -6,6 +6,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a prefered texture format.
 //  2021/01/28: added support for color-layered glyphs via ImGuiFreeTypeBuilderFlags_LoadColor (require Freetype 2.10+).
 //  2021/01/26: simplified integration by using '#define IMGUI_ENABLE_FREETYPE'.
 //              renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API. removed ImGuiFreeType::BuildFontAtlas().
@@ -105,7 +106,7 @@ namespace
         FT_Int      OffsetX;            // The distance from the origin ("pen position") to the left of the glyph.
         FT_Int      OffsetY;            // The distance from the origin to the top of the glyph. This is usually a value < 0.
         float       AdvanceX;           // The distance from the origin to the origin of the next glyph. This is usually a value > 0.
-        bool        IsColored;
+        bool        IsColored;          // The glyph is colored
     };
 
     // Font parameters and metrics.
@@ -605,6 +606,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
 
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
+    bool tex_use_colors = false;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
@@ -668,13 +670,15 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
             dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
 
-            IM_ASSERT(dst_font->Glyphs.back().Codepoint == src_glyph.Codepoint);
+            ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
+            IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
             if (src_glyph.Info.IsColored)
-                dst_font->Glyphs.back().Colored = true;
+                dst_glyph->Colored = tex_use_colors = true;
         }
 
         src_tmp.Rects = NULL;
     }
+    atlas->TexPixelsUseColors = tex_use_colors;
 
     // Cleanup
     for (int buf_i = 0; buf_i < buf_bitmap_buffers.Size; buf_i++)

@@ -13,6 +13,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-03-03: DirectX9: Added support for IMGUI_USE_BGRA_PACKED_COLOR in user's imconfig file.
 //  2021-02-18: DirectX9: Change blending equation to preserve alpha in output buffer.
 //  2019-05-29: DirectX9: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX9: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
@@ -30,8 +31,6 @@
 
 // DirectX
 #include <d3d9.h>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
 
 // DirectX data
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
@@ -47,6 +46,12 @@ struct CUSTOMVERTEX
     float    uv[2];
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
+
+#ifdef IMGUI_USE_BGRA_PACKED_COLOR
+#define IMGUI_COL_TO_DX9_ARGB(_COL)     (_COL)
+#else
+#define IMGUI_COL_TO_DX9_ARGB(_COL)     (((_COL) & 0xFF00FF00) | (((_COL) & 0xFF0000) >> 16) | (((_COL) & 0xFF) << 16))
+#endif
 
 // Forward Declarations
 static void ImGui_ImplDX9_InitPlatformInterface();
@@ -148,7 +153,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
 
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
-    // FIXME-OPT: This is a waste of resource, the ideal is to use imconfig.h and
+    // FIXME-OPT: This is a minor waste of resource, the ideal is to use imconfig.h and
     //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
     //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
     CUSTOMVERTEX* vtx_dst;
@@ -166,7 +171,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             vtx_dst->pos[0] = vtx_src->pos.x;
             vtx_dst->pos[1] = vtx_src->pos.y;
             vtx_dst->pos[2] = 0.0f;
-            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000) >> 16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
+            vtx_dst->col = IMGUI_COL_TO_DX9_ARGB(vtx_src->col);
             vtx_dst->uv[0] = vtx_src->uv.x;
             vtx_dst->uv[1] = vtx_src->uv.y;
             vtx_dst++;
@@ -263,6 +268,13 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
+
+    // Convert RGBA32 to BGRA32 as the earlier is not well supported by DX9 devices
+#ifndef IMGUI_USE_BGRA_PACKED_COLOR
+    if (io.Fonts->TexPixelsUseColors)
+        for (ImU32* p = (ImU32*)pixels, *p_end = p + width * height; p < p_end; p++)
+            *p = IMGUI_COL_TO_DX9_ARGB(*p);
+#endif
 
     // Upload texture to graphics system
     g_FontTexture = NULL;

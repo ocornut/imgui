@@ -19,6 +19,10 @@
 #endif
 #include <windows.h>
 #include <tchar.h>
+#include <dwmapi.h>
+
+// Configuration flags to add in your imconfig.h file:
+//#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD              // Disable gamepad support (this used to be meaningful before <1.81) but we know load XInput dynamically so the option is less relevant now.
 
 // Using XInput for gamepad (will load DLL dynamically)
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -30,6 +34,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-02-18: Added ImGui_ImplWin32_EnableAlphaCompositing(). Non Visual Studio users will need to link with dwmapi.lib (MinGW/gcc: use -ldwmapi).
 //  2021-02-17: Fixed ImGui_ImplWin32_EnableDpiAwareness() attempting to get SetProcessDpiAwareness from shcore.dll on Windows 8 whereas it is only supported on Windows 8.1.
 //  2021-01-25: Inputs: Dynamically loading XInput DLL.
 //  2020-12-04: Misc: Fixed setting of io.DisplaySize to invalid/uninitialized data when after hwnd has been closed.
@@ -547,7 +552,7 @@ void ImGui_ImplWin32_EnableDpiAwareness()
 }
 
 #if defined(_MSC_VER) && !defined(NOGDI)
-#pragma comment(lib, "gdi32")   // Link with gdi32.lib for GetDeviceCaps()
+#pragma comment(lib, "gdi32")   // Link with gdi32.lib for GetDeviceCaps(). MinGW will require linking with '-lgdi32'
 #endif
 
 float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
@@ -588,7 +593,7 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
 #endif
 
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
 #define HAS_WIN32_IME   1
 #include <imm.h>
 #ifdef _MSC_VER
@@ -926,6 +931,46 @@ static void ImGui_ImplWin32_InitPlatformInterface()
 static void ImGui_ImplWin32_ShutdownPlatformInterface()
 {
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(NULL));
+}
+
+//---------------------------------------------------------------------------------------------------------
+// Transparency related helpers (optional)
+//--------------------------------------------------------------------------------------------------------
+
+#if defined(_MSC_VER)
+#pragma comment(lib, "dwmapi")  // Link with dwmapi.lib. MinGW will require linking with '-ldwmapi'
+#endif
+
+// [experimental]
+// Borrowed from GLFW's function updateFramebufferTransparency() in src/win32_window.c
+// (the Dwm* functions are Vista era functions but we are borrowing logic from GLFW)
+void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
+{
+    if (!IsWindowsVistaOrGreater())
+        return;
+
+    BOOL composition;
+    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition)
+        return;
+
+    BOOL opaque;
+    DWORD color;
+    if (IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque))
+    {
+        HRGN region = ::CreateRectRgn(0, 0, -1, -1);
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+        bb.hRgnBlur = region;
+        bb.fEnable = TRUE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+        ::DeleteObject(region);
+    }
+    else
+    {
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+    }
 }
 
 //---------------------------------------------------------------------------------------------------------

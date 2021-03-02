@@ -8,9 +8,7 @@ a 13 pixels high, pixel-perfect font used by default. We embed it in the source 
 You may also load external .TTF/.OTF files. 
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
 
-**Read the FAQ:** https://www.dearimgui.org/faq (there is a Fonts section!)
-
-**Use the Discord server**: http://discord.dearimgui.org and not the GitHub issue tracker for basic font loading questions.
+**Also read the FAQ:** https://www.dearimgui.org/faq (there is a Fonts section!)
 
 ## Index
 - [Readme First](#readme-first)

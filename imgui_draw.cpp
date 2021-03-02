@@ -1830,6 +1830,7 @@ void    ImFontAtlas::ClearTexData()
         IM_FREE(TexPixelsRGBA32);
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
+    TexPixelsUseColors = false;
 }
 
 void    ImFontAtlas::ClearFonts()

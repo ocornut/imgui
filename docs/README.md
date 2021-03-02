@@ -116,7 +116,7 @@ On most platforms and when using C++, **you should be able to use a combination 
 Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the [FAQ](https://www.dearimgui.org/faq), comments, and some of the examples/ application!**
 
 Officially maintained backends/bindings (in repository):
-- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, WebGPU.
+- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, Vulkan, WebGPU.
 - Platforms: GLFW, SDL2, Win32, Glut, OSX.
 - Frameworks: Emscripten, Allegro5, Marmalade.
 
@@ -162,9 +162,7 @@ See: [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, a
 
 See: [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#about-the-imgui-paradigm) to read/learn about the Immediate Mode GUI paradigm.
 
-If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: you can use [Discord server](http://discord.dearimgui.org).
-
-Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
+For questions, bug reports, requests, feedback, you may post on [GitHub Issues](https://github.com/ocornut/imgui/issues) or [GitHub Discussions](https://github.com/ocornut/imgui/discussions). Please read and fill the New Issue template carefully.
 
 Private support is available for paying business customers (E-mail: _contact @ dearimgui dot com_).
 
@@ -183,7 +181,7 @@ How to help
 
 **How can I help?**
 
-- You may participate in the [Discord server](http://discord.dearimgui.org), [GitHub forum/issues](https://github.com/ocornut/imgui/issues).
+- See [GitHub Forum/issues](https://github.com/ocornut/imgui/issues) and [Github Discussions](https://github.com/ocornut/imgui/discussions).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
 - Have your company financially support this project (please reach by e-mail)

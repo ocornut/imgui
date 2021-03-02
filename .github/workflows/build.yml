@@ -68,7 +68,7 @@ jobs:
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (with IMGUI_DISABLE_WIN32_FUNCTIONS)
         shell: bash
@@ -81,7 +81,7 @@ jobs:
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (as DLL)
         shell: cmd

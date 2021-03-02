@@ -5,11 +5,11 @@ This document holds the user-facing changelog that we also use in release notes.
 We generally fold multiple commits pertaining to the same topic as a single entry.
 Changes to backends are also included within the individual .cpp files of each backend.
 
-RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
-REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
-COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
-FAQ                             https://www.dearimgui.org/faq/
-WIKI                            https://github.com/ocornut/imgui/wiki
+RELEASE NOTES:          https://github.com/ocornut/imgui/releases
+REPORT ISSUES:          https://github.com/ocornut/imgui/issues
+DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
+FAQ                     https://www.dearimgui.org/faq/
+WIKI                    https://github.com/ocornut/imgui/wiki
 
 WHEN TO UPDATE?
 
@@ -107,20 +107,36 @@ Breaking Changes:
 
 - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
+- Win32+MinGW: Re-enabled IME functions by default even under MinGW. In July 2016, issue #738 had me incorrectly
+  disable those default functions for MinGW. MinGW users should: either link with -limm32, either set their
+  imconfig file with '#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS'. (#2590, #738) [@actboy168]
+- Backends: Win32: Pragma linking with dwmapi.lib (Vista-era, ~9 kb). MinGW users will need to link with -ldwmapi.
 
 Other Changes:
 
+- DragScalar: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
+  with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
+- Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
+  area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
+- Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
+- Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
+- ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
+  This can currently only ever be set by the Freetype renderer.
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): New default for style.
+- Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with 
+  alpha compositing and transparent windows. (#2766, #3447 etc.).
 - Backends: OpenGL, Vulkan, DX9, DX10, DX11, DX12, Metal, WebGPU, Allegro: Rework blending equation to
   preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently
   accross all backends), facilitating compositing of the output buffer with another buffer.
   (#2693, #2764, #2766, #2873, #3447, #3813, #3816) [@ocornut, @thedmd, @ShawnM427, @Ubpa, @aiekick]
+- Backends: DX9: Fix to support IMGUI_USE_BGRA_PACKED_COLOR. (#3844) [@Xiliusha]
+- Backends: DX9: Fix to support colored glyphs, using newly introduced 'TexPixelsUseColors' info. (#3844)
 - Examples: Reworked setup of clear color to be compatible with transparent values.
 - CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if
   scheduled builds builds are not required. [@rokups]
->>>>>>> master
+- Log/Capture: Added LogTextV, a va_list variant of LogText. [@PathogenDavid]
 
 
 -----------------------------------------------------------------------

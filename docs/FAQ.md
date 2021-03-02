@@ -48,13 +48,13 @@ or view this file with any Markdown viewer.
 ### Q: Where is the documentation?
 
 **This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.**
+- The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
 - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
 - See documentation: [Backends](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md), [Examples](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md), [Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
-- The [Wiki](https://github.com/ocornut/imgui/wiki) has many resources and links.
 - The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
-- The [Issues](https://github.com/ocornut/imgui/issues) section can be searched for past questions and issues.
+- The [Issues](https://github.com/ocornut/imgui/issues) and [Discussions](https://github.com/ocornut/imgui/discussions) sections can be searched for past questions and issues.
 - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
 - The `ImGui::ShowMetricsWindow()` function exposes lots of internal information and tools. Although it is primary designed as a debugging tool, having access to that information tends to help understands concepts.
 
@@ -94,7 +94,8 @@ You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) bran
 
 Read [EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
 Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
-Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp).
+Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp). <BR>
+The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
 
 ##### [Return to Index](#index)
 
@@ -103,15 +104,25 @@ Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/
 ### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
 
 You can read the `io.WantCaptureMouse`, `io.WantCaptureKeyboard` and `io.WantTextInput` flags from the ImGuiIO structure.
+- When `io.WantCaptureMouse` is set, you need to discard/hide the mouse inputs from your underlying application.
+- When `io.WantCaptureKeyboard` is set, you need to discard/hide the keyboard inputs from your underlying application.
+- When `io.WantTextInput` is set, you can notify your OS/engine to popup an on-screen keyboard, if available (e.g. on a mobile phone, or console OS).
 
-e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
+Important: you should always pass your mouse/keyboard inputs to Dear ImGui, regardless of the value `io.WantCaptureMouse`/`io.WantCaptureKeyboard`. This is because e.g. we need to detect that you clicked in the void to unfocus its own windows, and other reasons.
 
-- When `io.WantCaptureMouse` is set, imgui wants to use your mouse state, and you may want to discard/hide the inputs from the rest of your application.
-- When `io.WantCaptureKeyboard` is set, imgui wants to use your keyboard state, and you may want to discard/hide the inputs from the rest of your application.
-- When `io.WantTextInput` is set to may want to notify your OS to popup an on-screen keyboard, if available (e.g. on a mobile phone, or console OS).
+```cpp
+void MyLowLevelMouseButtonHandler(int button, bool down)
+{
+    // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
+    ImGuiIO& io = ImGui::GetIO();
+    io.MouseDown[button] = down;
+    
+    // (2) ONLY forward mouse data to your underlying app/game.
+    if (!io.WantCaptureMouse)
+        my_game->HandleMouseData(...);
+}
+```
 
-**Note:** You should always pass your mouse/keyboard inputs to Dear ImGui, even when the io.WantCaptureXXX flag are set false.
- This is because imgui needs to detect that you clicked in the void to unfocus its own windows.
 
 **Note:** The `io.WantCaptureMouse` is more correct that any manual attempt to "check if the mouse is hovering a window" (don't do that!). It handle mouse dragging correctly (both dragging that started over your application or over a Dear ImGui window) and handle e.g. popup and modal windows blocking inputs.
 
@@ -452,8 +463,9 @@ ImGui::End();
 - To generate colors: you can use the macro `IM_COL32(255,255,255,255)` to generate them at compile time, or use `ImGui::GetColorU32(IM_COL32(255,255,255,255))` or `ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f))` to generate a color that is multiplied by the current value of `style.Alpha`.
 - Math operators: if you have setup `IM_VEC2_CLASS_EXTRA` in `imconfig.h` to bind your own math types, you can use your own math types and their natural operators instead of ImVec2. ImVec2 by default doesn't export any math operators in the public API. You may use `#define IMGUI_DEFINE_MATH_OPERATORS` `#include "imgui_internal.h"` to use the internally defined math operators, but instead prefer using your own math library and set it up in `imconfig.h`.
 - You can use `ImGui::GetBackgroundDrawList()` or `ImGui::GetForegroundDrawList()` to access draw lists which will be displayed behind and over every other dear imgui windows (one bg/fg drawlist per viewport). This is very convenient if you need to quickly display something on the screen that is not associated to a dear imgui window.
-- You can also create your own empty window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
-- You can create your own ImDrawList instance. You'll need to initialize them with `ImGui::GetDrawListSharedData()`, or create your own instancing ImDrawListSharedData, and then call your renderer function with your own ImDrawList or ImDrawData data.
+- You can also create your own empty window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via `GetWindowDrawList()` and draw to it in any way you like.
+`- You can create your own ImDrawList instance. You'll need to initialize them with `ImGui::GetDrawListSharedData()`, or create your own instancing ImDrawListSharedData`, and then call your renderer function with your own ImDrawList or ImDrawData data.
+- Looking for fun? The [ImDrawList coding party 2020](https://github.com/ocornut/imgui/issues/3606) thread is full of "don't do this at home" extreme uses of the ImDrawList API.
 
 ##### [Return to Index](#index)
 
@@ -599,6 +611,7 @@ You may take a look at:
 
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
+- [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors)
 - [Gallery](https://github.com/ocornut/imgui/issues/3488)
 
 ##### [Return to Index](#index)
@@ -643,7 +656,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 ### Q: How can I help?
 - Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding we can hire more people working on this project.
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
-- If you are experienced with Dear ImGui and C++, look at the [GitHub Issues](https://github.com/ocornut/imgui/issues), look at the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
+- If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
 You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3488). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
