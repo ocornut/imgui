@@ -198,67 +198,131 @@ static IDirect3DIndexBuffer9*       g_pIB              = NULL;
 static int                          g_VertexBufferSize = 5000;
 static int                          g_IndexBufferSize  = 10000;
 // Direct3D9 programmable rendering pipeline data
+static bool                         g_IsShaderPipeline = false;
 static IDirect3DVertexDeclaration9* g_pInputLayout     = NULL;
 static IDirect3DVertexShader9*      g_pVertexShader    = NULL;
 static IDirect3DPixelShader9*       g_pPixelShader     = NULL;
 
+// Setup render state
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
-    // Setup viewport
-    D3DVIEWPORT9 vp;
-    vp.X = vp.Y = 0;
-    vp.Width = (DWORD)draw_data->DisplaySize.x;
-    vp.Height = (DWORD)draw_data->DisplaySize.y;
-    vp.MinZ = 0.0f;
-    vp.MaxZ = 1.0f;
-    g_pd3dDevice->SetViewport(&vp);
-
-    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
-    g_pd3dDevice->SetPixelShader(NULL);
-    g_pd3dDevice->SetVertexShader(NULL);
-    g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-    g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
-    g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    g_pd3dDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-    g_pd3dDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-    g_pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    g_pd3dDevice->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
-    g_pd3dDevice->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
-    g_pd3dDevice->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
-    g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
-    g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
-    g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, FALSE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-
+    IDirect3DDevice9* ctx = g_pd3dDevice;
+    
     // Setup orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
-    // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
+    // DisplayPos is (0,0) for single viewport apps.
+    // Being agnostic of <DirectXMath.h> can be used, we aren't relying on DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
+    // D3DX, <d3dx9.h> and D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() is not recommand. https://walbourn.github.io/where-is-the-directx-sdk-2021-edition/
+    float L = draw_data->DisplayPos.x + 0.5f;
+    float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
+    float T = draw_data->DisplayPos.y + 0.5f;
+    float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
+    const D3DMATRIX mat_projection =
+    { { {
+        2.0f/(R-L),   0.0f,         0.0f,  0.0f,
+        0.0f,         2.0f/(T-B),   0.0f,  0.0f,
+        0.0f,         0.0f,         0.5f,  0.0f,
+        (L+R)/(L-R),  (T+B)/(B-T),  0.5f,  1.0f,
+    } } };
+    
+    // [IA Stage]
+    
+    if (!g_IsShaderPipeline)
     {
-        float L = draw_data->DisplayPos.x + 0.5f;
-        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
-        float T = draw_data->DisplayPos.y + 0.5f;
-        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
-        D3DMATRIX mat_identity = { { { 1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f } } };
-        D3DMATRIX mat_projection =
-        { { {
-            2.0f/(R-L),   0.0f,         0.0f,  0.0f,
-            0.0f,         2.0f/(T-B),   0.0f,  0.0f,
-            0.0f,         0.0f,         0.5f,  0.0f,
-            (L+R)/(L-R),  (T+B)/(B-T),  0.5f,  1.0f
-        } } };
-        g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat_identity);
-        g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat_identity);
-        g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat_projection);
+        ctx->SetFVF(D3DFVF_CUSTOMVERTEX);
+        ctx->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
     }
+    else
+    {
+        ctx->SetVertexDeclaration(g_pInputLayout);
+        ctx->SetStreamSource(0, g_pVB, 0, sizeof(ImDrawVert));
+    }
+    ctx->SetStreamSourceFreq(0, 1);
+    ctx->SetIndices(g_pIB);
+    
+    // [VS Stage]
+    
+    if (!g_IsShaderPipeline)
+    {
+        const D3DMATRIX mat_identity =
+        { { {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f,
+        } } };
+        ctx->SetTransform(D3DTS_WORLD, &mat_identity);
+        ctx->SetTransform(D3DTS_VIEW, &mat_identity);
+        ctx->SetTransform(D3DTS_PROJECTION, &mat_projection);
+        ctx->SetVertexShader(NULL);
+    }
+    else
+    {
+        ctx->SetVertexShaderConstantF(0, (float*)&mat_projection, 4); // float4x4 matrix
+        ctx->SetVertexShader(g_pVertexShader);
+    }
+    
+    // [RS Stage]
+    
+    // Rasterizer state
+    ctx->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+    ctx->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    ctx->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+    ctx->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, FALSE);
+    ctx->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, FALSE);
+    // Setup viewport
+    const D3DVIEWPORT9 viewport = { 0, 0, (DWORD)draw_data->DisplaySize.x, (DWORD)draw_data->DisplaySize.y, 0.0f, 1.0f };
+    ctx->SetViewport(&viewport);
+    
+    // [PS Stage]
+    
+    // Sampler state
+    ctx->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    ctx->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    ctx->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    ctx->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    if (!g_IsShaderPipeline)
+    {
+        ctx->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+        ctx->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+        ctx->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+        ctx->SetPixelShader(NULL);
+    }
+    else
+    {
+        // Pixel shader will replace texture stage state
+        ctx->SetPixelShader(g_pPixelShader);
+    }
+    
+    // [OM Stage]
+    
+    // Depth stencil state
+    ctx->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
+    ctx->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+    // Blend state
+    ctx->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    ctx->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
+    ctx->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+    ctx->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    ctx->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    ctx->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
+    ctx->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+    ctx->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
+    const DWORD mask = D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA;
+    ctx->SetRenderState(D3DRS_COLORWRITEENABLE, mask);
+    
+    // [Fixed Pipeline]
+    
+    // disable these features, especially lighting
+    ctx->SetRenderState(D3DRS_CLIPPING, FALSE);
+    ctx->SetRenderState(D3DRS_CLIPPLANEENABLE, 0);
+    ctx->SetRenderState(D3DRS_LIGHTING, FALSE);
+    ctx->SetRenderState(D3DRS_POINTSPRITEENABLE, FALSE);
+    ctx->SetRenderState(D3DRS_FOGENABLE, FALSE);
+    ctx->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 }
 
 // Render function.
@@ -267,7 +331,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
-
+    
     // Create and grow buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
     {
@@ -283,18 +347,18 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         if (g_pd3dDevice->CreateIndexBuffer(g_IndexBufferSize * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, sizeof(ImDrawIdx) == 2 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, D3DPOOL_DEFAULT, &g_pIB, NULL) < 0)
             return;
     }
-
+    
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = NULL;
     if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
         return;
-
+    
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
     D3DMATRIX last_world, last_view, last_projection;
     g_pd3dDevice->GetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
-
+    
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
     // FIXME-OPT: This is a minor waste of resource, the ideal is to use imconfig.h and
     //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
@@ -325,13 +389,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     }
     g_pVB->Unlock();
     g_pIB->Unlock();
-    g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
-    g_pd3dDevice->SetIndices(g_pIB);
-    g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-
+    
     // Setup desired DX state
     ImGui_ImplDX9_SetupRenderState(draw_data);
-
+    
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     int global_vtx_offset = 0;
@@ -363,12 +424,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         global_idx_offset += cmd_list->IdxBuffer.Size;
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
-
+    
     // Restore the DX9 transform
     g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
-
+    
     // Restore the DX9 state
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
@@ -380,7 +441,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx9";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-
+    
     g_pd3dDevice = device;
     g_pd3dDevice->AddRef();
     return true;
@@ -410,7 +471,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
         pixels = (unsigned char*)dst_start;
     }
 #endif
-
+    
     // Upload texture to graphics system
     g_FontTexture = NULL;
     if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
@@ -421,7 +482,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     for (int y = 0; y < height; y++)
         memcpy((unsigned char*)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
     g_FontTexture->UnlockRect(0);
-
+    
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)g_FontTexture);
 
