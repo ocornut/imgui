@@ -204,6 +204,11 @@ static IDirect3DVertexDeclaration9* g_pInputLayout     = NULL;
 static IDirect3DVertexShader9*      g_pVertexShader    = NULL;
 static IDirect3DPixelShader9*       g_pPixelShader     = NULL;
 
+// Backend names (in order to identify and debug easier)
+static const char* IMGUI_IMPL_D3D9_BACKEND_NAME = "imgui_impl_dx9";
+static const char* IMGUI_IMPL_D3D9_BACKEND_NAME_FIXED = "imgui_impl_dx9 (fixed)";
+static const char* IMGUI_IMPL_D3D9_BACKEND_NAME_SHADER = "imgui_impl_dx9 (shader)";
+
 // Setup render state
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
@@ -424,6 +429,16 @@ static bool ImGui_ImplDX9_CreateBuffers(ImDrawData* draw_data)
     
     return true;
 }
+static bool ImGui_ImplDX9_CreateShaderPipeline()
+{
+    if (D3D_OK != g_pd3dDevice->CreateVertexDeclaration(g_InputLayoutData, &g_pInputLayout))
+        return false;
+    if (D3D_OK != g_pd3dDevice->CreateVertexShader((DWORD*)g_VertexShaderData, &g_pVertexShader))
+        return false;
+    if (D3D_OK != g_pd3dDevice->CreatePixelShader((DWORD*)g_PixelShaderData, &g_pPixelShader))
+        return false;
+    return true;
+}
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
@@ -462,16 +477,6 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
         ImGui::MemFree(pixels);
 #endif
 
-    return true;
-}
-static bool ImGui_ImplDX9_CreateShaderPipeline()
-{
-    if (D3D_OK != g_pd3dDevice->CreateVertexDeclaration(g_InputLayoutData, &g_pInputLayout))
-        return false;
-    if (D3D_OK != g_pd3dDevice->CreateVertexShader((DWORD*)g_VertexShaderData, &g_pVertexShader))
-        return false;
-    if (D3D_OK != g_pd3dDevice->CreatePixelShader((DWORD*)g_PixelShaderData, &g_pPixelShader))
-        return false;
     return true;
 }
 
@@ -552,7 +557,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.BackendRendererName = "imgui_impl_dx9";
+    io.BackendRendererName = IMGUI_IMPL_D3D9_BACKEND_NAME;
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     
     return true;
@@ -570,7 +575,12 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
         return false;
     if (!ImGui_ImplDX9_CreateFontsTexture())
         return false;
-    ImGui_ImplDX9_CreateShaderPipeline(); // Shader pipeline is optional
+    g_IsShaderPipeline = ImGui_ImplDX9_CreateShaderPipeline(); // Shader pipeline is optional
+    // g_IsShaderPipeline = false; // still want to disable it
+    if (!g_IsShaderPipeline)
+        ImGui::GetIO().BackendRendererName = IMGUI_IMPL_D3D9_BACKEND_NAME_FIXED;
+    else
+        ImGui::GetIO().BackendRendererName = IMGUI_IMPL_D3D9_BACKEND_NAME_SHADER;
     return true;
 }
 
