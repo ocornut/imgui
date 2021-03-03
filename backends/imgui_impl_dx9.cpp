@@ -225,25 +225,16 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
         (L+R)/(L-R),  (T+B)/(B-T),  0.5f,  1.0f,
     } } };
     
-    // [IA Stage]
+    // [IA Stage] & [VS Stage] & [PS Stage]
     
+    ctx->SetStreamSourceFreq(0, 1); // no instantiated drawing
+    ctx->SetIndices(g_pIB);
     if (!g_IsShaderPipeline)
     {
+        // Vertex buffer
         ctx->SetFVF(D3DFVF_CUSTOMVERTEX);
         ctx->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
-    }
-    else
-    {
-        ctx->SetVertexDeclaration(g_pInputLayout);
-        ctx->SetStreamSource(0, g_pVB, 0, sizeof(ImDrawVert));
-    }
-    ctx->SetStreamSourceFreq(0, 1);
-    ctx->SetIndices(g_pIB);
-    
-    // [VS Stage]
-    
-    if (!g_IsShaderPipeline)
-    {
+        // Transforms
         const D3DMATRIX mat_identity =
         { { {
             1.0f, 0.0f, 0.0f, 0.0f,
@@ -254,13 +245,33 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
         ctx->SetTransform(D3DTS_WORLD, &mat_identity);
         ctx->SetTransform(D3DTS_VIEW, &mat_identity);
         ctx->SetTransform(D3DTS_PROJECTION, &mat_projection);
+        // texture stage state
+        ctx->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+        ctx->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+        ctx->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+        // No shaders
         ctx->SetVertexShader(NULL);
+        ctx->SetPixelShader(NULL);
     }
     else
     {
+        // Vertex buffer
+        ctx->SetVertexDeclaration(g_pInputLayout);
+        ctx->SetStreamSource(0, g_pVB, 0, sizeof(ImDrawVert));
+        // Constant buffer
         ctx->SetVertexShaderConstantF(0, (float*)&mat_projection, 4); // float4x4 matrix
+        // Shaders
         ctx->SetVertexShader(g_pVertexShader);
+        ctx->SetPixelShader(g_pPixelShader);
     }
+    // Sampler state
+    ctx->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    ctx->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    ctx->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    ctx->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
     
     // [RS Stage]
     
@@ -273,29 +284,6 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     // Setup viewport
     const D3DVIEWPORT9 viewport = { 0, 0, (DWORD)draw_data->DisplaySize.x, (DWORD)draw_data->DisplaySize.y, 0.0f, 1.0f };
     ctx->SetViewport(&viewport);
-    
-    // [PS Stage]
-    
-    // Sampler state
-    ctx->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    ctx->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-    ctx->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    ctx->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    if (!g_IsShaderPipeline)
-    {
-        ctx->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-        ctx->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-        ctx->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-        ctx->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-        ctx->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-        ctx->SetPixelShader(NULL);
-    }
-    else
-    {
-        // Pixel shader will replace texture stage state
-        ctx->SetPixelShader(g_pPixelShader);
-    }
     
     // [OM Stage]
     
