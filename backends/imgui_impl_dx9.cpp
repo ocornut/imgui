@@ -27,29 +27,180 @@
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
 
-// DirectX
+// Direct3D9
 #include <d3d9.h>
+#ifdef IMGUI_USE_BGRA_PACKED_COLOR
+#define IMGUI_COL_TO_DX9_ARGB(_COL) (_COL)
+#else
+#define IMGUI_COL_TO_DX9_ARGB(_COL) (((_COL) & 0xFF00FF00) | (((_COL) & 0xFF0000) >> 16) | (((_COL) & 0xFF) << 16))
+#endif
 
-// DirectX data
-static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
-static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
-static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
-static LPDIRECT3DTEXTURE9       g_FontTexture = NULL;
-static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
-
+// Direct3D9 fixed rendering pipeline
 struct CUSTOMVERTEX
 {
     float    pos[3];
     D3DCOLOR col;
     float    uv[2];
 };
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
+static const DWORD D3DFVF_CUSTOMVERTEX = (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1);
 
-#ifdef IMGUI_USE_BGRA_PACKED_COLOR
-#define IMGUI_COL_TO_DX9_ARGB(_COL)     (_COL)
-#else
-#define IMGUI_COL_TO_DX9_ARGB(_COL)     (((_COL) & 0xFF00FF00) | (((_COL) & 0xFF0000) >> 16) | (((_COL) & 0xFF) << 16))
-#endif
+// Direct3D9 programmable rendering pipeline
+static const D3DVERTEXELEMENT9 g_InputLayoutData[4] = {
+    // Input vertex layout of default ImDrawVert
+    { 0,  0, D3DDECLTYPE_FLOAT2  , D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 },
+    { 0,  8, D3DDECLTYPE_FLOAT2  , D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
+    { 0, 16, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR   , 0 },
+    D3DDECL_END(),
+};
+static const BYTE g_VertexShaderData[] = {
+    // HLSL source code
+    /*
+        float4x4 mvp : register(c0);
+        
+        struct VS_Input
+        {
+            float2 pos : POSITION0;
+            float2 uv  : TEXCOORD0;
+            float4 col : COLOR0;
+        };
+        
+        struct VS_Output
+        {
+            float4 pos : POSITION;
+            float2 uv  : TEXCOORD0;
+            float4 col : COLOR0;
+        };
+        
+        VS_Output main(VS_Input input)
+        {
+            VS_Output output;
+            
+            output.pos = mul(mvp, float4(input.pos.x, input.pos.y, 0.0f, 1.0f));
+            output.uv = input.uv;
+            output.col = input.col;
+            
+            return output;
+        };
+    */
+    // Precompile with Visual Studio 2019 HLSL compiler, vs_2_0
+       0,   2, 254, 255, 254, 255, 
+      30,   0,  67,  84,  65,  66, 
+      28,   0,   0,   0,  75,   0, 
+       0,   0,   0,   2, 254, 255, 
+       1,   0,   0,   0,  28,   0, 
+       0,   0,   0,   1,   0,   0, 
+      68,   0,   0,   0,  48,   0, 
+       0,   0,   2,   0,   0,   0, 
+       4,   0,   2,   0,  52,   0, 
+       0,   0,   0,   0,   0,   0, 
+     109, 118, 112,   0,   3,   0, 
+       3,   0,   4,   0,   4,   0, 
+       1,   0,   0,   0,   0,   0, 
+       0,   0, 118, 115,  95,  50, 
+      95,  48,   0,  77, 105,  99, 
+     114, 111, 115, 111, 102, 116, 
+      32,  40,  82,  41,  32,  72, 
+      76,  83,  76,  32,  83, 104, 
+      97, 100, 101, 114,  32,  67, 
+     111, 109, 112, 105, 108, 101, 
+     114,  32,  49,  48,  46,  49, 
+       0, 171,  31,   0,   0,   2, 
+       0,   0,   0, 128,   0,   0, 
+      15, 144,  31,   0,   0,   2, 
+       5,   0,   0, 128,   1,   0, 
+      15, 144,  31,   0,   0,   2, 
+      10,   0,   0, 128,   2,   0, 
+      15, 144,   5,   0,   0,   3, 
+       0,   0,  15, 128,   0,   0, 
+      85, 144,   1,   0, 228, 160, 
+       4,   0,   0,   4,   0,   0, 
+      15, 128,   0,   0, 228, 160, 
+       0,   0,   0, 144,   0,   0, 
+     228, 128,   2,   0,   0,   3, 
+       0,   0,  15, 192,   0,   0, 
+     228, 128,   3,   0, 228, 160, 
+       1,   0,   0,   2,   0,   0, 
+       3, 224,   1,   0, 228, 144, 
+       1,   0,   0,   2,   0,   0, 
+      15, 208,   2,   0, 228, 144, 
+     255, 255,   0,   0
+};
+static const BYTE g_PixelShaderData[] = {
+    // HLSL source code
+    /*
+        sampler tex0 : register(s0);
+        
+        struct PS_Input
+        {
+            float4 pos : VPOS;
+            float2 uv  : TEXCOORD0;
+            float4 col : COLOR0;
+        };
+        
+        struct PS_Output
+        {
+            float4 col : COLOR;
+        };
+        
+        PS_Output main(PS_Input input)
+        {
+            PS_Output output;
+            
+            output.col = input.col * tex2D(tex0, input.uv);
+            
+            return output;
+        };
+    */
+    // Precompile with Visual Studio 2019 HLSL compiler, ps_2_0
+       0,   2, 255, 255, 254, 255, 
+      31,   0,  67,  84,  65,  66, 
+      28,   0,   0,   0,  79,   0, 
+       0,   0,   0,   2, 255, 255, 
+       1,   0,   0,   0,  28,   0, 
+       0,   0,   0,   1,   0,   0, 
+      72,   0,   0,   0,  48,   0, 
+       0,   0,   3,   0,   0,   0, 
+       1,   0,   2,   0,  56,   0, 
+       0,   0,   0,   0,   0,   0, 
+     116, 101, 120,  48,   0, 171, 
+     171, 171,   4,   0,  12,   0, 
+       1,   0,   1,   0,   1,   0, 
+       0,   0,   0,   0,   0,   0, 
+     112, 115,  95,  50,  95,  48, 
+       0,  77, 105,  99, 114, 111, 
+     115, 111, 102, 116,  32,  40, 
+      82,  41,  32,  72,  76,  83, 
+      76,  32,  83, 104,  97, 100, 
+     101, 114,  32,  67, 111, 109, 
+     112, 105, 108, 101, 114,  32, 
+      49,  48,  46,  49,   0, 171, 
+      31,   0,   0,   2,   0,   0, 
+       0, 128,   0,   0,   3, 176, 
+      31,   0,   0,   2,   0,   0, 
+       0, 128,   0,   0,  15, 144, 
+      31,   0,   0,   2,   0,   0, 
+       0, 144,   0,   8,  15, 160, 
+      66,   0,   0,   3,   0,   0, 
+      15, 128,   0,   0, 228, 176, 
+       0,   8, 228, 160,   5,   0, 
+       0,   3,   0,   0,  15, 128, 
+       0,   0, 228, 128,   0,   0, 
+     228, 144,   1,   0,   0,   2, 
+       0,   8,  15, 128,   0,   0, 
+     228, 128, 255, 255,   0,   0
+};
+
+// Direct3D9 data
+static IDirect3DDevice9*            g_pd3dDevice       = NULL;
+static IDirect3DTexture9*           g_FontTexture      = NULL;
+static IDirect3DVertexBuffer9*      g_pVB              = NULL;
+static IDirect3DIndexBuffer9*       g_pIB              = NULL;
+static int                          g_VertexBufferSize = 5000;
+static int                          g_IndexBufferSize  = 10000;
+// Direct3D9 programmable rendering pipeline data
+static IDirect3DVertexDeclaration9* g_pInputLayout     = NULL;
+static IDirect3DVertexShader9*      g_pVertexShader    = NULL;
+static IDirect3DPixelShader9*       g_pPixelShader     = NULL;
 
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
@@ -204,8 +355,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 const RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
-                g_pd3dDevice->SetTexture(0, texture);
+                g_pd3dDevice->SetTexture(0, (IDirect3DTexture9*)pcmd->TextureId);
                 g_pd3dDevice->SetScissorRect(&r);
                 g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
             }
