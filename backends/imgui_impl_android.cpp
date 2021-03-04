@@ -3,9 +3,13 @@
 
 // Implemented features:
 //  [X] Platform: Keyboard arrays indexed using AKEYCODE_* codes, e.g. ImGui::IsKeyPressed(AKEYCODE_SPACE).
+// Missing features:
 //  [ ] Platform: Clipboard support.
 //  [ ] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [ ] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
+// Important:
+//  - FIXME: On-screen keyboard currently needs to be enabled by the application (see examples/ and issue #3446)
+//  - FIXME: Unicode character inputs needs to be passed by Dear ImGui by the application (see examples/ and issue #3446)
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -13,39 +17,35 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2021-03-02: Support for physical pointer device input (such as physical mouse)
-//  2020-09-13: Support for Unicode characters
-//  2020-08-31: On-screen and physical keyboard input (ASCII characters only)
-//  2020-03-02: basic draft, touch input
+//  2021-03-04: Initial version.
 
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include <time.h>
 #include <map>
 #include <queue>
-
-// Android
 #include <android/native_window.h>
 #include <android/input.h>
 #include <android/keycodes.h>
 #include <android/log.h>
 
+// Android data
 static double                                   g_Time = 0.0;
 static ANativeWindow*                           g_Window;
-static char                                     g_LogTag[] = "ImguiExample";
+static char                                     g_LogTag[] = "ImGuiExample";
 static std::map<int32_t, std::queue<int32_t>>   g_KeyEventQueues; // FIXME: Remove dependency on map and queue once we use upcoming input queue.
 
-int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* inputEvent)
+int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
 {
     ImGuiIO& io = ImGui::GetIO();
-    int32_t event_type = AInputEvent_getType(inputEvent);
+    int32_t event_type = AInputEvent_getType(input_event);
     switch (event_type)
     {
     case AINPUT_EVENT_TYPE_KEY:
     {
-        int32_t event_key_code = AKeyEvent_getKeyCode(inputEvent);
-        int32_t event_action = AKeyEvent_getAction(inputEvent);
-        int32_t event_meta_state = AKeyEvent_getMetaState(inputEvent);
+        int32_t event_key_code = AKeyEvent_getKeyCode(input_event);
+        int32_t event_action = AKeyEvent_getAction(input_event);
+        int32_t event_meta_state = AKeyEvent_getMetaState(input_event);
 
         io.KeyCtrl = ((event_meta_state & AMETA_CTRL_ON) != 0);
         io.KeyShift = ((event_meta_state & AMETA_SHIFT_ON) != 0);
@@ -53,10 +53,9 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* inputEvent)
 
         switch (event_action)
         {
-        // FIXME: AKEY_EVENT_ACTION_DOWN and AKEY_EVENT_ACTION_UP occur at once
-        // as soon as a touch pointer goes up from a key. We use a simple key event queue
-        // and process one event per key per ImGui frame in ImGui_ImplAndroid_NewFrame().
-        // ...or consider ImGui IO queue, if suitable: https://github.com/ocornut/imgui/issues/2787
+        // FIXME: AKEY_EVENT_ACTION_DOWN and AKEY_EVENT_ACTION_UP occur at once as soon as a touch pointer
+        // goes up from a key. We use a simple key event queue/ and process one event per key per frame in
+        // ImGui_ImplAndroid_NewFrame()...or consider using IO queue, if suitable: https://github.com/ocornut/imgui/issues/2787
         case AKEY_EVENT_ACTION_DOWN:
         case AKEY_EVENT_ACTION_UP:
             g_KeyEventQueues[event_key_code].push(event_action);
@@ -68,7 +67,7 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* inputEvent)
     }
     case AINPUT_EVENT_TYPE_MOTION:
     {
-        int32_t event_action = AMotionEvent_getAction(inputEvent);
+        int32_t event_action = AMotionEvent_getAction(input_event);
         int32_t event_pointer_index = (event_action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
         event_action &= AMOTION_EVENT_ACTION_MASK;
         switch (event_action)
@@ -78,33 +77,29 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* inputEvent)
             // Physical mouse buttons (and probably other physical devices) also invoke the actions AMOTION_EVENT_ACTION_DOWN/_UP,
             // but we have to process them separately to identify the actual button pressed. This is done below via
             // AMOTION_EVENT_ACTION_BUTTON_PRESS/_RELEASE. Here, we only process "FINGER" input (and "UNKNOWN", as a fallback).
-            if((AMotionEvent_getToolType(inputEvent, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER)
-            || (AMotionEvent_getToolType(inputEvent, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_UNKNOWN))
+            if((AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER)
+            || (AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_UNKNOWN))
             {
                 io.MouseDown[0] = (event_action == AMOTION_EVENT_ACTION_DOWN) ? true : false;
-                io.MousePos = ImVec2(
-                        AMotionEvent_getX(inputEvent, event_pointer_index),
-                        AMotionEvent_getY(inputEvent, event_pointer_index));
+                io.MousePos = ImVec2(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
             }
             break;
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
             {
-                int32_t button_state = AMotionEvent_getButtonState(inputEvent);
+                int32_t button_state = AMotionEvent_getButtonState(input_event);
                 io.MouseDown[0] = (button_state & AMOTION_EVENT_BUTTON_PRIMARY) ? true : false;
                 io.MouseDown[1] = (button_state & AMOTION_EVENT_BUTTON_SECONDARY) ? true : false;
                 io.MouseDown[2] = (button_state & AMOTION_EVENT_BUTTON_TERTIARY) ? true : false;
             }
             break;
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
-        case AMOTION_EVENT_ACTION_MOVE: // Touch pointer moves while DOWN
-            io.MousePos = ImVec2(
-                AMotionEvent_getX(inputEvent, event_pointer_index),
-                AMotionEvent_getY(inputEvent, event_pointer_index));
+        case AMOTION_EVENT_ACTION_MOVE:       // Touch pointer moves while DOWN
+            io.MousePos = ImVec2(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
             break;
         case AMOTION_EVENT_ACTION_SCROLL:
-            io.MouseWheel = AMotionEvent_getAxisValue(inputEvent, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index);
-            io.MouseWheelH = AMotionEvent_getAxisValue(inputEvent, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index);
+            io.MouseWheel = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index);
+            io.MouseWheelH = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index);
             break;
         default:
             break;
@@ -123,11 +118,11 @@ bool ImGui_ImplAndroid_Init(ANativeWindow* window)
     g_Window = window;
     g_Time = 0.0;
 
-    // Setup back-end capabilities flags
+    // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = "imgui_impl_android";
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = AKEYCODE_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = AKEYCODE_DPAD_LEFT;   // also covers physical keyboard arrow key
     io.KeyMap[ImGuiKey_RightArrow] = AKEYCODE_DPAD_RIGHT; // also covers physical keyboard arrow key
@@ -161,10 +156,10 @@ void ImGui_ImplAndroid_Shutdown()
 void ImGui_ImplAndroid_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
     // Process queued key events
-    // FIXME: This is a workaround for multiple key event actions occuring at once (see above) and can be removed once we use upcoming input queue.
+    // FIXME: This is a workaround for multiple key event actions occurring at once (see above) and can be removed once we use upcoming input queue.
     for (auto& key_queue : g_KeyEventQueues)
     {
         if (key_queue.second.empty())

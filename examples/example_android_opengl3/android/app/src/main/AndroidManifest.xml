@@ -3,7 +3,7 @@
     package="imgui.example.android">
 
     <application
-        android:label="ImguiExample"
+        android:label="ImGuiExample"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:hasCode="true">
@@ -13,7 +13,7 @@
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:configChanges="orientation|keyboardHidden|screenSize">
             <meta-data android:name="android.app.lib_name"
-                android:value="ImguiExample" />
+                android:value="ImGuiExample" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
