@@ -1461,7 +1461,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
         return;
     }
 
-    const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
+    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
     if (push_texture_id)
         PushTextureID(user_texture_id);
 

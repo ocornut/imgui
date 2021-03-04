@@ -946,8 +946,8 @@ static void    FreeWrapper(void* ptr, void* user_data)        { IM_UNUSED(user_d
 static void*   MallocWrapper(size_t size, void* user_data)    { IM_UNUSED(user_data); IM_UNUSED(size); IM_ASSERT(0); return NULL; }
 static void    FreeWrapper(void* ptr, void* user_data)        { IM_UNUSED(user_data); IM_UNUSED(ptr); IM_ASSERT(0); }
 #endif
-static ImGuiMemAllocFunc*   GImAllocatorAllocFunc = MallocWrapper;
-static ImGuiMemFreeFunc*    GImAllocatorFreeFunc = FreeWrapper;
+static ImGuiMemAllocFunc    GImAllocatorAllocFunc = MallocWrapper;
+static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
 static void*                GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
@@ -3290,7 +3290,7 @@ void* ImGui::MemAlloc(size_t size)
 {
     if (ImGuiContext* ctx = GImGui)
         ctx->IO.MetricsActiveAllocations++;
-    return GImAllocatorAllocFunc(size, GImAllocatorUserData);
+    return (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
 }
 
 // IM_FREE() == ImGui::MemFree()
@@ -3299,7 +3299,7 @@ void ImGui::MemFree(void* ptr)
     if (ptr)
         if (ImGuiContext* ctx = GImGui)
             ctx->IO.MetricsActiveAllocations--;
-    return GImAllocatorFreeFunc(ptr, GImAllocatorUserData);
+    return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
 const char* ImGui::GetClipboardText()
@@ -3336,7 +3336,7 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc* alloc_func, ImGuiMemFreeFunc* free_func, void* user_data)
+void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data)
 {
     GImAllocatorAllocFunc = alloc_func;
     GImAllocatorFreeFunc = free_func;
@@ -3344,7 +3344,7 @@ void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc* alloc_func, ImGuiMemFreeFun
 }
 
 // This is provided to facilitate copying allocators from one static/DLL boundary to another (e.g. retrieve default allocator of your executable address space)
-void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc** p_alloc_func, ImGuiMemFreeFunc** p_free_func, void** p_user_data)
+void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data)
 {
     *p_alloc_func = GImAllocatorAllocFunc;
     *p_free_func = GImAllocatorFreeFunc;
@@ -6432,6 +6432,7 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
     FocusWindow(NULL);
 }
 
+// Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
 void ImGui::SetCurrentFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
