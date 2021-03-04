@@ -201,6 +201,9 @@ static IDirect3DVertexBuffer9*      g_pVB              = NULL;
 static IDirect3DIndexBuffer9*       g_pIB              = NULL;
 static int                          g_VertexBufferSize = 4096;
 static int                          g_IndexBufferSize  = 8192;
+// Direct3D9 state
+static IDirect3DStateBlock9*        g_pd3dState        = NULL;
+static D3DMATRIX                    g_LastMVP[3];
 // Direct3D9 programmable rendering pipeline data
 static bool                         g_IsShaderPipeline = false;
 static IDirect3DVertexDeclaration9* g_pInputLayout     = NULL;
@@ -213,6 +216,43 @@ static const char* IMGUI_IMPL_D3D9_BACKEND_NAME_FIXED = "imgui_impl_dx9 (fixed)"
 static const char* IMGUI_IMPL_D3D9_BACKEND_NAME_SHADER = "imgui_impl_dx9 (shader)";
 
 // Setup render state
+// According to Microsoft's official documents, IDirect3DStateBlock9 should store all states,
+// but according to the actual test, it seems to only store dirty states.
+// We have to backup some states manually. Only support those device create without D3DCREATE_PUREDEVICE flag!
+static void ImGui_ImplDX9_BackupState()
+{
+    // Backup the DX9 transform
+    if (!g_IsShaderPipeline)
+    {
+        g_pd3dDevice->GetTransform(D3DTS_WORLD, &g_LastMVP[0]);
+        g_pd3dDevice->GetTransform(D3DTS_VIEW, &g_LastMVP[1]);
+        g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &g_LastMVP[2]);
+    }
+    else
+    {
+        g_pd3dDevice->GetVertexShaderConstantF(0, (float*)&g_LastMVP[0], 4);
+    }
+    
+    // Backup the DX9 state
+    g_pd3dState->Capture();
+}
+static void ImGui_ImplDX9_RestoreState()
+{
+    // Restore the DX9 transform
+    if (!g_IsShaderPipeline)
+    {
+        g_pd3dDevice->SetTransform(D3DTS_WORLD, &g_LastMVP[0]);
+        g_pd3dDevice->SetTransform(D3DTS_VIEW, &g_LastMVP[1]);
+        g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &g_LastMVP[2]);
+    }
+    else
+    {
+        g_pd3dDevice->SetVertexShaderConstantF(0, (float*)&g_LastMVP[0], 4);
+    }
+    
+    // Restore the DX9 state
+    g_pd3dState->Apply();
+}
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
     IDirect3DDevice9* ctx = g_pd3dDevice;
@@ -493,59 +533,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // Upload vertex & index data
     if (!ImGui_ImplDX9_CreateBuffers(draw_data))
         return;
-    if (d3d9_state_block->Capture() < 0)
-    {
-        d3d9_state_block->Release();
-        return;
-    }
-    
-    // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
-    D3DMATRIX last_world, last_view, last_projection;
-    g_pd3dDevice->GetTransform(D3DTS_WORLD, &last_world);
-    g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
-    g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
-    
-    // Allocate buffers
-    CUSTOMVERTEX* vtx_dst;
-    ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, (UINT)(draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
-    {
-        d3d9_state_block->Release();
-        return;
-    }
-    if (g_pIB->Lock(0, (UINT)(draw_data->TotalIdxCount * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
-    {
-        g_pVB->Unlock();
-        d3d9_state_block->Release();
-        return;
-    }
-    
-    // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
-    // FIXME-OPT: This is a minor waste of resource, the ideal is to use imconfig.h and
-    //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
-    //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const ImDrawVert* vtx_src = cmd_list->VtxBuffer.Data;
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++)
-        {
-            vtx_dst->pos[0] = vtx_src->pos.x;
-            vtx_dst->pos[1] = vtx_src->pos.y;
-            vtx_dst->pos[2] = 0.0f;
-            vtx_dst->col = IMGUI_COL_TO_DX9_ARGB(vtx_src->col);
-            vtx_dst->uv[0] = vtx_src->uv.x;
-            vtx_dst->uv[1] = vtx_src->uv.y;
-            vtx_dst++;
-            vtx_src++;
-        }
-        memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-        idx_dst += cmd_list->IdxBuffer.Size;
-    }
-    g_pVB->Unlock();
-    g_pIB->Unlock();
     
     // Setup desired DX state
+    ImGui_ImplDX9_BackupState();
     ImGui_ImplDX9_SetupRenderState(draw_data);
     
     // Render command lists
@@ -580,14 +570,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
     
-    // Restore the DX9 transform
-    g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
-    g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
-    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
-    
-    // Restore the DX9 state
-    d3d9_state_block->Apply();
-    d3d9_state_block->Release();
+    // Restore DX state
+    ImGui_ImplDX9_RestoreState();
 }
 
 bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
@@ -616,6 +600,8 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
+    if (D3D_OK != g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &g_pd3dState))
+        return false;
     if (!ImGui_ImplDX9_CreateFontsTexture())
         return false;
     g_IsShaderPipeline = ImGui_ImplDX9_CreateShaderPipeline(); // Shader pipeline is optional
@@ -634,6 +620,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     SAFE_RELEASE(g_pIB);
     g_VertexBufferSize = 4096;
     g_IndexBufferSize  = 8192;
+    SAFE_RELEASE(g_pd3dState);
     g_IsShaderPipeline = false;
     SAFE_RELEASE(g_pInputLayout);
     SAFE_RELEASE(g_pVertexShader);
