@@ -446,7 +446,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
-
+    
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     if (io.Fonts->TexPixelsUseColors)
@@ -471,12 +471,12 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)g_pFontTexture);
-
+    
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     if (io.Fonts->TexPixelsUseColors)
         ImGui::MemFree(pixels);
 #endif
-
+    
     return true;
 }
 
