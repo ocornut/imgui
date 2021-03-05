@@ -220,7 +220,8 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = io.BackendRendererName = "imgui_impl_marmalade";
 
-    io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
+    io.KeyMap[ImGuiKey_Tab] = s3eKeyTab
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
     io.KeyMap[ImGuiKey_RightArrow] = s3eKeyRight;
     io.KeyMap[ImGuiKey_UpArrow] = s3eKeyUp;

@@ -6,6 +6,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021/03/05: added ImGuiFreeTypeBuilderFlags_Bitmap to load bitmap glyphs.
 //  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a prefered texture format.
 //  2021/01/28: added support for color-layered glyphs via ImGuiFreeTypeBuilderFlags_LoadColor (require Freetype 2.10+).
 //  2021/01/26: simplified integration by using '#define IMGUI_ENABLE_FREETYPE'.
@@ -152,12 +153,13 @@ namespace
         if (error != 0)
             return false;
 
-        memset(&Info, 0, sizeof(Info));
-        SetPixelHeight((uint32_t)cfg.SizePixels);
-
         // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
         UserFlags = cfg.FontBuilderFlags | extra_font_builder_flags;
-        LoadFlags = FT_LOAD_NO_BITMAP;
+
+        LoadFlags = 0;
+        if ((UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) == 0)
+            LoadFlags |= FT_LOAD_NO_BITMAP;
+
         if (UserFlags & ImGuiFreeTypeBuilderFlags_NoHinting)
             LoadFlags |= FT_LOAD_NO_HINTING;
         if (UserFlags & ImGuiFreeTypeBuilderFlags_NoAutoHint)
@@ -179,6 +181,9 @@ namespace
         if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
             LoadFlags |= FT_LOAD_COLOR;
 
+        memset(&Info, 0, sizeof(Info));
+        SetPixelHeight((uint32_t)cfg.SizePixels);
+
         return true;
     }
 
@@ -197,7 +202,7 @@ namespace
         // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
         // NB: FT_Set_Pixel_Sizes() doesn't seem to get us the same result.
         FT_Size_RequestRec req;
-        req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.type = (UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
         req.width = 0;
         req.height = (uint32_t)pixel_height * 64;
         req.horiResolution = 0;
@@ -225,7 +230,7 @@ namespace
 
         // Need an outline for this to work
         FT_GlyphSlot slot = Face->glyph;
-        IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE);
+        IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE || slot->format == FT_GLYPH_FORMAT_BITMAP);
 
         // Apply convenience transform (this is not picking from real "Bold"/"Italic" fonts! Merely applying FreeType helper transform. Oblique == Slanting)
         if (UserFlags & ImGuiFreeTypeBuilderFlags_Bold)

@@ -57,6 +57,7 @@ In the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder
 
 List of Platforms Backends:
 
+    imgui_impl_android.cpp    ; Android native app API
     imgui_impl_glfw.cpp       ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/
     imgui_impl_osx.mm         ; macOS native API (not as feature complete as glfw/sdl backends)
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org

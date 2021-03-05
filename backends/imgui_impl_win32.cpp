@@ -106,7 +106,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplWin32_InitPlatformInterface();
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
