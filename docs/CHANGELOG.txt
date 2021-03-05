@@ -58,6 +58,8 @@ Other Changes:
 - Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
 - ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
   This can currently only ever be set by the Freetype renderer.
+- imgui_freetype: Added ImGuiFreeTypeBuilderFlags_Bitmap flag to request Freetype loading bitmap data. 
+  This may have an effect on size and must be called with correct size values. (#3879) [@metarutaiga]
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): New default for style.
