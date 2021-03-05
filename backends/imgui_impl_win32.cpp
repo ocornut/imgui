@@ -218,7 +218,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
     if (io.WantSetMousePos)
     {
         POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
-        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0 || ::ClientToScreen(g_hWnd, &pos))
+        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
             ::ClientToScreen(g_hWnd, &pos);
         ::SetCursorPos(pos.x, pos.y);
     }
