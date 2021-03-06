@@ -190,6 +190,24 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
+    // Bug - Flashing when click the main window
+    bool found_parent_window = false;
+    NSArray<NSWindow*>* array = [NSApp orderedWindows];
+    for (NSUInteger i = 0; i < array.count; ++i)
+    {
+        NSWindow* window = array[i];
+        if (window == g_Window)
+        {
+            found_parent_window = true;
+            continue;
+        }
+        if (found_parent_window && window.parentWindow == g_Window)
+        {
+            [window orderFront:g_Window];
+            break;
+        }
+    }
+
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
     if (view)
@@ -428,7 +446,8 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setTitle:@"Untitled"];
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
-    [window orderFront:NSApp];
+    [window orderFront:g_Window];
+    [window setParentWindow:g_Window];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
@@ -477,18 +496,6 @@ static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
-
-    if (ImGui::GetMainViewport() != viewport)
-    {
-        if ([g_Window isMiniaturized])
-        {
-            [data->Window setIsVisible:NO];
-        }
-        else
-        {
-            [data->Window setIsVisible:YES];
-        }
-    }
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
@@ -545,7 +552,7 @@ static void ImGui_ImplOSX_SetWindowFocus(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
 
-    [data->Window orderFront:NSApp];
+    [data->Window orderFront:g_Window];
 }
 
 static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
@@ -553,7 +560,15 @@ static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
 
-    return [NSApp orderedWindows].firstObject == data->Window;
+    NSArray<NSWindow*>* array = [NSApp orderedWindows];
+    for (NSInteger i = 0; i < array.count; ++i)
+    {
+        NSWindow* window = array[i];
+        if (window != g_Window && window.parentWindow != g_Window)
+            continue;
+        return (window == data->Window);
+    }
+    return false;
 }
 
 static bool ImGui_ImplOSX_GetWindowMinimized(ImGuiViewport* viewport)
