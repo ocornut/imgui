@@ -8,7 +8,7 @@
 
 // Important: to compile on 32-bit systems, this backend requires code to be compiled with '#define ImTextureID ImU64'.
 // This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
-// This define is done in the example .vcxproj file and need to be replicated in your app (by e.g. editing imconfig.h)
+// This define is set in the example .vcxproj file and need to be replicated in your app or by adding it to your imconfig.h file.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
@@ -16,6 +16,11 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4471) // a forward declaration of an unscoped enumeration must have an underlying type
+#endif
 
 enum DXGI_FORMAT;
 struct ID3D12Device;
@@ -37,3 +42,8 @@ IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3
 // Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
+
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
+
