@@ -200,40 +200,37 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Set other windows to floating when mouse hit the titlebar
     NSRect rect = [g_Window frame];
+    NSRect contentRect = [g_Window contentRectForFrameRect:rect];
     NSPoint mouse = [NSEvent mouseLocation];
     if (mouse.x >= rect.origin.x && mouse.x <= rect.origin.x + rect.size.width &&
-        mouse.y >= rect.origin.y && mouse.y <= rect.origin.y + rect.size.height)
+        mouse.y >= rect.origin.y + contentRect.size.height && mouse.y <= rect.origin.y + rect.size.height)
     {
-        NSRect contentRect = [g_Window contentRectForFrameRect:rect];
-        if (mouse.y >= contentRect.origin.y && mouse.y <= contentRect.origin.y + contentRect.size.height)
+        if (g_Children == nil && [NSApp isActive])
         {
-            NSUInteger pressed = [NSEvent pressedMouseButtons];
-            if (g_Children && (pressed & 1) == 0)
+            g_Children = [g_Window childWindows].copy;
+            for (NSUInteger i = 0; i < g_Children.count; ++i)
             {
-                for (NSUInteger i = 0; i < g_Children.count; ++i)
-                {
-                    NSWindow* window = g_Children[i];
-                    if ([window contentView] == nil)
-                        continue;
-                    [g_Window addChildWindow:window ordered:NSWindowAbove];
-                    [window setLevel:NSNormalWindowLevel];
-                }
-                g_Children = nil;
+                NSWindow* window = g_Children[i];
+                [g_Window removeChildWindow:window];
+                [window setParentWindow:g_Window];
+                [window setLevel:NSFloatingWindowLevel];
             }
         }
-        else
+    }
+    else
+    {
+        NSUInteger pressed = [NSEvent pressedMouseButtons];
+        if (g_Children && (pressed & 1) == 0)
         {
-            if (g_Children == nil)
+            for (NSUInteger i = 0; i < g_Children.count; ++i)
             {
-                g_Children = [g_Window childWindows].copy;
-                for (NSUInteger i = 0; i < g_Children.count; ++i)
-                {
-                    NSWindow* window = g_Children[i];
-                    [g_Window removeChildWindow:window];
-                    [window setParentWindow:g_Window];
-                    [window setLevel:NSFloatingWindowLevel];
-                }
+                NSWindow* window = g_Children[i];
+                if ([window contentView] == nil)
+                    continue;
+                [g_Window addChildWindow:window ordered:NSWindowAbove];
+                [window setLevel:NSNormalWindowLevel];
             }
+            g_Children = nil;
         }
     }
 
