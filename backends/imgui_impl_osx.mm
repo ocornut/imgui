@@ -35,7 +35,6 @@
 // Data
 static NSWindow*      g_Window = nil;
 static NSArray*       g_Children = nil;
-static bool           g_IsMoving = false;
 static id             g_Monitor = nil;
 static CFAbsoluteTime g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
@@ -154,7 +153,6 @@ void ImGui_ImplOSX_Shutdown()
     ImGui_ImplOSX_ShutdownPlatformInterface();
     g_Window = nil;
     g_Children = nil;
-    g_IsMoving = false;
     if (g_Monitor != nil)
     {
         [NSEvent removeMonitor:g_Monitor];
@@ -200,7 +198,44 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
-    ImGui_ImplOSX_WindowFinishMove(view);
+    // Set other windows to floating when mouse hit the titlebar
+    NSRect rect = [g_Window frame];
+    NSPoint mouse = [NSEvent mouseLocation];
+    if (mouse.x >= rect.origin.x && mouse.x <= rect.origin.x + rect.size.width &&
+        mouse.y >= rect.origin.y && mouse.y <= rect.origin.y + rect.size.height)
+    {
+        NSRect contentRect = [g_Window contentRectForFrameRect:rect];
+        if (mouse.y >= contentRect.origin.y && mouse.y <= contentRect.origin.y + contentRect.size.height)
+        {
+            NSUInteger pressed = [NSEvent pressedMouseButtons];
+            if (g_Children && (pressed & 1) == 0)
+            {
+                for (NSUInteger i = 0; i < g_Children.count; ++i)
+                {
+                    NSWindow* window = g_Children[i];
+                    if ([window contentView] == nil)
+                        continue;
+                    [g_Window addChildWindow:window ordered:NSWindowAbove];
+                    [window setLevel:NSNormalWindowLevel];
+                }
+                g_Children = nil;
+            }
+        }
+        else
+        {
+            if (g_Children == nil)
+            {
+                g_Children = [g_Window childWindows].copy;
+                for (NSUInteger i = 0; i < g_Children.count; ++i)
+                {
+                    NSWindow* window = g_Children[i];
+                    [g_Window removeChildWindow:window];
+                    [window setParentWindow:g_Window];
+                    [window setLevel:NSFloatingWindowLevel];
+                }
+            }
+        }
+    }
 
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
@@ -247,25 +282,14 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    // Bring the window to top
     if (event.type == NSEventTypeLeftMouseDown)
     {
-        if (event.window == g_Window)
+        if (event.window.parentWindow == g_Window && event.window != [g_Window childWindows].lastObject)
         {
-            ImGui_ImplOSX_WindowWillMove(view);
+            [g_Window removeChildWindow:event.window];
+            [g_Window addChildWindow:event.window ordered:NSWindowAbove];
         }
-        if (event.window != g_Window)
-        {
-            if ([g_Window childWindows].lastObject != event.window)
-            {
-                [g_Window removeChildWindow:event.window];
-                [g_Window addChildWindow:event.window ordered:NSWindowAbove];
-            }
-        }
-    }
-
-    if (event.type == NSEventTypeLeftMouseUp)
-    {
-        g_IsMoving = false;
     }
 
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
@@ -414,41 +438,6 @@ void ImGui_ImplOSX_AddTrackingArea(NSViewController* _Nonnull controller)
     }];
 }
 
-void ImGui_ImplOSX_WindowWillMove(NSView* _Nullable view)
-{
-    if (view.window != g_Window)
-        return;
-    if (g_IsMoving)
-        return;
-    g_IsMoving = true;
-    if (g_Children)
-        return;
-    g_Children = [g_Window childWindows].copy;
-    for (NSUInteger i = 0; i < g_Children.count; ++i)
-    {
-        NSWindow* child = g_Children[i];
-        [g_Window removeChildWindow:child];
-    }
-}
-
-void ImGui_ImplOSX_WindowFinishMove(NSView* _Nullable view)
-{
-    if (view.window != g_Window)
-        return;
-    if (g_IsMoving)
-        return;
-    if (g_Children == nil)
-        return;
-    for (NSUInteger i = 0; i < g_Children.count; ++i)
-    {
-        NSWindow* child = g_Children[i];
-        if (child.contentView == nil)
-            continue;
-        [g_Window addChildWindow:child ordered:NSWindowAbove];
-    }
-    g_Children = nil;
-}
-
 //--------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
@@ -498,7 +487,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setTitle:@"Untitled"];
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
-    [window orderFront:g_Window];
     [g_Window addChildWindow:window ordered:NSWindowAbove];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
@@ -618,7 +606,7 @@ static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
         NSWindow* window = array[i];
         if (window != g_Window && window.parentWindow != g_Window)
             continue;
-        return true;
+        return (window == data->Window);
     }
     return false;
 }
