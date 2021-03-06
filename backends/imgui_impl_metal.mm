@@ -75,7 +75,6 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 // renderer backend. Stores the render pipeline state cache and the default
 // font texture, and manages the reusable buffer cache.
 @interface MetalContext : NSObject
-@property (nonatomic, strong) id<MTLDevice> device;
 @property (nonatomic, strong) id<MTLDepthStencilState> depthStencilState;
 @property (nonatomic, strong) FramebufferDescriptor *framebufferDescriptor; // framebuffer descriptor for current frame; transient
 @property (nonatomic, strong) NSMutableDictionary *renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
@@ -162,7 +161,6 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
     [g_sharedMetalContext makeDeviceObjectsWithDevice:device];
-    g_sharedMetalContext.device = device;
 
     ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
     ImGui_ImplMetal_CreateFontsTexture(device);
@@ -205,7 +203,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     IM_ASSERT(handle != 0);
 
-    id<MTLDevice> device = g_sharedMetalContext.device;
+    id<MTLDevice> device = [g_sharedMetalContext.depthStencilState device];
 
     CAMetalLayer* layer = [CAMetalLayer layer];
     layer.device = device;
