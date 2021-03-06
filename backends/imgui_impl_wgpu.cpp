@@ -27,6 +27,7 @@ extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
 
 // WebGPU data
 static WGPUDevice               g_wgpuDevice = NULL;
+static WGPUQueue                g_defaultQueue = NULL;
 static WGPUTextureFormat        g_renderTargetFormat = WGPUTextureFormat_Undefined;
 static WGPURenderPipeline       g_pipelineState = NULL;
 
@@ -297,7 +298,7 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
-        wgpuQueueWriteBuffer(wgpuDeviceGetDefaultQueue(g_wgpuDevice), g_resources.Uniforms, 0, mvp, sizeof(mvp));
+        wgpuQueueWriteBuffer(g_defaultQueue, g_resources.Uniforms, 0, mvp, sizeof(mvp));
     }
 
     // Setup viewport
@@ -384,8 +385,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     }
     int64_t vb_write_size = ((char*)vtx_dst - (char*)fr->VertexBufferHost + 3) & ~3;
     int64_t ib_write_size = ((char*)idx_dst - (char*)fr->IndexBufferHost  + 3) & ~3;
-    wgpuQueueWriteBuffer(wgpuDeviceGetDefaultQueue(g_wgpuDevice), fr->VertexBuffer, 0, fr->VertexBufferHost, vb_write_size);
-    wgpuQueueWriteBuffer(wgpuDeviceGetDefaultQueue(g_wgpuDevice), fr->IndexBuffer,  0, fr->IndexBufferHost,  ib_write_size);
+    wgpuQueueWriteBuffer(g_defaultQueue, fr->VertexBuffer, 0, fr->VertexBufferHost, vb_write_size);
+    wgpuQueueWriteBuffer(g_defaultQueue, fr->IndexBuffer,  0, fr->IndexBufferHost,  ib_write_size);
 
     // Setup desired render state
     ImGui_ImplWGPU_SetupRenderState(draw_data, pass_encoder, fr);
@@ -487,7 +488,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         layout.bytesPerRow = width * size_pp;
         layout.rowsPerImage = height;
         WGPUExtent3D size = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
-        wgpuQueueWriteTexture(wgpuDeviceGetDefaultQueue(g_wgpuDevice), &dst_view, pixels, (uint32_t)(width * size_pp * height), &layout, &size);
+        wgpuQueueWriteTexture(g_defaultQueue, &dst_view, pixels, (uint32_t)(width * size_pp * height), &layout, &size);
     }
 
     // Create the associated sampler
@@ -673,6 +674,7 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     g_wgpuDevice = device;
+    g_defaultQueue = wgpuDeviceGetDefaultQueue(g_wgpuDevice);
     g_renderTargetFormat = rt_format;
     g_pFrameResources = new FrameResources[num_frames_in_flight];
     g_numFramesInFlight = num_frames_in_flight;
@@ -707,6 +709,7 @@ void ImGui_ImplWGPU_Shutdown()
     ImGui_ImplWGPU_InvalidateDeviceObjects();
     delete[] g_pFrameResources;
     g_pFrameResources = NULL;
+    wgpuQueueRelease(g_defaultQueue);
     g_wgpuDevice = NULL;
     g_numFramesInFlight = 0;
     g_frameIndex = UINT_MAX;
