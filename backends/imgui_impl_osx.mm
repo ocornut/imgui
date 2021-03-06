@@ -36,6 +36,7 @@
 static NSWindow*      g_Window = nil;
 static NSArray*       g_Children = nil;
 static bool           g_IsMoving = false;
+static id             g_Monitor = nil;
 static CFAbsoluteTime g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
@@ -152,6 +153,13 @@ void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_ShutdownPlatformInterface();
     g_Window = nil;
+    g_Children = nil;
+    g_IsMoving = false;
+    if (g_Monitor != nil)
+    {
+        [NSEvent removeMonitor:g_Monitor];
+        g_Monitor = nil;
+    }
 }
 
 static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
@@ -396,8 +404,10 @@ void ImGui_ImplOSX_AddTrackingArea(NSViewController* _Nonnull controller)
     // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
     // window, we'd want to be much more careful than just ingesting the complete event stream.
     // To match the behavior of other backends, we pass every event down to the OS.
+    if (g_Monitor)
+        return;
     NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
-    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
+    g_Monitor = [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
     {
         ImGui_ImplOSX_HandleEvent(event, controller.view);
         return event;
