@@ -214,6 +214,19 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
                 [g_Window removeChildWindow:window];
                 [window setParentWindow:g_Window];
                 [window setLevel:NSFloatingWindowLevel];
+                [window setIsVisible:YES];
+            }
+        }
+    }
+    else if ([g_Window isMiniaturized])
+    {
+        if (g_Children)
+        {
+            for (NSUInteger i = 0; i < g_Children.count; ++i)
+            {
+                NSWindow* window = g_Children[i];
+                [window setLevel:NSNormalWindowLevel];
+                [window setIsVisible:NO];
             }
         }
     }
@@ -229,6 +242,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
                     continue;
                 [g_Window addChildWindow:window ordered:NSWindowAbove];
                 [window setLevel:NSNormalWindowLevel];
+                [window setIsVisible:YES];
             }
             g_Children = nil;
         }
