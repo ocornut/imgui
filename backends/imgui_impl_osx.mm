@@ -34,6 +34,8 @@
 
 // Data
 static NSWindow*      g_Window = nil;
+static NSArray*       g_Children = nil;
+static bool           g_IsMoving = false;
 static CFAbsoluteTime g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
@@ -190,23 +192,7 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
-    // Bug - Flashing when click the main window
-    bool found_parent_window = false;
-    NSArray<NSWindow*>* array = [NSApp orderedWindows];
-    for (NSUInteger i = 0; i < array.count; ++i)
-    {
-        NSWindow* window = array[i];
-        if (window == g_Window)
-        {
-            found_parent_window = true;
-            continue;
-        }
-        if (found_parent_window && window.parentWindow == g_Window)
-        {
-            [window orderFront:g_Window];
-            break;
-        }
-    }
+    ImGui_ImplOSX_WindowFinishMove(view);
 
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
@@ -252,6 +238,27 @@ static void resetKeys()
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    if (event.type == NSEventTypeLeftMouseDown)
+    {
+        if (event.window == g_Window)
+        {
+            ImGui_ImplOSX_WindowWillMove(view);
+        }
+        if (event.window != g_Window)
+        {
+            if ([g_Window childWindows].lastObject != event.window)
+            {
+                [g_Window removeChildWindow:event.window];
+                [g_Window addChildWindow:event.window ordered:NSWindowAbove];
+            }
+        }
+    }
+
+    if (event.type == NSEventTypeLeftMouseUp)
+    {
+        g_IsMoving = false;
+    }
 
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
@@ -397,6 +404,41 @@ void ImGui_ImplOSX_AddTrackingArea(NSViewController* _Nonnull controller)
     }];
 }
 
+void ImGui_ImplOSX_WindowWillMove(NSView* _Nullable view)
+{
+    if (view.window != g_Window)
+        return;
+    if (g_IsMoving)
+        return;
+    g_IsMoving = true;
+    if (g_Children)
+        return;
+    g_Children = [g_Window childWindows].copy;
+    for (NSUInteger i = 0; i < g_Children.count; ++i)
+    {
+        NSWindow* child = g_Children[i];
+        [g_Window removeChildWindow:child];
+    }
+}
+
+void ImGui_ImplOSX_WindowFinishMove(NSView* _Nullable view)
+{
+    if (view.window != g_Window)
+        return;
+    if (g_IsMoving)
+        return;
+    if (g_Children == nil)
+        return;
+    for (NSUInteger i = 0; i < g_Children.count; ++i)
+    {
+        NSWindow* child = g_Children[i];
+        if (child.contentView == nil)
+            continue;
+        [g_Window addChildWindow:child ordered:NSWindowAbove];
+    }
+    g_Children = nil;
+}
+
 //--------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
@@ -447,7 +489,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
     [window orderFront:g_Window];
-    [window setParentWindow:g_Window];
+    [g_Window addChildWindow:window ordered:NSWindowAbove];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
@@ -566,7 +608,7 @@ static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
         NSWindow* window = array[i];
         if (window != g_Window && window.parentWindow != g_Window)
             continue;
-        return (window == data->Window);
+        return true;
     }
     return false;
 }
