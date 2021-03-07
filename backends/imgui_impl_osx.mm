@@ -530,6 +530,7 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
             [window setContentView:nil];
             [window setContentViewController:nil];
             [window orderOut:nil];
+            [g_Window removeChildWindow:window];
         }
         data->Window = nil;
         IM_DELETE(data);
@@ -603,7 +604,15 @@ static void ImGui_ImplOSX_SetWindowFocus(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
 
-    [data->Window orderFront:g_Window];
+    if (data->Window == g_Window)
+    {
+        [g_Window orderWindow:NSWindowAbove relativeTo:0];
+    }
+    else if (data->Window.parentWindow == g_Window)
+    {
+        [g_Window removeChildWindow:data->Window];
+        [g_Window addChildWindow:data->Window ordered:NSWindowAbove];
+    }
 }
 
 static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
