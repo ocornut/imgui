@@ -1568,7 +1568,7 @@ struct ImGuiContext
         ActiveIdClickOffset = ImVec2(-1, -1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
-        ActiveIdMouseButton = 0;
+        ActiveIdMouseButton = -1;
         ActiveIdPreviousFrame = 0;
         ActiveIdPreviousFrameIsAlive = false;
         ActiveIdPreviousFrameHasBeenEditedBefore = false;

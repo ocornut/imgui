@@ -49,7 +49,7 @@ Other Changes:
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
 - Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
-- DragScalar: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
+- Drags: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
   with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
 - Drags, Sliders: Fixed a bug where editing value would use wrong number if there were digits right after 
   format specifier (e.g. using "%f123" as a format string). [@rokups]
@@ -59,6 +59,8 @@ Other Changes:
 - IsItemHovered(): fixed return value false positive when used after EndChild(), EndGroup() or widgets using
   either of them, when the hovered location is located within a child window, e.g. InputTextMultiline().
   This is intended to have no side effects, but brace yourself for the possible comeback.. (#3851, #1370)
+- Drag and Drop: can use BeginDragDropSource() for other than the left mouse button as long as the item 
+  has an ID (for ID-less items will add new functionalities later). (#1637, #3885)
 - Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
 - ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
   This can currently only ever be set by the Freetype renderer.

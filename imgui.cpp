@@ -3024,6 +3024,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
         g.ActiveIdTimer = 0.0f;
         g.ActiveIdHasBeenPressedBefore = false;
         g.ActiveIdHasBeenEditedBefore = false;
+        g.ActiveIdMouseButton = -1;
         if (id != 0)
         {
             g.LastActiveId = id;
@@ -9643,27 +9644,45 @@ void ImGui::ClearDragDrop()
     memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
 }
 
-// Call when current ID is active.
 // When this returns true you need to: a) call SetDragDropPayload() exactly once, b) you may render the payload visual/description, c) call EndDragDropSource()
+// If the item has an identifier:
+// - This assume/require the item to be activated (typically via ButtonBehavior).
+// - Therefore if you want to use this with a mouse button other than left mouse button, it is up to the item itself to activate with another button.
+// - We then pull and use the mouse button that was used to activate the item and use it to carry on the drag.
+// If the item has no identifier:
+// - Currently always assume left mouse button.
 bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
+    // FIXME-DRAGDROP: While in the common-most "drag from non-zero active id" case we can tell the mouse button,
+    // in both SourceExtern and id==0 cases we may requires something else (explicit flags or some heuristic).
+    ImGuiMouseButton mouse_button = ImGuiMouseButton_Left;
+
     bool source_drag_active = false;
     ImGuiID source_id = 0;
     ImGuiID source_parent_id = 0;
-    ImGuiMouseButton mouse_button = ImGuiMouseButton_Left;
     if (!(flags & ImGuiDragDropFlags_SourceExtern))
     {
         source_id = window->DC.LastItemId;
-        if (source_id != 0 && g.ActiveId != source_id) // Early out for most common case
-            return false;
-        if (g.IO.MouseDown[mouse_button] == false)
-            return false;
-
-        if (source_id == 0)
+        if (source_id != 0)
         {
+            // Common path: items with ID
+            if (g.ActiveId != source_id)
+                return false;
+            if (g.ActiveIdMouseButton != -1)
+                mouse_button = g.ActiveIdMouseButton;
+            if (g.IO.MouseDown[mouse_button] == false)
+                return false;
+            g.ActiveIdAllowOverlap = false;
+        }
+        else
+        {
+            // Uncommon path: items without ID
+            if (g.IO.MouseDown[mouse_button] == false)
+                return false;
+
             // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
             // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
             if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
@@ -9689,10 +9708,6 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             }
             if (g.ActiveId == source_id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
                 g.ActiveIdAllowOverlap = is_hovered;
-        }
-        else
-        {
-            g.ActiveIdAllowOverlap = false;
         }
         if (g.ActiveId != source_id)
             return false;
@@ -9896,7 +9911,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that lives for 1 frame)
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
-        // FIXME-DRAG: Settle on a proper default visuals for drop target.
+        // FIXME-DRAGDROP: Settle on a proper default visuals for drop target.
         r.Expand(3.5f);
         bool push_clip_rect = !window->ClipRect.Contains(r);
         if (push_clip_rect) window->DrawList->PushClipRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1));
