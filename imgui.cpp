@@ -886,6 +886,7 @@ static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
+static void             NavRestoreLayer(ImGuiNavLayer layer);
 static int              FindWindowFocusIndex(ImGuiWindow* window);
 
 // Error Checking
@@ -8476,9 +8477,8 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 // [SECTION] KEYBOARD/GAMEPAD NAVIGATION
 //-----------------------------------------------------------------------------
 
-// FIXME-NAV: The existence of SetNavID vs SetNavIDWithRectRel vs SetFocusID is incredibly messy and confusing,
-// and needs some explanation or serious refactoring.
-void ImGui::SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id)
+// FIXME-NAV: The existence of SetNavID vs SetFocusID properly needs to be clarified/reworked.
+void ImGui::SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow != NULL);
@@ -8487,16 +8487,9 @@ void ImGui::SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id)
     g.NavLayer = (ImGuiNavLayer)nav_layer;
     g.NavFocusScopeId = focus_scope_id;
     g.NavWindow->NavLastIds[nav_layer] = id;
-}
-
-void ImGui::SetNavIDWithRectRel(ImGuiID id, int nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel)
-{
-    ImGuiContext& g = *GImGui;
-    SetNavID(id, nav_layer, focus_scope_id);
     g.NavWindow->NavRectRel[nav_layer] = rect_rel;
-    g.NavMousePosDirty = true;
-    g.NavDisableHighlight = false;
-    g.NavDisableMouseHover = true;
+    //g.NavDisableHighlight = false;
+    //g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
 
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
@@ -8810,17 +8803,23 @@ static ImGuiWindow* ImGui::NavRestoreLastChildNavWindow(ImGuiWindow* window)
     return window;
 }
 
-static void NavRestoreLayer(ImGuiNavLayer layer)
+void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
 {
     ImGuiContext& g = *GImGui;
-    g.NavLayer = layer;
-    if (layer == 0)
-        g.NavWindow = ImGui::NavRestoreLastChildNavWindow(g.NavWindow);
+    if (layer == ImGuiNavLayer_Main)
+        g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);
     ImGuiWindow* window = g.NavWindow;
     if (window->NavLastIds[layer] != 0)
-        ImGui::SetNavIDWithRectRel(window->NavLastIds[layer], layer, 0, g.NavWindow->NavRectRel[layer]);
+    {
+        SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = g.NavMousePosDirty = true;
+    }
     else
-        ImGui::NavInitWindow(window, true);
+    {
+        g.NavLayer = layer;
+        NavInitWindow(window, true);
+    }
 }
 
 static inline void ImGui::NavUpdateAnyRequestFlag()
@@ -8843,7 +8842,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: from NavInitWindow(), init_for_nav=%d, window=\"%s\", layer=%d\n", init_for_nav, window->Name, g.NavLayer);
     if (init_for_nav)
     {
-        SetNavID(0, g.NavLayer, 0);
+        SetNavID(0, g.NavLayer, 0, ImRect());
         g.NavInitRequest = true;
         g.NavInitRequestFromMove = false;
         g.NavInitResultId = 0;
@@ -8987,13 +8986,11 @@ static void ImGui::NavUpdate()
     {
         // Set mouse position given our knowledge of the navigated item position from last frame
         if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
-        {
             if (!g.NavDisableHighlight && g.NavDisableMouseHover && g.NavWindow)
             {
                 io.MousePos = io.MousePosPrev = NavCalcPreferredRefPos();
                 io.WantSetMousePos = true;
             }
-        }
         g.NavMousePosDirty = false;
     }
     g.NavIdIsAlive = false;
@@ -9028,12 +9025,9 @@ static void ImGui::NavUpdate()
             ImGuiWindow* child_window = g.NavWindow;
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             IM_ASSERT(child_window->ChildId != 0);
+            ImRect child_rect = child_window->Rect();
             FocusWindow(parent_window);
-            SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0);
-            // Reassigning with same value, we're being explicit here.
-            g.NavIdIsAlive = false;     // -V1048
-            if (g.NavDisableMouseHover)
-                g.NavMousePosDirty = true;
+            SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, ImRect(child_rect.Min - parent_window->Pos, child_rect.Max - parent_window->Pos));
         }
         else if (g.OpenPopupStack.Size > 0)
         {
@@ -9202,11 +9196,12 @@ static void ImGui::NavUpdateInitResult()
 
     // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
     IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
+    SetNavID(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
     if (g.NavInitRequestFromMove)
-        SetNavIDWithRectRel(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
-    else
-        SetNavID(g.NavInitResultId, g.NavLayer, 0);
-    g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitResultRectRel;
+    {
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = g.NavMousePosDirty = true;
+    }
 }
 
 // Apply result from previous frame navigation directional move request
@@ -9269,7 +9264,9 @@ static void ImGui::NavUpdateMoveResult()
         g.NavJustMovedToKeyMods = g.NavMoveRequestKeyMods;
     }
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
-    SetNavIDWithRectRel(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+    SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+    g.NavDisableHighlight = false;
+    g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
 
 // Handle PageUp/PageDown/Home/End keys

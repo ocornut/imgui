@@ -2313,8 +2313,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f);
     IMGUI_API int           CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate);
     IMGUI_API void          ActivateItem(ImGuiID id);   // Remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
-    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id);
-    IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel);
+    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel);
 
     // Focus Scope (WIP)
     // This is generally used to identify a selection set (multiple of which may be in the same window), as selection
