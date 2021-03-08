@@ -84,6 +84,7 @@ static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
 static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
+static GLFWwindow*          g_KeyOwnerWindows[512] = {};
 static bool                 g_InstalledCallbacks = false;
 static bool                 g_WantUpdateMonitors = true;
 
@@ -135,9 +136,15 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
 
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
+    {
         io.KeysDown[key] = true;
+        g_KeyOwnerWindows[key] = window;
+    }
     if (action == GLFW_RELEASE)
+    {
         io.KeysDown[key] = false;
+        g_KeyOwnerWindows[key] = NULL;
+    }
 
     // Modifiers are not reliable across systems
     io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
@@ -607,6 +614,13 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
             HWND hwnd = (HWND)viewport->PlatformHandleRaw;
             ::RemovePropA(hwnd, "IMGUI_VIEWPORT");
 #endif
+
+            // Release any keys that were pressed in the window being destroyed and are still held down,
+            // because we will not receive any release events after window is destroyed.
+            for (int i = 0; i < IM_ARRAYSIZE(g_KeyOwnerWindows); i++)
+                if (g_KeyOwnerWindows[i] == data->Window)
+                    ImGui_ImplGlfw_KeyCallback(data->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
+
             glfwDestroyWindow(data->Window);
         }
         data->Window = NULL;
