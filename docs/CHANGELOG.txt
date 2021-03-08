@@ -49,6 +49,8 @@ Other Changes:
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
 - Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
+- Nav: Various fixes for losing gamepad/keyboard navigation reference point when a window reappears or
+  when it appears while gamepad/keyboard are not being used. (#787)
 - Drags: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
   with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
 - Drags, Sliders: Fixed a bug where editing value would use wrong number if there were digits right after 
