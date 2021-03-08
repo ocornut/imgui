@@ -230,11 +230,22 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     }
     else
     {
+        bool foundMainWindow = false;
         for (NSUInteger i = orderedWindows.count; i > 0; --i)
         {
             NSWindow* window = orderedWindows[i - 1];
+            if (window == g_Window)
+            {
+                foundMainWindow = true;
+                continue;
+            }
             if (window.parentWindow != g_Window)
                 continue;
+            // Reorder other windows when the main window is focused
+            if (foundMainWindow == false)
+            {
+                [window orderWindow:NSWindowAbove relativeTo:0];
+            }
             [window setLevel:NSNormalWindowLevel];
             [window setIsVisible:YES];
             [window setParentWindow:g_Window];
