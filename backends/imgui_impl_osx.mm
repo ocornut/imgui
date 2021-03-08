@@ -34,7 +34,6 @@
 
 // Data
 static NSWindow*      g_Window = nil;
-static NSArray*       g_Children = nil;
 static id             g_Monitor = nil;
 static CFAbsoluteTime g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
@@ -152,7 +151,6 @@ void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_ShutdownPlatformInterface();
     g_Window = nil;
-    g_Children = nil;
     if (g_Monitor != nil)
     {
         [NSEvent removeMonitor:g_Monitor];
@@ -198,53 +196,48 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
-    // Set other windows to floating when mouse hit the titlebar
+    // Set other windows to floating when mouse hit the main window
     NSRect rect = [g_Window frame];
-    NSRect contentRect = [g_Window contentRectForFrameRect:rect];
     NSPoint mouse = [NSEvent mouseLocation];
-    if (mouse.x >= rect.origin.x && mouse.x <= rect.origin.x + rect.size.width &&
-        mouse.y >= rect.origin.y + contentRect.size.height && mouse.y <= rect.origin.y + rect.size.height)
+    NSArray<NSWindow*>* orderedWindows = [NSApp orderedWindows];
+    if ([g_Window isMiniaturized])
     {
-        if (g_Children == nil && [NSApp isActive])
+        for (NSUInteger i = orderedWindows.count; i > 0; --i)
         {
-            g_Children = [g_Window childWindows].copy;
-            for (NSUInteger i = 0; i < g_Children.count; ++i)
-            {
-                NSWindow* window = g_Children[i];
-                [g_Window removeChildWindow:window];
-                [window setParentWindow:g_Window];
-                [window setLevel:NSFloatingWindowLevel];
-                [window setIsVisible:YES];
-            }
+            NSWindow* window = orderedWindows[i - 1];
+            if (window.parentWindow != g_Window)
+                continue;
+            [window setLevel:NSNormalWindowLevel];
+            [window setIsVisible:NO];
+            [window setParentWindow:g_Window];
         }
     }
-    else if ([g_Window isMiniaturized])
+    else if (mouse.x >= rect.origin.x && mouse.x <= rect.origin.x + rect.size.width &&
+        mouse.y >= rect.origin.y && mouse.y <= rect.origin.y + rect.size.height)
     {
-        if (g_Children)
+        if ([NSApp isActive] && [g_Window isMiniaturized] == NO)
         {
-            for (NSUInteger i = 0; i < g_Children.count; ++i)
+            for (NSUInteger i = orderedWindows.count; i > 0; --i)
             {
-                NSWindow* window = g_Children[i];
-                [window setLevel:NSNormalWindowLevel];
-                [window setIsVisible:NO];
+                NSWindow* window = orderedWindows[i - 1];
+                if (window.parentWindow != g_Window)
+                    continue;
+                [window setLevel:NSFloatingWindowLevel];
+                [window setIsVisible:YES];
+                [window setParentWindow:g_Window];
             }
         }
     }
     else
     {
-        NSUInteger pressed = [NSEvent pressedMouseButtons];
-        if (g_Children && (pressed & 1) == 0)
+        for (NSUInteger i = orderedWindows.count; i > 0; --i)
         {
-            for (NSUInteger i = 0; i < g_Children.count; ++i)
-            {
-                NSWindow* window = g_Children[i];
-                if ([window contentView] == nil)
-                    continue;
-                [g_Window addChildWindow:window ordered:NSWindowAbove];
-                [window setLevel:NSNormalWindowLevel];
-                [window setIsVisible:YES];
-            }
-            g_Children = nil;
+            NSWindow* window = orderedWindows[i - 1];
+            if (window.parentWindow != g_Window)
+                continue;
+            [window setLevel:NSNormalWindowLevel];
+            [window setIsVisible:YES];
+            [window setParentWindow:g_Window];
         }
     }
 
@@ -292,16 +285,6 @@ static void resetKeys()
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
-
-    // Bring the window to top
-    if (event.type == NSEventTypeLeftMouseDown)
-    {
-        if (event.window.parentWindow == g_Window && event.window != [g_Window childWindows].lastObject)
-        {
-            [g_Window removeChildWindow:event.window];
-            [g_Window addChildWindow:event.window ordered:NSWindowAbove];
-        }
-    }
 
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
@@ -498,7 +481,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setTitle:@"Untitled"];
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
-    [g_Window addChildWindow:window ordered:NSWindowAbove];
+    [window setParentWindow:g_Window];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
@@ -530,7 +513,6 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
             [window setContentView:nil];
             [window setContentViewController:nil];
             [window orderOut:nil];
-            [g_Window removeChildWindow:window];
         }
         data->Window = nil;
         IM_DELETE(data);
@@ -604,15 +586,7 @@ static void ImGui_ImplOSX_SetWindowFocus(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
 
-    if (data->Window == g_Window)
-    {
-        [g_Window orderWindow:NSWindowAbove relativeTo:0];
-    }
-    else if (data->Window.parentWindow == g_Window)
-    {
-        [g_Window removeChildWindow:data->Window];
-        [g_Window addChildWindow:data->Window ordered:NSWindowAbove];
-    }
+    [data->Window orderWindow:NSWindowAbove relativeTo:0];
 }
 
 static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
