@@ -37,6 +37,11 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- ImDrawList: upgraded AddPolyline()/PathStroke()'s "bool closed" parameter to use "ImDrawFlags flags".
+  The matching ImDrawFlags_Closed value is guaranteed to always stay == 1 in the future.
+      bool closed = false ----> use ImDrawFlags_None, or 0
+      bool closed = true  ----> use ImDrawFlags_Closed
+  Difference may not be noticeable for most but zealous type-checking tools may report a need to change.
 - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
 - Win32+MinGW: Re-enabled IME functions by default even under MinGW. In July 2016, issue #738 had me incorrectly
@@ -53,26 +58,26 @@ Other Changes:
   when it appears while gamepad/keyboard are not being used. (#787)
 - Drags: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
   with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
-- Drags, Sliders: Fixed a bug where editing value would use wrong number if there were digits right after 
+- Drags, Sliders: Fixed a bug where editing value would use wrong number if there were digits right after
   format specifier (e.g. using "%f123" as a format string). [@rokups]
-- Drags, Sliders: Fixed a bug where using custom formatting flags (',$,_) supported by stb_sprintf.h 
+- Drags, Sliders: Fixed a bug where using custom formatting flags (',$,_) supported by stb_sprintf.h
   would cause incorrect value to be displayed. (#3604) [@rokups]
 - Tables: Fixed unaligned accesses when using TableSetBgColor(ImGuiTableBgTarget_CellBg). (#3872)
 - IsItemHovered(): fixed return value false positive when used after EndChild(), EndGroup() or widgets using
   either of them, when the hovered location is located within a child window, e.g. InputTextMultiline().
   This is intended to have no side effects, but brace yourself for the possible comeback.. (#3851, #1370)
-- Drag and Drop: can use BeginDragDropSource() for other than the left mouse button as long as the item 
+- Drag and Drop: can use BeginDragDropSource() for other than the left mouse button as long as the item
   has an ID (for ID-less items will add new functionalities later). (#1637, #3885)
 - Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
 - ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
   This can currently only ever be set by the Freetype renderer.
-- imgui_freetype: Added ImGuiFreeTypeBuilderFlags_Bitmap flag to request Freetype loading bitmap data. 
+- imgui_freetype: Added ImGuiFreeTypeBuilderFlags_Bitmap flag to request Freetype loading bitmap data.
   This may have an effect on size and must be called with correct size values. (#3879) [@metarutaiga]
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): New default for style.
 - Backends: Android: Added native Android backend. (#3446) [@duddel]
-- Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with 
+- Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with
   alpha compositing and transparent windows. (#2766, #3447 etc.).
 - Backends: OpenGL, Vulkan, DX9, DX10, DX11, DX12, Metal, WebGPU, Allegro: Rework blending equation to
   preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently

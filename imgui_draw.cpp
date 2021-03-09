@@ -689,11 +689,12 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, ImDrawFlags flags, float thickness)
 {
     if (points_count < 2)
         return;
 
+    const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
@@ -1192,7 +1193,7 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
         return;
     PathLineTo(p1 + ImVec2(0.5f, 0.5f));
     PathLineTo(p2 + ImVec2(0.5f, 0.5f));
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 // p_min = upper-left, p_max = lower-right
@@ -1205,7 +1206,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, rounding_corners);
     else
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, rounding_corners); // Better looking lower-right corner and rounded non-AA shapes.
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawCornerFlags rounding_corners)
@@ -1249,7 +1250,7 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     PathLineTo(p2);
     PathLineTo(p3);
     PathLineTo(p4);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -1272,7 +1273,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -1309,7 +1310,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         PathArcToFast(center, radius - 0.5f, 0, 12 - 1);
     else
         PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
@@ -1347,7 +1348,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -1370,7 +1371,7 @@ void ImDrawList::AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2
 
     PathLineTo(p1);
     PathBezierCubicCurveTo(p2, p3, p4, num_segments);
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 // Quadratic Bezier takes 3 controls points
@@ -1381,7 +1382,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
 
     PathLineTo(p1);
     PathBezierQuadraticCurveTo(p2, p3, num_segments);
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
@@ -2534,7 +2535,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = 0x00;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = 0xFF;
 
@@ -2546,7 +2547,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = IM_COL32_BLACK_TRANS;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
@@ -3584,7 +3585,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx - third, by - third));
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
-    draw_list->PathStroke(col, false, thickness);
+    draw_list->PathStroke(col, 0, thickness);
 }
 
 void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
