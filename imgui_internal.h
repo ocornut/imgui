@@ -818,9 +818,9 @@ enum ImGuiInputSource
 {
     ImGuiInputSource_None = 0,
     ImGuiInputSource_Mouse,
-    ImGuiInputSource_Nav,
-    ImGuiInputSource_NavKeyboard,   // Only used occasionally for storage, not tested/handled by most code
-    ImGuiInputSource_NavGamepad,    // "
+    ImGuiInputSource_Keyboard,
+    ImGuiInputSource_Gamepad,
+    ImGuiInputSource_Nav,               // Stored in g.ActiveIdSource only
     ImGuiInputSource_COUNT
 };
 
