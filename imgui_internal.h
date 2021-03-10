@@ -636,11 +636,11 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))))
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_ERROR(_N,_RAD)     ((1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))) / (_RAD))
 
-// ImDrawList: Lookup table size for adaptive arc drawing, cover quarter of the circle.
+// ImDrawList: Lookup table size for adaptive arc drawing, cover full circle.
 #ifndef IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE
-#define IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE                   12 // Number of samples in lookup table.
+#define IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE                   48 // Number of samples in lookup table.
 #endif
-#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          (4 * IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE) // Sample index _PathArcToFastEx() for 360 angle.
+#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
 
 // Data shared between all ImDrawList instances
 // You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
