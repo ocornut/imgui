@@ -1542,6 +1542,7 @@ struct ImGuiContext
     ImGuiViewportP*         MouseViewport;
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more) + honoring the _NoInputs flag.
     ImGuiID                 PlatformLastFocusedViewportId;
+    ImGuiPlatformMonitor    FallbackMonitor;                    // Virtual monitor used as fallback if backend doesn't provide monitor information.
     int                     ViewportFrontMostStampCount;        // Every time the front-most window changes, we stamp its viewport with an incrementing counter
 
     // Gamepad/keyboard Navigation
@@ -2452,9 +2453,10 @@ namespace ImGui
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Viewports
-    IMGUI_API void          TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& old_pos, const ImVec2& new_pos);
-    IMGUI_API void          ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
-    IMGUI_API void          DestroyPlatformWindow(ImGuiViewportP* viewport);
+    IMGUI_API void                  TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& old_pos, const ImVec2& new_pos);
+    IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
+    IMGUI_API void                  DestroyPlatformWindow(ImGuiViewportP* viewport);
+    const ImGuiPlatformMonitor*     GetViewportPlatformMonitor(ImGuiViewport* viewport);
 
     // Settings
     IMGUI_API void                  MarkIniSettingsDirty();

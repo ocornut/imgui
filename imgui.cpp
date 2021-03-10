@@ -3985,7 +3985,7 @@ void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     ImGuiContext& g = *GImGui;
-    
+
     // Remove pending delete hooks before frame start.
     // This deferred removal avoid issues of removal while iterating the hook vector
     for (int n = g.Hooks.Size - 1; n >= 0; n--)
@@ -6449,19 +6449,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
             else if (window->ViewportOwned && g.PlatformIO.Monitors.Size > 0)
             {
-                if (window->Viewport->PlatformMonitor == -1)
-                {
-                    // Fallback for "lost" window (e.g. a monitor disconnected): we move the window back over the main viewport
-                    const ImGuiViewport* main_viewport = GetMainViewport();
-                    SetWindowPos(window, main_viewport->Pos + style.DisplayWindowPadding, ImGuiCond_Always);
-                }
-                else
-                {
-                    ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->Viewport->PlatformMonitor];
-                    visibility_rect.Min = monitor.WorkPos + visibility_padding;
-                    visibility_rect.Max = monitor.WorkPos + monitor.WorkSize - visibility_padding;
-                    ClampWindowRect(window, visibility_rect);
-                }
+                // Lost windows (e.g. a monitor disconnected) will naturally moved to the fallback/dummy monitor aka the main viewport.
+                const ImGuiPlatformMonitor* monitor = GetViewportPlatformMonitor(window->Viewport);
+                visibility_rect.Min = monitor->WorkPos + visibility_padding;
+                visibility_rect.Max = monitor->WorkPos + monitor->WorkSize - visibility_padding;
+                ClampWindowRect(window, visibility_rect);
             }
         }
         window->Pos = ImFloor(window->Pos);
@@ -11534,6 +11526,17 @@ static void ImGui::UpdateViewportsNewFrame()
         viewport->DpiScale = new_dpi_scale;
     }
 
+    // Update fallback monitor
+    if (g.PlatformIO.Monitors.Size == 0)
+    {
+        ImGuiPlatformMonitor* monitor = &g.FallbackMonitor;
+        monitor->MainPos = main_viewport->Pos;
+        monitor->MainSize = main_viewport->Size;
+        monitor->WorkPos = main_viewport->WorkPos;
+        monitor->WorkSize = main_viewport->WorkSize;
+        monitor->DpiScale = main_viewport->DpiScale;
+    }
+
     if (!viewports_enabled)
     {
         g.MouseViewport = main_viewport;
@@ -11747,7 +11750,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if (window->Viewport == NULL)
         if (!UpdateTryMergeWindowIntoHostViewport(window, main_viewport))
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
-    
+
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
     if (!lock_viewport)
     {
@@ -12008,6 +12011,17 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
     viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect());
+}
+
+// Return value is always != NULL, but don't hold on it across frames.
+const ImGuiPlatformMonitor* ImGui::GetViewportPlatformMonitor(ImGuiViewport* viewport_p)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)viewport_p;
+    int monitor_idx = viewport->PlatformMonitor;
+    if (monitor_idx >= 0 || monitor_idx < g.PlatformIO.Monitors.Size)
+        return &g.PlatformIO.Monitors[monitor_idx];
+    return &g.FallbackMonitor;
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
@@ -13613,7 +13627,7 @@ bool ImGui::DockNodeBeginAmendTabBar(ImGuiDockNode* node)
     PushOverrideID(node->ID);
     bool ret = BeginTabBarEx(node->TabBar, node->TabBar->BarRect, node->TabBar->Flags, node);
     IM_UNUSED(ret);
-    IM_ASSERT(ret);    
+    IM_ASSERT(ret);
     return true;
 }
 
