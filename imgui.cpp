@@ -2213,6 +2213,42 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     *out_items_display_end = end;
 }
 
+static int SortAndFuseRanges(int* range_start, int* range_end, int range_count)
+{
+    // Helper to order ranges and fuse them together if possible.
+    // First sort both rangeStart and rangeEnd by rangeStart. Since this helper will just sort 2 or 3 entries, a bubble sort will do fine.
+    for (int sort_end = range_count - 1; sort_end > 0; --sort_end)
+    {
+        for (int i = 0; i < sort_end; ++i)
+        {
+            if (range_start[i] > range_start[i + 1])
+            {
+                ImSwap(range_start[i], range_start[i + 1]);
+                ImSwap(range_end[i], range_end[i + 1]);
+            }
+        }
+    }
+
+    // Now fuse ranges together as much as possible.
+    for (int i = 1; i < range_count;)
+    {
+        if (range_end[i - 1] >= range_start[i])
+        {
+            range_end[i - 1] = ImMax(range_end[i - 1], range_end[i]);
+            range_count--;
+            for (int j = i; j < range_count; ++j)
+            {
+                range_start[j] = range_start[j + 1];
+                range_end[j] = range_end[j + 1];
+            }
+        }
+        else
+            i++;
+    }
+
+    return range_count;
+}
+
 static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height)
 {
     // Set cursor position and a few other things so that SetScrollHereY() and Columns() can work when seeking cursor.
@@ -2242,7 +2278,6 @@ ImGuiListClipper::ImGuiListClipper()
 {
     memset(this, 0, sizeof(*this));
     ItemsCount = -1;
-    ItemForced = -1;
 }
 
 ImGuiListClipper::~ImGuiListClipper()
@@ -2280,12 +2315,17 @@ void ImGuiListClipper::End()
     if (ItemsCount < INT_MAX && DisplayStart >= 0)
         SetCursorPosYAndSetupForPrevLine(StartPosY + (ItemsCount - ItemsFrozen) * ItemsHeight, ItemsHeight);
     ItemsCount = -1;
-    StepNo = 5;
+    StepNo = RangeCount;
 }
 
-void ImGuiListClipper::ForceDisplay(int item_index)
+void ImGuiListClipper::ForceDisplayRange(int item_start, int item_end)
 {
-    ItemForced = item_index;
+    if (DisplayStart < 0 && RangeCount < 1) // Only allowed after Begin() and if there has not been a specified range yet.
+    {
+        RangeStart[RangeCount] = item_start;
+        RangeEnd[RangeCount] = item_end;
+        RangeCount++;
+    }
 }
 
 bool ImGuiListClipper::Step()
@@ -2304,6 +2344,8 @@ bool ImGuiListClipper::Step()
         return false;
     }
 
+    bool calc_clipping = false;
+
     // Step 0: Let you process the first element (regardless of it being visible or not, so we can measure the element height)
     if (StepNo == 0)
     {
@@ -2320,22 +2362,24 @@ bool ImGuiListClipper::Step()
         StartPosY = window->DC.CursorPos.y;
         if (ItemsHeight <= 0.0f)
         {
-            // Submit the first item so we can measure its height (generally it is 0..1)
-            DisplayStart = ItemsFrozen;
-            DisplayEnd = ItemsFrozen + 1;
+            // Submit the first item (or range) so we can measure its height (generally it is 0..1)
+            RangeStart[RangeCount] = ItemsFrozen;
+            RangeEnd[RangeCount] = ItemsFrozen + 1;
+            if (++RangeCount > 1)
+                RangeCount = SortAndFuseRanges(RangeStart, RangeEnd, RangeCount);
+            DisplayStart = ImMax(RangeStart[0], ItemsFrozen);
+            DisplayEnd = ImMin(RangeEnd[0], ItemsCount);
             StepNo = 1;
             return true;
         }
 
-        // Already has item height (given by user in Begin): skip to calculating step
-        DisplayStart = DisplayEnd;
-        StepNo = 2;
+        calc_clipping = true;   // If on the first step with known item height, calculate clipping.
     }
 
-    // Step 1: the clipper infer height from first element
-    if (StepNo == 1)
+    // Step 1: Let the clipper infer height from first range
+    if (ItemsHeight <= 0.0f)
     {
-        IM_ASSERT(ItemsHeight <= 0.0f);
+        IM_ASSERT(StepNo == 1);
         if (table)
         {
             const float pos_y1 = table->RowPosY1;   // Using this instead of StartPosY to handle clipper straddling the frozen row
@@ -2345,92 +2389,52 @@ bool ImGuiListClipper::Step()
         }
         else
         {
-            ItemsHeight = window->DC.CursorPos.y - StartPosY;
+            ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
         }
         IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
-        StepNo = 2;
+
+        calc_clipping = true;   // If item height had to be calculated, calculate clipping afterwards.
     }
 
-    // Reached end of list
-    if (DisplayEnd >= ItemsCount)
-    {
-        End();
-        return false;
-    }
-
-    // Step 2: calculate the actual range of visible elements, and check for a forced element before the visible start
-    // If there is a forced element before the visible start, position the cursor before that element, otherwise fall through to next step
-    if (StepNo == 2)
+    // Step 0 or 1: Calculate the actual range of visible elements.
+    if (calc_clipping)
     {
         IM_ASSERT(ItemsHeight > 0.0f);
 
         int already_submitted = DisplayEnd;
-        ImGui::CalcListClipping(ItemsCount - already_submitted, ItemsHeight, &VisibleStart, &VisibleEnd);
-        VisibleStart += already_submitted;
-        VisibleEnd += already_submitted;
+        ImGui::CalcListClipping(ItemsCount - already_submitted, ItemsHeight, &RangeStart[RangeCount], &RangeEnd[RangeCount]);
 
-        StepNo = 3;
-
-        if ((ItemForced >= already_submitted) && (ItemForced < VisibleStart))
+        // Only add another range if it hasn't been handled by the initial range.
+        if (RangeStart[RangeCount] < RangeEnd[RangeCount])
         {
-            DisplayStart = ItemForced;
-            DisplayEnd = ItemForced + 1;
-
-            // Seek cursor
-            if (DisplayStart > already_submitted)
-                SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
-
-            return true;
+            RangeStart[RangeCount] += already_submitted;
+            RangeEnd[RangeCount] += already_submitted;
+            if (++RangeCount > StepNo + 1)
+                RangeCount = StepNo + SortAndFuseRanges(&RangeStart[StepNo], &RangeEnd[StepNo], RangeCount - StepNo);
         }
     }
 
-    // Step 3: display the visible elements calculated in step 2
-    if (StepNo == 3)
+    // Step 0+ (if item height is given in advance) or 1+: Display the next range in line.
+    if (StepNo < RangeCount)
     {
         int already_submitted = DisplayEnd;
-        DisplayStart = VisibleStart;
-        DisplayEnd = VisibleEnd;
+        DisplayStart = ImMax(RangeStart[StepNo], already_submitted);
+        DisplayEnd = ImMin(RangeEnd[StepNo], ItemsCount);
 
         // Seek cursor
         if (DisplayStart > already_submitted)
             SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
 
-        StepNo = 4;
+        StepNo++;
         return true;
     }
 
-    // Step 4: if there is a forced element after the visible end, display it, otherwise fall through to step 5
-    if (StepNo == 4)
-    {
-        int already_submitted = DisplayEnd;
-
-        StepNo = 5;
-
-        if ((ItemForced >= already_submitted) && (ItemForced < ItemsCount))
-        {
-            DisplayStart = ItemForced;
-            DisplayEnd = ItemForced + 1;
-
-            // Seek cursor
-            if (DisplayStart > already_submitted)
-                SetCursorPosYAndSetupForPrevLine(StartPosY + (DisplayStart - ItemsFrozen) * ItemsHeight, ItemsHeight);
-
-            return true;
-        }
-    }
-
-    // Step 5: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
+    // After the last step: Let the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
-    if (StepNo == 5)
-    {
-        // Seek cursor
-        if (ItemsCount < INT_MAX)
-            SetCursorPosYAndSetupForPrevLine(StartPosY + (ItemsCount - ItemsFrozen) * ItemsHeight, ItemsHeight); // advance cursor
-        ItemsCount = -1;
-        return false;
-    }
+    if (ItemsCount < INT_MAX)
+        SetCursorPosYAndSetupForPrevLine(StartPosY + (ItemsCount - ItemsFrozen) * ItemsHeight, ItemsHeight); // advance cursor
+    ItemsCount = -1;
 
-    IM_ASSERT(0);
     return false;
 }
 
