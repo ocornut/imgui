@@ -373,7 +373,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     // Sample quarter of the circle.
     for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2.0f * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        const float a = ((float)i * 0.5f * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
 
@@ -1063,7 +1063,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
         a_step = _CalcArcAutoSegmentStepSize(radius);
 
     // Make sure we never do steps larger than one quarter of the circle
-    a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE / 4);
+    a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE);
 
     // Normalize a_min_sample to always start lie in [0..IM_DRAWLIST_ARCFAST_SAMPLE_MAX] range.
     if (a_min_sample < 0)
@@ -1101,6 +1101,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
     _Path.resize(_Path.Size + samples);
     ImVec2* out_ptr = _Path.Data + (_Path.Size - samples);
 
+    ImVec2 s;
     int sample_index = a_min_sample;
     for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
     {
@@ -1109,7 +1110,28 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
         if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
             sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
-        const ImVec2 s = _Data->ArcFastVtx[sample_index];
+        if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
+        {
+            s = _Data->ArcFastVtx[sample_index];
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            s.x = -c.y;
+            s.y =  c.x;
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            s.x = -c.x;
+            s.y = -c.y;
+        }
+        else
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            s.x =  c.y;
+            s.y = -c.x;
+        }
 
         out_ptr->x = center.x + s.x * radius;
         out_ptr->y = center.y + s.y * radius;
@@ -1125,7 +1147,28 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
         sample_index = normalized_max_sample;
 
-        const ImVec2 s = _Data->ArcFastVtx[sample_index];
+        if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE)
+        {
+            s = _Data->ArcFastVtx[sample_index];
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2)
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE];
+            s.x = -c.y;
+            s.y =  c.x;
+        }
+        else if (sample_index < IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3)
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 2];
+            s.x = -c.x;
+            s.y = -c.y;
+        }
+        else
+        {
+            const ImVec2& c = _Data->ArcFastVtx[sample_index - IM_DRAWLIST_ARCFAST_LOOKUP_TABLE_SIZE * 3];
+            s.x =  c.y;
+            s.y = -c.x;
+        }
 
         out_ptr->x = center.x + s.x * radius;
         out_ptr->y = center.y + s.y * radius;
