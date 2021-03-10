@@ -162,7 +162,6 @@ typedef int ImGuiMouseCursor;       // -> enum ImGuiMouseCursor_     // Enum: A 
 typedef int ImGuiSortDirection;     // -> enum ImGuiSortDirection_   // Enum: A sorting direction (ascending or descending)
 typedef int ImGuiStyleVar;          // -> enum ImGuiStyleVar_        // Enum: A variable identifier for styling
 typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A color target for TableSetBgColor()
-typedef int ImDrawCornerFlags;      // -> enum ImDrawCornerFlags_    // Flags: for ImDrawList functions: AddRect(), AddRectFilled() etc.
 typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions: AddPolyline(), PathStroke() etc.
 typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList instance
 typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas build
@@ -2278,25 +2277,33 @@ struct ImDrawListSplitter
     IMGUI_API void              SetCurrentChannel(ImDrawList* draw_list, int channel_idx);
 };
 
-enum ImDrawCornerFlags_
-{
-    ImDrawCornerFlags_None      = 0,
-    ImDrawCornerFlags_TopLeft   = 1 << 0, // 0x1
-    ImDrawCornerFlags_TopRight  = 1 << 1, // 0x2
-    ImDrawCornerFlags_BotLeft   = 1 << 2, // 0x4
-    ImDrawCornerFlags_BotRight  = 1 << 3, // 0x8
-    ImDrawCornerFlags_Top       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,   // 0x3
-    ImDrawCornerFlags_Bot       = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,   // 0xC
-    ImDrawCornerFlags_Left      = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,    // 0x5
-    ImDrawCornerFlags_Right     = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight,  // 0xA
-    ImDrawCornerFlags_All       = 0xF     // In your function calls you may use ~0 (= all bits sets) instead of ImDrawCornerFlags_All, as a convenience
-};
-
 // Flags for some ImDrawList functions
 enum ImDrawFlags_
 {
     ImDrawFlags_None                        = 0,
-    ImDrawFlags_Closed                      = 1 << 0  // PathStroke(), AddPolyline(): specify that (LEGACY: this must always stay == 1 to be backward compatible with old API using a bool)
+    ImDrawFlags_Closed                      = 1 << 0, // PathStroke(), AddPolyline(): specify that (LEGACY: this must always stay == 1 to be backward compatible with old API using a bool)
+    // (bits 1..3 unused to facilitate handling of legacy behavior and detection of Flags = 0x0F)
+    ImDrawFlags_NoRoundCornerTL             = 1 << 4,
+    ImDrawFlags_NoRoundCornerTR             = 1 << 5,
+    ImDrawFlags_NoRoundCornerBL             = 1 << 6,
+    ImDrawFlags_NoRoundCornerBR             = 1 << 7,
+    ImDrawFlags_NoRoundCornerT              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerTR,
+    ImDrawFlags_NoRoundCornerR              = ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBR,
+    ImDrawFlags_NoRoundCornerL              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerBL,
+    ImDrawFlags_NoRoundCornerB              = ImDrawFlags_NoRoundCornerBL | ImDrawFlags_NoRoundCornerBR,
+    ImDrawFlags_NoRoundCorners              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBL | ImDrawFlags_NoRoundCornerBR,
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    ImDrawCornerFlags_None                  = ImDrawFlags_NoRoundCorners,
+    ImDrawCornerFlags_TopLeft               = 1 << 28,  // Order is identical to ImDrawFlags_NoRoundCorner* flag order and is exploited by FixImDrawCornerFlags() for support of legacy code.
+    ImDrawCornerFlags_TopRight              = 1 << 29,
+    ImDrawCornerFlags_BotLeft               = 1 << 30,
+    ImDrawCornerFlags_BotRight              = 1 << 31,
+    ImDrawCornerFlags_Top                   = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,
+    ImDrawCornerFlags_Bot                   = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,
+    ImDrawCornerFlags_Left                  = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,
+    ImDrawCornerFlags_Right                 = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight,
+    ImDrawCornerFlags_All                   = 0x0F
+#endif
 };
 
 // Flags for ImDrawList instance. Those are set automatically by ImGui:: functions from ImGuiIO settings, and generally not manipulated directly.
@@ -2359,8 +2366,8 @@ struct ImDrawList
     //   In future versions we will use textures to provide cheaper and higher-quality circles.
     //   Use AddNgon() and AddNgonFilled() functions if you need to guaranteed a specific number of sides.
     IMGUI_API void  AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness = 1.0f);
-    IMGUI_API void  AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawCornerFlags rounding_corners = ImDrawCornerFlags_All, float thickness = 1.0f);   // a: upper-left, b: lower-right (== upper-left + size), rounding_corners_flags: 4 bits corresponding to which corner to round
-    IMGUI_API void  AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawCornerFlags rounding_corners = ImDrawCornerFlags_All);                     // a: upper-left, b: lower-right (== upper-left + size)
+    IMGUI_API void  AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);   // a: upper-left, b: lower-right (== upper-left + size)
+    IMGUI_API void  AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0);                     // a: upper-left, b: lower-right (== upper-left + size)
     IMGUI_API void  AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left);
     IMGUI_API void  AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col);
@@ -2383,7 +2390,7 @@ struct ImDrawList
     // - "uv_min" and "uv_max" represent the normalized texture coordinates to use for those corners. Using (0,0)->(1,1) texture coordinates will generally display the entire texture.
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), ImU32 col = IM_COL32_WHITE);
     IMGUI_API void  AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1 = ImVec2(0, 0), const ImVec2& uv2 = ImVec2(1, 0), const ImVec2& uv3 = ImVec2(1, 1), const ImVec2& uv4 = ImVec2(0, 1), ImU32 col = IM_COL32_WHITE);
-    IMGUI_API void  AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawCornerFlags rounding_corners = ImDrawCornerFlags_All);
+    IMGUI_API void  AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags = 0);
 
     // Stateful path API, add points then finish with PathFillConvex() or PathStroke()
     inline    void  PathClear()                                                 { _Path.Size = 0; }
@@ -2395,7 +2402,7 @@ struct ImDrawList
     IMGUI_API void  PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12);                // Use precomputed angles for a 12 steps circle
     IMGUI_API void  PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, int num_segments = 0); // Cubic Bezier (4 control points)
     IMGUI_API void  PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, int num_segments = 0);               // Quadratic Bezier (3 control points)
-    IMGUI_API void  PathRect(const ImVec2& rect_min, const ImVec2& rect_max, float rounding = 0.0f, ImDrawCornerFlags rounding_corners = ImDrawCornerFlags_All);
+    IMGUI_API void  PathRect(const ImVec2& rect_min, const ImVec2& rect_max, float rounding = 0.0f, ImDrawFlags flags = 0);
 
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.

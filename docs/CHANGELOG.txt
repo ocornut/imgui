@@ -52,6 +52,8 @@ Breaking Changes:
   disable those default functions for MinGW. MinGW users should: either link with -limm32, either set their
   imconfig file with '#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS'. (#2590, #738) [@actboy168]
 - Backends: Win32: Pragma linking with dwmapi.lib (Vista-era, ~9 kb). MinGW users will need to link with -ldwmapi.
+- ImDrawList: Merged ImDrawCornerFlags to ImDrawFlags. Hardcoded use of 0x0F or ~0 as ImDrawCornerFlags should be
+  replaced with ImDrawFlags_None or 0. [@rokups]
 
 Other Changes:
 
