@@ -376,6 +376,18 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2021/03/11 (1.82) - upgraded ImDrawList::AddRect(), AddRectFilled(), PathRect() to use general ImDrawFlags instead of ImDrawCornersFlags.
+                       the old ImDrawCornersFlags used an awkward default value of ~0 or 0xF (4 lower bits set) to signify "round all corners". We still support old flags, but note that the new named flags are opt-out instead of opt-in!
+                        - AddRect(..., rounding, ImDrawCornerFlags_TopLeft) --> AddRect(..., ImDrawFlags_NoRoundCorners ^ ImDrawFlags_NoRoundCornerTL)
+                       flags now sanely defaults to 0 instead of defaulting to ~0 or ImDrawCornerFlags_All, consistent with everywhere else in the codebase.
+                       in practice, this shouldn't have an effect as those flags were rarely used. all meaningful old uses are supported:
+                        - default flags will behave the same.
+                        - use of old named flags will behave the same (but will be obsoleted later).
+                        - use of hardcoded ~0 or 0xF, previously suggested as a convenience, will behave the same (but will be obsoleted later).
+                       not supported:
+                        - use of hardcoded values between 0x01 and 0x0E not using named flags are NOT supported (will assert).
+                        - use of new ImDrawFlags together with ImDrawCornerFlags in the same call (will assert).
+                        - use of rounding > 0.0f along old flags explicitely set as hard coded 0 would have previously overidden the rounding value back into "no rounding", whereas it will now behave as "round all corners". This is technically the only real breaking change which we can't solve automatically.
  - 2021/03/11 (1.82) - removed redirecting functions/enums names that were marked obsolete in 1.66 (September 2018):
                         - ImGui::SetScrollHere()              -> use ImGui::SetScrollHereY()
  - 2021/03/11 (1.82) - clarified that ImDrawList::PathArcTo(), ImDrawList::PathArcToFast() won't render with radius < 0.0f. Previously it sorts of accidentally worked but would generally lead to counter-clockwise paths and have an effect on anti-aliasing.

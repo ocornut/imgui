@@ -162,7 +162,7 @@ typedef int ImGuiMouseCursor;       // -> enum ImGuiMouseCursor_     // Enum: A 
 typedef int ImGuiSortDirection;     // -> enum ImGuiSortDirection_   // Enum: A sorting direction (ascending or descending)
 typedef int ImGuiStyleVar;          // -> enum ImGuiStyleVar_        // Enum: A variable identifier for styling
 typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A color target for TableSetBgColor()
-typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions: AddPolyline(), PathStroke() etc.
+typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions
 typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList instance
 typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas build
 typedef int ImGuiBackendFlags;      // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
@@ -2277,33 +2277,25 @@ struct ImDrawListSplitter
     IMGUI_API void              SetCurrentChannel(ImDrawList* draw_list, int channel_idx);
 };
 
-// Flags for some ImDrawList functions
+// Flags for ImDrawList functions
+// (Before version 1.82: functions like AddRect(), AddRectFilled(), AddImageRounded(), PathRect() used ImDrawCornerFlags,
+//  we have moved those in 1.82 to ImDrawList but using opposite "opt-out" logic instead of "opt-in" logic:
+//    Old: ImDrawCornerFlags_BotLeft          New: ImDrawFlags_NoRoundCornerBL
+//  The old enums are defined under ImDrawCornerFlags_ in the "Obsolete functions and types" section of this header)
+// (Legacy: bit 0 must always correspond to ImDrawFlags_Closed to be backward compatible with old API using a bool. Bits 1..3 must b unused)
 enum ImDrawFlags_
 {
     ImDrawFlags_None                        = 0,
-    ImDrawFlags_Closed                      = 1 << 0, // PathStroke(), AddPolyline(): specify that (LEGACY: this must always stay == 1 to be backward compatible with old API using a bool)
-    // (bits 1..3 unused to facilitate handling of legacy behavior and detection of Flags = 0x0F)
-    ImDrawFlags_NoRoundCornerTL             = 1 << 4,
-    ImDrawFlags_NoRoundCornerTR             = 1 << 5,
-    ImDrawFlags_NoRoundCornerBL             = 1 << 6,
-    ImDrawFlags_NoRoundCornerBR             = 1 << 7,
+    ImDrawFlags_Closed                      = 1 << 0, // PathStroke(), AddPolyline(): specify that shape should be closed (Important: this is always == 1 for legacy reason)
+    ImDrawFlags_NoRoundCornerTL             = 1 << 4, // AddRect(), AddRectFilled(), PathRect(): disable rounding top-left corner when rounding > 0.0f
+    ImDrawFlags_NoRoundCornerTR             = 1 << 5, // AddRect(), AddRectFilled(), PathRect(): disable rounding top-right corner when rounding > 0.0f
+    ImDrawFlags_NoRoundCornerBL             = 1 << 6, // AddRect(), AddRectFilled(), PathRect(): disable rounding bottom-left corner when rounding > 0.0f
+    ImDrawFlags_NoRoundCornerBR             = 1 << 7, // AddRect(), AddRectFilled(), PathRect(): disable rounding bottom-right corner when rounding > 0.0f
     ImDrawFlags_NoRoundCornerT              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerTR,
     ImDrawFlags_NoRoundCornerR              = ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBR,
     ImDrawFlags_NoRoundCornerL              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerBL,
     ImDrawFlags_NoRoundCornerB              = ImDrawFlags_NoRoundCornerBL | ImDrawFlags_NoRoundCornerBR,
-    ImDrawFlags_NoRoundCorners              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBL | ImDrawFlags_NoRoundCornerBR,
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImDrawCornerFlags_None                  = ImDrawFlags_NoRoundCorners,
-    ImDrawCornerFlags_TopLeft               = 1 << 28,  // Order is identical to ImDrawFlags_NoRoundCorner* flag order and is exploited by FixImDrawCornerFlags() for support of legacy code.
-    ImDrawCornerFlags_TopRight              = 1 << 29,
-    ImDrawCornerFlags_BotLeft               = 1 << 30,
-    ImDrawCornerFlags_BotRight              = 1 << 31,
-    ImDrawCornerFlags_Top                   = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,
-    ImDrawCornerFlags_Bot                   = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,
-    ImDrawCornerFlags_Left                  = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,
-    ImDrawCornerFlags_Right                 = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight,
-    ImDrawCornerFlags_All                   = 0x0F
-#endif
+    ImDrawFlags_NoRoundCorners              = ImDrawFlags_NoRoundCornerTL | ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBL | ImDrawFlags_NoRoundCornerBR
 };
 
 // Flags for ImDrawList instance. Those are set automatically by ImGui:: functions from ImGuiIO settings, and generally not manipulated directly.
@@ -2795,6 +2787,23 @@ namespace ImGui
     // OBSOLETED in 1.69 (from Mar 2019)
     static inline ImDrawList* GetOverlayDrawList()          { return GetForegroundDrawList(); }
 }
+
+// OBSOLETED in 1.82 (from Mars 2021): flags for AddRect(), AddRectFilled(), AddImageRounded(), PathRect()
+typedef ImDrawFlags ImDrawCornerFlags;
+enum ImDrawCornerFlags_
+{
+    ImDrawCornerFlags_None      = ImDrawFlags_NoRoundCorners,
+    ImDrawCornerFlags_TopLeft   = 1 << 24,  // Was (1 << 0) prior to 1.82. Order matches ImDrawFlags_NoRoundCorner* flag (we exploit this internally).
+    ImDrawCornerFlags_TopRight  = 1 << 25,  // Was (1 << 1) prior to 1.82.
+    ImDrawCornerFlags_BotLeft   = 1 << 26,  // Was (1 << 2) prior to 1.82.
+    ImDrawCornerFlags_BotRight  = 1 << 27,  // Was (1 << 3) prior to 1.82.
+    ImDrawCornerFlags_All       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight, // Was (0x0F) prior to 1.82
+    ImDrawCornerFlags_Top       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,
+    ImDrawCornerFlags_Bot       = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,
+    ImDrawCornerFlags_Left      = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,
+    ImDrawCornerFlags_Right     = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight
+};
+
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //-----------------------------------------------------------------------------

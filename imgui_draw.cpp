@@ -1280,40 +1280,34 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-static inline ImDrawFlags FixImDrawCornerFlags(ImDrawFlags flags)
+static inline ImDrawFlags FixDrawCornerFlags(ImDrawFlags flags)
 {
-    // If following asserts trigger, please update your code replacing all uses of ImDrawCornerFlags_* with ImDrawFlags_*.
-    if ((flags & ImDrawCornerFlags_All) == ImDrawCornerFlags_All)
-    {
-        // All round corners, set new flags to 0 if:
-        // Legacy Rule 1: first 4 bits of flags are set, ImDrawCornerFlags_All was used
-        // Legacy Rule 2: first all bits of flags are set, ~0 was used
-        IM_ASSERT((flags == ImDrawCornerFlags_All || flags == ~0) && "Mixing new and legacy flags is not allowed.");
+    // If any of following asserts triggers, please update your code replacing all uses of ImDrawCornerFlags_* with ImDrawFlags_*.
+    // Legacy Rule 1: Support for hard coded 0x0F or ~0 (used to be equivalent to ImDrawCornerFlags_All)
+    if (flags == ~0 || flags == 0x0F)
         return 0;
-    }
-    else if ((flags & (ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight)) != 0)
+
+    // Legacy Rule 2: if any of old ImDrawCornerFlags flags, move them to corresponding positions of non-legacy flags and invert them.
+    if ((flags & ImDrawCornerFlags_All) != 0)
     {
-        // Legacy Rule 3: if any of last 4 bits are set, move them to corresponding positions of non-legacy flags and invert them.
-        IM_ASSERT((flags & 0x0FFFFFFF) == 0 && "Mixing new and legacy flags is not allowed.");
-        const int legacy_flags_bit_offset = 24; // 32 - num_legacy_flags (4) - new_flags_first_bit (4)
-        return (flags >> legacy_flags_bit_offset) ^ (ImDrawFlags_NoRoundCornerT | ImDrawFlags_NoRoundCornerB);
+        IM_ASSERT((flags & ~ImDrawCornerFlags_All) == 0 && "Mixing legacy ImDrawCornerFlags and new ImDrawFlags is not allowed.");
+        IM_STATIC_ASSERT((ImDrawCornerFlags_TopLeft >> 20) == ImDrawFlags_NoRoundCornerTL);
+        return (flags >> 20) ^ ImDrawFlags_NoRoundCorners;
     }
-    else
-    {
-        IM_ASSERT((flags & 0x0E) == 0 && "Bits 1..3 are unused.");
-        return flags;
-    }
+
+    // Bits 1..3 are unused, did you use old hard coded values?! In which case, check the old values in ImDrawCornerFlags_ definition.
+    // If you used ~0 or 0x0F you can now change them to 0 or ImDrawFlags_None.
+    IM_ASSERT((flags & 0x0E) == 0);
+    return flags;
 }
+#else
+// Assert and return same value
+#define FixDrawCornerFlags(FLAGS)  (IM_ASSERT((FLAGS & 0x0E) == 0), FLAGS)
 #endif
 
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawFlags flags)
 {
-#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    // Legacy use of ~0 or 0x0F as ImDrawCornerFlags value. Please update your code to use ImDrawFlags_NoRoundCorner* flags.
-    IM_ASSERT((flags & 0x0E) == 0);
-#else
-    flags = FixImDrawCornerFlags(flags);
-#endif
+    flags = FixDrawCornerFlags(flags);
     rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((flags & ImDrawFlags_NoRoundCornerT) == 0) || ((flags & ImDrawFlags_NoRoundCornerB) == 0) ? 0.5f : 1.0f ) - 1.0f);
     rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((flags & ImDrawFlags_NoRoundCornerL) == 0) || ((flags & ImDrawFlags_NoRoundCornerR) == 0) ? 0.5f : 1.0f ) - 1.0f);
 
@@ -1606,12 +1600,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    // Legacy use of ~0 or 0x0F as ImDrawCornerFlags value. Please update your code to use ImDrawFlags_NoRoundCorner* flags.
-    IM_ASSERT((flags & 0x0E) == 0);
-#else
-    flags = FixImDrawCornerFlags(flags);
-#endif
+    flags = FixDrawCornerFlags(flags);
     if (rounding <= 0.0f || (flags & ImDrawFlags_NoRoundCorners) == ImDrawFlags_NoRoundCorners)
     {
         AddImage(user_texture_id, p_min, p_max, uv_min, uv_max, col);
