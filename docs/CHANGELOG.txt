@@ -37,10 +37,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Removed redirecting functions/enums names that were marked obsolete in 1.66 (September 2018):
+  - ImGui::SetScrollHere() --> use ImGui::SetScrollHereY()
 - ImDrawList: upgraded AddPolyline()/PathStroke()'s "bool closed" parameter to use "ImDrawFlags flags".
   The matching ImDrawFlags_Closed value is guaranteed to always stay == 1 in the future.
-      bool closed = false ----> use ImDrawFlags_None, or 0
-      bool closed = true  ----> use ImDrawFlags_Closed
+  - bool closed = false   --> use ImDrawFlags_None, or 0
+  - bool closed = true    --> use ImDrawFlags_Closed
   Difference may not be noticeable for most but zealous type-checking tools may report a need to change.
 - ImDrawList: clarified that PathArcTo()/PathArcToFast() won't render with radius < 0.0f. Previously it sorts
   of accidentally worked but would lead to counter-clockwise paths which and have an effect on anti-aliasing.
