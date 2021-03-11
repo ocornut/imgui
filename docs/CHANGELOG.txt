@@ -102,6 +102,8 @@ Other Changes:
   in e.g. hi-dpi settings will generally look better. (#3491) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
+- Misc: Added 'debuggers/imgui.gdb' and 'debuggers/imgui.natstepfilter' (along with existing 'imgui.natvis')
+  scriptss to configure popular debuggers into skipping trivial functions when using StepInto. [@rokups]
 - Backends: Android: Added native Android backend. (#3446) [@duddel]
 - Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with
   alpha compositing and transparent windows. (#2766, #3447 etc.).
