@@ -42,6 +42,8 @@ Breaking Changes:
       bool closed = false ----> use ImDrawFlags_None, or 0
       bool closed = true  ----> use ImDrawFlags_Closed
   Difference may not be noticeable for most but zealous type-checking tools may report a need to change.
+- ImDrawList: clarified that PathArcTo()/PathArcToFast() won't render with radius < 0.0f. Previously it sorts
+  of accidentally worked but would lead to counter-clockwise paths which and have an effect on anti-aliasing.
 - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
 - Win32+MinGW: Re-enabled IME functions by default even under MinGW. In July 2016, issue #738 had me incorrectly
