@@ -380,18 +380,22 @@ ImDrawListSharedData::ImDrawListSharedData()
         const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
     if (CircleSegmentMaxError == max_error)
         return;
+
+    IM_ASSERT(max_error > 0.0f);
     CircleSegmentMaxError = max_error;
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
         CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
     }
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 // Initialize before use in a new frame. We always have a command ready in the buffer.
@@ -551,7 +555,7 @@ void ImDrawList::_OnChangedVtxOffset()
 int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     // Automatic segment count
-    const int radius_idx = (int)(radius + 0.999f); // ceil to never reduce accuracy
+    const int radius_idx = (int)(radius + 0.999999f); // ceil to never reduce accuracy
     if (radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
@@ -695,11 +699,12 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, ImDrawFlags flags, float thickness)
 {
     if (points_count < 2)
         return;
 
+    const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
@@ -1031,33 +1036,88 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
+void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
 {
-    if (radius == 0.0f)
+    if (radius <= 0.0f)
     {
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min_of_12 <= a_max_of_12);
+    IM_ASSERT(a_min_sample <= a_max_sample);
 
-    // For legacy reason the PathArcToFast() always takes angles where 2*PI is represented by 12,
-    // but it is possible to set IM_DRAWLIST_ARCFAST_TESSELATION_MULTIPLIER to a higher value. This should compile to a no-op otherwise.
-#if IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER != 1
-    a_min_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
-    a_max_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
-#endif
+    // Calculate arc auto segment step size
+    if (a_step <= 0)
+        a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius);
 
-    _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
-    for (int a = a_min_of_12; a <= a_max_of_12; a++)
+    // Make sure we never do steps larger than one quarter of the circle
+    a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+
+    // Normalize a_min_sample to always start lie in [0..IM_DRAWLIST_ARCFAST_SAMPLE_MAX] range.
+    if (a_min_sample < 0)
     {
-        const ImVec2& c = _Data->ArcFastVtx[a % IM_ARRAYSIZE(_Data->ArcFastVtx)];
-        _Path.push_back(ImVec2(center.x + c.x * radius, center.y + c.y * radius));
+        int normalized_sample = a_min_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        if (normalized_sample < 0)
+            normalized_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        a_max_sample += (normalized_sample - a_min_sample);
+        a_min_sample = normalized_sample;
     }
+
+    const int sample_range = a_max_sample - a_min_sample;
+    const int a_next_step = a_step;
+
+    int samples = sample_range + 1;
+    bool extra_max_sample = false;
+    if (a_step > 1)
+    {
+        samples            = sample_range / a_step + 1;
+        const int overstep = sample_range % a_step;
+
+        if (overstep > 0)
+        {
+            extra_max_sample = true;
+            samples++;
+
+            // When we have overstep to avoid awkwardly looking one long line and one tiny one at the end,
+            // distribute first step range evenly between them by reducing first step size.
+            if (sample_range > 0)
+                a_step -= (a_step - overstep) / 2;
+        }
+    }
+
+    _Path.resize(_Path.Size + samples);
+    ImVec2* out_ptr = _Path.Data + (_Path.Size - samples);
+
+    int sample_index = a_min_sample;
+    for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
+    {
+        // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
+        if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+            sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+        const ImVec2 s = _Data->ArcFastVtx[sample_index];
+        out_ptr->x = center.x + s.x * radius;
+        out_ptr->y = center.y + s.y * radius;
+        out_ptr++;
+    }
+
+    if (extra_max_sample)
+    {
+        int normalized_max_sample = a_max_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        if (normalized_max_sample < 0)
+            normalized_max_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+        const ImVec2 s = _Data->ArcFastVtx[normalized_max_sample];
+        out_ptr->x = center.x + s.x * radius;
+        out_ptr->y = center.y + s.y * radius;
+        out_ptr++;
+    }
+
+    IM_ASSERT_PARANOID(_Path.Data + _Path.Size == out_ptr);
 }
 
-void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
+void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
-    if (radius == 0.0f)
+    if (radius <= 0.0f)
     {
         _Path.push_back(center);
         return;
@@ -1071,6 +1131,64 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     {
         const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
         _Path.push_back(ImVec2(center.x + ImCos(a) * radius, center.y + ImSin(a) * radius));
+    }
+}
+
+// 0: East, 3: South, 6: West, 9: North, 12: East
+void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
+{
+    if (radius <= 0.0f)
+    {
+        _Path.push_back(center);
+        return;
+    }
+    IM_ASSERT(a_min_of_12 <= a_max_of_12);
+    _PathArcToFastEx(center, radius, a_min_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, a_max_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, 0);
+}
+
+void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
+{
+    if (radius <= 0.0f)
+    {
+        _Path.push_back(center);
+        return;
+    }
+    IM_ASSERT(a_min <= a_max);
+
+    if (num_segments > 0)
+    {
+        _PathArcToN(center, radius, a_min, a_max, num_segments);
+        return;
+    }
+
+    // Automatic segment count
+    if (radius <= _Data->ArcFastRadiusCutoff)
+    {
+        // We are going to use precomputed values for mid samples.
+        // Determine first and last sample in lookup table that belong to the arc.
+        const int a_min_sample = (int)ImCeil(IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f));
+        const int a_max_sample = (int)(      IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (IM_PI * 2.0f));
+        const int a_mid_samples = ImMax(a_max_sample - a_min_sample, 0);
+
+        const float a_min_segment_angle = a_min_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        const float a_max_segment_angle = a_max_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        const bool a_emit_start = (a_min_segment_angle - a_min) > 0.0f;
+        const bool a_emit_end = (a_max - a_max_segment_angle) > 0.0f;
+
+        _Path.reserve(_Path.Size + (a_mid_samples + 1 + (a_emit_start ? 1 : 0) + (a_emit_end ? 1 : 0)));
+        if (a_emit_start)
+            _Path.push_back(ImVec2(center.x + ImCos(a_min) * radius, center.y + ImSin(a_min) * radius));
+        if (a_max_sample >= a_min_sample)
+            _PathArcToFastEx(center, radius, a_min_sample, a_max_sample, 0);
+        if (a_emit_end)
+            _Path.push_back(ImVec2(center.x + ImCos(a_max) * radius, center.y + ImSin(a_max) * radius));
+    }
+    else
+    {
+        const float arc_length = a_max - a_min;
+        const int circle_segment_count = _CalcCircleAutoSegmentCount(radius);
+        const int arc_segment_count = ImMax((int)ImCeil(circle_segment_count * arc_length / (IM_PI * 2.0f)), (int)(2.0f * IM_PI / arc_length));
+        _PathArcToN(center, radius, a_min, a_max, arc_segment_count);
     }
 }
 
@@ -1167,12 +1285,39 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     }
 }
 
-void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawCornerFlags rounding_corners)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+static inline ImDrawFlags FixDrawCornerFlags(ImDrawFlags flags)
 {
-    rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((rounding_corners & ImDrawCornerFlags_Top)  == ImDrawCornerFlags_Top)  || ((rounding_corners & ImDrawCornerFlags_Bot)   == ImDrawCornerFlags_Bot)   ? 0.5f : 1.0f ) - 1.0f);
-    rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((rounding_corners & ImDrawCornerFlags_Left) == ImDrawCornerFlags_Left) || ((rounding_corners & ImDrawCornerFlags_Right) == ImDrawCornerFlags_Right) ? 0.5f : 1.0f ) - 1.0f);
+    // If any of following asserts triggers, please update your code replacing all uses of ImDrawCornerFlags_* with ImDrawFlags_*.
+    // Legacy Rule 1: Support for hard coded 0x0F or ~0 (used to be equivalent to ImDrawCornerFlags_All)
+    if (flags == ~0 || flags == 0x0F)
+        return 0;
 
-    if (rounding <= 0.0f || rounding_corners == 0)
+    // Legacy Rule 2: if any of old ImDrawCornerFlags flags, move them to corresponding positions of non-legacy flags and invert them.
+    if ((flags & ImDrawCornerFlags_All) != 0)
+    {
+        IM_ASSERT((flags & ~ImDrawCornerFlags_All) == 0 && "Mixing legacy ImDrawCornerFlags and new ImDrawFlags is not allowed.");
+        IM_STATIC_ASSERT((ImDrawCornerFlags_TopLeft >> 20) == ImDrawFlags_NoRoundCornerTL);
+        return (flags >> 20) ^ ImDrawFlags_NoRoundCorners;
+    }
+
+    // Bits 1..3 are unused, did you use old hard coded values?! In which case, check the old values in ImDrawCornerFlags_ definition.
+    // If you used ~0 or 0x0F you can now change them to 0 or ImDrawFlags_None.
+    IM_ASSERT((flags & 0x0E) == 0);
+    return flags;
+}
+#else
+// Assert and return same value
+#define FixDrawCornerFlags(FLAGS)  (IM_ASSERT((FLAGS & 0x0E) == 0), FLAGS)
+#endif
+
+void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawFlags flags)
+{
+    flags = FixDrawCornerFlags(flags);
+    rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((flags & ImDrawFlags_NoRoundCornerT) == 0) || ((flags & ImDrawFlags_NoRoundCornerB) == 0) ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((flags & ImDrawFlags_NoRoundCornerL) == 0) || ((flags & ImDrawFlags_NoRoundCornerR) == 0) ? 0.5f : 1.0f ) - 1.0f);
+
+    if (rounding <= 0.0f || (flags & ImDrawFlags_NoRoundCorners) == ImDrawFlags_NoRoundCorners)
     {
         PathLineTo(a);
         PathLineTo(ImVec2(b.x, a.y));
@@ -1181,10 +1326,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
     else
     {
-        const float rounding_tl = (rounding_corners & ImDrawCornerFlags_TopLeft) ? rounding : 0.0f;
-        const float rounding_tr = (rounding_corners & ImDrawCornerFlags_TopRight) ? rounding : 0.0f;
-        const float rounding_br = (rounding_corners & ImDrawCornerFlags_BotRight) ? rounding : 0.0f;
-        const float rounding_bl = (rounding_corners & ImDrawCornerFlags_BotLeft) ? rounding : 0.0f;
+        const float rounding_tl = (flags & ImDrawFlags_NoRoundCornerTL) ? 0.0f : rounding;
+        const float rounding_tr = (flags & ImDrawFlags_NoRoundCornerTR) ? 0.0f : rounding;
+        const float rounding_br = (flags & ImDrawFlags_NoRoundCornerBR) ? 0.0f : rounding;
+        const float rounding_bl = (flags & ImDrawFlags_NoRoundCornerBL) ? 0.0f : rounding;
         PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
         PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
@@ -1198,29 +1343,29 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
         return;
     PathLineTo(p1 + ImVec2(0.5f, 0.5f));
     PathLineTo(p2 + ImVec2(0.5f, 0.5f));
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 // p_min = upper-left, p_max = lower-right
 // Note we don't render 1 pixels sized rectangles properly.
-void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawCornerFlags rounding_corners, float thickness)
+void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
     if (Flags & ImDrawListFlags_AntiAliasedLines)
-        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, rounding_corners);
+        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
     else
-        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, rounding_corners); // Better looking lower-right corner and rounded non-AA shapes.
-    PathStroke(col, true, thickness);
+        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
-void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawCornerFlags rounding_corners)
+void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (rounding > 0.0f)
+    if (rounding > 0.0f && (flags & ImDrawFlags_NoRoundCorners) != ImDrawFlags_NoRoundCorners)
     {
-        PathRect(p_min, p_max, rounding, rounding_corners);
+        PathRect(p_min, p_max, rounding, flags);
         PathFillConvex(col);
     }
     else
@@ -1255,7 +1400,7 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     PathLineTo(p2);
     PathLineTo(p3);
     PathLineTo(p4);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -1278,7 +1423,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -1315,7 +1460,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         PathArcToFast(center, radius - 0.5f, 0, 12 - 1);
     else
         PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
@@ -1353,7 +1498,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, true, thickness);
+    PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -1376,7 +1521,7 @@ void ImDrawList::AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2
 
     PathLineTo(p1);
     PathBezierCubicCurveTo(p2, p3, p4, num_segments);
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 // Quadratic Bezier takes 3 controls points
@@ -1387,7 +1532,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
 
     PathLineTo(p1);
     PathBezierQuadraticCurveTo(p2, p3, num_segments);
-    PathStroke(col, false, thickness);
+    PathStroke(col, 0, thickness);
 }
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
@@ -1456,12 +1601,13 @@ void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, con
         PopTextureID();
 }
 
-void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawCornerFlags rounding_corners)
+void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (rounding <= 0.0f || (rounding_corners & ImDrawCornerFlags_All) == 0)
+    flags = FixDrawCornerFlags(flags);
+    if (rounding <= 0.0f || (flags & ImDrawFlags_NoRoundCorners) == ImDrawFlags_NoRoundCorners)
     {
         AddImage(user_texture_id, p_min, p_max, uv_min, uv_max, col);
         return;
@@ -1472,7 +1618,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
         PushTextureID(user_texture_id);
 
     int vert_start_idx = VtxBuffer.Size;
-    PathRect(p_min, p_max, rounding, rounding_corners);
+    PathRect(p_min, p_max, rounding, flags);
     PathFillConvex(col);
     int vert_end_idx = VtxBuffer.Size;
     ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, p_min, p_max, uv_min, uv_max, true);
@@ -2540,7 +2686,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = 0x00;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = 0xFF;
 
@@ -2552,7 +2698,7 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
             unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = IM_COL32_BLACK_TRANS;
-            
+
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
@@ -3592,7 +3738,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx - third, by - third));
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
-    draw_list->PathStroke(col, false, thickness);
+    draw_list->PathStroke(col, 0, thickness);
 }
 
 void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
@@ -3712,27 +3858,27 @@ void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, ImRect outer, ImRect
     const bool fill_R = (inner.Max.x < outer.Max.x);
     const bool fill_U = (inner.Min.y > outer.Min.y);
     const bool fill_D = (inner.Max.y < outer.Max.y);
-    if (fill_L) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Min.y), ImVec2(inner.Min.x, inner.Max.y), col, rounding, (fill_U ? 0 : ImDrawCornerFlags_TopLeft) | (fill_D ? 0 : ImDrawCornerFlags_BotLeft));
-    if (fill_R) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Min.y), ImVec2(outer.Max.x, inner.Max.y), col, rounding, (fill_U ? 0 : ImDrawCornerFlags_TopRight) | (fill_D ? 0 : ImDrawCornerFlags_BotRight));
-    if (fill_U) draw_list->AddRectFilled(ImVec2(inner.Min.x, outer.Min.y), ImVec2(inner.Max.x, inner.Min.y), col, rounding, (fill_L ? 0 : ImDrawCornerFlags_TopLeft) | (fill_R ? 0 : ImDrawCornerFlags_TopRight));
-    if (fill_D) draw_list->AddRectFilled(ImVec2(inner.Min.x, inner.Max.y), ImVec2(inner.Max.x, outer.Max.y), col, rounding, (fill_L ? 0 : ImDrawCornerFlags_BotLeft) | (fill_R ? 0 : ImDrawCornerFlags_BotRight));
-    if (fill_L && fill_U) draw_list->AddRectFilled(ImVec2(outer.Min.x, outer.Min.y), ImVec2(inner.Min.x, inner.Min.y), col, rounding, ImDrawCornerFlags_TopLeft);
-    if (fill_R && fill_U) draw_list->AddRectFilled(ImVec2(inner.Max.x, outer.Min.y), ImVec2(outer.Max.x, inner.Min.y), col, rounding, ImDrawCornerFlags_TopRight);
-    if (fill_L && fill_D) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Max.y), ImVec2(inner.Min.x, outer.Max.y), col, rounding, ImDrawCornerFlags_BotLeft);
-    if (fill_R && fill_D) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Max.y), ImVec2(outer.Max.x, outer.Max.y), col, rounding, ImDrawCornerFlags_BotRight);
+    if (fill_L) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Min.y), ImVec2(inner.Min.x, inner.Max.y), col, rounding, (fill_U ? ImDrawFlags_NoRoundCornerTL : 0) | (fill_D ? ImDrawFlags_NoRoundCornerBL : 0));
+    if (fill_R) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Min.y), ImVec2(outer.Max.x, inner.Max.y), col, rounding, (fill_U ? ImDrawFlags_NoRoundCornerTR : 0) | (fill_D ? ImDrawFlags_NoRoundCornerBR : 0));
+    if (fill_U) draw_list->AddRectFilled(ImVec2(inner.Min.x, outer.Min.y), ImVec2(inner.Max.x, inner.Min.y), col, rounding, (fill_L ? ImDrawFlags_NoRoundCornerTL : 0) | (fill_R ? ImDrawFlags_NoRoundCornerTR : 0));
+    if (fill_D) draw_list->AddRectFilled(ImVec2(inner.Min.x, inner.Max.y), ImVec2(inner.Max.x, outer.Max.y), col, rounding, (fill_L ? ImDrawFlags_NoRoundCornerBL : 0) | (fill_R ? ImDrawFlags_NoRoundCornerBR : 0));
+    if (fill_L && fill_U) draw_list->AddRectFilled(ImVec2(outer.Min.x, outer.Min.y), ImVec2(inner.Min.x, inner.Min.y), col, rounding, ImDrawFlags_NoRoundCornerB | ImDrawFlags_NoRoundCornerTR);
+    if (fill_R && fill_U) draw_list->AddRectFilled(ImVec2(inner.Max.x, outer.Min.y), ImVec2(outer.Max.x, inner.Min.y), col, rounding, ImDrawFlags_NoRoundCornerB | ImDrawFlags_NoRoundCornerTL);
+    if (fill_L && fill_D) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Max.y), ImVec2(inner.Min.x, outer.Max.y), col, rounding, ImDrawFlags_NoRoundCornerT | ImDrawFlags_NoRoundCornerBR);
+    if (fill_R && fill_D) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Max.y), ImVec2(outer.Max.x, outer.Max.y), col, rounding, ImDrawFlags_NoRoundCornerT | ImDrawFlags_NoRoundCornerBL);
 }
 
 // Helper for ColorPicker4()
 // NB: This is rather brittle and will show artifact when rounding this enabled if rounded corners overlap multiple cells. Caller currently responsible for avoiding that.
 // Spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding altogether.
 // FIXME: uses ImGui::GetColorU32
-void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, int rounding_corners_flags)
+void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags)
 {
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
         ImU32 col_bg1 = ImGui::GetColorU32(ImAlphaBlendColors(IM_COL32(204, 204, 204, 255), col));
         ImU32 col_bg2 = ImGui::GetColorU32(ImAlphaBlendColors(IM_COL32(128, 128, 128, 255), col));
-        draw_list->AddRectFilled(p_min, p_max, col_bg1, rounding, rounding_corners_flags);
+        draw_list->AddRectFilled(p_min, p_max, col_bg1, rounding, flags);
 
         int yi = 0;
         for (float y = p_min.y + grid_off.y; y < p_max.y; y += grid_step, yi++)
@@ -3745,17 +3891,17 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p
                 float x1 = ImClamp(x, p_min.x, p_max.x), x2 = ImMin(x + grid_step, p_max.x);
                 if (x2 <= x1)
                     continue;
-                int rounding_corners_flags_cell = 0;
-                if (y1 <= p_min.y) { if (x1 <= p_min.x) rounding_corners_flags_cell |= ImDrawCornerFlags_TopLeft; if (x2 >= p_max.x) rounding_corners_flags_cell |= ImDrawCornerFlags_TopRight; }
-                if (y2 >= p_max.y) { if (x1 <= p_min.x) rounding_corners_flags_cell |= ImDrawCornerFlags_BotLeft; if (x2 >= p_max.x) rounding_corners_flags_cell |= ImDrawCornerFlags_BotRight; }
-                rounding_corners_flags_cell &= rounding_corners_flags;
-                draw_list->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), col_bg2, rounding_corners_flags_cell ? rounding : 0.0f, rounding_corners_flags_cell);
+                ImDrawFlags cell_flags = ImDrawFlags_NoRoundCorners;
+                if (y1 <= p_min.y) { if (x1 <= p_min.x) cell_flags &= ~ImDrawFlags_NoRoundCornerTL; if (x2 >= p_max.x) cell_flags &= ~ImDrawFlags_NoRoundCornerTR; }
+                if (y2 >= p_max.y) { if (x1 <= p_min.x) cell_flags &= ~ImDrawFlags_NoRoundCornerBL; if (x2 >= p_max.x) cell_flags &= ~ImDrawFlags_NoRoundCornerBR; }
+                cell_flags |= flags;
+                draw_list->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), col_bg2, rounding, cell_flags);
             }
         }
     }
     else
     {
-        draw_list->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags);
+        draw_list->AddRectFilled(p_min, p_max, col, rounding, flags);
     }
 }
 

@@ -162,7 +162,7 @@
     <ClInclude Include="..\..\backends\imgui_impl_win32.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\misc\natvis\imgui.natvis" />
+    <None Include="..\..\misc\debuggers\imgui.natvis" />
     <None Include="..\README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
