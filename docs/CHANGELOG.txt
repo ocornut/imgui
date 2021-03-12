@@ -106,28 +106,29 @@ Other changes:
 Breaking Changes:
 
 - Removed redirecting functions/enums names that were marked obsolete in 1.66 (September 2018):
-  - ImGui::SetScrollHere() --> use ImGui::SetScrollHereY()
+    - ImGui::SetScrollHere() --> use ImGui::SetScrollHereY()
 - ImDrawList: upgraded AddPolyline()/PathStroke()'s "bool closed" parameter to use "ImDrawFlags flags".
+    - bool closed = false    --> use ImDrawFlags_None, or 0
+    - bool closed = true     --> use ImDrawFlags_Closed
   The matching ImDrawFlags_Closed value is guaranteed to always stay == 1 in the future.
-  - bool closed = false    --> use ImDrawFlags_None, or 0
-  - bool closed = true     --> use ImDrawFlags_Closed
   Difference may not be noticeable for most but zealous type-checking tools may report a need to change.
-- ImDrawList: upgraded AddRect(), AddRectFilled(), PathRect() to use general ImDrawFlags instead of ImDrawCornersFlags.
-  The old ImDrawCornersFlags used an awkward default value of ~0 or 0xF (4 lower bits set) to signify "round all
-  corners". We still support old flags, but note that the new named flags are opt-out instead of opt-in. [@rokups]
-  - AddRect(..., rounding, ImDrawCornerFlags_TopLeft) --> AddRect(..., ImDrawFlags_NoRoundCorners ^ ImDrawFlags_NoRoundCornerTL)
-  - Flags now sanely default to 0 instead of defaulting to ~0 or ImDrawCornerFlags_All, consistent with everywhere else.
-  - In practice, this shouldn't have an effect as those flags were rarely used.
-  - All meaningful old uses are supported:
-    - Default flags will behave the same.
-    - Use of old named flags will behave the same (but will be obsoleted later)
-    - Use of hardcoded ~0 or 0xF, previously suggested as a convenience, will behave the same (but will be obsoleted later).
-  - Not supported:
-    - Use of hardcoded values between 0x01 and 0x0E not using named flags are NOT supported (will assert).
-    - Use of new ImDrawFlags together with ImDrawCornerFlags in the same call (will assert).
-    - Use of rounding > 0.0f along old flags explicitely set as hardcoded 0 would have previously overidden the
-      rounding value back into "no rounding", whereas it will now behave as "round all corners".
-      This is technically the only real breaking change which we can't solve automatically.
+- ImDrawList: upgraded AddRect(), AddRectFilled(), PathRect() to use ImDrawFlags instead of ImDrawCornersFlags.
+    - ImDrawCornerFlags_TopLeft  --> use ImDrawFlags_RoundCornersTopLeft
+    - ImDrawCornerFlags_BotRight --> use ImDrawFlags_RoundCornersBottomRight
+    - ImDrawCornerFlags_None     --> use ImDrawFlags_RoundCornersNone etc.
+  Flags now sanely defaults to 0 instead of 0x0F, consistent with all other flags in the API.
+  IMPORTANT: The default with rounding > 0.0f is now "round all corners" vs old implicit "round no corners":
+    - rounding == 0.0f + flags == 0 --> meant no rounding  --> unchanged (common use)
+    - rounding  > 0.0f + flags != 0 --> meant rounding     --> unchanged (common use)
+    - rounding == 0.0f + flags != 0 --> meant no rounding  --> unchanged (unlikely use)
+    - rounding  > 0.0f + flags == 0 --> meant no rounding  --> BREAKING (unlikely use)!
+       - this ONLY matters for hardcoded use of 0 with rounding > 0.0f.
+       - fix by using named ImDrawFlags_RoundCornersNone or rounding == 0.0f!
+       - this is technically the only real breaking change which we can't solve automatically (it's also uncommon).
+  The old ImDrawCornersFlags used awkward default values of ~0 or 0xF (4 lower bits set) to signify "round all corners"
+  and we sometimes encouraged using them as shortcuts. As a result the legacy path still support use of hardcoded ~0
+  or any value from 0x1 or 0xF. They will behave the same with legacy paths enabled (will assert otherwise).
+  Courtesy of legacy untangling commity: [@rokups, @ocornut, @thedmd]
 - ImDrawList: clarified that PathArcTo()/PathArcToFast() won't render with radius < 0.0f. Previously it sorts
   of accidentally worked but would lead to counter-clockwise paths which and have an effect on anti-aliasing.
 - Moved 'misc/natvis/imgui.natvis' to 'misc/debuggers/imgui.natvis' as we will provide scripts for other debuggers.
