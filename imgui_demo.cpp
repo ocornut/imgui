@@ -7205,7 +7205,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
             const float spacing = 10.0f;
-            const ImDrawFlags corners_tl_br = ImDrawFlags_NoRoundCornerTR | ImDrawFlags_NoRoundCornerBL;
+            const ImDrawFlags corners_tl_br = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomRight;
             const float rounding = sz / 5.0f;
             const int circle_segments = circle_segments_override ? circle_segments_override_v : 0;
             const int curve_segments = curve_segments_override ? curve_segments_override_v : 0;

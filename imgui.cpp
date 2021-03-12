@@ -376,18 +376,19 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2021/03/11 (1.82) - upgraded ImDrawList::AddRect(), AddRectFilled(), PathRect() to use general ImDrawFlags instead of ImDrawCornersFlags.
-                       the old ImDrawCornersFlags used an awkward default value of ~0 or 0xF (4 lower bits set) to signify "round all corners". We still support old flags, but note that the new named flags are opt-out instead of opt-in!
-                        - AddRect(..., rounding, ImDrawCornerFlags_TopLeft) --> AddRect(..., ImDrawFlags_NoRoundCorners ^ ImDrawFlags_NoRoundCornerTL)
-                       flags now sanely defaults to 0 instead of defaulting to ~0 or ImDrawCornerFlags_All, consistent with everywhere else in the codebase.
-                       in practice, this shouldn't have an effect as those flags were rarely used. all meaningful old uses are supported:
-                        - default flags will behave the same.
-                        - use of old named flags will behave the same (but will be obsoleted later).
-                        - use of hardcoded ~0 or 0xF, previously suggested as a convenience, will behave the same (but will be obsoleted later).
-                       not supported:
-                        - use of hardcoded values between 0x01 and 0x0E not using named flags are NOT supported (will assert).
-                        - use of new ImDrawFlags together with ImDrawCornerFlags in the same call (will assert).
-                        - use of rounding > 0.0f along old flags explicitely set as hard coded 0 would have previously overidden the rounding value back into "no rounding", whereas it will now behave as "round all corners". This is technically the only real breaking change which we can't solve automatically.
+ - 2021/03/12 (1.82) - upgraded ImDrawList::AddRect(), AddRectFilled(), PathRect() to use ImDrawFlags instead of ImDrawCornersFlags.
+                        - ImDrawCornerFlags_TopLeft  -> use ImDrawFlags_RoundCornersTopLeft
+                        - ImDrawCornerFlags_BotRight -> use ImDrawFlags_RoundCornersBottomRight
+                        - ImDrawCornerFlags_None     -> use ImDrawFlags_RoundCornersNone etc.
+                       flags now sanely defaults to 0 instead of 0x0F, consistent with all other flags in the API.
+                       breaking: the default with rounding > 0.0f is now "round all corners" vs old implicit "round no corners":
+                        - rounding == 0.0f + flags == 0 --> meant no rounding  --> unchanged (common use)
+                        - rounding  > 0.0f + flags != 0 --> meant rounding     --> unchanged (common use)
+                        - rounding == 0.0f + flags != 0 --> meant no rounding  --> unchanged (unlikely use)
+                        - rounding  > 0.0f + flags == 0 --> meant no rounding  --> BREAKING (unlikely use): will now round all corners --> use ImDrawFlags_RoundCornersNone or rounding == 0.0f.
+                       this ONLY matters for hard coded use of 0 + rounding > 0.0f. Use of named ImDrawFlags_RoundCornersNone (new) or ImDrawCornerFlags_None (old) are ok.
+                       the old ImDrawCornersFlags used awkward default values of ~0 or 0xF (4 lower bits set) to signify "round all corners" and we sometimes encouraged using them as shortcuts.
+                       legacy path still support use of hard coded ~0 or any value from 0x1 or 0xF. They will behave the same with legacy paths enabled (will assert otherwise).
  - 2021/03/11 (1.82) - removed redirecting functions/enums names that were marked obsolete in 1.66 (September 2018):
                         - ImGui::SetScrollHere()              -> use ImGui::SetScrollHereY()
  - 2021/03/11 (1.82) - clarified that ImDrawList::PathArcTo(), ImDrawList::PathArcToFast() won't render with radius < 0.0f. Previously it sorts of accidentally worked but would generally lead to counter-clockwise paths and have an effect on anti-aliasing.
@@ -5516,14 +5517,14 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             }
             if (override_alpha)
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
-            window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_NoRoundCornerT);
+            window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom);
         }
 
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             ImU32 title_bar_col = GetColorU32(title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
-            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_NoRoundCornerB);
+            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundCornersTop);
         }
 
         // Menu bar
@@ -5531,7 +5532,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-            window->DrawList->AddRectFilled(menu_bar_rect.Min + ImVec2(window_border_size, 0), menu_bar_rect.Max - ImVec2(window_border_size, 0), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_NoRoundCornerB);
+            window->DrawList->AddRectFilled(menu_bar_rect.Min + ImVec2(window_border_size, 0), menu_bar_rect.Max - ImVec2(window_border_size, 0), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                 window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
         }
