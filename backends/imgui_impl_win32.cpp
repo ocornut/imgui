@@ -23,6 +23,7 @@
 
 // Configuration flags to add in your imconfig.h file:
 //#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD              // Disable gamepad support (this used to be meaningful before <1.81) but we know load XInput dynamically so the option is less relevant now.
+//#define IMGUI_IMPL_WIN32_ENABLE_PEEKMESSAGE           // Enable PeekMessage in the Multi-viewport if main window call PeekMessage itself only
 
 // Using XInput for gamepad (will load DLL dynamically)
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -728,6 +729,16 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
         ::ShowWindow(data->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
     }
+
+    // To call PeekMessage if calling PeekMessage main window in the main loop only
+#ifdef IMGUI_IMPL_WIN32_ENABLE_PEEKMESSAGE
+    MSG msg;
+    if (::PeekMessage(&msg, data->Hwnd, 0, 0, PM_REMOVE))
+    {
+        ::TranslateMessage(&msg);
+        ::DispatchMessage(&msg);
+    }
+#endif
 }
 
 static ImVec2 ImGui_ImplWin32_GetWindowPos(ImGuiViewport* viewport)
