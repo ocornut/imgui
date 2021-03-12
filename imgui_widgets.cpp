@@ -3980,8 +3980,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (!is_multiline && focus_requested_by_code)
                 select_all = true;
         }
-        if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
-            state->Stb.insert_mode = 1;
+        if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
+            state->Stb.insert_mode = 1; // stb field name is indeed incorrect (see #2863)
         if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
             select_all = true;
     }
