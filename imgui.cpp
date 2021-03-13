@@ -2320,11 +2320,21 @@ void ImGuiListClipper::End()
 
 void ImGuiListClipper::ForceDisplayRange(int item_start, int item_end)
 {
-    if (DisplayStart < 0 && RangeCount < 1) // Only allowed after Begin() and if there has not been a specified range yet.
+    if (DisplayStart < 0 && RangeCount + YRangeCount < 1)  // Only allowed after Begin() and if there has not been a specified range yet.
     {
         RangeStart[RangeCount] = item_start;
         RangeEnd[RangeCount] = item_end;
         RangeCount++;
+    }
+}
+
+void ImGuiListClipper::ForceDisplayYRange(float y_min, float y_max)
+{
+    if (DisplayStart < 0 && RangeCount + YRangeCount < 1)  // Only allowed after Begin() and if there has not been a specified range yet.
+    {
+        YRangeMin[YRangeCount] = y_min;
+        YRangeMax[YRangeCount] = y_max;
+        YRangeCount++;
     }
 }
 
@@ -2409,9 +2419,29 @@ bool ImGuiListClipper::Step()
         {
             RangeStart[RangeCount] += already_submitted;
             RangeEnd[RangeCount] += already_submitted;
-            if (++RangeCount > StepNo + 1)
-                RangeCount = StepNo + SortAndFuseRanges(&RangeStart[StepNo], &RangeEnd[StepNo], RangeCount - StepNo);
+            RangeCount++;
         }
+
+        // Convert specified y ranges to item index ranges.
+        for (int i = 0; i < YRangeCount; ++i)
+        {
+            int start = already_submitted + (int)((YRangeMin[i] - window->DC.CursorPos.y) / ItemsHeight);
+            int end = already_submitted + (int)((YRangeMax[i] - window->DC.CursorPos.y) / ItemsHeight) + 1;
+
+            start = ImMax(start, already_submitted);
+            end = ImMin(end, ItemsCount);
+
+            if (start < end)
+            {
+                RangeStart[RangeCount] = start;
+                RangeEnd[RangeCount] = end;
+                RangeCount++;
+            }
+        }
+
+        // Try to sort and fuse only if there is more than 1 range remaining.
+        if (RangeCount > StepNo + 1)
+            RangeCount = StepNo + SortAndFuseRanges(&RangeStart[StepNo], &RangeEnd[StepNo], RangeCount - StepNo);
     }
 
     // Step 0+ (if item height is given in advance) or 1+: Display the next range in line.

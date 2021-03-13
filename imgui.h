@@ -2163,6 +2163,9 @@ struct ImGuiListClipper
     int     RangeStart[4];  // 1 for the user, rest for internal use
     int     RangeEnd[4];
     int     RangeCount;
+    int     YRangeMin[1];
+    int     YRangeMax[1];
+    int     YRangeCount;
     int     StepNo;
     int     ItemsFrozen;
     float   ItemsHeight;
@@ -2176,7 +2179,8 @@ struct ImGuiListClipper
     IMGUI_API void Begin(int items_count, float items_height = -1.0f);  // Automatically called by constructor if you passed 'items_count' or by Step() in Step 1.
     IMGUI_API void End();                                               // Automatically called on the last call of Step() that returns false.
     IMGUI_API void ForceDisplayRange(int item_start, int item_end);     // Optionally call before the first call to Step() if you need a range of items to be displayed regardless of visibility.
-    inline    void ForceDisplay(int item_start, int item_count = 1) { ForceDisplayRange(item_start, item_start + item_count); }  // Like ForceDisplayRange, but with a number insteaf of an end index.
+    inline    void ForceDisplay(int item_start, int item_count = 1) { ForceDisplayRange(item_start, item_start + item_count); }  // Like ForceDisplayRange, but with a number instead of an end index.
+    IMGUI_API void ForceDisplayYRange(float y_min, float y_max);        // Like ForceDisplayRange, but with y coordinates instead of item indices.
     IMGUI_API bool Step();                                              // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
