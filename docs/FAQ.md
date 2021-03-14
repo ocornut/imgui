@@ -81,8 +81,7 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
-You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) branch which includes:
-- [Table features](https://github.com/ocornut/imgui/issues/2957)
+The tables branch was merged with master and released as part of 1.80.
 
 ##### [Return to Index](#index)
 
