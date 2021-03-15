@@ -111,6 +111,8 @@
     ImGui_ImplOSX_AddTrackingArea(self);
     ImGui_ImplOSX_Init(self.view);
 #endif
+
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 #pragma mark - Interaction
