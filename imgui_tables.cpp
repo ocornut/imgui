@@ -1,4 +1,4 @@
-// dear imgui, v1.82 WIP
+// dear imgui, v1.82
 // (tables and columns code)
 
 /*
@@ -166,7 +166,7 @@ Index of this file:
 // - Case B: column is clipped / out of sight (because of scrolling or parent ClipRect): TableNextColumn() return false as a hint but we still allow layout output.
 // - Case C: column is hidden explicitly by the user (e.g. via the context menu, or _DefaultHide column flag, etc.).
 //
-//                        [A]         [B]          [C]         
+//                        [A]         [B]          [C]
 //  TableNextColumn():    true        false        false       -> [userland] when TableNextColumn() / TableSetColumnIndex() return false, user can skip submitting items but only if the column doesn't contribute to row height.
 //          SkipItems:    false       false        true        -> [internal] when SkipItems is true, most widgets will early out if submitted, resulting is no layout output.
 //           ClipRect:    normal      zero-width   zero-width  -> [internal] when ClipRect is zero, ItemAdd() will return false and most widgets will early out mid-way.
@@ -635,7 +635,7 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
     {
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_)); // Check that only 1 of each set is used.
     }
-    
+
     // Resize
     if ((table->Flags & ImGuiTableFlags_Resizable) == 0)
         flags |= ImGuiTableColumnFlags_NoResize;
@@ -808,7 +808,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             // Apply same widths policy
             float width_auto = column->WidthAuto;
             if (table_sizing_policy == ImGuiTableFlags_SizingFixedSame && (column->AutoFitQueue != 0x00 || !column_is_resizable))
-                width_auto = fixed_max_width_auto; 
+                width_auto = fixed_max_width_auto;
 
             // Apply automatic width
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
