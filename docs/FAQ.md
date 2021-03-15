@@ -81,9 +81,6 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
-You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) branch which includes:
-- [Table features](https://github.com/ocornut/imgui/issues/2957)
-
 ##### [Return to Index](#index)
 
 ----
@@ -116,7 +113,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
     // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
     ImGuiIO& io = ImGui::GetIO();
     io.MouseDown[button] = down;
-    
+
     // (2) ONLY forward mouse data to your underlying app/game.
     if (!io.WantCaptureMouse)
         my_game->HandleMouseData(...);

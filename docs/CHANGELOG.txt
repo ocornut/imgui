@@ -86,6 +86,7 @@ Other Changes:
   format specifier (e.g. using "%f123" as a format string). [@rokups]
 - Drags, Sliders: Fixed a bug where using custom formatting flags (',$,_) supported by stb_sprintf.h
   would cause incorrect value to be displayed. (#3604) [@rokups]
+- Drags, Sliders: Support ImGuiSliderFlags_Logarithmic flag with integers. Because why not? (#3786)
 - Tables: Fixed unaligned accesses when using TableSetBgColor(ImGuiTableBgTarget_CellBg). (#3872)
 - IsItemHovered(): fixed return value false positive when used after EndChild(), EndGroup() or widgets using
   either of them, when the hovered location is located within a child window, e.g. InputTextMultiline().
