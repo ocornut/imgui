@@ -100,8 +100,10 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.82 WIP (In Progresss)
+ VERSION 1.82 (Released 2021-02-15)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.82
 
 Breaking Changes:
 
@@ -131,6 +133,8 @@ Breaking Changes:
   Courtesy of legacy untangling commity: [@rokups, @ocornut, @thedmd]
 - ImDrawList: clarified that PathArcTo()/PathArcToFast() won't render with radius < 0.0f. Previously it sorts
   of accidentally worked but would lead to counter-clockwise paths which and have an effect on anti-aliasing.
+- InputText: renamed ImGuiInputTextFlags_AlwaysInsertMode to ImGuiInputTextFlags_AlwaysOverwrite, old name was an
+  incorrect description of behavior. Was ostly used by memory editor. Kept inline redirection function. (#2863)
 - Moved 'misc/natvis/imgui.natvis' to 'misc/debuggers/imgui.natvis' as we will provide scripts for other debuggers.
 - Style: renamed rarely used style.CircleSegmentMaxError (old default = 1.60f)
   to style.CircleTessellationMaxError (new default = 0.30f) as its meaning changed. (#3808) [@thedmd]
@@ -141,9 +145,9 @@ Breaking Changes:
 
 Other Changes:
 
+- Window, Nav: Fixed crash when calling SetWindowFocus(NULL) at the time a new window appears. (#3865) [@nem0]
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
-- Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
 - Nav: Various fixes for losing gamepad/keyboard navigation reference point when a window reappears or
   when it appears while gamepad/keyboard are not being used. (#787)
 - Drags: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
@@ -152,24 +156,27 @@ Other Changes:
   format specifier (e.g. using "%f123" as a format string). [@rokups]
 - Drags, Sliders: Fixed a bug where using custom formatting flags (',$,_) supported by stb_sprintf.h
   would cause incorrect value to be displayed. (#3604) [@rokups]
+- Drags, Sliders: Support ImGuiSliderFlags_Logarithmic flag with integers. Because why not? (#3786)
 - Tables: Fixed unaligned accesses when using TableSetBgColor(ImGuiTableBgTarget_CellBg). (#3872)
 - IsItemHovered(): fixed return value false positive when used after EndChild(), EndGroup() or widgets using
   either of them, when the hovered location is located within a child window, e.g. InputTextMultiline().
   This is intended to have no side effects, but brace yourself for the possible comeback.. (#3851, #1370)
 - Drag and Drop: can use BeginDragDropSource() for other than the left mouse button as long as the item
   has an ID (for ID-less items will add new functionalities later). (#1637, #3885)
-- Added GetAllocatorFunctions() to facilitate sharing allocators accross DLL boundaries. (#3836)
 - ImFontAtlas: Added 'bool TexPixelsUseColors' output to help backend decide of underlying texture format. (#3369)
   This can currently only ever be set by the Freetype renderer.
 - imgui_freetype: Added ImGuiFreeTypeBuilderFlags_Bitmap flag to request Freetype loading bitmap data.
   This may have an effect on size and must be called with correct size values. (#3879) [@metarutaiga]
-- ImDrawList: PathArcTo() now supports "int num_segments = 0" (new default) and adaptively tesselate.
-  The adapative tesselation uses look up tables, tends to be faster than old PathArcTo() while maintaining
-  quality for large arcs (tesselation quality derived from "style.CircleTessellationMaxError") (#3491) [@thedmd]
-- ImDrawList: PathArcToFast() also adaptively tesselate efficiently. This means that large rounded corners
+- ImDrawList: PathArcTo() now supports "int num_segments = 0" (new default) and adaptively tessellate.
+  The adaptive tessellation uses look up tables, tends to be faster than old PathArcTo() while maintaining
+  quality for large arcs (tessellation quality derived from "style.CircleTessellationMaxError") (#3491) [@thedmd]
+- ImDrawList: PathArcToFast() also adaptively tessellate efficiently. This means that large rounded corners
   in e.g. hi-dpi settings will generally look better. (#3491) [@thedmd]
 - ImDrawList: AddCircle, AddCircleFilled(): Tweaked default segment count calculation to honor MaxError
   with more accuracy. Made default segment count always even for better looking result. (#3808) [@thedmd]
+- Misc: Added GetAllocatorFunctions() to facilitate sharing allocators across DLL boundaries. (#3836)
+- Misc: Added 'debuggers/imgui.gdb' and 'debuggers/imgui.natstepfilter' (along with existing 'imgui.natvis')
+  scripts to configure popular debuggers into skipping trivial functions when using StepInto. [@rokups]
 - Backends: Android: Added native Android backend. (#3446) [@duddel]
 - Backends: Win32: Added ImGui_ImplWin32_EnableAlphaCompositing() to facilitate experimenting with
   alpha compositing and transparent windows. (#2766, #3447 etc.).
@@ -179,7 +186,7 @@ Other Changes:
   (#2693, #2764, #2766, #2873, #3447, #3813, #3816) [@ocornut, @thedmd, @ShawnM427, @Ubpa, @aiekick]
 - Backends: DX9: Fix to support IMGUI_USE_BGRA_PACKED_COLOR. (#3844) [@Xiliusha]
 - Backends: DX9: Fix to support colored glyphs, using newly introduced 'TexPixelsUseColors' info. (#3844)
-- Examples: Android: Added Android + GL ES2 example. (#3446) [@duddel]
+- Examples: Android: Added Android + GL ES3 example. (#3446) [@duddel]
 - Examples: Reworked setup of clear color to be compatible with transparent values.
 - CI: Use a dedicated "scheduled" workflow to trigger scheduled builds. Forks may disable this workflow if
   scheduled builds builds are not required. [@rokups]
@@ -189,6 +196,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.81 (Released 2021-02-10)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.81
 
 Breaking Changes:
 
