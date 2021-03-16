@@ -39,6 +39,7 @@ Breaking Changes:
 
 Other Changes:
 
+- DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 
