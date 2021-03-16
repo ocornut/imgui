@@ -110,9 +110,9 @@
 #if TARGET_OS_OSX
     ImGui_ImplOSX_AddTrackingArea(self);
     ImGui_ImplOSX_Init(self.view);
-#endif
 
     [NSApp activateIgnoringOtherApps:YES];
+#endif
 }
 
 #pragma mark - Interaction
@@ -130,61 +130,6 @@
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplOSX_Shutdown();
     ImGui::DestroyContext();
-}
-
-- (void)mouseMoved:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)mouseDown:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseDown:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseDown:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)mouseUp:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseUp:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseUp:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)mouseDragged:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseDragged:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseDragged:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)scrollWheel:(NSEvent *)event
-{
-    ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
 #else
