@@ -192,6 +192,11 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window)
     return true;
 }
 
+bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_Init(window);
+}
+
 bool ImGui_ImplSDL2_InitForOpenGL(SDL_Window* window, void* sdl_gl_context)
 {
     (void)sdl_gl_context; // Viewport branch will need this.
