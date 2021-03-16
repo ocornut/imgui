@@ -100,6 +100,20 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.83 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
+  consistent with the compile-time default. (#3922)
+- DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
+- Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
+
+
+-----------------------------------------------------------------------
  VERSION 1.82 (Released 2021-02-15)
 -----------------------------------------------------------------------
 
@@ -414,7 +428,7 @@ Breaking Changes:
 - Renamed ImGuiSliderFlags_ClampOnInput to ImGuiSliderFlags_AlwaysClamp. Kept redirection enum (will obsolete).
 - Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
   For variety of reason this is more self-explanatory and less error-prone. Kept inline redirection function.
-- Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
+- Removed return value from OpenPopupOnItemClick() - returned true on mouse release on an item - because it
   is inconsistent with other popups API and makes others misleading. It's also and unnecessary: you can
   use IsWindowAppearing() after BeginPopup() for a similar result.
 
@@ -1354,7 +1368,7 @@ Breaking Changes:
 
 - Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
 - Made it illegal/assert when io.DisplayTime == 0.0f (with an exception for the first frame).
-  If for some reason your time step calculation gives you a zero value, replace it with a arbitrary small value!
+  If for some reason your time step calculation gives you a zero value, replace it with a arbitrarily small value!
 
 Other Changes:
 
