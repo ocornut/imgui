@@ -12815,6 +12815,29 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     MarkIniSettingsDirty();
 }
 
+// Problem:
+//   Undocking a large (~full screen) window would leave it so large that the bottom right sizing corner would more
+//   than likely be off the screen and the window would be hard to resize to fit on screen. This can be particularly problematic
+//   with 'ConfigWindowsMoveFromTitleBarOnly=true' and/or with 'ConfigWindowsResizeFromEdges=false' as well (the later can be
+//   due to missing ImGuiBackendFlags_HasMouseCursors backend flag).
+// Solution:
+//   When undocking a window we currently force its maximum size to 90% of the host viewport or monitor.
+// Reevaluate this when we implement preserving docked/undocked size ("docking_wip/undocked_size" branch).
+static ImVec2 FixLargeWindowsWhenUndocking(const ImVec2& size, ImGuiViewport* ref_viewport)
+{
+    if (ref_viewport == NULL)
+        return size;
+
+    ImGuiContext& g = *GImGui;
+    ImVec2 max_size = ImFloor(ref_viewport->WorkSize * 0.90f);
+    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
+    {
+        const ImGuiPlatformMonitor* monitor = ImGui::GetViewportPlatformMonitor(ref_viewport);
+        max_size = ImFloor(monitor->WorkSize * 0.90f);
+    }
+    return ImMin(size, max_size);
+}
+
 void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref)
 {
     IMGUI_DEBUG_LOG_DOCKING("DockContextProcessUndockWindow window '%s', clear_persistent_docking_ref = %d\n", window->Name, clear_persistent_docking_ref);
@@ -12826,6 +12849,8 @@ void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* windo
     window->Collapsed = false;
     window->DockIsActive = false;
     window->DockTabIsVisible = false;
+    window->Size = window->SizeFull = FixLargeWindowsWhenUndocking(window->SizeFull, window->Viewport);
+
     MarkIniSettingsDirty();
 }
 
@@ -12839,6 +12864,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     {
         // In the case of a root node or central node, the node will have to stay in place. Create a new node to receive the payload.
         ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
+        new_node->Pos = node->Pos;
+        new_node->Size = node->Size;
+        new_node->SizeRef = node->SizeRef;
         DockNodeMoveWindows(new_node, node);
         DockSettingsRenameNodeReferences(node->ID, new_node->ID);
         for (int n = 0; n < new_node->Windows.Size; n++)
@@ -12847,7 +12875,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     }
     else
     {
-        // Otherwise extract our node and merging our sibling back into the parent node.
+        // Otherwise extract our node and merge our sibling back into the parent node.
         IM_ASSERT(node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
         int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
         node->ParentNode->ChildNodes[index_in_parent] = NULL;
@@ -12855,7 +12883,8 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         node->ParentNode->AuthorityForViewport = ImGuiDataAuthority_Window; // The node that stays in place keeps the viewport, so our newly dragged out node will create a new viewport
         node->ParentNode = NULL;
     }
-    node->AuthorityForPos = node->AuthorityForSize = ImGuiDataAuthority_Window;
+    node->AuthorityForPos = node->AuthorityForSize = ImGuiDataAuthority_DockNode;
+    node->Size = FixLargeWindowsWhenUndocking(node->Size, node->Windows[0]->Viewport);
     node->WantMouseMove = true;
     MarkIniSettingsDirty();
 }
