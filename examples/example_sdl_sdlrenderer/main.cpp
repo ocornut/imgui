@@ -23,6 +23,10 @@ int main(int, char**)
         return -1;
     }
 
+    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
     // Setup window
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);

@@ -1,20 +1,11 @@
-// dear imgui: Renderer Backend for OpenGL2 (legacy OpenGL, fixed pipeline)
-// This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
+// dear imgui: Renderer Backend for SDL_Renderer, with Platform Backend SDL 
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
-// **Prefer using the code in imgui_impl_opengl3.cpp**
-// This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
-// If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
-// complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
-// confuse your GPU driver.
-// The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
 // CHANGELOG
 //  2021-16-03: Creation 
@@ -37,8 +28,6 @@
 
 SDL_Renderer *g_SDLRenderer = NULL;
 SDL_Texture  *g_SDLFontTexture = NULL;
-int g_SDLFontTexture_w = 0;
-int g_SDLFontTexture_h = 0;
 
 bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
 {
@@ -47,6 +36,14 @@ bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
     io.BackendRendererName = "imgui_impl_SDLRenderer";
 
     g_SDLRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    if (g_SDLRenderer == NULL) {
+        SDL_Log("Error creating SDL renderer");
+        return false;
+    } else {
+        SDL_RendererInfo info;
+        SDL_GetRendererInfo(g_SDLRenderer, &info);
+        SDL_Log("Current SDL Renderer: %s", info.name);
+    }
     return true;
 }
 
@@ -144,8 +141,8 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                         tab[0].color.g = (v0.col >> 8) & 0xff;
                         tab[0].color.b = (v0.col >> 16) & 0xff;
                         tab[0].color.a = (v0.col >> 24) & 0xff;
-                        tab[0].tex_coord.x = v0.uv.x * g_SDLFontTexture_w;
-                        tab[0].tex_coord.y = v0.uv.y * g_SDLFontTexture_h;
+                        tab[0].tex_coord.x = v0.uv.x;
+                        tab[0].tex_coord.y = v0.uv.y;
 
                         tab[1].position.x = v1.pos.x;
                         tab[1].position.y = v1.pos.y;
@@ -153,8 +150,8 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                         tab[1].color.g = (v1.col >> 8) & 0xff;
                         tab[1].color.b = (v1.col >> 16) & 0xff;
                         tab[1].color.a = (v1.col >> 24) & 0xff;
-                        tab[1].tex_coord.x = v1.uv.x * g_SDLFontTexture_w;
-                        tab[1].tex_coord.y = v1.uv.y * g_SDLFontTexture_h;
+                        tab[1].tex_coord.x = v1.uv.x;
+                        tab[1].tex_coord.y = v1.uv.y;
 
                         tab[2].position.x = v2.pos.x;
                         tab[2].position.y = v2.pos.y;
@@ -162,8 +159,8 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                         tab[2].color.g = (v2.col >> 8) & 0xff;
                         tab[2].color.b = (v2.col >> 16) & 0xff;
                         tab[2].color.a = (v2.col >> 24) & 0xff;
-                        tab[2].tex_coord.x = v2.uv.x * g_SDLFontTexture_w;
-                        tab[2].tex_coord.y = v2.uv.y * g_SDLFontTexture_h;
+                        tab[2].tex_coord.x = v2.uv.x;
+                        tab[2].tex_coord.y = v2.uv.y;
 
                         SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? g_SDLFontTexture : NULL);
                         SDL_RenderGeometry(g_SDLRenderer, tex, tab, 3, NULL, 0);
@@ -186,8 +183,10 @@ bool ImGui_ImplSDLRenderer_CreateFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
     g_SDLFontTexture = SDL_CreateTexture(g_SDLRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    g_SDLFontTexture_w = width;
-    g_SDLFontTexture_h = height;
+    if (g_SDLFontTexture == NULL) {
+        SDL_Log("error creating texture");
+        return false;
+    }
     SDL_UpdateTexture(g_SDLFontTexture, NULL, pixels, 4 * width);
     SDL_SetTextureBlendMode(g_SDLFontTexture, SDL_BLENDMODE_BLEND);
     // Store our identifier
