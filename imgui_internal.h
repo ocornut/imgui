@@ -372,8 +372,25 @@ IMGUI_API bool              ImFileClose(ImFileHandle file);
 IMGUI_API ImU64             ImFileGetSize(ImFileHandle file);
 IMGUI_API ImU64             ImFileRead(void* data, ImU64 size, ImU64 count, ImFileHandle file);
 IMGUI_API ImU64             ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle file);
-#else
+#else //Bedrock File Handler Hook so we can use our own internal file handling
 #define IMGUI_DISABLE_TTY_FUNCTIONS // Can't use stdout, fflush if we are not using default file functions
+//We'll cast this to our own internal type as needed
+typedef void* ImFileHandle;
+//Helper struct for hooking file operations to external systems
+struct ImIFileHelper {
+    virtual ~ImIFileHelper() = default;
+    virtual ImFileHandle  ImFileOpen(const char* filename, const char* mode) = 0;
+    virtual bool          ImFileClose(ImFileHandle file) = 0;
+    virtual ImU64         ImFileGetSize(ImFileHandle file) = 0;
+    virtual ImU64         ImFileRead(void* data, ImU64 size, ImU64 count, ImFileHandle file) = 0;
+    virtual ImU64         ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle file) = 0;
+};
+
+IMGUI_API ImFileHandle      ImFileOpen(const char* filename, const char* mode);
+IMGUI_API bool              ImFileClose(ImFileHandle file);
+IMGUI_API ImU64             ImFileGetSize(ImFileHandle file);
+IMGUI_API ImU64             ImFileRead(void* data, ImU64 size, ImU64 count, ImFileHandle file);
+IMGUI_API ImU64             ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle file);
 #endif
 IMGUI_API void*             ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 
@@ -1598,6 +1615,9 @@ struct ImGuiContext
     ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
     ImGuiID                             HookIdNext;             // Next available HookId
+#ifdef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+    ImIFileHelper* FileHelper = nullptr;                        // Hook object for external source to implement their own fileIO
+#endif
 
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing

@@ -1565,7 +1565,49 @@ bool    ImFileClose(ImFileHandle f)     { return fclose(f) == 0; }
 ImU64   ImFileGetSize(ImFileHandle f)   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? (ImU64)sz : (ImU64)-1; }
 ImU64   ImFileRead(void* data, ImU64 sz, ImU64 count, ImFileHandle f)           { return fread(data, (size_t)sz, (size_t)count, f); }
 ImU64   ImFileWrite(const void* data, ImU64 sz, ImU64 count, ImFileHandle f)    { return fwrite(data, (size_t)sz, (size_t)count, f); }
-#endif // #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+#else
+//Functions to redirect to our hook object function calls if it exists
+ImFileHandle      ImFileOpen(const char* filename, const char* mode) {
+    if (auto context = ImGui::GetCurrentContext()) {
+        if (ImIFileHelper* fileHelperPtr = context->FileHelper) {
+            return fileHelperPtr->ImFileOpen(filename, mode);
+        }
+    }
+    return nullptr;
+}
+bool              ImFileClose(ImFileHandle file) {
+    if (auto context = ImGui::GetCurrentContext()) {
+        if (ImIFileHelper* fileHelperPtr = context->FileHelper) {
+            return fileHelperPtr->ImFileClose(file);
+        }
+    }
+    return false;
+}
+ImU64             ImFileGetSize(ImFileHandle file) {
+    if (auto context = ImGui::GetCurrentContext()) {
+        if (ImIFileHelper* fileHelperPtr = context->FileHelper) {
+            return fileHelperPtr->ImFileGetSize(file);
+        }
+    }
+    return 0;
+}
+ImU64             ImFileRead(void* data, ImU64 size, ImU64 count, ImFileHandle file) {
+    if (auto context = ImGui::GetCurrentContext()) {
+        if (ImIFileHelper* fileHelperPtr = context->FileHelper) {
+            return fileHelperPtr->ImFileRead(data, size, count, file);
+        }
+    }
+    return 0;
+}
+ImU64             ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle file) {
+    if (auto context = ImGui::GetCurrentContext()) {
+        if (ImIFileHelper* fileHelperPtr = context->FileHelper) {
+            return fileHelperPtr->ImFileWrite(data, size, count, file);
+        }
+    }
+    return 0;
+}
+#endif
 
 // Helper: Load file content into memory
 // Memory allocated with IM_ALLOC(), must be freed by user using IM_FREE() == ImGui::MemFree()
