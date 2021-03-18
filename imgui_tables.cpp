@@ -8,6 +8,7 @@ Index of this file:
 // [SECTION] Commentary
 // [SECTION] Header mess
 // [SECTION] Tables: Main code
+// [SECTION] Tables: Simple accessors
 // [SECTION] Tables: Row changes
 // [SECTION] Tables: Columns changes
 // [SECTION] Tables: Columns width management
@@ -234,6 +235,19 @@ Index of this file:
 
 //-----------------------------------------------------------------------------
 // [SECTION] Tables: Main code
+//-----------------------------------------------------------------------------
+// - TableFixFlags() [Internal]
+// - TableFindByID() [Internal]
+// - BeginTable()
+// - BeginTableEx() [Internal]
+// - TableBeginInitMemory() [Internal]
+// - TableBeginApplyRequests() [Internal]
+// - TableSetupColumnFlags() [Internal]
+// - TableUpdateLayout() [Internal]
+// - TableUpdateBorders() [Internal]
+// - EndTable()
+// - TableSetupColumn()
+// - TableSetupScrollFreeze()
 //-----------------------------------------------------------------------------
 
 // Configuration
@@ -1434,6 +1448,20 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] Tables: Simple accessors
+//-----------------------------------------------------------------------------
+// - TableGetColumnCount()
+// - TableGetColumnName()
+// - TableGetColumnName() [Internal]
+// - TableSetColumnEnabled() [Internal]
+// - TableGetColumnFlags()
+// - TableGetCellBgRect() [Internal]
+// - TableGetColumnResizeID() [Internal]
+// - TableGetHoveredColumn() [Internal]
+// - TableSetBgColor()
+//-----------------------------------------------------------------------------
 
 int ImGui::TableGetColumnCount()
 {

@@ -42,6 +42,8 @@ Other Changes:
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
+- Backends: DirectX9: calling IDirect3DStateBlock9::Capture() after CreateStateBlock() which appears to
+  workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 
