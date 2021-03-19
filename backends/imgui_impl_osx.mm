@@ -434,7 +434,7 @@ void ImGui_ImplOSX_AddTrackingArea(NSViewController* _Nonnull controller)
     if (g_Monitor)
         return;
     NSEventMask eventMask = 0;
-    eventMask |= NSEventMaskMouseMoved | NSEventTypeScrollWheel;
+    eventMask |= NSEventMaskMouseMoved | NSEventMaskScrollWheel;
     eventMask |= NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp | NSEventMaskLeftMouseDragged;
     eventMask |= NSEventMaskRightMouseDown | NSEventMaskRightMouseUp | NSEventMaskRightMouseDragged;
     eventMask |= NSEventMaskOtherMouseDown | NSEventMaskOtherMouseUp | NSEventMaskOtherMouseDragged;
