@@ -1,15 +1,9 @@
 #
-# Cross Platform Makefile
-# Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
+# Raspbian Specific Makefile
 #
 # You will need SDL2 (http://www.libsdl.org):
 # Linux:
 #   apt-get install libsdl2-dev
-# Mac OS X:
-#   brew install sdl2
-# MSYS2:
-#   pacman -S mingw-w64-i686-SDL2
-#
 
 #CXX = g++
 #CXX = clang++
@@ -32,7 +26,11 @@ CXXFLAGS += -DRPI -DIMGUI_IMPL_OPENGL_ES2
 ## OPENGL LOADER
 ##---------------------------------------------------------------------
 
-## Using OpenGL loader: gl3w [default]
+## Using OpenGL loader: glad
+SOURCES += ../libs/glad/es2.0/src/glad.c
+CXXFLAGS += -I../libs/glad/es2.0/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
+
+## Using OpenGL loader: gl3w 
 #SOURCES += ../libs/gl3w/GL/gl3w.c
 #CXXFLAGS += -I../libs/gl3w -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 
@@ -40,10 +38,6 @@ CXXFLAGS += -DRPI -DIMGUI_IMPL_OPENGL_ES2
 ## (This assumes a system-wide installation)
 #CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLEW
 #LIBS += -lGLEW
-
-## Using OpenGL loader: glad
-SOURCES += ../libs/glad/es2.0/src/glad.c
-CXXFLAGS += -I../libs/glad/es2.0/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
 
 ## Using OpenGL loader: glad2
 # SOURCES += ../libs/glad/src/gl.c
@@ -64,8 +58,6 @@ CXXFLAGS += -I../libs/glad/es2.0/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-#	LIBS += -lGL -ldl `sdl2-config --libs`
-#	CXXFLAGS += `sdl2-config --cflags`
 
 	LIBS += `PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig pkg-config --libs bcm_host brcmegl brcmglesv2` -ldl `sdl2-config --libs`
 	CXXFLAGS += `PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig pkg-config --cflags bcm_host brcmegl brcmglesv2` `sdl2-config --cflags`
@@ -73,23 +65,6 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(UNAME_S), Darwin) #APPLE
-	ECHO_MESSAGE = "Mac OS X"
-	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
-	LIBS += -L/usr/local/lib -L/opt/local/lib
-
-	CXXFLAGS += `sdl2-config --cflags`
-	CXXFLAGS += -I/usr/local/include -I/opt/local/include
-	CFLAGS = $(CXXFLAGS)
-endif
-
-ifeq ($(OS), Windows_NT)
-    ECHO_MESSAGE = "MinGW"
-    LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
-
-    CXXFLAGS += `pkg-config --cflags sdl2`
-    CFLAGS = $(CXXFLAGS)
-endif
 
 ##---------------------------------------------------------------------
 ## BUILD RULES
