@@ -7507,6 +7507,50 @@ void ImGui::TabBarQueueReorder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, in
     tab_bar->ReorderRequestDir = (ImS8)dir;
 }
 
+void ImGui::TabBarQueueReorderFromMousePos(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, ImVec2 mouse_pos)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(tab_bar->ReorderRequestTabId == 0);
+
+    if ((tab_bar->Flags & ImGuiTabBarFlags_Reorderable) == 0)
+        return;
+
+    int source_idx = tab_bar->Tabs.index_from_ptr(tab);
+    float bar_x = tab_bar->BarRect.Min.x;
+    int dir = bar_x + tab->Offset > mouse_pos.x ? -1 : +1;
+    int target_idx = source_idx;
+
+    for (int i = source_idx; 0 <= i && i < tab_bar->Tabs.Size; i += dir)
+    {
+        const ImGuiTabItem* target_tab = &tab_bar->Tabs[i];
+
+        // Reorder only within tab groups with _Leading, _Trailing flag or without either of them.
+        if ((target_tab->Flags & ImGuiTabItemFlags_Leading) != (tab->Flags & ImGuiTabItemFlags_Leading))
+            break;
+        if ((target_tab->Flags & ImGuiTabItemFlags_Trailing) != (tab->Flags & ImGuiTabItemFlags_Trailing))
+            break;
+
+        // Do not reorder past tabs with _NoReorder flag.
+        if (target_tab->Flags & ImGuiTabItemFlags_NoReorder)
+            break;
+
+        target_idx = i;     // target_tab can be swapped with dragged tab.
+
+        // Current tab is destination tab under mouse position. Also include space after tab, so when mouse cursor is
+        // between tabs we would not continue checking further tabs that are not hovered.
+        if (dir > 0 && mouse_pos.x < bar_x + target_tab->Offset + target_tab->Width + g.Style.ItemInnerSpacing.x)       // End of tab is past mouse_pos.
+            break;
+        if (dir < 0 && mouse_pos.x > bar_x + target_tab->Offset - g.Style.ItemInnerSpacing.x)                           // Mouse pos is past start of tab.
+            break;
+    }
+
+    if (target_idx != source_idx)
+    {
+        tab_bar->ReorderRequestTabId = tab->ID;
+        tab_bar->ReorderRequestDir = (ImS8)(target_idx - source_idx);
+    }
+}
+
 bool ImGui::TabBarProcessReorder(ImGuiTabBar* tab_bar)
 {
     ImGuiTabItem* tab1 = TabBarFindTabByID(tab_bar, tab_bar->ReorderRequestTabId);
@@ -7526,7 +7570,18 @@ bool ImGui::TabBarProcessReorder(ImGuiTabBar* tab_bar)
         return false;
 
     ImGuiTabItem item_tmp = *tab1;
-    *tab1 = *tab2;
+    ImGuiTabItem* src, *dst;
+    if (tab_bar->ReorderRequestDir > 0)
+    {
+        dst = tab1;
+        src = tab1 + 1;
+    }
+    else
+    {
+        dst = tab2 + 1;
+        src = tab2;
+    }
+    memmove(dst, src, abs(tab_bar->ReorderRequestDir) * sizeof(ImGuiTabItem));
     *tab2 = item_tmp;
 
     if (tab_bar->Flags & ImGuiTabBarFlags_SaveSettings)
@@ -7882,14 +7937,12 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < bb.Min.x)
             {
                 drag_distance_from_edge_x = bb.Min.x - g.IO.MousePos.x;
-                if (tab_bar->Flags & ImGuiTabBarFlags_Reorderable)
-                    TabBarQueueReorder(tab_bar, tab, -1);
+                TabBarQueueReorderFromMousePos(tab_bar, tab, g.IO.MousePos);
             }
             else if (g.IO.MouseDelta.x > 0.0f && g.IO.MousePos.x > bb.Max.x)
             {
                 drag_distance_from_edge_x = g.IO.MousePos.x - bb.Max.x;
-                if (tab_bar->Flags & ImGuiTabBarFlags_Reorderable)
-                    TabBarQueueReorder(tab_bar, tab, +1);
+                TabBarQueueReorderFromMousePos(tab_bar, tab, g.IO.MousePos);
             }
         }
 
