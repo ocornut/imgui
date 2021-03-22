@@ -2423,6 +2423,7 @@ namespace ImGui
     IMGUI_API void          TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id);
     IMGUI_API void          TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
     IMGUI_API void          TabBarQueueReorder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, int dir);
+    IMGUI_API void          TabBarQueueReorderFromMousePos(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, ImVec2 mouse_pos);
     IMGUI_API bool          TabBarProcessReorder(ImGuiTabBar* tab_bar);
     IMGUI_API bool          TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags);
     IMGUI_API ImVec2        TabItemCalcSize(const char* label, bool has_close_button);
