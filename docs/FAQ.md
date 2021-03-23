@@ -16,12 +16,12 @@ or view this file with any Markdown viewer.
 | [Which version should I get?](#q-which-version-should-i-get) |
 | **Q&A: Integration** |
 | **[How to get started?](#q-how-to-get-started)** |
-| **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application)** |
+| **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-my-application)** |
 | [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
-| [I integrated Dear ImGui in my engine and little squares are showing instead of text..](#q-i-integrated-dear-imgui-in-my-engine-and-little-squares-are-showing-instead-of-text) |
-| [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
-| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
+| [I integrated Dear ImGui in my engine and little squares are showing instead of text...](#q-i-integrated-dear-imgui-in-my-engine-and-little-squares-are-showing-instead-of-text) |
+| [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
+| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
 | **[Why is my widget not reacting when I click on it?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?](#q-why-is-my-widget-not-reacting-when-i-click-on-it)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
@@ -47,7 +47,7 @@ or view this file with any Markdown viewer.
 
 ### Q: Where is the documentation?
 
-**This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.**
+**This library is poorly documented at the moment and expects the user to be acquainted with C/C++.**
 - The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
 - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
@@ -55,7 +55,7 @@ or view this file with any Markdown viewer.
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
 - The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
 - The [Issues](https://github.com/ocornut/imgui/issues) and [Discussions](https://github.com/ocornut/imgui/discussions) sections can be searched for past questions and issues.
-- Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
+- Your programming IDE is your friend, find the type or function declaration to find comments associated with it.
 - The `ImGui::ShowMetricsWindow()` function exposes lots of internal information and tools. Although it is primary designed as a debugging tool, having access to that information tends to help understands concepts.
 
 ##### [Return to Index](#index)
@@ -81,9 +81,6 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
-You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) branch which includes:
-- [Table features](https://github.com/ocornut/imgui/issues/2957)
-
 ##### [Return to Index](#index)
 
 ----
@@ -101,7 +98,7 @@ The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and
 
 ---
 
-### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
+### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?
 
 You can read the `io.WantCaptureMouse`, `io.WantCaptureKeyboard` and `io.WantTextInput` flags from the ImGuiIO structure.
 - When `io.WantCaptureMouse` is set, you need to discard/hide the mouse inputs from your underlying application.
@@ -116,7 +113,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
     // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
     ImGuiIO& io = ImGui::GetIO();
     io.MouseDown[button] = down;
-    
+
     // (2) ONLY forward mouse data to your underlying app/game.
     if (!io.WantCaptureMouse)
         my_game->HandleMouseData(...);
@@ -162,7 +159,7 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ---
 
-### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text..
+### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
 This usually means that: your font texture wasn't uploaded into GPU, or your shader or other rendering state are not reading from the right texture (e.g. texture wasn't bound).
 If this happens using the standard backends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 
@@ -170,8 +167,8 @@ If this happens using the standard backends it is probably that the texture fail
 
 ---
 
-### Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-### Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
+### Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...
+### Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...
 You are probably mishandling the clipping rectangles in your render function.
 Each draw command needs the triangle rendered using the clipping rectangle provided in the ImDrawCmd structure (`ImDrawCmd->CllipRect`).
 Rectangles provided by Dear ImGui are defined as
@@ -654,11 +651,11 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 # Q&A: Community
 
 ### Q: How can I help?
-- Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding we can hire more people working on this project.
+- Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding, we can hire more people working on this project.
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
-You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3488). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
+You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3488). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and help other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)

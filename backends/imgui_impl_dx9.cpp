@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-03-18: DirectX9: Calling IDirect3DStateBlock9::Capture() after CreateStateBlock() as a workaround for state restoring issues (see #3857).
 //  2021-03-03: DirectX9: Added support for IMGUI_USE_BGRA_PACKED_COLOR in user's imconfig file.
 //  2021-02-18: DirectX9: Change blending equation to preserve alpha in output buffer.
 //  2019-05-29: DirectX9: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
@@ -137,6 +138,11 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     IDirect3DStateBlock9* d3d9_state_block = NULL;
     if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
         return;
+    if (d3d9_state_block->Capture() < 0)
+    {
+        d3d9_state_block->Release();
+        return;
+    }
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
     D3DMATRIX last_world, last_view, last_projection;

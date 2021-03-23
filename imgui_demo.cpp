@@ -1,4 +1,4 @@
-// dear imgui, v1.82 WIP
+// dear imgui, v1.83 WIP
 // (demo code)
 
 // Help:
@@ -6,9 +6,9 @@
 // - Newcomers, read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 // - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp. All applications in examples/ are doing that.
 // Read imgui.cpp for more details, documentation and comments.
-// Get latest version at https://github.com/ocornut/imgui
+// Get the latest version at https://github.com/ocornut/imgui
 
-// Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
+// Message to the person tempted to delete this file when integrating Dear ImGui into their codebase:
 // Do NOT remove this file from your project! Think again! It is the most useful reference code that you and other
 // coders will want to refer to and call. Have the ImGui::ShowDemoWindow() function wired in an always-available
 // debug menu of your game/app! Removing this file from your project is hindering access to documentation for everyone
@@ -16,19 +16,19 @@
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowDemoWindow().
 // If you want to link core Dear ImGui in your shipped builds but want a thorough guarantee that the demo will not be
 // linked, you can setup your imconfig.h with #define IMGUI_DISABLE_DEMO_WINDOWS and those functions will be empty.
-// In other situation, whenever you have Dear ImGui available you probably want this to be available for reference.
+// In another situation, whenever you have Dear ImGui available you probably want this to be available for reference.
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (which you won't delete)
 
 // Message to beginner C/C++ programmers about the meaning of the 'static' keyword:
-// In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls,
+// In this demo code, we frequently use 'static' variables inside functions. A static variable persists across calls,
 // so it is essentially like a global variable but declared inside the scope of the function. We do this as a way to
 // gather code and data in the same place, to make the demo source code faster to read, faster to write, and smaller
 // in size. It also happens to be a convenient way of storing simple UI related information as long as your function
 // doesn't need to be reentrant or used in multiple threads. This might be a pattern you will want to use in your code,
 // but most of the real data you would be editing is likely going to be stored outside your functions.
 
-// The Demo code in this file is designed to be easy to copy-and-paste in into your application!
+// The Demo code in this file is designed to be easy to copy-and-paste into your application!
 // Because of this:
 // - We never omit the ImGui:: prefix when calling functions, even though most code here is in the same namespace.
 // - We try to declare static variables in the local scope, as close as possible to the code using them.
@@ -2838,6 +2838,8 @@ static void ShowDemoWindowLayout()
             {
                 for (int item = 0; item < 100; item++)
                 {
+                    if (item > 0)
+                        ImGui::SameLine();
                     if (enable_track && item == track_item)
                     {
                         ImGui::TextColored(ImVec4(1, 1, 0, 1), "Item %d", item);
@@ -2847,7 +2849,6 @@ static void ShowDemoWindowLayout()
                     {
                         ImGui::Text("Item %d", item);
                     }
-                    ImGui::SameLine();
                 }
             }
             float scroll_x = ImGui::GetScrollX();
