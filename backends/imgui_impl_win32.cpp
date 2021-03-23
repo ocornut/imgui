@@ -32,6 +32,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-03-23: Inputs: Clearing keyboard down array when losing focus (WM_KILLFOCUS).
 //  2021-02-18: Added ImGui_ImplWin32_EnableAlphaCompositing(). Non Visual Studio users will need to link with dwmapi.lib (MinGW/gcc: use -ldwmapi).
 //  2021-02-17: Fixed ImGui_ImplWin32_EnableDpiAwareness() attempting to get SetProcessDpiAwareness from shcore.dll on Windows 8 whereas it is only supported on Windows 8.1.
 //  2021-01-25: Inputs: Dynamically loading XInput DLL.
@@ -372,6 +373,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_SYSKEYUP:
         if (wParam < 256)
             io.KeysDown[wParam] = 0;
+        return 0;
+    case WM_KILLFOCUS:
+        memset(io.KeysDown, 0, sizeof(io.KeysDown));
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
