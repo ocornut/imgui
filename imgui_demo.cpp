@@ -199,7 +199,7 @@ Index of this file:
 
 
 // ImGuiDemoCallback: a type of callback that will be called at each DEMO_MARKER macro call.
-typedef void (*ImGuiDemoCallback)(bool clicked, const char* file, int line_number, const char* demo_title);
+typedef void (*ImGuiDemoCallback)(const char* file, int line_number, const char* demo_title);
 // GImGuiDemoCallback: an optional external callback (if not present, DemoCodeWindow will be used)
 ImGuiDemoCallback GImGuiDemoCallback = NULL;
 
@@ -380,13 +380,10 @@ namespace DemoMarkerTools
                 IM_DELETE(SourceLineNumbersStr);
         }
 
-        void DemoCallback(bool clicked, const char* /*file*/, int line_number, const char* /*demo_title*/)
+        void DemoCallback(const char* /*file*/, int line_number, const char* /*demo_title*/)
         {
-            if (clicked)
-            {
-                IsWindowOpened = true;
-                EditorLine_NavigateTo = line_number;
-            }
+            IsWindowOpened = true;
+            EditorLine_NavigateTo = line_number;
         }
 
         void Gui()
@@ -546,7 +543,7 @@ namespace DemoMarkerTools
     // "Help/Code lookup" button. It also can display a DemoCodeWindow (if the source code is available)
     class DemoMarkersRegistry
     {
-#define DEMO_PICKUP_LABEL "Help/Code Lookup"
+#define CODE_LOOKUP_LABEL "Code Lookup"
     private:
         // A ZoneBoundings specifies a rectangular bounding for the widgets whose code is given
         // *after* a call to DEMO_MARKER. This bounding will extend down to the next DEMO_MARKER macro call.
@@ -564,9 +561,9 @@ namespace DemoMarkerTools
             AllZonesBoundings(),
             PreviousZoneSourceLine(-1),
             CodeWindow(),
-            IsPicking(false),
-            FlagTooltipDoneThisFrame(false)
-        {}
+            FlagFollowMouse(false)
+        {
+        }
 
         // DemoMarker is the method which is called by the DEMO_MARKER macro
         void DemoMarker(const char* file, int line_number, const char *demo_title)
@@ -580,66 +577,52 @@ namespace DemoMarkerTools
             if (! is_mouve_hovering_zone)
                 return;
 
-            bool is_keyboard_shortcut_active = (ImGui::GetIO().KeyShift && ImGui::GetIO().KeyCtrl);
-            bool shall_highlight = IsPicking || is_keyboard_shortcut_active;
-
+            bool shall_highlight = FlagFollowMouse;
             if (shall_highlight)
             {
                 HighlightZone(zone_boundings);
-                FlagTooltipDoneThisFrame = true;
                 ImGui::SetTooltip(
+                    CODE_LOOKUP_LABEL ":\n"
                     DEMO_MARKER_MACRO_NAME "(\"%s\") at %s:%d\n\n"
-                    "*Right* click or press \"Esc\" to exit this mode",
-                    demo_title, FileBaseName(file),line_number);
+                    "Press \"Esc\" to exit this mode",
+                    demo_title, FileBaseName(file), line_number);
             }
 
-            bool clicked = ImGui::IsMouseClicked(1);
-            DemoCallback(clicked || is_keyboard_shortcut_active, file, line_number, demo_title);
-
-            if (clicked)
-                IsPicking = false;
+            if (FlagFollowMouse)
+                DemoCallback(file, line_number, demo_title);
         }
 
         // StartFrame() Should be called once per frame
         void StartFrame()
         {
             PreviousZoneSourceLine = -1;
-            FlagTooltipDoneThisFrame = false;
             CodeWindow.Gui();
+
+            if (!FlagFollowMouse && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)) && ImGui::GetIO().KeyCtrl && ImGui::GetIO().KeyAlt)
+                FlagFollowMouse = true;
+            if (FlagFollowMouse && ImGui::IsKeyPressedMap(ImGuiKey_Escape))
+                FlagFollowMouse = false;
         }
 
-        // ShowPickButton() will show the "Help/Code Lookup" button and handles the zone picking
-        void ShowPickButton()
+        void ShowPickCheckbox()
         {
-            if (ImGui::Button(DEMO_PICKUP_LABEL))
-                IsPicking = true;
-            if (IsPicking && ImGui::IsKeyPressedMap(ImGuiKey_Escape))
-            {
-                IsPicking = false;
-            }
+            ImGui::SameLine(0.f, 100.f);
+            ImGui::Checkbox(CODE_LOOKUP_LABEL, &FlagFollowMouse);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip(
-                    "Press this button and hover any demo to pinpoint its location inside the code.\n"
+                    "Check this box and hover any demo to pinpoint its location inside the code.\n"
                     "\n"
-                    "(you can also press Ctrl-Shift at any time)"
+                    "(you can also press \"Ctrl-Alt-C\" at any time to toggle this mode)"
                 );
-
-            if (IsPicking && !FlagTooltipDoneThisFrame)
-            {
-                ImGui::SetTooltip(
-                    "Hover any demo and *right* click to pinpoint its location.\n"
-                    "Press \"Esc\" to exit this mode"
-                );
-            }
         }
 
     private:
-        void DemoCallback(bool clicked, const char* file, int line_number, const char* demo_title)
+        void DemoCallback(const char* file, int line_number, const char* demo_title)
         {
             if (GImGuiDemoCallback)
-                GImGuiDemoCallback(clicked, file, line_number, demo_title);
+                GImGuiDemoCallback(file, line_number, demo_title);
             else
-                CodeWindow.DemoCallback(clicked, file, line_number, demo_title);
+                CodeWindow.DemoCallback(file, line_number, demo_title);
         }
 
         void StoreZoneBoundings(int line_number)
@@ -687,8 +670,8 @@ namespace DemoMarkerTools
         void HighlightZone(const ZoneBoundings zone_boundings)
         {
             // tl_dim / br_dim : top_left and bottom_right corners of the dimmed zone.
-            ImVec2 tl_dim = ImVec2 (0.f, 0.f);
-            ImVec2 br_dim = ImGui::GetWindowViewport()->Size;
+            ImVec2 tl_dim = ImGui::GetWindowPos();
+            ImVec2 br_dim(ImGui::GetWindowPos().x + ImGui::GetWindowSize().x, ImGui::GetWindowPos().y + ImGui::GetWindowSize().y);
 
             // tl_zone / br_zone: top_left and bottom_right corner of the highlighted zone
             float minY = zone_boundings.MinY < ImGui::GetWindowPos().y ? ImGui::GetWindowPos().y : zone_boundings.MinY;
@@ -697,7 +680,7 @@ namespace DemoMarkerTools
             ImVec2 br_zone(ImGui::GetWindowPos().x + ImGui::GetWindowWidth(), maxY);
 
             ImDrawList* draw_list = ImGui::GetForegroundDrawList();
-            ImU32 dim_color = IM_COL32(127, 127, 127, 127);
+            ImU32 dim_color = IM_COL32(127, 127, 127, 100);
 
             draw_list->AddRectFilled(tl_dim, ImVec2(br_dim.x, tl_zone.y), dim_color);
 
@@ -761,10 +744,20 @@ namespace DemoMarkerTools
         ImVector<ZoneBoundings> AllZonesBoundings;    // All boundings for all the calls to DEMO_MARKERS
         int PreviousZoneSourceLine;                   // Location of the previous call to DEMO_MARKERS (used to end the previous bounding)
         DemoCodeWindow CodeWindow;
-        bool IsPicking;
-        bool FlagTooltipDoneThisFrame;
+    public:
+        bool FlagFollowMouse;
     };
     static DemoMarkersRegistry GDemoMarkersRegistry;  // Global instance used by the DEMO_MARKER macro
+
+    bool FlagFollowMouse()
+    {
+        return GDemoMarkersRegistry.FlagFollowMouse;
+    }
+
+    void SetFlagFollowMouse(bool v)
+    {
+        GDemoMarkersRegistry.FlagFollowMouse = v;
+    }
 
     void DemoMarker(const char* file, int line_number, const char *demo_title)
     {
@@ -982,12 +975,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
 
     // Menu Bar
-    DEMO_MARKER("Menu");
     if (ImGui::BeginMenuBar())
     {
-        DEMO_MARKER("Menu/BeginMenu");
         if (ImGui::BeginMenu("Menu"))
         {
+            DEMO_MARKER("Menu/BeginMenu");
             ShowExampleMenuFile();
             ImGui::EndMenu();
         }
@@ -1022,8 +1014,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
-    DemoMarkerTools::GDemoMarkersRegistry.ShowPickButton();
-    ImGui::Spacing();
+    DemoMarkerTools::GDemoMarkersRegistry.ShowPickCheckbox();
+    ImGui::BeginChild("Demos");
 
     DEMO_MARKER("Help");
     if (ImGui::CollapsingHeader("Help"))
@@ -1198,6 +1190,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowMisc();
 
     // End of ShowDemoWindow()
+    ImGui::EndChild(); // </ImGui::BeginChild("Demos");>
     ImGui::PopItemWidth();
     ImGui::End();
 }
