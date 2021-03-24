@@ -13,6 +13,7 @@
 static ID3D10Device*            g_pd3dDevice = NULL;
 static IDXGISwapChain*          g_pSwapChain = NULL;
 static ID3D10RenderTargetView*  g_mainRenderTargetView = NULL;
+static bool                     g_wndMinimized = false;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
@@ -96,6 +97,13 @@ int main(int, char**)
         }
         if (done)
             break;
+
+        // Don't render if the window is minimized
+        if (g_wndMinimized)
+        {
+            Sleep(1); // Let the processor sleep a bit
+            continue;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplDX10_NewFrame();
@@ -228,6 +236,14 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CleanupRenderTarget();
             g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
+        }
+        if (wParam == SIZE_MINIMIZED)
+        {
+            g_wndMinimized = true;
+        }
+        else if (wParam == SIZE_RESTORED)
+        {
+            g_wndMinimized = false;
         }
         return 0;
     case WM_SYSCOMMAND:
