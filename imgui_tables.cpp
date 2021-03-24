@@ -1491,6 +1491,9 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
+// Request enabling/disabling a column (often perceived as "showing/hiding" from users point of view)
+// Note that end-user can use the context menu to change this themselves (right-click in headers, or right-click in columns body with ImGuiTableFlags_ContextMenuInBody)
+// Request will be applied during next layout, which happens on the first call to TableNextRow() after BeginTable()
 // For the getter you can use (TableGetColumnFlags() & ImGuiTableColumnFlags_IsEnabled)
 void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
 {
