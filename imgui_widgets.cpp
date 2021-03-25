@@ -6625,12 +6625,15 @@ bool ImGui::BeginMainMenuBar()
     if (menu_bar_window == NULL || menu_bar_window->BeginCount == 0)
     {
         // Set window position
-        // We don't attempt to calculate our height ahead, as it depends on the per-viewport font size.
-        // However menu-bar will affect the minimum window size so we'll get the right height.
+        SetCurrentViewport(NULL, viewport);
+        float height = GetFrameHeight();
         ImVec2 menu_bar_pos = viewport->Pos + viewport->CurrWorkOffsetMin;
-        ImVec2 menu_bar_size = ImVec2(viewport->Size.x - viewport->CurrWorkOffsetMin.x + viewport->CurrWorkOffsetMax.x, 1.0f);
+        ImVec2 menu_bar_size = ImVec2(viewport->Size.x - viewport->CurrWorkOffsetMin.x + viewport->CurrWorkOffsetMax.x, height);
         SetNextWindowPos(menu_bar_pos);
         SetNextWindowSize(menu_bar_size);
+
+        // Report our size into work area
+        viewport->CurrWorkOffsetMin.y += height;
     }
 
     // Create window
@@ -6640,11 +6643,6 @@ bool ImGui::BeginMainMenuBar()
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
     bool is_open = Begin("##MainMenuBar", NULL, window_flags) && BeginMenuBar();
     PopStyleVar(2);
-
-    // Report our size into work area (for next frame) using actual window size
-    menu_bar_window = GetCurrentWindow();
-    if (menu_bar_window->BeginCount == 1)
-        viewport->CurrWorkOffsetMin.y += menu_bar_window->Size.y;
 
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
     if (!is_open)

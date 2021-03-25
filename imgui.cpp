@@ -943,7 +943,6 @@ static void             UpdateViewportsEndFrame();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static bool             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
 static bool             UpdateTryMergeWindowIntoHostViewports(ImGuiWindow* window);
-static void             SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 static bool             GetWindowAlwaysWantOwnViewport(ImGuiWindow* window);
 static int              FindPlatformMonitorForPos(const ImVec2& pos);
 static int              FindPlatformMonitorForRect(const ImRect& r);

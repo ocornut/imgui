@@ -2462,6 +2462,7 @@ namespace ImGui
     IMGUI_API void                  TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& old_pos, const ImVec2& new_pos);
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void                  DestroyPlatformWindow(ImGuiViewportP* viewport);
+    IMGUI_API void                  SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
     const ImGuiPlatformMonitor*     GetViewportPlatformMonitor(ImGuiViewport* viewport);
 
     // Settings
