@@ -10566,9 +10566,9 @@ static void ImGui::UpdateViewportsNewFrame()
         ImGuiViewportP* viewport = g.Viewports[n];
 
         // Lock down space taken by menu bars and status bars, reset the offset for fucntions like BeginMainMenuBar() to alter them again.
-        viewport->WorkOffsetMin = viewport->CurrWorkOffsetMin;
-        viewport->WorkOffsetMax = viewport->CurrWorkOffsetMax;
-        viewport->CurrWorkOffsetMin = viewport->CurrWorkOffsetMax = ImVec2(0.0f, 0.0f);
+        viewport->WorkOffsetMin = viewport->BuildWorkOffsetMin;
+        viewport->WorkOffsetMax = viewport->BuildWorkOffsetMax;
+        viewport->BuildWorkOffsetMin = viewport->BuildWorkOffsetMax = ImVec2(0.0f, 0.0f);
         viewport->UpdateWorkRect();
     }
 }
