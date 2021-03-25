@@ -84,6 +84,10 @@ struct State {
 // Map GLFWwindow pointer to State
 static ImGuiStorage g_StateStorage;
 
+// The initial window given to the first call to ImGui_ImplGlfw_Init.  Fall
+// back to this window if another window isn't provided in ImGui_ImplGlfw_Shutdown or ImGui_ImplGlfw_NewFrame
+static GLFWwindow* g_DefaultWindow = NULL;
+
 static State* ImGui_ImplGlfw_InitWindowState(GLFWwindow* window)
 {
     State* state = (State*)ImGui::MemAlloc(sizeof(State));
@@ -168,6 +172,9 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
+    if (g_DefaultWindow == NULL)
+        g_DefaultWindow = window;
+
     State* state = ImGui_ImplGlfw_InitWindowState(window);
 
     state->Time = 0.0;
@@ -265,9 +272,11 @@ bool ImGui_ImplGlfw_InitForOther(GLFWwindow* window, bool install_callbacks)
     return ImGui_ImplGlfw_Init(window, install_callbacks, GlfwClientApi_Unknown);
 }
 
-void ImGui_ImplGlfw_Shutdown()
+void ImGui_ImplGlfw_Shutdown(GLFWwindow* window)
 {
-    GLFWwindow* window = glfwGetCurrentContext();
+    if (window == NULL)
+        window = g_DefaultWindow;
+
     State* state = ImGui_ImplGlfw_GetWindowState(window);
 
     if (state->InstalledCallbacks)
@@ -385,12 +394,13 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
 }
 
-void ImGui_ImplGlfw_NewFrame()
+void ImGui_ImplGlfw_NewFrame(GLFWwindow* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
-    GLFWwindow* window = glfwGetCurrentContext();
+    if (window == NULL)
+        window = g_DefaultWindow;
 
     State* state = ImGui_ImplGlfw_GetWindowState(window);
 
