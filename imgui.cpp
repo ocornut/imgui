@@ -12064,7 +12064,7 @@ const ImGuiPlatformMonitor* ImGui::GetViewportPlatformMonitor(ImGuiViewport* vie
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)viewport_p;
     int monitor_idx = viewport->PlatformMonitor;
-    if (monitor_idx >= 0 || monitor_idx < g.PlatformIO.Monitors.Size)
+    if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
         return &g.PlatformIO.Monitors[monitor_idx];
     return &g.FallbackMonitor;
 }
