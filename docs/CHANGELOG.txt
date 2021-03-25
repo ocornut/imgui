@@ -110,6 +110,8 @@ Other Changes:
 - Scrolling: Fix scroll tracking with e.g. SetScrollHereX/Y() when WindowPadding < ItemSpacing.
 - Scrolling: Fix scroll snapping on edge of scroll region when both scrollbars are enabled.
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
+- TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
+  frame and then immediately standling still (would only affect automation/bots). [@rokups]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
