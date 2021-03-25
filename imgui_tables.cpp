@@ -8,6 +8,7 @@ Index of this file:
 // [SECTION] Commentary
 // [SECTION] Header mess
 // [SECTION] Tables: Main code
+// [SECTION] Tables: Simple accessors
 // [SECTION] Tables: Row changes
 // [SECTION] Tables: Columns changes
 // [SECTION] Tables: Columns width management
@@ -234,6 +235,19 @@ Index of this file:
 
 //-----------------------------------------------------------------------------
 // [SECTION] Tables: Main code
+//-----------------------------------------------------------------------------
+// - TableFixFlags() [Internal]
+// - TableFindByID() [Internal]
+// - BeginTable()
+// - BeginTableEx() [Internal]
+// - TableBeginInitMemory() [Internal]
+// - TableBeginApplyRequests() [Internal]
+// - TableSetupColumnFlags() [Internal]
+// - TableUpdateLayout() [Internal]
+// - TableUpdateBorders() [Internal]
+// - EndTable()
+// - TableSetupColumn()
+// - TableSetupScrollFreeze()
 //-----------------------------------------------------------------------------
 
 // Configuration
@@ -1430,6 +1444,20 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] Tables: Simple accessors
+//-----------------------------------------------------------------------------
+// - TableGetColumnCount()
+// - TableGetColumnName()
+// - TableGetColumnName() [Internal]
+// - TableSetColumnEnabled() [Internal]
+// - TableGetColumnFlags()
+// - TableGetCellBgRect() [Internal]
+// - TableGetColumnResizeID() [Internal]
+// - TableGetHoveredColumn() [Internal]
+// - TableSetBgColor()
+//-----------------------------------------------------------------------------
+
 int ImGui::TableGetColumnCount()
 {
     ImGuiContext& g = *GImGui;
@@ -1458,6 +1486,9 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
+// Request enabling/disabling a column (often perceived as "showing/hiding" from users point of view)
+// Note that end-user can use the context menu to change this themselves (right-click in headers, or right-click in columns body with ImGuiTableFlags_ContextMenuInBody)
+// Request will be applied during next layout, which happens on the first call to TableNextRow() after BeginTable()
 // For the getter you can use (TableGetColumnFlags() & ImGuiTableColumnFlags_IsEnabled)
 void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
 {
@@ -2673,18 +2704,19 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
     // Write output
     table->SortSpecsMulti.resize(table->SortSpecsCount <= 1 ? 0 : table->SortSpecsCount);
     ImGuiTableColumnSortSpecs* sort_specs = (table->SortSpecsCount == 0) ? NULL : (table->SortSpecsCount == 1) ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (column->SortOrder == -1)
-            continue;
-        IM_ASSERT(column->SortOrder < table->SortSpecsCount);
-        ImGuiTableColumnSortSpecs* sort_spec = &sort_specs[column->SortOrder];
-        sort_spec->ColumnUserID = column->UserID;
-        sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
-        sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
-        sort_spec->SortDirection = column->SortDirection;
-    }
+    if (sort_specs != NULL)
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        {
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if (column->SortOrder == -1)
+                continue;
+            IM_ASSERT(column->SortOrder < table->SortSpecsCount);
+            ImGuiTableColumnSortSpecs* sort_spec = &sort_specs[column->SortOrder];
+            sort_spec->ColumnUserID = column->UserID;
+            sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
+            sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
+            sort_spec->SortDirection = column->SortDirection;
+        }
     table->SortSpecs.Specs = sort_specs;
     table->SortSpecs.SpecsCount = table->SortSpecsCount;
     table->SortSpecs.SpecsDirty = true; // Mark as dirty for user

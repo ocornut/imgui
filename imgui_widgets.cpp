@@ -6604,7 +6604,7 @@ void ImGui::EndMenuBar()
     IM_ASSERT(window->DC.MenuBarAppending);
     PopClipRect();
     PopID();
-    window->DC.MenuBarOffset.x = window->DC.CursorPos.x - window->MenuBarRect().Min.x; // Save horizontal position so next append can reuse it. This is kinda equivalent to a per-layer CursorPos.
+    window->DC.MenuBarOffset.x = window->DC.CursorPos.x - window->Pos.x; // Save horizontal position so next append can reuse it. This is kinda equivalent to a per-layer CursorPos.
     g.GroupStack.back().EmitItem = false;
     EndGroup(); // Restore position on layer 0
     window->DC.LayoutType = ImGuiLayoutType_Vertical;
@@ -6612,45 +6612,67 @@ void ImGui::EndMenuBar()
     window->DC.MenuBarAppending = false;
 }
 
+// Important: calling order matters!
+// FIXME: Somehow overlapping with docking tech.
+// FIXME: The "rect-cut" aspect of this could be formalized into a lower-level helper (rect-cut: https://halt.software/dead-simple-layouts)
+bool ImGui::BeginViewportSideBar(const char* name, ImGuiViewport* viewport_p, ImGuiDir dir, float axis_size, ImGuiWindowFlags window_flags)
+{
+    IM_ASSERT(dir != ImGuiDir_None);
+
+    ImGuiWindow* bar_window = FindWindowByName(name);
+    ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)(viewport_p ? viewport_p : GetMainViewport());
+    if (bar_window == NULL || bar_window->BeginCount == 0)
+    {
+        // Calculate and set window size/position
+        ImRect avail_rect = viewport->GetBuildWorkRect();
+        ImGuiAxis axis = (dir == ImGuiDir_Up || dir == ImGuiDir_Down) ? ImGuiAxis_Y : ImGuiAxis_X;
+        ImVec2 pos = avail_rect.Min;
+        if (dir == ImGuiDir_Right || dir == ImGuiDir_Down)
+            pos[axis] = avail_rect.Max[axis] - axis_size;
+        ImVec2 size = avail_rect.GetSize();
+        size[axis] = axis_size;
+        SetNextWindowPos(pos);
+        SetNextWindowSize(size);
+
+        // Report our size into work area (for next frame) using actual window size
+        if (dir == ImGuiDir_Up || dir == ImGuiDir_Left)
+            viewport->BuildWorkOffsetMin[axis] += axis_size;
+        else if (dir == ImGuiDir_Down || dir == ImGuiDir_Right)
+            viewport->BuildWorkOffsetMax[axis] -= axis_size;
+    }
+
+    window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+    SetNextWindowViewport(viewport->ID); // Enforce viewport so we don't create our own viewport when ImGuiConfigFlags_ViewportsNoMerge is set.
+    PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0, 0)); // Lift normal size constraint
+    bool is_open = Begin(name, NULL, window_flags);
+    PopStyleVar(2);
+
+    return is_open;
+}
+
 bool ImGui::BeginMainMenuBar()
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
-    ImGuiWindow* menu_bar_window = FindWindowByName("##MainMenuBar");
+
+    // Notify of viewport change so GetFrameHeight() can be accurate in case of DPI change
+    SetCurrentViewport(NULL, viewport);
 
     // For the main menu bar, which cannot be moved, we honor g.Style.DisplaySafeAreaPadding to ensure text can be visible on a TV set.
+    // FIXME: This could be generalized as an opt-in way to clamp window->DC.CursorStartPos to avoid SafeArea?
+    // FIXME: Consider removing support for safe area down the line... it's messy. Nowadays consoles have support for TV calibration in OS settings.
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(g.Style.DisplaySafeAreaPadding.x, ImMax(g.Style.DisplaySafeAreaPadding.y - g.Style.FramePadding.y, 0.0f));
-
-    // Get our rectangle at the top of the work area
-    if (menu_bar_window == NULL || menu_bar_window->BeginCount == 0)
-    {
-        // Set window position
-        SetCurrentViewport(NULL, viewport);
-        float height = GetFrameHeight();
-        ImVec2 menu_bar_pos = viewport->Pos + viewport->CurrWorkOffsetMin;
-        ImVec2 menu_bar_size = ImVec2(viewport->Size.x - viewport->CurrWorkOffsetMin.x + viewport->CurrWorkOffsetMax.x, height);
-        SetNextWindowPos(menu_bar_pos);
-        SetNextWindowSize(menu_bar_size);
-
-        // Report our size into work area
-        viewport->CurrWorkOffsetMin.y += height;
-    }
-
-    // Create window
-    SetNextWindowViewport(viewport->ID); // Enforce viewport so we don't create our own viewport when ImGuiConfigFlags_ViewportsNoMerge is set.
-    PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0, 0)); // Lift normal size constraint, however the presence of a menu-bar will give us the minimum height we want.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
-    bool is_open = Begin("##MainMenuBar", NULL, window_flags) && BeginMenuBar();
-    PopStyleVar(2);
-
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
+    float height = GetFrameHeight();
+    bool is_open = BeginViewportSideBar("##MainMenuBar", viewport, ImGuiDir_Up, height, window_flags);
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
-    if (!is_open)
-    {
+
+    if (is_open)
+        BeginMenuBar();
+    else
         End();
-        return false;
-    }
-    return true; //-V1020
+    return is_open;
 }
 
 void ImGui::EndMainMenuBar()
