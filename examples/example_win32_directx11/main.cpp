@@ -241,14 +241,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
         }
-        if (wParam == SIZE_MINIMIZED)
-        {
-            g_wndMinimized = true;
-        }
-        else if (wParam == SIZE_RESTORED)
-        {
-            g_wndMinimized = false;
-        }
+        g_wndMinimized = (wParam == SIZE_MINIMIZED);
         return 0;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
