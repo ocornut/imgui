@@ -1,9 +1,9 @@
 // dear imgui: Platform Backend for GLUT/FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
-// !!! GLUT/FreeGLUT IS OBSOLETE PREHISTORIC SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! GLUT IS OBSOLETE PREHISTORIC SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT today, you are being abused. Please show some resistance. !!!
-// !!! Nowadays, prefer using GLFW or SDL instead!
+// !!! Nowadays, prefer using FreeGLUT, GLFW or SDL instead!
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
