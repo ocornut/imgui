@@ -2082,6 +2082,7 @@ static const char* ImAtoi(const char* src, TYPE* output)
 // - stb_sprintf.h supports several new modifiers which format numbers in a way that also makes them incompatible atof/atoi.
 static void SanitizeFormatString(const char* fmt, char* fmt_out, size_t fmt_out_size)
 {
+    IM_UNUSED(fmt_out_size);
     const char* fmt_end = ImParseFormatFindEnd(fmt);
     IM_ASSERT((size_t)(fmt_end - fmt + 1) < fmt_out_size); // Format is too long, let us know if this happens to you!
     while (fmt < fmt_end)
