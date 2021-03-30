@@ -7920,17 +7920,20 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     else if (held && !tab_appearing && IsMouseDragging(0))
     {
         // Drag and drop: re-order tabs
+        int drag_dir = 0;
         float drag_distance_from_edge_x = 0.0f;
         if (!g.DragDropActive && ((tab_bar->Flags & ImGuiTabBarFlags_Reorderable) || (docked_window != NULL)))
         {
             // While moving a tab it will jump on the other side of the mouse, so we also test for MouseDelta.x
             if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < bb.Min.x)
             {
+                drag_dir = -1;
                 drag_distance_from_edge_x = bb.Min.x - g.IO.MousePos.x;
                 TabBarQueueReorderFromMousePos(tab_bar, tab, g.IO.MousePos);
             }
             else if (g.IO.MouseDelta.x > 0.0f && g.IO.MousePos.x > bb.Max.x)
             {
+                drag_dir = +1;
                 drag_distance_from_edge_x = g.IO.MousePos.x - bb.Max.x;
                 TabBarQueueReorderFromMousePos(tab_bar, tab, g.IO.MousePos);
             }
@@ -7952,7 +7955,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 if (distance_from_edge_y >= threshold_y)
                     undocking_tab = true;
                 if (drag_distance_from_edge_x > threshold_x)
-                    if ((tab_bar->GetTabOrder(tab) == 0) || (tab_bar->GetTabOrder(tab) == tab_bar->Tabs.Size - 1))
+                    if ((drag_dir < 0 && tab_bar->GetTabOrder(tab) == 0) || (drag_dir > 0 && tab_bar->GetTabOrder(tab) == tab_bar->Tabs.Size - 1))
                         undocking_tab = true;
             }
 
