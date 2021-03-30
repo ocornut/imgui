@@ -128,6 +128,8 @@ Other Changes:
 
 Docking Branch:
 
+- [Breaking] Removed io.ConfigDockingWithShift config option. Behavior always equivalent to having the
+  option set to false (dock/undock by default, hold shift to avoid docking). (#2109)
 - Docking: DockSpace() returns its node ID.
 - Docking: Dockspace() never draws a background. (#3924)
 - Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease further manipulations.
