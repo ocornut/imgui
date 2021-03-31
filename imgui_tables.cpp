@@ -1748,8 +1748,8 @@ void ImGui::TableSetupColumn(ImStrv label, ImGuiTableColumnFlags flags, float in
     {
         char zero_terminator = 0;
         name_offset = (ImS16)table->ColumnsNames.size();
-        table->ColumnsNames.append(label.Begin, label.End);
-        table->ColumnsNames.append(&zero_terminator, &zero_terminator + 1);
+        table->ColumnsNames.append(label);
+        table->ColumnsNames.append(ImStrv(&zero_terminator, &zero_terminator + 1));
     }
     const ImGuiID column_id = label ? ImHashStr(label) : 0;
 
@@ -3338,8 +3338,8 @@ void ImGui::TableHeader(ImStrv label)
     if (!label)
         label = "";
     ImGuiID id = window->GetID(label);
-    ImStrv label_for_display(label.Begin, FindRenderedTextEnd(label));
-    ImVec2 label_size = CalcTextSize(label_for_display, false);
+    const ImStrv label_for_display(label.Begin, FindRenderedTextEnd(label));
+    const ImVec2 label_size = CalcTextSize(label_for_display, false);
     ImVec2 label_pos = window->DC.CursorPos;
 
     // If we already got a row height, there's use that.
