@@ -109,12 +109,14 @@ Other Changes:
 
 - Scrolling: Fix scroll tracking with e.g. SetScrollHereX/Y() when WindowPadding < ItemSpacing.
 - Scrolling: Fix scroll snapping on edge of scroll region when both scrollbars are enabled.
+- Window: Fix IsWindowAppearing() from returning true twice in most cases. (#3982, #1497, #1061)
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
   frame and then immediately standling still (would only affect automation/bots). [@rokups]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
+- ColorEdit4: Alpha default to 255 (instead of 0) when omitted in hex input. (#3973) [@squadack]
 - Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
@@ -123,7 +125,9 @@ Other Changes:
   workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
 - Backends: Vulkan: Fix mapped memory Vulkan validation error when buffer sizes are not multiple of
   VkPhysicalDeviceLimits::nonCoherentAtomSize. (#3957) [@AgentX1994]
+- Examples: Add OpenGL ES 2.0 support to modern GL examples. (#2837, #3951) [@lethal-guitar, @hinxx]
 - Examples: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)
+- Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 Docking Branch:
