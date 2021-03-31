@@ -5693,8 +5693,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
 
     // Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
     // FIXME: Refactor text alignment facilities along with RenderText helpers, this is WAY too much messy code..
-    const char* UNSAVED_DOCUMENT_MARKER = "*";
-    const float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
+    ImStrv UNSAVED_DOCUMENT_MARKER("*");
+    const float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, false, 0.0f).x : 0.0f;
     const ImVec2 text_size = CalcTextSize(name) + ImVec2(marker_size_x, 0.0f);
 
     // As a nice touch we try to ensure that centered title text doesn't get affected by visibility of Close/Collapse button,
@@ -7050,14 +7050,6 @@ void ImGui::PushID(ImStrv str_id)
     window->IDStack.push_back(id);
 }
 
-void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetIDNoKeepAlive(ImStrv(str_id_begin, str_id_end));
-    window->IDStack.push_back(id);
-}
-
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiContext& g = *GImGui;
@@ -7107,12 +7099,6 @@ ImGuiID ImGui::GetID(ImStrv str_id)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(str_id);
-}
-
-ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->GetID(ImStrv(str_id_begin, str_id_end));
 }
 
 ImGuiID ImGui::GetID(const void* ptr_id)
@@ -10865,7 +10851,8 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
         window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
         window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
-        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        ImStrv label(thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), label);
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
 }
