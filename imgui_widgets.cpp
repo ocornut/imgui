@@ -199,7 +199,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                     if (!line_end)
                         line_end = text_end;
                     if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                        text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                        text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -219,7 +219,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
-                text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 RenderText(pos, ImStrv(line, line_end), false);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
@@ -235,7 +235,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                    text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                    text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 line = line_end + 1;
                 lines_skipped++;
             }
@@ -8128,9 +8128,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
     tab->Flags = flags;
 
     // Append name with zero-terminator
+    char zero_c = 0;
     tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
     tab_bar->TabsNames.append(label);
-    char zero_c = 0;
     tab_bar->TabsNames.append(ImStrv(&zero_c, &zero_c + 1));
 
     // Update selected tab
