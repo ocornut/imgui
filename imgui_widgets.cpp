@@ -200,7 +200,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                     if (!line_end)
                         line_end = text_end;
                     if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                        text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                        text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -220,7 +220,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
-                text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 RenderText(pos, ImStrv(line, line_end), false);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
@@ -236,7 +236,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                    text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                    text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 line = line_end + 1;
                 lines_skipped++;
             }
@@ -390,9 +390,10 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
-    const char* text_begin = g.TempBuffer;
-    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    const ImVec2 label_size = CalcTextSize(text_begin, text_end, false);
+    ImStrv text;
+    text.Begin = g.TempBuffer;
+    text.End = text.Begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    const ImVec2 label_size = CalcTextSize(text, false);
     const ImVec2 total_size = ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x * 2) : 0.0f), label_size.y);  // Empty text doesn't add padding
     ImVec2 pos = window->DC.CursorPos;
     pos.y += window->DC.CurrLineTextBaseOffset;
@@ -404,7 +405,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     // Render
     ImU32 text_col = GetColorU32(ImGuiCol_Text);
     RenderBullet(window->DrawList, bb.Min + ImVec2(style.FramePadding.x + g.FontSize * 0.5f, g.FontSize * 0.5f), text_col);
-    RenderText(bb.Min + ImVec2(g.FontSize + style.FramePadding.x * 2, 0.0f), ImStrv(text_begin, text_end), false);
+    RenderText(bb.Min + ImVec2(g.FontSize + style.FramePadding.x * 2, 0.0f), text, false);
 }
 
 //-------------------------------------------------------------------------
@@ -8023,9 +8024,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
     tab->Flags = flags;
 
     // Append name with zero-terminator
+    char zero_c = 0;
     tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
     tab_bar->TabsNames.append(label);
-    char zero_c = 0;
     tab_bar->TabsNames.append(ImStrv(&zero_c, &zero_c + 1));
 
     // Update selected tab
