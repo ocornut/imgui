@@ -209,7 +209,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                     if (!line_end)
                         line_end = text_end;
                     if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                        text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                        text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -229,7 +229,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 const char* line_end = (const char*)ImMemchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
-                text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 RenderText(pos, ImStrv(line, line_end), false);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
@@ -245,7 +245,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                    text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                    text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 line = line_end + 1;
                 lines_skipped++;
             }
@@ -1918,7 +1918,7 @@ bool ImGui::BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags
 
     const float arrow_size = (flags & ImGuiComboFlags_NoArrowButton) ? 0.0f : GetFrameHeight();
     const ImVec2 label_size = CalcTextSize(label, true);
-    const float preview_width = ((flags & ImGuiComboFlags_WidthFitPreview) && (preview_value != NULL)) ? CalcTextSize(preview_value, true).x : 0.0f;
+    const float preview_width = ((flags & ImGuiComboFlags_WidthFitPreview) && preview_value) ? CalcTextSize(preview_value, true).x : 0.0f;
     const float w = (flags & ImGuiComboFlags_NoPreview) ? arrow_size : ((flags & ImGuiComboFlags_WidthFitPreview) ? (arrow_size + preview_width + style.FramePadding.x * 2.0f) : CalcItemWidth());
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
     const ImRect total_bb(bb.Min, bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
@@ -1957,7 +1957,7 @@ bool ImGui::BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags
     if (flags & ImGuiComboFlags_CustomPreview)
     {
         g.ComboPreviewData.PreviewRect = ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
-        IM_ASSERT(!preview_value);
+        IM_ASSERT(preview_value.empty());
     }
 
     // Render preview and label
@@ -10475,9 +10475,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
     }
     else
     {
+        char zero_c = 0;
         tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
         tab_bar->TabsNames.append(label);
-        char zero_c = 0;
         tab_bar->TabsNames.append(ImStrv(&zero_c, &zero_c + 1));
     }
 

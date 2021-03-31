@@ -3196,7 +3196,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(ImStrv filename, float size_pixels, cons
     {
         if (font_cfg_template == NULL || (font_cfg_template->Flags & ImFontFlags_NoLoadError) == 0)
         {
-            IMGUI_DEBUG_LOG("While loading '%s'\n", filename);
+            IMGUI_DEBUG_LOG("While loading '%.*s'\n", filename.length(), filename.Begin);
             IM_ASSERT_USER_ERROR(0, "Could not load font file!");
         }
         return NULL;
@@ -5773,7 +5773,7 @@ begin:
             }
             else
             {
-                s = line_end ? line_end + 1 : text.End;
+                s = line_end ? line_end + 1 : text_end;
             }
             y += line_height;
         }
