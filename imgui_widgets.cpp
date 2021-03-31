@@ -208,7 +208,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                     if (!line_end)
                         line_end = text_end;
                     if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                        text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                        text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -228,7 +228,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 const char* line_end = (const char*)ImMemchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
-                text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 RenderText(pos, ImStrv(line, line_end), false);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
@@ -244,7 +244,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
-                    text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
+                    text_size.x = ImMax(text_size.x, CalcTextSize(ImStrv(line, line_end)).x);
                 line = line_end + 1;
                 lines_skipped++;
             }
@@ -2199,12 +2199,12 @@ static const char* ImGuiGetNameFromIndexOldToNewCallback(void* user_data, int id
     return s;
 }
 
-bool ImGui::ListBox(const char* label, int* current_item, bool (*old_getter)(void*, int, const char**), void* user_data, int items_count, int height_in_items)
+bool ImGui::ListBox(ImStrv label, int* current_item, bool (*old_getter)(void*, int, const char**), void* user_data, int items_count, int height_in_items)
 {
     ImGuiGetNameFromIndexOldToNewCallbackData old_to_new_data = { user_data, old_getter };
     return ListBox(label, current_item, ImGuiGetNameFromIndexOldToNewCallback, &old_to_new_data, items_count, height_in_items);
 }
-bool ImGui::Combo(const char* label, int* current_item, bool (*old_getter)(void*, int, const char**), void* user_data, int items_count, int popup_max_height_in_items)
+bool ImGui::Combo(ImStrv label, int* current_item, bool (*old_getter)(void*, int, const char**), void* user_data, int items_count, int popup_max_height_in_items)
 {
     ImGuiGetNameFromIndexOldToNewCallbackData old_to_new_data = { user_data, old_getter };
     return Combo(label, current_item, ImGuiGetNameFromIndexOldToNewCallback, &old_to_new_data, items_count, popup_max_height_in_items);
@@ -10445,9 +10445,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
     }
     else
     {
+        char zero_c = 0;
         tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
         tab_bar->TabsNames.append(label);
-        char zero_c = 0;
         tab_bar->TabsNames.append(ImStrv(&zero_c, &zero_c + 1));
     }
 

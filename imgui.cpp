@@ -9093,14 +9093,6 @@ void ImGui::PushID(ImStrv str_id)
     window->IDStack.push_back(id);
 }
 
-void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetID(ImStrv(str_id_begin, str_id_end));
-    window->IDStack.push_back(id);
-}
-
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiContext& g = *GImGui;
@@ -9169,12 +9161,6 @@ ImGuiID ImGui::GetID(ImStrv str_id)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(str_id);
-}
-
-ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->GetID(ImStrv(str_id_begin, str_id_end));
 }
 
 ImGuiID ImGui::GetID(const void* ptr_id)
@@ -15893,7 +15879,8 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
         window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
         window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
-        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        ImStrv label(thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), label);
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
     if (viewport->ID == g.DebugMetricsConfig.HighlightViewportID)
@@ -16185,10 +16172,10 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
                     ImFontAtlasRectId id = ImFontAtlasRectId_Make(atlas->Builder->RectsIndex.index_from_ptr(&entry), entry.Generation);
                     ImFontAtlasRect r = {};
                     atlas->GetCustomRect(id, &r);
-                    const char* buf;
+                    ImStrv buf;
                     ImFormatStringToTempBuffer(&buf, NULL, "ID:%08X, used:%d, { w:%3d, h:%3d } { x:%4d, y:%4d }", id, entry.IsUsed, r.w, r.h, r.x, r.y);
                     TableNextColumn();
-                    Selectable(buf);
+                    Selectable(buf.Begin);
                     if (IsItemHovered())
                         highlight_r_id = id;
                     TableNextColumn();
