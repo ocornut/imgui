@@ -126,45 +126,24 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     SDL_RenderSetClipRect(g_SDLRenderer, &r);
 
 
+                    int xy_stride = sizeof(ImDrawVert);
+                    float *xy = (float *)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, pos));
 
-                    for (unsigned int i = 0; i + 3 <= pcmd->ElemCount; i += 3)
-                    {
-                        const ImDrawVert& v0 = vtx_buffer[idx_buffer[i + 0]];
-                        const ImDrawVert& v1 = vtx_buffer[idx_buffer[i + 1]];
-                        const ImDrawVert& v2 = vtx_buffer[idx_buffer[i + 2]];
+                    int uv_stride = sizeof(ImDrawVert);
+                    float *uv = (float*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, uv));
 
-                        SDL_Vertex tab[3];
+                    int col_stride = sizeof(ImDrawVert);
+                    int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-                        tab[0].position.x = v0.pos.x;
-                        tab[0].position.y = v0.pos.y;
-                        tab[0].color.r = (v0.col >> 0) & 0xff;
-                        tab[0].color.g = (v0.col >> 8) & 0xff;
-                        tab[0].color.b = (v0.col >> 16) & 0xff;
-                        tab[0].color.a = (v0.col >> 24) & 0xff;
-                        tab[0].tex_coord.x = v0.uv.x;
-                        tab[0].tex_coord.y = v0.uv.y;
+                    SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? g_SDLFontTexture : NULL);
 
-                        tab[1].position.x = v1.pos.x;
-                        tab[1].position.y = v1.pos.y;
-                        tab[1].color.r = (v1.col >> 0) & 0xff;
-                        tab[1].color.g = (v1.col >> 8) & 0xff;
-                        tab[1].color.b = (v1.col >> 16) & 0xff;
-                        tab[1].color.a = (v1.col >> 24) & 0xff;
-                        tab[1].tex_coord.x = v1.uv.x;
-                        tab[1].tex_coord.y = v1.uv.y;
+                    SDL_RenderGeometryRaw(g_SDLRenderer, tex, 
+                            xy, xy_stride, color,
+                            col_stride, 
+                            uv, uv_stride, 
+                            cmd_list->VtxBuffer.Size,
+                            idx_buffer, pcmd->ElemCount, sizeof (ImDrawIdx));
 
-                        tab[2].position.x = v2.pos.x;
-                        tab[2].position.y = v2.pos.y;
-                        tab[2].color.r = (v2.col >> 0) & 0xff;
-                        tab[2].color.g = (v2.col >> 8) & 0xff;
-                        tab[2].color.b = (v2.col >> 16) & 0xff;
-                        tab[2].color.a = (v2.col >> 24) & 0xff;
-                        tab[2].tex_coord.x = v2.uv.x;
-                        tab[2].tex_coord.y = v2.uv.y;
-
-                        SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? g_SDLFontTexture : NULL);
-                        SDL_RenderGeometry(g_SDLRenderer, tex, tab, 3, NULL, 0);
-                    }
                 }
             }
             idx_buffer += pcmd->ElemCount;
