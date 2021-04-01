@@ -90,7 +90,7 @@ static GLFWwindow* g_DefaultWindow = NULL;
 
 static State* ImGui_ImplGlfw_InitWindowState(GLFWwindow* window)
 {
-    State* state = (State*)ImGui::MemAlloc(sizeof(State));
+    State* state = IM_NEW(State)();
     const ImGuiID window_hash = ImHashData(&window, sizeof(void*), 0);
     g_StateStorage.SetVoidPtr(window_hash, state);
     return state;
@@ -295,7 +295,7 @@ void ImGui_ImplGlfw_Shutdown(GLFWwindow* window)
     }
     state->ClientApi = GlfwClientApi_Unknown;
 
-    ImGui::MemFree(state);
+    IM_DELETE(state);
 }
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons(GLFWwindow* window)
