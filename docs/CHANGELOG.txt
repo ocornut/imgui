@@ -62,7 +62,7 @@ Other Changes:
 - Examples: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
-- Examples: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater. (issue??) [name??]
+- Examples: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater. (#3998) [@s7jones]
 
 
 -----------------------------------------------------------------------
