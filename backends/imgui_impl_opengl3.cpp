@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-04-02: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater.
 //  2021-02-18: OpenGL: Change blending equation to preserve alpha in output buffer.
 //  2021-01-03: OpenGL: Backup, setup and restore GL_STENCIL_TEST state.
 //  2020-10-23: OpenGL: Backup, setup and restore GL_PRIMITIVE_RESTART state.
@@ -263,10 +264,13 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 
     // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
 #if defined(GL_CLIP_ORIGIN) && !defined(__APPLE__)
-    bool clip_origin_lower_left = true;
-    GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
-    if (current_clip_origin == GL_UPPER_LEFT)
-        clip_origin_lower_left = false;
+    if (g_GlVersion >= 450)
+    {
+        bool clip_origin_lower_left = true;
+        GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
+        if (current_clip_origin == GL_UPPER_LEFT)
+            clip_origin_lower_left = false;
+    }
 #endif
 
     // Setup viewport, orthographic projection matrix
