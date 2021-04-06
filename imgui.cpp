@@ -3738,10 +3738,17 @@ void ImGui::UpdateMouseWheel()
 
     // Mouse wheel scrolling
     // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent
+    if (g.IO.KeyCtrl)
+        return;
+
+    // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
+    // (we avoid doing it on OSX as it the OS input layer handles this already)
+    const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
+    const float wheel_y = swap_axis ? 0.0f : g.IO.MouseWheel;
+    const float wheel_x = swap_axis ? g.IO.MouseWheel : g.IO.MouseWheelH;
 
     // Vertical Mouse Wheel scrolling
-    const float wheel_y = (g.IO.MouseWheel != 0.0f && !g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
-    if (wheel_y != 0.0f && !g.IO.KeyCtrl)
+    if (wheel_y != 0.0f)
     {
         StartLockWheelingWindow(window);
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
@@ -3755,8 +3762,7 @@ void ImGui::UpdateMouseWheel()
     }
 
     // Horizontal Mouse Wheel scrolling, or Vertical Mouse Wheel w/ Shift held
-    const float wheel_x = (g.IO.MouseWheelH != 0.0f && !g.IO.KeyShift) ? g.IO.MouseWheelH : (g.IO.MouseWheel != 0.0f && g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
-    if (wheel_x != 0.0f && !g.IO.KeyCtrl)
+    if (wheel_x != 0.0f)
     {
         StartLockWheelingWindow(window);
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.x == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
