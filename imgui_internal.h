@@ -827,6 +827,7 @@ enum ImGuiInputSource
     ImGuiInputSource_Keyboard,
     ImGuiInputSource_Gamepad,
     ImGuiInputSource_Nav,               // Stored in g.ActiveIdSource only
+    ImGuiInputSource_Clipboard,         // Currently only used by InputText()
     ImGuiInputSource_COUNT
 };
 
