@@ -11116,7 +11116,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Misc Details
     if (TreeNode("Internal state"))
     {
-        const char* input_source_names[] = { "None", "Mouse", "Nav", "NavKeyboard", "NavGamepad" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT);
+        const char* input_source_names[] = { "None", "Mouse", "Keyboard", "Gamepad", "Nav", "Clipboard" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT);
 
         Text("WINDOWING");
         Indent();
