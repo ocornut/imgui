@@ -88,9 +88,9 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
             {
                 int32_t button_state = AMotionEvent_getButtonState(input_event);
-                io.MouseDown[0] = (button_state & AMOTION_EVENT_BUTTON_PRIMARY);
-                io.MouseDown[1] = (button_state & AMOTION_EVENT_BUTTON_SECONDARY);
-                io.MouseDown[2] = (button_state & AMOTION_EVENT_BUTTON_TERTIARY);
+                io.MouseDown[0] = ((button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
+                io.MouseDown[1] = ((button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
+                io.MouseDown[2] = ((button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
             }
             break;
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
