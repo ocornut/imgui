@@ -43,8 +43,9 @@
 #include <allegro5/allegro_primitives.h>
 #ifdef _WIN32
 #include <allegro5/allegro_windows.h>
-#endif
+#else // Never use Allegro's clipboard implementation on Windows since it has issues on some systems.
 #define ALLEGRO_HAS_CLIPBOARD   (ALLEGRO_VERSION_INT >= ((5 << 24) | (1 << 16) | (12 << 8)))    // Clipboard only supported from Allegro 5.1.12
+#endif
 
 // Visual Studio warnings
 #ifdef _MSC_VER

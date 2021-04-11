@@ -10646,16 +10646,48 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     if (!::OpenClipboard(NULL))
         return;
-    const int wbuf_length = ::MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+
+    // Count number of non-CRLF newlines
+    // (They will be expanded to CRLF as per the CF_UNICODETEXT definition.)
+    int newline_count = 0;
+    char last_char = '\0';
+    for (size_t i = 0; text[i] != '\0'; i++)
+    {
+        char current_char = text[i];
+        if (current_char == '\n' && last_char != '\r')
+            newline_count++;
+        last_char = current_char;
+    }
+
+    // Allocate the clipboard string
+    const int wbuf_length = ::MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0) + newline_count;
     HGLOBAL wbuf_handle = ::GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(WCHAR));
     if (wbuf_handle == NULL)
     {
         ::CloseClipboard();
         return;
     }
+
+    // Populate the string, converting LF to CRLF (iterating backwards to avoid allocating more than one buffer or uneccessary string moves.)
     WCHAR* wbuf_global = (WCHAR*)::GlobalLock(wbuf_handle);
-    ::MultiByteToWideChar(CP_UTF8, 0, text, -1, wbuf_global, wbuf_length);
+    int wchars_written = ::MultiByteToWideChar(CP_UTF8, 0, text, -1, wbuf_global, wbuf_length);
+
+    for (int in_i = wchars_written - 1, out_i = wbuf_length - 1; newline_count > 0 && in_i >= 0 && out_i >= 0; out_i--, in_i--)
+    {
+        WCHAR current_char = wbuf_global[in_i];
+        wbuf_global[out_i] = current_char;
+
+        if (current_char == L'\n' && (in_i == 0 || wbuf_global[in_i - 1] != L'\r'))
+        {
+            wbuf_global[out_i - 1] = L'\r';
+            out_i--;
+            newline_count--;
+        }
+    }
+
     ::GlobalUnlock(wbuf_handle);
+
+    // Populate the clipboard
     ::EmptyClipboard();
     if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
         ::GlobalFree(wbuf_handle);

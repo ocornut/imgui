@@ -68,6 +68,7 @@ Other Changes:
 - Examples: Vulkan: Prefer using discrete GPU if there are more than one available. (#4012) [@rokups]
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
+- Misc: Changed default Windows clipboard handler to expand LF to CRLF to fix clipboard corruption on some systems. (#4029) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------

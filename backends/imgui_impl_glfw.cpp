@@ -78,6 +78,7 @@ static GLFWscrollfun        g_PrevUserCallbackScroll = NULL;
 static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
 static GLFWcharfun          g_PrevUserCallbackChar = NULL;
 
+#if !defined(_WIN32)
 static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
 {
     return glfwGetClipboardString((GLFWwindow*)user_data);
@@ -87,6 +88,7 @@ static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
 {
     glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
+#endif
 
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
@@ -173,9 +175,11 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
+#if !defined(_WIN32) // The glfwSetClipboardString Windows implementation has problems on some systems
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
     io.ClipboardUserData = g_Window;
+#endif
 #if defined(_WIN32)
     io.ImeWindowHandle = (void*)glfwGetWin32Window(g_Window);
 #endif
