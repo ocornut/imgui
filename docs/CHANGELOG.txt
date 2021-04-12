@@ -67,6 +67,8 @@ Other Changes:
 - ColorEdit4: Fixed hue resetting to 0 when it is set to 255. [@rokups]
 - ColorEdit4: Fixed hue value jitter when source color is stored as RGB in 32-bit integer and perform
   RGB<>HSV round trips every frames. [@rokups]
+- ColorPicker4: Fixed picker being unable to select exact 1.0f color when dragging toward the edges
+  of the SV square (previously picked 0.999989986f). (#3517) [@rokups]
 - Menus: Fixed vertical alignments of MenuItem() calls within a menu bar. (broken in 1.84). (#4538)
 - Menus: Adjust closing logic to accomodate for varying font size and dpi.
 - Menus: Fixed crash when navigating left inside a child window inside a sub-menu. (#4510).
