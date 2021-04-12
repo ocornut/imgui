@@ -13006,6 +13006,12 @@ int ImGui::DockNodeGetTabOrder(ImGuiWindow* window)
     return tab ? tab_bar->GetTabOrder(tab) : -1;
 }
 
+static void DockNodeHideWindowDuringHostWindowCreation(ImGuiWindow* window)
+{
+    window->Hidden = true;
+    window->HiddenFramesCanSkipItems = window->Active ? 1 : 2;
+}
+
 static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, bool add_to_tab_bar)
 {
     ImGuiContext& g = *GImGui; (void)g;
@@ -13018,20 +13024,18 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
     IM_ASSERT(window->DockNode == NULL || window->DockNodeAsHost == NULL);
     IMGUI_DEBUG_LOG_DOCKING("DockNodeAddWindow node 0x%08X window '%s'\n", node->ID, window->Name);
 
+    // If more than 2 windows appeared on the same frame leading to the creation of a new hosting window,
+    // we'll hide windows until the host window is ready. Hide the 1st window after its been output (so it is not visible for one frame).
+    // We will call DockNodeHideWindowDuringHostWindowCreation() on ourselves in Begin()
+    if (node->HostWindow == NULL && node->Windows.Size == 1 && node->Windows[0]->WasActive == false)
+        DockNodeHideWindowDuringHostWindowCreation(node->Windows[0]);
+
     node->Windows.push_back(window);
     node->WantHiddenTabBarUpdate = true;
     window->DockNode = node;
     window->DockId = node->ID;
     window->DockIsActive = (node->Windows.Size > 1);
     window->DockTabWantClose = false;
-
-    // If more than 2 windows appeared on the same frame, we'll create a new hosting DockNode from the point of the second window submission.
-    // Then we need to hide the first window (after its been output) otherwise it would be visible as a standalone window for one frame.
-    if (node->HostWindow == NULL && node->Windows.Size == 2 && node->Windows[0]->WasActive == false)
-    {
-        node->Windows[0]->Hidden = true;
-        node->Windows[0]->HiddenFramesCanSkipItems = 1;
-    }
 
     // When reactivating a node with one or two loose window, the window pos/size/viewport are authoritative over the node storage.
     // In particular it is important we init the viewport from the first window so we don't create two viewports and drop one.
@@ -15427,6 +15431,8 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     {
         window->DockIsActive = (node->State == ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing);
         window->DockTabIsVisible = false;
+        if (node->Windows.Size > 1)
+            DockNodeHideWindowDuringHostWindowCreation(window);
         return;
     }
 
