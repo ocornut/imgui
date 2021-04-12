@@ -137,6 +137,7 @@ Docking Branch:
 - Docking: DockSpace() returns its node ID.
 - Docking: Dockspace() never draws a background. (#3924)
 - Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease further manipulations.
+- Docking: Fixed restoring of tab order within a dockspace or a split node.
 - Viewports: Hotfix for crash in monitor array access, caused by 4b9bc4902. (#3967)
 - Backends, Viewports: GLFW: Add a workaround for stuck keys after closing a GLFW window (#3837).
 - Backends, Viewports: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)
