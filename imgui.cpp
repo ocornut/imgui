@@ -16260,7 +16260,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetSize()))
     {
         for (int n = 0; n < g.TabBars.GetSize(); n++)
-            DebugNodeTabBar(g.TabBars.GetByIndex(n), "TabBar");
+        {
+            ImGuiTabBar* tab_bar = g.TabBars.GetByIndex(n);
+            PushID(tab_bar);
+            DebugNodeTabBar(tab_bar, "TabBar");
+            PopID();
+        }
         TreePop();
     }
 
@@ -16702,7 +16707,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
     }
     p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
     if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
-    bool open = TreeNode(tab_bar, "%s", buf);
+    bool open = TreeNode(label, "%s", buf);
     if (!is_active) { PopStyleColor(); }
     if (is_active && IsItemHovered())
     {

@@ -138,7 +138,8 @@ Docking Branch:
 - Docking: Dockspace() never draws a background. (#3924)
 - Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease further manipulations.
 - Docking: Fixed restoring of tab order within a dockspace or a split node.
-- Docking: Fixed multiple simultaneously reappearing window from appearing undocked in their initial frame.
+- Docking: Fixed reappearing docked windows with no close button showing a tab with extraneous space for one frame.
+- Docking: Fixed multiple simultaneously reappearing window from appearing undocked for one frame.
 - Viewports: Hotfix for crash in monitor array access, caused by 4b9bc4902. (#3967)
 - Backends, Viewports: GLFW: Add a workaround for stuck keys after closing a GLFW window (#3837).
 - Backends, Viewports: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)
