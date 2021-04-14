@@ -11638,6 +11638,7 @@ static void ImGui::UpdateViewportsNewFrame()
     // - when releasing a moving window we will revert to aiming behind (at viewport_hovered)
     // - when we are between viewports, our dragged preview will tend to show in the last viewport _even_ if we don't have tooltips in their viewports (when lacking monitor info)
     // - consider the case of holding on a menu item to browse child menus: even thou a mouse button is held, there's no active id because menu items only react on mouse release.
+    // FIXME-VIEWPORT: This is essentially broken, when ImGuiBackendFlags_HasMouseHoveredViewport is set we want to trust when viewport_hovered==NULL and use that.
     const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive;
     if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
         viewport_hovered = g.MouseLastHoveredViewport;
@@ -12970,7 +12971,6 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 {
     ID = id;
-    WindowMenuButtonId = ImHashStr("#COLLAPSE", 0, ID);
     SharedFlags = LocalFlags = ImGuiDockNodeFlags_None;
     ParentNode = ChildNodes[0] = ChildNodes[1] = NULL;
     TabBar = NULL;
@@ -13823,8 +13823,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     // Docking/Collapse button
     if (has_window_menu_button)
     {
-        IMGUI_TEST_ENGINE_ID_INFO(node->WindowMenuButtonId, ImGuiDataType_String, "#COLLAPSE");
-        if (CollapseButton(node->WindowMenuButtonId, window_menu_button_pos, node))
+        if (CollapseButton(host_window->GetID("#COLLAPSE"), window_menu_button_pos, node)) // == DockNodeGetWindowMenuButtonId(node)
             OpenPopup("#WindowMenu");
         if (IsItemActive())
             focus_tab_id = tab_bar->SelectedTabId;
