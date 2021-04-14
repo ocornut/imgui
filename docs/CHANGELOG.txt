@@ -130,13 +130,13 @@ Other Changes:
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
-Docking Branch:
+Docking+Viewports Branch:
 
 - [Breaking] Removed io.ConfigDockingWithShift config option. Behavior always equivalent to having the
   option set to false (dock/undock by default, hold shift to avoid docking). (#2109)
 - Docking: DockSpace() returns its node ID.
 - Docking: Dockspace() never draws a background. (#3924)
-- Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease further manipulations.
+- Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease manipulations.
 - Docking: Fixed restoring of tab order within a dockspace or a split node.
 - Docking: Fixed reappearing docked windows with no close button showing a tab with extraneous space for one frame.
 - Docking: Fixed multiple simultaneously reappearing window from appearing undocked for one frame.
@@ -238,6 +238,13 @@ Other Changes:
   scheduled builds builds are not required. [@rokups]
 - Log/Capture: Added LogTextV, a va_list variant of LogText. [@PathogenDavid]
 
+Docking+Viewports Branch:
+
+- Viewports: Fix setting of ImGuiViewportFlags_NoRendererClear. (#3213)
+- Viewports: Added GetViewportPlatformMonitor() with a safety net to keep code portable.
+- Viewports, Backends: SDL: Fix missing ImGuiBackendFlags_HasSetMousePos flag in docking branch.
+- Viewports, Backends: GLFW: Fix application of WantSetMousePos. (#1542, #787)
+
 
 -----------------------------------------------------------------------
  VERSION 1.81 (Released 2021-02-10)
@@ -318,6 +325,17 @@ Other Changes:
   Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.
 - Examples: WebGPU: Added Emscripten+WebGPU example. (#3632) [@bfierz]
 - Backends: GLFW: Added ImGui_ImplGlfw_InitForOther() initialization call to use with non OpenGL API. (#3632)
+
+Docking+Viewports Branch:
+
+- Docking: Fix losing docking information on closed windows for which the hosting node was split. (#3716) [@GamingMinds-DanielC]
+- Docking: Fix gap in hit test hole when using ImGuiDockNodeFlags_PassthruCentralNode touching the edge of a viewport. (#3733)
+- Viewports: (Breaking) removed ImGuiPlatformIO::MainViewport which is now pretty much unused and duplicate
+  (and misleading as we will evolve the concept).
+- Viewports: (Breaking) turned ImGuiViewport::GetWorkPos(), ImGuiViewport::GetWorkSize() into regular fields
+  (WorkPos, WorkSize) before exposing in master branch.
+- Viewports: Fix issue inferring viewport z-order when new popups gets created. (#3734) + Metrics updates.
+- Viewports, Backends: Vulkan: handle VK_ERROR_OUT_OF_DATE_KHR when resizing secondary viewport (#3766, #3758)
 
 
 -----------------------------------------------------------------------
@@ -437,6 +455,14 @@ Other Changes:
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md, and improved them.
 - Docs: Consistently renamed all occurrences of "binding" and "back-end" to "backend" in comments and docs.
 
+Docking+Viewports Branch:
+
+- Docking: Docked windows honor change of tab and text colors. (#2771)
+- Docking: Support for appending into existing tab-bar made to work with Docking + internal helper DockNodeBeginAmendTabBar().
+- Docking: Added experimental TabItemFlagsOverrideSet to ImGuiWindowClass.
+- Viewports: Fixed incorrect whitening of popups above a modal if both use their own viewport.
+- Viewports: Backends: Vulkan: Fixed build, removed extraneous pipeline creation. (#3459, #3579)
+
 
 -----------------------------------------------------------------------
  VERSION 1.79 (Released 2020-10-08)
@@ -530,6 +556,21 @@ Other Changes:
 - Examples: DX12: Enable breaking on any warning/error when debug interface is enabled.
 - Examples: DX12: Added '#define ImTextureID ImU64' in project and build files to also allow building
   on 32-bit systems. Added project to default Visual Studio solution file. (#301)
+
+Docking+Viewports Branch:
+
+- Docking: DockSpace() emits ItemSize() properly (useful when not filling all space).
+- Docking: Fixed docking while hovering a child window. (#3420) broken by 85a661d. Improve metrics debugging.
+- Docking: Fix honoring payload filter with overlapping nodes (we incorrectly over-relied on g.HoveredDockNode
+  when making change for #3398).
+- Docking: Fix handling of WindowMenuButtonPosition == ImGuiDir_None in Docking Nodes. (#3499)
+- Viewports: Fixed a rare edge-case if the window targeted by CTRL+Tab stops being rendered.
+- Viewports, Backends: DX12: Make secondary viewport format match main viewport one (#3462) {@BeastLe9enD]
+- Viewports: Backends: Vulkan: Removed unused shader code. Fix leaks. Avoid unnecessary pipeline creation for main
+  viewport. (#3459) + Add ImGui_ImplVulkanH_CreateWindowSwapChain in ImGui_ImplVulkanH_CreateOrResizeWindow().
+- Viewports: Backends: DirectX9: Recover from D3DERR_DEVICELOST on secondary viewports. (#3424)
+- Viewports, Backends: Win32: Fix toggling of ImGuiViewportFlags_TopMost (#3477) [@Kodokuna]
+- Viewports: Backends: GLFW: Workaround for cases where glfwGetMonitorWorkarea fails (#3457) [@dougbinks]
 
 
 -----------------------------------------------------------------------
@@ -632,6 +673,23 @@ Other Changes:
 - Examples: Vulkan: Fixed GLFW+Vulkan and SDL+Vulkan clear color not being set. (#3390) [@RoryO]
 - CI: Emscripten has stopped their support for their fastcomp backend, switching to latest sdk [@Xipiryon]
 
+Docking+Viewports Branch:
+
+- Docking: Made DockBuilderAddNode() automatically call DockBuilderRemoveNode(). (#3399, #2109)
+- Docking: Storing HoveredDockNode in context which can be useful for easily detecting e.g. hovering an
+  empty node. (#3398)
+- Docking: Fixed docking overlay bits appearing at (0,0), because of 43bd80a. Most typically noticeable
+  when disabling multi-viewport.
+- Docking: Workaround recovery for node created without the _DockSpace flags later becoming a DockSpace. (#3340)
+- Docking: Rework size allocations to recover when there's no enough room for nodes + do not hold on
+  _WantLockSizeOnce forever. (#3328)
+- Docking: Rework size allocation to allow user code to override node sizes. Not all edge cases will be
+  properly handled but this is a step toward toolbar emitting size constraints.
+- Docking: Added experimental flags to perform more docking filtering and disable resize per axis.
+  Designed for toolbar patterns.
+- Viewports, Backends, GLFW: Use GLFW_MOUSE_PASSTHROUGH when available.
+- Viewports, Backends: DX12: Fixed issue on shutdown when viewports are disabled. (#3347)
+
 
 -----------------------------------------------------------------------
  VERSION 1.77 (Released 2020-06-29)
@@ -723,6 +781,17 @@ Other Changes:
 - Examples: Apple: Fixed example_apple_metal and example_apple_opengl2 using imgui_impl_osx.mm
   not forwarding right and center mouse clicks. (#3260) [@nburrus]
 
+Docking+Viewports Branch:
+
+- Viewports: Don't set ImGuiViewportFlags_NoRendererClear when ImGuiWindowFlags_NoBackground is set. (#3213)
+- Viewports: Report minimized viewports as zero DisplaySize to be consistent with main branch. (#1542)
+- Docking, Settings: Allow reload of settings data at runtime. (#2573)
+- Backends, GLFW: Fix windows resizing incorrectly on Linux due to GLFW firing window positioning
+  callbacks on next frame after window is resized manually. (#2117)
+- Backends: DX12: Fix OBJECT_DELETED_WHILE_STILL_IN_USE on viewport resizing. (#3210)
+- Backends: DX12: Fix for crash caused by early resource release. (#3121)
+- Backends, Win32: Request monitor update when DPI awareness is enabled to make sure they have the correct DPI settings.
+
 
 -----------------------------------------------------------------------
  VERSION 1.76 (Released 2020-04-12)
@@ -794,6 +863,20 @@ Other Changes:
 - Examples: Win32+DX12: Fixed resizing main window, enabled debug layer. (#3087, #3115) [@sergeyn]
 - Examples: SDL+DX11: Fixed resizing main window. (#3057) [@joeslay]
 - Examples: Added SDL+Metal example application. (#3017) [@coding-jackalope]
+
+Docking+Viewports Branch:
+
+- Docking: Fixed assert preventing dockspace from being created instead a hidden tab. (#3101)
+- Viewports: Fixed secondary viewports accidentally merging into a minimized host viewport. (#3118)
+- Viewports, Docking: Added per-viewport work area system for e.g. menu-bars. Fixed DockspaceOverViewport()
+  and demo code (overlay etc) accordingly. (#3035, #2889, #2474, #1542, #2109)
+- Viewports: Improve menu positioning in multi-monitor setups. [@rokups]
+- Viewports: Software mouse cursor is also scaled by current DpiScale. (amend #939)
+- Viewports: Avoid manually clipping resize grips and borders, which messes up with automation ability
+  to locate those items. Also simpler and more standard.
+- Viewports: Fix for UWP in the imgui_impl_win32.cpp IME handler. (#2895, #2892).
+- Viewports: Bunch of extra of comments to facilitate setting up multi-viewports.
+- Viewports, GLFW: Avoid using window positioning workaround for GLFW 3.3+ versions that have it fixed.
 
 
 -----------------------------------------------------------------------
@@ -893,6 +976,21 @@ Other Changes:
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
 
+Docking+Viewports Branch:
+
+- Docking + Nav: Fixed messed up Ctrl+Tab order with docked windows.
+- Docking + Nav: Fixed failing to restore NavId when refocusing a child within a docked window.
+- Docking + Nav: Fixed failing to restore NavId when refocusing due to missing nav window (when
+  it stops being submitted).
+- Docking: Fixed a bug where the tab bar of a hidden dockspace would keep requesting focus. (#2960)
+- Docking: Added experimental DockNodeFlagsOverrideSet/DockNodeFlagsOverrideClear flags in ImGuiWindowClass
+  (currently experimenting with toolbar idioms).
+- Viewports: Fix resizing viewport-owning windows when mouse pos is outside the InnerClipRect
+  (can happen with OS decoration enabled).
+- Viewports: Preserve last known size for minimized main viewport to be consistent with secondary viewports.
+- Backends: SDL: Honor NoTaskBarIcon flag under non Win32 OS. (#2117)
+- Backends: GLFW, SDL: Platform monitors declared properly even if multi-viewport is not enabled.
+
 
 -----------------------------------------------------------------------
  VERSION 1.74 (Released 2019-11-25)
@@ -972,6 +1070,14 @@ Other Changes:
 - CI: Set up a bunch of continuous-integration tests using GitHub Actions. We now compile many of the example
   applications on Windows, Linux, MacOS, iOS, Emscripten. Removed Travis integration. (#2865) [@rokups]
 
+Docking+Viewports Branch:
+
+- Docking: Can undock from the small triangle button. (#2109,. #2645)
+- Docking: Fixed node->HasCloseButton not honoring ImGuiDockNodeFlags_NoCloseButton in a floating node,
+  leading to empty space at the right of tab-bars with those flags. (#2109)
+- Docking: Made docked windows not use style.ChildRounding.
+- Multi-viewports: Added multi-viewport support in the DX12 back-end. (#2851) [@obfuscate]
+
 
 -----------------------------------------------------------------------
  VERSION 1.73 (Released 2019-09-24)
@@ -1033,6 +1139,28 @@ Other Changes:
   [@intonarumori, @ElectricMagic]
 - Misc: Updated stb_rect_pack.h from 0.99 to 1.00 (fixes by @rygorous: off-by-1 bug in best-fit heuristic,
   fix handling of rectangles too large to fit inside texture). (#2762) [@tido64]
+
+Docking+Viewports Branch:
+
+- Docking: Fix BeginDocked() path that creates node so that SetNextWindowDockID() doesn't immediately discard the node. (#2109)
+- Docking: Fix for node created at the same time as windows that are still resizing (typically with
+  io.ConfigDockingAlwaysTabBar) to not be zero/min sized. (#2109). The fix delays their visibility by one frame,
+  which is not ideal but not very problematic as the .ini data gets populated after that.
+- Docking: Fix a crash that could occur with a malformed ini file (DockNode Parent value pointing to a missing node).
+- Viewport: Fix modal/popup window being stuck in unowned hidden viewport associated to fallback window without stealing
+  it back. Fix modal reference viewport when opened outside of another window. (#1542)
+- Viewport: Modals don't need to set ImGuiViewportFlags_NoFocusOnClick, this also mitigate the issue described by #2445,
+  which becomes particularly bad with unfocused modal. (#1542)
+- Viewport: better case case where host window gets moved and resized simultaneous (toggling maximized state).
+  There's no perfect solution there, than using io.ConfigViewportsNoAutoMerge = false. (#1542)
+- Viewport, Docking: Fixed incorrect assignment of IsFallbackWindow which would tag dock node host windows created
+  in NewFrame() as such, messing with popup viewport inheritance.
+- Viewport: Fixed issue where resize grip would display as hovered while mouse is still off the OS bounds so a click
+  would miss it and focus the OS window behind expected one. (#1542)
+- Viewport: Fix to allow multiple shutdown / calls to DestroyPlatformWindows(). (#2769)
+- Viewport: Backends: GLFW: Fix setting window size on macOS (#2767, #2117) [@rokups]
+- Viewport: Backends: GLFW+Linux: Fix window having incorrect size after uncollapse. (#2756, #2117) [@rokups]
+- Viewport: Backends: DirectX9: Workaround for windows not refreshing when main viewport has no draw call. (#2560)
 
 
 -----------------------------------------------------------------------
@@ -1135,6 +1263,25 @@ Other Changes:
 - Backends: SDL2: Added ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
+
+Docking+Viewports Branch:
+
+- Docking: Making it possible to undock a node by clicking on the tab bar / title bar for the node. (#2645).
+- Docking: Explicitly inhibit constraint when docked for now. Fix clipping issue related to constraints. (#2690).
+- Docking: Fixed dragging/resizing from OS decoration not marking settings as dirty.
+- Docking: Renamed io.ConfigDockingTabBarOnSingleWindows to io.ConfigDockingAlwaysTabBar.
+  Added ImGuiWindowClass::DockingAlwaysTabBar to set on individual windows.
+- Docking: Perform simple check: assert if Docking or Viewport are enabled exactly on frame 1 (instead of frame 0
+  or later), which is a common user error leading to loss of .ini data on load.
+- Docking: Fix so that an appearing window making a dock node reappear won't have a zero-size on its first frame.
+- Docking: Fixed using ImGuiDockNodeFlags_AutoHideTabBar with io.ConfigDockingTabBarOnSingleWindows.
+- Docking: Added ImGuiDockNode to .natvis file.
+- Docking: Fixed support for large meshes in GetBackgroundDrawList(), GetForegroundDrawList(). (#2638)
+- Viewport: Fix monitor dpi info not being copied to main viewport when multi-viewports are not enabled. (#2621, #1676)
+- Viewport: Refactored ImGuiWindowClass's ViewportFlagsOverrideMask + ViewportFlagsOverrideValue into
+  ViewportFlagsOverrideSet + ViewportFlagsOverrideClear which appears easier to grasp. (#1542)
+- Viewport: Added ImGuiViewportFlags_NoAutoMerge to prevent merging into host viewport in a per-window basis
+  via the ImGuiWindowClass override mechanism. (#1542)
 
 
 -----------------------------------------------------------------------
