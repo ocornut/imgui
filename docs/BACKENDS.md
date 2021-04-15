@@ -17,6 +17,8 @@ your application or engine to easily integrate Dear ImGui.** Each backend is typ
 An application usually combines 1 Platform backend + 1 Renderer backend + main Dear ImGui sources.
 For example, the [example_win32_directx11](https://github.com/ocornut/imgui/tree/master/examples/example_win32_directx11) application combines imgui_impl_win32.cpp + imgui_impl_dx11.cpp. There are 20+ examples in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder. See [EXAMPLES.MD](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md) for details.
 
+**Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
+
 
 ### What are backends
 

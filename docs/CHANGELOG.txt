@@ -109,6 +109,7 @@ Other Changes:
 
 - Scrolling: Fix scroll tracking with e.g. SetScrollHereX/Y() when WindowPadding < ItemSpacing.
 - Scrolling: Fix scroll snapping on edge of scroll region when both scrollbars are enabled.
+- Scrolling: Fix mouse wheel axis swap when using SHIFT on macOS (system already does it). (#4010)
 - Window: Fix IsWindowAppearing() from returning true twice in most cases. (#3982, #1497, #1061)
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
@@ -117,17 +118,28 @@ Other Changes:
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
 - ColorEdit4: Alpha default to 255 (instead of 0) when omitted in hex input. (#3973) [@squadack]
+- InputText: Do not filter private unicode codepoints (e.g. icons) when pasted from clipboard. (#4005) [@dougbinks]
+- LabelText: Fixed clipping of multi-line value text when label is single-line. (#4004)
+- LabelText: Fixed vertical alignment of single-line value text when label is multi-line. (#4004)
+- Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
+- ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
+- Demo: Improved popups demo and comments.
 - Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
   [@1025798851]
 - Backends: DirectX9: calling IDirect3DStateBlock9::Capture() after CreateStateBlock() which appears to
   workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
+- Backends: DirectX10, DirectX11: fixed a crash when backing/restoring state if nothing is bound when
+  entering the rendering function. (#4045) [@Nemirtingas]
 - Backends: Vulkan: Fix mapped memory Vulkan validation error when buffer sizes are not multiple of
   VkPhysicalDeviceLimits::nonCoherentAtomSize. (#3957) [@AgentX1994]
-- Examples: Add OpenGL ES 2.0 support to modern GL examples. (#2837, #3951) [@lethal-guitar, @hinxx]
+- Backends: OpenGL3: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5. (#3998, #2366, #2186) [@s7jones]
+- Examples: OpenGL: Add OpenGL ES 2.0 support to modern GL examples. (#2837, #3951) [@lethal-guitar, @hinxx]
 - Examples: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)
+- Examples: Vulkan: Prefer using discrete GPU if there are more than one available. (#4012) [@rokups]
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
+- Examples: Android: Make Android example build compatible with Gradle 7.0. (#3446)
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 Docking+Viewports Branch:
