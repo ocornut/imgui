@@ -470,10 +470,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->MemoryCompacted = false;
 
     // Setup memory buffer (clear data if columns count changed)
-    const int stored_size = table->Columns.size();
-    if (stored_size != 0 && stored_size != columns_count)
+    ImGuiTableColumn* old_columns_to_preserve = NULL;
+    void* old_columns_raw_data = NULL;
+    const int old_columns_count = table->Columns.size();
+    if (old_columns_count != 0 && old_columns_count != columns_count)
     {
-        IM_FREE(table->RawData);
+        // Attempt to preserve width on column count change (#4046)
+        old_columns_to_preserve = table->Columns.Data;
+        old_columns_raw_data = table->RawData;
         table->RawData = NULL;
     }
     if (table->RawData == NULL)
@@ -496,14 +500,24 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         for (int n = 0; n < columns_count; n++)
         {
             ImGuiTableColumn* column = &table->Columns[n];
-            float width_auto = column->WidthAuto;
-            *column = ImGuiTableColumn();
-            column->WidthAuto = width_auto;
-            column->IsPreserveWidthAuto = true; // Preserve WidthAuto when reinitializing a live table: not technically necessary but remove a visible flicker
+            if (old_columns_to_preserve && n < old_columns_count)
+            {
+                // FIXME: We don't attempt to preserve column order in this path.
+                *column = old_columns_to_preserve[n];
+            }
+            else
+            {
+                float width_auto = column->WidthAuto;
+                *column = ImGuiTableColumn();
+                column->WidthAuto = width_auto;
+                column->IsPreserveWidthAuto = true; // Preserve WidthAuto when reinitializing a live table: not technically necessary but remove a visible flicker
+                column->IsEnabled = column->IsEnabledNextFrame = true;
+            }
             column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImGuiTableColumnIdx)n;
-            column->IsEnabled = column->IsEnabledNextFrame = true;
         }
     }
+    if (old_columns_raw_data)
+        IM_FREE(old_columns_raw_data);
 
     // Load settings
     if (table->IsSettingsRequestLoad)
@@ -3350,6 +3364,9 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
         for (int column_n = 0; column_n < settings->ColumnsCount; column_n++, column++)
         {
             // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
+            bool save_column = column->UserID != 0 || save_size || save_visible || save_order || (save_sort && column->SortOrder != -1);
+            if (!save_column)
+                continue;
             buf->appendf("Column %-2d", column_n);
             if (column->UserID != 0)                    buf->appendf(" UserID=%08X", column->UserID);
             if (save_size && column->IsStretch)         buf->appendf(" Weight=%.4f", column->WidthOrWeight);
