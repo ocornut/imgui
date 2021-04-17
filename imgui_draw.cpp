@@ -1600,53 +1600,53 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     PrimReserve(indeces, vertices);
 
     // make the grid of points (see figure above)
-    auto v1 = PushVtx(ImVec2(p_min.x - outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_left_irregular ? threshold : 3.0, top_left_irregular ? outer_threshold : outer_threshold_irregular, top_left_irregular ? antialiasing : antialiasing_irregular);
-    auto v2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto v3 = !middle_column ? v2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto v4 = PushVtx(ImVec2(p_max.x + outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_right_irregular ? threshold : 3.0, top_right_irregular ? outer_threshold : outer_threshold_irregular, top_right_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx v1 = PushVtx(ImVec2(p_min.x - outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_left_irregular ? threshold : 3.0, top_left_irregular ? outer_threshold : outer_threshold_irregular, top_left_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx v2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx v3 = !middle_column ? v2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx v4 = PushVtx(ImVec2(p_max.x + outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_right_irregular ? threshold : 3.0, top_right_irregular ? outer_threshold : outer_threshold_irregular, top_right_irregular ? antialiasing : antialiasing_irregular);
 
-    auto w1 = PushVtx(ImVec2(p_min.x - outer, p_min.y + (top_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto w2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y + (top_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto w3 = !middle_column ? w2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y + (top_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto w4 = PushVtx(ImVec2(p_max.x + outer, p_min.y + (top_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx w1 = PushVtx(ImVec2(p_min.x - outer, p_min.y + (top_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx w2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y + (top_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx w3 = !middle_column ? w2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y + (top_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx w4 = PushVtx(ImVec2(p_max.x + outer, p_min.y + (top_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
 
-    auto x1 = !middle_row ? w1 : PushVtx(ImVec2(p_min.x - outer, p_max.y - (bottom_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto x2 = !middle_row ? w2 : PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y - (bottom_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto x3 = !middle_row ? w3 : !middle_column ? x2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y - (bottom_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto x4 = !middle_row ? w4 : PushVtx(ImVec2(p_max.x + outer, p_max.y - (bottom_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx x1 = !middle_row ? w1 : PushVtx(ImVec2(p_min.x - outer, p_max.y - (bottom_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx x2 = !middle_row ? w2 : PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y - (bottom_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx x3 = !middle_row ? w3 : !middle_column ? x2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y - (bottom_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx x4 = !middle_row ? w4 : PushVtx(ImVec2(p_max.x + outer, p_max.y - (bottom_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
 
-    auto y1 = PushVtx(ImVec2(p_min.x - outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_left_irregular ? threshold : 3.0, bottom_left_irregular ? outer_threshold : outer_threshold_irregular, bottom_left_irregular ? antialiasing : antialiasing_irregular);
-    auto y2 = PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto y3 = !middle_column ? y2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    auto y4 = PushVtx(ImVec2(p_max.x + outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_right_irregular ? threshold : 3.0, bottom_right_irregular ? outer_threshold : outer_threshold_irregular, bottom_right_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx y1 = PushVtx(ImVec2(p_min.x - outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_left_irregular ? threshold : 3.0, bottom_left_irregular ? outer_threshold : outer_threshold_irregular, bottom_left_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx y2 = PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx y3 = !middle_column ? y2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    ImDrawIdx y4 = PushVtx(ImVec2(p_max.x + outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_right_irregular ? threshold : 3.0, bottom_right_irregular ? outer_threshold : outer_threshold_irregular, bottom_right_irregular ? antialiasing : antialiasing_irregular);
 
     // Push out quads based on the vertices above.
     // Sometimes we need to push an additional vertices if an irregular corner is encounterd (with a different/no rounding as the rest).
     // If this is the case, we need to compensate for the different rounding of the shadow that originates from this corner.
     PushQuadIndex(v1, v2, w2, w1);
     if (middle_column) {
-      auto w2_bottom = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-      auto w3_bottom = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx w2_bottom = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx w3_bottom = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
       PushQuadIndex(v2, v3, w3_bottom, w2_bottom);
     }
     PushQuadIndex(v4, w4, w3, v3);
 
     if (middle_row) {
-      auto w2_left = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-      auto x2_left = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx w2_left = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx x2_left = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
       PushQuadIndex(w1, w2_left, x2_left, x1);
       if (middle_column && innerVisible) {
         PushQuadIndex(w2, w3, x3, x2);
       }
-      auto w3_right = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-      auto x3_right = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx w3_right = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx x3_right = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
       PushQuadIndex(w3_right, w4, x4, x3_right);
     }
 
     PushQuadIndex(y1, x1, x2, y2);
     if (middle_column) {
-      auto x2_bottom = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-      auto x3_bottom = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx x2_bottom = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      ImDrawIdx x3_bottom = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
       PushQuadIndex(x2_bottom, x3_bottom, y3, y2);
     }
     PushQuadIndex(y4, y3, x3, x4);
