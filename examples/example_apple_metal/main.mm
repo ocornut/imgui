@@ -19,7 +19,7 @@
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
 
-@interface ViewController : NSViewController
+@interface ViewController : NSViewController<NSWindowDelegate>
 @end
 #else
 @interface ViewController : UIViewController
@@ -54,10 +54,20 @@
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
 
     // Setup Renderer backend
     ImGui_ImplMetal_Init(_device);
@@ -98,27 +108,10 @@
     self.mtkView.delegate = self;
 
 #if TARGET_OS_OSX
-    // Add a tracking area in order to receive mouse events whenever the mouse is within the bounds of our view
-    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
-                                                                options:NSTrackingMouseMoved | NSTrackingInVisibleRect | NSTrackingActiveAlways
-                                                                  owner:self
-                                                               userInfo:nil];
-    [self.view addTrackingArea:trackingArea];
+    ImGui_ImplOSX_AddTrackingArea(self);
+    ImGui_ImplOSX_Init(self.view);
 
-    // If we want to receive key events, we either need to be in the responder chain of the key view,
-    // or else we can install a local monitor. The consequence of this heavy-handed approach is that
-    // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
-    // window, we'd want to be much more careful than just ingesting the complete event stream.
-    // To match the behavior of other backends, we pass every event down to the OS.
-    NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
-    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
-    {
-        ImGui_ImplOSX_HandleEvent(event, self.view);
-        return event;
-    }];
-
-    ImGui_ImplOSX_Init();
-
+    [NSApp activateIgnoringOtherApps:YES];
 #endif
 }
 
@@ -126,48 +119,17 @@
 
 #if TARGET_OS_OSX
 
-- (void)mouseMoved:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
+- (void)viewWillAppear
+{
+    [super viewWillAppear];
+    self.view.window.delegate = self;
 }
 
-- (void)mouseDown:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseDown:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseDown:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)mouseUp:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseUp:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseUp:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)mouseDragged:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)rightMouseDragged:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)otherMouseDragged:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
-}
-
-- (void)scrollWheel:(NSEvent *)event {
-    ImGui_ImplOSX_HandleEvent(event, self.view);
+- (void)windowWillClose:(NSNotification *)notification
+{
+    ImGui_ImplMetal_Shutdown();
+    ImGui_ImplOSX_Shutdown();
+    ImGui::DestroyContext();
 }
 
 #else
@@ -299,6 +261,7 @@
         // Rendering
         ImGui::Render();
         ImDrawData* draw_data = ImGui::GetDrawData();
+        draw_data->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
         ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
 
         [renderEncoder popDebugGroup];
@@ -308,6 +271,13 @@
     }
 
     [commandBuffer commit];
+
+    // Update and Render additional Platform Windows
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 - (void)mtkView:(MTKView*)view drawableSizeWillChange:(CGSize)size

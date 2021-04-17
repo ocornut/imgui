@@ -41,6 +41,12 @@
 
 -(void)updateAndDrawDemoView
 {
+#if TARGET_OS_OSX
+    CGFloat framebufferScale = self.window.screen.backingScaleFactor ?: NSScreen.mainScreen.backingScaleFactor;
+#else
+    CGFloat framebufferScale = self.window.screen.scale ?: UIScreen.mainScreen.scale;
+#endif
+
     // Start the Dear ImGui frame
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplOSX_NewFrame(self);
@@ -93,6 +99,7 @@
 	[[self openGLContext] makeCurrentContext];
 
     ImDrawData* draw_data = ImGui::GetDrawData();
+    draw_data->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
     GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     glViewport(0, 0, width, height);
@@ -103,6 +110,14 @@
 
     // Present
     [[self openGLContext] flushBuffer];
+
+    // Update and Render additional Platform Windows
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 
     if (!animationTimer)
         animationTimer = [NSTimer scheduledTimerWithTimeInterval:0.017 target:self selector:@selector(animationTimerFired:) userInfo:nil repeats:YES];
@@ -163,7 +178,7 @@
 // ImGuiExampleAppDelegate
 //-----------------------------------------------------------------------------------
 
-@interface ImGuiExampleAppDelegate : NSObject <NSApplicationDelegate>
+@interface ImGuiExampleAppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 @property (nonatomic, readonly) NSWindow* window;
 @end
 
@@ -187,6 +202,7 @@
     [_window setAcceptsMouseMovedEvents:YES];
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
+    [_window setDelegate:self];
 
     return (_window);
 }
@@ -251,13 +267,14 @@
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_Init(view);
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
@@ -274,6 +291,13 @@
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
+}
+
+-(void)windowWillClose:(NSNotification *)notification
+{
+    ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplOSX_Shutdown();
+    ImGui::DestroyContext();
 }
 
 @end

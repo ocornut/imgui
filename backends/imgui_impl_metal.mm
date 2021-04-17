@@ -4,8 +4,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
-// Missing features:
-//  [ ] Renderer: Multi-viewport / platform windows.
+//  [X] Renderer: Multi-viewport / platform windows.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
@@ -15,6 +14,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2021-02-18: Metal: Change blending equation to preserve alpha in output buffer.
 //  2021-01-25: Metal: Fixed texture storage mode when building on Mac Catalyst.
+//  2019-09-17: Metal: Added support for Multi-viewport.
 //  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
@@ -25,8 +25,32 @@
 #include "imgui_impl_metal.h"
 
 #import <Metal/Metal.h>
-// #import <QuartzCore/CAMetalLayer.h> // Not supported in XCode 9.2. Maybe a macro to detect the SDK version can be used (something like #if MACOS_SDK >= 10.13 ...)
+#if TARGET_OS_SIMULATOR == 0 || __IPHONE_13_0
+#import <QuartzCore/CAMetalLayer.h>
+#else
+// Compatible for Xcode version below 12.X
+#import <QuartzCore/CALayer.h>
+@protocol CAMetalDrawable <MTLDrawable>
+@property(readonly) id<MTLTexture> texture;
+@end
+@interface CAMetalLayer : CALayer
+@property(nullable, retain) id<MTLDevice> device;
+@property MTLPixelFormat pixelFormat;
+@property BOOL framebufferOnly;
+@property CGSize drawableSize;
+- (nullable id<CAMetalDrawable>)nextDrawable;
+@end
+#endif
 #import <simd/simd.h>
+#if TARGET_OS_OSX
+#import <Cocoa/Cocoa.h>
+#endif
+
+// Forward Declarations
+static void ImGui_ImplMetal_InitPlatformInterface();
+static void ImGui_ImplMetal_ShutdownPlatformInterface();
+static void ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
+static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 
 #pragma mark - Support classes
 
@@ -83,6 +107,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -91,11 +116,15 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 
     ImGui_ImplMetal_CreateDeviceObjects(device);
 
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGui_ImplMetal_InitPlatformInterface();
+
     return true;
 }
 
 void ImGui_ImplMetal_Shutdown()
 {
+    ImGui_ImplMetal_ShutdownPlatformInterface();
     ImGui_ImplMetal_DestroyDeviceObjects();
 }
 
@@ -133,6 +162,7 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
     [g_sharedMetalContext makeDeviceObjectsWithDevice:device];
 
+    ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
     ImGui_ImplMetal_CreateFontsTexture(device);
 
     return true;
@@ -141,7 +171,143 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     ImGui_ImplMetal_DestroyFontsTexture();
+    ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
+
     [g_sharedMetalContext emptyRenderPipelineStateCache];
+}
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+struct ImGuiViewportDataMetal
+{
+    CAMetalLayer*               MetalLayer;
+    id <MTLCommandQueue>        CommandQueue;
+    MTLRenderPassDescriptor*    RenderPassDescriptor;
+    void*                       Handle;
+
+    ImGuiViewportDataMetal()    { Handle = NULL; }
+    ~ImGuiViewportDataMetal()   {}
+};
+
+static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataMetal* data = IM_NEW(ImGuiViewportDataMetal)();
+    viewport->RendererUserData = data;
+
+    // PlatformHandleRaw should always be a NSWindow*, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-ends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the NSWindow*.
+    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
+    IM_ASSERT(handle != 0);
+
+    id<MTLDevice> device = [g_sharedMetalContext.depthStencilState device];
+
+    CAMetalLayer* layer = [CAMetalLayer layer];
+    layer.device = device;
+    layer.framebufferOnly = YES;
+    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+#if TARGET_OS_OSX
+    NSWindow* window = (__bridge NSWindow*)handle;
+    NSView* view = nil;
+    if (view == nil)
+        view = [window contentView];
+    if (view == nil)
+        view = [[window contentViewController] view];
+    [view setLayer:layer];
+    [view setWantsLayer:YES];
+#endif
+    data->MetalLayer = layer;
+    data->CommandQueue = [device newCommandQueue];
+    data->RenderPassDescriptor = [[MTLRenderPassDescriptor alloc] init];
+    data->Handle = handle;
+}
+
+static void ImGui_ImplMetal_DestroyWindow(ImGuiViewport* viewport)
+{
+    // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
+    if (ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData)
+    {
+        IM_DELETE(data);
+    }
+    viewport->RendererUserData = NULL;
+}
+
+static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+    ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
+
+    CGSize drawableSize = CGSizeMake(size.x, size.y);
+    drawableSize.width *= viewport->DpiScale;
+    drawableSize.height *= viewport->DpiScale;
+    data->MetalLayer.drawableSize = drawableSize;
+}
+
+static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
+
+#if TARGET_OS_OSX
+    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
+    NSWindow* window = (__bridge NSWindow*)handle;
+    viewport->DpiScale = [window backingScaleFactor];
+    if (data->MetalLayer.contentsScale != viewport->DpiScale)
+    {
+        data->MetalLayer.contentsScale = viewport->DpiScale;
+
+        CGSize drawableSize = [window frame].size;
+        drawableSize.width *= viewport->DpiScale;
+        drawableSize.height *= viewport->DpiScale;
+        data->MetalLayer.drawableSize = drawableSize;
+    }
+    viewport->DrawData->FramebufferScale = ImVec2(viewport->DpiScale, viewport->DpiScale);
+#endif
+
+    id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
+
+    MTLRenderPassDescriptor* renderPassDescriptor = data->RenderPassDescriptor;
+    renderPassDescriptor.colorAttachments[0].texture = [drawable texture];
+    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+
+    id <MTLCommandBuffer> commandBuffer = [data->CommandQueue commandBuffer];
+    id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    ImGui_ImplMetal_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
+    [renderEncoder endEncoding];
+
+    [commandBuffer presentDrawable:drawable];
+    [commandBuffer commit];
+}
+
+static void ImGui_ImplMetal_InitPlatformInterface()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplMetal_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplMetal_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplMetal_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplMetal_RenderWindow;
+}
+
+static void ImGui_ImplMetal_ShutdownPlatformInterface()
+{
+    ImGui::DestroyPlatformWindows();
+}
+
+static void ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (!platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplMetal_CreateWindow(platform_io.Viewports[i]);
+}
+
+static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplMetal_DestroyWindow(platform_io.Viewports[i]);
 }
 
 #pragma mark - MetalBuffer implementation
@@ -521,7 +687,6 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                         .height = NSUInteger(clip_rect.w - clip_rect.y)
                     };
                     [commandEncoder setScissorRect:scissorRect];
-
 
                     // Bind texture, Draw
                     if (pcmd->TextureId != NULL)
