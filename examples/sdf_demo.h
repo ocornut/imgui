@@ -77,7 +77,7 @@ void SDFDemo() {
   ImGui::SetWindowFontScale(1.5f);
   ImGui::Text("Shapes");
   ImGui::SetWindowFontScale(1);
-  ImGui::TextWrapped("To support text effects, additional information needs be encoded in ImDrawVert. This same information can easily be supported for drawing outlines and shadow for regular shapes. A rounded rectangle with shadow can be drawn with 18 triangles (size of shadow or rounding does not have an impact). See the DrawCmd in Metrics/Debugger window how these rectangles are drawn (especially ones with some round corners, and some straight corners).");
+  ImGui::TextWrapped("To support text effects, additional information needs be encoded in ImDrawVert. This same information can easily be used for drawing outlines and shadow for regular shapes. A rounded rectangle with shadow can be drawn with 18 triangles (size of shadow or rounding does not have an impact). See the DrawCmd in Metrics/Debugger window how these rectangles are drawn (especially ones with some round corners, and some straight corners).");
 
   ImGui::TextWrapped("Support for these new rounded rectangles is enabled if the flag SignedDistanceShapes is set by the backend. If enabled, AddRect and AddRectFilled are using these new implementation of shapes. This causes the number of vertices and triangles to drop significantly when using rounded frames.");
 

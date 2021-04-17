@@ -57,6 +57,12 @@ int main(int, char**)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
+    //
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 12;
+    style.FrameRounding = 12;
+    style.WindowBorderSize = 0;
+    style.FrameShadowSize = 3;
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);

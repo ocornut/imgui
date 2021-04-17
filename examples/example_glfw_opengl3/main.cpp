@@ -128,6 +128,7 @@ int main(int, char**)
     style.WindowRounding = 12;
     style.FrameRounding = 12;
     style.WindowBorderSize = 0;
+    style.FrameShadowSize = 3;
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
