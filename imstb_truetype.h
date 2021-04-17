@@ -663,7 +663,7 @@ STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int
 
 STBTT_DEF int  stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
 STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect *rects, int num_rects);
-STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
+STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects, bool sdf = false);
 // Calling these functions in sequence is roughly equivalent to calling
 // stbtt_PackFontRanges(). If you more control over the packing of multiple
 // fonts, or if you want to pack custom data into a font texture, take a look
@@ -929,6 +929,7 @@ STBTT_DEF void stbtt_FreeSDF(unsigned char *bitmap, void *userdata);
 // frees the SDF bitmap allocated below
 
 STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff);
+STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride);
 STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff);
 // These functions compute a discretized SDF field for a single character, suitable for storing
 // in a single-channel texture, sampling with bilinear filtering, and testing against
@@ -4042,7 +4043,7 @@ STBTT_DEF void stbtt_MakeGlyphBitmapSubpixelPrefilter(const stbtt_fontinfo *info
 }
 
 // rects array must be big enough to accommodate all characters in the given ranges
-STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects)
+STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects, bool sdf)
 {
    int i,j,k, return_value = 1;
 
@@ -4076,19 +4077,26 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const
             r->w -= pad;
             r->h -= pad;
             stbtt_GetGlyphHMetrics(info, glyph, &advance, &lsb);
-            stbtt_GetGlyphBitmapBox(info, glyph,
+            stbtt_GetGlyphBitmapBoxSubpixel(info, glyph,
                                     scale * spc->h_oversample,
                                     scale * spc->v_oversample,
+                                    0, 0,
                                     &x0,&y0,&x1,&y1);
-            stbtt_MakeGlyphBitmapSubpixel(info,
-                                          spc->pixels + r->x + r->y*spc->stride_in_bytes,
-                                          r->w - spc->h_oversample+1,
-                                          r->h - spc->v_oversample+1,
-                                          spc->stride_in_bytes,
-                                          scale * spc->h_oversample,
-                                          scale * spc->v_oversample,
-                                          0,0,
-                                          glyph);
+
+            if (!sdf) {
+              stbtt_MakeGlyphBitmapSubpixel(info,
+                                            spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                            r->w - spc->h_oversample+1,
+                                            r->h - spc->v_oversample+1,
+                                            spc->stride_in_bytes,
+                                            scale * spc->h_oversample,
+                                            scale * spc->v_oversample,
+                                            0, 0,
+                                            glyph);
+            } else {
+              const static int p = IMGUI_SDF_PADDING; // do not use pad here (it is the distance to the other glyph)
+              stbtt_GetGlyphSDF2(info, scale, -scale, glyph, p, 128, (128/p)+1, x0-p, y0-p, x1+p, y1+p, spc->pixels + r->x + (r->y - p)*spc->stride_in_bytes - p, spc->stride_in_bytes);
+            }
 
             if (spc->h_oversample > 1)
                stbtt__h_prefilter(spc->pixels + r->x + r->y*spc->stride_in_bytes,
@@ -4438,13 +4446,17 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
 
    // invert for y-downwards bitmaps
    scale_y = -scale_y;
+
+	 data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
+	 stbtt_GetGlyphSDF2(info, scale_x, scale_y, glyph, padding, onedge_value, pixel_dist_scale, ix0, iy0, ix1, iy1, data, w);
+	 return data;
+}
       
-   {
+STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride) {
       int x,y,i,j;
       float *precompute;
       stbtt_vertex *verts;
       int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
-      data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
       precompute = (float *) STBTT_malloc(num_verts * sizeof(float), info->userdata);
 
       for (i=0,j=num_verts-1; i < num_verts; j=i++) {
@@ -4580,13 +4592,11 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
                val = 0;
             else if (val > 255)
                val = 255;
-            data[(y-iy0)*w+(x-ix0)] = (unsigned char) val;
+            data[(y-iy0)*stride+(x-ix0)] = (unsigned char) val;
          }
       }
       STBTT_free(precompute, info->userdata);
       STBTT_free(verts, info->userdata);
-   }
-   return data;
 }   
 
 STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff)

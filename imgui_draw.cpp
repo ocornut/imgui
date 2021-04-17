@@ -239,6 +239,10 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+    colors[ImGuiCol_WindowShadowStart]      = ImVec4(1.00f, 1.00f, 1.00f, 0.25f);
+    colors[ImGuiCol_WindowShadowEnd]        = ImVec4(1.00f, 1.00f, 1.00f, 0.0);
+    colors[ImGuiCol_FrameShadowStart]       = ImVec4(1.00f, 1.00f, 1.00f, 0.25f);
+    colors[ImGuiCol_FrameShadowEnd]         = ImVec4(1.00f, 1.00f, 1.00f, 0.0);
 }
 
 void ImGui::StyleColorsClassic(ImGuiStyle* dst)
@@ -299,6 +303,10 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_WindowShadowStart]      = ImVec4(1.00f, 1.00f, 1.00f, 0.25f);
+    colors[ImGuiCol_WindowShadowEnd]        = ImVec4(1.00f, 1.00f, 1.00f, 0.0);
+    colors[ImGuiCol_FrameShadowStart]       = ImVec4(1.00f, 1.00f, 1.00f, 0.25f);
+    colors[ImGuiCol_FrameShadowEnd]         = ImVec4(1.00f, 1.00f, 1.00f, 0.0);
 }
 
 // Those light colors are better suited with a thicker font than the default one + FrameBorder
@@ -360,6 +368,10 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(0.70f, 0.70f, 0.70f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.20f, 0.20f, 0.20f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_WindowShadowStart]      = ImVec4(0.00f, 0.00f, 0.00f, 0.25f);
+    colors[ImGuiCol_WindowShadowEnd]        = ImVec4(0.00f, 0.00f, 0.00f, 0.0);
+    colors[ImGuiCol_FrameShadowStart]       = ImVec4(0.00f, 0.00f, 0.00f, 0.25f);
+    colors[ImGuiCol_FrameShadowEnd]         = ImVec4(0.00f, 0.00f, 0.00f, 0.0);
 }
 
 //-----------------------------------------------------------------------------
@@ -652,14 +664,56 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
     _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
     _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
+#ifndef IMGUI_DISABLE_SDF
+    _VtxWritePtr[0].simple();
+    _VtxWritePtr[1].simple();
+    _VtxWritePtr[2].simple();
+    _VtxWritePtr[3].simple();
+#endif
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
     _IdxWritePtr += 6;
 }
 
-void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
+void ImDrawList::PrimRectUV(const ImVec2& tl, const ImVec2& br, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 innerColor, ImU32 startOuterColor, ImU32 endOuterColor, float a, float b, float w)
 {
-    ImVec2 b(c.x, a.y), d(a.x, c.y), uv_b(uv_c.x, uv_a.y), uv_d(uv_a.x, uv_c.y);
+    ImVec2 tr(br.x, tl.y), bl(tl.x, br.y), uv_b(uv_c.x, uv_a.y), uv_d(uv_a.x, uv_c.y);
+    ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+    _IdxWritePtr[0] = idx; _IdxWritePtr[1] = (ImDrawIdx)(idx+1); _IdxWritePtr[2] = (ImDrawIdx)(idx+2);
+    _IdxWritePtr[3] = idx; _IdxWritePtr[4] = (ImDrawIdx)(idx+2); _IdxWritePtr[5] = (ImDrawIdx)(idx+3);
+    _VtxWritePtr[0].pos = tl; _VtxWritePtr[0].uv = uv_a; _VtxWritePtr[0].col = innerColor;
+    _VtxWritePtr[1].pos = tr; _VtxWritePtr[1].uv = uv_b; _VtxWritePtr[1].col = innerColor;
+    _VtxWritePtr[2].pos = br; _VtxWritePtr[2].uv = uv_c; _VtxWritePtr[2].col = innerColor;
+    _VtxWritePtr[3].pos = bl; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = innerColor;
+#ifndef IMGUI_DISABLE_SDF
+    _VtxWritePtr[0].startOuterColor =
+        _VtxWritePtr[1].startOuterColor =
+        _VtxWritePtr[2].startOuterColor =
+        _VtxWritePtr[3].startOuterColor = startOuterColor;
+    _VtxWritePtr[0].endOuterColor =
+        _VtxWritePtr[1].endOuterColor =
+        _VtxWritePtr[2].endOuterColor =
+        _VtxWritePtr[3].endOuterColor = endOuterColor;
+    _VtxWritePtr[0].a =
+        _VtxWritePtr[1].a =
+        _VtxWritePtr[2].a =
+        _VtxWritePtr[3].a = a;
+    _VtxWritePtr[0].b =
+        _VtxWritePtr[1].b =
+        _VtxWritePtr[2].b =
+        _VtxWritePtr[3].b = b;
+    _VtxWritePtr[0].w =
+        _VtxWritePtr[1].w =
+        _VtxWritePtr[2].w =
+        _VtxWritePtr[3].w = w;
+#endif
+    _VtxWritePtr += 4;
+    _VtxCurrentIdx += 4;
+    _IdxWritePtr += 6;
+}
+
+void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col, float w)
+{
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
     _IdxWritePtr[0] = idx; _IdxWritePtr[1] = (ImDrawIdx)(idx+1); _IdxWritePtr[2] = (ImDrawIdx)(idx+2);
     _IdxWritePtr[3] = idx; _IdxWritePtr[4] = (ImDrawIdx)(idx+2); _IdxWritePtr[5] = (ImDrawIdx)(idx+3);
@@ -667,20 +721,16 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv_b; _VtxWritePtr[1].col = col;
     _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv_c; _VtxWritePtr[2].col = col;
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = col;
-    _VtxWritePtr += 4;
-    _VtxCurrentIdx += 4;
-    _IdxWritePtr += 6;
-}
-
-void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col)
-{
-    ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-    _IdxWritePtr[0] = idx; _IdxWritePtr[1] = (ImDrawIdx)(idx+1); _IdxWritePtr[2] = (ImDrawIdx)(idx+2);
-    _IdxWritePtr[3] = idx; _IdxWritePtr[4] = (ImDrawIdx)(idx+2); _IdxWritePtr[5] = (ImDrawIdx)(idx+3);
-    _VtxWritePtr[0].pos = a; _VtxWritePtr[0].uv = uv_a; _VtxWritePtr[0].col = col;
-    _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv_b; _VtxWritePtr[1].col = col;
-    _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv_c; _VtxWritePtr[2].col = col;
-    _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = col;
+#ifndef IMGUI_DISABLE_SDF
+    _VtxWritePtr[0].simple();
+    _VtxWritePtr[1].simple();
+    _VtxWritePtr[2].simple();
+    _VtxWritePtr[3].simple();
+    _VtxWritePtr[0].w =
+        _VtxWritePtr[1].w =
+        _VtxWritePtr[2].w =
+        _VtxWritePtr[3].w = w;
+#endif
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
     _IdxWritePtr += 6;
@@ -828,6 +878,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 {
                     _VtxWritePtr[0].pos = temp_points[i * 2 + 0]; _VtxWritePtr[0].uv = tex_uv0; _VtxWritePtr[0].col = col; // Left-side outer edge
                     _VtxWritePtr[1].pos = temp_points[i * 2 + 1]; _VtxWritePtr[1].uv = tex_uv1; _VtxWritePtr[1].col = col; // Right-side outer edge
+#ifndef IMGUI_DISABLE_SDF
+                    _VtxWritePtr[0].simple();
+                    _VtxWritePtr[1].simple();
+#endif
                     _VtxWritePtr += 2;
                 }
             }
@@ -839,6 +893,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                     _VtxWritePtr[0].pos = points[i];              _VtxWritePtr[0].uv = opaque_uv; _VtxWritePtr[0].col = col;       // Center of line
                     _VtxWritePtr[1].pos = temp_points[i * 2 + 0]; _VtxWritePtr[1].uv = opaque_uv; _VtxWritePtr[1].col = col_trans; // Left-side outer edge
                     _VtxWritePtr[2].pos = temp_points[i * 2 + 1]; _VtxWritePtr[2].uv = opaque_uv; _VtxWritePtr[2].col = col_trans; // Right-side outer edge
+#ifndef IMGUI_DISABLE_SDF
+                    _VtxWritePtr[0].simple();
+                    _VtxWritePtr[1].simple();
+                    _VtxWritePtr[2].simple();
+#endif
                     _VtxWritePtr += 3;
                 }
             }
@@ -910,6 +969,12 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 _VtxWritePtr[1].pos = temp_points[i * 4 + 1]; _VtxWritePtr[1].uv = opaque_uv; _VtxWritePtr[1].col = col;
                 _VtxWritePtr[2].pos = temp_points[i * 4 + 2]; _VtxWritePtr[2].uv = opaque_uv; _VtxWritePtr[2].col = col;
                 _VtxWritePtr[3].pos = temp_points[i * 4 + 3]; _VtxWritePtr[3].uv = opaque_uv; _VtxWritePtr[3].col = col_trans;
+#ifndef IMGUI_DISABLE_SDF
+                _VtxWritePtr[0].simple();
+                _VtxWritePtr[1].simple();
+                _VtxWritePtr[2].simple();
+                _VtxWritePtr[3].simple();
+#endif
                 _VtxWritePtr += 4;
             }
         }
@@ -938,6 +1003,12 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             _VtxWritePtr[1].pos.x = p2.x + dy; _VtxWritePtr[1].pos.y = p2.y - dx; _VtxWritePtr[1].uv = opaque_uv; _VtxWritePtr[1].col = col;
             _VtxWritePtr[2].pos.x = p2.x - dy; _VtxWritePtr[2].pos.y = p2.y + dx; _VtxWritePtr[2].uv = opaque_uv; _VtxWritePtr[2].col = col;
             _VtxWritePtr[3].pos.x = p1.x - dy; _VtxWritePtr[3].pos.y = p1.y + dx; _VtxWritePtr[3].uv = opaque_uv; _VtxWritePtr[3].col = col;
+#ifndef IMGUI_DISABLE_SDF
+            _VtxWritePtr[0].simple();
+            _VtxWritePtr[1].simple();
+            _VtxWritePtr[2].simple();
+            _VtxWritePtr[3].simple();
+#endif
             _VtxWritePtr += 4;
 
             _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + 1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx + 2);
@@ -1001,6 +1072,10 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             // Add vertices
             _VtxWritePtr[0].pos.x = (points[i1].x - dm_x); _VtxWritePtr[0].pos.y = (points[i1].y - dm_y); _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
             _VtxWritePtr[1].pos.x = (points[i1].x + dm_x); _VtxWritePtr[1].pos.y = (points[i1].y + dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
+#ifndef IMGUI_DISABLE_SDF
+            _VtxWritePtr[0].simple();
+            _VtxWritePtr[1].simple();
+#endif
             _VtxWritePtr += 2;
 
             // Add indexes for fringes
@@ -1019,6 +1094,9 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         for (int i = 0; i < vtx_count; i++)
         {
             _VtxWritePtr[0].pos = points[i]; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+#ifndef IMGUI_DISABLE_SDF
+            _VtxWritePtr[0].simple();
+#endif
             _VtxWritePtr++;
         }
         for (int i = 2; i < points_count; i++)
@@ -1365,8 +1443,13 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
 
 // p_min = upper-left, p_max = lower-right
 // Note we don't render 1 pixels sized rectangles properly.
-void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness)
-{
+void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness) {
+#ifndef IMGUI_DISABLE_SDF
+    if ((Flags & ImDrawListFlags_SignedDistanceShapes)) {
+      AddRectFilled(p_min + ImVec2(thickness/2, thickness/2), p_max - ImVec2(thickness/2, thickness/2), IM_COL32_BLACK_TRANS, rounding, flags, thickness, col, col);
+      return;
+    }
+#endif
     if ((col & IM_COL32_A_MASK) == 0)
         return;
     if (Flags & ImDrawListFlags_AntiAliasedLines)
@@ -1376,20 +1459,198 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
-void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags)
-{
-    if ((col & IM_COL32_A_MASK) == 0)
-        return;
-    if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
-    {
+ImDrawIdx ImDrawList::PushVtx(const ImVec2& pos, const ImVec2& uv, ImU32 innerColor, ImU32 startOuterColor, ImU32 endOuterColor, float a, float b, float w) {
+#ifndef IMGUI_DISABLE_SDF
+    _VtxWritePtr[0] = {pos, uv, innerColor, startOuterColor, endOuterColor, a, b, w};
+#else
+    _VtxWritePtr[0] = {pos, uv, innerColor};
+#endif
+    ++_VtxWritePtr;
+    return _VtxCurrentIdx++;
+}
+
+// first vertex is the provocing vertex
+void ImDrawList::PushQuadIndex(ImDrawIdx a, ImDrawIdx b, ImDrawIdx c, ImDrawIdx d) {
+    if ((Flags & ImDrawListFlags_ProvocingVertexFirst)) {
+      *_IdxWritePtr++ = a;
+    }
+
+    *_IdxWritePtr++ = b;
+    *_IdxWritePtr++ = c;
+
+    *_IdxWritePtr++ = a;
+
+    *_IdxWritePtr++ = c;
+    *_IdxWritePtr++ = d;
+
+    if (!(Flags & ImDrawListFlags_ProvocingVertexFirst)) {
+      *_IdxWritePtr++ = a;
+    }
+}
+
+void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding, ImDrawFlags flags, float outer, ImU32 startOuterColor, ImU32 endOuterColor) {
+#ifndef IMGUI_DISABLE_SDF
+    if (!(Flags & ImDrawListFlags_SignedDistanceShapes)) {
+#endif
+      if ((col & IM_COL32_A_MASK) == 0)
+          return;
+      if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+      {
+          PrimReserve(6, 4);
+          PrimRect(p_min, p_max, col);
+      }
+      else
+      {
+          PathRect(p_min, p_max, rounding, flags);
+          PathFillConvex(col);
+      }
+#ifndef IMGUI_DISABLE_SDF
+      return;
+    }
+
+    if (!flags)
+      flags = ImDrawFlags_RoundCornersAll;
+
+    if (flags == ImDrawFlags_RoundCornersNone)
+      rounding = 0;
+
+    if (p_max.x < p_min.x)
+      ImSwap(p_min.x, p_max.x);
+    if (p_max.y < p_min.y)
+      ImSwap(p_min.y, p_max.y);
+
+    // max rounding is the shortest side
+    if ((flags & ImDrawFlags_RoundCornersTop) && (flags & ImDrawFlags_RoundCornersBottom)) {
+      rounding = ImMin((p_max.y - p_min.y - 1) / 2, rounding);
+    }
+    if ((flags & ImDrawFlags_RoundCornersLeft) && (flags & ImDrawFlags_RoundCornersRight)) {
+      rounding = ImMin((p_max.x - p_min.x - 1) / 2, rounding);
+    }
+    rounding = ImMin(ImMin(p_max.x - p_min.x - 1, p_max.y - p_min.y - 1), rounding);
+
+    // reduce artifacts in shader, especially in a corner the outer color can be seen a bit
+    
+    if (outer == 0) {
+        startOuterColor &= ~IM_COL32_A_MASK;
+        endOuterColor &= ~IM_COL32_A_MASK;
+    }
+
+    if ((startOuterColor & IM_COL32_A_MASK) == 0 && (endOuterColor & IM_COL32_A_MASK) == 0) {
+        startOuterColor = endOuterColor = col;
+        outer = 0;
+    }
+
+    // fast path
+    if (outer + rounding == 0) {
         PrimReserve(6, 4);
         PrimRect(p_min, p_max, col);
+        return;
     }
-    else
-    {
-        PathRect(p_min, p_max, rounding, flags);
-        PathFillConvex(col);
+
+    float total = outer + rounding;
+    float antialiasing = 0.25 / total; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
+    float threshold = ImMin(1.0f, float(outer + 0.25) / total);
+    float outer_threshold = outer == 0 ? threshold : antialiasing; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
+
+    float antialiasing_irregular = outer ? 0.25 / outer : 0.0f; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
+    float outer_threshold_irregular = outer == 0 ? threshold : antialiasing_irregular; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
+    // we want circular signed distance calculations
+    threshold += 2.0;
+
+    /* BASE LAYOUT:
+     * XY coordinates:
+     *   v1, v2, v3, v4
+     *   w1, w2, w3, w4
+     *   x1, x2, x3, x4
+     *   y1, y2, y3, y4
+     * Texture coordinates:
+     *   uv_a, uv_b, uv_c, uv_d
+     *
+     * There are mapped like this (for the normal case with all corners have the same rounding):
+     *
+     *        1 2    3 4
+     *      v a-b----b-a
+     *      w d-c----c-d
+     *        | |    | |
+     *      x d-c----c-d
+     *      y a-b----b-a
+     */
+
+    ImVec2 uv_a{ 1, 1 };
+    ImVec2 uv_b{ 0, 1 };
+    ImVec2 uv_c{ 0, 0 };
+    ImVec2 uv_d{ 1, 0 };
+
+    // mark as rounding if rounding is zero to save vertices (which are generated for non-rounded corners if rounded corners are also present
+    int top_left_irregular = (flags & ImDrawFlags_RoundCornersTopLeft) > 0 || rounding == 0;
+    int top_right_irregular = (flags & ImDrawFlags_RoundCornersTopRight) > 0 || rounding == 0;
+    int bottom_left_irregular = (flags & ImDrawFlags_RoundCornersBottomLeft) > 0 || rounding == 0;
+    int bottom_right_irregular = (flags & ImDrawFlags_RoundCornersBottomRight) > 0 || rounding == 0;
+
+    // check which rows and columns needs to be generated
+    bool middle_row = p_min.y + ((flags & ImDrawFlags_RoundCornersTop) ? rounding : 0) < p_max.y - ((flags & ImDrawFlags_RoundCornersBottom) ? rounding : 0);
+    bool middle_column = p_min.x + ((flags & ImDrawFlags_RoundCornersLeft) ? rounding : 0) < p_max.x - ((flags & ImDrawFlags_RoundCornersRight) ? rounding : 0);
+    bool innerVisible = (col & IM_COL32_A_MASK) > 0;
+
+    // calculate number of indeces/vertices to reserve
+    int noCorners = !top_left_irregular + !top_right_irregular + !bottom_left_irregular + !bottom_right_irregular;
+    int vertices = (3+middle_column)*(3+middle_row) + (middle_column ? noCorners : 0) + (middle_row ? noCorners : 0);
+    int indeces = 6 * (4 + (middle_row ? 2 : 0) + (middle_column ? 2 : 0) + (middle_row && middle_column && innerVisible ? 1 : 0));
+
+    PrimReserve(indeces, vertices);
+
+    // make the grid of points (see figure above)
+    auto v1 = PushVtx(ImVec2(p_min.x - outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_left_irregular ? threshold : 3.0, top_left_irregular ? outer_threshold : outer_threshold_irregular, top_left_irregular ? antialiasing : antialiasing_irregular);
+    auto v2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto v3 = !middle_column ? v2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto v4 = PushVtx(ImVec2(p_max.x + outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_right_irregular ? threshold : 3.0, top_right_irregular ? outer_threshold : outer_threshold_irregular, top_right_irregular ? antialiasing : antialiasing_irregular);
+
+    auto w1 = PushVtx(ImVec2(p_min.x - outer, p_min.y + (top_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto w2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y + (top_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto w3 = !middle_column ? w2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y + (top_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto w4 = PushVtx(ImVec2(p_max.x + outer, p_min.y + (top_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+
+    auto x1 = !middle_row ? w1 : PushVtx(ImVec2(p_min.x - outer, p_max.y - (bottom_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto x2 = !middle_row ? w2 : PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y - (bottom_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto x3 = !middle_row ? w3 : !middle_column ? x2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y - (bottom_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto x4 = !middle_row ? w4 : PushVtx(ImVec2(p_max.x + outer, p_max.y - (bottom_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+
+    auto y1 = PushVtx(ImVec2(p_min.x - outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_left_irregular ? threshold : 3.0, bottom_left_irregular ? outer_threshold : outer_threshold_irregular, bottom_left_irregular ? antialiasing : antialiasing_irregular);
+    auto y2 = PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto y3 = !middle_column ? y2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+    auto y4 = PushVtx(ImVec2(p_max.x + outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_right_irregular ? threshold : 3.0, bottom_right_irregular ? outer_threshold : outer_threshold_irregular, bottom_right_irregular ? antialiasing : antialiasing_irregular);
+
+    // Push out quads based on the vertices above.
+    // Sometimes we need to push an additional vertices if an irregular corner is encounterd (with a different/no rounding as the rest).
+    // If this is the case, we need to compensate for the different rounding of the shadow that originates from this corner.
+    PushQuadIndex(v1, v2, w2, w1);
+    if (middle_column) {
+      auto w2_bottom = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      auto w3_bottom = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      PushQuadIndex(v2, v3, w3_bottom, w2_bottom);
     }
+    PushQuadIndex(v4, w4, w3, v3);
+
+    if (middle_row) {
+      auto w2_left = top_left_irregular ? w2 : PushVtx(ImVec2(p_min.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      auto x2_left = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      PushQuadIndex(w1, w2_left, x2_left, x1);
+      if (middle_column && innerVisible) {
+        PushQuadIndex(w2, w3, x3, x2);
+      }
+      auto w3_right = top_right_irregular ? w3 : PushVtx(ImVec2(p_max.x, p_min.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      auto x3_right = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(3 - threshold, 0), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      PushQuadIndex(w3_right, w4, x4, x3_right);
+    }
+
+    PushQuadIndex(y1, x1, x2, y2);
+    if (middle_column) {
+      auto x2_bottom = bottom_left_irregular ? x2 : PushVtx(ImVec2(p_min.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      auto x3_bottom = bottom_right_irregular ? x3 : PushVtx(ImVec2(p_max.x, p_max.y), uv_c + ImVec2(0, 3 - threshold), col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
+      PushQuadIndex(x2_bottom, x3_bottom, y3, y2);
+    }
+    PushQuadIndex(y4, y3, x3, x4);
+#endif
 }
 
 // p_min = upper-left, p_max = lower-right
@@ -1552,7 +1813,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, float shadow_size, ImU32 shadow_start, ImU32 shadow_end)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1578,12 +1839,13 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
+    bool globalSDF = ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts;
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, globalSDF && font->SignedDistanceFont, shadow_size, shadow_start, shadow_end);
 }
 
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float shadow_size, ImU32 shadow_start, ImU32 shadow_end)
 {
-    AddText(NULL, 0.0f, pos, col, text_begin, text_end);
+    AddText(NULL, 0.0f, pos, col, text_begin, text_end, 0.0f, NULL, shadow_size, shadow_start, shadow_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
@@ -2320,6 +2582,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
+    bool globalSDF = ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts;
+
     ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
@@ -2435,25 +2699,26 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Convert our ranges in the format stb_truetype wants
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        src_tmp.PackRange.font_size = cfg.SizePixels;
+        bool sdf = globalSDF && cfg.SignedDistanceFont;
+        src_tmp.PackRange.font_size = sdf ? IMGUI_SDF_DETAIL : cfg.SizePixels;
         src_tmp.PackRange.first_unicode_codepoint_in_range = 0;
         src_tmp.PackRange.array_of_unicode_codepoints = src_tmp.GlyphsList.Data;
         src_tmp.PackRange.num_chars = src_tmp.GlyphsList.Size;
         src_tmp.PackRange.chardata_for_range = src_tmp.PackedChars;
-        src_tmp.PackRange.h_oversample = (unsigned char)cfg.OversampleH;
-        src_tmp.PackRange.v_oversample = (unsigned char)cfg.OversampleV;
+        src_tmp.PackRange.h_oversample = sdf ? 1 : (unsigned char)cfg.OversampleH;
+        src_tmp.PackRange.v_oversample = sdf ? 1 : (unsigned char)cfg.OversampleV;
 
         // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
-        const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
-        const int padding = atlas->TexGlyphPadding;
+        const float scale = (sdf || cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, sdf ? IMGUI_SDF_DETAIL : cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
+        const int padding = atlas->TexGlyphPadding + (globalSDF ? 2*IMGUI_SDF_PADDING+1 : 0); // *2: because it is actually a margin (TexGlyphPadding is shared between two glyphs), +1 to make sure interpolation is done with a clean pixel;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
             int x0, y0, x1, y1;
             const int glyph_index_in_font = stbtt_FindGlyphIndex(&src_tmp.FontInfo, src_tmp.GlyphsList[glyph_i]);
             IM_ASSERT(glyph_index_in_font != 0);
-            stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * cfg.OversampleH, scale * cfg.OversampleV, 0, 0, &x0, &y0, &x1, &y1);
-            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + cfg.OversampleH - 1);
-            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + cfg.OversampleV - 1);
+            stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * (sdf ? 1 : cfg.OversampleH), scale * (sdf ? 1 : cfg.OversampleV), 0, 0, &x0, &y0, &x1, &y1);
+            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + (sdf ? 0 : cfg.OversampleH - 1));
+            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + (sdf ? 0 : cfg.OversampleV - 1));
             total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
@@ -2472,7 +2737,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     const int TEX_HEIGHT_MAX = 1024 * 32;
     stbtt_pack_context spc = {};
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
+    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding + (globalSDF ? 2*IMGUI_SDF_PADDING+1 : 0), NULL);
     ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
 
     // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
@@ -2507,7 +2772,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         if (src_tmp.GlyphsCount == 0)
             continue;
 
-        stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects);
+        bool sdf = globalSDF && cfg.SignedDistanceFont;
+        stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects, sdf);
 
         // Apply multiply operator
         if (cfg.RasterizerMultiply != 1.0f)
@@ -2539,7 +2805,9 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontConfig& cfg = atlas->ConfigData[src_i];
         ImFont* dst_font = cfg.DstFont;
 
-        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels);
+        bool sdf = globalSDF && cfg.SignedDistanceFont;
+
+        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, sdf ? IMGUI_SDF_DETAIL : cfg.SizePixels);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&src_tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
@@ -2549,6 +2817,10 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + IM_ROUND(dst_font->Ascent);
 
+        float u_padding = sdf ? float(IMGUI_SDF_PADDING)/atlas->TexWidth : 0.0f;
+        float v_padding = sdf ? float(IMGUI_SDF_PADDING)/atlas->TexHeight : 0.0f;
+        float xy_padding = sdf ? float(IMGUI_SDF_PADDING) : 0.0f;
+        float sdf_scale = sdf ? float(cfg.SizePixels) / IMGUI_SDF_DETAIL : 1.0f;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
         {
             // Register glyph
@@ -2557,7 +2829,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             stbtt_aligned_quad q;
             float unused_x = 0.0f, unused_y = 0.0f;
             stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexWidth, atlas->TexHeight, glyph_i, &unused_x, &unused_y, &q, 0);
-            dst_font->AddGlyph(&cfg, (ImWchar)codepoint, q.x0 + font_off_x, q.y0 + font_off_y, q.x1 + font_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
+            dst_font->AddGlyph(&cfg, (ImWchar)codepoint, q.x0 + font_off_x - xy_padding, q.y0 + font_off_y - xy_padding, q.x1 + font_off_x + xy_padding, q.y1 + font_off_y + xy_padding, q.s0 - u_padding, q.t0 - v_padding, q.s1 + u_padding, q.t1 + v_padding, pc.xadvance, sdf_scale);
         }
     }
 
@@ -2583,7 +2855,10 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
     if (!font_config->MergeMode)
     {
         font->ClearOutputData();
+        bool globalSDF = ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts;
+        bool sdf = globalSDF && font_config->SignedDistanceFont;
         font->FontSize = font_config->SizePixels;
+        font->SignedDistanceFont = sdf;
         font->ConfigData = font_config;
         font->ConfigDataCount = 0;
         font->ContainerAtlas = atlas;
@@ -2771,7 +3046,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
         IM_ASSERT(r->Font->ContainerAtlas == atlas);
         ImVec2 uv0, uv1;
         atlas->CalcCustomRectUV(r, &uv0, &uv1);
-        r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX);
+        r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX, 1);
     }
 
     // Build all fonts lookup tables
@@ -3212,8 +3487,14 @@ void ImFont::GrowIndex(int new_size)
 // x0/y0/x1/y1 are offset from the character upper-left layout position, in pixels. Therefore x0/y0 are often fairly close to zero.
 // Not to be mistaken with texture coordinates, which are held by u0/v0/u1/v1 in normalized format (0.0..1.0 on each texture axis).
 // 'cfg' is not necessarily == 'this->ConfigData' because multiple source fonts+configs can be used to build one target font.
-void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x)
+void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x, float scale)
 {
+    x0 *= scale;
+    x1 *= scale;
+    y0 *= scale;
+    y1 *= scale;
+    advance_x *= scale;
+
     if (cfg != NULL)
     {
         // Clamp & recenter if needed
@@ -3251,7 +3532,8 @@ void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, floa
 
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
     // We use (U1-U0)*TexWidth instead of X1-X0 to account for oversampling.
-    float pad = ContainerAtlas->TexGlyphPadding + 0.99f;
+    bool sdf = ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts;
+    float pad = ContainerAtlas->TexGlyphPadding + 0.99f + (sdf ? 2*IMGUI_SDF_PADDING+1 : 0);
     DirtyLookupTables = true;
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + pad) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + pad);
 }
@@ -3485,7 +3767,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c) const
+void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c, bool sdf, float shadow_size, ImU32 shadow_start, ImU32 shadow_end) const
 {
     const ImFontGlyph* glyph = FindGlyph(c);
     if (!glyph || !glyph->Visible)
@@ -3495,12 +3777,25 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
     pos.x = IM_FLOOR(pos.x);
     pos.y = IM_FLOOR(pos.y);
+
+    // calculate SDF properties, a = cut-off value for signed distance, width = anti-aliasing width
+    float a = sdf ? 0.5 : 0.0;
+    float width = float(IMGUI_SDF_DETAIL) / size * 1. / IMGUI_SDF_PADDING * 1. / IMGUI_SDF_SHARPENING;
+    if (size < IMGUI_SDF_DETAIL) {
+        width *= float(size) / IMGUI_SDF_DETAIL;
+    }
+    shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);
+    if (shadow_size == a) {
+      shadow_start = IM_COL32_BLACK_TRANS;
+      shadow_end = IM_COL32_BLACK_TRANS;
+    }
+
     draw_list->PrimReserve(6, 4);
-    draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
+    draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col, shadow_start, shadow_end, a, shadow_size, width);
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, bool sdf, float shadow_size, ImU32 shadow_start, ImU32 shadow_end) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3556,6 +3851,19 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
+
+    // calculate SDF properties, a = cut-off value for signed distance (0.0 = disabled), width = anti-aliasing width
+    float a = sdf ? 0.5 : 0.0;
+    float width = float(IMGUI_SDF_DETAIL) / size * 1. / IMGUI_SDF_PADDING * 1. / IMGUI_SDF_SHARPENING;
+    if (size < IMGUI_SDF_DETAIL) {
+        width *= float(size) / IMGUI_SDF_DETAIL;
+    }
+    // shadow should be at least a, otherwise it is discarded
+    shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);
+    if (shadow_size == a) {
+      shadow_start = IM_COL32_BLACK_TRANS;
+      shadow_end = IM_COL32_BLACK_TRANS;
+    }
 
     while (s < text_end)
     {
@@ -3673,6 +3981,35 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
                     vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
                     vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+#ifndef IMGUI_DISABLE_SDF
+                    if (sdf) {
+                      vtx_write[0].a =
+                        vtx_write[1].a =
+                        vtx_write[2].a =
+                        vtx_write[3].a = a;
+                      vtx_write[0].b =
+                        vtx_write[1].b =
+                        vtx_write[2].b =
+                        vtx_write[3].b = shadow_size;
+                      vtx_write[0].w =
+                        vtx_write[1].w =
+                        vtx_write[2].w =
+                        vtx_write[3].w = width;
+                      vtx_write[0].startOuterColor =
+                        vtx_write[1].startOuterColor =
+                        vtx_write[2].startOuterColor =
+                        vtx_write[3].startOuterColor = shadow_start;
+                      vtx_write[0].endOuterColor =
+                        vtx_write[1].endOuterColor =
+                        vtx_write[2].endOuterColor =
+                        vtx_write[3].endOuterColor = shadow_end;
+                    } else {
+                      vtx_write[0].simple();
+                      vtx_write[1].simple();
+                      vtx_write[2].simple();
+                      vtx_write[3].simple();
+                    }
+#endif
                     vtx_write += 4;
                     vtx_current_idx += 4;
                     idx_write += 6;

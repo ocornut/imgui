@@ -463,6 +463,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors",      &backend_flags, ImGuiBackendFlags_HasMouseCursors);
             ImGui::CheckboxFlags("io.BackendFlags: HasSetMousePos",       &backend_flags, ImGuiBackendFlags_HasSetMousePos);
             ImGui::CheckboxFlags("io.BackendFlags: RendererHasVtxOffset", &backend_flags, ImGuiBackendFlags_RendererHasVtxOffset);
+            ImGui::CheckboxFlags("io.BackendFlags: SignedDistanceFonts",  &backend_flags, ImGuiBackendFlags_SignedDistanceFonts);
+            ImGui::CheckboxFlags("io.BackendFlags: SignedDistanceShapes", &backend_flags, ImGuiBackendFlags_SignedDistanceShapes);
+            ImGui::CheckboxFlags("io.BackendFlags: ProvocingVertexFirst", &backend_flags, ImGuiBackendFlags_ProvocingVertexFirst);
             ImGui::TreePop();
             ImGui::Separator();
         }
@@ -5798,8 +5801,8 @@ static void NodeFont(ImFont* font)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
-    bool font_details_opened = ImGui::TreeNode(font, "Font: \"%s\"\n%.2f px, %d glyphs, %d file(s)",
-        font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount);
+    bool font_details_opened = ImGui::TreeNode(font, "Font: \"%s\"\n%.2f px, %d glyphs, %d file(s)%s",
+        font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount, font->SignedDistanceFont ? ", uses signed distance" : "");
     ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { io.FontDefault = font; }
     if (!font_details_opened)
         return;
@@ -5944,6 +5947,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat("PopupBorderSize", &style.PopupBorderSize, 0.0f, 1.0f, "%.0f");
             ImGui::SliderFloat("FrameBorderSize", &style.FrameBorderSize, 0.0f, 1.0f, "%.0f");
             ImGui::SliderFloat("TabBorderSize", &style.TabBorderSize, 0.0f, 1.0f, "%.0f");
+            ImGui::Text("Shadows (for SDF backends)");
+            ImGui::SliderFloat("WindowShadowSize", &style.WindowShadowSize, 0.0f, 32.0f, "%.0f");
+            ImGui::SliderFloat("FrameShadowSize", &style.FrameShadowSize, 0.0f, 32.0f, "%.0f");
+            ImGui::SliderFloat("FontShadowSize", &style.FontShadowSize, 0.0f, 1.0f, "%.01f");
             ImGui::Text("Rounding");
             ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("ChildRounding", &style.ChildRounding, 0.0f, 12.0f, "%.0f");
@@ -6065,7 +6072,17 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             static float window_scale = 1.0f;
             if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp)) // Scale only this window
                 ImGui::SetWindowFontScale(window_scale);
+            ImGui::SameLine();
+            if (ImGui::Button("Reset")) {
+              window_scale = 1.0;
+              ImGui::SetWindowFontScale(window_scale);
+            }
             ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp); // Scale everything
+            ImGui::SameLine();
+            ImGui::PushID("global_scale_reset");
+            if (ImGui::Button("Reset"))
+              io.FontGlobalScale = 1.0f;
+            ImGui::PopID();
             ImGui::PopItemWidth();
 
             ImGui::EndTabItem();

@@ -148,12 +148,15 @@ static GLuint       g_GlVersion = 0;                // Extracted at runtime usin
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
-static GLint        g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
-static GLuint       g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
+static GLint        g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                     // Uniforms location
+static GLuint       g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxInnerColor = 0; // Vertex attributes location
+#ifndef IMGUI_DISABLE_SDF
+static GLuint       g_AttribLocationVtxStartOuterColor = 0, g_AttribLocationVtxEndOuterColor = 0, g_AttribLocationVtxW = 0, g_AttribLocationVtxA = 0, g_AttribLocationVtxB = 0; // Vertex attributes location
+#endif
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 
 // Functions
-bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
+bool    ImGui_ImplOpenGL3_Init(const char* glsl_version, ImGuiBackendFlags flags)
 {
     // Query for GL version (e.g. 320 for GL 3.2)
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
@@ -179,6 +182,13 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     if (g_GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
+#ifndef IMGUI_DISABLE_SDF
+    if (g_GlVersion >= 130) {
+      io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceFonts);
+      io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceShapes);
+    }
+#endif
+
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
@@ -309,10 +319,30 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ElementsHandle);
     glEnableVertexAttribArray(g_AttribLocationVtxPos);
     glEnableVertexAttribArray(g_AttribLocationVtxUV);
-    glEnableVertexAttribArray(g_AttribLocationVtxColor);
+    glEnableVertexAttribArray(g_AttribLocationVtxInnerColor);
+
+#ifndef IMGUI_DISABLE_SDF
+    bool sdf = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts) | (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceShapes);
+    if (sdf) {
+      glEnableVertexAttribArray(g_AttribLocationVtxStartOuterColor);
+      glEnableVertexAttribArray(g_AttribLocationVtxEndOuterColor);
+      glEnableVertexAttribArray(g_AttribLocationVtxA);
+      glEnableVertexAttribArray(g_AttribLocationVtxB);
+      glEnableVertexAttribArray(g_AttribLocationVtxW);
+    }
+#endif
     glVertexAttribPointer(g_AttribLocationVtxPos,   2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
     glVertexAttribPointer(g_AttribLocationVtxUV,    2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
-    glVertexAttribPointer(g_AttribLocationVtxColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
+    glVertexAttribPointer(g_AttribLocationVtxInnerColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
+#ifndef IMGUI_DISABLE_SDF
+    if (sdf) {
+      glVertexAttribPointer(g_AttribLocationVtxStartOuterColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, startOuterColor));
+      glVertexAttribPointer(g_AttribLocationVtxEndOuterColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, endOuterColor));
+      glVertexAttribPointer(g_AttribLocationVtxA,  1, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, a));
+      glVertexAttribPointer(g_AttribLocationVtxB,  1, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, b));
+      glVertexAttribPointer(g_AttribLocationVtxW,  1, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, w));
+    }
+#endif
 }
 
 // OpenGL3 Render function.
@@ -458,7 +488,7 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
-    unsigned char* pixels;
+    unsigned char* pixels = NULL;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
@@ -541,64 +571,79 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 #endif
 
+#ifndef IMGUI_DISABLE_SDF
+    bool sdf = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts) | (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceShapes);
+#endif
+
     // Parse GLSL version string
     int glsl_version = 130;
     sscanf(g_GlslVersionString, "#version %d", &glsl_version);
 
+    // needed flat qualifier for SDF is not available in 120
     const GLchar* vertex_shader_glsl_120 =
         "uniform mat4 ProjMtx;\n"
         "attribute vec2 Position;\n"
         "attribute vec2 UV;\n"
-        "attribute vec4 Color;\n"
+        "attribute vec4 InnerColor;\n"
         "varying vec2 Frag_UV;\n"
         "varying vec4 Frag_Color;\n"
         "void main()\n"
         "{\n"
         "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
+        "    Frag_Color = InnerColor;\n"
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
+#define LAYOUT(location, definition) "#if defined(__VERSION__) >= 300\nlayout (location = " location ") " definition ";\n#else\n" definition ";\n#endif\n"
+
+#ifndef IMGUI_DISABLE_SDF
     const GLchar* vertex_shader_glsl_130 =
+        "#ifdef GL_ES\n"
+        "precision mediump float;\n"
+        "#endif\n"
+        LAYOUT("0", "in vec2 Position")
+        LAYOUT("1", "in vec2 UV")
+        LAYOUT("2", "in float a")
+        LAYOUT("3", "in float b")
+        LAYOUT("4", "in float w") // for anti-aliasing
+        LAYOUT("5", "in vec4 InnerColor")      // until a
+        LAYOUT("6", "in vec4 StartOuterColor") // after a
+        LAYOUT("7", "in vec4 EndOuterColor")   // at b
         "uniform mat4 ProjMtx;\n"
-        "in vec2 Position;\n"
-        "in vec2 UV;\n"
-        "in vec4 Color;\n"
         "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
+        "out vec4 Frag_InnerColor;\n"      // until a
+        "out vec4 Frag_StartOuterColor;\n" // after a
+        "out vec4 Frag_EndOuterColor;\n"   // at b
+        "flat out float Frag_a;\n"
+        "flat out float Frag_b;\n"
+        "flat out float Frag_w;\n" // for anti-aliasing
         "void main()\n"
         "{\n"
         "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
+        "    Frag_InnerColor = InnerColor;\n"
+        "    Frag_StartOuterColor = StartOuterColor;\n"
+        "    Frag_EndOuterColor = EndOuterColor;\n"
+        "    Frag_a = a;\n"
+        "    Frag_b = b;\n"
+        "    Frag_w = w;\n"
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
+#endif
 
     const GLchar* vertex_shader_glsl_300_es =
+        "#ifdef GL_ES\n"
         "precision mediump float;\n"
-        "layout (location = 0) in vec2 Position;\n"
-        "layout (location = 1) in vec2 UV;\n"
-        "layout (location = 2) in vec4 Color;\n"
+        "#endif\n"
+        LAYOUT("0", "in vec2 Position")
+        LAYOUT("1", "in vec2 UV")
+        LAYOUT("2", "in vec4 InnerColor")
         "uniform mat4 ProjMtx;\n"
         "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
+        "out vec4 Frag_InnerColor;\n"
         "void main()\n"
         "{\n"
         "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
-        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-        "}\n";
-
-    const GLchar* vertex_shader_glsl_410_core =
-        "layout (location = 0) in vec2 Position;\n"
-        "layout (location = 1) in vec2 UV;\n"
-        "layout (location = 2) in vec4 Color;\n"
-        "uniform mat4 ProjMtx;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
+        "    Frag_InnerColor = InnerColor;\n"
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
@@ -614,35 +659,69 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
         "}\n";
 
+#ifndef IMGUI_DISABLE_SDF
     const GLchar* fragment_shader_glsl_130 =
+        "#ifdef GL_ES\n"
+        "precision mediump float;\n"
+        "#endif\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "out vec4 Out_Color;\n"
+        "in vec4 Frag_InnerColor;\n"      // until a
+        "in vec4 Frag_StartOuterColor;\n" // after a
+        "in vec4 Frag_EndOuterColor;\n"   // at b
+        "flat in float Frag_a;\n"
+        "flat in float Frag_b;\n"
+        "flat in float Frag_w;\n" // for anti-aliasing
+        LAYOUT("0", "out vec4 Out_Color")
+        //"float median(float r, float g, float b) { return max(min(r, g), min(max(r, g), b)); }\n"
+        "float stretch(float low, float high, float x) {\n"
+        "  return clamp((x-low)/(high-low), 0.0, 1.0);\n"
+        "}\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+         "  if (Frag_a == 0.0) {\n"
+        "    Out_Color = texture(Texture, Frag_UV.st) * Frag_InnerColor;\n"
+        "    return;\n"
+        "  }\n"
+        "  float a = Frag_a;\n"
+        "  float distance;\n"
+        "  if (a >= 2.0) {\n"
+        "     a = a - 2.0;\n"
+        "     distance = 1.0 - (Frag_UV.s > 0.0 && Frag_UV.t > 0.0 ? clamp(length(Frag_UV.st), 0.0, 1.0) : max(Frag_UV.s, Frag_UV.t));\n"
+        "  } else {\n"
+        "     distance = texture(Texture, Frag_UV.st).a;\n"
+        "  }\n"
+        "  if (distance >= a + Frag_w) {\n"
+        "    Out_Color = Frag_InnerColor;\n"
+        "    return;\n"
+        "  }\n"
+        "  if (distance <= Frag_b - Frag_w) discard; \n"
+        "  float m = stretch(a - Frag_w, min(1.0, a + Frag_w), distance); \n"
+        "  if (a <= Frag_b) {\n"
+        "    Out_Color = vec4(Frag_InnerColor.rgb, Frag_InnerColor.a * m);\n"
+        "    return;\n"
+        "  }\n"
+        "  float outerMix = stretch(Frag_b, a, distance); \n"
+        "  vec4 outer = mix(Frag_EndOuterColor, Frag_StartOuterColor, outerMix); \n"
+        "  outer.a *= stretch(Frag_b - Frag_w, Frag_b + Frag_w, distance); \n"
+        "  float ia = m * Frag_InnerColor.a;\n"
+        "  float oa = (1.0 - m) * outer.a;\n"
+        "  a = ia + oa;\n"
+        "  Out_Color = vec4((Frag_InnerColor.rgb * ia + outer.rgb * oa) / a, a);\n"
         "}\n";
+#endif
 
     const GLchar* fragment_shader_glsl_300_es =
+        "#ifdef GL_ES\n"
         "precision mediump float;\n"
+        "#endif\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
+        "in vec4 Frag_InnerColor;\n"
+        LAYOUT("0", "out vec4 Out_Color")
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    const GLchar* fragment_shader_glsl_410_core =
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "uniform sampler2D Texture;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_InnerColor * texture(Texture, Frag_UV.st);\n"
         "}\n";
 
     // Select shaders matching our GLSL versions
@@ -653,20 +732,17 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         vertex_shader = vertex_shader_glsl_120;
         fragment_shader = fragment_shader_glsl_120;
     }
-    else if (glsl_version >= 410)
-    {
-        vertex_shader = vertex_shader_glsl_410_core;
-        fragment_shader = fragment_shader_glsl_410_core;
-    }
-    else if (glsl_version == 300)
-    {
-        vertex_shader = vertex_shader_glsl_300_es;
-        fragment_shader = fragment_shader_glsl_300_es;
-    }
-    else
+#ifndef IMGUI_DISABLE_SDF
+    else if (sdf)
     {
         vertex_shader = vertex_shader_glsl_130;
         fragment_shader = fragment_shader_glsl_130;
+    }
+#endif
+    else
+    {
+        vertex_shader = vertex_shader_glsl_300_es;
+        fragment_shader = fragment_shader_glsl_300_es;
     }
 
     // Create shaders
@@ -692,7 +768,16 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     g_AttribLocationProjMtx = glGetUniformLocation(g_ShaderHandle, "ProjMtx");
     g_AttribLocationVtxPos = (GLuint)glGetAttribLocation(g_ShaderHandle, "Position");
     g_AttribLocationVtxUV = (GLuint)glGetAttribLocation(g_ShaderHandle, "UV");
-    g_AttribLocationVtxColor = (GLuint)glGetAttribLocation(g_ShaderHandle, "Color");
+    g_AttribLocationVtxInnerColor = (GLuint)glGetAttribLocation(g_ShaderHandle, "InnerColor");
+#ifndef IMGUI_DISABLE_SDF
+    if (sdf) {
+      g_AttribLocationVtxStartOuterColor = (GLuint)glGetAttribLocation(g_ShaderHandle, "StartOuterColor");
+      g_AttribLocationVtxEndOuterColor = (GLuint)glGetAttribLocation(g_ShaderHandle, "EndOuterColor");
+      g_AttribLocationVtxW = (GLuint)glGetAttribLocation(g_ShaderHandle, "w");
+      g_AttribLocationVtxA = (GLuint)glGetAttribLocation(g_ShaderHandle, "a");
+      g_AttribLocationVtxB = (GLuint)glGetAttribLocation(g_ShaderHandle, "b");
+    }
+#endif
 
     // Create buffers
     glGenBuffers(1, &g_VboHandle);
