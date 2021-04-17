@@ -1815,7 +1815,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, float shadow_size, ImU32 shadow_start, ImU32 shadow_end)
 {
-    if ((col & IM_COL32_A_MASK) == 0)
+    if ((col & IM_COL32_A_MASK) == 0 && (shadow_size <= 0.0f || ((shadow_start & IM_COL32_A_MASK) == 0 && (shadow_end & IM_COL32_A_MASK) == 0)))
         return;
 
     if (text_end == NULL)

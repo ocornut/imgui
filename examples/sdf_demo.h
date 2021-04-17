@@ -41,9 +41,10 @@ void SDFDemo() {
   ImGui::SetWindowFontScale(1);
   ImGui::TextWrapped("Signed distance tester. You can choose multiple fonts in the style manager, supporting both signed distance fonts and regular fonts at the same time. Because of additional shader support that is needed, this is only enabled if the backend enables the new SignedDistance flags.");
   static float scale = 3.0f;
+  static ImVec4 text_inner_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
   static ImVec4 text_outline_start = ImVec4(1.0f, .0f, .0f, 1.0f);
   static ImVec4 text_outline_end = ImVec4(1.0f, .0f, .0f, 0.0f);
-  static float outline_width = .99f;
+  static float outline_width = .6;
   static float rotate = 0.1f;
 
   ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50);
@@ -53,10 +54,11 @@ void SDFDemo() {
   ImGui::TextWrapped("Some scaled text.");
 
   ImGui::PushStyleVar(ImGuiStyleVar_FontShadowSize, outline_width);
+  ImGui::PushStyleColor(ImGuiCol_Text, text_inner_color);
   ImGui::PushStyleColor(ImGuiCol_FontShadowStart, text_outline_start);
   ImGui::PushStyleColor(ImGuiCol_FontShadowEnd, text_outline_end);
   ImGui::TextWrapped("Additional styles are supported.");
-  ImGui::PopStyleColor(2);
+  ImGui::PopStyleColor(3);
   ImGui::PopStyleVar(1);
   ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50);
 
@@ -64,6 +66,7 @@ void SDFDemo() {
   ImGui::SetWindowFontScale(1);
 
   ImGui::SliderFloat("scale", &scale, 0.2f, 10.0f);
+  ImGui::ColorEdit4("text color", (float*)&text_inner_color);
   ImGui::ColorEdit4("outline start", (float*)&text_outline_start);
   ImGui::ColorEdit4("outline end", (float*)&text_outline_end);
   ImGui::SliderFloat("outline width", &outline_width, 0.0f, .99f);
