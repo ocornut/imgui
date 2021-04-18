@@ -431,6 +431,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     "  return float4((in.innerColor.rgb * ia + outer.rgb * oa) / a, a);\n"
     "}\n";
 
+    bool sdf = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts) | (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceShapes);
     NSString* shaderSource = sdf ? shaderSourceSDF : shaderSourceDirect;
 #else
     NSString* shaderSource = shaderSourceDirect;

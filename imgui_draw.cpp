@@ -1472,7 +1472,7 @@ ImDrawIdx ImDrawList::PushVtx(const ImVec2& pos, const ImVec2& uv, ImU32 innerCo
     v.w = w;
 #endif
     ++_VtxWritePtr;
-    return ImDrawIdx(_VtxCurrentIdx++);
+    return (ImDrawIdx)(_VtxCurrentIdx++);
 }
 
 // first vertex is the provocing vertex
