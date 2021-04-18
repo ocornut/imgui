@@ -3780,9 +3780,10 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
     // calculate SDF properties, a = cut-off value for signed distance (0.0 = disabled), width = anti-aliasing width
     float a = sdf ? 0.5f : 0.0f;
-    float width = 0.20f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
+    float width = 0.25f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
     if (size < 16.0) {
-        width *= float(size) / 16.0f;
+        float extra = float(size) / 16.0f;
+        width *= extra * extra;
     }
     shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);
     if (shadow_size == a) {
@@ -3854,9 +3855,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
     // calculate SDF properties, a = cut-off value for signed distance (0.0 = disabled), width = anti-aliasing width
     float a = sdf ? 0.5f : 0.0f;
-    float width = 0.20f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
+    float width = 0.25f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
     if (size < 16.0) {
-        width *= float(size) / 16.0f;
+        float extra = float(size) / 16.0f;
+        width *= extra * extra;
     }
     // shadow should be at least a, otherwise it is discarded
     shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);
