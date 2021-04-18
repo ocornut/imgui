@@ -1397,7 +1397,7 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_SignedDistanceShapes  = 1 << 6,  // Enable/disabled signed distance rendering of (rounded) rectangles.
     ImGuiBackendFlags_ProvocingVertexFirst  = 1 << 7,  // Needed for DirectX if the signed distance fields operations are enabled.
     ImGuiBackendFlags_DefaultFast          = ImGuiBackendFlags_None, // Minimal shader, minimal effects
-    ImGuiBackendFlags_DefaultDesktop       = (1 << 8) - 1, // Full desktop backend: SignedDistanceFonts, SignedDistanceShapes
+    ImGuiBackendFlags_DefaultDesktop       = (1 << 8) - 1 // Full desktop backend: SignedDistanceFonts, SignedDistanceShapes
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -2268,11 +2268,11 @@ struct ImDrawVert
     ImU32   col;
 #ifndef IMGUI_DISABLE_SDF
     // signed distance support
-    ImU32   startOuterColor = IM_COL32(0x0, 0x0, 0x0, 0x0); // 4 bytes = 24
-    ImU32   endOuterColor = IM_COL32(0x0, 0x0, 0x0, 0x0); // 4 bytes = 28
-    float   a = 0.0;   // threshold [0-1] between outer and inner; 4 bytes = 32
-    float   b = 0.0;   // threshold [0-1] between outer and discard; 4 bytes = 36
-    float   w = 0.0;   // anti-aliasing width [0-1]; 4 bytes = 40
+    ImU32   startOuterColor; // 4 bytes = 24
+    ImU32   endOuterColor;   // 4 bytes = 28
+    float   a;               // threshold [0-1] (using textures) or [2-3] (using circle aritifical signed distance) between outer and inner; 4 bytes = 32
+    float   b;               // threshold [0-1] between outer and discard; 4 bytes = 36
+    float   w;               // anti-aliasing width [0-1]; 4 bytes = 40
     void simple() {
       a = 0.0f;
       b = 0.0f;

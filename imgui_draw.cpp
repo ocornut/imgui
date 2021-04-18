@@ -1460,10 +1460,16 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 }
 
 ImDrawIdx ImDrawList::PushVtx(const ImVec2& pos, const ImVec2& uv, ImU32 innerColor, ImU32 startOuterColor, ImU32 endOuterColor, float a, float b, float w) {
+    ImDrawVert& v = _VtxWritePtr[0];
+    v.pos = pos;
+    v.uv = uv;
+    v.col = innerColor;
 #ifndef IMGUI_DISABLE_SDF
-    _VtxWritePtr[0] = {pos, uv, innerColor, startOuterColor, endOuterColor, a, b, w};
-#else
-    _VtxWritePtr[0] = {pos, uv, innerColor};
+    v.startOuterColor = startOuterColor;
+    v.endOuterColor = endOuterColor;
+    v.a = a;
+    v.b = b;
+    v.w = w;
 #endif
     ++_VtxWritePtr;
     return ImDrawIdx(_VtxCurrentIdx++);
@@ -1541,7 +1547,7 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     }
 
     // fast path
-    if (outer + rounding == 0) {
+    if (outer + rounding <= 0.0f) {
         PrimReserve(6, 4);
         PrimRect(p_min, p_max, col);
         return;
@@ -1553,9 +1559,9 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     float outer_threshold = outer == 0 ? threshold : antialiasing; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
 
     float antialiasing_irregular = outer ? 0.25f / outer : 0.0f; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
-    float outer_threshold_irregular = outer == 0 ? threshold : antialiasing_irregular; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
+    float outer_threshold_irregular = outer <= 0.0f ? threshold : antialiasing_irregular; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
     // we want circular signed distance calculations
-    threshold += 2.0;
+    threshold += 2.0f;
 
     /* BASE LAYOUT:
      * XY coordinates:
@@ -1576,10 +1582,10 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
      *      y a-b----b-a
      */
 
-    ImVec2 uv_a{ 1, 1 };
-    ImVec2 uv_b{ 0, 1 };
-    ImVec2 uv_c{ 0, 0 };
-    ImVec2 uv_d{ 1, 0 };
+    ImVec2 uv_a (1, 1);
+    ImVec2 uv_b (0, 1);
+    ImVec2 uv_c (0, 0);
+    ImVec2 uv_d (1, 0);
 
     // mark as rounding if rounding is zero to save vertices (which are generated for non-rounded corners if rounded corners are also present
     int top_left_irregular = (flags & ImDrawFlags_RoundCornersTopLeft) > 0 || rounding == 0;
