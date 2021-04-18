@@ -2824,13 +2824,14 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         // Render text, render ellipsis
         RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
         float ellipsis_x = pos_min.x + text_size_clipped_x;
-        if (ellipsis_x + ellipsis_total_width <= ellipsis_max_x)
+        if (ellipsis_x + ellipsis_total_width <= ellipsis_max_x) {
+            bool globalSDF = ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts;
             for (int i = 0; i < ellipsis_char_count; i++)
             {
-                ImGuiContext& g = *GImGui;
-                font->RenderChar(draw_list, font_size, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_char, g.Style.FontShadowSize, GetColorU32(ImGuiCol_FontShadowStart), GetColorU32(ImGuiCol_FontShadowEnd));
+                font->RenderChar(draw_list, font_size, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_char, globalSDF && font->SignedDistanceFont, g.Style.FontShadowSize, GetColorU32(ImGuiCol_FontShadowStart), GetColorU32(ImGuiCol_FontShadowEnd));
                 ellipsis_x += ellipsis_glyph_width;
             }
+         }
     }
     else
     {

@@ -2259,8 +2259,6 @@ typedef unsigned short ImDrawIdx;
 #define IMGUI_SDF_DETAIL 40
 // so outlines are more or less the same size around the font
 #define IMGUI_SDF_PADDING (IMGUI_SDF_DETAIL/10)
-// the higher the sharper for lower font sizes, value of 2 matches the regular font rendering
-#define IMGUI_SDF_SHARPENING 2
 
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
 struct ImDrawVert

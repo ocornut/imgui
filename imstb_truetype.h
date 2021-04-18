@@ -929,7 +929,7 @@ STBTT_DEF void stbtt_FreeSDF(unsigned char *bitmap, void *userdata);
 // frees the SDF bitmap allocated below
 
 STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff);
-STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride);
+STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride);
 STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff);
 // These functions compute a discretized SDF field for a single character, suitable for storing
 // in a single-channel texture, sampling with bilinear filtering, and testing against
@@ -4077,10 +4077,9 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const
             r->w -= pad;
             r->h -= pad;
             stbtt_GetGlyphHMetrics(info, glyph, &advance, &lsb);
-            stbtt_GetGlyphBitmapBoxSubpixel(info, glyph,
+            stbtt_GetGlyphBitmapBox(info, glyph,
                                     scale * spc->h_oversample,
                                     scale * spc->v_oversample,
-                                    0, 0,
                                     &x0,&y0,&x1,&y1);
 
             if (!sdf) {
@@ -4095,7 +4094,7 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const
                                             glyph);
             } else {
               const static int p = IMGUI_SDF_PADDING; // do not use pad here (it is the distance to the other glyph)
-              stbtt_GetGlyphSDF2(info, scale, -scale, glyph, p, 128, (128/p)+1, x0-p, y0-p, x1+p, y1+p, spc->pixels + r->x + (r->y - p)*spc->stride_in_bytes - p, spc->stride_in_bytes);
+              stbtt_GetGlyphSDF2(info, scale, -scale, glyph, 128, (128/p)+1, x0-p, y0-p, x1+p, y1+p, spc->pixels + r->x + (r->y - p)*spc->stride_in_bytes - p, spc->stride_in_bytes);
             }
 
             if (spc->h_oversample > 1)
@@ -4448,11 +4447,11 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    scale_y = -scale_y;
 
 	 data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
-	 stbtt_GetGlyphSDF2(info, scale_x, scale_y, glyph, padding, onedge_value, pixel_dist_scale, ix0, iy0, ix1, iy1, data, w);
+	 stbtt_GetGlyphSDF2(info, scale_x, scale_y, glyph, onedge_value, pixel_dist_scale, ix0, iy0, ix1, iy1, data, w);
 	 return data;
 }
       
-STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride) {
+STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride) {
       int x,y,i,j;
       float *precompute;
       stbtt_vertex *verts;

@@ -1466,7 +1466,7 @@ ImDrawIdx ImDrawList::PushVtx(const ImVec2& pos, const ImVec2& uv, ImU32 innerCo
     _VtxWritePtr[0] = {pos, uv, innerColor};
 #endif
     ++_VtxWritePtr;
-    return _VtxCurrentIdx++;
+    return ImDrawIdx(_VtxCurrentIdx++);
 }
 
 // first vertex is the provocing vertex
@@ -1548,11 +1548,11 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     }
 
     float total = outer + rounding;
-    float antialiasing = 0.25 / total; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
+    float antialiasing = 0.25f / total; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
     float threshold = ImMin(1.0f, float(outer + 0.25) / total);
     float outer_threshold = outer == 0 ? threshold : antialiasing; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
 
-    float antialiasing_irregular = outer ? 0.25 / outer : 0.0f; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
+    float antialiasing_irregular = outer ? 0.25f / outer : 0.0f; // In the shader this value is used both ways, so in effect this is half a pixel. This results in sharp corners for the sides of the rounded rect.
     float outer_threshold_irregular = outer == 0 ? threshold : antialiasing_irregular; // if the outer calculatings are not needed, set the outer threshold to same value as inner threshold to avoid unneeded calculations
     // we want circular signed distance calculations
     threshold += 2.0;
@@ -1600,10 +1600,10 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     PrimReserve(indeces, vertices);
 
     // make the grid of points (see figure above)
-    ImDrawIdx v1 = PushVtx(ImVec2(p_min.x - outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_left_irregular ? threshold : 3.0, top_left_irregular ? outer_threshold : outer_threshold_irregular, top_left_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx v1 = PushVtx(ImVec2(p_min.x - outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_left_irregular ? threshold : 3.0f, top_left_irregular ? outer_threshold : outer_threshold_irregular, top_left_irregular ? antialiasing : antialiasing_irregular);
     ImDrawIdx v2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
     ImDrawIdx v3 = !middle_column ? v2 : PushVtx(ImVec2(p_max.x - (top_right_irregular ? rounding : 0), p_min.y - outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    ImDrawIdx v4 = PushVtx(ImVec2(p_max.x + outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_right_irregular ? threshold : 3.0, top_right_irregular ? outer_threshold : outer_threshold_irregular, top_right_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx v4 = PushVtx(ImVec2(p_max.x + outer, p_min.y - outer), uv_a, col, startOuterColor, endOuterColor, top_right_irregular ? threshold : 3.0f, top_right_irregular ? outer_threshold : outer_threshold_irregular, top_right_irregular ? antialiasing : antialiasing_irregular);
 
     ImDrawIdx w1 = PushVtx(ImVec2(p_min.x - outer, p_min.y + (top_left_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
     ImDrawIdx w2 = PushVtx(ImVec2(p_min.x + (top_left_irregular ? rounding : 0), p_min.y + (top_left_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
@@ -1615,10 +1615,10 @@ void ImDrawList::AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float roun
     ImDrawIdx x3 = !middle_row ? w3 : !middle_column ? x2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y - (bottom_right_irregular ? rounding : 0)), uv_c, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
     ImDrawIdx x4 = !middle_row ? w4 : PushVtx(ImVec2(p_max.x + outer, p_max.y - (bottom_right_irregular ? rounding : 0)), uv_d, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
 
-    ImDrawIdx y1 = PushVtx(ImVec2(p_min.x - outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_left_irregular ? threshold : 3.0, bottom_left_irregular ? outer_threshold : outer_threshold_irregular, bottom_left_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx y1 = PushVtx(ImVec2(p_min.x - outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_left_irregular ? threshold : 3.0f, bottom_left_irregular ? outer_threshold : outer_threshold_irregular, bottom_left_irregular ? antialiasing : antialiasing_irregular);
     ImDrawIdx y2 = PushVtx(ImVec2(p_min.x + (bottom_left_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
     ImDrawIdx y3 = !middle_column ? y2 : PushVtx(ImVec2(p_max.x - (bottom_right_irregular ? rounding : 0), p_max.y + outer), uv_b, col, startOuterColor, endOuterColor, threshold, outer_threshold, antialiasing);
-    ImDrawIdx y4 = PushVtx(ImVec2(p_max.x + outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_right_irregular ? threshold : 3.0, bottom_right_irregular ? outer_threshold : outer_threshold_irregular, bottom_right_irregular ? antialiasing : antialiasing_irregular);
+    ImDrawIdx y4 = PushVtx(ImVec2(p_max.x + outer, p_max.y + outer), uv_a, col, startOuterColor, endOuterColor, bottom_right_irregular ? threshold : 3.0f, bottom_right_irregular ? outer_threshold : outer_threshold_irregular, bottom_right_irregular ? antialiasing : antialiasing_irregular);
 
     // Push out quads based on the vertices above.
     // Sometimes we need to push an additional vertices if an irregular corner is encounterd (with a different/no rounding as the rest).
@@ -3778,11 +3778,11 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     pos.x = IM_FLOOR(pos.x);
     pos.y = IM_FLOOR(pos.y);
 
-    // calculate SDF properties, a = cut-off value for signed distance, width = anti-aliasing width
-    float a = sdf ? 0.5 : 0.0;
-    float width = float(IMGUI_SDF_DETAIL) / size * 1. / IMGUI_SDF_PADDING * 1. / IMGUI_SDF_SHARPENING;
-    if (size < IMGUI_SDF_DETAIL) {
-        width *= float(size) / IMGUI_SDF_DETAIL;
+    // calculate SDF properties, a = cut-off value for signed distance (0.0 = disabled), width = anti-aliasing width
+    float a = sdf ? 0.5f : 0.0f;
+    float width = 0.20f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
+    if (size < 16.0) {
+        width *= float(size) / 16.0f;
     }
     shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);
     if (shadow_size == a) {
@@ -3853,10 +3853,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
 
     // calculate SDF properties, a = cut-off value for signed distance (0.0 = disabled), width = anti-aliasing width
-    float a = sdf ? 0.5 : 0.0;
-    float width = float(IMGUI_SDF_DETAIL) / size * 1. / IMGUI_SDF_PADDING * 1. / IMGUI_SDF_SHARPENING;
-    if (size < IMGUI_SDF_DETAIL) {
-        width *= float(size) / IMGUI_SDF_DETAIL;
+    float a = sdf ? 0.5f : 0.0f;
+    float width = 0.20f / IMGUI_SDF_PADDING * float(IMGUI_SDF_DETAIL) / float(size);
+    if (size < 16.0) {
+        width *= float(size) / 16.0f;
     }
     // shadow should be at least a, otherwise it is discarded
     shadow_size = ImClamp(0.5f - shadow_size/2.0f, width, a);

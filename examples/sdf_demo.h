@@ -25,7 +25,7 @@ ImVec2 ImRotationCenter()
 
 void ImRotateEnd(float rad, ImVec2 center = ImRotationCenter())
 {
-	float s=sin(rad), c=cos(rad);
+	float s=sinf(rad), c=cosf(rad);
 	center = ImRotate(center, s, c) - center;
 
 	auto& buf = ImGui::GetWindowDrawList()->VtxBuffer;
@@ -41,10 +41,10 @@ void SDFDemo() {
   ImGui::SetWindowFontScale(1);
   ImGui::TextWrapped("Signed distance tester. You can choose multiple fonts in the style manager, supporting both signed distance fonts and regular fonts at the same time. Because of additional shader support that is needed, this is only enabled if the backend enables the new SignedDistance flags.");
   static float scale = 3.0f;
-  static ImVec4 text_inner_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+  static ImVec4 text_inner_color = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
   static ImVec4 text_outline_start = ImVec4(1.0f, .0f, .0f, 1.0f);
   static ImVec4 text_outline_end = ImVec4(1.0f, .0f, .0f, 0.0f);
-  static float outline_width = .6;
+  static float outline_width = .6f;
   static float rotate = 0.1f;
 
   ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50);
@@ -62,7 +62,7 @@ void SDFDemo() {
   ImGui::PopStyleVar(1);
   ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50);
 
-  ImRotateEnd(rotate + M_PI/2);
+  ImRotateEnd(rotate + float(M_PI/2));
   ImGui::SetWindowFontScale(1);
 
   ImGui::SliderFloat("scale", &scale, 0.2f, 10.0f);
@@ -71,10 +71,10 @@ void SDFDemo() {
   ImGui::ColorEdit4("outline end", (float*)&text_outline_end);
   ImGui::SliderFloat("outline width", &outline_width, 0.0f, .99f);
   static bool animate_rotation = false;
-  ImGui::SliderFloat("rotate", &rotate, 0.0f, 2*M_PI);
+  ImGui::SliderFloat("rotate", &rotate, 0.0f, float(2*M_PI));
   ImGui::Checkbox("Animate rotation", &animate_rotation);
   if (animate_rotation)
-    rotate = 0.05f*ImGui::GetTime();
+    rotate = 0.05f*float(ImGui::GetTime());
 
   ImGui::Separator();
   ImGui::SetWindowFontScale(1.5f);
@@ -88,27 +88,26 @@ void SDFDemo() {
 
   static ImVec4 color = ImColor(IM_COL32(0xff, 0x98, 0x07, 0xff)); //ImGui::GetColorU32(ImGuiCol_Text));
   ImGui::ColorEdit4("inner color", (float*)&color); // Edit 3 floats representing a color
-  static ImVec4 shadowStart = ImVec4(1.0f, 1.0f, 1.0f, .25f);
+  static ImVec4 shadowStart = ImVec4(.0f, .0f, .0f, .25f);
   ImGui::ColorEdit4("shadow start", (float*)&shadowStart); // Edit 3 floats representing a color
-  static ImVec4 shadowEnd = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+  static ImVec4 shadowEnd = ImVec4(.0f, .0f, .0f, 0.0f);
   ImGui::ColorEdit4("shadow end", (float*)&shadowEnd); // Edit 3 floats representing a color
 
-  static int shadow = 50;
-  ImGui::SliderInt("shadow", &shadow, 0, 100);
+  static float shadow = 50;
+  ImGui::SliderFloat("shadow", &shadow, 0.0f, 100.0f);
 
   static bool rounded_top_left = true;
   static bool rounded_top_right = true;
   static bool rounded_bottom_left = true;
   static bool rounded_bottom_right = false;
-  static int radius = 100;
-  ImGui::SliderInt("radius", &radius, 0, 200);
+  static float radius = 100.0f;
+  ImGui::SliderFloat("radius", &radius, 0.0f, 200.0f);
   ImGui::Text("Rounded:");
   ImGui::SameLine();
   ImGui::BeginGroup();
   ImGui::Checkbox("top-left", &rounded_top_left);
   ImGui::SameLine();
   ImGui::Checkbox("top-right", &rounded_top_right);
-  ImGui::Checkbox("bottom-left", &rounded_bottom_left);
   ImGui::SameLine();
   ImGui::Checkbox("bottom-right", &rounded_bottom_right);
   ImGui::EndGroup();
@@ -131,10 +130,10 @@ void SDFDemo() {
     flags |= ImDrawFlags_RoundCornersBottomLeft;
   if (rounded_bottom_right)
     flags |= ImDrawFlags_RoundCornersBottomRight;
-  int radiusCopy = radius;
+  float radiusCopy = radius;
   if (flags == 0)
-    radiusCopy = 0;
-  drawList->AddRectFilled(ImVec2(pos.x + 100, pos.y), ImVec2(pos.x + w + 100, pos.y + h), ImColor(color), radiusCopy, flags, shadow, ImColor(shadowStart), ImColor(shadowEnd));
+    radiusCopy = 0.0f;
+  drawList->AddRectFilled(ImVec2(pos.x + 100.0f, pos.y), ImVec2(pos.x + w + 100.0f, pos.y + h), ImColor(color), radiusCopy, flags, shadow, ImColor(shadowStart), ImColor(shadowEnd));
 
   ImGui::SetCursorPosY(ImGui::GetCursorPosY() + h + 50);
 }
