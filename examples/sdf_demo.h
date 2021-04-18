@@ -108,6 +108,7 @@ void SDFDemo() {
   ImGui::Checkbox("top-left", &rounded_top_left);
   ImGui::SameLine();
   ImGui::Checkbox("top-right", &rounded_top_right);
+  ImGui::Checkbox("bottom-left", &rounded_bottom_left);
   ImGui::SameLine();
   ImGui::Checkbox("bottom-right", &rounded_bottom_right);
   ImGui::EndGroup();
