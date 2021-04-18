@@ -2760,7 +2760,7 @@ struct ImFont
     IMGUI_API void              BuildLookupTable();
     IMGUI_API void              ClearOutputData();
     IMGUI_API void              GrowIndex(int new_size);
-    IMGUI_API void              AddGlyph(const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x, float scale);
+    IMGUI_API void              AddGlyph(const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x, float scale = 1.0f);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API void              SetFallbackChar(ImWchar c);
