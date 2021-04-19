@@ -57,8 +57,7 @@ Other Changes:
 - Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
 - ImDrawList: Fixed/improved thickness of thick strokes with sharp angles. (#4053, #3366, #2964, #2868, #2518, #2183)
   Effectively introduced a regression in 1.67 (Jan 2019), and a fix in 1.70 (Apr 2019) but the fix wasn't actually on
-  par with original version. Now incorporating the correct fix + tweaked threshold to further mitigate the effect of
-  varying thickness, up to a certain degree. Shapes with very sharp angles and thick strokes will extend a little more.
+  par with original version. Now incorporating the correct revert.
 - ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
 - Demo: Improved popups demo and comments.
 - Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
