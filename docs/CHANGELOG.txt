@@ -112,6 +112,7 @@ Other Changes:
 - Scrolling: Fix mouse wheel axis swap when using SHIFT on macOS (system already does it). (#4010)
 - Window: Fix IsWindowAppearing() from returning true twice in most cases. (#3982, #1497, #1061)
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
+- Tables: Better preserve widths when columns count changes. (#4046)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
   frame and then immediately standling still (would only affect automation/bots). [@rokups]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
@@ -122,12 +123,16 @@ Other Changes:
 - LabelText: Fixed clipping of multi-line value text when label is single-line. (#4004)
 - LabelText: Fixed vertical alignment of single-line value text when label is multi-line. (#4004)
 - Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
+- ImDrawList: Fixed/improved thickness of thick strokes with sharp angles. (#4053, #3366, #2964, #2868, #2518, #2183)
+  Effectively introduced a regression in 1.67 (Jan 2019), and a fix in 1.70 (Apr 2019) but the fix wasn't actually on
+  par with original version. Now incorporating the correct revert.
 - ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
 - Demo: Improved popups demo and comments.
 - Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
   [@1025798851]
+- Backends: OSX: Fix keys remaining stuck when CMD-tabbing to a different application. (#3832) [@rokups]
 - Backends: DirectX9: calling IDirect3DStateBlock9::Capture() after CreateStateBlock() which appears to
   workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
 - Backends: DirectX10, DirectX11: fixed a crash when backing/restoring state if nothing is bound when
