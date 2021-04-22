@@ -43,6 +43,7 @@ Other Changes:
 - Scrolling: Fix scroll snapping on edge of scroll region when both scrollbars are enabled.
 - Scrolling: Fix mouse wheel axis swap when using SHIFT on macOS (system already does it). (#4010)
 - Window: Fix IsWindowAppearing() from returning true twice in most cases. (#3982, #1497, #1061)
+- Nav: Fixed using SetItemDefaultFocus() on windows with _NavFlattened flag.
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
