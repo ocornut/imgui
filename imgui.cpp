@@ -9039,8 +9039,16 @@ static void ImGui::NavUpdate()
             io.NavInputs[ImGuiNavInput_TweakSlow] = 1.0f;
         if (io.KeyShift)
             io.NavInputs[ImGuiNavInput_TweakFast] = 1.0f;
-        if (io.KeyAlt && !io.KeyCtrl) // AltGR is Alt+Ctrl, also even on keyboards without AltGR we don't want Alt+Ctrl to open menu.
+
+        // AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl)
+        // But also even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
+        if (io.KeyAlt && !io.KeyCtrl)
             io.NavInputs[ImGuiNavInput_KeyMenu_]  = 1.0f;
+
+        // We automatically cancel toggling nav layer when any text has been typed while holding Alt. (See #370)
+        if (io.KeyAlt && !io.KeyCtrl && g.NavWindowingToggleLayer && io.InputQueueCharacters.Size > 0)
+            g.NavWindowingToggleLayer = false;
+
         #undef NAV_MAP_KEY
     }
     memcpy(io.NavInputsDownDurationPrev, io.NavInputsDownDuration, sizeof(io.NavInputsDownDuration));
