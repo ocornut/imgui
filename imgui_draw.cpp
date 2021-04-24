@@ -2504,7 +2504,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     return true;
 }
 
-bool    ImFontAtlas::Build()
+bool    ImFontAtlas::Build(ImDispatch dispatcher)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
 
@@ -2526,7 +2526,7 @@ bool    ImFontAtlas::Build()
     }
 
     // Build
-    return builder_io->FontBuilder_Build(this);
+    return builder_io->FontBuilder_Build(this, dispatcher);
 }
 
 void    ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_brighten_factor)
@@ -2584,7 +2584,20 @@ static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>*
                     out->push_back((int)(((it - it_begin) << 5) + bit_n));
 }
 
-static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
+struct ImFontAtlasRunnerArgs {
+  stbtt_pack_context *spc;
+  const stbtt_fontinfo *info;
+  stbtt_pack_range range;
+  stbrp_rect *rects;
+};
+static void ImFontAtlasRunner(unsigned int i, void* arg) {
+  ImVector<ImFontAtlasRunnerArgs>& b = *static_cast<ImVector<ImFontAtlasRunnerArgs>*>(arg);
+  IM_ASSERT(i < b.Size);
+  ImFontAtlasRunnerArgs& item = b[i];
+  stbtt_PackFontRangesRenderIntoRects(item.spc, item.info, &item.range, 1, item.rects, true);
+}
+
+static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas, ImDispatch dispatcher)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
@@ -2771,6 +2784,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     spc.height = atlas->TexHeight;
 
     // 8. Render/rasterize font characters into the texture
+    ImVector<ImFontAtlasRunnerArgs> background;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontConfig& cfg = atlas->ConfigData[src_i];
@@ -2779,7 +2793,36 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             continue;
 
         bool sdf = globalSDF && cfg.SignedDistanceFont;
-        stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects, sdf);
+        if (!sdf || !dispatcher) {
+          stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects, sdf);
+        } else {
+          const int batchSize = 25;
+          for (int j=0; j < src_tmp.PackRange.num_chars; j += batchSize) {
+            background.resize(background.size()+1);
+            ImFontAtlasRunnerArgs& args = background.back();
+            args.spc = &spc;
+            args.info = &src_tmp.FontInfo;
+            args.range = src_tmp.PackRange;
+            args.rects = &src_tmp.Rects[j];
+
+            args.range.chardata_for_range = &args.range.chardata_for_range[j];
+            args.range.first_unicode_codepoint_in_range += j;
+            if (args.range.array_of_unicode_codepoints)
+              args.range.array_of_unicode_codepoints = &args.range.array_of_unicode_codepoints[j];
+            args.range.num_chars = ImMin(batchSize, args.range.num_chars - j);
+          }
+        }
+    }
+
+    if (dispatcher && background.size() > 0)
+      (*dispatcher)(ImFontAtlasRunner, background.size(), &background);
+
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
+    {
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        if (src_tmp.GlyphsCount == 0)
+            continue;
 
         // Apply multiply operator
         if (cfg.RasterizerMultiply != 1.0f)

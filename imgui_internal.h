@@ -2561,7 +2561,7 @@ namespace ImGui
 // This structure is likely to evolve as we add support for incremental atlas updates
 struct ImFontBuilderIO
 {
-    bool    (*FontBuilder_Build)(ImFontAtlas* atlas);
+    bool    (*FontBuilder_Build)(ImFontAtlas* atlas, ImDispatch dispatcher);
 };
 
 // Helper for font builder

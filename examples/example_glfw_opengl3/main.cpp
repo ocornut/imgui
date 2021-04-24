@@ -55,6 +55,32 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+#include <mutex>
+#include <thread>
+#include <vector>
+#include <iostream>
+
+void Dispatcher(ImRunner runner, unsigned int count, void* arg) {
+  std::mutex mutex;
+  std::cout << "background: " << count << std::endl;
+  const auto& f = [runner, arg, &count, &mutex] {
+    mutex.lock();
+    while (count > 0) {
+      auto current = --count;
+      mutex.unlock();
+      runner(current, arg);
+      mutex.lock();
+    }
+    mutex.unlock();
+  };
+  std::vector<std::thread> threads {std::min(std::thread::hardware_concurrency()-1, count)};
+  for (auto& t : threads)
+    t = std::thread(f);
+  f();
+  for (auto& t : threads)
+    t.join();
+}
+
 int main(int, char**)
 {
     // Setup window
@@ -172,6 +198,7 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
     
+    io.Fonts->Build(Dispatcher);
 
     // Our state
     bool show_demo_window = true;
