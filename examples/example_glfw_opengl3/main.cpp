@@ -55,6 +55,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+#if __cplusplus >= 201103L
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -80,6 +81,7 @@ void Dispatcher(ImRunner runner, unsigned int count, void* arg) {
   for (auto& t : threads)
     t.join();
 }
+#endif
 
 int main(int, char**)
 {
@@ -197,8 +199,10 @@ int main(int, char**)
     io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 32.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
-    
+
+#if __cplusplus >= 201103L
     io.Fonts->Build(Dispatcher);
+#endif
 
     // Our state
     bool show_demo_window = true;

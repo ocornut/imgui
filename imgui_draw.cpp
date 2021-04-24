@@ -2592,7 +2592,10 @@ struct ImFontAtlasRunnerArgs {
 };
 static void ImFontAtlasRunner(unsigned int i, void* arg) {
   ImVector<ImFontAtlasRunnerArgs>& b = *static_cast<ImVector<ImFontAtlasRunnerArgs>*>(arg);
-  IM_ASSERT(i < b.Size);
+  unsigned int size = b.Size;
+  IM_ASSERT(i < size);
+  if (i >= size)
+      return;
   ImFontAtlasRunnerArgs& item = b[i];
   stbtt_PackFontRangesRenderIntoRects(item.spc, item.info, &item.range, 1, item.rects, true);
 }

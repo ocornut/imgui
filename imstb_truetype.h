@@ -4458,11 +4458,9 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
    for (y=iy0; y < iy1; ++y) {
       memset(&data[(y-iy0)*stride], 255, ix1-ix0);
    }
-   int p = 255/pixel_dist_scale + 1;
    for (i=0,j=num_verts-1; i < num_verts; j=i++) {
       float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
       if (verts[i].type == STBTT_vline) {
-         float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
          float x1 = verts[j].x*scale_x, y1 = verts[j].y*scale_y;
          float dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
          float precompute = (dist == 0) ? 0.0f : 1.0f / dist;
@@ -4478,7 +4476,6 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
                float dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
                if (dist2 < min_dist*min_dist)
                   min_dist = (float) STBTT_sqrt(dist2);
-
 
                // coarse culling against bbox
                //if (sx > STBTT_min(x0,x1)-min_dist && sx < STBTT_max(x0,x1)+min_dist &&
@@ -4506,7 +4503,6 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
       } else if (verts[i].type == STBTT_vcurve) {
          float x2 = verts[j].x *scale_x, y2 = verts[j].y *scale_y;
          float x1 = verts[i].cx*scale_x, y1 = verts[i].cy*scale_y;
-         float x0 = verts[i].x *scale_x, y0 = verts[i].y *scale_y;
          float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
          float len2 = bx*bx + by*by;
          float precompute = 0.0f;
