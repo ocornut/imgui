@@ -4462,8 +4462,8 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
       float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
       if (verts[i].type == STBTT_vline) {
          float x1 = verts[j].x*scale_x, y1 = verts[j].y*scale_y;
-         float dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
-         float precompute = (dist == 0) ? 0.0f : 1.0f / dist;
+         float _dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+         float precompute = (_dist == 0) ? 0.0f : 1.0f / _dist;
          for (y=iy0; y < iy1; ++y) {
             float sy = (float) y + 0.5f;
             for (x=ix0; x < ix1; ++x) {
@@ -4521,8 +4521,6 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
                if (dist2 < min_dist*min_dist)
                   min_dist = (float) STBTT_sqrt(dist2);
 
-               float x2 = verts[i-1].x *scale_x, y2 = verts[i-1].y *scale_y;
-               float x1 = verts[i  ].cx*scale_x, y1 = verts[i  ].cy*scale_y;
                float box_x0 = STBTT_min(STBTT_min(x0,x1),x2);
                float box_y0 = STBTT_min(STBTT_min(y0,y1),y2);
                float box_x1 = STBTT_max(STBTT_max(x0,x1),x2);
@@ -4531,7 +4529,6 @@ STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, flo
                if (sx > box_x0-min_dist && sx < box_x1+min_dist && sy > box_y0-min_dist && sy < box_y1+min_dist) {
                   int num=0;
                   float ax = x1-x0, ay = y1-y0;
-                  float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
                   float mx = x0 - sx, my = y0 - sy;
                   float res[3],px,py,t,it;
                   float a_inv = precompute;
