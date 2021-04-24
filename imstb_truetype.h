@@ -4446,157 +4446,179 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    // invert for y-downwards bitmaps
    scale_y = -scale_y;
 
-	 data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
-	 stbtt_GetGlyphSDF2(info, scale_x, scale_y, glyph, onedge_value, pixel_dist_scale, ix0, iy0, ix1, iy1, data, w);
-	 return data;
+   data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
+   stbtt_GetGlyphSDF2(info, scale_x, scale_y, glyph, onedge_value, pixel_dist_scale, ix0, iy0, ix1, iy1, data, w);
+   return data;
 }
-      
+
 STBTT_DEF void stbtt_GetGlyphSDF2(const stbtt_fontinfo *info, float scale_x, float scale_y, int glyph, unsigned char onedge_value, float pixel_dist_scale, int ix0, int iy0, int ix1, int iy1, unsigned char* data, int stride) {
-      int x,y,i,j;
-      float *precompute;
-      stbtt_vertex *verts;
-      int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
-      precompute = (float *) STBTT_malloc(num_verts * sizeof(float), info->userdata);
-
-      for (i=0,j=num_verts-1; i < num_verts; j=i++) {
-         if (verts[i].type == STBTT_vline) {
-            float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
-            float x1 = verts[j].x*scale_x, y1 = verts[j].y*scale_y;
-            float dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
-            precompute[i] = (dist == 0) ? 0.0f : 1.0f / dist;
-         } else if (verts[i].type == STBTT_vcurve) {
-            float x2 = verts[j].x *scale_x, y2 = verts[j].y *scale_y;
-            float x1 = verts[i].cx*scale_x, y1 = verts[i].cy*scale_y;
-            float x0 = verts[i].x *scale_x, y0 = verts[i].y *scale_y;
-            float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
-            float len2 = bx*bx + by*by;
-            if (len2 != 0.0f)
-               precompute[i] = 1.0f / (bx*bx + by*by);
-            else
-               precompute[i] = 0.0f;
-         } else
-            precompute[i] = 0.0f;
-      }
-
-      for (y=iy0; y < iy1; ++y) {
-         for (x=ix0; x < ix1; ++x) {
-            float val;
-            float min_dist = 999999.0f;
-            float sx = (float) x + 0.5f;
+   int x,y,i,j;
+   stbtt_vertex *verts;
+   int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
+   for (y=iy0; y < iy1; ++y) {
+      memset(&data[(y-iy0)*stride], 255, ix1-ix0);
+   }
+   int p = 255/pixel_dist_scale + 1;
+   for (i=0,j=num_verts-1; i < num_verts; j=i++) {
+      float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
+      if (verts[i].type == STBTT_vline) {
+         float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
+         float x1 = verts[j].x*scale_x, y1 = verts[j].y*scale_y;
+         float dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+         float precompute = (dist == 0) ? 0.0f : 1.0f / dist;
+         for (y=iy0; y < iy1; ++y) {
             float sy = (float) y + 0.5f;
-            float x_gspace = (sx / scale_x);
-            float y_gspace = (sy / scale_y);
-
-            int winding = stbtt__compute_crossings_x(x_gspace, y_gspace, num_verts, verts); // @OPTIMIZE: this could just be a rasterization, but needs to be line vs. non-tesselated curves so a new path
-
-            for (i=0; i < num_verts; ++i) {
-               float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
+            for (x=ix0; x < ix1; ++x) {
+               unsigned char prev = data[(y-iy0)*stride+(x-ix0)];
+               float min_dist = prev / pixel_dist_scale;
+               float sx = (float) x + 0.5f;
+               float val;
 
                // check against every point here rather than inside line/curve primitives -- @TODO: wrong if multiple 'moves' in a row produce a garbage point, and given culling, probably more efficient to do within line/curve
                float dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
                if (dist2 < min_dist*min_dist)
                   min_dist = (float) STBTT_sqrt(dist2);
 
-               if (verts[i].type == STBTT_vline) {
-                  float x1 = verts[i-1].x*scale_x, y1 = verts[i-1].y*scale_y;
 
-                  // coarse culling against bbox
-                  //if (sx > STBTT_min(x0,x1)-min_dist && sx < STBTT_max(x0,x1)+min_dist &&
-                  //    sy > STBTT_min(y0,y1)-min_dist && sy < STBTT_max(y0,y1)+min_dist)
-                  float dist = (float) STBTT_fabs((x1-x0)*(y0-sy) - (y1-y0)*(x0-sx)) * precompute[i];
-                  STBTT_assert(i != 0);
-                  if (dist < min_dist) {
-                     // check position along line
-                     // x' = x0 + t*(x1-x0), y' = y0 + t*(y1-y0)
-                     // minimize (x'-sx)*(x'-sx)+(y'-sy)*(y'-sy)
-                     float dx = x1-x0, dy = y1-y0;
-                     float px = x0-sx, py = y0-sy;
-                     // minimize (px+t*dx)^2 + (py+t*dy)^2 = px*px + 2*px*dx*t + t^2*dx*dx + py*py + 2*py*dy*t + t^2*dy*dy
-                     // derivative: 2*px*dx + 2*py*dy + (2*dx*dx+2*dy*dy)*t, set to 0 and solve
-                     float t = -(px*dx + py*dy) / (dx*dx + dy*dy);
-                     if (t >= 0.0f && t <= 1.0f)
-                        min_dist = dist;
-                  }
-               } else if (verts[i].type == STBTT_vcurve) {
-                  float x2 = verts[i-1].x *scale_x, y2 = verts[i-1].y *scale_y;
-                  float x1 = verts[i  ].cx*scale_x, y1 = verts[i  ].cy*scale_y;
-                  float box_x0 = STBTT_min(STBTT_min(x0,x1),x2);
-                  float box_y0 = STBTT_min(STBTT_min(y0,y1),y2);
-                  float box_x1 = STBTT_max(STBTT_max(x0,x1),x2);
-                  float box_y1 = STBTT_max(STBTT_max(y0,y1),y2);
-                  // coarse culling against bbox to avoid computing cubic unnecessarily
-                  if (sx > box_x0-min_dist && sx < box_x1+min_dist && sy > box_y0-min_dist && sy < box_y1+min_dist) {
-                     int num=0;
-                     float ax = x1-x0, ay = y1-y0;
-                     float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
-                     float mx = x0 - sx, my = y0 - sy;
-                     float res[3],px,py,t,it;
-                     float a_inv = precompute[i];
-                     if (a_inv == 0.0) { // if a_inv is 0, it's 2nd degree so use quadratic formula
-                        float a = 3*(ax*bx + ay*by);
-                        float b = 2*(ax*ax + ay*ay) + (mx*bx+my*by);
-                        float c = mx*ax+my*ay;
-                        if (a == 0.0) { // if a is 0, it's linear
-                           if (b != 0.0) {
-                              res[num++] = -c/b;
-                           }
-                        } else {
-                           float discriminant = b*b - 4*a*c;
-                           if (discriminant < 0)
-                              num = 0;
-                           else {
-                              float root = (float) STBTT_sqrt(discriminant);
-                              res[0] = (-b - root)/(2*a);
-                              res[1] = (-b + root)/(2*a);
-                              num = 2; // don't bother distinguishing 1-solution case, as code below will still work
-                           }
+               // coarse culling against bbox
+               //if (sx > STBTT_min(x0,x1)-min_dist && sx < STBTT_max(x0,x1)+min_dist &&
+               //    sy > STBTT_min(y0,y1)-min_dist && sy < STBTT_max(y0,y1)+min_dist)
+               float dist = (float) STBTT_fabs((x1-x0)*(y0-sy) - (y1-y0)*(x0-sx)) * precompute;
+               STBTT_assert(i != 0);
+               if (dist < min_dist) {
+                  // check position along line
+                  // x' = x0 + t*(x1-x0), y' = y0 + t*(y1-y0)
+                  // minimize (x'-sx)*(x'-sx)+(y'-sy)*(y'-sy)
+                  float dx = x1-x0, dy = y1-y0;
+                  float px = x0-sx, py = y0-sy;
+                  // minimize (px+t*dx)^2 + (py+t*dy)^2 = px*px + 2*px*dx*t + t^2*dx*dx + py*py + 2*py*dy*t + t^2*dy*dy
+                  // derivative: 2*px*dx + 2*py*dy + (2*dx*dx+2*dy*dy)*t, set to 0 and solve
+                  float t = -(px*dx + py*dy) / (dx*dx + dy*dy);
+                  if (t >= 0.0f && t <= 1.0f)
+                     min_dist = dist;
+               }
+               val = pixel_dist_scale * min_dist;
+               if (val > 255)
+                  val = 255;
+               data[(y-iy0)*stride+(x-ix0)] = (unsigned char) val;
+            }
+         }
+      } else if (verts[i].type == STBTT_vcurve) {
+         float x2 = verts[j].x *scale_x, y2 = verts[j].y *scale_y;
+         float x1 = verts[i].cx*scale_x, y1 = verts[i].cy*scale_y;
+         float x0 = verts[i].x *scale_x, y0 = verts[i].y *scale_y;
+         float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
+         float len2 = bx*bx + by*by;
+         float precompute = 0.0f;
+         if (len2 != 0.0f)
+            precompute = 1.0f / (bx*bx + by*by);
+         for (y=iy0; y < iy1; ++y) {
+            float sy = (float) y + 0.5f;
+            for (x=ix0; x < ix1; ++x) {
+               unsigned char prev = data[(y-iy0)*stride+(x-ix0)];
+               float min_dist = prev / pixel_dist_scale;
+               float sx = (float) x + 0.5f;
+               float val;
+
+               // check against every point here rather than inside line/curve primitives -- @TODO: wrong if multiple 'moves' in a row produce a garbage point, and given culling, probably more efficient to do within line/curve
+               float dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
+               if (dist2 < min_dist*min_dist)
+                  min_dist = (float) STBTT_sqrt(dist2);
+
+               float x2 = verts[i-1].x *scale_x, y2 = verts[i-1].y *scale_y;
+               float x1 = verts[i  ].cx*scale_x, y1 = verts[i  ].cy*scale_y;
+               float box_x0 = STBTT_min(STBTT_min(x0,x1),x2);
+               float box_y0 = STBTT_min(STBTT_min(y0,y1),y2);
+               float box_x1 = STBTT_max(STBTT_max(x0,x1),x2);
+               float box_y1 = STBTT_max(STBTT_max(y0,y1),y2);
+               // coarse culling against bbox to avoid computing cubic unnecessarily
+               if (sx > box_x0-min_dist && sx < box_x1+min_dist && sy > box_y0-min_dist && sy < box_y1+min_dist) {
+                  int num=0;
+                  float ax = x1-x0, ay = y1-y0;
+                  float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
+                  float mx = x0 - sx, my = y0 - sy;
+                  float res[3],px,py,t,it;
+                  float a_inv = precompute;
+                  if (a_inv == 0.0) { // if a_inv is 0, it's 2nd degree so use quadratic formula
+                     float a = 3*(ax*bx + ay*by);
+                     float b = 2*(ax*ax + ay*ay) + (mx*bx+my*by);
+                     float c = mx*ax+my*ay;
+                     if (a == 0.0) { // if a is 0, it's linear
+                        if (b != 0.0) {
+                           res[num++] = -c/b;
                         }
                      } else {
-                        float b = 3*(ax*bx + ay*by) * a_inv; // could precompute this as it doesn't depend on sample point
-                        float c = (2*(ax*ax + ay*ay) + (mx*bx+my*by)) * a_inv;
-                        float d = (mx*ax+my*ay) * a_inv;
-                        num = stbtt__solve_cubic(b, c, d, res);
+                        float discriminant = b*b - 4*a*c;
+                        if (discriminant < 0)
+                           num = 0;
+                        else {
+                           float root = (float) STBTT_sqrt(discriminant);
+                           res[0] = (-b - root)/(2*a);
+                           res[1] = (-b + root)/(2*a);
+                           num = 2; // don't bother distinguishing 1-solution case, as code below will still work
+                        }
                      }
-                     if (num >= 1 && res[0] >= 0.0f && res[0] <= 1.0f) {
-                        t = res[0], it = 1.0f - t;
-                        px = it*it*x0 + 2*t*it*x1 + t*t*x2;
-                        py = it*it*y0 + 2*t*it*y1 + t*t*y2;
-                        dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
-                        if (dist2 < min_dist * min_dist)
-                           min_dist = (float) STBTT_sqrt(dist2);
-                     }
-                     if (num >= 2 && res[1] >= 0.0f && res[1] <= 1.0f) {
-                        t = res[1], it = 1.0f - t;
-                        px = it*it*x0 + 2*t*it*x1 + t*t*x2;
-                        py = it*it*y0 + 2*t*it*y1 + t*t*y2;
-                        dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
-                        if (dist2 < min_dist * min_dist)
-                           min_dist = (float) STBTT_sqrt(dist2);
-                     }
-                     if (num >= 3 && res[2] >= 0.0f && res[2] <= 1.0f) {
-                        t = res[2], it = 1.0f - t;
-                        px = it*it*x0 + 2*t*it*x1 + t*t*x2;
-                        py = it*it*y0 + 2*t*it*y1 + t*t*y2;
-                        dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
-                        if (dist2 < min_dist * min_dist)
-                           min_dist = (float) STBTT_sqrt(dist2);
-                     }
+                  } else {
+                     float b = 3*(ax*bx + ay*by) * a_inv; // could precompute this as it doesn't depend on sample point
+                     float c = (2*(ax*ax + ay*ay) + (mx*bx+my*by)) * a_inv;
+                     float d = (mx*ax+my*ay) * a_inv;
+                     num = stbtt__solve_cubic(b, c, d, res);
+                  }
+                  if (num >= 1 && res[0] >= 0.0f && res[0] <= 1.0f) {
+                     t = res[0], it = 1.0f - t;
+                     px = it*it*x0 + 2*t*it*x1 + t*t*x2;
+                     py = it*it*y0 + 2*t*it*y1 + t*t*y2;
+                     dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
+                     if (dist2 < min_dist * min_dist)
+                        min_dist = (float) STBTT_sqrt(dist2);
+                  }
+                  if (num >= 2 && res[1] >= 0.0f && res[1] <= 1.0f) {
+                     t = res[1], it = 1.0f - t;
+                     px = it*it*x0 + 2*t*it*x1 + t*t*x2;
+                     py = it*it*y0 + 2*t*it*y1 + t*t*y2;
+                     dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
+                     if (dist2 < min_dist * min_dist)
+                        min_dist = (float) STBTT_sqrt(dist2);
+                  }
+                  if (num >= 3 && res[2] >= 0.0f && res[2] <= 1.0f) {
+                     t = res[2], it = 1.0f - t;
+                     px = it*it*x0 + 2*t*it*x1 + t*t*x2;
+                     py = it*it*y0 + 2*t*it*y1 + t*t*y2;
+                     dist2 = (px-sx)*(px-sx) + (py-sy)*(py-sy);
+                     if (dist2 < min_dist * min_dist)
+                        min_dist = (float) STBTT_sqrt(dist2);
                   }
                }
+               val = pixel_dist_scale * min_dist;
+               if (val > 255)
+                  val = 255;
+               data[(y-iy0)*stride+(x-ix0)] = (unsigned char) val;
             }
-            if (winding == 0)
-               min_dist = -min_dist;  // if outside the shape, value is negative
-            val = onedge_value + pixel_dist_scale * min_dist;
-            if (val < 0)
-               val = 0;
-            else if (val > 255)
-               val = 255;
-            data[(y-iy0)*stride+(x-ix0)] = (unsigned char) val;
          }
       }
-      STBTT_free(precompute, info->userdata);
-      STBTT_free(verts, info->userdata);
-}   
+   }
+   for (y=iy0; y < iy1; ++y) {
+      for (x=ix0; x < ix1; ++x) {
+         float sx = (float) x + 0.5f;
+         float sy = (float) y + 0.5f;
+         float x_gspace = (sx / scale_x);
+         float y_gspace = (sy / scale_y);
+
+         float val = data[(y-iy0)*stride+(x-ix0)];
+
+         int winding = stbtt__compute_crossings_x(x_gspace, y_gspace, num_verts, verts); // @OPTIMIZE: this could just be a rasterization, but needs to be line vs. non-tesselated curves so a new path
+         if (winding == 0) {
+            val = onedge_value - val;
+         } else {
+            val = onedge_value + val;
+         }
+         if (val < 0) val = 0;
+         else if (val > 255) val = 255;
+         data[(y-iy0)*stride+(x-ix0)] = (unsigned char) val;
+      }
+   }
+   STBTT_free(verts, info->userdata);
+}
 
 STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff)
 {
