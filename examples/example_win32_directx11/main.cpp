@@ -110,7 +110,6 @@ int main(int, char**)
         {
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
-
             if (msg.message == WM_QUIT)
                 done = true;
         }
