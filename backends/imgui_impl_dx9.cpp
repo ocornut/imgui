@@ -265,14 +265,33 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
 
     // Build texture atlas
     unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    int width, height, bytes_per_pixel;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
     io.Fonts->MarkClean();
 
-    if ((!g_FontTexture) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     if (io.Fonts->TexPixelsUseColors)
+    {
+        ImU32* dst_start = (ImU32*)ImGui::MemAlloc(width * height * bytes_per_pixel);
+        for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + width * height; dst < dst_end; src++, dst++)
+            *dst = IMGUI_COL_TO_DX9_ARGB(*src);
+        pixels = (unsigned char*)dst_start;
+    }
+#endif
+
+    // Upload texture to graphics system
+    g_FontTexture = NULL;
+    if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
+        return false;
+    D3DLOCKED_RECT tex_locked_rect;
+    if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
+        return false;
+    for (int y = 0; y < height; y++)
+        memcpy((unsigned char*)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+    g_FontTexture->UnlockRect(0);
+
+    if ((!g_FontTexture) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
     {
         // (Re-)create texture
         if (g_FontTexture)
@@ -281,12 +300,6 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
         g_FontTexture = NULL;
         if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
             return false;
-        ImU32* dst_start = (ImU32*)ImGui::MemAlloc(width * height * bytes_per_pixel);
-        for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + width * height; dst < dst_end; src++, dst++)
-            *dst = IMGUI_COL_TO_DX9_ARGB(*src);
-        pixels = (unsigned char*)dst_start;
-    }
-#endif
 
         // Store size
         g_FontTextureWidth = width;
@@ -297,12 +310,6 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
     io.Fonts->SetTexID((ImTextureID)g_FontTexture);
 
     {
-        // Upload the dirty region
-#ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (io.Fonts->TexPixelsUseColors)
-        ImGui::MemFree(pixels);
-#endif
-
         D3DLOCKED_RECT tex_locked_rect;
         RECT dirty_rect;
         dirty_rect.left = 0;
@@ -334,6 +341,12 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
         }
         g_FontTexture->UnlockRect(0);
     }
+
+    // Upload the dirty region
+#ifndef IMGUI_USE_BGRA_PACKED_COLOR
+    if (io.Fonts->TexPixelsUseColors)
+        ImGui::MemFree(pixels);
+#endif
 
     return true;
 }
