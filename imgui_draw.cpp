@@ -398,8 +398,8 @@ void ImDrawList::_ResetForNewFrame()
     // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.
     // (those should be IM_STATIC_ASSERT() in theory but with our pre C++11 setup the whole check doesn't compile with GCC)
     IM_ASSERT(IM_OFFSETOF(ImDrawCmd, ClipRect) == 0);
-    IM_ASSERT(IM_OFFSETOF(ImDrawCmd, TextureId) == sizeof(ImVec4));
-    IM_ASSERT(IM_OFFSETOF(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTextureID));
+    IM_ASSERT(IM_OFFSETOF(ImDrawCmd, Texture) == sizeof(ImVec4));
+    IM_ASSERT(IM_OFFSETOF(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTexture));
 
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
@@ -410,7 +410,7 @@ void ImDrawList::_ResetForNewFrame()
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
     _ClipRectStack.resize(0);
-    _TextureIdStack.resize(0);
+    _TextureStack.resize(0);
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
@@ -427,7 +427,7 @@ void ImDrawList::_ClearFreeMemory()
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
     _ClipRectStack.clear();
-    _TextureIdStack.clear();
+    _TextureStack.clear();
     _Path.clear();
     _Splitter.ClearFreeMemory();
 }
@@ -446,7 +446,7 @@ void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
     draw_cmd.ClipRect = _CmdHeader.ClipRect;    // Same as calling ImDrawCmd_HeaderCopy()
-    draw_cmd.TextureId = _CmdHeader.TextureId;
+    draw_cmd.Texture = _CmdHeader.Texture;
     draw_cmd.VtxOffset = _CmdHeader.VtxOffset;
     draw_cmd.IdxOffset = IdxBuffer.Size;
 
@@ -513,7 +513,7 @@ void ImDrawList::_OnChangedTextureID()
 {
     // If current command is used with different settings we need to add a new command
     ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
-    if (curr_cmd->ElemCount != 0 && curr_cmd->TextureId != _CmdHeader.TextureId)
+    if (curr_cmd->ElemCount != 0 && curr_cmd->Texture != _CmdHeader.Texture)
     {
         AddDrawCmd();
         return;
@@ -528,7 +528,7 @@ void ImDrawList::_OnChangedTextureID()
         return;
     }
 
-    curr_cmd->TextureId = _CmdHeader.TextureId;
+    curr_cmd->Texture = _CmdHeader.Texture;
 }
 
 void ImDrawList::_OnChangedVtxOffset()
@@ -590,15 +590,18 @@ void ImDrawList::PopClipRect()
 
 void ImDrawList::PushTextureID(ImTextureID texture_id)
 {
-    _TextureIdStack.push_back(texture_id);
-    _CmdHeader.TextureId = texture_id;
+    _CmdHeader.Texture = ImTexture(texture_id);
+    _TextureStack.push_back(_CmdHeader.Texture);
     _OnChangedTextureID();
 }
 
 void ImDrawList::PopTextureID()
 {
-    _TextureIdStack.pop_back();
-    _CmdHeader.TextureId = (_TextureIdStack.Size == 0) ? (ImTextureID)NULL : _TextureIdStack.Data[_TextureIdStack.Size - 1];
+    _TextureStack.pop_back();
+    if (_TextureStack.Size == 0)
+        memset(&_CmdHeader.Texture, 0, sizeof(ImTexture));
+    else
+        _CmdHeader.Texture = _TextureStack.Data[_TextureStack.Size - 1];
     _OnChangedTextureID();
 }
 
@@ -1569,7 +1572,8 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (font_size == 0.0f)
         font_size = _Data->FontSize;
 
-    IM_ASSERT(font->ContainerAtlas->TexID == _CmdHeader.TextureId);  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
+    // #thedmd: fixme, condition should be: ImTexture(font->ContainerAtlas) == _CmdHeader.Texture
+    IM_ASSERT(ImTexture(font->ContainerAtlas).GetID() == _CmdHeader.Texture.GetID());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     ImVec4 clip_rect = _CmdHeader.ClipRect;
     if (cpu_fine_clip_rect)
@@ -1592,7 +1596,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, cons
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
+    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
@@ -1608,7 +1612,7 @@ void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, con
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
+    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
@@ -1631,7 +1635,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
         return;
     }
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
+    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
