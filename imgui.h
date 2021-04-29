@@ -2067,8 +2067,8 @@ struct ImGuiStorage
     {
         ImGuiID key;
         union { int val_i; float val_f; void* val_p; };
-        ImGuiStoragePair(ImGuiID _key, int _val_i)   { memset(val_p, 0, 4); key = _key; val_i = _val_i; }
-        ImGuiStoragePair(ImGuiID _key, float _val_f) { memset(val_p, 0, 4); key = _key; val_f = _val_f; }
+        ImGuiStoragePair(ImGuiID _key, int _val_i)   { memset(val_p, 0, sizeof(val_p)); key = _key; val_i = _val_i; }
+        ImGuiStoragePair(ImGuiID _key, float _val_f) { memset(val_p, 0, sizeof(val_p)); key = _key; val_f = _val_f; }
         ImGuiStoragePair(ImGuiID _key, void* _val_p) { key = _key; val_p = _val_p; }
     };
 
