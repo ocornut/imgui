@@ -103,7 +103,7 @@ Index of this file:
 // Warnings
 #ifdef _MSC_VER
 #pragma warning (push)
-#pragma warning (disable: 26495) // Variable 'XXX' is uninitialized. Always initialize a member variable (type.6). // (VS2019 Static Analyzer arguably is buggy as of 16.9.4, will reconsider)
+#pragma warning (disable: 26495)    // [Static Analyzer] Variable 'XXX' is uninitialized. Always initialize a member variable (type.6).
 #endif
 #if defined(__clang__)
 #pragma clang diagnostic push

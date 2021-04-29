@@ -54,8 +54,10 @@ Index of this file:
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (push)
-#pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
-#pragma warning (disable: 26812)// The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
+#pragma warning (disable: 4251)     // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
+#pragma warning (disable: 26812)    // The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
+#pragma warning (disable: 26495)    // [Static Analyzer] Variable 'XXX' is uninitialized. Always initialize a member variable (type.6).
+
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -227,6 +229,13 @@ namespace ImStb
 #define IMGUI_CDECL __cdecl
 #else
 #define IMGUI_CDECL
+#endif
+
+// Warnings
+#if defined(_MSC_VER) && !defined(__clang__)
+#define IM_MSVC_WARNING_SUPPRESS(XXXX)  __pragma(warning(suppress: XXXX))
+#else
+#define IM_MSVC_WARNING_SUPPRESS(XXXX)
 #endif
 
 // Debug Tools

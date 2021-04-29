@@ -59,8 +59,8 @@ Index of this file:
 #if defined(_MSC_VER) && _MSC_VER >= 1922 // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)     // operator '|': deprecated between enumerations of different types
 #endif
-#pragma warning (disable: 26451)    // Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
-#pragma warning (disable: 26812)    // The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
+#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26812)    // [Static Analyzer] The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -4818,10 +4818,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 p++;
             i[0] = i[1] = i[2] = 0;
             i[3] = 0xFF; // alpha default to 255 is not parsed by scanf (e.g. inputting #FFFFFF omitting alpha)
+            int r;
             if (alpha)
-                sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2], (unsigned int*)&i[3]); // Treat at unsigned (%X is unsigned)
+                r = sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2], (unsigned int*)&i[3]); // Treat at unsigned (%X is unsigned)
             else
-                sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
+                r = sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
+            IM_UNUSED(r); // Fixes C6031: Return value ignored: 'sscanf'.
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
             OpenPopupOnItemClick("context");
@@ -6603,6 +6605,7 @@ void ImGui::EndMenuBar()
         }
     }
 
+    IM_MSVC_WARNING_SUPPRESS(6011); // Static Analysis false positive "warning C6011: Dereferencing NULL pointer 'window'"
     IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
     IM_ASSERT(window->DC.MenuBarAppending);
     PopClipRect();
@@ -7234,6 +7237,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         curr_section_n = section_n;
 
         // Store data so we can build an array sorted by width if we need to shrink tabs down
+        IM_MSVC_WARNING_SUPPRESS(6385);
         int shrink_buffer_index = shrink_buffer_indexes[section_n]++;
         g.ShrinkWidthBuffer[shrink_buffer_index].Index = tab_n;
         g.ShrinkWidthBuffer[shrink_buffer_index].Width = tab->ContentWidth;
