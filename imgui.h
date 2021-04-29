@@ -2240,9 +2240,9 @@ struct ImTexture
     ImTextureType       Type;
     unsigned short      FontAtlasPage;
 
-    ImTexture() {};
-    explicit ImTexture(ImFontAtlas* font_atlas): FontAtlas(font_atlas), Type(ImTextureType_Atlas), FontAtlasPage(0) {}
-    explicit ImTexture(ImTextureID texture_id): TextureId(texture_id), Type(ImTextureType_UserID), FontAtlasPage(0) {}
+    ImTexture() {}
+    explicit ImTexture(ImFontAtlas* font_atlas);
+    explicit ImTexture(ImTextureID texture_id);
 
     inline friend bool operator==(const ImTexture& lhs, const ImTexture& rhs) { return memcmp(&lhs, &rhs, sizeof(ImTexture)) == 0; }
     inline friend bool operator!=(const ImTexture& lhs, const ImTexture& rhs) { return !(lhs == rhs); }
@@ -2390,8 +2390,10 @@ struct ImDrawList
     IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
-    IMGUI_API void  PushTextureID(ImTextureID texture_id);
-    IMGUI_API void  PopTextureID();
+    IMGUI_API void  PushTexture(ImTexture texture);
+    IMGUI_API void  PopTexture();
+    IMGUI_API void  PushTextureID(ImTextureID texture_id);  // DEPRECATED???
+    IMGUI_API void  PopTextureID();                         // DEPRECATED???
     inline ImVec2   GetClipRectMin() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.x, cr.y); }
     inline ImVec2   GetClipRectMax() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.z, cr.w); }
 
@@ -2424,8 +2426,11 @@ struct ImDrawList
     // - Read FAQ to understand what ImTextureID is.
     // - "p_min" and "p_max" represent the upper-left and lower-right corners of the rectangle.
     // - "uv_min" and "uv_max" represent the normalized texture coordinates to use for those corners. Using (0,0)->(1,1) texture coordinates will generally display the entire texture.
+    IMGUI_API void  AddImage(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), ImU32 col = IM_COL32_WHITE);
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), ImU32 col = IM_COL32_WHITE);
+    IMGUI_API void  AddImageQuad(ImTexture texture, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1 = ImVec2(0, 0), const ImVec2& uv2 = ImVec2(1, 0), const ImVec2& uv3 = ImVec2(1, 1), const ImVec2& uv4 = ImVec2(0, 1), ImU32 col = IM_COL32_WHITE);
     IMGUI_API void  AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1 = ImVec2(0, 0), const ImVec2& uv2 = ImVec2(1, 0), const ImVec2& uv3 = ImVec2(1, 1), const ImVec2& uv4 = ImVec2(0, 1), ImU32 col = IM_COL32_WHITE);
+    IMGUI_API void  AddImageRounded(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags = 0);
     IMGUI_API void  AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags = 0);
 
     // Stateful path API, add points then finish with PathFillConvex() or PathStroke()
@@ -2820,6 +2825,20 @@ struct ImGuiViewport
 //-----------------------------------------------------------------------------
 // [SECTION] Inline function implementations
 //-----------------------------------------------------------------------------
+
+inline ImTexture::ImTexture(ImFontAtlas* font_atlas)
+    : FontAtlas(font_atlas)
+    , Type(ImTextureType_Atlas)
+    , FontAtlasPage(font_atlas->TexPages.Size)
+{
+}
+
+inline ImTexture::ImTexture(ImTextureID texture_id)
+    : TextureId(texture_id)
+    , Type(ImTextureType_UserID)
+    , FontAtlasPage(0)
+{
+}
 
 inline ImTextureID ImTexture::GetID() const
 {

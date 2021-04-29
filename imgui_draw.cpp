@@ -588,14 +588,14 @@ void ImDrawList::PopClipRect()
     _OnChangedClipRect();
 }
 
-void ImDrawList::PushTextureID(ImTextureID texture_id)
+void ImDrawList::PushTexture(ImTexture texture)
 {
-    _CmdHeader.Texture = ImTexture(texture_id);
+    _CmdHeader.Texture = texture;
     _TextureStack.push_back(_CmdHeader.Texture);
     _OnChangedTextureID();
 }
 
-void ImDrawList::PopTextureID()
+void ImDrawList::PopTexture()
 {
     _TextureStack.pop_back();
     if (_TextureStack.Size == 0)
@@ -603,6 +603,16 @@ void ImDrawList::PopTextureID()
     else
         _CmdHeader.Texture = _TextureStack.Data[_TextureStack.Size - 1];
     _OnChangedTextureID();
+}
+
+void ImDrawList::PushTextureID(ImTextureID texture_id)
+{
+    PushTexture(ImTexture(texture_id));
+}
+
+void ImDrawList::PopTextureID()
+{
+    PopTexture();
 }
 
 // Reserve space for a number of vertices and indices.
@@ -1572,8 +1582,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (font_size == 0.0f)
         font_size = _Data->FontSize;
 
-    // #thedmd: fixme, condition should be: ImTexture(font->ContainerAtlas) == _CmdHeader.Texture
-    IM_ASSERT(ImTexture(font->ContainerAtlas).GetID() == _CmdHeader.Texture.GetID());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
+    IM_ASSERT(ImTexture(font->ContainerAtlas) == _CmdHeader.Texture);  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     ImVec4 clip_rect = _CmdHeader.ClipRect;
     if (cpu_fine_clip_rect)
@@ -1591,39 +1600,49 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
     AddText(NULL, 0.0f, pos, col, text_begin, text_end);
 }
 
-void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+void ImDrawList::AddImage(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     PrimReserve(6, 4);
     PrimRectUV(p_min, p_max, uv_min, uv_max, col);
 
-    if (push_texture_id)
+    if (push_texture)
         PopTextureID();
 }
 
-void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+{
+    AddImage(ImTexture(user_texture_id), p_min, p_max, uv_min, uv_max, col);
+}
+
+void ImDrawList::AddImageQuad(ImTexture texture, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     PrimReserve(6, 4);
     PrimQuadUV(p1, p2, p3, p4, uv1, uv2, uv3, uv4, col);
 
-    if (push_texture_id)
-        PopTextureID();
+    if (push_texture)
+        PopTexture();
 }
 
-void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
+void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
+{
+    AddImageQuad(ImTexture(user_texture_id), p1, p2, p3, p4, uv1, uv2, uv3, uv4, col);
+}
+
+void ImDrawList::AddImageRounded(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1631,13 +1650,13 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
     flags = FixRectCornerFlags(flags);
     if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
-        AddImage(user_texture_id, p_min, p_max, uv_min, uv_max, col);
+        AddImage(texture, p_min, p_max, uv_min, uv_max, col);
         return;
     }
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.Texture.GetID();
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     int vert_start_idx = VtxBuffer.Size;
     PathRect(p_min, p_max, rounding, flags);
@@ -1645,8 +1664,13 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
     int vert_end_idx = VtxBuffer.Size;
     ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, p_min, p_max, uv_min, uv_max, true);
 
-    if (push_texture_id)
-        PopTextureID();
+    if (push_texture)
+        PopTexture();
+}
+
+void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
+{
+    AddImageRounded(ImTexture(user_texture_id), p_min, p_max, uv_min, uv_max, col, rounding, flags);
 }
 
 
@@ -1973,7 +1997,7 @@ void ImTextureData::EnsureFormat(ImTextureFormat format)
         unsigned int r_coeff_fix24 =  3566836; // R * (1 << 24)
         unsigned int g_coeff_fix24 = 11999065; // G * (1 << 24)
         unsigned int b_coeff_fix24 =  1211315; // B * (1 << 24)
-        unsigned int a_coeff_fix24 = 16843009; // A * (256 / 255) * (1 << 24)
+        unsigned int a_coeff_fix16 =    65793; // A * (256 / 255) * (1 << 16)
         unsigned int* pixels = (unsigned int*)TexPixels;
         unsigned char* pixels_alpha8 = (unsigned char*)IM_ALLOC((size_t)TexWidth * (size_t)TexHeight);
         const unsigned int* src = pixels;
@@ -1994,12 +2018,7 @@ void ImTextureData::EnsureFormat(ImTextureFormat format)
             // Multiplying by a_coeff_fix24 move alpha to range [0..256].
             // Luma max value is 255, product brings value back to [0..255] range
             // and can be used directly.
-            //
-            // On floating point numbers this equals to:
-            //    luma   = [0..255]
-            //    alpha  = [0..255]
-            //    result = (alpha * 256.0f / 255.0f) * luma
-            luma_fix24 = a_coeff_fix24 * (luma_fix24 >> 24) * ((color >> IM_COL32_A_SHIFT) & 0xFF);
+            luma_fix24 = a_coeff_fix16 * (luma_fix24 >> 24) * ((color >> IM_COL32_A_SHIFT) & 0xFF);
 
             *dst++ = luma_fix24 >> 24;
         }
@@ -3897,13 +3916,13 @@ void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, Im
     if (font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
     {
         pos -= offset;
-        ImTextureID tex_id = font_atlas->GetTexID();
-        draw_list->PushTextureID(tex_id);
-        draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale,    uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale,    uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_id, pos,                        pos + size * scale,                     uv[2], uv[3], col_border);
-        draw_list->AddImage(tex_id, pos,                        pos + size * scale,                     uv[0], uv[1], col_fill);
-        draw_list->PopTextureID();
+        draw_list->PushTexture(ImTexture(font_atlas));
+        ImTexture tex = draw_list->_CmdHeader.Texture;
+        draw_list->AddImage(tex, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale,    uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale,    uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex, pos,                        pos + size * scale,                     uv[2], uv[3], col_border);
+        draw_list->AddImage(tex, pos,                        pos + size * scale,                     uv[0], uv[1], col_fill);
+        draw_list->PopTexture();
     }
 }
 
