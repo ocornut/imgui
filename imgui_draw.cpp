@@ -1970,9 +1970,10 @@ void ImTextureData::EnsureFormat(ImTextureFormat format)
         // Convert to Alpha8 format on demand
         // Use Rec. 709 luma coefficients:
         //   R = 0.2126   G = 0.7152   B = 0.0722
-        unsigned int r_coeff_fix24 =  3566836; // R * ((1 << 24) - 1)
-        unsigned int g_coeff_fix24 = 11999064; // G * ((1 << 24) - 1)
-        unsigned int b_coeff_fix24 =  1211315; // B * ((1 << 24) - 1)
+        unsigned int r_coeff_fix24 =  3566836; // R * (1 << 24)
+        unsigned int g_coeff_fix24 = 11999065; // G * (1 << 24)
+        unsigned int b_coeff_fix24 =  1211315; // B * (1 << 24)
+        unsigned int a_coeff_fix24 = 16843009; // A * (256 / 255) * (1 << 24)
         unsigned int* pixels = (unsigned int*)TexPixels;
         unsigned char* pixels_alpha8 = (unsigned char*)IM_ALLOC((size_t)TexWidth * (size_t)TexHeight);
         const unsigned int* src = pixels;
@@ -1981,7 +1982,7 @@ void ImTextureData::EnsureFormat(ImTextureFormat format)
         {
             unsigned int color = *src++;
 
-            // Calculate luma from RGB image
+            // Calculate luma from RGB image, value is in range [0..255] in fixed format
             unsigned int luma_fix24 =
                 ((color >> IM_COL32_R_SHIFT) & 0xFF) * r_coeff_fix24 +
                 ((color >> IM_COL32_G_SHIFT) & 0xFF) * g_coeff_fix24 +
@@ -1989,9 +1990,18 @@ void ImTextureData::EnsureFormat(ImTextureFormat format)
 
             // Luma will be used as alpha. If original texture have
             // transparency data, we're pre-multiplying it into luma.
-            unsigned int luma_fix32 = luma_fix24 * ((color >> IM_COL32_A_SHIFT) & 0xFF);
+            //
+            // Multiplying by a_coeff_fix24 move alpha to range [0..256].
+            // Luma max value is 255, product brings value back to [0..255] range
+            // and can be used directly.
+            //
+            // On floating point numbers this equals to:
+            //    luma   = [0..255]
+            //    alpha  = [0..255]
+            //    result = (alpha * 256.0f / 255.0f) * luma
+            luma_fix24 = a_coeff_fix24 * (luma_fix24 >> 24) * ((color >> IM_COL32_A_SHIFT) & 0xFF);
 
-            *dst++ = luma_fix32 >> 24; //
+            *dst++ = luma_fix24 >> 24;
         }
         IM_FREE(TexPixels);
         TexPixels = pixels_alpha8;
