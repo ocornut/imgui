@@ -370,7 +370,7 @@ ImGui::Image((void*)texture, ImVec2(texture->Width, texture->Height));
 The renderer function called after ImGui::Render() will receive that same value that the user code passed:
 ```cpp
 // Cast ImTextureID / void* stored in the draw command as our texture type
-MyTexture* texture = (MyTexture*)pcmd->TextureId;
+MyTexture* texture = (MyTexture*)pcmd->GetTexID();
 MyEngineBindTexture2D(texture);
 ```
 Once you understand this design you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui.

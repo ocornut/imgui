@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-XX-YY: DirectX9: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2021-04-23: DirectX9: Explicitly setting up more graphics states to increase compatibility with unusual non-default states.
 //  2021-03-18: DirectX9: Calling IDirect3DStateBlock9::Capture() after CreateStateBlock() as a workaround for state restoring issues (see #3857).
 //  2021-03-03: DirectX9: Added support for IMGUI_USE_BGRA_PACKED_COLOR in user's imconfig file.
@@ -37,6 +38,8 @@ static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
 static LPDIRECT3DTEXTURE9       g_FontTexture = NULL;
+static int                      g_FontTextureWidth = 0;
+static int                      g_FontTextureHeight = 0;
 static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
 
 struct CUSTOMVERTEX
@@ -217,7 +220,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 const RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
+                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->GetTexID();
                 g_pd3dDevice->SetTexture(0, texture);
                 g_pd3dDevice->SetScissorRect(&r);
                 g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
@@ -243,6 +246,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx9";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // We support font atlas texture reloading (IsDirty() check in ImGui_ImplDX11_NewFrame)
 
     g_pd3dDevice = device;
     g_pd3dDevice->AddRef();
@@ -255,17 +259,19 @@ void ImGui_ImplDX9_Shutdown()
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
 }
 
-static bool ImGui_ImplDX9_CreateFontsTexture()
+static bool ImGui_ImplDX9_UpdateFontsTexture()
 {
-    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
+
+    // Build texture atlas
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
+    io.Fonts->MarkClean();
 
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (io.Fonts->TexPixelsUseColors)
+    if (io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
     {
         ImU32* dst_start = (ImU32*)ImGui::MemAlloc(width * height * bytes_per_pixel);
         for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + width * height; dst < dst_end; src++, dst++)
@@ -275,21 +281,60 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
 #endif
 
     // Upload texture to graphics system
-    g_FontTexture = NULL;
-    if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
-        return false;
-    D3DLOCKED_RECT tex_locked_rect;
-    if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
-        return false;
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char*)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
-    g_FontTexture->UnlockRect(0);
+    if ((!g_FontTexture) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
+    {
+        // (Re-)create texture
+        if (g_FontTexture)
+            g_FontTexture->Release();
+        io.Fonts->SetTexID(NULL);
+        g_FontTexture = NULL;
+        if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
+            return false;
+
+        // Store size
+        g_FontTextureWidth = width;
+        g_FontTextureHeight = height;
+    }
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)g_FontTexture);
 
+    {
+        D3DLOCKED_RECT tex_locked_rect;
+        RECT dirty_rect;
+        dirty_rect.left = 0;
+        dirty_rect.right = width;
+        dirty_rect.top = 0;
+        dirty_rect.bottom = height;
+        if (g_FontTexture->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
+            return false;
+
+        if (tex_locked_rect.Pitch == (width * 4))
+        {
+            memcpy(tex_locked_rect.pBits, pixels, width * height * 4); // Fast path for full image upload
+        }
+        else
+        {
+            // Sub-region upload
+            const int src_stride = width * 4;
+            const int dest_stride = tex_locked_rect.Pitch;
+            const int copy_bytes = width * 4; // Bytes to copy for each line
+            unsigned char* read_ptr = pixels;
+            char* write_ptr = (char*)tex_locked_rect.pBits;
+
+            for (int y = 0; y < height; y++)
+            {
+                memcpy(write_ptr, read_ptr, copy_bytes);
+                write_ptr += dest_stride;
+                read_ptr += src_stride;
+            }
+        }
+        g_FontTexture->UnlockRect(0);
+    }
+
+    // Upload the dirty region
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (io.Fonts->TexPixelsUseColors)
+    if (io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
         ImGui::MemFree(pixels);
 #endif
 
@@ -300,7 +345,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
-    if (!ImGui_ImplDX9_CreateFontsTexture())
+    if (!ImGui_ImplDX9_UpdateFontsTexture())
         return false;
     return true;
 }
@@ -316,6 +361,11 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
 
 void ImGui_ImplDX9_NewFrame()
 {
+    ImGuiIO& io = ImGui::GetIO();
+
     if (!g_FontTexture)
         ImGui_ImplDX9_CreateDeviceObjects();
+
+    if (io.Fonts->IsDirty())
+        ImGui_ImplDX9_UpdateFontsTexture(); // We ignore the return value because if it fails that almost certainly means the device is invalid, and the font will get reinitialised by ImGui_ImplDX9_CreateDeviceObjects() later
 }

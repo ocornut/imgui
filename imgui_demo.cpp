@@ -463,6 +463,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors",      &backend_flags, ImGuiBackendFlags_HasMouseCursors);
             ImGui::CheckboxFlags("io.BackendFlags: HasSetMousePos",       &backend_flags, ImGuiBackendFlags_HasSetMousePos);
             ImGui::CheckboxFlags("io.BackendFlags: RendererHasVtxOffset", &backend_flags, ImGuiBackendFlags_RendererHasVtxOffset);
+            ImGui::CheckboxFlags("io.BackendFlags: RendererHasTexReload", &backend_flags, ImGuiBackendFlags_RendererHasTexReload);
             ImGui::TreePop();
             ImGui::Separator();
         }
@@ -958,9 +959,9 @@ static void ShowDemoWindowWidgets()
         // - Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
         // - Read https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
         // - Read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-        ImTextureID my_tex_id = io.Fonts->TexID;
-        float my_tex_w = (float)io.Fonts->TexWidth;
-        float my_tex_h = (float)io.Fonts->TexHeight;
+        ImTextureID my_tex_id = io.Fonts->GetTexID();
+        float my_tex_w = (float)io.Fonts->TexData.TexWidth;
+        float my_tex_h = (float)io.Fonts->TexData.TexHeight;
         {
             ImGui::Text("%.0fx%.0f", my_tex_w, my_tex_h);
             ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -5718,7 +5719,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos)         ImGui::Text(" HasSetMousePos");
         if (io.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)   ImGui::Text(" RendererHasVtxOffset");
         ImGui::Separator();
-        ImGui::Text("io.Fonts: %d fonts, Flags: 0x%08X, TexSize: %d,%d", io.Fonts->Fonts.Size, io.Fonts->Flags, io.Fonts->TexWidth, io.Fonts->TexHeight);
+        ImGui::Text("io.Fonts: %d fonts, Flags: 0x%08X, TexSize: %d,%d", io.Fonts->Fonts.Size, io.Fonts->Flags, io.Fonts->TexData.TexWidth, io.Fonts->TexData.TexHeight);
         ImGui::Text("io.DisplaySize: %.2f,%.2f", io.DisplaySize.x, io.DisplaySize.y);
         ImGui::Text("io.DisplayFramebufferScale: %.2f,%.2f", io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
         ImGui::Separator();
@@ -6045,11 +6046,11 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 NodeFont(font);
                 ImGui::PopID();
             }
-            if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+            if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexData.TexWidth, atlas->TexData.TexHeight))
             {
                 ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
                 ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
+                ImGui::Image(atlas->GetTexID(), ImVec2((float)atlas->TexData.TexWidth, (float)atlas->TexData.TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
                 ImGui::TreePop();
             }
 
@@ -7688,6 +7689,99 @@ void ShowExampleAppDocuments(bool* p_open)
 
     ImGui::End();
 }
+
+static const char* font_path_prefix = "../../misc/fonts/";
+static const char* fonts[] =
+{
+    "Default (built-in)",
+    "Roboto-Medium.ttf",
+    "Cousine-Regular.ttf",
+    "DroidSans.ttf",
+    "ProggyTiny.ttf",
+};
+
+static int selected_font_index = -1;
+static float selected_font_size = -1.0f;
+static int font_index = 0;
+static float font_size = 16.0f;
+
+void ImGui::UpdateFontDemo()
+{
+    if (selected_font_index >= 0 || selected_font_size > 0.0f)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (selected_font_index < 0)
+            selected_font_index = font_index;
+        if (selected_font_size < 0)
+            selected_font_size = font_size;
+
+        io.Fonts->Clear();
+        if (selected_font_index == 0)
+        {
+            io.Fonts->AddFontDefault();
+        }
+        else
+        {
+            char path[256];
+            strcpy(path, font_path_prefix);
+            strcat(path, fonts[selected_font_index]);
+            io.Fonts->AddFontFromFileTTF(path, font_size);
+        }
+
+        font_index = selected_font_index;
+        font_size = selected_font_size;
+
+        selected_font_index = -1;
+        selected_font_size = -1.0f;
+
+        //io.Fonts->Build();
+    }
+}
+
+void ImGui::ShowFontDemoWindow()
+{
+    if (ImGui::Begin("Font Test"))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGuiBackendFlags backend_flags = io.BackendFlags;
+        ImGui::CheckboxFlags("io.BackendFlags: RendererHasTexReload", &backend_flags, ImGuiBackendFlags_RendererHasTexReload);
+        if (io.BackendPlatformName)
+            ImGui::TextUnformatted(io.BackendPlatformName);
+        if (io.BackendRendererName)
+            ImGui::TextUnformatted(io.BackendRendererName);
+
+        if (ImGui::BeginCombo("Font", fonts[font_index]))
+        {
+            for (int i = 0; i < IM_ARRAYSIZE(fonts); ++i)
+            {
+                if (ImGui::Selectable(fonts[i]))
+                    selected_font_index = i;
+            }
+
+            ImGui::EndCombo();
+        }
+
+        float size = font_size;
+        if (ImGui::SliderFloat("Size", &size, 6.0f, 48.0f))
+            selected_font_size = size;
+
+        //ImGuiIO& io = ImGui::GetIO();
+        ImFontAtlas* atlas = io.Fonts;
+        //if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+        ImGui::Text("Atlas texture (%dx%d pixels)", atlas->TexData.TexWidth, atlas->TexData.TexHeight);
+        {
+            ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+            ImGui::Image(atlas->GetTexID(), ImVec2((float)atlas->TexData.TexWidth, (float)atlas->TexData.TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
+            //ImGui::TreePop();
+        }
+
+        ImGui::End();
+    }
+}
+
 
 // End of Demo code
 #else

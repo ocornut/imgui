@@ -87,7 +87,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
                 pCurrentMaterial->SetAlphaMode(CIwMaterial::ALPHA_BLEND);
                 pCurrentMaterial->SetDepthWriteMode(CIwMaterial::DEPTH_WRITE_NORMAL);
                 pCurrentMaterial->SetAlphaTestMode(CIwMaterial::ALPHATEST_DISABLED);
-                pCurrentMaterial->SetTexture((CIwTexture*)pcmd->TextureId);
+                pCurrentMaterial->SetTexture((CIwTexture*)pcmd->GetTexID());
                 IwGxSetMaterial(pCurrentMaterial);
                 IwGxDrawPrims(IW_GX_TRI_LIST, (uint16*)idx_buffer, pcmd->ElemCount);
             }

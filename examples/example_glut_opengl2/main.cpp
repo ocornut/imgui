@@ -26,6 +26,8 @@ static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 void my_display_code()
 {
+    ImGui::ShowFontDemoWindow();
+
     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
     if (show_demo_window)
         ImGui::ShowDemoWindow(&show_demo_window);
@@ -66,6 +68,8 @@ void my_display_code()
 
 void glut_display_func()
 {
+    ImGui::UpdateFontDemo();
+
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL2_NewFrame();
     ImGui_ImplGLUT_NewFrame();

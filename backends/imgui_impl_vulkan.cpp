@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-XX-YY: *BREAKING CHANGE*: Vulkan: Changed ImGui_ImplVulkan_CreateFontsTexture() to ImGui_ImplVulkan_UpdateFontsTexture(), which should be called at the start of the frame when ImGui::GetIO().Fonts->IsDirty() is true to reupload the font texture. ImGuiBackendFlags_RendererHasTexReload should be set once this is implemented.
 //  2021-03-22: Vulkan: Fix mapped memory validation error when buffer sizes are not multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize.
 //  2021-02-18: Vulkan: Change blending equation to preserve alpha in output buffer.
 //  2021-01-27: Vulkan: Added support for custom function load and IMGUI_IMPL_VULKAN_NO_PROTOTYPES by using ImGui_ImplVulkan_LoadFunctions().
@@ -100,6 +101,8 @@ static VkImage                  g_FontImage = VK_NULL_HANDLE;
 static VkImageView              g_FontView = VK_NULL_HANDLE;
 static VkDeviceMemory           g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer                 g_UploadBuffer = VK_NULL_HANDLE;
+static int                      g_FontTextureWidth = 0;
+static int                      g_FontTextureHeight = 0;
 
 // Render buffers
 static ImGui_ImplVulkanH_WindowRenderBuffers    g_MainWindowRenderBuffers;
@@ -516,7 +519,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     }
 }
 
-bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
+void ImGui_ImplVulkan_UpdateFontsTexture(VkCommandBuffer command_buffer)
 {
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
     ImGuiIO& io = ImGui::GetIO();
@@ -524,148 +527,166 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    size_t upload_size = width * height * 4 * sizeof(char);
+    io.Fonts->MarkClean();
 
     VkResult err;
 
-    // Create the Image:
+    if ((!g_FontView) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
     {
-        VkImageCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        info.imageType = VK_IMAGE_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        info.extent.width = width;
-        info.extent.height = height;
-        info.extent.depth = 1;
-        info.mipLevels = 1;
-        info.arrayLayers = 1;
-        info.samples = VK_SAMPLE_COUNT_1_BIT;
-        info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        err = vkCreateImage(v->Device, &info, v->Allocator, &g_FontImage);
-        check_vk_result(err);
-        VkMemoryRequirements req;
-        vkGetImageMemoryRequirements(v->Device, g_FontImage, &req);
-        VkMemoryAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        alloc_info.allocationSize = req.size;
-        alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
-        err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &g_FontMemory);
-        check_vk_result(err);
-        err = vkBindImageMemory(v->Device, g_FontImage, g_FontMemory, 0);
-        check_vk_result(err);
+        // Either we have no texture or the size has changed, so (re-)create the texture
+
+        if (g_FontView) { vkDestroyImageView(v->Device, g_FontView, v->Allocator); g_FontView = VK_NULL_HANDLE; }
+        if (g_FontImage) { vkDestroyImage(v->Device, g_FontImage, v->Allocator); g_FontImage = VK_NULL_HANDLE; }
+        if (g_FontMemory) { vkFreeMemory(v->Device, g_FontMemory, v->Allocator); g_FontMemory = VK_NULL_HANDLE; }
+
+        // Create the Image:
+        {
+            VkImageCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            info.imageType = VK_IMAGE_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.extent.width = width;
+            info.extent.height = height;
+            info.extent.depth = 1;
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.samples = VK_SAMPLE_COUNT_1_BIT;
+            info.tiling = VK_IMAGE_TILING_OPTIMAL;
+            info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            err = vkCreateImage(v->Device, &info, v->Allocator, &g_FontImage);
+            check_vk_result(err);
+            VkMemoryRequirements req;
+            vkGetImageMemoryRequirements(v->Device, g_FontImage, &req);
+            VkMemoryAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.allocationSize = req.size;
+            alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
+            err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &g_FontMemory);
+            check_vk_result(err);
+            err = vkBindImageMemory(v->Device, g_FontImage, g_FontMemory, 0);
+            check_vk_result(err);
+        }
+
+        // Create the Image View:
+        {
+            VkImageViewCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            info.image = g_FontImage;
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            info.format = VK_FORMAT_R8G8B8A8_UNORM;
+            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            info.subresourceRange.levelCount = 1;
+            info.subresourceRange.layerCount = 1;
+            err = vkCreateImageView(v->Device, &info, v->Allocator, &g_FontView);
+            check_vk_result(err);
+        }
+
+        // Update the Descriptor Set:
+        {
+            VkDescriptorImageInfo desc_image[1] = {};
+            desc_image[0].sampler = g_FontSampler;
+            desc_image[0].imageView = g_FontView;
+            desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkWriteDescriptorSet write_desc[1] = {};
+            write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_desc[0].dstSet = g_DescriptorSet;
+            write_desc[0].descriptorCount = 1;
+            write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_desc[0].pImageInfo = desc_image;
+            vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, NULL);
+        }
+
+        // Store our identifier
+        io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontImage);
+        g_FontTextureWidth = width;
+        g_FontTextureHeight = height;
     }
 
-    // Create the Image View:
     {
-        VkImageViewCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        info.image = g_FontImage;
-        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        info.subresourceRange.levelCount = 1;
-        info.subresourceRange.layerCount = 1;
-        err = vkCreateImageView(v->Device, &info, v->Allocator, &g_FontView);
-        check_vk_result(err);
+        size_t upload_size = width * height * 4 * sizeof(char);
+
+        // Create the Upload Buffer:
+        {
+            VkBufferCreateInfo buffer_info = {};
+            buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_info.size = upload_size;
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &g_UploadBuffer);
+            check_vk_result(err);
+            VkMemoryRequirements req;
+            vkGetBufferMemoryRequirements(v->Device, g_UploadBuffer, &req);
+            g_BufferMemoryAlignment = (g_BufferMemoryAlignment > req.alignment) ? g_BufferMemoryAlignment : req.alignment;
+            VkMemoryAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            alloc_info.allocationSize = req.size;
+            alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
+            err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &g_UploadBufferMemory);
+            check_vk_result(err);
+            err = vkBindBufferMemory(v->Device, g_UploadBuffer, g_UploadBufferMemory, 0);
+            check_vk_result(err);
+        }
+
+        // Upload to Buffer:
+        {
+            char* map = NULL;
+            err = vkMapMemory(v->Device, g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map));
+            check_vk_result(err);
+            memcpy(map, pixels, upload_size); // Fast path for full image upload
+            VkMappedMemoryRange range[1] = {};
+            range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+            range[0].memory = g_UploadBufferMemory;
+            range[0].size = upload_size;
+            err = vkFlushMappedMemoryRanges(v->Device, 1, range);
+            check_vk_result(err);
+            vkUnmapMemory(v->Device, g_UploadBufferMemory);
+        }
+
+        // Copy to Image:
+        {
+            VkImageMemoryBarrier copy_barrier[1] = {};
+            copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            copy_barrier[0].image = g_FontImage;
+            copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copy_barrier[0].subresourceRange.levelCount = 1;
+            copy_barrier[0].subresourceRange.layerCount = 1;
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, copy_barrier);
+
+            VkBufferImageCopy region = {};
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.layerCount = 1;
+            region.imageOffset.x = 0;
+            region.imageOffset.y = 0;
+            region.imageExtent.width = width;
+            region.imageExtent.height = height;
+            region.imageExtent.depth = 1;
+            region.bufferOffset = 0;
+            region.bufferRowLength = width;
+            region.bufferImageHeight = height;
+            vkCmdCopyBufferToImage(command_buffer, g_UploadBuffer, g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+            VkImageMemoryBarrier use_barrier[1] = {};
+            use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            use_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            use_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            use_barrier[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            use_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            use_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            use_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            use_barrier[0].image = g_FontImage;
+            use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            use_barrier[0].subresourceRange.levelCount = 1;
+            use_barrier[0].subresourceRange.layerCount = 1;
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, use_barrier);
+        }
     }
-
-    // Update the Descriptor Set:
-    {
-        VkDescriptorImageInfo desc_image[1] = {};
-        desc_image[0].sampler = g_FontSampler;
-        desc_image[0].imageView = g_FontView;
-        desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        VkWriteDescriptorSet write_desc[1] = {};
-        write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_desc[0].dstSet = g_DescriptorSet;
-        write_desc[0].descriptorCount = 1;
-        write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_desc[0].pImageInfo = desc_image;
-        vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, NULL);
-    }
-
-    // Create the Upload Buffer:
-    {
-        VkBufferCreateInfo buffer_info = {};
-        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = upload_size;
-        buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &g_UploadBuffer);
-        check_vk_result(err);
-        VkMemoryRequirements req;
-        vkGetBufferMemoryRequirements(v->Device, g_UploadBuffer, &req);
-        g_BufferMemoryAlignment = (g_BufferMemoryAlignment > req.alignment) ? g_BufferMemoryAlignment : req.alignment;
-        VkMemoryAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        alloc_info.allocationSize = req.size;
-        alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
-        err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &g_UploadBufferMemory);
-        check_vk_result(err);
-        err = vkBindBufferMemory(v->Device, g_UploadBuffer, g_UploadBufferMemory, 0);
-        check_vk_result(err);
-    }
-
-    // Upload to Buffer:
-    {
-        char* map = NULL;
-        err = vkMapMemory(v->Device, g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map));
-        check_vk_result(err);
-        memcpy(map, pixels, upload_size);
-        VkMappedMemoryRange range[1] = {};
-        range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range[0].memory = g_UploadBufferMemory;
-        range[0].size = upload_size;
-        err = vkFlushMappedMemoryRanges(v->Device, 1, range);
-        check_vk_result(err);
-        vkUnmapMemory(v->Device, g_UploadBufferMemory);
-    }
-
-    // Copy to Image:
-    {
-        VkImageMemoryBarrier copy_barrier[1] = {};
-        copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        copy_barrier[0].image = g_FontImage;
-        copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_barrier[0].subresourceRange.levelCount = 1;
-        copy_barrier[0].subresourceRange.layerCount = 1;
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, copy_barrier);
-
-        VkBufferImageCopy region = {};
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.layerCount = 1;
-        region.imageExtent.width = width;
-        region.imageExtent.height = height;
-        region.imageExtent.depth = 1;
-        vkCmdCopyBufferToImage(command_buffer, g_UploadBuffer, g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-        VkImageMemoryBarrier use_barrier[1] = {};
-        use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        use_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        use_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        use_barrier[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        use_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        use_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        use_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        use_barrier[0].image = g_FontImage;
-        use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        use_barrier[0].subresourceRange.levelCount = 1;
-        use_barrier[0].subresourceRange.layerCount = 1;
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, use_barrier);
-    }
-
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontImage);
-
-    return true;
 }
 
 static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAllocationCallbacks* allocator)
@@ -991,6 +1012,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_vulkan";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    // Note that we explicitly do *not* set ImGuiBackendFlags_RendererHasTexReload here, because in Vulkan that requires support in the caller as well, so we leave setting it (or not) up to that code.
 
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);
     IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
