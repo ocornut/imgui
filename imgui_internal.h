@@ -55,6 +55,7 @@ Index of this file:
 #ifdef _MSC_VER
 #pragma warning (push)
 #pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
+#pragma warning (disable: 26812)// The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -492,12 +493,12 @@ inline void     ImBitArraySetBitRange(ImU32* arr, int n, int n2) // Works on ran
 }
 
 // Helper: ImBitArray class (wrapper over ImBitArray functions)
-// Store 1-bit per value. NOT CLEARED by constructor.
+// Store 1-bit per value.
 template<int BITCOUNT>
 struct IMGUI_API ImBitArray
 {
     ImU32           Storage[(BITCOUNT + 31) >> 5];
-    ImBitArray()                                { }
+    ImBitArray()                                { ClearAllBits(); }
     void            ClearAllBits()              { memset(Storage, 0, sizeof(Storage)); }
     void            SetAllBits()                { memset(Storage, 255, sizeof(Storage)); }
     bool            TestBit(int n) const        { IM_ASSERT(n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
@@ -1440,7 +1441,7 @@ struct ImGuiContext
     int                     TabFocusRequestCurrCounterTabStop;  // Tab item being requested for focus, stored as an index
     int                     TabFocusRequestNextCounterRegular;  // Stored for next frame
     int                     TabFocusRequestNextCounterTabStop;  // "
-    bool                    TabFocusPressed;                    //
+    bool                    TabFocusPressed;                    // Set in NewFrame() when user pressed Tab
 
     // Render
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)

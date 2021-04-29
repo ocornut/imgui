@@ -816,6 +816,8 @@ CODE
 #if defined(_MSC_VER) && _MSC_VER >= 1922   // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)             // operator '|': deprecated between enumerations of different types
 #endif
+#pragma warning (disable: 26451)            // Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26812)            // The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -4574,6 +4576,7 @@ static void FindHoveredWindow()
                 continue;
         }
 
+        IM_ASSERT(window != NULL); // fix C28182
         if (hovered_window == NULL)
             hovered_window = window;
         if (hovered_window_ignoring_moving_window == NULL && (!g.MovingWindow || window->RootWindow != g.MovingWindow->RootWindow))

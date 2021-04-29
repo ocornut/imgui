@@ -59,6 +59,8 @@ Index of this file:
 #if defined(_MSC_VER) && _MSC_VER >= 1922 // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)     // operator '|': deprecated between enumerations of different types
 #endif
+#pragma warning (disable: 26451)    // Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26812)    // The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -1980,13 +1982,15 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     {
         // All other types assign constant
         // We don't bother handling support for legacy operators since they are a little too crappy. Instead we will later implement a proper expression evaluator in the future.
-        sscanf(buf, format, p_data);
+        if (sscanf(buf, format, p_data) < 1)
+            return false;
     }
     else
     {
         // Small types need a 32-bit buffer to receive the result from scanf()
         int v32;
-        sscanf(buf, format, &v32);
+        if (sscanf(buf, format, &v32) < 1)
+            return false;
         if (data_type == ImGuiDataType_S8)
             *(ImS8*)p_data = (ImS8)ImClamp(v32, (int)IM_S8_MIN, (int)IM_S8_MAX);
         else if (data_type == ImGuiDataType_U8)
