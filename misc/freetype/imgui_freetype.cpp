@@ -635,6 +635,17 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             const int tx = pack_rect.x + padding;
             const int ty = pack_rect.y + padding;
 
+            // Register glyph
+            float x0 = info.OffsetX + font_off_x;
+            float y0 = info.OffsetY + font_off_y;
+            float x1 = x0 + info.Width;
+            float y1 = y0 + info.Height;
+            float u0 = (tx) / (float)atlas->TexData.TexWidth;
+            float v0 = (ty) / (float)atlas->TexData.TexHeight;
+            float u1 = (tx + info.Width) / (float)atlas->TexData.TexWidth;
+            float v1 = (ty + info.Height) / (float)atlas->TexData.TexHeight;
+            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
+
             ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
             IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
             if (src_glyph.Info.IsColored)
@@ -658,17 +669,6 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
                     for (int x = 0; x < info.Width; x++)
                         blit_dst[x] = blit_src[x];
             }
-
-            // Register glyph
-            float x0 = info.OffsetX + font_off_x;
-            float y0 = info.OffsetY + font_off_y;
-            float x1 = x0 + info.Width;
-            float y1 = y0 + info.Height;
-            float u0 = (tx) / (float)atlas->TexData.TexWidth;
-            float v0 = (ty) / (float)atlas->TexData.TexHeight;
-            float u1 = (tx + info.Width) / (float)atlas->TexData.TexWidth;
-            float v1 = (ty + info.Height) / (float)atlas->TexData.TexHeight;
-            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
         }
 
         src_tmp.Rects = NULL;
