@@ -281,16 +281,6 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
 #endif
 
     // Upload texture to graphics system
-    g_FontTexture = NULL;
-    if (g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL) < 0)
-        return false;
-    D3DLOCKED_RECT tex_locked_rect;
-    if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
-        return false;
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char*)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
-    g_FontTexture->UnlockRect(0);
-
     if ((!g_FontTexture) || (g_FontTextureWidth != width) || (g_FontTextureHeight != height))
     {
         // (Re-)create texture
