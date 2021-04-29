@@ -349,7 +349,7 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     const bool rgba_support = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
-    if (!rgba_support && io.Fonts->TexPixelsUseColors)
+    if (!rgba_support && io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
     {
         ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
         for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + (size_t)width * height; dst < dst_end; src++, dst++)
@@ -414,7 +414,7 @@ static bool ImGui_ImplDX9_UpdateFontsTexture()
 
     // Upload the dirty region
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!rgba_support && io.Fonts->TexPixelsUseColors)
+    if (!rgba_support && io.Fonts->TexData.TexFormat == ImTextureFormat_RGBA32)
         ImGui::MemFree(pixels);
 #endif
 
