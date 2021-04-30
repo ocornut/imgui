@@ -725,10 +725,10 @@ enum ImGuiItemStatusFlags_
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     , // [imgui_tests only]
-    ImGuiItemStatusFlags_Openable           = 1 << 10,  //
-    ImGuiItemStatusFlags_Opened             = 1 << 11,  //
-    ImGuiItemStatusFlags_Checkable          = 1 << 12,  //
-    ImGuiItemStatusFlags_Checked            = 1 << 13   //
+    ImGuiItemStatusFlags_Openable           = 1 << 20,  //
+    ImGuiItemStatusFlags_Opened             = 1 << 21,  //
+    ImGuiItemStatusFlags_Checkable          = 1 << 22,  //
+    ImGuiItemStatusFlags_Checked            = 1 << 23   //
 #endif
 };
 
@@ -2286,7 +2286,7 @@ namespace ImGui
     inline ImGuiItemStatusFlags GetItemStatusFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemStatusFlags; }
     inline ImGuiID          GetActiveID()   { ImGuiContext& g = *GImGui; return g.ActiveId; }
     inline ImGuiID          GetFocusID()    { ImGuiContext& g = *GImGui; return g.NavId; }
-    inline ImGuiItemFlags   GetItemsFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.ItemFlags; }
+    inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.ItemFlags; }
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetFocusID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
