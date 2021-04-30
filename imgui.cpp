@@ -9508,9 +9508,8 @@ static void ImGui::NavEndFrame()
 
 static int ImGui::FindWindowFocusIndex(ImGuiWindow* window)
 {
-    ImGuiContext& g = *GImGui;
     int order = window->FocusOrder;
-    IM_ASSERT(g.WindowsFocusOrder[order] == window);
+    IM_ASSERT(GImGui->WindowsFocusOrder[order] == window);
     return order;
 }
 
