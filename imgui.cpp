@@ -3176,7 +3176,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         return false;
 
     // Test if the item is disabled
-    if ((window->DC.ItemFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
+    if ((g.CurrentItemFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
         return false;
 
     // Special handling for calling after Begin() which represent the title bar or tab.
@@ -3202,7 +3202,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     if (g.NavDisableMouseHover)
         return false;
-    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None) || (window->DC.ItemFlags & ImGuiItemFlags_Disabled))
+    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None) || (g.CurrentItemFlags & ImGuiItemFlags_Disabled))
     {
         g.HoveredIdDisabled = true;
         return false;
@@ -3254,7 +3254,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
     ImGuiContext& g = *GImGui;
 
     // Increment counters
-    const bool is_tab_stop = (window->DC.ItemFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
+    const bool is_tab_stop = (g.CurrentItemFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
     window->DC.FocusCounterRegular++;
     if (is_tab_stop)
         window->DC.FocusCounterTabStop++;
@@ -5613,8 +5613,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse) && (style.WindowMenuButtonPosition != ImGuiDir_None);
 
     // Close & Collapse button are on the Menu NavLayer and don't default focus (unless there's nothing else on that layer)
-    const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
-    window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
+    const ImGuiItemFlags item_flags_backup = g.CurrentItemFlags;
+    g.CurrentItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
 
     // Layout buttons
@@ -5651,7 +5651,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
             *p_open = false;
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
-    window->DC.ItemFlags = item_flags_backup;
+    g.CurrentItemFlags = item_flags_backup;
 
     // Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
     // FIXME: Refactor text alignment facilities along with RenderText helpers, this is WAY too much messy code..
@@ -6297,7 +6297,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
 
     // Pull/inherit current state
-    window->DC.ItemFlags = g.ItemFlagsStack.back(); // Inherit from shared stack
+    g.CurrentItemFlags = g.ItemFlagsStack.back(); // Inherit from shared stack
     window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // Inherit from parent only // -V595
 
     PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
@@ -6539,24 +6539,22 @@ void  ImGui::PopFont()
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    ImGuiItemFlags item_flags = g.CurrentItemFlags;
     IM_ASSERT(item_flags == g.ItemFlagsStack.back());
     if (enabled)
         item_flags |= option;
     else
         item_flags &= ~option;
-    window->DC.ItemFlags = item_flags;
+    g.CurrentItemFlags = item_flags;
     g.ItemFlagsStack.push_back(item_flags);
 }
 
 void ImGui::PopItemFlag()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(g.ItemFlagsStack.Size > 1); // Too many calls to PopItemFlag() - we always leave a 0 at the bottom of the stack.
     g.ItemFlagsStack.pop_back();
-    window->DC.ItemFlags = g.ItemFlagsStack.back();
+    g.CurrentItemFlags = g.ItemFlagsStack.back();
 }
 
 // FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
@@ -8780,7 +8778,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
     //    return;
 
-    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    const ImGuiItemFlags item_flags = g.CurrentItemFlags;
     const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
 
     // Process Init Request

@@ -688,7 +688,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, id))
         return false;
 
-    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat)
+    if (g.CurrentItemFlags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
@@ -764,7 +764,7 @@ bool ImGui::ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size, ImGuiBu
     if (!ItemAdd(bb, id))
         return false;
 
-    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat)
+    if (g.CurrentItemFlags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
 
     bool hovered, held;
@@ -1099,7 +1099,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     RenderNavHighlight(total_bb, id);
     RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
     ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
-    bool mixed_value = (window->DC.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
+    bool mixed_value = (g.CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
     if (mixed_value)
     {
         // Undocumented tristate/mixed/indeterminate checkbox (#2644)
@@ -1131,11 +1131,11 @@ bool ImGui::CheckboxFlagsT(const char* label, T* flags, T flags_value)
     bool pressed;
     if (!all_on && any_on)
     {
-        ImGuiWindow* window = GetCurrentWindow();
-        ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
-        window->DC.ItemFlags |= ImGuiItemFlags_MixedValue;
+        ImGuiContext& g = *GImGui;
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
+        g.CurrentItemFlags |= ImGuiItemFlags_MixedValue;
         pressed = Checkbox(label, &all_on);
-        window->DC.ItemFlags = backup_item_flags;
+        g.CurrentItemFlags = backup_item_flags;
     }
     else
     {
@@ -1433,10 +1433,10 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
-    window->DC.ItemFlags |= ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus;
+    const ImGuiItemFlags item_flags_backup = g.CurrentItemFlags;
+    g.CurrentItemFlags |= ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus;
     bool item_add = ItemAdd(bb, id);
-    window->DC.ItemFlags = item_flags_backup;
+    g.CurrentItemFlags = item_flags_backup;
     if (!item_add)
         return false;
 
@@ -2277,7 +2277,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
     }
     if (g.ActiveId != id)
         return false;
-    if ((g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
+    if ((g.CurrentItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     switch (data_type)
@@ -2884,7 +2884,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
     IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flag!  Has the 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
 
     ImGuiContext& g = *GImGui;
-    if ((g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
+    if ((g.CurrentItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     switch (data_type)
@@ -6070,10 +6070,10 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bool item_add;
     if (flags & ImGuiSelectableFlags_Disabled)
     {
-        ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
-        window->DC.ItemFlags |= ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNavDefaultFocus;
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
+        g.CurrentItemFlags |= ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNavDefaultFocus;
         item_add = ItemAdd(bb, id);
-        window->DC.ItemFlags = backup_item_flags;
+        g.CurrentItemFlags = backup_item_flags;
     }
     else
     {
@@ -6151,7 +6151,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
+    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(g.CurrentItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
         CloseCurrentPopup();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);

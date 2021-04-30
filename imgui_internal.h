@@ -1346,6 +1346,7 @@ struct ImGuiContext
     float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
+    ImGuiItemFlags          CurrentItemFlags;                   // == g.ItemFlagsStack.back()
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
     bool                    HoveredIdAllowOverlap;
@@ -1574,6 +1575,7 @@ struct ImGuiContext
         WheelingWindow = NULL;
         WheelingWindowTimer = 0.0f;
 
+        CurrentItemFlags = ImGuiItemFlags_None;
         HoveredId = HoveredIdPreviousFrame = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdUsingMouseWheel = HoveredIdPreviousFrameUsingMouseWheel = false;
@@ -1750,7 +1752,6 @@ struct IMGUI_API ImGuiWindowTempData
 
     // Local parameters stacks
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
-    ImGuiItemFlags          ItemFlags;              // == g.ItemFlagsStack.back()
     float                   ItemWidth;              // Current item width (>0.0: width in pixels, <0.0: align xx pixels to the right of window).
     float                   TextWrapPos;            // Current text wrap pos.
     ImVector<float>         ItemWidthStack;         // Store item widths to restore (attention: .back() is not == ItemWidth)
@@ -2286,7 +2287,7 @@ namespace ImGui
     inline ImGuiItemStatusFlags GetItemStatusFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemStatusFlags; }
     inline ImGuiID          GetActiveID()   { ImGuiContext& g = *GImGui; return g.ActiveId; }
     inline ImGuiID          GetFocusID()    { ImGuiContext& g = *GImGui; return g.NavId; }
-    inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.ItemFlags; }
+    inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.CurrentItemFlags; }
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetFocusID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
