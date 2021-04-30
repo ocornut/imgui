@@ -5501,7 +5501,7 @@ static void ShowDemoWindowMisc()
             ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
             ImGui::PushAllowKeyboardFocus(false);
             ImGui::InputText("4 (tab skip)", buf, IM_ARRAYSIZE(buf));
-            //ImGui::SameLine(); HelpMarker("Use ImGui::PushAllowKeyboardFocus(bool) to disable tabbing through certain widgets.");
+            ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
             ImGui::PopAllowKeyboardFocus();
             ImGui::InputText("5", buf, IM_ARRAYSIZE(buf));
             ImGui::TreePop();
@@ -5527,6 +5527,7 @@ static void ShowDemoWindowMisc()
             if (focus_3) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 3;
+            ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
             ImGui::PopAllowKeyboardFocus();
 
             if (has_focus)

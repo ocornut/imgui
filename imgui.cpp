@@ -3257,7 +3257,11 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
     const bool is_tab_stop = (g.CurrentItemFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
     window->DC.FocusCounterRegular++;
     if (is_tab_stop)
+    {
         window->DC.FocusCounterTabStop++;
+        if (g.NavId == id)
+            g.NavIdTabCounter = window->DC.FocusCounterTabStop;
+    }
 
     // Process TAB/Shift-TAB to tab *OUT* of the currently focused item.
     // (Note that we can always TAB out of a widget that doesn't allow tabbing in)
@@ -3787,12 +3791,14 @@ void ImGui::UpdateTabFocus()
     g.TabFocusPressed = (g.NavWindow && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab));
     if (g.ActiveId == 0 && g.TabFocusPressed)
     {
-        // Note that SetKeyboardFocusHere() sets the Next fields mid-frame. To be consistent we also
-        // manipulate the Next fields even, even though they will be turned into Curr fields by the code below.
+        // - This path is only taken when no widget are active/tabbed-into yet.
+        //   Subsequent tabbing will be processed by FocusableItemRegister()
+        // - Note that SetKeyboardFocusHere() sets the Next fields mid-frame. To be consistent we also
+        //   manipulate the Next fields here even though they will be turned into Curr fields below.
         g.TabFocusRequestNextWindow = g.NavWindow;
         g.TabFocusRequestNextCounterRegular = INT_MAX;
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
-            g.TabFocusRequestNextCounterTabStop = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
+            g.TabFocusRequestNextCounterTabStop = g.NavIdTabCounter + (g.IO.KeyShift ? -1 : 0);
         else
             g.TabFocusRequestNextCounterTabStop = g.IO.KeyShift ? -1 : 0;
     }
@@ -8828,7 +8834,6 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         g.NavLayer = window->DC.NavLayerCurrent;
         g.NavFocusScopeId = window->DC.NavFocusScopeIdCurrent;
         g.NavIdIsAlive = true;
-        g.NavIdTabCounter = window->DC.FocusCounterTabStop;
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
     }
 }

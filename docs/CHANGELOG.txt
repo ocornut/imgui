@@ -47,6 +47,7 @@ Other Changes:
 - Nav: Fixed pressing Escape to leave menu layer while in a popup or child window. (#787)
 - Nav, InputText: Fixed accidental menu toggling while typing non-ascii characters using AltGR. [@rokups] (#370)
 - Nav: Fixed using SetItemDefaultFocus() on windows with _NavFlattened flag. (#787)
+- Nav: Fixed Tabbing initial activation from skipping the first item if it is tabbable through. (#787)
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
