@@ -545,9 +545,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Vertex input configuration
     WGPUVertexAttributeDescriptor attribute_binding_desc[] =
     {
-        { WGPUVertexFormat_Float2,     (uint64_t)IM_OFFSETOF(ImDrawVert, pos), 0 },
-        { WGPUVertexFormat_Float2,     (uint64_t)IM_OFFSETOF(ImDrawVert, uv),  1 },
-        { WGPUVertexFormat_UChar4Norm, (uint64_t)IM_OFFSETOF(ImDrawVert, col), 2 },
+        { WGPUVertexFormat_Float32x2, (uint64_t)IM_OFFSETOF(ImDrawVert, pos), 0 },
+        { WGPUVertexFormat_Float32x2, (uint64_t)IM_OFFSETOF(ImDrawVert, uv),  1 },
+        { WGPUVertexFormat_Unorm8x4,  (uint64_t)IM_OFFSETOF(ImDrawVert, col), 2 },
     };
 
     WGPUVertexBufferLayoutDescriptor buffer_binding_desc;
