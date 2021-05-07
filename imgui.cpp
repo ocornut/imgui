@@ -4204,7 +4204,9 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.ShrinkWidthBuffer.clear();
 
     g.Tables.Clear();
-    g.CurrentTableStack.clear();
+    for (int i = 0; i < g.TablesTempDataStack.Size; i++)
+        g.TablesTempDataStack[i].~ImGuiTableTempData();
+    g.TablesTempDataStack.clear();
     g.DrawChannelsTempMergeBuffer.clear();
 
     g.ClipboardHandlerData.clear();
