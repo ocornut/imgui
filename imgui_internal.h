@@ -2154,9 +2154,7 @@ struct ImGuiTable
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
     ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
-    ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (should move to ImGuiTableTempDataB)
-    ImGuiTableColumnSortSpecs   SortSpecsSingle;
-    ImVector<ImGuiTableColumnSortSpecs> SortSpecsMulti;     // FIXME-OPT: Using a small-vector pattern would be good.
+    ImDrawListSplitter*         DrawSplitter;               // Shortcut to TempData->DrawSplitter while in table. Isolate draw commands per columns to avoid switching clip rect constantly
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImGuiTableColumnIdx         SortSpecsCount;
     ImGuiTableColumnIdx         ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
@@ -2203,13 +2201,19 @@ struct ImGuiTable
     IMGUI_API ~ImGuiTable()     { IM_FREE(RawData); }
 };
 
-// Transient data that are only needed between BeginTable() and EndTable(), those buffers are shared.
-// Accessing those requires chasing an extra pointer so for very frequently used data we leave them in the main table structure.
-// FIXME-TABLE: more transient data could be stored here: DrawSplitter (!), SortSpecs? incoming RowData?
+// Transient data that are only needed between BeginTable() and EndTable(), those buffers are shared (1 per level of stacked table).
+// - Accessing those requires chasing an extra pointer so for very frequently used data we leave them in the main table structure.
+// - We also leave out of this structure data that tend to be particularly useful for debugging/metrics.
+// FIXME-TABLE: more transient data could be stored here: DrawSplitter, incoming RowData?
 struct ImGuiTableTempData
 {
     int                         TableIndex;                 // Index in g.Tables.Buf[] pool
+    float                       LastTimeActive;             // Last timestamp this structure was used
+
     ImVec2                      UserOuterSize;              // outer_size.x passed to BeginTable()
+    ImDrawListSplitter          DrawSplitter;
+    ImGuiTableColumnSortSpecs   SortSpecsSingle;
+    ImVector<ImGuiTableColumnSortSpecs> SortSpecsMulti;     // FIXME-OPT: Using a small-vector pattern would be good.
 
     ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
     ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
@@ -2485,6 +2489,7 @@ namespace ImGui
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
     IMGUI_API void          TableRemove(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
+    IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTableTempData* table);
     IMGUI_API void          TableGcCompactSettings();
 
     // Tables: Settings
