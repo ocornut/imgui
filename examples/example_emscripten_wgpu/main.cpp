@@ -221,7 +221,7 @@ static void main_loop(void* window)
 
     WGPUCommandBufferDescriptor cmd_buffer_desc = {};
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
-    WGPUQueue queue = wgpuDeviceGetDefaultQueue(wgpu_device);
+    WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
 }
 

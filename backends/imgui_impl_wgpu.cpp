@@ -674,7 +674,7 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     g_wgpuDevice = device;
-    g_defaultQueue = wgpuDeviceGetDefaultQueue(g_wgpuDevice);
+    g_defaultQueue = wgpuDeviceGetQueue(g_wgpuDevice);
     g_renderTargetFormat = rt_format;
     g_pFrameResources = new FrameResources[num_frames_in_flight];
     g_numFramesInFlight = num_frames_in_flight;
