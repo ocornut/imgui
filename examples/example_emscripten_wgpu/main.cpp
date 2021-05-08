@@ -147,7 +147,7 @@ static void main_loop(void* window)
         wgpu_swap_chain_height = height;
 
         WGPUSwapChainDescriptor swap_chain_desc = {};
-        swap_chain_desc.usage = WGPUTextureUsage_OutputAttachment;
+        swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
         swap_chain_desc.format = WGPUTextureFormat_RGBA8Unorm;
         swap_chain_desc.width = width;
         swap_chain_desc.height = height;
