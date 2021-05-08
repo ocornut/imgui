@@ -456,7 +456,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         tex_desc.dimension = WGPUTextureDimension_2D;
         tex_desc.size.width = width;
         tex_desc.size.height = height;
-        tex_desc.size.depth = 1;
+        tex_desc.size.depthOrArrayLayers = 1;
         tex_desc.sampleCount = 1;
         tex_desc.format = WGPUTextureFormat_RGBA8Unorm;
         tex_desc.mipLevelCount = 1;
@@ -476,13 +476,11 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
 
     // Upload texture data
     {
-        WGPUTextureCopyView dst_view = {};
+        WGPUImageCopyTexture dst_view = {};
         dst_view.texture = g_resources.FontTexture;
         dst_view.mipLevel = 0;
         dst_view.origin = { 0, 0, 0 };
-#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
         dst_view.aspect = WGPUTextureAspect_All;
-#endif
         WGPUTextureDataLayout layout = {};
         layout.offset = 0;
         layout.bytesPerRow = width * size_pp;
@@ -500,9 +498,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         sampler_desc.addressModeU = WGPUAddressMode_Repeat;
         sampler_desc.addressModeV = WGPUAddressMode_Repeat;
         sampler_desc.addressModeW = WGPUAddressMode_Repeat;
-#if !defined(__EMSCRIPTEN__) || HAS_EMSCRIPTEN_VERSION(2, 0, 14)
         sampler_desc.maxAnisotropy = 1;
-#endif
         g_resources.Sampler = wgpuDeviceCreateSampler(g_wgpuDevice, &sampler_desc);
     }
 
