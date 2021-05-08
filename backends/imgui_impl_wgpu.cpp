@@ -312,7 +312,7 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
 
     // Setup blend factor
     WGPUColor blend_color = { 0.f, 0.f, 0.f, 0.f };
-    wgpuRenderPassEncoderSetBlendColor(ctx, &blend_color);
+    wgpuRenderPassEncoderSetBlendConstant(ctx, &blend_color);
 }
 
 // Render function
