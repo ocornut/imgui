@@ -532,92 +532,73 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
         ImGui_ImplWGPU_InvalidateDeviceObjects();
 
     // Create render pipeline
-    WGPURenderPipelineDescriptor graphics_pipeline_desc = {};
-    graphics_pipeline_desc.primitiveTopology = WGPUPrimitiveTopology_TriangleList;
-    graphics_pipeline_desc.sampleCount = 1;
-    graphics_pipeline_desc.sampleMask = UINT_MAX;
+    WGPURenderPipelineDescriptor2 graphics_pipeline_desc = {};
+    graphics_pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    graphics_pipeline_desc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+    graphics_pipeline_desc.primitive.frontFace = WGPUFrontFace_CW;
+    graphics_pipeline_desc.primitive.cullMode = WGPUCullMode_None;
+    graphics_pipeline_desc.multisample.count = 1;
+    graphics_pipeline_desc.multisample.mask = UINT_MAX;
+    graphics_pipeline_desc.multisample.alphaToCoverageEnabled = false;
     graphics_pipeline_desc.layout = nullptr; // Use automatic layout generation
 
     // Create the vertex shader
     WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv) / sizeof(uint32_t));
-    graphics_pipeline_desc.vertexStage = vertex_shader_desc;
+    graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
+    graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
 
     // Vertex input configuration
-    WGPUVertexAttributeDescriptor attribute_binding_desc[] =
+    WGPUVertexAttribute attribute_desc[] =
     {
         { WGPUVertexFormat_Float32x2, (uint64_t)IM_OFFSETOF(ImDrawVert, pos), 0 },
         { WGPUVertexFormat_Float32x2, (uint64_t)IM_OFFSETOF(ImDrawVert, uv),  1 },
         { WGPUVertexFormat_Unorm8x4,  (uint64_t)IM_OFFSETOF(ImDrawVert, col), 2 },
     };
 
-    WGPUVertexBufferLayoutDescriptor buffer_binding_desc;
-    buffer_binding_desc.arrayStride = sizeof(ImDrawVert);
-    buffer_binding_desc.stepMode = WGPUInputStepMode_Vertex;
-    buffer_binding_desc.attributeCount = 3;
-    buffer_binding_desc.attributes = attribute_binding_desc;
+    WGPUVertexBufferLayout buffer_layouts[1];
+    buffer_layouts[0].arrayStride = sizeof(ImDrawVert);
+    buffer_layouts[0].stepMode = WGPUInputStepMode_Vertex;
+    buffer_layouts[0].attributeCount = 3;
+    buffer_layouts[0].attributes = attribute_desc;
 
-    WGPUVertexStateDescriptor vertex_state_desc = {};
-    vertex_state_desc.indexFormat = WGPUIndexFormat_Undefined;
-    vertex_state_desc.vertexBufferCount = 1;
-    vertex_state_desc.vertexBuffers = &buffer_binding_desc;
-
-    graphics_pipeline_desc.vertexState = &vertex_state_desc;
+    graphics_pipeline_desc.vertex.bufferCount = 1;
+    graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
     WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv) / sizeof(uint32_t));
-    graphics_pipeline_desc.fragmentStage = &pixel_shader_desc;
 
     // Create the blending setup
-    WGPUColorStateDescriptor color_state = {};
-    {
-        color_state.format = g_renderTargetFormat;
-        color_state.alphaBlend.operation = WGPUBlendOperation_Add;
-        color_state.alphaBlend.srcFactor = WGPUBlendFactor_One;
-        color_state.alphaBlend.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        color_state.colorBlend.operation = WGPUBlendOperation_Add;
-        color_state.colorBlend.srcFactor = WGPUBlendFactor_SrcAlpha;
-        color_state.colorBlend.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        color_state.writeMask = WGPUColorWriteMask_All;
+    WGPUBlendState blend_state = {};
+    blend_state.alpha.operation = WGPUBlendOperation_Add;
+    blend_state.alpha.srcFactor = WGPUBlendFactor_One;
+    blend_state.alpha.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+    blend_state.color.operation = WGPUBlendOperation_Add;
+    blend_state.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+    blend_state.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
 
-        graphics_pipeline_desc.colorStateCount = 1;
-        graphics_pipeline_desc.colorStates = &color_state;
-        graphics_pipeline_desc.alphaToCoverageEnabled = false;
-    }
+    WGPUColorTargetState color_state = {};
+    color_state.format = g_renderTargetFormat;
+    color_state.blend = &blend_state;
+    color_state.writeMask = WGPUColorWriteMask_All;
 
-    // Create the rasterizer state
-    WGPURasterizationStateDescriptor raster_desc = {};
-    {
-        raster_desc.cullMode = WGPUCullMode_None;
-        raster_desc.frontFace = WGPUFrontFace_CW;
-        raster_desc.depthBias = 0;
-        raster_desc.depthBiasClamp = 0;
-        raster_desc.depthBiasSlopeScale = 0;
-        graphics_pipeline_desc.rasterizationState = &raster_desc;
-    }
+    WGPUFragmentState fragment_state = {};
+    fragment_state.module = pixel_shader_desc.module;
+    fragment_state.entryPoint = pixel_shader_desc.entryPoint;
+    fragment_state.targetCount = 1;
+    fragment_state.targets = &color_state;
+
+    graphics_pipeline_desc.fragment = &fragment_state;
 
     // Create depth-stencil State
-    WGPUDepthStencilStateDescriptor depth_desc = {};
-    {
-        // Configure disabled state
-        depth_desc.format = WGPUTextureFormat_Undefined;
-        depth_desc.depthWriteEnabled = true;
-        depth_desc.depthCompare = WGPUCompareFunction_Always;
-        depth_desc.stencilReadMask = 0;
-        depth_desc.stencilWriteMask = 0;
-        depth_desc.stencilBack.compare = WGPUCompareFunction_Always;
-        depth_desc.stencilBack.failOp = WGPUStencilOperation_Keep;
-        depth_desc.stencilBack.depthFailOp = WGPUStencilOperation_Keep;
-        depth_desc.stencilBack.passOp = WGPUStencilOperation_Keep;
-        depth_desc.stencilFront.compare = WGPUCompareFunction_Always;
-        depth_desc.stencilFront.failOp = WGPUStencilOperation_Keep;
-        depth_desc.stencilFront.depthFailOp = WGPUStencilOperation_Keep;
-        depth_desc.stencilFront.passOp = WGPUStencilOperation_Keep;
+    WGPUDepthStencilState depth_stencil_state = {};
+    depth_stencil_state.depthBias = 0;
+    depth_stencil_state.depthBiasClamp = 0;
+    depth_stencil_state.depthBiasSlopeScale = 0;
 
-        // No depth buffer corresponds to no configuration
-        graphics_pipeline_desc.depthStencilState = NULL;
-    }
+    // Configure disabled depth-stencil state
+    graphics_pipeline_desc.depthStencil = nullptr;
 
-    g_pipelineState = wgpuDeviceCreateRenderPipeline(g_wgpuDevice, &graphics_pipeline_desc);
+    g_pipelineState = wgpuDeviceCreateRenderPipeline2(g_wgpuDevice, &graphics_pipeline_desc);
 
     ImGui_ImplWGPU_CreateFontsTexture();
     ImGui_ImplWGPU_CreateUniformBuffer();
