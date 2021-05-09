@@ -39,6 +39,8 @@ struct RenderResources
     WGPUBindGroup       CommonBindGroup;        // Resources bind-group to bind the common resources to pipeline
     ImGuiStorage        ImageBindGroups;        // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
     WGPUBindGroup       ImageBindGroup;         // Default font-resource of Dear ImGui
+    WGPUBindGroupLayout ImageBindGroupLayout;   // Cache layout used for the image bind group.
+                                                // Avoids allocating unnecessary JS objecs when working with WebASM
 };
 static RenderResources  g_resources;
 
@@ -241,6 +243,7 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
     SafeRelease(res.ImageBindGroup);
+    SafeRelease(res.ImageBindGroupLayout);
 };
 
 static void SafeRelease(FrameResources& res)
@@ -417,11 +420,9 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 }
                 else
                 {
-                    WGPUBindGroupLayout bg_layout = wgpuRenderPipelineGetBindGroupLayout(g_pipelineState, 1);
-                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layout, (WGPUTextureView)pcmd->TextureId);
+                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(g_resources.ImageBindGroupLayout, (WGPUTextureView)pcmd->TextureId);
                     g_resources.ImageBindGroups.SetVoidPtr(ImHashData(&pcmd->TextureId, sizeof(ImTextureID)), image_bind_group);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
-                    SafeRelease(bg_layout);
                 }
 
                 // Apply Scissor, Bind texture, Draw
@@ -639,12 +640,12 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], g_resources.FontTextureView);
     g_resources.ImageBindGroup = image_bind_group;
+    g_resources.ImageBindGroupLayout = bg_layouts[1];
     g_resources.ImageBindGroups.SetVoidPtr(ImHashData(&g_resources.FontTextureView, sizeof(ImTextureID)), image_bind_group);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
     SafeRelease(bg_layouts[0]);
-    SafeRelease(bg_layouts[1]);
 
     return true;
 }
@@ -684,6 +685,7 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     g_resources.CommonBindGroup = NULL;
     g_resources.ImageBindGroups.Data.reserve(100);
     g_resources.ImageBindGroup = NULL;
+    g_resources.ImageBindGroupLayout = NULL;
 
     // Create buffers with a default size (they will later be grown as needed)
     for (int i = 0; i < num_frames_in_flight; i++)
