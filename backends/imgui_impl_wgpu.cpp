@@ -336,7 +336,10 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     if (fr->VertexBuffer == NULL || fr->VertexBufferSize < draw_data->TotalVtxCount)
     {
         if (fr->VertexBuffer)
+        {
             wgpuBufferDestroy(fr->VertexBuffer);
+            wgpuBufferRelease(fr->VertexBuffer);
+        }
         SafeRelease(fr->VertexBufferHost);
         fr->VertexBufferSize = draw_data->TotalVtxCount + 5000;
 
@@ -357,7 +360,10 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     if (fr->IndexBuffer == NULL || fr->IndexBufferSize < draw_data->TotalIdxCount)
     {
         if (fr->IndexBuffer)
+        {
             wgpuBufferDestroy(fr->IndexBuffer);
+            wgpuBufferRelease(fr->IndexBuffer);
+        }
         SafeRelease(fr->IndexBufferHost);
         fr->IndexBufferSize = draw_data->TotalIdxCount + 10000;
 
