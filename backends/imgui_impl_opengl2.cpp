@@ -53,26 +53,47 @@
 #include <GL/gl.h>
 #endif
 
-// OpenGL Data
-static GLuint       g_FontTexture = 0;
+struct ImGui_ImplOpenGL2
+{
+    // OpenGL Data
+    GLuint       FontTexture;
+};
 
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
+
+    if (io.BackendRendererUserData)
+        return false;
+
+    ImGui_ImplOpenGL2* impl = (ImGui_ImplOpenGL2*)ImGui::MemAlloc(sizeof(ImGui_ImplOpenGL2));
     io.BackendRendererName = "imgui_impl_opengl2";
+    io.BackendRendererUserData = impl;
+
+    impl->FontTexture = 0;
+
     return true;
 }
 
 void    ImGui_ImplOpenGL2_Shutdown()
 {
     ImGui_ImplOpenGL2_DestroyDeviceObjects();
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2* impl = (ImGui_ImplOpenGL2*)io.BackendRendererUserData;
+    ImGui::MemFree(impl);
+    io.BackendPlatformName = NULL;
+    io.BackendPlatformUserData = NULL;
 }
 
 void    ImGui_ImplOpenGL2_NewFrame()
 {
-    if (!g_FontTexture)
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2* impl = (ImGui_ImplOpenGL2*)io.BackendRendererUserData;
+
+    if (!impl->FontTexture)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
 }
 
@@ -211,8 +232,10 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 
 bool ImGui_ImplOpenGL2_CreateFontsTexture()
 {
-    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2* impl = (ImGui_ImplOpenGL2*)io.BackendRendererUserData;
+
+    // Build texture atlas
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
@@ -220,15 +243,15 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
     // Upload texture to graphics system
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
-    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    glGenTextures(1, &impl->FontTexture);
+    glBindTexture(GL_TEXTURE_2D, impl->FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontTexture);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)impl->FontTexture);
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -238,12 +261,14 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
 
 void ImGui_ImplOpenGL2_DestroyFontsTexture()
 {
-    if (g_FontTexture)
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2* impl = (ImGui_ImplOpenGL2*)io.BackendRendererUserData;
+
+    if (impl->FontTexture)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        glDeleteTextures(1, &g_FontTexture);
+        glDeleteTextures(1, &impl->FontTexture);
         io.Fonts->SetTexID(0);
-        g_FontTexture = 0;
+        impl->FontTexture = 0;
     }
 }
 
