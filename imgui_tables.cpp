@@ -306,7 +306,7 @@ ImGuiTable* ImGui::TableFindByID(ImGuiID id)
 }
 
 // Read about "TABLE SIZING" at the top of this file.
-bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
+bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width) IMGUI_NOEXCEPT
 {
     ImGuiID id = GetID(str_id);
     return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
@@ -1196,7 +1196,7 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
     }
 }
 
-void    ImGui::EndTable()
+void    ImGui::EndTable() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;

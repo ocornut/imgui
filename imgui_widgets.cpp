@@ -1550,7 +1550,7 @@ static float CalcMaxPopupHeightFromItemCount(int items_count)
     return (g.FontSize + g.Style.ItemSpacing.y) * items_count - g.Style.ItemSpacing.y + (g.Style.WindowPadding.y * 2);
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags) IMGUI_NOEXCEPT
 {
     // Always consume the SetNextWindowSizeConstraint() call in our early return paths
     ImGuiContext& g = *GImGui;
@@ -1667,7 +1667,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     return true;
 }
 
-void ImGui::EndCombo()
+void ImGui::EndCombo() IMGUI_NOEXCEPT
 {
     EndPopup();
 }
@@ -6173,7 +6173,7 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 
 // Tip: To have a list filling the entire window width, use size.x = -FLT_MIN and pass an non-visible label e.g. "##empty"
 // Tip: If your vertical size is calculated from an item count (e.g. 10 * item_height) consider adding a fractional part to facilitate seeing scrolling boundaries (e.g. 10.25 * item_height).
-bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
+bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -6226,7 +6226,7 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 }
 #endif
 
-void ImGui::EndListBox()
+void ImGui::EndListBox() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -6544,7 +6544,7 @@ float ImGuiMenuColumns::CalcExtraSpace(float avail_w) const
 // Currently the main responsibility of this function being to setup clip-rect + horizontal layout + menu navigation layer.
 // Ideally we also want this to be responsible for claiming space out of the main window scrolling rectangle, in which case ImGuiWindowFlags_MenuBar will become unnecessary.
 // Then later the same system could be used for multiple menu-bars, scrollbars, side-bars.
-bool ImGui::BeginMenuBar()
+bool ImGui::BeginMenuBar() IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6572,7 +6572,7 @@ bool ImGui::BeginMenuBar()
     return true;
 }
 
-void ImGui::EndMenuBar()
+void ImGui::EndMenuBar() IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6651,7 +6651,7 @@ bool ImGui::BeginViewportSideBar(const char* name, ImGuiViewport* viewport_p, Im
     return is_open;
 }
 
-bool ImGui::BeginMainMenuBar()
+bool ImGui::BeginMainMenuBar() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
@@ -6672,7 +6672,7 @@ bool ImGui::BeginMainMenuBar()
     return is_open;
 }
 
-void ImGui::EndMainMenuBar()
+void ImGui::EndMainMenuBar() IMGUI_NOEXCEPT
 {
     EndMenuBar();
 
@@ -6685,7 +6685,7 @@ void ImGui::EndMainMenuBar()
     End();
 }
 
-bool ImGui::BeginMenu(const char* label, bool enabled)
+bool ImGui::BeginMenu(const char* label, bool enabled) IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6849,7 +6849,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     return menu_is_open;
 }
 
-void ImGui::EndMenu()
+void ImGui::EndMenu() IMGUI_NOEXCEPT
 {
     // Nav: When a left move request _within our child menu_ failed, close ourselves (the _parent_ menu).
     // A menu doesn't close itself because EndMenuBar() wants the catch the last Left<>Right inputs.
@@ -7008,7 +7008,7 @@ static ImGuiPtrOrIndex GetTabBarRefFromTabBar(ImGuiTabBar* tab_bar)
     return ImGuiPtrOrIndex(tab_bar);
 }
 
-bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
+bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7081,7 +7081,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     return true;
 }
 
-void    ImGui::EndTabBar()
+void    ImGui::EndTabBar() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7643,7 +7643,7 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 // - TabItemLabelAndCloseButton() [Internal]
 //-------------------------------------------------------------------------
 
-bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
+bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7667,7 +7667,7 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     return ret;
 }
 
-void    ImGui::EndTabItem()
+void    ImGui::EndTabItem() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;

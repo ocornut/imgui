@@ -2283,7 +2283,7 @@ ImGuiListClipper::~ImGuiListClipper()
 // Use case A: Begin() called from constructor with items_height<0, then called again from Step() in StepNo 1
 // Use case B: Begin() called from constructor with items_height>0
 // FIXME-LEGACY: Ideally we should remove the Begin/End functions but they are part of the legacy API we still support. This is why some of the code in Step() calling Begin() and reassign some fields, spaghetti style.
-void ImGuiListClipper::Begin(int items_count, float items_height)
+void ImGuiListClipper::Begin(int items_count, float items_height) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2301,7 +2301,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
     DisplayEnd = 0;
 }
 
-void ImGuiListClipper::End()
+void ImGuiListClipper::End() IMGUI_NOEXCEPT
 {
     if (ItemsCount < 0) // Already ended
         return;
@@ -3322,7 +3322,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 }
 
 // IM_ALLOC() == ImGui::MemAlloc()
-void* ImGui::MemAlloc(size_t size)
+void* ImGui::MemAlloc(size_t size) IMGUI_NOEXCEPT
 {
     if (ImGuiContext* ctx = GImGui)
         ctx->IO.MetricsActiveAllocations++;
@@ -3330,7 +3330,7 @@ void* ImGui::MemAlloc(size_t size)
 }
 
 // IM_FREE() == ImGui::MemFree()
-void ImGui::MemFree(void* ptr)
+void ImGui::MemFree(void* ptr) IMGUI_NOEXCEPT
 {
     if (ptr)
         if (ImGuiContext* ctx = GImGui)
@@ -5018,19 +5018,19 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     return ret;
 }
 
-bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     return BeginChildEx(str_id, window->GetID(str_id), size_arg, border, extra_flags);
 }
 
-bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
 {
     IM_ASSERT(id != 0);
     return BeginChildEx(NULL, id, size_arg, border, extra_flags);
 }
 
-void ImGui::EndChild()
+void ImGui::EndChild() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -5077,7 +5077,7 @@ void ImGui::EndChild()
 }
 
 // Helper to create a child window / scrolling region that looks like a normal widget frame.
-bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -5091,7 +5091,7 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags ext
     return ret;
 }
 
-void ImGui::EndChildFrame()
+void ImGui::EndChildFrame() IMGUI_NOEXCEPT
 {
     EndChild();
 }
@@ -5721,7 +5721,7 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
 //   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_open' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
-bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
+bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -6365,7 +6365,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     return !window->SkipItems;
 }
 
-void ImGui::End()
+void ImGui::End() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7715,7 +7715,7 @@ float ImGui::GetWindowContentRegionWidth()
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
 // Groups are currently a mishmash of functionalities which should perhaps be clarified and separated.
-void ImGui::BeginGroup()
+void ImGui::BeginGroup() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7742,7 +7742,7 @@ void ImGui::BeginGroup()
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 }
 
-void ImGui::EndGroup()
+void ImGui::EndGroup() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8009,7 +8009,7 @@ void ImGui::SetScrollHereY(float center_y_ratio)
 // [SECTION] TOOLTIPS
 //-----------------------------------------------------------------------------
 
-void ImGui::BeginTooltip()
+void ImGui::BeginTooltip() IMGUI_NOEXCEPT
 {
     BeginTooltipEx(ImGuiWindowFlags_None, ImGuiTooltipFlags_None);
 }
@@ -8046,7 +8046,7 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags toolt
     Begin(window_name, NULL, flags | extra_flags);
 }
 
-void ImGui::EndTooltip()
+void ImGui::EndTooltip() IMGUI_NOEXCEPT
 {
     IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);   // Mismatched BeginTooltip()/EndTooltip() calls
     End();
@@ -8312,7 +8312,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags)
     return is_open;
 }
 
-bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
+bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.Size <= g.BeginPopupStack.Size) // Early out for performance
@@ -8326,7 +8326,7 @@ bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
 
 // If 'p_open' is specified for a modal popup window, the popup will have a regular close button which will close the popup.
 // Note that popup visibility status is owned by Dear ImGui (and manipulated with e.g. OpenPopup) so the actual value of *p_open is meaningless here.
-bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags)
+bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8358,7 +8358,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     return is_open;
 }
 
-void ImGui::EndPopup()
+void ImGui::EndPopup() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8407,7 +8407,7 @@ void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags
 //           OpenPopup(id);
 //       return BeginPopup(id);
 //   The main difference being that this is tweaked to avoid computing the ID twice.
-bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags)
+bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (window->SkipItems)
@@ -8420,7 +8420,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flag
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_flags)
+bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
@@ -8433,7 +8433,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flags)
+bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
@@ -9771,7 +9771,7 @@ void ImGui::ClearDragDrop()
 // - We then pull and use the mouse button that was used to activate the item and use it to carry on the drag.
 // If the item has no identifier:
 // - Currently always assume left mouse button.
-bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
+bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags) IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -9885,7 +9885,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
     return false;
 }
 
-void ImGui::EndDragDropSource()
+void ImGui::EndDragDropSource() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
@@ -9971,7 +9971,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 // 1) we use LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle them.
 // 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
 // Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
-bool ImGui::BeginDragDropTarget()
+bool ImGui::BeginDragDropTarget() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.DragDropActive)
@@ -10054,7 +10054,7 @@ const ImGuiPayload* ImGui::GetDragDropPayload()
 }
 
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
-void ImGui::EndDragDropTarget()
+void ImGui::EndDragDropTarget() IMGUI_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
