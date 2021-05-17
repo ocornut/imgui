@@ -53,7 +53,6 @@
 
 #include "imgui_impl_vulkan.h"
 #include <stdio.h>
-#include <vulkan/vulkan_core.h>
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
 // [Please zero-clear before use!]
@@ -197,7 +196,7 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_devi
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetFences) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueSubmit) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR) 
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR)
 
 // Define function pointers
 #define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
