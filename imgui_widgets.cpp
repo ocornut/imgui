@@ -4081,7 +4081,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const float mouse_y = (is_multiline ? (io.MousePos.y - draw_window->DC.CursorPos.y) : (g.FontSize * 0.5f));
 
         const bool is_osx = io.ConfigMacOSXBehaviors;
-        if (select_all || (hovered && !is_osx && io.MouseDoubleClicked[0]))
+        if (select_all || (hovered && io.MouseDoubleClicked[0] && (!is_osx || is_password)))
         {
             state->SelectAll();
             state->SelectedAllMouseLock = true;
