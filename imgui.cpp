@@ -1948,12 +1948,12 @@ ImFileHandle ImFileOpen(ImStrv filename, ImStrv mode)
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
     const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), NULL, 0);
     const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), NULL, 0);
-    ImVector<ImWchar> buf;
+    ImVector<wchar_t> buf;
     buf.resize(filename_wsize + 1 + mode_wsize + 1);
-    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), (wchar_t*)&buf[0], filename_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), (wchar_t*)&buf[filename_wsize + 1], mode_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), &buf[0], filename_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), &buf[filename_wsize + 1], mode_wsize);
     buf[filename_wsize] = buf[filename_wsize + 1 + mode_wsize] = 0;
-    return ::_wfopen((const wchar_t*)&buf[0], (const wchar_t*)&buf[filename_wsize + 1]);
+    return ::_wfopen(&buf[0], &buf[filename_wsize + 1]);
 #else
     // ImStrv is not guaranteed to be zero-terminated.
     ImStrv filename_0 = ImStrdup(filename);
