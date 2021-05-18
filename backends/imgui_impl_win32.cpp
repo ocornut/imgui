@@ -18,6 +18,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <math.h> // isinf
 #include <tchar.h>
 #include <dwmapi.h>
 
@@ -384,6 +385,20 @@ void    ImGui_ImplWin32_NewFrame()
     ImGui_ImplWin32_UpdateGamepads();
 }
 
+void ImGui_ImplWin32_WaitForEvent()
+{
+    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnablePowerSavingMode))
+        return;
+
+    BOOL window_is_hidden = !IsWindowVisible(g_hWnd) || IsIconic(g_hWnd);
+    double waiting_time = window_is_hidden ? INFINITE : ImGui::GetEventWaitingTime();
+    if (waiting_time > 0.0)
+    {
+        DWORD waiting_time_ms = isinf(waiting_time) ? INFINITE : (DWORD)(1000.0 * waiting_time);
+        ::MsgWaitForMultipleObjectsEx(0, NULL, waiting_time_ms, QS_ALLINPUT, MWMO_INPUTAVAILABLE|MWMO_ALERTABLE);
+    }
+}
+
 // Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.
 #ifndef WM_MOUSEHWHEEL
 #define WM_MOUSEHWHEEL 0x020E
@@ -410,6 +425,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
 
     ImGuiIO& io = ImGui::GetIO();
+
+    io.FrameCountSinceLastInput = 0;
+
     switch (msg)
     {
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:

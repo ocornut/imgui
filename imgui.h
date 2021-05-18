@@ -285,6 +285,15 @@ namespace ImGui
     IMGUI_API void          Render();                                   // ends the Dear ImGui frame, finalize the draw data. You can then get call GetDrawData().
     IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render.
 
+    // Power saving mode
+    // Disabled by default; enabled by setting ImGuiConfigFlags_EnablePowerSavingMode in ImGuiIO.ConfigFlags.
+    // Requires platform binding support.
+    // When enabled and supported, ImGui will wait for input events before starting new frames, instead of continuously polling, thereby helping to reduce power consumption.
+    // It will wake up periodically if a widget is animating (e.g. blinking InputText cursor). You can control this maximum wake-up timeout using SetMaxWaitBeforeNextFrame(), for example when your application is playing an animation.
+    // This wake-up/timeout event is disabled, and ImGui will wait for an input event, as long as the window is known, for sure, to be hidden. This depends on the platform binding, and does not work in all cases (e.g. if the window is in a logical/system 'visible' state, but currently sitting behind another, non-transparent window).
+    IMGUI_API double        GetEventWaitingTime();                      // in seconds; note that it can be zero (in which case you might want to peek/poll) or infinity (in which case you may have to use a non-timeout event waiting method).
+    IMGUI_API void          SetMaxWaitBeforeNextFrame(double time);     // in seconds
+
     // Demo, Debug, Information
     IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create Demo window. demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
     IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // create Metrics/Debugger window. display Dear ImGui internals: windows, draw commands, various internal state, etc.
@@ -1440,6 +1449,8 @@ enum ImGuiConfigFlags_
     // [BETA] Docking
     ImGuiConfigFlags_DockingEnable          = 1 << 6,   // Docking enable flags.
 
+    ImGuiConfigFlags_EnablePowerSavingMode  = 1 << 7,   // Instruct imgui to help save power by not starting new frames when there are no user inputs or if the window is known not to be visible (both features require support in the platform binding). Use SetMaxWaitBeforeNextFrame() to let your application request a maximum wait before the next frame, which helps enforce a minimum frame rate (e.g. when playing an animation).
+
     // [BETA] Viewports
     // When using viewports it is recommended that your default value for ImGuiCol_WindowBg is opaque (Alpha=1.0) so transition to a viewport won't be noticeable.
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiBackendFlags_PlatformHasViewports + ImGuiBackendFlags_RendererHasViewports set by the respective backends)
@@ -1962,6 +1973,7 @@ struct ImGuiIO
     float       PenPressure;                    // Touch/Pen pressure (0.0f to 1.0f, should be >0.0f only when MouseDown[0] == true). Helper storage currently unused by Dear ImGui.
     ImWchar16   InputQueueSurrogate;            // For AddInputCharacterUTF16
     ImVector<ImWchar> InputQueueCharacters;     // Queue of _characters_ input (obtained by platform backend). Fill using AddInputCharacter() helper.
+    int         FrameCountSinceLastInput;       // How many frames since the last input event; a value of 0 indicates that the current frame was triggered by an input.
 
     IMGUI_API   ImGuiIO();
 };

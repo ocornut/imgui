@@ -1594,6 +1594,9 @@ struct ImGuiContext
     ImGuiPlatformMonitor    FallbackMonitor;                    // Virtual monitor used as fallback if backend doesn't provide monitor information.
     int                     ViewportFrontMostStampCount;        // Every time the front-most window changes, we stamp its viewport with an incrementing counter
 
+    // Power saving mode
+    double                  MaxWaitBeforeNextFrame;             // How much time, in seconds, can we wait for events before starting the next frame
+
     // Gamepad/keyboard Navigation
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
     ImGuiID                 NavId;                              // Focused item for navigation
