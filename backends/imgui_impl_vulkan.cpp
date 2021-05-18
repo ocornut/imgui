@@ -186,7 +186,18 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_devi
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetSwapchainImagesKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkMapMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUnmapMemory) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets)
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceSupportKHR) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkWaitForFences) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBeginRenderPass) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdEndRenderPass) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueuePresentKHR) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkBeginCommandBuffer) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkEndCommandBuffer) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetFences) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueSubmit) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR)
 
 // Define function pointers
 #define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
