@@ -305,9 +305,9 @@ CODE
              }
              else
              {
-                 // The texture for the draw call is specified by pcmd->TextureId.
+                 // The texture for the draw call is specified by pcmd->GetTexID().
                  // The vast majority of draw calls will use the Dear ImGui texture atlas, which value you have set yourself during initialization.
-                 MyEngineBindTexture((MyTexture*)pcmd->TextureId);
+                 MyEngineBindTexture((MyTexture*)pcmd->GetTexID());
 
                  // We are using scissoring to clip some objects. All low-level graphics API should support it.
                  // - If your engine doesn't support scissoring yet, you may ignore this at first. You will get some small glitches
@@ -386,6 +386,9 @@ CODE
  - 2021/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 
 
+ - 2021/05/19 (1.83) - backends: obsoleted direct access to ImDrawCmd::TextureId in favor of calling ImDrawCmd::GetTexID().
+                        - if you are using official backends from the source tree: you have nothing to do.
+                        - if you have copied old backend code or using your own: change access to draw_cmd->TextureId to draw_cmd->GetTexID().
  - 2021/03/12 (1.82) - upgraded ImDrawList::AddRect(), AddRectFilled(), PathRect() to use ImDrawFlags instead of ImDrawCornersFlags.
                         - ImDrawCornerFlags_TopLeft  -> use ImDrawFlags_RoundCornersTopLeft
                         - ImDrawCornerFlags_BotRight -> use ImDrawFlags_RoundCornersBottomRight
@@ -4051,7 +4054,8 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
     g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
-    g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
+    g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_ARRAYSIZE(g.FramerateSecPerFrame));
+    g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)g.FramerateSecPerFrameCount)) : FLT_MAX;
 
     UpdateViewportsNewFrame();
 
@@ -4195,6 +4199,9 @@ void ImGui::NewFrame()
     for (int i = 0; i < g.TablesLastTimeActive.Size; i++)
         if (g.TablesLastTimeActive[i] >= 0.0f && g.TablesLastTimeActive[i] < memory_compact_start_time)
             TableGcCompactTransientBuffers(g.Tables.GetByIndex(i));
+    for (int i = 0; i < g.TablesTempDataStack.Size; i++)
+        if (g.TablesTempDataStack[i].LastTimeActive >= 0.0f && g.TablesTempDataStack[i].LastTimeActive < memory_compact_start_time)
+            TableGcCompactTransientBuffers(&g.TablesTempDataStack[i]);
     if (g.GcCompactAll)
         GcCompactTransientMiscBuffers();
     g.GcCompactAll = false;
@@ -4359,7 +4366,9 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.ShrinkWidthBuffer.clear();
 
     g.Tables.Clear();
-    g.CurrentTableStack.clear();
+    for (int i = 0; i < g.TablesTempDataStack.Size; i++)
+        g.TablesTempDataStack[i].~ImGuiTableTempData();
+    g.TablesTempDataStack.clear();
     g.DrawChannelsTempMergeBuffer.clear();
 
     g.ClipboardHandlerData.clear();

@@ -147,7 +147,7 @@ static void main_loop(void* window)
         wgpu_swap_chain_height = height;
 
         WGPUSwapChainDescriptor swap_chain_desc = {};
-        swap_chain_desc.usage = WGPUTextureUsage_OutputAttachment;
+        swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
         swap_chain_desc.format = WGPUTextureFormat_RGBA8Unorm;
         swap_chain_desc.width = width;
         swap_chain_desc.height = height;
@@ -202,11 +202,11 @@ static void main_loop(void* window)
     // Rendering
     ImGui::Render();
 
-    WGPURenderPassColorAttachmentDescriptor color_attachments = {};
+    WGPURenderPassColorAttachment color_attachments = {};
     color_attachments.loadOp = WGPULoadOp_Clear;
     color_attachments.storeOp = WGPUStoreOp_Store;
     color_attachments.clearColor = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-    color_attachments.attachment = wgpuSwapChainGetCurrentTextureView(wgpu_swap_chain);
+    color_attachments.view = wgpuSwapChainGetCurrentTextureView(wgpu_swap_chain);
     WGPURenderPassDescriptor render_pass_desc = {};
     render_pass_desc.colorAttachmentCount = 1;
     render_pass_desc.colorAttachments = &color_attachments;
@@ -221,7 +221,7 @@ static void main_loop(void* window)
 
     WGPUCommandBufferDescriptor cmd_buffer_desc = {};
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
-    WGPUQueue queue = wgpuDeviceGetDefaultQueue(wgpu_device);
+    WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
 }
 

@@ -105,6 +105,13 @@ Other changes:
 
 Breaking Changes:
 
+- Backends: Obsoleted direct access to ImDrawCmd::TextureId in favor of calling ImDrawCmd::GetTexID(). (#3761) [@thedmd]
+  - If you are using official backends from the source tree: you have nothing to do.
+  - If you copied old backend code or using your own: change access to draw_cmd->TextureId to draw_cmd->GetTexID().
+  Why are we doing this?
+  - This change will be required in the future when adding support for incremental texture atlas updates.
+  - Please note this won't break soon, but we are making the change ahead of time.
+
 Other Changes:
 
 - Scrolling: Fix scroll tracking with e.g. SetScrollHereX/Y() when WindowPadding < ItemSpacing.
@@ -118,6 +125,7 @@ Other Changes:
 - Nav: Fixed Tabbing initial activation from skipping the first item if it is tabbable through. (#787)
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
+- Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
   frame and then immediately standling still (would only affect automation/bots). [@rokups]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
@@ -126,9 +134,15 @@ Other Changes:
 - ColorEdit4: Alpha default to 255 (instead of 0) when omitted in hex input. (#3973) [@squadack]
 - InputText: Do not filter private unicode codepoints (e.g. icons) when pasted from clipboard. (#4005) [@dougbinks]
 - InputText: Align caret/cursor to pixel coordinates. (#4080) [@elvissteinjr]
+- InputText: Fixed CTRL+Arrow or OSX double-click leaking the presence of spaces when ImGuiInputTextFlags_Password
+  is used. (#4155, #4156) [@michael-swan]
 - LabelText: Fixed clipping of multi-line value text when label is single-line. (#4004)
 - LabelText: Fixed vertical alignment of single-line value text when label is multi-line. (#4004)
 - Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
+- Tweak computation of io.Framerate so it is less biased toward high-values in the first 120 frames. (#4138)
+- Optimization: Disabling some of MSVC most aggressive Debug runtime checks for some simple/low-level functions
+  (e.g. ImVec2, ImVector) leading to a 10-20% increase of performances with MSVC "default" Debug settings.
+- ImDrawList: Add and use SSE-enabled ImRsqrt() in place of 1.0f / ImSqrt(). (#4091) [@wolfpld]
 - ImDrawList: Fixed/improved thickness of thick strokes with sharp angles. (#4053, #3366, #2964, #2868, #2518, #2183)
   Effectively introduced a regression in 1.67 (Jan 2019), and a fix in 1.70 (Apr 2019) but the fix wasn't actually on
   par with original version. Now incorporating the correct revert.
@@ -145,8 +159,10 @@ Other Changes:
   non-default states. (#4063)
 - Backends: DirectX10, DirectX11: fixed a crash when backing/restoring state if nothing is bound when
   entering the rendering function. (#4045) [@Nemirtingas]
+- Backends: GLFW: Adding bound check in KeyCallback because GLFW appears to send -1 on some setups. [#4124]
 - Backends: Vulkan: Fix mapped memory Vulkan validation error when buffer sizes are not multiple of
   VkPhysicalDeviceLimits::nonCoherentAtomSize. (#3957) [@AgentX1994]
+- Backends: WebGPU: Update to latest specs (Chrome Canary 92 and Emscripten 2.0.20). (#4116, #3632) [@bfierz, @Kangz]
 - Backends: OpenGL3: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5. (#3998, #2366, #2186) [@s7jones]
 - Examples: OpenGL: Add OpenGL ES 2.0 support to modern GL examples. (#2837, #3951) [@lethal-guitar, @hinxx]
 - Examples: Vulkan: Rebuild swapchain on VK_SUBOPTIMAL_KHR. (#3881)

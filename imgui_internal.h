@@ -51,6 +51,12 @@ Index of this file:
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 
+// Enable SSE intrinsics if available
+#if defined __SSE__ || defined __x86_64__ || defined _M_X64
+#define IMGUI_ENABLE_SSE
+#include <immintrin.h>
+#endif
+
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (push)
@@ -128,10 +134,11 @@ struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiTable;                  // Storage for a table
 struct ImGuiTableColumn;            // Storage for one column of a table
+struct ImGuiTableTempData;          // Temporary storage for one table (one per table in the stack), shared between tables.
 struct ImGuiTableSettings;          // Storage for a table .ini settings
 struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
 struct ImGuiWindow;                 // Storage for one window
-struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
+struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
@@ -338,6 +345,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, cons
 // We are keeping those disabled by default so they don't leak in user space, to allow user enabling implicit cast operators between ImVec2 and their own types (using IM_VEC2_CLASS_EXTRA etc.)
 // We unfortunately don't have a unary- operator for ImVec2 because this would needs to be defined inside the class itself.
 #ifdef IMGUI_DEFINE_MATH_OPERATORS
+IM_MSVC_RUNTIME_CHECKS_OFF
 static inline ImVec2 operator*(const ImVec2& lhs, const float rhs)              { return ImVec2(lhs.x * rhs, lhs.y * rhs); }
 static inline ImVec2 operator/(const ImVec2& lhs, const float rhs)              { return ImVec2(lhs.x / rhs, lhs.y / rhs); }
 static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
@@ -353,6 +361,7 @@ static inline ImVec2& operator/=(ImVec2& lhs, const ImVec2& rhs)                
 static inline ImVec4 operator+(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w); }
 static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w); }
 static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w); }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 #endif
 
 // Helpers: File System
@@ -378,6 +387,7 @@ IMGUI_API ImU64             ImFileWrite(const void* data, ImU64 size, ImU64 coun
 IMGUI_API void*             ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 
 // Helpers: Maths
+IM_MSVC_RUNTIME_CHECKS_OFF
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
 #ifndef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #define ImFabs(X)           fabsf(X)
@@ -399,6 +409,12 @@ static inline float  ImAbs(float x)             { return fabsf(x); }
 static inline double ImAbs(double x)            { return fabs(x); }
 static inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : ((x > 0.0f) ? 1.0f : 0.0f); } // Sign operator - returns -1, 0 or 1 based on sign of argument
 static inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : ((x > 0.0) ? 1.0 : 0.0); }
+#ifdef IMGUI_ENABLE_SSE
+static inline float  ImRsqrt(float x)           { return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); }
+#else
+static inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
+#endif
+static inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
 #endif
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
 // (Exceptionally using templates here but we could also redefine them for those types)
@@ -419,7 +435,7 @@ static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)          
 static inline float  ImSaturate(float f)                                        { return (f < 0.0f) ? 0.0f : (f > 1.0f) ? 1.0f : f; }
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return (lhs.x * lhs.x) + (lhs.y * lhs.y); }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return (lhs.x * lhs.x) + (lhs.y * lhs.y) + (lhs.z * lhs.z) + (lhs.w * lhs.w); }
-static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = (lhs.x * lhs.x) + (lhs.y * lhs.y); if (d > 0.0f) return 1.0f / ImSqrt(d); return fail_value; }
+static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = (lhs.x * lhs.x) + (lhs.y * lhs.y); if (d > 0.0f) return ImRsqrt(d); return fail_value; }
 static inline float  ImFloor(float f)                                           { return (float)(int)(f); }
 static inline float  ImFloorSigned(float f)                                     { return (float)((f >= 0 || (int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2((float)(int)(v.x), (float)(int)(v.y)); }
@@ -428,6 +444,7 @@ static inline float  ImDot(const ImVec2& a, const ImVec2& b)                    
 static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
 static inline float  ImLinearSweep(float current, float target, float speed)    { if (current < target) return ImMin(current + speed, target); if (current > target) return ImMax(current - speed, target); return current; }
 static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helpers: Geometry
 IMGUI_API ImVec2     ImBezierCubicCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float t);
@@ -443,6 +460,7 @@ IMGUI_API ImGuiDir   ImGetDirQuadrantFromDelta(float dx, float dy);
 
 // Helper: ImVec1 (1D vector)
 // (this odd construct is used to facilitate the transition between 1D and 2D, and the maintenance of some branches/patches)
+IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImVec1
 {
     float   x;
@@ -496,6 +514,7 @@ struct IMGUI_API ImRect
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
     ImVec4      ToVec4() const                      { return ImVec4(Min.x, Min.y, Max.x, Max.y); }
 };
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helper: ImBitArray
 inline bool     ImBitArrayTestBit(const ImU32* arr, int n)      { ImU32 mask = (ImU32)1 << (n & 31); return (arr[n >> 5] & mask) != 0; }
@@ -1022,7 +1041,7 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    ImGuiInputTextFlags     UserFlags;              // Temporarily set while we call user's callback
+    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags
     ImGuiInputTextCallback  UserCallback;           // "
     void*                   UserCallbackData;       // "
 
@@ -1675,8 +1694,9 @@ struct ImGuiContext
 
     // Table
     ImGuiTable*                     CurrentTable;
+    int                             CurrentTableStackIdx;
     ImPool<ImGuiTable>              Tables;
-    ImVector<ImGuiPtrOrIndex>       CurrentTableStack;
+    ImVector<ImGuiTableTempData>    TablesTempDataStack;
     ImVector<float>                 TablesLastTimeActive;       // Last used timestamp of each tables (SOA, for efficient GC)
     ImVector<ImDrawChannel>         DrawChannelsTempMergeBuffer;
 
@@ -1748,6 +1768,7 @@ struct ImGuiContext
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
     int                     FramerateSecPerFrameIdx;
+    int                     FramerateSecPerFrameCount;
     float                   FramerateSecPerFrameAccum;
     int                     WantCaptureMouseNextFrame;          // Explicit capture via CaptureKeyboardFromApp()/CaptureMouseFromApp() sets those flags
     int                     WantCaptureKeyboardNextFrame;
@@ -1866,6 +1887,7 @@ struct ImGuiContext
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
         CurrentTable = NULL;
+        CurrentTableStackIdx = -1;
         CurrentTabBar = NULL;
 
         LastValidMousePos = ImVec2(0.0f, 0.0f);
@@ -1903,7 +1925,7 @@ struct ImGuiContext
         DebugItemPickerBreakId = 0;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
-        FramerateSecPerFrameIdx = 0;
+        FramerateSecPerFrameIdx = FramerateSecPerFrameCount = 0;
         FramerateSecPerFrameAccum = 0.0f;
         WantCaptureMouseNextFrame = WantCaptureKeyboardNextFrame = WantTextInputNextFrame = -1;
         memset(TempBuffer, 0, sizeof(TempBuffer));
@@ -2289,12 +2311,13 @@ struct ImGuiTableCellData
     ImGuiTableColumnIdx         Column;     // Column number
 };
 
-// FIXME-TABLE: transient data could be stored in a per-stacked table structure: DrawSplitter, SortSpecs, incoming RowData
+// FIXME-TABLE: more transient data could be stored in a per-stacked table structure: DrawSplitter, SortSpecs, incoming RowData
 struct ImGuiTable
 {
     ImGuiID                     ID;
     ImGuiTableFlags             Flags;
     void*                       RawData;                    // Single allocation to hold Columns[], DisplayOrderToIndex[] and RowCellData[]
+    ImGuiTableTempData*         TempData;                   // Transient data while table is active. Point within g.CurrentTableStack[]
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImGuiTableColumnIdx> DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
@@ -2346,22 +2369,11 @@ struct ImGuiTable
     ImRect                      Bg0ClipRectForDrawCmd;      // Actual ImDrawCmd clip rect for BG0/1 channel. This tends to be == OuterWindow->ClipRect at BeginTable() because output in BG0/BG1 is cpu-clipped
     ImRect                      Bg2ClipRectForDrawCmd;      // Actual ImDrawCmd clip rect for BG2 channel. This tends to be a correct, tight-fit, because output to BG2 are done by widgets relying on regular ClipRect.
     ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
-    ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
-    ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
     ImRect                      HostBackupInnerClipRect;    // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
-    ImVec2                      HostBackupPrevLineSize;     // Backup of InnerWindow->DC.PrevLineSize at the end of BeginTable()
-    ImVec2                      HostBackupCurrLineSize;     // Backup of InnerWindow->DC.CurrLineSize at the end of BeginTable()
-    ImVec2                      HostBackupCursorMaxPos;     // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
-    ImVec2                      UserOuterSize;              // outer_size.x passed to BeginTable()
-    ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
-    float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
-    int                         HostBackupItemWidthStackSize;// Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
     ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
-    ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (FIXME: could be stored outside, worst case we need 1 splitter per recursing table)
-    ImGuiTableColumnSortSpecs   SortSpecsSingle;
-    ImVector<ImGuiTableColumnSortSpecs> SortSpecsMulti;     // FIXME-OPT: Using a small-vector pattern would work be good.
+    ImDrawListSplitter*         DrawSplitter;               // Shortcut to TempData->DrawSplitter while in table. Isolate draw commands per columns to avoid switching clip rect constantly
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImGuiTableColumnIdx         SortSpecsCount;
     ImGuiTableColumnIdx         ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
@@ -2406,6 +2418,32 @@ struct ImGuiTable
 
     IMGUI_API ImGuiTable()      { memset(this, 0, sizeof(*this)); LastFrameActive = -1; }
     IMGUI_API ~ImGuiTable()     { IM_FREE(RawData); }
+};
+
+// Transient data that are only needed between BeginTable() and EndTable(), those buffers are shared (1 per level of stacked table).
+// - Accessing those requires chasing an extra pointer so for very frequently used data we leave them in the main table structure.
+// - We also leave out of this structure data that tend to be particularly useful for debugging/metrics.
+// FIXME-TABLE: more transient data could be stored here: DrawSplitter, incoming RowData?
+struct ImGuiTableTempData
+{
+    int                         TableIndex;                 // Index in g.Tables.Buf[] pool
+    float                       LastTimeActive;             // Last timestamp this structure was used
+
+    ImVec2                      UserOuterSize;              // outer_size.x passed to BeginTable()
+    ImDrawListSplitter          DrawSplitter;
+    ImGuiTableColumnSortSpecs   SortSpecsSingle;
+    ImVector<ImGuiTableColumnSortSpecs> SortSpecsMulti;     // FIXME-OPT: Using a small-vector pattern would be good.
+
+    ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
+    ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
+    ImVec2                      HostBackupPrevLineSize;     // Backup of InnerWindow->DC.PrevLineSize at the end of BeginTable()
+    ImVec2                      HostBackupCurrLineSize;     // Backup of InnerWindow->DC.CurrLineSize at the end of BeginTable()
+    ImVec2                      HostBackupCursorMaxPos;     // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
+    ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
+    float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
+    int                         HostBackupItemWidthStackSize;//Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
+
+    IMGUI_API ImGuiTableTempData() { memset(this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };
 
 // sizeof() ~ 12
@@ -2725,6 +2763,7 @@ namespace ImGui
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
     IMGUI_API void          TableRemove(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
+    IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTableTempData* table);
     IMGUI_API void          TableGcCompactSettings();
 
     // Tables: Settings

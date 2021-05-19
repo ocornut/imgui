@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-05-19: Renderer: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
@@ -87,7 +88,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
                 pCurrentMaterial->SetAlphaMode(CIwMaterial::ALPHA_BLEND);
                 pCurrentMaterial->SetDepthWriteMode(CIwMaterial::DEPTH_WRITE_NORMAL);
                 pCurrentMaterial->SetAlphaTestMode(CIwMaterial::ALPHATEST_DISABLED);
-                pCurrentMaterial->SetTexture((CIwTexture*)pcmd->TextureId);
+                pCurrentMaterial->SetTexture((CIwTexture*)pcmd->GetTexID());
                 IwGxSetMaterial(pCurrentMaterial);
                 IwGxDrawPrims(IW_GX_TRI_LIST, (uint16*)idx_buffer, pcmd->ElemCount);
             }

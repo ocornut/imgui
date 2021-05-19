@@ -135,15 +135,18 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
         g_PrevUserCallbackKey(window, key, scancode, action, mods);
 
     ImGuiIO& io = ImGui::GetIO();
-    if (action == GLFW_PRESS)
+    if (key >= 0 && key < IM_ARRAYSIZE(io.KeysDown))
     {
-        io.KeysDown[key] = true;
-        g_KeyOwnerWindows[key] = window;
-    }
-    if (action == GLFW_RELEASE)
-    {
-        io.KeysDown[key] = false;
-        g_KeyOwnerWindows[key] = NULL;
+        if (action == GLFW_PRESS)
+        {
+            io.KeysDown[key] = true;
+            g_KeyOwnerWindows[key] = window;
+        }
+        if (action == GLFW_RELEASE)
+        {
+            io.KeysDown[key] = false;
+            g_KeyOwnerWindows[key] = NULL;
+        }
     }
 
     // Modifiers are not reliable across systems

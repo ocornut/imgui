@@ -80,7 +80,7 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
             if((AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER)
             || (AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_UNKNOWN))
             {
-                io.MouseDown[0] = (event_action == AMOTION_EVENT_ACTION_DOWN) ? true : false;
+                io.MouseDown[0] = (event_action == AMOTION_EVENT_ACTION_DOWN);
                 io.MousePos = ImVec2(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
             }
             break;
@@ -88,9 +88,9 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
             {
                 int32_t button_state = AMotionEvent_getButtonState(input_event);
-                io.MouseDown[0] = (button_state & AMOTION_EVENT_BUTTON_PRIMARY) ? true : false;
-                io.MouseDown[1] = (button_state & AMOTION_EVENT_BUTTON_SECONDARY) ? true : false;
-                io.MouseDown[2] = (button_state & AMOTION_EVENT_BUTTON_TERTIARY) ? true : false;
+                io.MouseDown[0] = ((button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
+                io.MouseDown[1] = ((button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
+                io.MouseDown[2] = ((button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
             }
             break;
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
