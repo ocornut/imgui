@@ -35,10 +35,10 @@
 //#define IMGUI_DISABLE_DEMO_WINDOWS                        // Disable demo windows: ShowDemoWindow()/ShowStyleEditor() will be empty. Not recommended.
 //#define IMGUI_DISABLE_METRICS_WINDOW                      // Disable metrics/debugger window: ShowMetricsWindow() will be empty.
 
-//---- If you are using modern C++ and need to mark functions as not throwing exceptions, for performance.
-//#if __cplusplus >= 201103L
-//#define IMGUI_NOEXCEPT noexcept
-//#endif
+//---- Tell >= C++11 compilers functions do not throw exceptions.
+#if __cplusplus >= 201103L
+#define IM_NOEXCEPT noexcept
+#endif
 
 //---- Don't implement some functions to reduce linkage requirements.
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS   // [Win32] Don't implement default clipboard handler. Won't use and link with OpenClipboard/GetClipboardData/CloseClipboard etc. (user32.lib/.a, kernel32.lib/.a)

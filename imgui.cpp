@@ -872,63 +872,63 @@ static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 2.00f;    // Lock 
 // [SECTION] FORWARD DECLARATIONS
 //-------------------------------------------------------------------------
 
-static void             SetCurrentWindow(ImGuiWindow* window) IMGUI_NOEXCEPT;
-static void             FindHoveredWindow() IMGUI_NOEXCEPT;
-static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags) IMGUI_NOEXCEPT;
-static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window) IMGUI_NOEXCEPT;
+static void             SetCurrentWindow(ImGuiWindow* window) IM_NOEXCEPT;
+static void             FindHoveredWindow() IM_NOEXCEPT;
+static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags) IM_NOEXCEPT;
+static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window) IM_NOEXCEPT;
 
-static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list) IMGUI_NOEXCEPT;
-static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window) IMGUI_NOEXCEPT;
+static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list) IM_NOEXCEPT;
+static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window) IM_NOEXCEPT;
 
 // Settings
-static void             WindowSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*) IMGUI_NOEXCEPT;
-static void*            WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) IMGUI_NOEXCEPT;
-static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) IMGUI_NOEXCEPT;
-static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*) IMGUI_NOEXCEPT;
-static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf) IMGUI_NOEXCEPT;
+static void             WindowSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*) IM_NOEXCEPT;
+static void*            WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) IM_NOEXCEPT;
+static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) IM_NOEXCEPT;
+static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*) IM_NOEXCEPT;
+static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf) IM_NOEXCEPT;
 
 // Platform Dependents default implementation for IO functions
-static const char*      GetClipboardTextFn_DefaultImpl(void* user_data) IMGUI_NOEXCEPT;
-static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text) IMGUI_NOEXCEPT;
-static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y) IMGUI_NOEXCEPT;
+static const char*      GetClipboardTextFn_DefaultImpl(void* user_data) IM_NOEXCEPT;
+static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text) IM_NOEXCEPT;
+static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y) IM_NOEXCEPT;
 
 namespace ImGui
 {
 // Navigation
-static void             NavUpdate() IMGUI_NOEXCEPT;
-static void             NavUpdateWindowing() IMGUI_NOEXCEPT;
-static void             NavUpdateWindowingOverlay() IMGUI_NOEXCEPT;
-static void             NavUpdateMoveResult() IMGUI_NOEXCEPT;
-static void             NavUpdateInitResult() IMGUI_NOEXCEPT;
-static float            NavUpdatePageUpPageDown() IMGUI_NOEXCEPT;
-static inline void      NavUpdateAnyRequestFlag() IMGUI_NOEXCEPT;
-static void             NavEndFrame() IMGUI_NOEXCEPT;
-static bool             NavScoreItem(ImGuiNavItemData* result, ImRect cand) IMGUI_NOEXCEPT;
-static void             NavApplyItemToResult(ImGuiNavItemData* result, ImGuiWindow* window, ImGuiID id, const ImRect& nav_bb_rel) IMGUI_NOEXCEPT;
-static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, ImGuiID id) IMGUI_NOEXCEPT;
-static ImVec2           NavCalcPreferredRefPos() IMGUI_NOEXCEPT;
-static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window) IMGUI_NOEXCEPT;
-static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window) IMGUI_NOEXCEPT;
-static void             NavRestoreLayer(ImGuiNavLayer layer) IMGUI_NOEXCEPT;
-static int              FindWindowFocusIndex(ImGuiWindow* window) IMGUI_NOEXCEPT;
+static void             NavUpdate() IM_NOEXCEPT;
+static void             NavUpdateWindowing() IM_NOEXCEPT;
+static void             NavUpdateWindowingOverlay() IM_NOEXCEPT;
+static void             NavUpdateMoveResult() IM_NOEXCEPT;
+static void             NavUpdateInitResult() IM_NOEXCEPT;
+static float            NavUpdatePageUpPageDown() IM_NOEXCEPT;
+static inline void      NavUpdateAnyRequestFlag() IM_NOEXCEPT;
+static void             NavEndFrame() IM_NOEXCEPT;
+static bool             NavScoreItem(ImGuiNavItemData* result, ImRect cand) IM_NOEXCEPT;
+static void             NavApplyItemToResult(ImGuiNavItemData* result, ImGuiWindow* window, ImGuiID id, const ImRect& nav_bb_rel) IM_NOEXCEPT;
+static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, ImGuiID id) IM_NOEXCEPT;
+static ImVec2           NavCalcPreferredRefPos() IM_NOEXCEPT;
+static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window) IM_NOEXCEPT;
+static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window) IM_NOEXCEPT;
+static void             NavRestoreLayer(ImGuiNavLayer layer) IM_NOEXCEPT;
+static int              FindWindowFocusIndex(ImGuiWindow* window) IM_NOEXCEPT;
 
 // Error Checking
-static void             ErrorCheckNewFrameSanityChecks() IMGUI_NOEXCEPT;
-static void             ErrorCheckEndFrameSanityChecks() IMGUI_NOEXCEPT;
+static void             ErrorCheckNewFrameSanityChecks() IM_NOEXCEPT;
+static void             ErrorCheckEndFrameSanityChecks() IM_NOEXCEPT;
 
 // Misc
-static void             UpdateSettings() IMGUI_NOEXCEPT;
-static void             UpdateMouseInputs() IMGUI_NOEXCEPT;
-static void             UpdateMouseWheel() IMGUI_NOEXCEPT;
-static void             UpdateTabFocus() IMGUI_NOEXCEPT;
-static void             UpdateDebugToolItemPicker() IMGUI_NOEXCEPT;
-static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect) IMGUI_NOEXCEPT;
-static void             RenderWindowOuterBorders(ImGuiWindow* window) IMGUI_NOEXCEPT;
-static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size) IMGUI_NOEXCEPT;
-static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open) IMGUI_NOEXCEPT;
+static void             UpdateSettings() IM_NOEXCEPT;
+static void             UpdateMouseInputs() IM_NOEXCEPT;
+static void             UpdateMouseWheel() IM_NOEXCEPT;
+static void             UpdateTabFocus() IM_NOEXCEPT;
+static void             UpdateDebugToolItemPicker() IM_NOEXCEPT;
+static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect) IM_NOEXCEPT;
+static void             RenderWindowOuterBorders(ImGuiWindow* window) IM_NOEXCEPT;
+static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size) IM_NOEXCEPT;
+static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open) IM_NOEXCEPT;
 
 // Viewports
-static void             UpdateViewportsNewFrame() IMGUI_NOEXCEPT;
+static void             UpdateViewportsNewFrame() IM_NOEXCEPT;
 
 }
 
@@ -964,11 +964,11 @@ ImGuiContext*   GImGui = NULL;
 // - You probably don't want to modify that mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
 // - DLL users: read comments above.
 #ifndef IMGUI_DISABLE_DEFAULT_ALLOCATORS
-static void*   MallocWrapper(size_t size, void* user_data) IMGUI_NOEXCEPT  { IM_UNUSED(user_data); return malloc(size); }
-static void    FreeWrapper(void* ptr, void* user_data)     IMGUI_NOEXCEPT  { IM_UNUSED(user_data); free(ptr); }
+static void*   MallocWrapper(size_t size, void* user_data) IM_NOEXCEPT  { IM_UNUSED(user_data); return malloc(size); }
+static void    FreeWrapper(void* ptr, void* user_data)     IM_NOEXCEPT  { IM_UNUSED(user_data); free(ptr); }
 #else
-static void*   MallocWrapper(size_t size, void* user_data) IMGUI_NOEXCEPT  { IM_UNUSED(user_data); IM_UNUSED(size); IM_ASSERT(0); return NULL; }
-static void    FreeWrapper(void* ptr, void* user_data)     IMGUI_NOEXCEPT  { IM_UNUSED(user_data); IM_UNUSED(ptr); IM_ASSERT(0); }
+static void*   MallocWrapper(size_t size, void* user_data) IM_NOEXCEPT  { IM_UNUSED(user_data); IM_UNUSED(size); IM_ASSERT(0); return NULL; }
+static void    FreeWrapper(void* ptr, void* user_data)     IM_NOEXCEPT  { IM_UNUSED(user_data); IM_UNUSED(ptr); IM_ASSERT(0); }
 #endif
 static ImGuiMemAllocFunc    GImAllocatorAllocFunc = MallocWrapper;
 static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
@@ -978,7 +978,7 @@ static void*                GImAllocatorUserData = NULL;
 // [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 //-----------------------------------------------------------------------------
 
-ImGuiStyle::ImGuiStyle() IMGUI_NOEXCEPT
+ImGuiStyle::ImGuiStyle() IM_NOEXCEPT
 {
     Alpha                   = 1.0f;             // Global alpha applies to everything in ImGui
     WindowPadding           = ImVec2(8,8);      // Padding within a window
@@ -1026,7 +1026,7 @@ ImGuiStyle::ImGuiStyle() IMGUI_NOEXCEPT
 
 // To scale your entire UI (e.g. if you want your app to use High DPI or generally be DPI aware) you may use this helper function. Scaling the fonts is done separately and is up to you.
 // Important: This operation is lossy because we round all sizes to integer. If you need to change your scale multiples, call this over a freshly initialized ImGuiStyle structure rather than scaling multiple times.
-void ImGuiStyle::ScaleAllSizes(float scale_factor) IMGUI_NOEXCEPT
+void ImGuiStyle::ScaleAllSizes(float scale_factor) IM_NOEXCEPT
 {
     WindowPadding = ImFloor(WindowPadding * scale_factor);
     WindowRounding = ImFloor(WindowRounding * scale_factor);
@@ -1053,7 +1053,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor) IMGUI_NOEXCEPT
     MouseCursorScale = ImFloor(MouseCursorScale * scale_factor);
 }
 
-ImGuiIO::ImGuiIO() IMGUI_NOEXCEPT
+ImGuiIO::ImGuiIO() IM_NOEXCEPT
 {
     // Most fields are initialized with zero
     memset(this, 0, sizeof(*this));
@@ -1114,7 +1114,7 @@ ImGuiIO::ImGuiIO() IMGUI_NOEXCEPT
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
-void ImGuiIO::AddInputCharacter(unsigned int c) IMGUI_NOEXCEPT
+void ImGuiIO::AddInputCharacter(unsigned int c) IM_NOEXCEPT
 {
     if (c != 0)
         InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
@@ -1122,7 +1122,7 @@ void ImGuiIO::AddInputCharacter(unsigned int c) IMGUI_NOEXCEPT
 
 // UTF16 strings use surrogate pairs to encode codepoints >= 0x10000, so
 // we should save the high surrogate.
-void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c) IMGUI_NOEXCEPT
+void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c) IM_NOEXCEPT
 {
     if (c == 0 && InputQueueSurrogate == 0)
         return;
@@ -1156,7 +1156,7 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c) IMGUI_NOEXCEPT
     InputQueueCharacters.push_back(cp);
 }
 
-void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars) IMGUI_NOEXCEPT
+void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars) IM_NOEXCEPT
 {
     while (*utf8_chars != 0)
     {
@@ -1167,7 +1167,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars) IMGUI_NOEXCEPT
     }
 }
 
-void ImGuiIO::ClearInputCharacters() IMGUI_NOEXCEPT
+void ImGuiIO::ClearInputCharacters() IM_NOEXCEPT
 {
     InputQueueCharacters.resize(0);
 }
@@ -1176,7 +1176,7 @@ void ImGuiIO::ClearInputCharacters() IMGUI_NOEXCEPT
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
 
-ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments) IMGUI_NOEXCEPT
+ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments) IM_NOEXCEPT
 {
     IM_ASSERT(num_segments > 0); // Use ImBezierCubicClosestPointCasteljau()
     ImVec2 p_last = p1;
@@ -1199,7 +1199,7 @@ ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec
 }
 
 // Closely mimics PathBezierToCasteljau() in imgui_draw.cpp
-static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level) IMGUI_NOEXCEPT
+static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level) IM_NOEXCEPT
 {
     float dx = x4 - x1;
     float dy = y4 - y1;
@@ -1234,7 +1234,7 @@ static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_cl
 
 // tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationTol
 // Because those ImXXX functions are lower-level than ImGui:: we cannot access this value automatically.
-ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol) IMGUI_NOEXCEPT
+ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol) IM_NOEXCEPT
 {
     IM_ASSERT(tess_tol > 0.0f);
     ImVec2 p_last = p1;
@@ -1244,7 +1244,7 @@ ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, co
     return p_closest;
 }
 
-ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p) IMGUI_NOEXCEPT
+ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p) IM_NOEXCEPT
 {
     ImVec2 ap = p - a;
     ImVec2 ab_dir = b - a;
@@ -1257,7 +1257,7 @@ ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p) IMG
     return a + ab_dir * dot / ab_len_sqr;
 }
 
-bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p) IMGUI_NOEXCEPT
+bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p) IM_NOEXCEPT
 {
     bool b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0f;
     bool b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0f;
@@ -1265,7 +1265,7 @@ bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, 
     return ((b1 == b2) && (b2 == b3));
 }
 
-void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w) IMGUI_NOEXCEPT
+void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w) IM_NOEXCEPT
 {
     ImVec2 v0 = b - a;
     ImVec2 v1 = c - a;
@@ -1276,7 +1276,7 @@ void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2&
     out_u = 1.0f - out_v - out_w;
 }
 
-ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p) IMGUI_NOEXCEPT
+ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p) IM_NOEXCEPT
 {
     ImVec2 proj_ab = ImLineClosestPoint(a, b, p);
     ImVec2 proj_bc = ImLineClosestPoint(b, c, p);
@@ -1297,21 +1297,21 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 //-----------------------------------------------------------------------------
 
 // Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
-int ImStricmp(const char* str1, const char* str2) IMGUI_NOEXCEPT
+int ImStricmp(const char* str1, const char* str2) IM_NOEXCEPT
 {
     int d;
     while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; }
     return d;
 }
 
-int ImStrnicmp(const char* str1, const char* str2, size_t count) IMGUI_NOEXCEPT
+int ImStrnicmp(const char* str1, const char* str2, size_t count) IM_NOEXCEPT
 {
     int d = 0;
     while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
     return d;
 }
 
-void ImStrncpy(char* dst, const char* src, size_t count) IMGUI_NOEXCEPT
+void ImStrncpy(char* dst, const char* src, size_t count) IM_NOEXCEPT
 {
     if (count < 1)
         return;
@@ -1320,14 +1320,14 @@ void ImStrncpy(char* dst, const char* src, size_t count) IMGUI_NOEXCEPT
     dst[count - 1] = 0;
 }
 
-char* ImStrdup(const char* str) IMGUI_NOEXCEPT
+char* ImStrdup(const char* str) IM_NOEXCEPT
 {
     size_t len = strlen(str);
     void* buf = IM_ALLOC(len + 1);
     return (char*)memcpy(buf, (const void*)str, len + 1);
 }
 
-char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src) IMGUI_NOEXCEPT
+char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src) IM_NOEXCEPT
 {
     size_t dst_buf_size = p_dst_size ? *p_dst_size : strlen(dst) + 1;
     size_t src_size = strlen(src) + 1;
@@ -1341,13 +1341,13 @@ char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src) IMGUI_NOEXCEPT
     return (char*)memcpy(dst, (const void*)src, src_size);
 }
 
-const char* ImStrchrRange(const char* str, const char* str_end, char c) IMGUI_NOEXCEPT
+const char* ImStrchrRange(const char* str, const char* str_end, char c) IM_NOEXCEPT
 {
     const char* p = (const char*)memchr(str, (int)c, str_end - str);
     return p;
 }
 
-int ImStrlenW(const ImWchar* str) IMGUI_NOEXCEPT
+int ImStrlenW(const ImWchar* str) IM_NOEXCEPT
 {
     //return (int)wcslen((const wchar_t*)str);  // FIXME-OPT: Could use this when wchar_t are 16-bit
     int n = 0;
@@ -1356,20 +1356,20 @@ int ImStrlenW(const ImWchar* str) IMGUI_NOEXCEPT
 }
 
 // Find end-of-line. Return pointer will point to either first \n, either str_end.
-const char* ImStreolRange(const char* str, const char* str_end) IMGUI_NOEXCEPT
+const char* ImStreolRange(const char* str, const char* str_end) IM_NOEXCEPT
 {
     const char* p = (const char*)memchr(str, '\n', str_end - str);
     return p ? p : str_end;
 }
 
-const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) IMGUI_NOEXCEPT // find beginning-of-line
+const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) IM_NOEXCEPT // find beginning-of-line
 {
     while (buf_mid_line > buf_begin && buf_mid_line[-1] != '\n')
         buf_mid_line--;
     return buf_mid_line;
 }
 
-const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end) IMGUI_NOEXCEPT
+const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end) IM_NOEXCEPT
 {
     if (!needle_end)
         needle_end = needle + strlen(needle);
@@ -1392,7 +1392,7 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
 }
 
 // Trim str by offsetting contents when there's leading data + writing a \0 at the trailing position. We use this in situation where the cost is negligible.
-void ImStrTrimBlanks(char* buf) IMGUI_NOEXCEPT
+void ImStrTrimBlanks(char* buf) IM_NOEXCEPT
 {
     char* p = buf;
     while (p[0] == ' ' || p[0] == '\t')     // Leading blanks
@@ -1407,7 +1407,7 @@ void ImStrTrimBlanks(char* buf) IMGUI_NOEXCEPT
     buf[p - p_start] = 0;                   // Zero terminate
 }
 
-const char* ImStrSkipBlank(const char* str) IMGUI_NOEXCEPT
+const char* ImStrSkipBlank(const char* str) IM_NOEXCEPT
 {
     while (str[0] == ' ' || str[0] == '\t')
         str++;
@@ -1432,7 +1432,7 @@ const char* ImStrSkipBlank(const char* str) IMGUI_NOEXCEPT
 #define vsnprintf _vsnprintf
 #endif
 
-int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IMGUI_NOEXCEPT
+int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IM_NOEXCEPT
 {
     va_list args;
     va_start(args, fmt);
@@ -1450,7 +1450,7 @@ int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IMGUI_NOEXC
     return w;
 }
 
-int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args) IMGUI_NOEXCEPT
+int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args) IM_NOEXCEPT
 {
 #ifdef IMGUI_USE_STB_SPRINTF
     int w = stbsp_vsnprintf(buf, (int)buf_size, fmt, args);
@@ -1492,7 +1492,7 @@ static const ImU32 GCrc32LookupTable[256] =
 // Known size hash
 // It is ok to call ImHashData on a string with known length but the ### operator won't be supported.
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed) IMGUI_NOEXCEPT
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed) IM_NOEXCEPT
 {
     ImU32 crc = ~seed;
     const unsigned char* data = (const unsigned char*)data_p;
@@ -1508,7 +1508,7 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed) IMGUI_NOEXC
 // - If we reach ### in the string we discard the hash so far and reset to the seed.
 // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller/faster (measured ~10% diff in Debug build)
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed) IMGUI_NOEXCEPT
+ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed) IM_NOEXCEPT
 {
     seed = ~seed;
     ImU32 crc = seed;
@@ -1543,7 +1543,7 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed) IMGUI_NOEXCE
 // Default file functions
 #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 
-ImFileHandle ImFileOpen(const char* filename, const char* mode) IMGUI_NOEXCEPT
+ImFileHandle ImFileOpen(const char* filename, const char* mode) IM_NOEXCEPT
 {
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
@@ -1561,16 +1561,16 @@ ImFileHandle ImFileOpen(const char* filename, const char* mode) IMGUI_NOEXCEPT
 }
 
 // We should in theory be using fseeko()/ftello() with off_t and _fseeki64()/_ftelli64() with __int64, waiting for the PR that does that in a very portable pre-C++11 zero-warnings way.
-bool    ImFileClose(ImFileHandle f)   IMGUI_NOEXCEPT   { return fclose(f) == 0; }
-ImU64   ImFileGetSize(ImFileHandle f) IMGUI_NOEXCEPT   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? (ImU64)sz : (ImU64)-1; }
-ImU64   ImFileRead(void* data, ImU64 sz, ImU64 count, ImFileHandle f) IMGUI_NOEXCEPT           { return fread(data, (size_t)sz, (size_t)count, f); }
-ImU64   ImFileWrite(const void* data, ImU64 sz, ImU64 count, ImFileHandle f) IMGUI_NOEXCEPT    { return fwrite(data, (size_t)sz, (size_t)count, f); }
+bool    ImFileClose(ImFileHandle f)   IM_NOEXCEPT   { return fclose(f) == 0; }
+ImU64   ImFileGetSize(ImFileHandle f) IM_NOEXCEPT   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? (ImU64)sz : (ImU64)-1; }
+ImU64   ImFileRead(void* data, ImU64 sz, ImU64 count, ImFileHandle f) IM_NOEXCEPT           { return fread(data, (size_t)sz, (size_t)count, f); }
+ImU64   ImFileWrite(const void* data, ImU64 sz, ImU64 count, ImFileHandle f) IM_NOEXCEPT    { return fwrite(data, (size_t)sz, (size_t)count, f); }
 #endif // #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 
 // Helper: Load file content into memory
 // Memory allocated with IM_ALLOC(), must be freed by user using IM_FREE() == ImGui::MemFree()
 // This can't really be used with "rt" because fseek size won't match read size.
-void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size, int padding_bytes) IMGUI_NOEXCEPT
+void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size, int padding_bytes) IM_NOEXCEPT
 {
     IM_ASSERT(filename && mode);
     if (out_file_size)
@@ -1616,7 +1616,7 @@ void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_f
 // Convert UTF-8 to 32-bit character, process single character input.
 // A nearly-branchless UTF-8 decoder, based on work of Christopher Wellons (https://github.com/skeeto/branchless-utf8).
 // We handle UTF-8 decoding error by skipping forward.
-int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end) IMGUI_NOEXCEPT
+int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end) IM_NOEXCEPT
 {
     static const char lengths[32] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0 };
     static const int masks[]  = { 0x00, 0x7f, 0x1f, 0x0f, 0x07 };
@@ -1668,7 +1668,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     return wanted;
 }
 
-int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining) IMGUI_NOEXCEPT
+int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining) IM_NOEXCEPT
 {
     ImWchar* buf_out = buf;
     ImWchar* buf_end = buf + buf_size;
@@ -1686,7 +1686,7 @@ int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const cha
     return (int)(buf_out - buf);
 }
 
-int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end) IMGUI_NOEXCEPT
+int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end) IM_NOEXCEPT
 {
     int char_count = 0;
     while ((!in_text_end || in_text < in_text_end) && *in_text)
@@ -1701,7 +1701,7 @@ int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end) IMGUI
 }
 
 // Based on stb_to_utf8() from github.com/nothings/stb/
-static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c) IMGUI_NOEXCEPT
+static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c) IM_NOEXCEPT
 {
     if (c < 0x80)
     {
@@ -1737,13 +1737,13 @@ static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c) IMGU
 }
 
 // Not optimal but we very rarely use this function.
-int ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end) IMGUI_NOEXCEPT
+int ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end) IM_NOEXCEPT
 {
     unsigned int unused = 0;
     return ImTextCharFromUtf8(&unused, in_text, in_text_end);
 }
 
-static inline int ImTextCountUtf8BytesFromChar(unsigned int c) IMGUI_NOEXCEPT
+static inline int ImTextCountUtf8BytesFromChar(unsigned int c) IM_NOEXCEPT
 {
     if (c < 0x80) return 1;
     if (c < 0x800) return 2;
@@ -1752,7 +1752,7 @@ static inline int ImTextCountUtf8BytesFromChar(unsigned int c) IMGUI_NOEXCEPT
     return 3;
 }
 
-int ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end) IMGUI_NOEXCEPT
+int ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end) IM_NOEXCEPT
 {
     char* buf_out = buf;
     const char* buf_end = buf + buf_size;
@@ -1768,7 +1768,7 @@ int ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWch
     return (int)(buf_out - buf);
 }
 
-int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end) IMGUI_NOEXCEPT
+int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end) IM_NOEXCEPT
 {
     int bytes_count = 0;
     while ((!in_text_end || in_text < in_text_end) && *in_text)
@@ -1787,7 +1787,7 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 // Note: The Convert functions are early design which are not consistent with other API.
 //-----------------------------------------------------------------------------
 
-IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b) IMGUI_NOEXCEPT
+IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b) IM_NOEXCEPT
 {
     float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
     int r = ImLerp((int)(col_a >> IM_COL32_R_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
@@ -1796,7 +1796,7 @@ IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b) IMGUI_NOEXCEPT
     return IM_COL32(r, g, b, 0xFF);
 }
 
-ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in) IMGUI_NOEXCEPT
+ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in) IM_NOEXCEPT
 {
     float s = 1.0f / 255.0f;
     return ImVec4(
@@ -1806,7 +1806,7 @@ ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in) IMGUI_NOEXCEPT
         ((in >> IM_COL32_A_SHIFT) & 0xFF) * s);
 }
 
-ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in) IMGUI_NOEXCEPT
+ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in) IM_NOEXCEPT
 {
     ImU32 out;
     out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x)) << IM_COL32_R_SHIFT;
@@ -1818,7 +1818,7 @@ ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in) IMGUI_NOEXCEPT
 
 // Convert rgb floats ([0-1],[0-1],[0-1]) to hsv floats ([0-1],[0-1],[0-1]), from Foley & van Dam p592
 // Optimized http://lolengine.net/blog/2013/01/13/fast-rgb-to-hsv
-void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v) IMGUI_NOEXCEPT
+void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v) IM_NOEXCEPT
 {
     float K = 0.f;
     if (g < b)
@@ -1840,7 +1840,7 @@ void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float&
 
 // Convert hsv floats ([0-1],[0-1],[0-1]) to rgb floats ([0-1],[0-1],[0-1]), from Foley & van Dam p593
 // also http://en.wikipedia.org/wiki/HSL_and_HSV
-void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b) IMGUI_NOEXCEPT
+void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b) IM_NOEXCEPT
 {
     if (s == 0.0f)
     {
@@ -1873,7 +1873,7 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
 //-----------------------------------------------------------------------------
 
 // std::lower_bound but without the bullshit
-static ImGuiStorage::ImGuiStoragePair* LowerBound(ImVector<ImGuiStorage::ImGuiStoragePair>& data, ImGuiID key) IMGUI_NOEXCEPT
+static ImGuiStorage::ImGuiStoragePair* LowerBound(ImVector<ImGuiStorage::ImGuiStoragePair>& data, ImGuiID key) IM_NOEXCEPT
 {
     ImGuiStorage::ImGuiStoragePair* first = data.Data;
     ImGuiStorage::ImGuiStoragePair* last = data.Data + data.Size;
@@ -1896,7 +1896,7 @@ static ImGuiStorage::ImGuiStoragePair* LowerBound(ImVector<ImGuiStorage::ImGuiSt
 }
 
 // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
-void ImGuiStorage::BuildSortByKey() IMGUI_NOEXCEPT
+void ImGuiStorage::BuildSortByKey() IM_NOEXCEPT
 {
     struct StaticFunc
     {
@@ -1912,7 +1912,7 @@ void ImGuiStorage::BuildSortByKey() IMGUI_NOEXCEPT
         ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairCompareByID);
 }
 
-int ImGuiStorage::GetInt(ImGuiID key, int default_val) const IMGUI_NOEXCEPT
+int ImGuiStorage::GetInt(ImGuiID key, int default_val) const IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
@@ -1920,12 +1920,12 @@ int ImGuiStorage::GetInt(ImGuiID key, int default_val) const IMGUI_NOEXCEPT
     return it->val_i;
 }
 
-bool ImGuiStorage::GetBool(ImGuiID key, bool default_val) const IMGUI_NOEXCEPT
+bool ImGuiStorage::GetBool(ImGuiID key, bool default_val) const IM_NOEXCEPT
 {
     return GetInt(key, default_val ? 1 : 0) != 0;
 }
 
-float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const IMGUI_NOEXCEPT
+float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
@@ -1933,7 +1933,7 @@ float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const IMGUI_NOEXCEP
     return it->val_f;
 }
 
-void* ImGuiStorage::GetVoidPtr(ImGuiID key) const IMGUI_NOEXCEPT
+void* ImGuiStorage::GetVoidPtr(ImGuiID key) const IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
@@ -1942,7 +1942,7 @@ void* ImGuiStorage::GetVoidPtr(ImGuiID key) const IMGUI_NOEXCEPT
 }
 
 // References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
-int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val) IMGUI_NOEXCEPT
+int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1950,12 +1950,12 @@ int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val) IMGUI_NOEXCEPT
     return &it->val_i;
 }
 
-bool* ImGuiStorage::GetBoolRef(ImGuiID key, bool default_val) IMGUI_NOEXCEPT
+bool* ImGuiStorage::GetBoolRef(ImGuiID key, bool default_val) IM_NOEXCEPT
 {
     return (bool*)GetIntRef(key, default_val ? 1 : 0);
 }
 
-float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val) IMGUI_NOEXCEPT
+float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1963,7 +1963,7 @@ float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val) IMGUI_NOEXCEPT
     return &it->val_f;
 }
 
-void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val) IMGUI_NOEXCEPT
+void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1972,7 +1972,7 @@ void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val) IMGUI_NOEXCEP
 }
 
 // FIXME-OPT: Need a way to reuse the result of lower_bound when doing GetInt()/SetInt() - not too bad because it only happens on explicit interaction (maximum one a frame)
-void ImGuiStorage::SetInt(ImGuiID key, int val) IMGUI_NOEXCEPT
+void ImGuiStorage::SetInt(ImGuiID key, int val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1983,12 +1983,12 @@ void ImGuiStorage::SetInt(ImGuiID key, int val) IMGUI_NOEXCEPT
     it->val_i = val;
 }
 
-void ImGuiStorage::SetBool(ImGuiID key, bool val) IMGUI_NOEXCEPT
+void ImGuiStorage::SetBool(ImGuiID key, bool val) IM_NOEXCEPT
 {
     SetInt(key, val ? 1 : 0);
 }
 
-void ImGuiStorage::SetFloat(ImGuiID key, float val) IMGUI_NOEXCEPT
+void ImGuiStorage::SetFloat(ImGuiID key, float val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1999,7 +1999,7 @@ void ImGuiStorage::SetFloat(ImGuiID key, float val) IMGUI_NOEXCEPT
     it->val_f = val;
 }
 
-void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val) IMGUI_NOEXCEPT
+void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val) IM_NOEXCEPT
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -2010,7 +2010,7 @@ void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val) IMGUI_NOEXCEPT
     it->val_p = val;
 }
 
-void ImGuiStorage::SetAllInt(int v) IMGUI_NOEXCEPT
+void ImGuiStorage::SetAllInt(int v) IM_NOEXCEPT
 {
     for (int i = 0; i < Data.Size; i++)
         Data[i].val_i = v;
@@ -2021,7 +2021,7 @@ void ImGuiStorage::SetAllInt(int v) IMGUI_NOEXCEPT
 //-----------------------------------------------------------------------------
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) IMGUI_NOEXCEPT
+ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) IM_NOEXCEPT
 {
     if (default_filter)
     {
@@ -2035,7 +2035,7 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) IMGUI_NOEXCEPT
     }
 }
 
-bool ImGuiTextFilter::Draw(const char* label, float width) IMGUI_NOEXCEPT
+bool ImGuiTextFilter::Draw(const char* label, float width) IM_NOEXCEPT
 {
     if (width != 0.0f)
         ImGui::SetNextItemWidth(width);
@@ -2045,7 +2045,7 @@ bool ImGuiTextFilter::Draw(const char* label, float width) IMGUI_NOEXCEPT
     return value_changed;
 }
 
-void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const IMGUI_NOEXCEPT
+void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const IM_NOEXCEPT
 {
     out->resize(0);
     const char* wb = b;
@@ -2063,7 +2063,7 @@ void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRa
         out->push_back(ImGuiTextRange(wb, we));
 }
 
-void ImGuiTextFilter::Build() IMGUI_NOEXCEPT
+void ImGuiTextFilter::Build() IM_NOEXCEPT
 {
     Filters.resize(0);
     ImGuiTextRange input_range(InputBuf, InputBuf + strlen(InputBuf));
@@ -2084,7 +2084,7 @@ void ImGuiTextFilter::Build() IMGUI_NOEXCEPT
     }
 }
 
-bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const IMGUI_NOEXCEPT
+bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const IM_NOEXCEPT
 {
     if (Filters.empty())
         return true;
@@ -2134,7 +2134,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const I
 
 char ImGuiTextBuffer::EmptyString[1] = { 0 };
 
-void ImGuiTextBuffer::append(const char* str, const char* str_end) IMGUI_NOEXCEPT
+void ImGuiTextBuffer::append(const char* str, const char* str_end) IM_NOEXCEPT
 {
     int len = str_end ? (int)(str_end - str) : (int)strlen(str);
 
@@ -2152,7 +2152,7 @@ void ImGuiTextBuffer::append(const char* str, const char* str_end) IMGUI_NOEXCEP
     Buf[write_off - 1 + len] = 0;
 }
 
-void ImGuiTextBuffer::appendf(const char* fmt, ...) IMGUI_NOEXCEPT
+void ImGuiTextBuffer::appendf(const char* fmt, ...) IM_NOEXCEPT
 {
     va_list args;
     va_start(args, fmt);
@@ -2161,7 +2161,7 @@ void ImGuiTextBuffer::appendf(const char* fmt, ...) IMGUI_NOEXCEPT
 }
 
 // Helper: Text buffer for logging/accumulating text
-void ImGuiTextBuffer::appendfv(const char* fmt, va_list args) IMGUI_NOEXCEPT
+void ImGuiTextBuffer::appendfv(const char* fmt, va_list args) IM_NOEXCEPT
 {
     va_list args_copy;
     va_copy(args_copy, args);
@@ -2195,7 +2195,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args) IMGUI_NOEXCEPT
 
 // FIXME-TABLE: This prevents us from using ImGuiListClipper _inside_ a table cell.
 // The problem we have is that without a Begin/End scheme for rows using the clipper is ambiguous.
-static bool GetSkipItemForListClipping() IMGUI_NOEXCEPT
+static bool GetSkipItemForListClipping() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return (g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems);
@@ -2204,7 +2204,7 @@ static bool GetSkipItemForListClipping() IMGUI_NOEXCEPT
 // Helper to calculate coarse clipping of large list of evenly sized items.
 // NB: Prefer using the ImGuiListClipper higher-level helper if you can! Read comments and instructions there on how those use this sort of pattern.
 // NB: 'items_count' is only used to clamp the result, if you don't know your count you can use INT_MAX
-void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end) IMGUI_NOEXCEPT
+void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2244,7 +2244,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     *out_items_display_end = end;
 }
 
-static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height) IMGUI_NOEXCEPT
+static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height) IM_NOEXCEPT
 {
     // Set cursor position and a few other things so that SetScrollHereY() and Columns() can work when seeking cursor.
     // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue.
@@ -2269,13 +2269,13 @@ static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height) IMG
     }
 }
 
-ImGuiListClipper::ImGuiListClipper() IMGUI_NOEXCEPT
+ImGuiListClipper::ImGuiListClipper() IM_NOEXCEPT
 {
     memset(this, 0, sizeof(*this));
     ItemsCount = -1;
 }
 
-ImGuiListClipper::~ImGuiListClipper() IMGUI_NOEXCEPT
+ImGuiListClipper::~ImGuiListClipper() IM_NOEXCEPT
 {
     IM_ASSERT(ItemsCount == -1 && "Forgot to call End(), or to Step() until false?");
 }
@@ -2283,7 +2283,7 @@ ImGuiListClipper::~ImGuiListClipper() IMGUI_NOEXCEPT
 // Use case A: Begin() called from constructor with items_height<0, then called again from Step() in StepNo 1
 // Use case B: Begin() called from constructor with items_height>0
 // FIXME-LEGACY: Ideally we should remove the Begin/End functions but they are part of the legacy API we still support. This is why some of the code in Step() calling Begin() and reassign some fields, spaghetti style.
-void ImGuiListClipper::Begin(int items_count, float items_height) IMGUI_NOEXCEPT
+void ImGuiListClipper::Begin(int items_count, float items_height) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2301,7 +2301,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height) IMGUI_NOEXCEPT
     DisplayEnd = 0;
 }
 
-void ImGuiListClipper::End() IMGUI_NOEXCEPT
+void ImGuiListClipper::End() IM_NOEXCEPT
 {
     if (ItemsCount < 0) // Already ended
         return;
@@ -2313,7 +2313,7 @@ void ImGuiListClipper::End() IMGUI_NOEXCEPT
     StepNo = 3;
 }
 
-bool ImGuiListClipper::Step() IMGUI_NOEXCEPT
+bool ImGuiListClipper::Step() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2420,13 +2420,13 @@ bool ImGuiListClipper::Step() IMGUI_NOEXCEPT
 // [SECTION] STYLING
 //-----------------------------------------------------------------------------
 
-ImGuiStyle& ImGui::GetStyle() IMGUI_NOEXCEPT
+ImGuiStyle& ImGui::GetStyle() IM_NOEXCEPT
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->Style;
 }
 
-ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul) IMGUI_NOEXCEPT
+ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul) IM_NOEXCEPT
 {
     ImGuiStyle& style = GImGui->Style;
     ImVec4 c = style.Colors[idx];
@@ -2434,7 +2434,7 @@ ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul) IMGUI_NOEXCEPT
     return ColorConvertFloat4ToU32(c);
 }
 
-ImU32 ImGui::GetColorU32(const ImVec4& col) IMGUI_NOEXCEPT
+ImU32 ImGui::GetColorU32(const ImVec4& col) IM_NOEXCEPT
 {
     ImGuiStyle& style = GImGui->Style;
     ImVec4 c = col;
@@ -2442,13 +2442,13 @@ ImU32 ImGui::GetColorU32(const ImVec4& col) IMGUI_NOEXCEPT
     return ColorConvertFloat4ToU32(c);
 }
 
-const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx) IMGUI_NOEXCEPT
+const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx) IM_NOEXCEPT
 {
     ImGuiStyle& style = GImGui->Style;
     return style.Colors[idx];
 }
 
-ImU32 ImGui::GetColorU32(ImU32 col) IMGUI_NOEXCEPT
+ImU32 ImGui::GetColorU32(ImU32 col) IM_NOEXCEPT
 {
     ImGuiStyle& style = GImGui->Style;
     if (style.Alpha >= 1.0f)
@@ -2459,7 +2459,7 @@ ImU32 ImGui::GetColorU32(ImU32 col) IMGUI_NOEXCEPT
 }
 
 // FIXME: This may incur a round-trip (if the end user got their data from a float4) but eventually we aim to store the in-flight colors as ImU32
-void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col) IMGUI_NOEXCEPT
+void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiColorMod backup;
@@ -2469,7 +2469,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col) IMGUI_NOEXCEPT
     g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
 }
 
-void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col) IMGUI_NOEXCEPT
+void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiColorMod backup;
@@ -2479,7 +2479,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col) IMGUI_NOEXCEPT
     g.Style.Colors[idx] = col;
 }
 
-void ImGui::PopStyleColor(int count) IMGUI_NOEXCEPT
+void ImGui::PopStyleColor(int count) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     while (count > 0)
@@ -2527,14 +2527,14 @@ static const ImGuiStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, SelectableTextAlign) }, // ImGuiStyleVar_SelectableTextAlign
 };
 
-static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx) IMGUI_NOEXCEPT
+static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx) IM_NOEXCEPT
 {
     IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_COUNT);
     IM_ASSERT(IM_ARRAYSIZE(GStyleVarInfo) == ImGuiStyleVar_COUNT);
     return &GStyleVarInfo[idx];
 }
 
-void ImGui::PushStyleVar(ImGuiStyleVar idx, float val) IMGUI_NOEXCEPT
+void ImGui::PushStyleVar(ImGuiStyleVar idx, float val) IM_NOEXCEPT
 {
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
@@ -2548,7 +2548,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val) IMGUI_NOEXCEPT
     IM_ASSERT(0 && "Called PushStyleVar() float variant but variable is not a float!");
 }
 
-void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val) IMGUI_NOEXCEPT
+void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val) IM_NOEXCEPT
 {
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
@@ -2562,7 +2562,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val) IMGUI_NOEXCEPT
     IM_ASSERT(0 && "Called PushStyleVar() ImVec2 variant but variable is not a ImVec2!");
 }
 
-void ImGui::PopStyleVar(int count) IMGUI_NOEXCEPT
+void ImGui::PopStyleVar(int count) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     while (count > 0)
@@ -2578,7 +2578,7 @@ void ImGui::PopStyleVar(int count) IMGUI_NOEXCEPT
     }
 }
 
-const char* ImGui::GetStyleColorName(ImGuiCol idx) IMGUI_NOEXCEPT
+const char* ImGui::GetStyleColorName(ImGuiCol idx) IM_NOEXCEPT
 {
     // Create switch-case from enum with regexp: ImGuiCol_{.*}, --> case ImGuiCol_\1: return "\1";
     switch (idx)
@@ -2649,7 +2649,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx) IMGUI_NOEXCEPT
 // Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: context.
 //-----------------------------------------------------------------------------
 
-const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end) IMGUI_NOEXCEPT
+const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end) IM_NOEXCEPT
 {
     const char* text_display_end = text;
     if (!text_end)
@@ -2662,7 +2662,7 @@ const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end) I
 
 // Internal ImGui functions to render text
 // RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
-void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash) IMGUI_NOEXCEPT
+void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2688,7 +2688,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     }
 }
 
-void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width) IMGUI_NOEXCEPT
+void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2706,7 +2706,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
 // Default clip_rect uses (pos_min,pos_max)
 // Handle clipping on CPU immediately (vs typically let the GPU clip the triangles that are overlapping the clipping rectangle edges)
-void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_display_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect) IMGUI_NOEXCEPT
+void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_display_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect) IM_NOEXCEPT
 {
     // Perform CPU side clipping for single clipped element to avoid using scissor state
     ImVec2 pos = pos_min;
@@ -2734,7 +2734,7 @@ void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, co
     }
 }
 
-void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect) IMGUI_NOEXCEPT
+void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect) IM_NOEXCEPT
 {
     // Hide anything after a '##' string
     const char* text_display_end = FindRenderedTextEnd(text, text_end);
@@ -2753,7 +2753,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
 // Another overly complex function until we reorganize everything into a nice all-in-one helper.
 // This is made more complex because we have dissociated the layout rectangle (pos_min..pos_max) which define _where_ the ellipsis is, from actual clipping of text and limit of the ellipsis display.
 // This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move.
-void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known) IMGUI_NOEXCEPT
+void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (text_end_full == NULL)
@@ -2831,7 +2831,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 }
 
 // Render a rectangle shaped with optional rounding and borders
-void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding) IMGUI_NOEXCEPT
+void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2844,7 +2844,7 @@ void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     }
 }
 
-void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding) IMGUI_NOEXCEPT
+void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2856,7 +2856,7 @@ void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding) IMGUI_
     }
 }
 
-void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags) IMGUI_NOEXCEPT
+void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (id != g.NavId)
@@ -2893,7 +2893,7 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
 //-----------------------------------------------------------------------------
 
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
-ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) IMGUI_NOEXCEPT : DrawListInst(NULL)
+ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) IM_NOEXCEPT : DrawListInst(NULL)
 {
     memset(this, 0, sizeof(*this));
     Name = ImStrdup(name);
@@ -2916,7 +2916,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) IMGUI_NOEXCEPT
     DrawList->_OwnerName = Name;
 }
 
-ImGuiWindow::~ImGuiWindow() IMGUI_NOEXCEPT
+ImGuiWindow::~ImGuiWindow() IM_NOEXCEPT
 {
     IM_ASSERT(DrawList == &DrawListInst);
     IM_DELETE(Name);
@@ -2924,7 +2924,7 @@ ImGuiWindow::~ImGuiWindow() IMGUI_NOEXCEPT
         ColumnsStorage[i].~ImGuiOldColumns();
 }
 
-ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
@@ -2936,7 +2936,7 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end) IMGUI_NOEXCEPT
     return id;
 }
 
-ImGuiID ImGuiWindow::GetID(const void* ptr) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetID(const void* ptr) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
@@ -2948,7 +2948,7 @@ ImGuiID ImGuiWindow::GetID(const void* ptr) IMGUI_NOEXCEPT
     return id;
 }
 
-ImGuiID ImGuiWindow::GetID(int n) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetID(int n) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
@@ -2960,7 +2960,7 @@ ImGuiID ImGuiWindow::GetID(int n) IMGUI_NOEXCEPT
     return id;
 }
 
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
@@ -2971,7 +2971,7 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end) IMGU
     return id;
 }
 
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
@@ -2982,7 +2982,7 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr) IMGUI_NOEXCEPT
     return id;
 }
 
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
@@ -2994,7 +2994,7 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n) IMGUI_NOEXCEPT
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
-ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs) IMGUI_NOEXCEPT
+ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs) IM_NOEXCEPT
 {
     ImGuiID seed = IDStack.back();
     const int r_rel[4] = { (int)(r_abs.Min.x - Pos.x), (int)(r_abs.Min.y - Pos.y), (int)(r_abs.Max.x - Pos.x), (int)(r_abs.Max.y - Pos.y) };
@@ -3003,7 +3003,7 @@ ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs) IMGUI_NOEXCEPT
     return id;
 }
 
-static void SetCurrentWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
+static void SetCurrentWindow(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
@@ -3012,7 +3012,7 @@ static void SetCurrentWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
-void ImGui::GcCompactTransientMiscBuffers() IMGUI_NOEXCEPT
+void ImGui::GcCompactTransientMiscBuffers() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
@@ -3024,7 +3024,7 @@ void ImGui::GcCompactTransientMiscBuffers() IMGUI_NOEXCEPT
 // Not freed:
 // - ImGuiWindow, ImGuiWindowSettings, Name, StateStorage, ColumnsStorage (may hold useful data)
 // This should have no noticeable visual effect. When the window reappear however, expect new allocation/buffer growth/copy cost.
-void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window) IM_NOEXCEPT
 {
     window->MemoryCompacted = true;
     window->MemoryDrawListIdxCapacity = window->DrawList->IdxBuffer.Capacity;
@@ -3036,7 +3036,7 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window) IMGUI_NOEXCEPT
     window->DC.TextWrapPosStack.clear();
 }
 
-void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window) IM_NOEXCEPT
 {
     // We stored capacity of the ImDrawList buffer to reduce growth-caused allocation/copy when awakening.
     // The other buffers tends to amortize much faster.
@@ -3046,7 +3046,7 @@ void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window) IMGUI_NOEXCEPT
     window->MemoryDrawListIdxCapacity = window->MemoryDrawListVtxCapacity = 0;
 }
 
-void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
@@ -3081,12 +3081,12 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window) IMGUI_NOEXCEPT
     g.ActiveIdUsingKeyInputMask = 0x00;
 }
 
-void ImGui::ClearActiveID() IMGUI_NOEXCEPT
+void ImGui::ClearActiveID() IM_NOEXCEPT
 {
     SetActiveID(0, NULL); // g.ActiveId = 0;
 }
 
-void ImGui::SetHoveredID(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::SetHoveredID(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
@@ -3096,13 +3096,13 @@ void ImGui::SetHoveredID(ImGuiID id) IMGUI_NOEXCEPT
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
 }
 
-ImGuiID ImGui::GetHoveredID() IMGUI_NOEXCEPT
+ImGuiID ImGui::GetHoveredID() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredId ? g.HoveredId : g.HoveredIdPreviousFrame;
 }
 
-void ImGui::KeepAliveID(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::KeepAliveID(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
@@ -3111,7 +3111,7 @@ void ImGui::KeepAliveID(ImGuiID id) IMGUI_NOEXCEPT
         g.ActiveIdPreviousFrameIsAlive = true;
 }
 
-void ImGui::MarkItemEdited(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::MarkItemEdited(ImGuiID id) IM_NOEXCEPT
 {
     // This marking is solely to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need need to fill the data.
@@ -3124,7 +3124,7 @@ void ImGui::MarkItemEdited(ImGuiID id) IMGUI_NOEXCEPT
     g.CurrentWindow->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Edited;
 }
 
-static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags) IMGUI_NOEXCEPT
+static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags) IM_NOEXCEPT
 {
     // An active popup disable hovering on other windows (apart from its own children)
     // FIXME-OPT: This could be cached/stored within the window.
@@ -3146,7 +3146,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFla
 // This is roughly matching the behavior of internal-facing ItemHoverable()
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered()
 // - this should work even for non-interactive items that have no ID, so we cannot use LastItemId
-bool ImGui::IsItemHovered(ImGuiHoveredFlags flags) IMGUI_NOEXCEPT
+bool ImGui::IsItemHovered(ImGuiHoveredFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3190,7 +3190,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags) IMGUI_NOEXCEPT
 }
 
 // Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().
-bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id) IMGUI_NOEXCEPT
+bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.HoveredId != 0 && g.HoveredId != id && !g.HoveredIdAllowOverlap)
@@ -3231,7 +3231,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id) IMGUI_NOEXCEPT
     return true;
 }
 
-bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged) IMGUI_NOEXCEPT
+bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3244,7 +3244,7 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged
 
 // This is also inlined in ItemAdd()
 // Note: if ImGuiItemStatusFlags_HasDisplayRect is set, user needs to set window->DC.LastItemDisplayRect!
-void ImGui::SetLastItemData(ImGuiWindow* window, ImGuiID item_id, ImGuiItemStatusFlags item_flags, const ImRect& item_rect) IMGUI_NOEXCEPT
+void ImGui::SetLastItemData(ImGuiWindow* window, ImGuiID item_id, ImGuiItemStatusFlags item_flags, const ImRect& item_rect) IM_NOEXCEPT
 {
     window->DC.LastItemId = item_id;
     window->DC.LastItemStatusFlags = item_flags;
@@ -3252,7 +3252,7 @@ void ImGui::SetLastItemData(ImGuiWindow* window, ImGuiID item_id, ImGuiItemStatu
 }
 
 // Process TAB/Shift+TAB. Be mindful that this function may _clear_ the ActiveID when tabbing out.
-void ImGui::ItemFocusable(ImGuiWindow* window, ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::ItemFocusable(ImGuiWindow* window, ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0 && id == window->DC.LastItemId);
@@ -3297,7 +3297,7 @@ void ImGui::ItemFocusable(ImGuiWindow* window, ImGuiID id) IMGUI_NOEXCEPT
     }
 }
 
-float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x) IMGUI_NOEXCEPT
+float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x) IM_NOEXCEPT
 {
     if (wrap_pos_x < 0.0f)
         return 0.0f;
@@ -3322,7 +3322,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x) IMGUI_NOEX
 }
 
 // IM_ALLOC() == ImGui::MemAlloc()
-void* ImGui::MemAlloc(size_t size) IMGUI_NOEXCEPT
+void* ImGui::MemAlloc(size_t size) IM_NOEXCEPT
 {
     if (ImGuiContext* ctx = GImGui)
         ctx->IO.MetricsActiveAllocations++;
@@ -3330,7 +3330,7 @@ void* ImGui::MemAlloc(size_t size) IMGUI_NOEXCEPT
 }
 
 // IM_FREE() == ImGui::MemFree()
-void ImGui::MemFree(void* ptr) IMGUI_NOEXCEPT
+void ImGui::MemFree(void* ptr) IM_NOEXCEPT
 {
     if (ptr)
         if (ImGuiContext* ctx = GImGui)
@@ -3338,32 +3338,32 @@ void ImGui::MemFree(void* ptr) IMGUI_NOEXCEPT
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
-const char* ImGui::GetClipboardText() IMGUI_NOEXCEPT
+const char* ImGui::GetClipboardText() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.IO.GetClipboardTextFn ? g.IO.GetClipboardTextFn(g.IO.ClipboardUserData) : "";
 }
 
-void ImGui::SetClipboardText(const char* text) IMGUI_NOEXCEPT
+void ImGui::SetClipboardText(const char* text) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.IO.SetClipboardTextFn)
         g.IO.SetClipboardTextFn(g.IO.ClipboardUserData, text);
 }
 
-const char* ImGui::GetVersion() IMGUI_NOEXCEPT
+const char* ImGui::GetVersion() IM_NOEXCEPT
 {
     return IMGUI_VERSION;
 }
 
 // Internal state access - if you want to share Dear ImGui state between modules (e.g. DLL) or allocate it yourself
 // Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
-ImGuiContext* ImGui::GetCurrentContext() IMGUI_NOEXCEPT
+ImGuiContext* ImGui::GetCurrentContext() IM_NOEXCEPT
 {
     return GImGui;
 }
 
-void ImGui::SetCurrentContext(ImGuiContext* ctx) IMGUI_NOEXCEPT
+void ImGui::SetCurrentContext(ImGuiContext* ctx) IM_NOEXCEPT
 {
 #ifdef IMGUI_SET_CURRENT_CONTEXT_FUNC
     IMGUI_SET_CURRENT_CONTEXT_FUNC(ctx); // For custom thread-based hackery you may want to have control over this.
@@ -3372,7 +3372,7 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx) IMGUI_NOEXCEPT
 #endif
 }
 
-void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data) IMGUI_NOEXCEPT
+void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data) IM_NOEXCEPT
 {
     GImAllocatorAllocFunc = alloc_func;
     GImAllocatorFreeFunc = free_func;
@@ -3380,14 +3380,14 @@ void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc
 }
 
 // This is provided to facilitate copying allocators from one static/DLL boundary to another (e.g. retrieve default allocator of your executable address space)
-void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data) IMGUI_NOEXCEPT
+void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data) IM_NOEXCEPT
 {
     *p_alloc_func = GImAllocatorAllocFunc;
     *p_free_func = GImAllocatorFreeFunc;
     *p_user_data = GImAllocatorUserData;
 }
 
-ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas) IMGUI_NOEXCEPT
+ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas) IM_NOEXCEPT
 {
     ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
     if (GImGui == NULL)
@@ -3396,7 +3396,7 @@ ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas) IMGUI_NOEXCEP
     return ctx;
 }
 
-void ImGui::DestroyContext(ImGuiContext* ctx) IMGUI_NOEXCEPT
+void ImGui::DestroyContext(ImGuiContext* ctx) IM_NOEXCEPT
 {
     if (ctx == NULL)
         ctx = GImGui;
@@ -3407,7 +3407,7 @@ void ImGui::DestroyContext(ImGuiContext* ctx) IMGUI_NOEXCEPT
 }
 
 // No specific ordering/dependency support, will see as needed
-ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook) IMGUI_NOEXCEPT
+ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook) IM_NOEXCEPT
 {
     ImGuiContext& g = *ctx;
     IM_ASSERT(hook->Callback != NULL && hook->HookId == 0 && hook->Type != ImGuiContextHookType_PendingRemoval_);
@@ -3417,7 +3417,7 @@ ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook) I
 }
 
 // Deferred removal, avoiding issue with changing vector while iterating it
-void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id) IMGUI_NOEXCEPT
+void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id) IM_NOEXCEPT
 {
     ImGuiContext& g = *ctx;
     IM_ASSERT(hook_id != 0);
@@ -3428,7 +3428,7 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id) IMGUI_NOEXCEPT
 
 // Call context hooks (used by e.g. test engine)
 // We assume a small number of hooks so all stored in same array
-void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type) IMGUI_NOEXCEPT
+void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type) IM_NOEXCEPT
 {
     ImGuiContext& g = *ctx;
     for (int n = 0; n < g.Hooks.Size; n++)
@@ -3436,31 +3436,31 @@ void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type) 
             g.Hooks[n].Callback(&g, &g.Hooks[n]);
 }
 
-ImGuiIO& ImGui::GetIO() IMGUI_NOEXCEPT
+ImGuiIO& ImGui::GetIO() IM_NOEXCEPT
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->IO;
 }
 
 // Pass this to your backend rendering function! Valid after Render() and until the next call to NewFrame()
-ImDrawData* ImGui::GetDrawData() IMGUI_NOEXCEPT
+ImDrawData* ImGui::GetDrawData() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = g.Viewports[0];
     return viewport->DrawDataP.Valid ? &viewport->DrawDataP : NULL;
 }
 
-double ImGui::GetTime() IMGUI_NOEXCEPT
+double ImGui::GetTime() IM_NOEXCEPT
 {
     return GImGui->Time;
 }
 
-int ImGui::GetFrameCount() IMGUI_NOEXCEPT
+int ImGui::GetFrameCount() IM_NOEXCEPT
 {
     return GImGui->FrameCount;
 }
 
-static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist_no, const char* drawlist_name) IMGUI_NOEXCEPT
+static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist_no, const char* drawlist_name) IM_NOEXCEPT
 {
     // Create the draw list on demand, because they are not frequently used for all viewports
     ImGuiContext& g = *GImGui;
@@ -3484,34 +3484,34 @@ static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist
     return draw_list;
 }
 
-ImDrawList* ImGui::GetBackgroundDrawList(ImGuiViewport* viewport) IMGUI_NOEXCEPT
+ImDrawList* ImGui::GetBackgroundDrawList(ImGuiViewport* viewport) IM_NOEXCEPT
 {
     return GetViewportDrawList((ImGuiViewportP*)viewport, 0, "##Background");
 }
 
-ImDrawList* ImGui::GetBackgroundDrawList() IMGUI_NOEXCEPT
+ImDrawList* ImGui::GetBackgroundDrawList() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return GetBackgroundDrawList(g.Viewports[0]);
 }
 
-ImDrawList* ImGui::GetForegroundDrawList(ImGuiViewport* viewport) IMGUI_NOEXCEPT
+ImDrawList* ImGui::GetForegroundDrawList(ImGuiViewport* viewport) IM_NOEXCEPT
 {
     return GetViewportDrawList((ImGuiViewportP*)viewport, 1, "##Foreground");
 }
 
-ImDrawList* ImGui::GetForegroundDrawList() IMGUI_NOEXCEPT
+ImDrawList* ImGui::GetForegroundDrawList() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return GetForegroundDrawList(g.Viewports[0]);
 }
 
-ImDrawListSharedData* ImGui::GetDrawListSharedData() IMGUI_NOEXCEPT
+ImDrawListSharedData* ImGui::GetDrawListSharedData() IM_NOEXCEPT
 {
     return &GImGui->DrawListSharedData;
 }
 
-void ImGui::StartMouseMovingWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::StartMouseMovingWindow(ImGuiWindow* window) IM_NOEXCEPT
 {
     // Set ActiveId even if the _NoMove flag is set. Without it, dragging away from a window with _NoMove would activate hover on other windows.
     // We _also_ call this when clicking in a window empty space when io.ConfigWindowsMoveFromTitleBarOnly is set, but clear g.MovingWindow afterward.
@@ -3535,7 +3535,7 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
 // FIXME: We don't have strong guarantee that g.MovingWindow stay synched with g.ActiveId == g.MovingWindow->MoveId.
 // This is currently enforced by the fact that BeginDragDropSource() is setting all g.ActiveIdUsingXXXX flags to inhibit navigation inputs,
 // but if we should more thoroughly test cases where g.ActiveId or g.MovingWindow gets changed and not the other.
-void ImGui::UpdateMouseMovingWindowNewFrame() IMGUI_NOEXCEPT
+void ImGui::UpdateMouseMovingWindowNewFrame() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.MovingWindow != NULL)
@@ -3575,7 +3575,7 @@ void ImGui::UpdateMouseMovingWindowNewFrame() IMGUI_NOEXCEPT
 
 // Initiate moving window when clicking on empty space or title bar.
 // Handle left-click and right-click focus.
-void ImGui::UpdateMouseMovingWindowEndFrame() IMGUI_NOEXCEPT
+void ImGui::UpdateMouseMovingWindowEndFrame() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.ActiveId != 0 || g.HoveredId != 0)
@@ -3627,12 +3627,12 @@ void ImGui::UpdateMouseMovingWindowEndFrame() IMGUI_NOEXCEPT
     }
 }
 
-static bool IsWindowActiveAndVisible(ImGuiWindow* window) IMGUI_NOEXCEPT
+static bool IsWindowActiveAndVisible(ImGuiWindow* window) IM_NOEXCEPT
 {
     return (window->Active) && (!window->Hidden);
 }
 
-static void ImGui::UpdateMouseInputs() IMGUI_NOEXCEPT
+static void ImGui::UpdateMouseInputs() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -3689,7 +3689,7 @@ static void ImGui::UpdateMouseInputs() IMGUI_NOEXCEPT
     }
 }
 
-static void StartLockWheelingWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
+static void StartLockWheelingWindow(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.WheelingWindow == window)
@@ -3699,7 +3699,7 @@ static void StartLockWheelingWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
     g.WheelingWindowTimer = WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER;
 }
 
-void ImGui::UpdateMouseWheel() IMGUI_NOEXCEPT
+void ImGui::UpdateMouseWheel() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -3784,7 +3784,7 @@ void ImGui::UpdateMouseWheel() IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::UpdateTabFocus() IMGUI_NOEXCEPT
+void ImGui::UpdateTabFocus() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -3823,7 +3823,7 @@ void ImGui::UpdateTabFocus() IMGUI_NOEXCEPT
 }
 
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
-void ImGui::UpdateHoveredWindowAndCaptureFlags() IMGUI_NOEXCEPT
+void ImGui::UpdateHoveredWindowAndCaptureFlags() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.WindowsHoverPadding = ImMax(g.Style.TouchExtraPadding, ImVec2(WINDOWS_HOVER_PADDING, WINDOWS_HOVER_PADDING));
@@ -3885,7 +3885,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags() IMGUI_NOEXCEPT
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
-ImGuiKeyModFlags ImGui::GetMergedKeyModFlags() IMGUI_NOEXCEPT
+ImGuiKeyModFlags ImGui::GetMergedKeyModFlags() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiKeyModFlags key_mod_flags = ImGuiKeyModFlags_None;
@@ -3896,7 +3896,7 @@ ImGuiKeyModFlags ImGui::GetMergedKeyModFlags() IMGUI_NOEXCEPT
     return key_mod_flags;
 }
 
-void ImGui::NewFrame() IMGUI_NOEXCEPT
+void ImGui::NewFrame() IM_NOEXCEPT
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     ImGuiContext& g = *GImGui;
@@ -4099,7 +4099,7 @@ void ImGui::NewFrame() IMGUI_NOEXCEPT
 }
 
 // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
-void ImGui::UpdateDebugToolItemPicker() IMGUI_NOEXCEPT
+void ImGui::UpdateDebugToolItemPicker() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.DebugItemPickerBreakId = 0;
@@ -4123,7 +4123,7 @@ void ImGui::UpdateDebugToolItemPicker() IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::Initialize(ImGuiContext* context) IMGUI_NOEXCEPT
+void ImGui::Initialize(ImGuiContext* context) IM_NOEXCEPT
 {
     ImGuiContext& g = *context;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
@@ -4157,7 +4157,7 @@ void ImGui::Initialize(ImGuiContext* context) IMGUI_NOEXCEPT
 }
 
 // This function is merely here to free heap allocations.
-void ImGui::Shutdown(ImGuiContext* context) IMGUI_NOEXCEPT
+void ImGui::Shutdown(ImGuiContext* context) IM_NOEXCEPT
 {
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
     ImGuiContext& g = *context;
@@ -4237,7 +4237,7 @@ void ImGui::Shutdown(ImGuiContext* context) IMGUI_NOEXCEPT
 }
 
 // FIXME: Add a more explicit sort order in the window structure.
-static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs) IMGUI_NOEXCEPT
+static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs) IM_NOEXCEPT
 {
     const ImGuiWindow* const a = *(const ImGuiWindow* const *)lhs;
     const ImGuiWindow* const b = *(const ImGuiWindow* const *)rhs;
@@ -4248,7 +4248,7 @@ static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs) IMG
     return (a->BeginOrderWithinParent - b->BeginOrderWithinParent);
 }
 
-static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window) IMGUI_NOEXCEPT
+static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window) IM_NOEXCEPT
 {
     out_sorted_windows->push_back(window);
     if (window->Active)
@@ -4265,7 +4265,7 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
     }
 }
 
-static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list) IMGUI_NOEXCEPT
+static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list) IM_NOEXCEPT
 {
     // Remove trailing command if unused.
     // Technically we could return directly instead of popping, but this make things looks neat in Metrics/Debugger window as well.
@@ -4301,7 +4301,7 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
     out_list->push_back(draw_list);
 }
 
-static void AddWindowToDrawData(ImGuiWindow* window, int layer) IMGUI_NOEXCEPT
+static void AddWindowToDrawData(ImGuiWindow* window, int layer) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = g.Viewports[0];
@@ -4316,13 +4316,13 @@ static void AddWindowToDrawData(ImGuiWindow* window, int layer) IMGUI_NOEXCEPT
 }
 
 // Layer is locked for the root window, however child windows may use a different viewport (e.g. extruding menu)
-static void AddRootWindowToDrawData(ImGuiWindow* window) IMGUI_NOEXCEPT
+static void AddRootWindowToDrawData(ImGuiWindow* window) IM_NOEXCEPT
 {
     int layer = (window->Flags & ImGuiWindowFlags_Tooltip) ? 1 : 0;
     AddWindowToDrawData(window, layer);
 }
 
-void ImDrawDataBuilder::FlattenIntoSingleLayer() IMGUI_NOEXCEPT
+void ImDrawDataBuilder::FlattenIntoSingleLayer() IM_NOEXCEPT
 {
     int n = Layers[0].Size;
     int size = n;
@@ -4340,7 +4340,7 @@ void ImDrawDataBuilder::FlattenIntoSingleLayer() IMGUI_NOEXCEPT
     }
 }
 
-static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*>* draw_lists) IMGUI_NOEXCEPT
+static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*>* draw_lists) IM_NOEXCEPT
 {
     ImGuiIO& io = ImGui::GetIO();
     ImDrawData* draw_data = &viewport->DrawDataP;
@@ -4364,14 +4364,14 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*
 // - If the code here changes, may need to update code of functions like NextColumn() and PushColumnClipRect():
 //   some frequently called functions which to modify both channels and clipping simultaneously tend to use the
 //   more specialized SetWindowClipRectBeforeSetChannel() to avoid extraneous updates of underlying ImDrawCmds.
-void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect) IMGUI_NOEXCEPT
+void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DrawList->PushClipRect(clip_rect_min, clip_rect_max, intersect_with_current_clip_rect);
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
-void ImGui::PopClipRect() IMGUI_NOEXCEPT
+void ImGui::PopClipRect() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DrawList->PopClipRect();
@@ -4379,7 +4379,7 @@ void ImGui::PopClipRect() IMGUI_NOEXCEPT
 }
 
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
-void ImGui::EndFrame() IMGUI_NOEXCEPT
+void ImGui::EndFrame() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
@@ -4461,7 +4461,7 @@ void ImGui::EndFrame() IMGUI_NOEXCEPT
     CallContextHooks(&g, ImGuiContextHookType_EndFramePost);
 }
 
-void ImGui::Render() IMGUI_NOEXCEPT
+void ImGui::Render() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
@@ -4523,7 +4523,7 @@ void ImGui::Render() IMGUI_NOEXCEPT
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, g.FontSize)
-ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width) IMGUI_NOEXCEPT
+ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -4553,7 +4553,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 // FIXME: Note that we have an inconsequential lag here: OuterRectClipped is updated in Begin(), so windows moved programmatically
 // with SetWindowPos() and not SetNextWindowPos() will have that rectangle lagging by a frame at the time FindHoveredWindow() is
 // called, aka before the next Begin(). Moving window isn't affected.
-static void FindHoveredWindow() IMGUI_NOEXCEPT
+static void FindHoveredWindow() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -4608,7 +4608,7 @@ static void FindHoveredWindow() IMGUI_NOEXCEPT
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip) IMGUI_NOEXCEPT
+bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -4624,7 +4624,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return true;
 }
 
-int ImGui::GetKeyIndex(ImGuiKey imgui_key) IMGUI_NOEXCEPT
+int ImGui::GetKeyIndex(ImGuiKey imgui_key) IM_NOEXCEPT
 {
     IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
     ImGuiContext& g = *GImGui;
@@ -4633,7 +4633,7 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key) IMGUI_NOEXCEPT
 
 // Note that dear imgui doesn't know the semantic of each entry of io.KeysDown[]!
 // Use your own indices/enums according to how your backend/engine stored them into io.KeysDown[]!
-bool ImGui::IsKeyDown(int user_key_index) IMGUI_NOEXCEPT
+bool ImGui::IsKeyDown(int user_key_index) IM_NOEXCEPT
 {
     if (user_key_index < 0)
         return false;
@@ -4646,7 +4646,7 @@ bool ImGui::IsKeyDown(int user_key_index) IMGUI_NOEXCEPT
 // t1 = current time (e.g.: g.Time)
 // An event is triggered at:
 //  t = 0.0f     t = repeat_delay,    t = repeat_delay + repeat_rate*N
-int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate) IMGUI_NOEXCEPT
+int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate) IM_NOEXCEPT
 {
     if (t1 == 0.0f)
         return 1;
@@ -4660,7 +4660,7 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
     return count;
 }
 
-int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate) IMGUI_NOEXCEPT
+int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (key_index < 0)
@@ -4670,7 +4670,7 @@ int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_r
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
 
-bool ImGui::IsKeyPressed(int user_key_index, bool repeat) IMGUI_NOEXCEPT
+bool ImGui::IsKeyPressed(int user_key_index, bool repeat) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (user_key_index < 0)
@@ -4684,7 +4684,7 @@ bool ImGui::IsKeyPressed(int user_key_index, bool repeat) IMGUI_NOEXCEPT
     return false;
 }
 
-bool ImGui::IsKeyReleased(int user_key_index) IMGUI_NOEXCEPT
+bool ImGui::IsKeyReleased(int user_key_index) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (user_key_index < 0) return false;
@@ -4692,14 +4692,14 @@ bool ImGui::IsKeyReleased(int user_key_index) IMGUI_NOEXCEPT
     return g.IO.KeysDownDurationPrev[user_key_index] >= 0.0f && !g.IO.KeysDown[user_key_index];
 }
 
-bool ImGui::IsMouseDown(ImGuiMouseButton button) IMGUI_NOEXCEPT
+bool ImGui::IsMouseDown(ImGuiMouseButton button) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
     return g.IO.MouseDown[button];
 }
 
-bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat) IMGUI_NOEXCEPT
+bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4717,14 +4717,14 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat) IMGUI_NOEXCEPT
     return false;
 }
 
-bool ImGui::IsMouseReleased(ImGuiMouseButton button) IMGUI_NOEXCEPT
+bool ImGui::IsMouseReleased(ImGuiMouseButton button) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
     return g.IO.MouseReleased[button];
 }
 
-bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button) IMGUI_NOEXCEPT
+bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4733,7 +4733,7 @@ bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button) IMGUI_NOEXCEPT
 
 // Return if a mouse click/drag went past the given threshold. Valid to call during the MouseReleased frame.
 // [Internal] This doesn't test if the button is pressed
-bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold) IMGUI_NOEXCEPT
+bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4742,7 +4742,7 @@ bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_thresho
     return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
 }
 
-bool ImGui::IsMouseDragging(ImGuiMouseButton button, float lock_threshold) IMGUI_NOEXCEPT
+bool ImGui::IsMouseDragging(ImGuiMouseButton button, float lock_threshold) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4751,14 +4751,14 @@ bool ImGui::IsMouseDragging(ImGuiMouseButton button, float lock_threshold) IMGUI
     return IsMouseDragPastThreshold(button, lock_threshold);
 }
 
-ImVec2 ImGui::GetMousePos() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetMousePos() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.IO.MousePos;
 }
 
 // NB: prefer to call right after BeginPopup(). At the time Selectable/MenuItem is activated, the popup is already closed!
-ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.BeginPopupStack.Size > 0)
@@ -4767,7 +4767,7 @@ ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup() IMGUI_NOEXCEPT
 }
 
 // We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position.
-bool ImGui::IsMousePosValid(const ImVec2* mouse_pos) IMGUI_NOEXCEPT
+bool ImGui::IsMousePosValid(const ImVec2* mouse_pos) IM_NOEXCEPT
 {
     // The assert is only to silence a false-positive in XCode Static Analysis.
     // Because GImGui is not dereferenced in every code path, the static analyzer assume that it may be NULL (which it doesn't for other functions).
@@ -4777,7 +4777,7 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos) IMGUI_NOEXCEPT
     return p.x >= MOUSE_INVALID && p.y >= MOUSE_INVALID;
 }
 
-bool ImGui::IsAnyMouseDown() IMGUI_NOEXCEPT
+bool ImGui::IsAnyMouseDown() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     for (int n = 0; n < IM_ARRAYSIZE(g.IO.MouseDown); n++)
@@ -4789,7 +4789,7 @@ bool ImGui::IsAnyMouseDown() IMGUI_NOEXCEPT
 // Return the delta from the initial clicking position while the mouse button is clicked or was just released.
 // This is locked and return 0.0f until the mouse moves past a distance threshold at least once.
 // NB: This is only valid if IsMousePosValid(). backends in theory should always keep mouse position valid when dragging even outside the client window.
-ImVec2 ImGui::GetMouseDragDelta(ImGuiMouseButton button, float lock_threshold) IMGUI_NOEXCEPT
+ImVec2 ImGui::GetMouseDragDelta(ImGuiMouseButton button, float lock_threshold) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4802,7 +4802,7 @@ ImVec2 ImGui::GetMouseDragDelta(ImGuiMouseButton button, float lock_threshold) I
     return ImVec2(0.0f, 0.0f);
 }
 
-void ImGui::ResetMouseDragDelta(ImGuiMouseButton button) IMGUI_NOEXCEPT
+void ImGui::ResetMouseDragDelta(ImGuiMouseButton button) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
@@ -4810,27 +4810,27 @@ void ImGui::ResetMouseDragDelta(ImGuiMouseButton button) IMGUI_NOEXCEPT
     g.IO.MouseClickedPos[button] = g.IO.MousePos;
 }
 
-ImGuiMouseCursor ImGui::GetMouseCursor() IMGUI_NOEXCEPT
+ImGuiMouseCursor ImGui::GetMouseCursor() IM_NOEXCEPT
 {
     return GImGui->MouseCursor;
 }
 
-void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type) IMGUI_NOEXCEPT
+void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type) IM_NOEXCEPT
 {
     GImGui->MouseCursor = cursor_type;
 }
 
-void ImGui::CaptureKeyboardFromApp(bool capture) IMGUI_NOEXCEPT
+void ImGui::CaptureKeyboardFromApp(bool capture) IM_NOEXCEPT
 {
     GImGui->WantCaptureKeyboardNextFrame = capture ? 1 : 0;
 }
 
-void ImGui::CaptureMouseFromApp(bool capture) IMGUI_NOEXCEPT
+void ImGui::CaptureMouseFromApp(bool capture) IM_NOEXCEPT
 {
     GImGui->WantCaptureMouseNextFrame = capture ? 1 : 0;
 }
 
-bool ImGui::IsItemActive() IMGUI_NOEXCEPT
+bool ImGui::IsItemActive() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.ActiveId)
@@ -4841,7 +4841,7 @@ bool ImGui::IsItemActive() IMGUI_NOEXCEPT
     return false;
 }
 
-bool ImGui::IsItemActivated() IMGUI_NOEXCEPT
+bool ImGui::IsItemActivated() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.ActiveId)
@@ -4853,7 +4853,7 @@ bool ImGui::IsItemActivated() IMGUI_NOEXCEPT
     return false;
 }
 
-bool ImGui::IsItemDeactivated() IMGUI_NOEXCEPT
+bool ImGui::IsItemDeactivated() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -4862,14 +4862,14 @@ bool ImGui::IsItemDeactivated() IMGUI_NOEXCEPT
     return (g.ActiveIdPreviousFrame == window->DC.LastItemId && g.ActiveIdPreviousFrame != 0 && g.ActiveId != window->DC.LastItemId);
 }
 
-bool ImGui::IsItemDeactivatedAfterEdit() IMGUI_NOEXCEPT
+bool ImGui::IsItemDeactivatedAfterEdit() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return IsItemDeactivated() && (g.ActiveIdPreviousFrameHasBeenEditedBefore || (g.ActiveId == 0 && g.ActiveIdHasBeenEditedBefore));
 }
 
 // == GetItemID() == GetFocusID()
-bool ImGui::IsItemFocused() IMGUI_NOEXCEPT
+bool ImGui::IsItemFocused() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -4881,48 +4881,48 @@ bool ImGui::IsItemFocused() IMGUI_NOEXCEPT
 
 // Important: this can be useful but it is NOT equivalent to the behavior of e.g.Button()!
 // Most widgets have specific reactions based on mouse-up/down state, mouse position etc.
-bool ImGui::IsItemClicked(ImGuiMouseButton mouse_button) IMGUI_NOEXCEPT
+bool ImGui::IsItemClicked(ImGuiMouseButton mouse_button) IM_NOEXCEPT
 {
     return IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_None);
 }
 
-bool ImGui::IsItemToggledOpen() IMGUI_NOEXCEPT
+bool ImGui::IsItemToggledOpen() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return (g.CurrentWindow->DC.LastItemStatusFlags & ImGuiItemStatusFlags_ToggledOpen) ? true : false;
 }
 
-bool ImGui::IsItemToggledSelection() IMGUI_NOEXCEPT
+bool ImGui::IsItemToggledSelection() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return (g.CurrentWindow->DC.LastItemStatusFlags & ImGuiItemStatusFlags_ToggledSelection) ? true : false;
 }
 
-bool ImGui::IsAnyItemHovered() IMGUI_NOEXCEPT
+bool ImGui::IsAnyItemHovered() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredId != 0 || g.HoveredIdPreviousFrame != 0;
 }
 
-bool ImGui::IsAnyItemActive() IMGUI_NOEXCEPT
+bool ImGui::IsAnyItemActive() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.ActiveId != 0;
 }
 
-bool ImGui::IsAnyItemFocused() IMGUI_NOEXCEPT
+bool ImGui::IsAnyItemFocused() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.NavId != 0 && !g.NavDisableHighlight;
 }
 
-bool ImGui::IsItemVisible() IMGUI_NOEXCEPT
+bool ImGui::IsItemVisible() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->ClipRect.Overlaps(window->DC.LastItemRect);
 }
 
-bool ImGui::IsItemEdited() IMGUI_NOEXCEPT
+bool ImGui::IsItemEdited() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_Edited) != 0;
@@ -4930,7 +4930,7 @@ bool ImGui::IsItemEdited() IMGUI_NOEXCEPT
 
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
 // FIXME: Although this is exposed, its interaction and ideal idiom with using ImGuiButtonFlags_AllowItemOverlap flag are extremely confusing, need rework.
-void ImGui::SetItemAllowOverlap() IMGUI_NOEXCEPT
+void ImGui::SetItemAllowOverlap() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->DC.LastItemId;
@@ -4940,7 +4940,7 @@ void ImGui::SetItemAllowOverlap() IMGUI_NOEXCEPT
         g.ActiveIdAllowOverlap = true;
 }
 
-void ImGui::SetItemUsingMouseWheel() IMGUI_NOEXCEPT
+void ImGui::SetItemUsingMouseWheel() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->DC.LastItemId;
@@ -4950,25 +4950,25 @@ void ImGui::SetItemUsingMouseWheel() IMGUI_NOEXCEPT
         g.ActiveIdUsingMouseWheel = true;
 }
 
-ImVec2 ImGui::GetItemRectMin() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetItemRectMin() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.Min;
 }
 
-ImVec2 ImGui::GetItemRectMax() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetItemRectMax() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.Max;
 }
 
-ImVec2 ImGui::GetItemRectSize() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetItemRectSize() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.GetSize();
 }
 
-bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
@@ -5018,19 +5018,19 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     return ret;
 }
 
-bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     return BeginChildEx(str_id, window->GetID(str_id), size_arg, border, extra_flags);
 }
 
-bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags) IM_NOEXCEPT
 {
     IM_ASSERT(id != 0);
     return BeginChildEx(NULL, id, size_arg, border, extra_flags);
 }
 
-void ImGui::EndChild() IMGUI_NOEXCEPT
+void ImGui::EndChild() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -5077,7 +5077,7 @@ void ImGui::EndChild() IMGUI_NOEXCEPT
 }
 
 // Helper to create a child window / scrolling region that looks like a normal widget frame.
-bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -5091,31 +5091,31 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags ext
     return ret;
 }
 
-void ImGui::EndChildFrame() IMGUI_NOEXCEPT
+void ImGui::EndChildFrame() IM_NOEXCEPT
 {
     EndChild();
 }
 
-static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled) IMGUI_NOEXCEPT
+static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled) IM_NOEXCEPT
 {
     window->SetWindowPosAllowFlags       = enabled ? (window->SetWindowPosAllowFlags       | flags) : (window->SetWindowPosAllowFlags       & ~flags);
     window->SetWindowSizeAllowFlags      = enabled ? (window->SetWindowSizeAllowFlags      | flags) : (window->SetWindowSizeAllowFlags      & ~flags);
     window->SetWindowCollapsedAllowFlags = enabled ? (window->SetWindowCollapsedAllowFlags | flags) : (window->SetWindowCollapsedAllowFlags & ~flags);
 }
 
-ImGuiWindow* ImGui::FindWindowByID(ImGuiID id) IMGUI_NOEXCEPT
+ImGuiWindow* ImGui::FindWindowByID(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return (ImGuiWindow*)g.WindowsById.GetVoidPtr(id);
 }
 
-ImGuiWindow* ImGui::FindWindowByName(const char* name) IMGUI_NOEXCEPT
+ImGuiWindow* ImGui::FindWindowByName(const char* name) IM_NOEXCEPT
 {
     ImGuiID id = ImHashStr(name);
     return FindWindowByID(id);
 }
 
-static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings) IMGUI_NOEXCEPT
+static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings) IM_NOEXCEPT
 {
     window->Pos = ImFloor(ImVec2(settings->Pos.x, settings->Pos.y));
     if (settings->Size.x > 0 && settings->Size.y > 0)
@@ -5123,7 +5123,7 @@ static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settin
     window->Collapsed = settings->Collapsed;
 }
 
-static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     //IMGUI_DEBUG_LOG("CreateNewWindow '%s', flags = 0x%08X\n", name, flags);
@@ -5175,7 +5175,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags) IM
     return window;
 }
 
-static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& size_desired) IMGUI_NOEXCEPT
+static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& size_desired) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImVec2 new_size = size_desired;
@@ -5210,7 +5210,7 @@ static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& s
     return new_size;
 }
 
-static void CalcWindowContentSizes(ImGuiWindow* window, ImVec2* content_size_current, ImVec2* content_size_ideal) IMGUI_NOEXCEPT
+static void CalcWindowContentSizes(ImGuiWindow* window, ImVec2* content_size_current, ImVec2* content_size_ideal) IM_NOEXCEPT
 {
     bool preserve_old_content_sizes = false;
     if (window->Collapsed && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
@@ -5230,7 +5230,7 @@ static void CalcWindowContentSizes(ImGuiWindow* window, ImVec2* content_size_cur
     content_size_ideal->y = (window->ContentSizeExplicit.y != 0.0f) ? window->ContentSizeExplicit.y : IM_FLOOR(ImMax(window->DC.CursorMaxPos.y, window->DC.IdealMaxPos.y) - window->DC.CursorStartPos.y);
 }
 
-static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_contents) IMGUI_NOEXCEPT
+static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_contents) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
@@ -5268,7 +5268,7 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
     }
 }
 
-ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window) IMGUI_NOEXCEPT
+ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImVec2 size_contents_current;
     ImVec2 size_contents_ideal;
@@ -5278,7 +5278,7 @@ ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window) IMGUI_NOEXCEPT
     return size_final;
 }
 
-static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
         return ImGuiCol_PopupBg;
@@ -5287,7 +5287,7 @@ static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags) IMGUI_NOEXC
     return ImGuiCol_WindowBg;
 }
 
-static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& corner_target, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size) IMGUI_NOEXCEPT
+static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& corner_target, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size) IM_NOEXCEPT
 {
     ImVec2 pos_min = ImLerp(corner_target, window->Pos, corner_norm);                // Expected window upper-left
     ImVec2 pos_max = ImLerp(window->Pos + window->Size, corner_target, corner_norm); // Expected window lower-right
@@ -5331,7 +5331,7 @@ static const ImGuiResizeBorderDef resize_border_def[4] =
     { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f }  // Down
 };
 
-static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness) IMGUI_NOEXCEPT
+static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness) IM_NOEXCEPT
 {
     ImRect rect = window->Rect();
     if (thickness == 0.0f)
@@ -5345,7 +5345,7 @@ static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_
 }
 
 // 0..3: corners (Lower-right, Lower-left, Unused, Unused)
-ImGuiID ImGui::GetWindowResizeCornerID(ImGuiWindow* window, int n) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetWindowResizeCornerID(ImGuiWindow* window, int n) IM_NOEXCEPT
 {
     IM_ASSERT(n >= 0 && n < 4);
     ImGuiID id = window->ID;
@@ -5355,7 +5355,7 @@ ImGuiID ImGui::GetWindowResizeCornerID(ImGuiWindow* window, int n) IMGUI_NOEXCEP
 }
 
 // Borders (Left, Right, Up, Down)
-ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir) IM_NOEXCEPT
 {
     IM_ASSERT(dir >= 0 && dir < 4);
     int n = (int)dir + 4;
@@ -5367,7 +5367,7 @@ ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir) IMGUI_
 
 // Handle resize for: Resize Grips, Borders, Gamepad
 // Return true when using auto-fit (double click on resize grip)
-static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect) IMGUI_NOEXCEPT
+static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
@@ -5497,7 +5497,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     return ret_auto_fit;
 }
 
-static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& visibility_rect) IMGUI_NOEXCEPT
+static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& visibility_rect) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImVec2 size_for_clamping = window->Size;
@@ -5506,7 +5506,7 @@ static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& visibility
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
 
-static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window) IMGUI_NOEXCEPT
+static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
@@ -5532,7 +5532,7 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window) IMGUI_NOEXCEPT
 
 // Draw background and borders
 // Draw and handle scrollbars
-void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size) IMGUI_NOEXCEPT
+void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
@@ -5616,7 +5616,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
 }
 
 // Render title text, collapse button, close button
-void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open) IMGUI_NOEXCEPT
+void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
@@ -5699,7 +5699,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     }
 }
 
-void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window) IMGUI_NOEXCEPT
+void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window) IM_NOEXCEPT
 {
     window->ParentWindow = parent_window;
     window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
@@ -5721,7 +5721,7 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
 //   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_open' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
-bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -6365,7 +6365,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags) IMGUI_
     return !window->SkipItems;
 }
 
-void ImGui::End() IMGUI_NOEXCEPT
+void ImGui::End() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -6399,7 +6399,7 @@ void ImGui::End() IMGUI_NOEXCEPT
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 
-void ImGui::BringWindowToFocusFront(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::BringWindowToFocusFront(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(window == window->RootWindow);
@@ -6420,7 +6420,7 @@ void ImGui::BringWindowToFocusFront(ImGuiWindow* window) IMGUI_NOEXCEPT
     window->FocusOrder = (short)new_order;
 }
 
-void ImGui::BringWindowToDisplayFront(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::BringWindowToDisplayFront(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* current_front_window = g.Windows.back();
@@ -6435,7 +6435,7 @@ void ImGui::BringWindowToDisplayFront(ImGuiWindow* window) IMGUI_NOEXCEPT
         }
 }
 
-void ImGui::BringWindowToDisplayBack(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::BringWindowToDisplayBack(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.Windows[0] == window)
@@ -6450,7 +6450,7 @@ void ImGui::BringWindowToDisplayBack(ImGuiWindow* window) IMGUI_NOEXCEPT
 }
 
 // Moving window to front of display and set focus (which happens to be back of our sorted list)
-void ImGui::FocusWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::FocusWindow(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -6493,7 +6493,7 @@ void ImGui::FocusWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
         BringWindowToDisplayFront(display_front_window);
 }
 
-void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window) IMGUI_NOEXCEPT
+void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -6515,7 +6515,7 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 }
 
 // Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
-void ImGui::SetCurrentFont(ImFont* font) IMGUI_NOEXCEPT
+void ImGui::SetCurrentFont(ImFont* font) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
@@ -6531,7 +6531,7 @@ void ImGui::SetCurrentFont(ImFont* font) IMGUI_NOEXCEPT
     g.DrawListSharedData.FontSize = g.FontSize;
 }
 
-void ImGui::PushFont(ImFont* font) IMGUI_NOEXCEPT
+void ImGui::PushFont(ImFont* font) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!font)
@@ -6541,7 +6541,7 @@ void ImGui::PushFont(ImFont* font) IMGUI_NOEXCEPT
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
 }
 
-void  ImGui::PopFont() IMGUI_NOEXCEPT
+void  ImGui::PopFont() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.CurrentWindow->DrawList->PopTextureID();
@@ -6549,7 +6549,7 @@ void  ImGui::PopFont() IMGUI_NOEXCEPT
     SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
 }
 
-void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled) IMGUI_NOEXCEPT
+void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiItemFlags item_flags = g.CurrentItemFlags;
@@ -6562,7 +6562,7 @@ void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled) IMGUI_NOEXCEPT
     g.ItemFlagsStack.push_back(item_flags);
 }
 
-void ImGui::PopItemFlag() IMGUI_NOEXCEPT
+void ImGui::PopItemFlag() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ItemFlagsStack.Size > 1); // Too many calls to PopItemFlag() - we always leave a 0 at the bottom of the stack.
@@ -6571,41 +6571,41 @@ void ImGui::PopItemFlag() IMGUI_NOEXCEPT
 }
 
 // FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
-void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus) IMGUI_NOEXCEPT
+void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus) IM_NOEXCEPT
 {
     PushItemFlag(ImGuiItemFlags_NoTabStop, !allow_keyboard_focus);
 }
 
-void ImGui::PopAllowKeyboardFocus() IMGUI_NOEXCEPT
+void ImGui::PopAllowKeyboardFocus() IM_NOEXCEPT
 {
     PopItemFlag();
 }
 
-void ImGui::PushButtonRepeat(bool repeat) IMGUI_NOEXCEPT
+void ImGui::PushButtonRepeat(bool repeat) IM_NOEXCEPT
 {
     PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat);
 }
 
-void ImGui::PopButtonRepeat() IMGUI_NOEXCEPT
+void ImGui::PopButtonRepeat() IM_NOEXCEPT
 {
     PopItemFlag();
 }
 
-void ImGui::PushTextWrapPos(float wrap_pos_x) IMGUI_NOEXCEPT
+void ImGui::PushTextWrapPos(float wrap_pos_x) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.TextWrapPosStack.push_back(window->DC.TextWrapPos);
     window->DC.TextWrapPos = wrap_pos_x;
 }
 
-void ImGui::PopTextWrapPos() IMGUI_NOEXCEPT
+void ImGui::PopTextWrapPos() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
     window->DC.TextWrapPosStack.pop_back();
 }
 
-bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent) IMGUI_NOEXCEPT
+bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent) IM_NOEXCEPT
 {
     if (window->RootWindow == potential_parent)
         return true;
@@ -6618,7 +6618,7 @@ bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent) 
     return false;
 }
 
-bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below) IMGUI_NOEXCEPT
+bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
@@ -6632,7 +6632,7 @@ bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_b
     return false;
 }
 
-bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags) IMGUI_NOEXCEPT
+bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags) IM_NOEXCEPT
 {
     IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
@@ -6671,7 +6671,7 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags) IMGUI_NOEXCEPT
     return true;
 }
 
-bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags) IMGUI_NOEXCEPT
+bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -6695,31 +6695,31 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags) IMGUI_NOEXCEPT
 // Can we focus this window with CTRL+TAB (or PadMenu + PadFocusPrev/PadFocusNext)
 // Note that NoNavFocus makes the window not reachable with CTRL+TAB but it can still be focused with mouse or programmatically.
 // If you want a window to never be focused, you may use the e.g. NoInputs flag.
-bool ImGui::IsWindowNavFocusable(ImGuiWindow* window) IMGUI_NOEXCEPT
+bool ImGui::IsWindowNavFocusable(ImGuiWindow* window) IM_NOEXCEPT
 {
     return window->WasActive && window == window->RootWindow && !(window->Flags & ImGuiWindowFlags_NoNavFocus);
 }
 
-float ImGui::GetWindowWidth() IMGUI_NOEXCEPT
+float ImGui::GetWindowWidth() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->Size.x;
 }
 
-float ImGui::GetWindowHeight() IMGUI_NOEXCEPT
+float ImGui::GetWindowHeight() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->Size.y;
 }
 
-ImVec2 ImGui::GetWindowPos() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetWindowPos() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     return window->Pos;
 }
 
-void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond) IM_NOEXCEPT
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
@@ -6739,25 +6739,25 @@ void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     window->DC.CursorStartPos += offset;
 }
 
-void ImGui::SetWindowPos(const ImVec2& pos, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowPos(const ImVec2& pos, ImGuiCond cond) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     SetWindowPos(window, pos, cond);
 }
 
-void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiCond cond) IM_NOEXCEPT
 {
     if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowPos(window, pos, cond);
 }
 
-ImVec2 ImGui::GetWindowSize() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetWindowSize() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->Size;
 }
 
-void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond) IM_NOEXCEPT
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
@@ -6789,18 +6789,18 @@ void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     }
 }
 
-void ImGui::SetWindowSize(const ImVec2& size, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowSize(const ImVec2& size, ImGuiCond cond) IM_NOEXCEPT
 {
     SetWindowSize(GImGui->CurrentWindow, size, cond);
 }
 
-void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiCond cond) IM_NOEXCEPT
 {
     if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowSize(window, size, cond);
 }
 
-void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond) IM_NOEXCEPT
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
@@ -6811,42 +6811,42 @@ void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond co
     window->Collapsed = collapsed;
 }
 
-void ImGui::SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size) IMGUI_NOEXCEPT
+void ImGui::SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size) IM_NOEXCEPT
 {
     IM_ASSERT(window->HitTestHoleSize.x == 0);     // We don't support multiple holes/hit test filters
     window->HitTestHoleSize = ImVec2ih(size);
     window->HitTestHoleOffset = ImVec2ih(pos - window->Pos);
 }
 
-void ImGui::SetWindowCollapsed(bool collapsed, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowCollapsed(bool collapsed, ImGuiCond cond) IM_NOEXCEPT
 {
     SetWindowCollapsed(GImGui->CurrentWindow, collapsed, cond);
 }
 
-bool ImGui::IsWindowCollapsed() IMGUI_NOEXCEPT
+bool ImGui::IsWindowCollapsed() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->Collapsed;
 }
 
-bool ImGui::IsWindowAppearing() IMGUI_NOEXCEPT
+bool ImGui::IsWindowAppearing() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->Appearing;
 }
 
-void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond) IM_NOEXCEPT
 {
     if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowCollapsed(window, collapsed, cond);
 }
 
-void ImGui::SetWindowFocus() IMGUI_NOEXCEPT
+void ImGui::SetWindowFocus() IM_NOEXCEPT
 {
     FocusWindow(GImGui->CurrentWindow);
 }
 
-void ImGui::SetWindowFocus(const char* name) IMGUI_NOEXCEPT
+void ImGui::SetWindowFocus(const char* name) IM_NOEXCEPT
 {
     if (name)
     {
@@ -6859,7 +6859,7 @@ void ImGui::SetWindowFocus(const char* name) IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(cond == 0 || ImIsPowerOfTwo(cond)); // Make sure the user doesn't attempt to combine multiple condition flags.
@@ -6869,7 +6869,7 @@ void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pi
     g.NextWindowData.PosCond = cond ? cond : ImGuiCond_Always;
 }
 
-void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(cond == 0 || ImIsPowerOfTwo(cond)); // Make sure the user doesn't attempt to combine multiple condition flags.
@@ -6878,7 +6878,7 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond) IMGUI_NOEXCEPT
     g.NextWindowData.SizeCond = cond ? cond : ImGuiCond_Always;
 }
 
-void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasSizeConstraint;
@@ -6889,21 +6889,21 @@ void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& s
 
 // Content size = inner scrollable rectangle, padded with WindowPadding.
 // SetNextWindowContentSize(ImVec2(100,100) + ImGuiWindowFlags_AlwaysAutoResize will always allow submitting a 100x100 item.
-void ImGui::SetNextWindowContentSize(const ImVec2& size) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowContentSize(const ImVec2& size) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasContentSize;
     g.NextWindowData.ContentSizeVal = ImFloor(size);
 }
 
-void ImGui::SetNextWindowScroll(const ImVec2& scroll) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowScroll(const ImVec2& scroll) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasScroll;
     g.NextWindowData.ScrollVal = scroll;
 }
 
-void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(cond == 0 || ImIsPowerOfTwo(cond)); // Make sure the user doesn't attempt to combine multiple condition flags.
@@ -6912,41 +6912,41 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond) IMGUI_NOEXCEP
     g.NextWindowData.CollapsedCond = cond ? cond : ImGuiCond_Always;
 }
 
-void ImGui::SetNextWindowFocus() IMGUI_NOEXCEPT
+void ImGui::SetNextWindowFocus() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasFocus;
 }
 
-void ImGui::SetNextWindowBgAlpha(float alpha) IMGUI_NOEXCEPT
+void ImGui::SetNextWindowBgAlpha(float alpha) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasBgAlpha;
     g.NextWindowData.BgAlphaVal = alpha;
 }
 
-ImDrawList* ImGui::GetWindowDrawList() IMGUI_NOEXCEPT
+ImDrawList* ImGui::GetWindowDrawList() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DrawList;
 }
 
-ImFont* ImGui::GetFont() IMGUI_NOEXCEPT
+ImFont* ImGui::GetFont() IM_NOEXCEPT
 {
     return GImGui->Font;
 }
 
-float ImGui::GetFontSize() IMGUI_NOEXCEPT
+float ImGui::GetFontSize() IM_NOEXCEPT
 {
     return GImGui->FontSize;
 }
 
-ImVec2 ImGui::GetFontTexUvWhitePixel() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetFontTexUvWhitePixel() IM_NOEXCEPT
 {
     return GImGui->DrawListSharedData.TexUvWhitePixel;
 }
 
-void ImGui::SetWindowFontScale(float scale) IMGUI_NOEXCEPT
+void ImGui::SetWindowFontScale(float scale) IM_NOEXCEPT
 {
     IM_ASSERT(scale > 0.0f);
     ImGuiContext& g = *GImGui;
@@ -6955,13 +6955,13 @@ void ImGui::SetWindowFontScale(float scale) IMGUI_NOEXCEPT
     g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
-void ImGui::ActivateItem(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::ActivateItem(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NavNextActivateId = id;
 }
 
-void ImGui::PushFocusScope(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::PushFocusScope(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -6969,7 +6969,7 @@ void ImGui::PushFocusScope(ImGuiID id) IMGUI_NOEXCEPT
     window->DC.NavFocusScopeIdCurrent = id;
 }
 
-void ImGui::PopFocusScope() IMGUI_NOEXCEPT
+void ImGui::PopFocusScope() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -6978,7 +6978,7 @@ void ImGui::PopFocusScope() IMGUI_NOEXCEPT
     g.FocusScopeStack.pop_back();
 }
 
-void ImGui::SetKeyboardFocusHere(int offset) IMGUI_NOEXCEPT
+void ImGui::SetKeyboardFocusHere(int offset) IM_NOEXCEPT
 {
     IM_ASSERT(offset >= -1);    // -1 is allowed but not below
     ImGuiContext& g = *GImGui;
@@ -6988,7 +6988,7 @@ void ImGui::SetKeyboardFocusHere(int offset) IMGUI_NOEXCEPT
     g.TabFocusRequestNextCounterTabStop = INT_MAX;
 }
 
-void ImGui::SetItemDefaultFocus() IMGUI_NOEXCEPT
+void ImGui::SetItemDefaultFocus() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7005,19 +7005,19 @@ void ImGui::SetItemDefaultFocus() IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::SetStateStorage(ImGuiStorage* tree) IMGUI_NOEXCEPT
+void ImGui::SetStateStorage(ImGuiStorage* tree) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     window->DC.StateStorage = tree ? tree : &window->StateStorage;
 }
 
-ImGuiStorage* ImGui::GetStateStorage() IMGUI_NOEXCEPT
+ImGuiStorage* ImGui::GetStateStorage() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->DC.StateStorage;
 }
 
-void ImGui::PushID(const char* str_id) IMGUI_NOEXCEPT
+void ImGui::PushID(const char* str_id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7025,7 +7025,7 @@ void ImGui::PushID(const char* str_id) IMGUI_NOEXCEPT
     window->IDStack.push_back(id);
 }
 
-void ImGui::PushID(const char* str_id_begin, const char* str_id_end) IMGUI_NOEXCEPT
+void ImGui::PushID(const char* str_id_begin, const char* str_id_end) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7033,7 +7033,7 @@ void ImGui::PushID(const char* str_id_begin, const char* str_id_end) IMGUI_NOEXC
     window->IDStack.push_back(id);
 }
 
-void ImGui::PushID(const void* ptr_id) IMGUI_NOEXCEPT
+void ImGui::PushID(const void* ptr_id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7041,7 +7041,7 @@ void ImGui::PushID(const void* ptr_id) IMGUI_NOEXCEPT
     window->IDStack.push_back(id);
 }
 
-void ImGui::PushID(int int_id) IMGUI_NOEXCEPT
+void ImGui::PushID(int int_id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7050,7 +7050,7 @@ void ImGui::PushID(int int_id) IMGUI_NOEXCEPT
 }
 
 // Push a given id value ignoring the ID stack as a seed.
-void ImGui::PushOverrideID(ImGuiID id) IMGUI_NOEXCEPT
+void ImGui::PushOverrideID(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7060,7 +7060,7 @@ void ImGui::PushOverrideID(ImGuiID id) IMGUI_NOEXCEPT
 // Helper to avoid a common series of PushOverrideID -> GetID() -> PopID() call
 // (note that when using this pattern, TestEngine's "Stack Tool" will tend to not display the intermediate stack level.
 //  for that to work we would need to do PushOverrideID() -> ItemAdd() -> PopID() which would alter widget code a little more)
-ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed) IM_NOEXCEPT
 {
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
     ImGui::KeepAliveID(id);
@@ -7071,38 +7071,38 @@ ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed)
     return id;
 }
 
-void ImGui::PopID() IMGUI_NOEXCEPT
+void ImGui::PopID() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     IM_ASSERT(window->IDStack.Size > 1); // Too many PopID(), or could be popping in a wrong/different window?
     window->IDStack.pop_back();
 }
 
-ImGuiID ImGui::GetID(const char* str_id) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetID(const char* str_id) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(str_id);
 }
 
-ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(str_id_begin, str_id_end);
 }
 
-ImGuiID ImGui::GetID(const void* ptr_id) IMGUI_NOEXCEPT
+ImGuiID ImGui::GetID(const void* ptr_id) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(ptr_id);
 }
 
-bool ImGui::IsRectVisible(const ImVec2& size) IMGUI_NOEXCEPT
+bool ImGui::IsRectVisible(const ImVec2& size) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
-bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max) IMGUI_NOEXCEPT
+bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ClipRect.Overlaps(ImRect(rect_min, rect_max));
@@ -7118,7 +7118,7 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max) IMGUI_
 // If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
 // may see different structures than what imgui.cpp sees, which is problematic.
 // We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
-bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx) IMGUI_NOEXCEPT
+bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx) IM_NOEXCEPT
 {
     bool error = false;
     if (strcmp(version, IMGUI_VERSION) != 0) { error = true; IM_ASSERT(strcmp(version, IMGUI_VERSION) == 0 && "Mismatched version string!"); }
@@ -7131,7 +7131,7 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
     return !error;
 }
 
-static void ImGui::ErrorCheckNewFrameSanityChecks() IMGUI_NOEXCEPT
+static void ImGui::ErrorCheckNewFrameSanityChecks() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -7168,7 +7168,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks() IMGUI_NOEXCEPT
         g.IO.ConfigWindowsResizeFromEdges = false;
 }
 
-static void ImGui::ErrorCheckEndFrameSanityChecks() IMGUI_NOEXCEPT
+static void ImGui::ErrorCheckEndFrameSanityChecks() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -7209,7 +7209,7 @@ static void ImGui::ErrorCheckEndFrameSanityChecks() IMGUI_NOEXCEPT
 // This is generally flawed as we are not necessarily End/Popping things in the right order.
 // FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
 // FIXME: Can't recover from interleaved BeginTabBar/Begin
-void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data) IMGUI_NOEXCEPT
+void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data) IM_NOEXCEPT
 {
     // PVS-Studio V1044 is "Loop break conditions do not depend on the number of iterations"
     ImGuiContext& g = *GImGui;
@@ -7279,7 +7279,7 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
 }
 
 // Save current stack sizes for later compare
-void ImGuiStackSizes::SetToCurrentState() IMGUI_NOEXCEPT
+void ImGuiStackSizes::SetToCurrentState() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7293,7 +7293,7 @@ void ImGuiStackSizes::SetToCurrentState() IMGUI_NOEXCEPT
 }
 
 // Compare to detect usage errors
-void ImGuiStackSizes::CompareWithCurrentState() IMGUI_NOEXCEPT
+void ImGuiStackSizes::CompareWithCurrentState() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7350,7 +7350,7 @@ void ImGuiStackSizes::CompareWithCurrentState() IMGUI_NOEXCEPT
 // Advance cursor given item size for layout.
 // Register minimum needed size so it can extend the bounding box used for auto-fit calculation.
 // See comments in ItemAdd() about how/why the size provided to ItemSize() vs ItemAdd() may often different.
-void ImGui::ItemSize(const ImVec2& size, float text_baseline_y) IMGUI_NOEXCEPT
+void ImGui::ItemSize(const ImVec2& size, float text_baseline_y) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7383,7 +7383,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_baseline_y) IMGUI_NOEXCEPT
         SameLine();
 }
 
-void ImGui::ItemSize(const ImRect& bb, float text_baseline_y) IMGUI_NOEXCEPT
+void ImGui::ItemSize(const ImRect& bb, float text_baseline_y) IM_NOEXCEPT
 {
     ItemSize(bb.GetSize(), text_baseline_y);
 }
@@ -7391,7 +7391,7 @@ void ImGui::ItemSize(const ImRect& bb, float text_baseline_y) IMGUI_NOEXCEPT
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
-bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemAddFlags flags) IMGUI_NOEXCEPT
+bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemAddFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7456,7 +7456,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 //      offset_from_start_x != 0 : align to specified x position (relative to window/group left)
 //      spacing_w < 0            : use default spacing if pos_x == 0, no spacing if pos_x != 0
 //      spacing_w >= 0           : enforce spacing amount
-void ImGui::SameLine(float offset_from_start_x, float spacing_w) IMGUI_NOEXCEPT
+void ImGui::SameLine(float offset_from_start_x, float spacing_w) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -7479,13 +7479,13 @@ void ImGui::SameLine(float offset_from_start_x, float spacing_w) IMGUI_NOEXCEPT
     window->DC.CurrLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
 }
 
-ImVec2 ImGui::GetCursorScreenPos() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetCursorScreenPos() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos;
 }
 
-void ImGui::SetCursorScreenPos(const ImVec2& pos) IMGUI_NOEXCEPT
+void ImGui::SetCursorScreenPos(const ImVec2& pos) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = pos;
@@ -7494,52 +7494,52 @@ void ImGui::SetCursorScreenPos(const ImVec2& pos) IMGUI_NOEXCEPT
 
 // User generally sees positions in window coordinates. Internally we store CursorPos in absolute screen coordinates because it is more convenient.
 // Conversion happens as we pass the value to user, but it makes our naming convention confusing because GetCursorPos() == (DC.CursorPos - window.Pos). May want to rename 'DC.CursorPos'.
-ImVec2 ImGui::GetCursorPos() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetCursorPos() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos - window->Pos + window->Scroll;
 }
 
-float ImGui::GetCursorPosX() IMGUI_NOEXCEPT
+float ImGui::GetCursorPosX() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos.x - window->Pos.x + window->Scroll.x;
 }
 
-float ImGui::GetCursorPosY() IMGUI_NOEXCEPT
+float ImGui::GetCursorPosY() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos.y - window->Pos.y + window->Scroll.y;
 }
 
-void ImGui::SetCursorPos(const ImVec2& local_pos) IMGUI_NOEXCEPT
+void ImGui::SetCursorPos(const ImVec2& local_pos) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = window->Pos - window->Scroll + local_pos;
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
-void ImGui::SetCursorPosX(float x) IMGUI_NOEXCEPT
+void ImGui::SetCursorPosX(float x) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + x;
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPos.x);
 }
 
-void ImGui::SetCursorPosY(float y) IMGUI_NOEXCEPT
+void ImGui::SetCursorPosY(float y) IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.y = window->Pos.y - window->Scroll.y + y;
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 }
 
-ImVec2 ImGui::GetCursorStartPos() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetCursorStartPos() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorStartPos - window->Pos;
 }
 
-void ImGui::Indent(float indent_w) IMGUI_NOEXCEPT
+void ImGui::Indent(float indent_w) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7547,7 +7547,7 @@ void ImGui::Indent(float indent_w) IMGUI_NOEXCEPT
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
 }
 
-void ImGui::Unindent(float indent_w) IMGUI_NOEXCEPT
+void ImGui::Unindent(float indent_w) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7556,7 +7556,7 @@ void ImGui::Unindent(float indent_w) IMGUI_NOEXCEPT
 }
 
 // Affect large frame+labels widgets only.
-void ImGui::SetNextItemWidth(float item_width) IMGUI_NOEXCEPT
+void ImGui::SetNextItemWidth(float item_width) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasWidth;
@@ -7564,7 +7564,7 @@ void ImGui::SetNextItemWidth(float item_width) IMGUI_NOEXCEPT
 }
 
 // FIXME: Remove the == 0.0f behavior?
-void ImGui::PushItemWidth(float item_width) IMGUI_NOEXCEPT
+void ImGui::PushItemWidth(float item_width) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7573,7 +7573,7 @@ void ImGui::PushItemWidth(float item_width) IMGUI_NOEXCEPT
     g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
 }
 
-void ImGui::PushMultiItemsWidths(int components, float w_full) IMGUI_NOEXCEPT
+void ImGui::PushMultiItemsWidths(int components, float w_full) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7588,7 +7588,7 @@ void ImGui::PushMultiItemsWidths(int components, float w_full) IMGUI_NOEXCEPT
     g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
 }
 
-void ImGui::PopItemWidth() IMGUI_NOEXCEPT
+void ImGui::PopItemWidth() IM_NOEXCEPT
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.ItemWidth = window->DC.ItemWidthStack.back();
@@ -7597,7 +7597,7 @@ void ImGui::PopItemWidth() IMGUI_NOEXCEPT
 
 // Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth().
 // The SetNextItemWidth() data is generally cleared/consumed by ItemAdd() or NextItemData.ClearFlags()
-float ImGui::CalcItemWidth() IMGUI_NOEXCEPT
+float ImGui::CalcItemWidth() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7619,7 +7619,7 @@ float ImGui::CalcItemWidth() IMGUI_NOEXCEPT
 // Those two functions CalcItemWidth vs CalcItemSize are awkwardly named because they are not fully symmetrical.
 // Note that only CalcItemWidth() is publicly exposed.
 // The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
-ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h) IMGUI_NOEXCEPT
+ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
 
@@ -7640,25 +7640,25 @@ ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h) IMGUI_
     return size;
 }
 
-float ImGui::GetTextLineHeight() IMGUI_NOEXCEPT
+float ImGui::GetTextLineHeight() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize;
 }
 
-float ImGui::GetTextLineHeightWithSpacing() IMGUI_NOEXCEPT
+float ImGui::GetTextLineHeightWithSpacing() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize + g.Style.ItemSpacing.y;
 }
 
-float ImGui::GetFrameHeight() IMGUI_NOEXCEPT
+float ImGui::GetFrameHeight() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
-float ImGui::GetFrameHeightWithSpacing() IMGUI_NOEXCEPT
+float ImGui::GetFrameHeightWithSpacing() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
@@ -7667,7 +7667,7 @@ float ImGui::GetFrameHeightWithSpacing() IMGUI_NOEXCEPT
 // FIXME: All the Contents Region function are messy or misleading. WE WILL AIM TO OBSOLETE ALL OF THEM WITH A NEW "WORK RECT" API. Thanks for your patience!
 
 // FIXME: This is in window space (not screen space!).
-ImVec2 ImGui::GetContentRegionMax() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetContentRegionMax() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7678,7 +7678,7 @@ ImVec2 ImGui::GetContentRegionMax() IMGUI_NOEXCEPT
 }
 
 // [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
-ImVec2 ImGui::GetContentRegionMaxAbs() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetContentRegionMaxAbs() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7688,26 +7688,26 @@ ImVec2 ImGui::GetContentRegionMaxAbs() IMGUI_NOEXCEPT
     return mx;
 }
 
-ImVec2 ImGui::GetContentRegionAvail() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetContentRegionAvail() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return GetContentRegionMaxAbs() - window->DC.CursorPos;
 }
 
 // In window space (not screen space!)
-ImVec2 ImGui::GetWindowContentRegionMin() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetWindowContentRegionMin() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.Min - window->Pos;
 }
 
-ImVec2 ImGui::GetWindowContentRegionMax() IMGUI_NOEXCEPT
+ImVec2 ImGui::GetWindowContentRegionMax() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.Max - window->Pos;
 }
 
-float ImGui::GetWindowContentRegionWidth() IMGUI_NOEXCEPT
+float ImGui::GetWindowContentRegionWidth() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.GetWidth();
@@ -7715,7 +7715,7 @@ float ImGui::GetWindowContentRegionWidth() IMGUI_NOEXCEPT
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
 // Groups are currently a mishmash of functionalities which should perhaps be clarified and separated.
-void ImGui::BeginGroup() IMGUI_NOEXCEPT
+void ImGui::BeginGroup() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7742,7 +7742,7 @@ void ImGui::BeginGroup() IMGUI_NOEXCEPT
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 }
 
-void ImGui::EndGroup() IMGUI_NOEXCEPT
+void ImGui::EndGroup() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7811,7 +7811,7 @@ void ImGui::EndGroup() IMGUI_NOEXCEPT
 // So the difference between WindowPadding and ItemSpacing will be in the visible area after scrolling.
 // When we refactor the scrolling API this may be configurable with a flag?
 // Note that the effect for this won't be visible on X axis with default Style settings as WindowPadding.x == ItemSpacing.x by default.
-static float CalcScrollEdgeSnap(float target, float snap_min, float snap_max, float snap_threshold, float center_ratio) IMGUI_NOEXCEPT
+static float CalcScrollEdgeSnap(float target, float snap_min, float snap_max, float snap_threshold, float center_ratio) IM_NOEXCEPT
 {
     if (target <= snap_min + snap_threshold)
         return ImLerp(snap_min, target, center_ratio);
@@ -7820,7 +7820,7 @@ static float CalcScrollEdgeSnap(float target, float snap_min, float snap_max, fl
     return target;
 }
 
-static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window) IMGUI_NOEXCEPT
+static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImVec2 scroll = window->Scroll;
     if (window->ScrollTarget.x < FLT_MAX)
@@ -7860,7 +7860,7 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window) IMGUI_
 }
 
 // Scroll to keep newly navigated item fully into view
-ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_rect) IMGUI_NOEXCEPT
+ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_rect) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImRect window_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
@@ -7889,51 +7889,51 @@ ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_
     return delta_scroll;
 }
 
-float ImGui::GetScrollX() IMGUI_NOEXCEPT
+float ImGui::GetScrollX() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->Scroll.x;
 }
 
-float ImGui::GetScrollY() IMGUI_NOEXCEPT
+float ImGui::GetScrollY() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->Scroll.y;
 }
 
-float ImGui::GetScrollMaxX() IMGUI_NOEXCEPT
+float ImGui::GetScrollMaxX() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ScrollMax.x;
 }
 
-float ImGui::GetScrollMaxY() IMGUI_NOEXCEPT
+float ImGui::GetScrollMaxY() IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ScrollMax.y;
 }
 
-void ImGui::SetScrollX(ImGuiWindow* window, float scroll_x) IMGUI_NOEXCEPT
+void ImGui::SetScrollX(ImGuiWindow* window, float scroll_x) IM_NOEXCEPT
 {
     window->ScrollTarget.x = scroll_x;
     window->ScrollTargetCenterRatio.x = 0.0f;
     window->ScrollTargetEdgeSnapDist.x = 0.0f;
 }
 
-void ImGui::SetScrollY(ImGuiWindow* window, float scroll_y) IMGUI_NOEXCEPT
+void ImGui::SetScrollY(ImGuiWindow* window, float scroll_y) IM_NOEXCEPT
 {
     window->ScrollTarget.y = scroll_y;
     window->ScrollTargetCenterRatio.y = 0.0f;
     window->ScrollTargetEdgeSnapDist.y = 0.0f;
 }
 
-void ImGui::SetScrollX(float scroll_x) IMGUI_NOEXCEPT
+void ImGui::SetScrollX(float scroll_x) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     SetScrollX(g.CurrentWindow, scroll_x);
 }
 
-void ImGui::SetScrollY(float scroll_y) IMGUI_NOEXCEPT
+void ImGui::SetScrollY(float scroll_y) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     SetScrollY(g.CurrentWindow, scroll_y);
@@ -7949,7 +7949,7 @@ void ImGui::SetScrollY(float scroll_y) IMGUI_NOEXCEPT
 //  - SetScrollFromPosY(0.0f) == SetScrollY(0.0f + scroll.y) == has no effect!
 //  - SetScrollFromPosY(-scroll.y) == SetScrollY(-scroll.y + scroll.y) == SetScrollY(0.0f) == reset scroll. Of course writing SetScrollY(0.0f) directly then makes more sense
 // We store a target position so centering and clamping can occur on the next frame when we are guaranteed to have a known window size
-void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x_ratio) IM_NOEXCEPT
 {
     IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
     window->ScrollTarget.x = IM_FLOOR(local_x + window->Scroll.x); // Convert local position to scroll offset
@@ -7957,7 +7957,7 @@ void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x
     window->ScrollTargetEdgeSnapDist.x = 0.0f;
 }
 
-void ImGui::SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y_ratio) IM_NOEXCEPT
 {
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     const float decoration_up_height = window->TitleBarHeight() + window->MenuBarHeight(); // FIXME: Would be nice to have a more standardized access to our scrollable/client rect;
@@ -7967,20 +7967,20 @@ void ImGui::SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y
     window->ScrollTargetEdgeSnapDist.y = 0.0f;
 }
 
-void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     SetScrollFromPosX(g.CurrentWindow, local_x, center_x_ratio);
 }
 
-void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     SetScrollFromPosY(g.CurrentWindow, local_y, center_y_ratio);
 }
 
 // center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
-void ImGui::SetScrollHereX(float center_x_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollHereX(float center_x_ratio) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7993,7 +7993,7 @@ void ImGui::SetScrollHereX(float center_x_ratio) IMGUI_NOEXCEPT
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
-void ImGui::SetScrollHereY(float center_y_ratio) IMGUI_NOEXCEPT
+void ImGui::SetScrollHereY(float center_y_ratio) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8009,12 +8009,12 @@ void ImGui::SetScrollHereY(float center_y_ratio) IMGUI_NOEXCEPT
 // [SECTION] TOOLTIPS
 //-----------------------------------------------------------------------------
 
-void ImGui::BeginTooltip() IMGUI_NOEXCEPT
+void ImGui::BeginTooltip() IM_NOEXCEPT
 {
     BeginTooltipEx(ImGuiWindowFlags_None, ImGuiTooltipFlags_None);
 }
 
-void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags tooltip_flags) IMGUI_NOEXCEPT
+void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags tooltip_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -8046,20 +8046,20 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags toolt
     Begin(window_name, NULL, flags | extra_flags);
 }
 
-void ImGui::EndTooltip() IMGUI_NOEXCEPT
+void ImGui::EndTooltip() IM_NOEXCEPT
 {
     IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);   // Mismatched BeginTooltip()/EndTooltip() calls
     End();
 }
 
-void ImGui::SetTooltipV(const char* fmt, va_list args) IMGUI_NOEXCEPT
+void ImGui::SetTooltipV(const char* fmt, va_list args) IM_NOEXCEPT
 {
     BeginTooltipEx(0, ImGuiTooltipFlags_OverridePreviousTooltip);
     TextV(fmt, args);
     EndTooltip();
 }
 
-void ImGui::SetTooltip(const char* fmt, ...) IMGUI_NOEXCEPT
+void ImGui::SetTooltip(const char* fmt, ...) IM_NOEXCEPT
 {
     va_list args;
     va_start(args, fmt);
@@ -8072,7 +8072,7 @@ void ImGui::SetTooltip(const char* fmt, ...) IMGUI_NOEXCEPT
 //-----------------------------------------------------------------------------
 
 // Supported flags: ImGuiPopupFlags_AnyPopupId, ImGuiPopupFlags_AnyPopupLevel
-bool ImGui::IsPopupOpen(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+bool ImGui::IsPopupOpen(ImGuiID id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (popup_flags & ImGuiPopupFlags_AnyPopupId)
@@ -8103,7 +8103,7 @@ bool ImGui::IsPopupOpen(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
     }
 }
 
-bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = (popup_flags & ImGuiPopupFlags_AnyPopupId) ? 0 : g.CurrentWindow->GetID(str_id);
@@ -8112,7 +8112,7 @@ bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_N
     return IsPopupOpen(id, popup_flags);
 }
 
-ImGuiWindow* ImGui::GetTopMostPopupModal() IMGUI_NOEXCEPT
+ImGuiWindow* ImGui::GetTopMostPopupModal() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     for (int n = g.OpenPopupStack.Size - 1; n >= 0; n--)
@@ -8122,13 +8122,13 @@ ImGuiWindow* ImGui::GetTopMostPopupModal() IMGUI_NOEXCEPT
     return NULL;
 }
 
-void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     OpenPopupEx(g.CurrentWindow->GetID(str_id), popup_flags);
 }
 
-void ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+void ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     OpenPopupEx(id, popup_flags);
 }
@@ -8137,7 +8137,7 @@ void ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
@@ -8186,7 +8186,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
 
 // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
 // This function closes any popups that are over 'ref_window'.
-void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup) IMGUI_NOEXCEPT
+void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.Size == 0)
@@ -8230,7 +8230,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to
     }
 }
 
-void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup) IMGUI_NOEXCEPT
+void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IMGUI_DEBUG_LOG_POPUP("ClosePopupToLevel(%d), restore_focus_to_window_under_popup=%d\n", remaining, restore_focus_to_window_under_popup);
@@ -8258,7 +8258,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
 }
 
 // Close the popup we have begin-ed into.
-void ImGui::CloseCurrentPopup() IMGUI_NOEXCEPT
+void ImGui::CloseCurrentPopup() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     int popup_idx = g.BeginPopupStack.Size - 1;
@@ -8289,7 +8289,7 @@ void ImGui::CloseCurrentPopup() IMGUI_NOEXCEPT
 }
 
 // Attention! BeginPopup() adds default flags which BeginPopupEx()!
-bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!IsPopupOpen(id, ImGuiPopupFlags_None))
@@ -8312,7 +8312,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
     return is_open;
 }
 
-bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.Size <= g.BeginPopupStack.Size) // Early out for performance
@@ -8326,7 +8326,7 @@ bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags) IMGUI_NOEXCEP
 
 // If 'p_open' is specified for a modal popup window, the popup will have a regular close button which will close the popup.
 // Note that popup visibility status is owned by Dear ImGui (and manipulated with e.g. OpenPopup) so the actual value of *p_open is meaningless here.
-bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8358,7 +8358,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     return is_open;
 }
 
-void ImGui::EndPopup() IMGUI_NOEXCEPT
+void ImGui::EndPopup() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8379,7 +8379,7 @@ void ImGui::EndPopup() IMGUI_NOEXCEPT
 
 // Helper to open a popup if mouse button is released over the item
 // - This is essentially the same as BeginPopupContextItem() but without the trailing BeginPopup()
-void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
@@ -8407,7 +8407,7 @@ void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags
 //           OpenPopup(id);
 //       return BeginPopup(id);
 //   The main difference being that this is tweaked to avoid computing the ID twice.
-bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (window->SkipItems)
@@ -8420,7 +8420,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flag
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
@@ -8433,7 +8433,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flags) IMGUI_NOEXCEPT
+bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flags) IM_NOEXCEPT
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
@@ -8451,7 +8451,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flag
 // (r_outer is usually equivalent to the viewport rectangle minus padding, but when multi-viewports are enabled and monitor
 //  information are available, it may represent the entire platform monitor from the frame of reference of the current viewport.
 //  this allows us to have tooltips/popups displayed out of the parent viewport.)
-ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy) IMGUI_NOEXCEPT
+ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy) IM_NOEXCEPT
 {
     ImVec2 base_pos_clamped = ImClamp(ref_pos, r_outer.Min, r_outer.Max - size);
     //GetForegroundDrawList()->AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255,0,0,255));
@@ -8526,7 +8526,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
 }
 
 // Note that this is used for popups, which can overlap the non work-area of individual viewports.
-ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window) IMGUI_NOEXCEPT
+ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_UNUSED(window);
@@ -8536,7 +8536,7 @@ ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window) IMGUI_NOEXCEPT
     return r_screen;
 }
 
-ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window) IMGUI_NOEXCEPT
+ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -8581,7 +8581,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window) IMGUI_NOEXCEPT
 //-----------------------------------------------------------------------------
 
 // FIXME-NAV: The existence of SetNavID vs SetFocusID properly needs to be clarified/reworked.
-void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel) IMGUI_NOEXCEPT
+void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow != NULL);
@@ -8595,7 +8595,7 @@ void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id
     //g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
 
-void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
@@ -8619,14 +8619,14 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window) IMGUI_NOEXCEPT
         g.NavDisableHighlight = true;
 }
 
-ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy) IMGUI_NOEXCEPT
+ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy) IM_NOEXCEPT
 {
     if (ImFabs(dx) > ImFabs(dy))
         return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
     return (dy > 0.0f) ? ImGuiDir_Down : ImGuiDir_Up;
 }
 
-static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float b1) IMGUI_NOEXCEPT
+static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float b1) IM_NOEXCEPT
 {
     if (a1 < b0)
         return a1 - b0;
@@ -8635,7 +8635,7 @@ static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float
     return 0.0f;
 }
 
-static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect) IMGUI_NOEXCEPT
+static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect) IM_NOEXCEPT
 {
     if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
     {
@@ -8650,7 +8650,7 @@ static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect
 }
 
 // Scoring function for gamepad/keyboard directional navigation. Based on https://gist.github.com/rygorous/6981057
-static bool ImGui::NavScoreItem(ImGuiNavItemData* result, ImRect cand) IMGUI_NOEXCEPT
+static bool ImGui::NavScoreItem(ImGuiNavItemData* result, ImRect cand) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8781,7 +8781,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result, ImRect cand) IMGUI_NOE
     return new_best;
 }
 
-static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result, ImGuiWindow* window, ImGuiID id, const ImRect& nav_bb_rel) IMGUI_NOEXCEPT
+static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result, ImGuiWindow* window, ImGuiID id, const ImRect& nav_bb_rel) IM_NOEXCEPT
 {
     result->Window = window;
     result->ID = id;
@@ -8790,7 +8790,7 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result, ImGuiWindow* w
 }
 
 // We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
-static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id) IMGUI_NOEXCEPT
+static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
@@ -8850,20 +8850,20 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     }
 }
 
-bool ImGui::NavMoveRequestButNoResultYet() IMGUI_NOEXCEPT
+bool ImGui::NavMoveRequestButNoResultYet() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
 }
 
-void ImGui::NavMoveRequestCancel() IMGUI_NOEXCEPT
+void ImGui::NavMoveRequestCancel() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NavMoveRequest = false;
     NavUpdateAnyRequestFlag();
 }
 
-void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags) IMGUI_NOEXCEPT
+void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_None);
@@ -8875,7 +8875,7 @@ void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const Im
     g.NavWindow->NavRectRel[g.NavLayer] = bb_rel;
 }
 
-void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags) IMGUI_NOEXCEPT
+void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -8887,7 +8887,7 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
 
 // FIXME: This could be replaced by updating a frame number in each window when (window == NavWindow) and (NavLayer == 0).
 // This way we could find the last focused window among our children. It would be much less confusing this way?
-static void ImGui::NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window) IMGUI_NOEXCEPT
+static void ImGui::NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window) IM_NOEXCEPT
 {
     ImGuiWindow* parent = nav_window;
     while (parent && parent->RootWindow != parent && (parent->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
@@ -8898,14 +8898,14 @@ static void ImGui::NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window) 
 
 // Restore the last focused child.
 // Call when we are expected to land on the Main Layer (0) after FocusWindow()
-static ImGuiWindow* ImGui::NavRestoreLastChildNavWindow(ImGuiWindow* window) IMGUI_NOEXCEPT
+static ImGuiWindow* ImGui::NavRestoreLastChildNavWindow(ImGuiWindow* window) IM_NOEXCEPT
 {
     if (window->NavLastChildNavWindow && window->NavLastChildNavWindow->WasActive)
         return window->NavLastChildNavWindow;
     return window;
 }
 
-void ImGui::NavRestoreLayer(ImGuiNavLayer layer) IMGUI_NOEXCEPT
+void ImGui::NavRestoreLayer(ImGuiNavLayer layer) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (layer == ImGuiNavLayer_Main)
@@ -8924,7 +8924,7 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer) IMGUI_NOEXCEPT
     }
 }
 
-static inline void ImGui::NavUpdateAnyRequestFlag() IMGUI_NOEXCEPT
+static inline void ImGui::NavUpdateAnyRequestFlag() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || (IMGUI_DEBUG_NAV_SCORING && g.NavWindow != NULL);
@@ -8933,7 +8933,7 @@ static inline void ImGui::NavUpdateAnyRequestFlag() IMGUI_NOEXCEPT
 }
 
 // This needs to be called before we submit any widget (aka in or before Begin)
-void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit) IMGUI_NOEXCEPT
+void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(window == g.NavWindow);
@@ -8964,7 +8964,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit) IMGUI_NOEXCEPT
     }
 }
 
-static ImVec2 ImGui::NavCalcPreferredRefPos() IMGUI_NOEXCEPT
+static ImVec2 ImGui::NavCalcPreferredRefPos() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
@@ -8984,7 +8984,7 @@ static ImVec2 ImGui::NavCalcPreferredRefPos() IMGUI_NOEXCEPT
     }
 }
 
-float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode) IMGUI_NOEXCEPT
+float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (mode == ImGuiInputReadMode_Down)
@@ -9006,7 +9006,7 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode) IMGUI_N
     return 0.0f;
 }
 
-ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor) IMGUI_NOEXCEPT
+ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor) IM_NOEXCEPT
 {
     ImVec2 delta(0.0f, 0.0f);
     if (dir_sources & ImGuiNavDirSourceFlags_Keyboard)
@@ -9022,7 +9022,7 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
     return delta;
 }
 
-static void ImGui::NavUpdate() IMGUI_NOEXCEPT
+static void ImGui::NavUpdate() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
@@ -9303,7 +9303,7 @@ static void ImGui::NavUpdate() IMGUI_NOEXCEPT
 #endif
 }
 
-static void ImGui::NavUpdateInitResult() IMGUI_NOEXCEPT
+static void ImGui::NavUpdateInitResult() IM_NOEXCEPT
 {
     // In very rare cases g.NavWindow may be null (e.g. clearing focus after requesting an init request, which does happen when releasing Alt while clicking on void)
     ImGuiContext& g = *GImGui;
@@ -9322,7 +9322,7 @@ static void ImGui::NavUpdateInitResult() IMGUI_NOEXCEPT
 }
 
 // Apply result from previous frame navigation directional move request
-static void ImGui::NavUpdateMoveResult() IMGUI_NOEXCEPT
+static void ImGui::NavUpdateMoveResult() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
@@ -9387,7 +9387,7 @@ static void ImGui::NavUpdateMoveResult() IMGUI_NOEXCEPT
 }
 
 // Handle PageUp/PageDown/Home/End keys
-static float ImGui::NavUpdatePageUpPageDown() IMGUI_NOEXCEPT
+static float ImGui::NavUpdatePageUpPageDown() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
@@ -9460,7 +9460,7 @@ static float ImGui::NavUpdatePageUpPageDown() IMGUI_NOEXCEPT
     return 0.0f;
 }
 
-static void ImGui::NavEndFrame() IMGUI_NOEXCEPT
+static void ImGui::NavEndFrame() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -9522,7 +9522,7 @@ static void ImGui::NavEndFrame() IMGUI_NOEXCEPT
     }
 }
 
-static int ImGui::FindWindowFocusIndex(ImGuiWindow* window) IMGUI_NOEXCEPT
+static int ImGui::FindWindowFocusIndex(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_UNUSED(g);
@@ -9531,7 +9531,7 @@ static int ImGui::FindWindowFocusIndex(ImGuiWindow* window) IMGUI_NOEXCEPT
     return order;
 }
 
-static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir)  IMGUI_NOEXCEPT  // FIXME-OPT O(N)
+static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir)  IM_NOEXCEPT  // FIXME-OPT O(N)
 {
     ImGuiContext& g = *GImGui;
     for (int i = i_start; i >= 0 && i < g.WindowsFocusOrder.Size && i != i_stop; i += dir)
@@ -9540,7 +9540,7 @@ static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir)  IM
     return NULL;
 }
 
-static void NavUpdateWindowingHighlightWindow(int focus_change_dir) IMGUI_NOEXCEPT
+static void NavUpdateWindowingHighlightWindow(int focus_change_dir) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindowingTarget);
@@ -9559,7 +9559,7 @@ static void NavUpdateWindowingHighlightWindow(int focus_change_dir) IMGUI_NOEXCE
 // Windowing management mode
 // Keyboard: CTRL+Tab (change focus/move/resize), Alt (toggle menu layer)
 // Gamepad:  Hold Menu/Square (change focus/move/resize), Tap Menu/Square (toggle menu layer)
-static void ImGui::NavUpdateWindowing() IMGUI_NOEXCEPT
+static void ImGui::NavUpdateWindowing() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* apply_focus_window = NULL;
@@ -9705,7 +9705,7 @@ static void ImGui::NavUpdateWindowing() IMGUI_NOEXCEPT
 }
 
 // Window has already passed the IsWindowNavFocusable()
-static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window) IMGUI_NOEXCEPT
+static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window) IM_NOEXCEPT
 {
     if (window->Flags & ImGuiWindowFlags_Popup)
         return "(Popup)";
@@ -9715,7 +9715,7 @@ static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window) IM
 }
 
 // Overlay displayed when using CTRL+TAB. Called by EndFrame().
-void ImGui::NavUpdateWindowingOverlay() IMGUI_NOEXCEPT
+void ImGui::NavUpdateWindowingOverlay() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindowingTarget != NULL);
@@ -9750,7 +9750,7 @@ void ImGui::NavUpdateWindowingOverlay() IMGUI_NOEXCEPT
 // [SECTION] DRAG AND DROP
 //-----------------------------------------------------------------------------
 
-void ImGui::ClearDragDrop() IMGUI_NOEXCEPT
+void ImGui::ClearDragDrop() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.DragDropActive = false;
@@ -9771,7 +9771,7 @@ void ImGui::ClearDragDrop() IMGUI_NOEXCEPT
 // - We then pull and use the mouse button that was used to activate the item and use it to carry on the drag.
 // If the item has no identifier:
 // - Currently always assume left mouse button.
-bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags) IMGUI_NOEXCEPT
+bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -9885,7 +9885,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags) IMGUI_NOEXCEPT
     return false;
 }
 
-void ImGui::EndDragDropSource() IMGUI_NOEXCEPT
+void ImGui::EndDragDropSource() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
@@ -9901,7 +9901,7 @@ void ImGui::EndDragDropSource() IMGUI_NOEXCEPT
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
-bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond) IMGUI_NOEXCEPT
+bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiPayload& payload = g.DragDropPayload;
@@ -9944,7 +9944,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
 }
 
-bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id) IMGUI_NOEXCEPT
+bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.DragDropActive)
@@ -9971,7 +9971,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id) IMGUI_NOEXCE
 // 1) we use LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle them.
 // 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
 // Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
-bool ImGui::BeginDragDropTarget() IMGUI_NOEXCEPT
+bool ImGui::BeginDragDropTarget() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.DragDropActive)
@@ -9998,13 +9998,13 @@ bool ImGui::BeginDragDropTarget() IMGUI_NOEXCEPT
     return true;
 }
 
-bool ImGui::IsDragDropPayloadBeingAccepted() IMGUI_NOEXCEPT
+bool ImGui::IsDragDropPayloadBeingAccepted() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.DragDropActive && g.DragDropAcceptIdPrev != 0;
 }
 
-const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags) IMGUI_NOEXCEPT
+const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -10047,14 +10047,14 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     return &payload;
 }
 
-const ImGuiPayload* ImGui::GetDragDropPayload() IMGUI_NOEXCEPT
+const ImGuiPayload* ImGui::GetDragDropPayload() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.DragDropActive ? &g.DragDropPayload : NULL;
 }
 
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
-void ImGui::EndDragDropTarget() IMGUI_NOEXCEPT
+void ImGui::EndDragDropTarget() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
@@ -10070,7 +10070,7 @@ void ImGui::EndDragDropTarget() IMGUI_NOEXCEPT
 //-----------------------------------------------------------------------------
 
 // Pass text data straight to log (without being displayed)
-static inline void LogTextV(ImGuiContext& g, const char* fmt, va_list args) IMGUI_NOEXCEPT
+static inline void LogTextV(ImGuiContext& g, const char* fmt, va_list args) IM_NOEXCEPT
 {
     if (g.LogFile)
     {
@@ -10084,7 +10084,7 @@ static inline void LogTextV(ImGuiContext& g, const char* fmt, va_list args) IMGU
     }
 }
 
-void ImGui::LogText(const char* fmt, ...) IMGUI_NOEXCEPT
+void ImGui::LogText(const char* fmt, ...) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.LogEnabled)
@@ -10096,7 +10096,7 @@ void ImGui::LogText(const char* fmt, ...) IMGUI_NOEXCEPT
     va_end(args);
 }
 
-void ImGui::LogTextV(const char* fmt, va_list args) IMGUI_NOEXCEPT
+void ImGui::LogTextV(const char* fmt, va_list args) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.LogEnabled)
@@ -10108,7 +10108,7 @@ void ImGui::LogTextV(const char* fmt, va_list args) IMGUI_NOEXCEPT
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
 // We split text into individual lines to add current tree level padding
 // FIXME: This code is a little complicated perhaps, considering simplifying the whole system.
-void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end) IMGUI_NOEXCEPT
+void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -10167,7 +10167,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
 }
 
 // Start logging/capturing text output
-void ImGui::LogBegin(ImGuiLogType type, int auto_open_depth) IMGUI_NOEXCEPT
+void ImGui::LogBegin(ImGuiLogType type, int auto_open_depth) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -10184,14 +10184,14 @@ void ImGui::LogBegin(ImGuiLogType type, int auto_open_depth) IMGUI_NOEXCEPT
 }
 
 // Important: doesn't copy underlying data, use carefully (prefix/suffix must be in scope at the time of the next LogRenderedText)
-void ImGui::LogSetNextTextDecoration(const char* prefix, const char* suffix) IMGUI_NOEXCEPT
+void ImGui::LogSetNextTextDecoration(const char* prefix, const char* suffix) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.LogNextPrefix = prefix;
     g.LogNextSuffix = suffix;
 }
 
-void ImGui::LogToTTY(int auto_open_depth) IMGUI_NOEXCEPT
+void ImGui::LogToTTY(int auto_open_depth) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -10204,7 +10204,7 @@ void ImGui::LogToTTY(int auto_open_depth) IMGUI_NOEXCEPT
 }
 
 // Start logging/capturing text output to given file
-void ImGui::LogToFile(int auto_open_depth, const char* filename) IMGUI_NOEXCEPT
+void ImGui::LogToFile(int auto_open_depth, const char* filename) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -10229,7 +10229,7 @@ void ImGui::LogToFile(int auto_open_depth, const char* filename) IMGUI_NOEXCEPT
 }
 
 // Start logging/capturing text output to clipboard
-void ImGui::LogToClipboard(int auto_open_depth) IMGUI_NOEXCEPT
+void ImGui::LogToClipboard(int auto_open_depth) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -10237,7 +10237,7 @@ void ImGui::LogToClipboard(int auto_open_depth) IMGUI_NOEXCEPT
     LogBegin(ImGuiLogType_Clipboard, auto_open_depth);
 }
 
-void ImGui::LogToBuffer(int auto_open_depth) IMGUI_NOEXCEPT
+void ImGui::LogToBuffer(int auto_open_depth) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -10245,7 +10245,7 @@ void ImGui::LogToBuffer(int auto_open_depth) IMGUI_NOEXCEPT
     LogBegin(ImGuiLogType_Buffer, auto_open_depth);
 }
 
-void ImGui::LogFinish() IMGUI_NOEXCEPT
+void ImGui::LogFinish() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!g.LogEnabled)
@@ -10281,7 +10281,7 @@ void ImGui::LogFinish() IMGUI_NOEXCEPT
 
 // Helper to display logging buttons
 // FIXME-OBSOLETE: We should probably obsolete this and let the user have their own helper (this is one of the oldest function alive!)
-void ImGui::LogButtons() IMGUI_NOEXCEPT
+void ImGui::LogButtons() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -10327,7 +10327,7 @@ void ImGui::LogButtons() IMGUI_NOEXCEPT
 //-----------------------------------------------------------------------------
 
 // Called by NewFrame()
-void ImGui::UpdateSettings() IMGUI_NOEXCEPT
+void ImGui::UpdateSettings() IM_NOEXCEPT
 {
     // Load settings on first frame (if not explicitly loaded manually before)
     ImGuiContext& g = *GImGui;
@@ -10354,14 +10354,14 @@ void ImGui::UpdateSettings() IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::MarkIniSettingsDirty() IMGUI_NOEXCEPT
+void ImGui::MarkIniSettingsDirty() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (g.SettingsDirtyTimer <= 0.0f)
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
-void ImGui::MarkIniSettingsDirty(ImGuiWindow* window) IMGUI_NOEXCEPT
+void ImGui::MarkIniSettingsDirty(ImGuiWindow* window) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -10369,7 +10369,7 @@ void ImGui::MarkIniSettingsDirty(ImGuiWindow* window) IMGUI_NOEXCEPT
             g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
-ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name) IMGUI_NOEXCEPT
+ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
 
@@ -10391,7 +10391,7 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name) IMGUI_NOEX
     return settings;
 }
 
-ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id) IMGUI_NOEXCEPT
+ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
@@ -10400,14 +10400,14 @@ ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id) IMGUI_NOEXCEPT
     return NULL;
 }
 
-ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name) IMGUI_NOEXCEPT
+ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name) IM_NOEXCEPT
 {
     if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name)))
         return settings;
     return CreateNewWindowSettings(name);
 }
 
-ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name) IMGUI_NOEXCEPT
+ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     const ImGuiID type_hash = ImHashStr(type_name);
@@ -10417,7 +10417,7 @@ ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name) IMGUI_NO
     return NULL;
 }
 
-void ImGui::ClearIniSettings() IMGUI_NOEXCEPT
+void ImGui::ClearIniSettings() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.SettingsIniData.clear();
@@ -10426,7 +10426,7 @@ void ImGui::ClearIniSettings() IMGUI_NOEXCEPT
             g.SettingsHandlers[handler_n].ClearAllFn(&g, &g.SettingsHandlers[handler_n]);
 }
 
-void ImGui::LoadIniSettingsFromDisk(const char* ini_filename) IMGUI_NOEXCEPT
+void ImGui::LoadIniSettingsFromDisk(const char* ini_filename) IM_NOEXCEPT
 {
     size_t file_data_size = 0;
     char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
@@ -10437,7 +10437,7 @@ void ImGui::LoadIniSettingsFromDisk(const char* ini_filename) IMGUI_NOEXCEPT
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
-void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size) IMGUI_NOEXCEPT
+void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
@@ -10507,7 +10507,7 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size) IMG
             g.SettingsHandlers[handler_n].ApplyAllFn(&g, &g.SettingsHandlers[handler_n]);
 }
 
-void ImGui::SaveIniSettingsToDisk(const char* ini_filename) IMGUI_NOEXCEPT
+void ImGui::SaveIniSettingsToDisk(const char* ini_filename) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
@@ -10524,7 +10524,7 @@ void ImGui::SaveIniSettingsToDisk(const char* ini_filename) IMGUI_NOEXCEPT
 }
 
 // Call registered handlers (e.g. SettingsHandlerWindow_WriteAll() + custom handlers) to write their stuff into a text buffer
-const char* ImGui::SaveIniSettingsToMemory(size_t* out_size) IMGUI_NOEXCEPT
+const char* ImGui::SaveIniSettingsToMemory(size_t* out_size) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
@@ -10540,7 +10540,7 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size) IMGUI_NOEXCEPT
     return g.SettingsIniData.c_str();
 }
 
-static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*) IMGUI_NOEXCEPT
+static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*) IM_NOEXCEPT
 {
     ImGuiContext& g = *ctx;
     for (int i = 0; i != g.Windows.Size; i++)
@@ -10548,7 +10548,7 @@ static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandl
     g.SettingsWindows.clear();
 }
 
-static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) IMGUI_NOEXCEPT
+static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) IM_NOEXCEPT
 {
     ImGuiWindowSettings* settings = ImGui::FindOrCreateWindowSettings(name);
     ImGuiID id = settings->ID;
@@ -10558,7 +10558,7 @@ static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*
     return (void*)settings;
 }
 
-static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) IMGUI_NOEXCEPT
+static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line) IM_NOEXCEPT
 {
     ImGuiWindowSettings* settings = (ImGuiWindowSettings*)entry;
     int x, y;
@@ -10569,7 +10569,7 @@ static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
 }
 
 // Apply to existing windows (if any)
-static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*) IMGUI_NOEXCEPT
+static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*) IM_NOEXCEPT
 {
     ImGuiContext& g = *ctx;
     for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
@@ -10581,7 +10581,7 @@ static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandl
         }
 }
 
-static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) IMGUI_NOEXCEPT
+static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) IM_NOEXCEPT
 {
     // Gather data from windows that were active during this session
     // (if a window wasn't opened in this session we preserve its settings)
@@ -10626,14 +10626,14 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 // (this section is more complete in the 'docking' branch)
 //-----------------------------------------------------------------------------
 
-ImGuiViewport* ImGui::GetMainViewport() IMGUI_NOEXCEPT
+ImGuiViewport* ImGui::GetMainViewport() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.Viewports[0];
 }
 
 // Update viewports and monitor infos
-static void ImGui::UpdateViewportsNewFrame() IMGUI_NOEXCEPT
+static void ImGui::UpdateViewportsNewFrame() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Viewports.Size == 1);
@@ -10677,7 +10677,7 @@ static void ImGui::UpdateViewportsNewFrame() IMGUI_NOEXCEPT
 
 // Win32 clipboard implementation
 // We use g.ClipboardHandlerData for temporary storage to ensure it is freed on Shutdown()
-static const char* GetClipboardTextFn_DefaultImpl(void*) IMGUI_NOEXCEPT
+static const char* GetClipboardTextFn_DefaultImpl(void*) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.ClipboardHandlerData.clear();
@@ -10700,7 +10700,7 @@ static const char* GetClipboardTextFn_DefaultImpl(void*) IMGUI_NOEXCEPT
     return g.ClipboardHandlerData.Data;
 }
 
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IMGUI_NOEXCEPT
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IM_NOEXCEPT
 {
     if (!::OpenClipboard(NULL))
         return;
@@ -10727,7 +10727,7 @@ static PasteboardRef main_clipboard = 0;
 
 // OSX clipboard implementation
 // If you enable this you will need to add '-framework ApplicationServices' to your linker command-line!
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IMGUI_NOEXCEPT
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IM_NOEXCEPT
 {
     if (!main_clipboard)
         PasteboardCreate(kPasteboardClipboard, &main_clipboard);
@@ -10740,7 +10740,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IMGUI_NOEXCE
     }
 }
 
-static const char* GetClipboardTextFn_DefaultImpl(void*) IMGUI_NOEXCEPT
+static const char* GetClipboardTextFn_DefaultImpl(void*) IM_NOEXCEPT
 {
     if (!main_clipboard)
         PasteboardCreate(kPasteboardClipboard, &main_clipboard);
@@ -10776,13 +10776,13 @@ static const char* GetClipboardTextFn_DefaultImpl(void*) IMGUI_NOEXCEPT
 #else
 
 // Local Dear ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers.
-static const char* GetClipboardTextFn_DefaultImpl(void*) IMGUI_NOEXCEPT
+static const char* GetClipboardTextFn_DefaultImpl(void*) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     return g.ClipboardHandlerData.empty() ? NULL : g.ClipboardHandlerData.begin();
 }
 
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IMGUI_NOEXCEPT
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     g.ClipboardHandlerData.clear();
@@ -10802,7 +10802,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text) IMGUI_NOEXCE
 #pragma comment(lib, "imm32")
 #endif
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y) IMGUI_NOEXCEPT
+static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y) IM_NOEXCEPT
 {
     // Notify OS Input Method Editor of text input position
     ImGuiIO& io = ImGui::GetIO();
@@ -10820,7 +10820,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y) IMGUI_NOEXCEPT
 
 #else
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int, int) IMGUI_NOEXCEPT {}
+static void ImeSetInputScreenPosFn_DefaultImpl(int, int) IM_NOEXCEPT {}
 
 #endif
 
@@ -10844,7 +10844,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) IMGUI_NOEXCEPT {}
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
 
-void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb) IMGUI_NOEXCEPT
+void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -10874,7 +10874,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
 }
 
-static void RenderViewportsThumbnails() IMGUI_NOEXCEPT
+static void RenderViewportsThumbnails() IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -10896,7 +10896,7 @@ static void RenderViewportsThumbnails() IMGUI_NOEXCEPT
 }
 
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
-static void MetricsHelpMarker(const char* desc) IMGUI_NOEXCEPT
+static void MetricsHelpMarker(const char* desc) IM_NOEXCEPT
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
@@ -10909,7 +10909,7 @@ static void MetricsHelpMarker(const char* desc) IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::ShowMetricsWindow(bool* p_open) IMGUI_NOEXCEPT
+void ImGui::ShowMetricsWindow(bool* p_open) IM_NOEXCEPT
 {
     if (!Begin("Dear ImGui Metrics/Debugger", p_open))
     {
@@ -11272,7 +11272,7 @@ void ImGui::ShowMetricsWindow(bool* p_open) IMGUI_NOEXCEPT
 }
 
 // [DEBUG] Display contents of Columns
-void ImGui::DebugNodeColumns(ImGuiOldColumns* columns) IMGUI_NOEXCEPT
+void ImGui::DebugNodeColumns(ImGuiOldColumns* columns) IM_NOEXCEPT
 {
     if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
         return;
@@ -11283,7 +11283,7 @@ void ImGui::DebugNodeColumns(ImGuiOldColumns* columns) IMGUI_NOEXCEPT
 }
 
 // [DEBUG] Display contents of ImDrawList
-void ImGui::DebugNodeDrawList(ImGuiWindow* window, const ImDrawList* draw_list, const char* label) IMGUI_NOEXCEPT
+void ImGui::DebugNodeDrawList(ImGuiWindow* window, const ImDrawList* draw_list, const char* label) IM_NOEXCEPT
 {
     ImGuiContext& g = *GImGui;
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
@@ -11377,7 +11377,7 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, const ImDrawList* draw_list, 
 }
 
 // [DEBUG] Display mesh/aabb of a ImDrawCmd
-void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb) IMGUI_NOEXCEPT
+void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb) IM_NOEXCEPT
 {
     IM_ASSERT(show_mesh || show_aabb);
     ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
@@ -11406,7 +11406,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
 }
 
 // [DEBUG] Display contents of ImGuiStorage
-void ImGui::DebugNodeStorage(ImGuiStorage* storage, const char* label) IMGUI_NOEXCEPT
+void ImGui::DebugNodeStorage(ImGuiStorage* storage, const char* label) IM_NOEXCEPT
 {
     if (!TreeNode(label, "%s: %d entries, %d bytes", label, storage->Data.Size, storage->Data.size_in_bytes()))
         return;
@@ -11419,7 +11419,7 @@ void ImGui::DebugNodeStorage(ImGuiStorage* storage, const char* label) IMGUI_NOE
 }
 
 // [DEBUG] Display contents of ImGuiTabBar
-void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label) IMGUI_NOEXCEPT
+void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label) IM_NOEXCEPT
 {
     // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
     char buf[256];
@@ -11454,7 +11454,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label) IMGUI_NOEXC
     }
 }
 
-void ImGui::DebugNodeViewport(ImGuiViewportP* viewport) IMGUI_NOEXCEPT
+void ImGui::DebugNodeViewport(ImGuiViewportP* viewport) IM_NOEXCEPT
 {
     SetNextItemOpen(true, ImGuiCond_Once);
     if (TreeNode("viewport0", "Viewport #%d", 0))
@@ -11474,7 +11474,7 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport) IMGUI_NOEXCEPT
     }
 }
 
-void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label) IMGUI_NOEXCEPT
+void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label) IM_NOEXCEPT
 {
     if (window == NULL)
     {
@@ -11532,13 +11532,13 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label) IMGUI_NOEXCE
     TreePop();
 }
 
-void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings* settings) IMGUI_NOEXCEPT
+void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings* settings) IM_NOEXCEPT
 {
     Text("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
         settings->ID, settings->GetName(), settings->Pos.x, settings->Pos.y, settings->Size.x, settings->Size.y, settings->Collapsed);
 }
 
-void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label) IMGUI_NOEXCEPT
+void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label) IM_NOEXCEPT
 {
     if (!TreeNode(label, "%s (%d)", label, windows->Size))
         return;
@@ -11554,16 +11554,16 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
 
 #else
 
-void ImGui::ShowMetricsWindow(bool*)                      IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeColumns(ImGuiOldColumns*)            IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeDrawList(ImGuiWindow*, const ImDrawList*, const char*) IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList*, const ImDrawList*, const ImDrawCmd*, bool, bool) IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeStorage(ImGuiStorage*, const char*)  IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeTabBar(ImGuiTabBar*, const char*)    IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeWindow(ImGuiWindow*, const char*)    IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings*) IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>*, const char*) IMGUI_NOEXCEPT {}
-void ImGui::DebugNodeViewport(ImGuiViewportP*)            IMGUI_NOEXCEPT {}
+void ImGui::ShowMetricsWindow(bool*)                      IM_NOEXCEPT {}
+void ImGui::DebugNodeColumns(ImGuiOldColumns*)            IM_NOEXCEPT {}
+void ImGui::DebugNodeDrawList(ImGuiWindow*, const ImDrawList*, const char*) IM_NOEXCEPT {}
+void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList*, const ImDrawList*, const ImDrawCmd*, bool, bool) IM_NOEXCEPT {}
+void ImGui::DebugNodeStorage(ImGuiStorage*, const char*)  IM_NOEXCEPT {}
+void ImGui::DebugNodeTabBar(ImGuiTabBar*, const char*)    IM_NOEXCEPT {}
+void ImGui::DebugNodeWindow(ImGuiWindow*, const char*)    IM_NOEXCEPT {}
+void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings*) IM_NOEXCEPT {}
+void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>*, const char*) IM_NOEXCEPT {}
+void ImGui::DebugNodeViewport(ImGuiViewportP*)            IM_NOEXCEPT {}
 
 #endif
 
