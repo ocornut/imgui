@@ -4607,8 +4607,28 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
             ImVec2 cursor_screen_pos = ImFloor(draw_pos + cursor_offset - draw_scroll);
             ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
-            if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-                draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            if (cursor_screen_rect.Overlaps(clip_rect))
+            {
+                if (g.IO.ConfigInputTextCursorBlink)
+                {
+                    double time_to_transition;
+
+                    if (state->CursorAnim <= 0.0f)
+                        time_to_transition = 0.80f - state->CursorAnim;
+                    else if (ImFmod(state->CursorAnim, 1.20f) <= 0.80f)
+                        time_to_transition = 0.80f - ImFmod(state->CursorAnim, 1.20f);
+                    else
+                        time_to_transition = 1.20f - ImFmod(state->CursorAnim, 1.20f);
+
+                    // Make sure the next frame starts after the transition.
+                    time_to_transition += 0.05f;
+
+                    SetMaxWaitBeforeNextFrame(time_to_transition);
+                }
+
+                if (cursor_is_visible)
+                    draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            }
 
             // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
             if (!is_readonly)

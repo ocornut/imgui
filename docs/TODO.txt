@@ -361,7 +361,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
- - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for backend to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
  - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)
@@ -381,12 +380,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - demo: window size constraint: square demo is broken when resizing from edges (#1975), would need to rework the callback system to solve this
 
  - examples: window minimize, maximize (#583)
- - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
  - backends: move to backends/ folder?
  - backends: report it better when not able to create texture?
  - backends: apple: example_apple should be using modern GL3.
- - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
