@@ -170,24 +170,24 @@ Index of this file:
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations
-static void ShowExampleAppDocuments(bool* p_open);
-static void ShowExampleAppMainMenuBar();
-static void ShowExampleAppConsole(bool* p_open);
-static void ShowExampleAppLog(bool* p_open);
-static void ShowExampleAppLayout(bool* p_open);
-static void ShowExampleAppPropertyEditor(bool* p_open);
-static void ShowExampleAppLongText(bool* p_open);
-static void ShowExampleAppAutoResize(bool* p_open);
-static void ShowExampleAppConstrainedResize(bool* p_open);
-static void ShowExampleAppSimpleOverlay(bool* p_open);
-static void ShowExampleAppFullscreen(bool* p_open);
-static void ShowExampleAppWindowTitles(bool* p_open);
-static void ShowExampleAppCustomRendering(bool* p_open);
-static void ShowExampleMenuFile();
+static void ShowExampleAppDocuments(bool* p_open)         IMGUI_NOEXCEPT;
+static void ShowExampleAppMainMenuBar()                   IMGUI_NOEXCEPT;
+static void ShowExampleAppConsole(bool* p_open)           IMGUI_NOEXCEPT;
+static void ShowExampleAppLog(bool* p_open)               IMGUI_NOEXCEPT;
+static void ShowExampleAppLayout(bool* p_open)            IMGUI_NOEXCEPT;
+static void ShowExampleAppPropertyEditor(bool* p_open)    IMGUI_NOEXCEPT;
+static void ShowExampleAppLongText(bool* p_open)          IMGUI_NOEXCEPT;
+static void ShowExampleAppAutoResize(bool* p_open)        IMGUI_NOEXCEPT;
+static void ShowExampleAppConstrainedResize(bool* p_open) IMGUI_NOEXCEPT;
+static void ShowExampleAppSimpleOverlay(bool* p_open)     IMGUI_NOEXCEPT;
+static void ShowExampleAppFullscreen(bool* p_open)        IMGUI_NOEXCEPT;
+static void ShowExampleAppWindowTitles(bool* p_open)      IMGUI_NOEXCEPT;
+static void ShowExampleAppCustomRendering(bool* p_open)   IMGUI_NOEXCEPT;
+static void ShowExampleMenuFile()                         IMGUI_NOEXCEPT;
 
 // Helper to display a little (?) mark which shows a tooltip when hovered.
 // In your own code you may want to display an actual icon if you are using a merged icon fonts (see docs/FONTS.md)
-static void HelpMarker(const char* desc)
+static void HelpMarker(const char* desc) IMGUI_NOEXCEPT
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
@@ -201,7 +201,7 @@ static void HelpMarker(const char* desc)
 }
 
 // Helper to display basic user controls.
-void ImGui::ShowUserGuide()
+void ImGui::ShowUserGuide() IMGUI_NOEXCEPT
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui::BulletText("Double-click on title bar to collapse window.");
@@ -245,17 +245,17 @@ void ImGui::ShowUserGuide()
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
 // (because the link time of very large functions grow non-linearly)
-static void ShowDemoWindowWidgets();
-static void ShowDemoWindowLayout();
-static void ShowDemoWindowPopups();
-static void ShowDemoWindowTables();
-static void ShowDemoWindowColumns();
-static void ShowDemoWindowMisc();
+static void ShowDemoWindowWidgets() IMGUI_NOEXCEPT;
+static void ShowDemoWindowLayout()  IMGUI_NOEXCEPT;
+static void ShowDemoWindowPopups()  IMGUI_NOEXCEPT;
+static void ShowDemoWindowTables()  IMGUI_NOEXCEPT;
+static void ShowDemoWindowColumns() IMGUI_NOEXCEPT;
+static void ShowDemoWindowMisc()    IMGUI_NOEXCEPT;
 
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
 // You may then search for keywords in the code when you are interested by a specific feature.
-void ImGui::ShowDemoWindow(bool* p_open)
+void ImGui::ShowDemoWindow(bool* p_open) IMGUI_NOEXCEPT
 {
     // Exceptionally add an extra assert here for people confused about initial Dear ImGui setup
     // Most ImGui functions would normally just crash if the context is missing.
@@ -525,7 +525,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::End();
 }
 
-static void ShowDemoWindowWidgets()
+static void ShowDemoWindowWidgets() IMGUI_NOEXCEPT
 {
     if (!ImGui::CollapsingHeader("Widgets"))
         return;
@@ -2323,7 +2323,7 @@ static void ShowDemoWindowWidgets()
     }
 }
 
-static void ShowDemoWindowLayout()
+static void ShowDemoWindowLayout() IMGUI_NOEXCEPT
 {
     if (!ImGui::CollapsingHeader("Layout & Scrolling"))
         return;
@@ -3089,7 +3089,7 @@ static void ShowDemoWindowLayout()
     }
 }
 
-static void ShowDemoWindowPopups()
+static void ShowDemoWindowPopups() IMGUI_NOEXCEPT
 {
     if (!ImGui::CollapsingHeader("Popups & Modal windows"))
         return;
@@ -3439,20 +3439,20 @@ const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
 }
 
 // Make the UI compact because there are so many fields
-static void PushStyleCompact()
+static void PushStyleCompact() IMGUI_NOEXCEPT
 {
     ImGuiStyle& style = ImGui::GetStyle();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, (float)(int)(style.FramePadding.y * 0.60f)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, (float)(int)(style.ItemSpacing.y * 0.60f)));
 }
 
-static void PopStyleCompact()
+static void PopStyleCompact() IMGUI_NOEXCEPT
 {
     ImGui::PopStyleVar(2);
 }
 
 // Show a combo box with a choice of sizing policies
-static void EditTableSizingFlags(ImGuiTableFlags* p_flags)
+static void EditTableSizingFlags(ImGuiTableFlags* p_flags) IMGUI_NOEXCEPT
 {
     struct EnumDesc { ImGuiTableFlags Value; const char* Name; const char* Tooltip; };
     static const EnumDesc policies[] =
@@ -3494,7 +3494,7 @@ static void EditTableSizingFlags(ImGuiTableFlags* p_flags)
     }
 }
 
-static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags)
+static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags) IMGUI_NOEXCEPT
 {
     ImGui::CheckboxFlags("_DefaultHide", p_flags, ImGuiTableColumnFlags_DefaultHide);
     ImGui::CheckboxFlags("_DefaultSort", p_flags, ImGuiTableColumnFlags_DefaultSort);
@@ -3516,7 +3516,7 @@ static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags)
     ImGui::CheckboxFlags("_IndentDisable", p_flags, ImGuiTableColumnFlags_IndentDisable); ImGui::SameLine(); HelpMarker("Default for column >0");
 }
 
-static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags)
+static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags) IMGUI_NOEXCEPT
 {
     ImGui::CheckboxFlags("_IsEnabled", &flags, ImGuiTableColumnFlags_IsEnabled);
     ImGui::CheckboxFlags("_IsVisible", &flags, ImGuiTableColumnFlags_IsVisible);
@@ -3524,7 +3524,7 @@ static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags)
     ImGui::CheckboxFlags("_IsHovered", &flags, ImGuiTableColumnFlags_IsHovered);
 }
 
-static void ShowDemoWindowTables()
+static void ShowDemoWindowTables() IMGUI_NOEXCEPT
 {
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (!ImGui::CollapsingHeader("Tables & Columns"))
@@ -5226,7 +5226,7 @@ static void ShowDemoWindowTables()
 
 // Demonstrate old/legacy Columns API!
 // [2020: Columns are under-featured and not maintained. Prefer using the more flexible and powerful BeginTable() API!]
-static void ShowDemoWindowColumns()
+static void ShowDemoWindowColumns() IMGUI_NOEXCEPT
 {
     bool open = ImGui::TreeNode("Legacy Columns API");
     ImGui::SameLine();
@@ -5423,7 +5423,7 @@ static void ShowDemoWindowColumns()
     ImGui::TreePop();
 }
 
-static void ShowDemoWindowMisc()
+static void ShowDemoWindowMisc() IMGUI_NOEXCEPT
 {
     if (ImGui::CollapsingHeader("Filtering"))
     {
@@ -5606,7 +5606,7 @@ static void ShowDemoWindowMisc()
 // Access from Dear ImGui Demo -> Tools -> About
 //-----------------------------------------------------------------------------
 
-void ImGui::ShowAboutWindow(bool* p_open)
+void ImGui::ShowAboutWindow(bool* p_open) IMGUI_NOEXCEPT
 {
     if (!ImGui::Begin("About Dear ImGui", p_open, ImGuiWindowFlags_AlwaysAutoResize))
     {
@@ -5753,7 +5753,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
 // Here we use the simplified Combo() api that packs items into a single literal string.
 // Useful for quick combo boxes where the choices are known locally.
-bool ImGui::ShowStyleSelector(const char* label)
+bool ImGui::ShowStyleSelector(const char* label) IMGUI_NOEXCEPT
 {
     static int style_idx = -1;
     if (ImGui::Combo(label, &style_idx, "Dark\0Light\0Classic\0"))
@@ -5771,7 +5771,7 @@ bool ImGui::ShowStyleSelector(const char* label)
 
 // Demo helper function to select among loaded fonts.
 // Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
-void ImGui::ShowFontSelector(const char* label)
+void ImGui::ShowFontSelector(const char* label) IMGUI_NOEXCEPT
 {
     ImGuiIO& io = ImGui::GetIO();
     ImFont* font_current = ImGui::GetFont();
@@ -5796,7 +5796,7 @@ void ImGui::ShowFontSelector(const char* label)
 }
 
 // [Internal] Display details for a single font, called by ShowStyleEditor().
-static void NodeFont(ImFont* font)
+static void NodeFont(ImFont* font) IMGUI_NOEXCEPT
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
@@ -5883,7 +5883,7 @@ static void NodeFont(ImFont* font)
     ImGui::TreePop();
 }
 
-void ImGui::ShowStyleEditor(ImGuiStyle* ref)
+void ImGui::ShowStyleEditor(ImGuiStyle* ref) IMGUI_NOEXCEPT
 {
     // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to
     // (without a reference style pointer, we will use one compared locally as a reference)
@@ -6153,7 +6153,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 // Note the difference between BeginMainMenuBar() and BeginMenuBar():
 // - BeginMenuBar() = menu-bar inside current window (which needs the ImGuiWindowFlags_MenuBar flag!)
 // - BeginMainMenuBar() = helper to create menu-bar-sized window at the top of the main viewport + call BeginMenuBar() into it.
-static void ShowExampleAppMainMenuBar()
+static void ShowExampleAppMainMenuBar() IMGUI_NOEXCEPT
 {
     if (ImGui::BeginMainMenuBar())
     {
@@ -6178,7 +6178,7 @@ static void ShowExampleAppMainMenuBar()
 
 // Note that shortcuts are currently provided for display only
 // (future version will add explicit flags to BeginMenu() to request processing shortcuts)
-static void ShowExampleMenuFile()
+static void ShowExampleMenuFile() IMGUI_NOEXCEPT
 {
     ImGui::MenuItem("(demo menu)", NULL, false, false);
     if (ImGui::MenuItem("New")) {}
@@ -6271,7 +6271,7 @@ struct ExampleAppConsole
     bool                  AutoScroll;
     bool                  ScrollToBottom;
 
-    ExampleAppConsole()
+    ExampleAppConsole() IMGUI_NOEXCEPT
     {
         ClearLog();
         memset(InputBuf, 0, sizeof(InputBuf));
@@ -6286,7 +6286,7 @@ struct ExampleAppConsole
         ScrollToBottom = false;
         AddLog("Welcome to Dear ImGui!");
     }
-    ~ExampleAppConsole()
+    ~ExampleAppConsole() IMGUI_NOEXCEPT
     {
         ClearLog();
         for (int i = 0; i < History.Size; i++)
@@ -6294,19 +6294,19 @@ struct ExampleAppConsole
     }
 
     // Portable helpers
-    static int   Stricmp(const char* s1, const char* s2)         { int d; while ((d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; } return d; }
-    static int   Strnicmp(const char* s1, const char* s2, int n) { int d = 0; while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; n--; } return d; }
-    static char* Strdup(const char* s)                           { IM_ASSERT(s); size_t len = strlen(s) + 1; void* buf = malloc(len); IM_ASSERT(buf); return (char*)memcpy(buf, (const void*)s, len); }
-    static void  Strtrim(char* s)                                { char* str_end = s + strlen(s); while (str_end > s && str_end[-1] == ' ') str_end--; *str_end = 0; }
+    static int   Stricmp(const char* s1, const char* s2)         IMGUI_NOEXCEPT { int d; while ((d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; } return d; }
+    static int   Strnicmp(const char* s1, const char* s2, int n) IMGUI_NOEXCEPT { int d = 0; while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; n--; } return d; }
+    static char* Strdup(const char* s)                           IMGUI_NOEXCEPT { IM_ASSERT(s); size_t len = strlen(s) + 1; void* buf = malloc(len); IM_ASSERT(buf); return (char*)memcpy(buf, (const void*)s, len); }
+    static void  Strtrim(char* s)                                IMGUI_NOEXCEPT { char* str_end = s + strlen(s); while (str_end > s && str_end[-1] == ' ') str_end--; *str_end = 0; }
 
-    void    ClearLog()
+    void    ClearLog() IMGUI_NOEXCEPT
     {
         for (int i = 0; i < Items.Size; i++)
             free(Items[i]);
         Items.clear();
     }
 
-    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+    void    AddLog(const char* fmt, ...) IM_FMTARGS(2) IMGUI_NOEXCEPT
     {
         // FIXME-OPT
         char buf[1024];
@@ -6318,7 +6318,7 @@ struct ExampleAppConsole
         Items.push_back(Strdup(buf));
     }
 
-    void    Draw(const char* title, bool* p_open)
+    void    Draw(const char* title, bool* p_open) IMGUI_NOEXCEPT
     {
         ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
         if (!ImGui::Begin(title, p_open))
@@ -6455,7 +6455,7 @@ struct ExampleAppConsole
         ImGui::End();
     }
 
-    void    ExecCommand(const char* command_line)
+    void    ExecCommand(const char* command_line) IMGUI_NOEXCEPT
     {
         AddLog("# %s\n", command_line);
 
@@ -6498,13 +6498,13 @@ struct ExampleAppConsole
     }
 
     // In C++11 you'd be better off using lambdas for this sort of forwarding callbacks
-    static int TextEditCallbackStub(ImGuiInputTextCallbackData* data)
+    static int TextEditCallbackStub(ImGuiInputTextCallbackData* data) IMGUI_NOEXCEPT
     {
         ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
         return console->TextEditCallback(data);
     }
 
-    int     TextEditCallback(ImGuiInputTextCallbackData* data)
+    int     TextEditCallback(ImGuiInputTextCallbackData* data) IMGUI_NOEXCEPT
     {
         //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventFlag)
@@ -6606,7 +6606,7 @@ struct ExampleAppConsole
     }
 };
 
-static void ShowExampleAppConsole(bool* p_open)
+static void ShowExampleAppConsole(bool* p_open) IMGUI_NOEXCEPT
 {
     static ExampleAppConsole console;
     console.Draw("Example: Console", p_open);
@@ -6627,20 +6627,20 @@ struct ExampleAppLog
     ImVector<int>       LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
     bool                AutoScroll;  // Keep scrolling if already at the bottom.
 
-    ExampleAppLog()
+    ExampleAppLog() IMGUI_NOEXCEPT
     {
         AutoScroll = true;
         Clear();
     }
 
-    void    Clear()
+    void    Clear() IMGUI_NOEXCEPT
     {
         Buf.clear();
         LineOffsets.clear();
         LineOffsets.push_back(0);
     }
 
-    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+    void    AddLog(const char* fmt, ...) IM_FMTARGS(2) IMGUI_NOEXCEPT
     {
         int old_size = Buf.size();
         va_list args;
@@ -6652,7 +6652,7 @@ struct ExampleAppLog
                 LineOffsets.push_back(old_size + 1);
     }
 
-    void    Draw(const char* title, bool* p_open = NULL)
+    void    Draw(const char* title, bool* p_open = NULL) IMGUI_NOEXCEPT
     {
         if (!ImGui::Begin(title, p_open))
         {
@@ -6741,7 +6741,7 @@ struct ExampleAppLog
 };
 
 // Demonstrate creating a simple log window with basic filtering.
-static void ShowExampleAppLog(bool* p_open)
+static void ShowExampleAppLog(bool* p_open) IMGUI_NOEXCEPT
 {
     static ExampleAppLog log;
 
@@ -6775,7 +6775,7 @@ static void ShowExampleAppLog(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate create a window with multiple child windows.
-static void ShowExampleAppLayout(bool* p_open)
+static void ShowExampleAppLayout(bool* p_open) IMGUI_NOEXCEPT
 {
     ImGui::SetNextWindowSize(ImVec2(500, 440), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Example: Simple layout", p_open, ImGuiWindowFlags_MenuBar))
@@ -6839,7 +6839,7 @@ static void ShowExampleAppLayout(bool* p_open)
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
 
-static void ShowPlaceholderObject(const char* prefix, int uid)
+static void ShowPlaceholderObject(const char* prefix, int uid) IMGUI_NOEXCEPT
 {
     // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
     ImGui::PushID(uid);
@@ -6887,7 +6887,7 @@ static void ShowPlaceholderObject(const char* prefix, int uid)
 }
 
 // Demonstrate create a simple property editor.
-static void ShowExampleAppPropertyEditor(bool* p_open)
+static void ShowExampleAppPropertyEditor(bool* p_open) IMGUI_NOEXCEPT
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Example: Property editor", p_open))
@@ -6922,7 +6922,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate/test rendering huge amount of text, and the incidence of clipping.
-static void ShowExampleAppLongText(bool* p_open)
+static void ShowExampleAppLongText(bool* p_open) IMGUI_NOEXCEPT
 {
     ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Example: Long text display", p_open))
@@ -6984,7 +6984,7 @@ static void ShowExampleAppLongText(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window which gets auto-resized according to its content.
-static void ShowExampleAppAutoResize(bool* p_open)
+static void ShowExampleAppAutoResize(bool* p_open) IMGUI_NOEXCEPT
 {
     if (!ImGui::Begin("Example: Auto-resizing window", p_open, ImGuiWindowFlags_AlwaysAutoResize))
     {
@@ -7008,7 +7008,7 @@ static void ShowExampleAppAutoResize(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window with custom resize constraints.
-static void ShowExampleAppConstrainedResize(bool* p_open)
+static void ShowExampleAppConstrainedResize(bool* p_open) IMGUI_NOEXCEPT
 {
     struct CustomConstraints
     {
@@ -7062,7 +7062,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 
 // Demonstrate creating a simple static window with no decoration
 // + a context-menu to choose which corner of the screen to use.
-static void ShowExampleAppSimpleOverlay(bool* p_open)
+static void ShowExampleAppSimpleOverlay(bool* p_open) IMGUI_NOEXCEPT
 {
     const float PAD = 10.0f;
     static int corner = 0;
@@ -7109,7 +7109,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window covering the entire screen/viewport
-static void ShowExampleAppFullscreen(bool* p_open)
+static void ShowExampleAppFullscreen(bool* p_open) IMGUI_NOEXCEPT
 {
     static bool use_work_area = true;
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
@@ -7147,7 +7147,7 @@ static void ShowExampleAppFullscreen(bool* p_open)
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
 // This apply to all regular items as well.
 // Read FAQ section "How can I have multiple widgets with the same label?" for details.
-static void ShowExampleAppWindowTitles(bool*)
+static void ShowExampleAppWindowTitles(bool*) IMGUI_NOEXCEPT
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const ImVec2 base_pos = viewport->Pos;
@@ -7180,7 +7180,7 @@ static void ShowExampleAppWindowTitles(bool*)
 //-----------------------------------------------------------------------------
 
 // Demonstrate using the low-level ImDrawList to draw custom shapes.
-static void ShowExampleAppCustomRendering(bool* p_open)
+static void ShowExampleAppCustomRendering(bool* p_open) IMGUI_NOEXCEPT
 {
     if (!ImGui::Begin("Example: Custom rendering", p_open))
     {
@@ -7430,7 +7430,7 @@ struct MyDocument
     bool        WantClose;  // Set when the document
     ImVec4      Color;      // An arbitrary variable associated to the document
 
-    MyDocument(const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
+    MyDocument(const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f)) IMGUI_NOEXCEPT
     {
         Name = name;
         Open = OpenPrev = open;
@@ -7438,13 +7438,13 @@ struct MyDocument
         WantClose = false;
         Color = color;
     }
-    void DoOpen()       { Open = true; }
-    void DoQueueClose() { WantClose = true; }
-    void DoForceClose() { Open = false; Dirty = false; }
-    void DoSave()       { Dirty = false; }
+    void DoOpen()       IMGUI_NOEXCEPT { Open = true; }
+    void DoQueueClose() IMGUI_NOEXCEPT { WantClose = true; }
+    void DoForceClose() IMGUI_NOEXCEPT { Open = false; Dirty = false; }
+    void DoSave()       IMGUI_NOEXCEPT { Dirty = false; }
 
     // Display placeholder contents for the Document
-    static void DisplayContents(MyDocument* doc)
+    static void DisplayContents(MyDocument* doc) IMGUI_NOEXCEPT
     {
         ImGui::PushID(doc);
         ImGui::Text("Document \"%s\"", doc->Name);
@@ -7461,7 +7461,7 @@ struct MyDocument
     }
 
     // Display context menu for the Document
-    static void DisplayContextMenu(MyDocument* doc)
+    static void DisplayContextMenu(MyDocument* doc) IMGUI_NOEXCEPT
     {
         if (!ImGui::BeginPopupContextItem())
             return;
@@ -7480,7 +7480,7 @@ struct ExampleAppDocuments
 {
     ImVector<MyDocument> Documents;
 
-    ExampleAppDocuments()
+    ExampleAppDocuments() IMGUI_NOEXCEPT
     {
         Documents.push_back(MyDocument("Lettuce",             true,  ImVec4(0.4f, 0.8f, 0.4f, 1.0f)));
         Documents.push_back(MyDocument("Eggplant",            true,  ImVec4(0.8f, 0.5f, 1.0f, 1.0f)));
@@ -7499,7 +7499,7 @@ struct ExampleAppDocuments
 // give the impression of a flicker for one frame.
 // We call SetTabItemClosed() to manually notify the Tab Bar or Docking system of removed tabs to avoid this glitch.
 // Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
-static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app)
+static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app) IMGUI_NOEXCEPT
 {
     for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
     {
@@ -7510,7 +7510,7 @@ static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app)
     }
 }
 
-void ShowExampleAppDocuments(bool* p_open)
+void ShowExampleAppDocuments(bool* p_open) IMGUI_NOEXCEPT
 {
     static ExampleAppDocuments app;
 
@@ -7694,10 +7694,10 @@ void ShowExampleAppDocuments(bool* p_open)
 // End of Demo code
 #else
 
-void ImGui::ShowAboutWindow(bool*) {}
-void ImGui::ShowDemoWindow(bool*) {}
-void ImGui::ShowUserGuide() {}
-void ImGui::ShowStyleEditor(ImGuiStyle*) {}
+void ImGui::ShowAboutWindow(bool*) IMGUI_NOEXCEPT {}
+void ImGui::ShowDemoWindow(bool*) IMGUI_NOEXCEPT {}
+void ImGui::ShowUserGuide() IMGUI_NOEXCEPT {}
+void ImGui::ShowStyleEditor(ImGuiStyle*) IMGUI_NOEXCEPT {}
 
 #endif
 
