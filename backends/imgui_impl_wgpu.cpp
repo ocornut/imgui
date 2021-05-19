@@ -425,15 +425,17 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             else
             {
                 // Bind custom texture
-                auto bind_group = g_resources.ImageBindGroups.GetVoidPtr(ImHashData(&pcmd->GetTexID(), sizeof(ImTextureID)));
+                ImTextureID tex_id = pcmd->GetTexID();
+                ImGuiID tex_id_hash = ImHashData(&tex_id, sizeof(tex_id));
+                auto bind_group = g_resources.ImageBindGroups.GetVoidPtr(tex_id_hash);
                 if (bind_group)
                 {
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, NULL);
                 }
                 else
                 {
-                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(g_resources.ImageBindGroupLayout, (WGPUTextureView)pcmd->GetTexID());
-                    g_resources.ImageBindGroups.SetVoidPtr(ImHashData(&pcmd->GetTexID(), sizeof(ImTextureID)), image_bind_group);
+                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(g_resources.ImageBindGroupLayout, (WGPUTextureView)tex_id);
+                    g_resources.ImageBindGroups.SetVoidPtr(tex_id_hash, image_bind_group);
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
                 }
 
