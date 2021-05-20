@@ -394,6 +394,7 @@ Other Changes:
 - Examples: DirectX12: Move ImGui::Render() call above the first barrier to clarify its lack of effect on the graphics pipe.
 - CI: Fix testing for Windows DLL builds. (#3603, #3601) [@iboB]
 - Docs: Improved the wiki and added a https://github.com/ocornut/imgui/wiki/Useful-Widgets page. [@Xipiryon]
+  [2021/05/20: moved to https://github.com/ocornut/imgui/wiki/Useful-Extensions]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md, and improved them.
 - Docs: Consistently renamed all occurrences of "binding" and "back-end" to "backend" in comments and docs.
 
