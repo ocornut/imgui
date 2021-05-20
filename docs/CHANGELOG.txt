@@ -177,7 +177,9 @@ Docking+Viewports Branch:
   option set to false (dock/undock by default, hold shift to avoid docking). (#2109)
 - Docking: DockSpace() returns its node ID.
 - Docking: Dockspace() never draws a background. (#3924)
-- Docking: undocking nodes/windows covering most of the monitor max their size down to 90% to ease manipulations.
+- Docking: Undocking nodes/windows covering most of the monitor max their size down to 90% to ease manipulations.
+- Docking: Docking node tab bar honors ItemInnerSpacing.x before first tab. (#4130)
+- Docking: Tweak rendering and alignment of dock node menu marker. (#4130)
 - Docking: Fixed restoring of tab order within a dockspace or a split node.
 - Docking: Fixed reappearing docked windows with no close button showing a tab with extraneous space for one frame.
 - Docking: Fixed multiple simultaneously reappearing window from appearing undocked for one frame.
