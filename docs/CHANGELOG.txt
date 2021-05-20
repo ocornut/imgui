@@ -60,6 +60,7 @@ Other Changes:
 - Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
   frame and then immediately standling still (would only affect automation/bots). [@rokups]
+- Menus: made MenuItem() in a menu bar reflect the 'selected' argument with a highlight. (#4128) [@mattelegende]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]

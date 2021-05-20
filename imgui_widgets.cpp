@@ -6883,11 +6883,11 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
         // Mimic the exact layout spacing of BeginMenu() to allow MenuItem() inside a menu bar, which is a little misleading but may be useful
-        // Note that in this situation we render neither the shortcut neither the selected tick mark
+        // Note that in this situation: we don't render the shortcut, we render a highlight instead of the selected tick mark.
         float w = label_size.x;
         window->DC.CursorPos.x += IM_FLOOR(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x * 2.0f, style.ItemSpacing.y));
-        pressed = Selectable(label, false, flags, ImVec2(w, 0.0f));
+        pressed = Selectable(label, selected, flags, ImVec2(w, 0.0f));
         PopStyleVar();
         window->DC.CursorPos.x += IM_FLOOR(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
     }
