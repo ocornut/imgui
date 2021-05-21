@@ -55,6 +55,8 @@ Other Changes:
 - Nav, InputText: Fixed accidental menu toggling while typing non-ascii characters using AltGR. [@rokups] (#370)
 - Nav: Fixed using SetItemDefaultFocus() on windows with _NavFlattened flag. (#787)
 - Nav: Fixed Tabbing initial activation from skipping the first item if it is tabbable through. (#787)
+- Nav: Fixed fast CTRL+Tab (where keys are only held for one single frame) from properly enabling the
+  menu layer of target window if it doesn't have other active layers.
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
 - Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
