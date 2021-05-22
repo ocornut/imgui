@@ -307,7 +307,7 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     }
 
     // Setup viewport
-    wgpuRenderPassEncoderSetViewport(ctx, 0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y, 0, 1);
+    wgpuRenderPassEncoderSetViewport(ctx, 0, 0, draw_data->FramebufferScale.x * draw_data->DisplaySize.x, draw_data->FramebufferScale.y * draw_data->DisplaySize.y, 0, 1);
 
     // Bind shader and vertex buffers
     wgpuRenderPassEncoderSetVertexBuffer(ctx, 0, fr->VertexBuffer, 0, 0);
@@ -441,10 +441,10 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
 
                 // Apply Scissor, Bind texture, Draw
                 uint32_t clip_rect[4];
-                clip_rect[0] = static_cast<uint32_t>(pcmd->ClipRect.x - clip_off.x);
-                clip_rect[1] = static_cast<uint32_t>(pcmd->ClipRect.y - clip_off.y);
-                clip_rect[2] = static_cast<uint32_t>(pcmd->ClipRect.z - clip_off.x);
-                clip_rect[3] = static_cast<uint32_t>(pcmd->ClipRect.w - clip_off.y);
+                clip_rect[0] = static_cast<uint32_t>(draw_data->FramebufferScale.x * (pcmd->ClipRect.x - clip_off.x));
+                clip_rect[1] = static_cast<uint32_t>(draw_data->FramebufferScale.y * (pcmd->ClipRect.y - clip_off.y));
+                clip_rect[2] = static_cast<uint32_t>(draw_data->FramebufferScale.x * (pcmd->ClipRect.z - clip_off.x));
+                clip_rect[3] = static_cast<uint32_t>(draw_data->FramebufferScale.y * (pcmd->ClipRect.w - clip_off.y));
                 wgpuRenderPassEncoderSetScissorRect(pass_encoder, clip_rect[0], clip_rect[1], clip_rect[2] - clip_rect[0], clip_rect[3] - clip_rect[1]);
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
             }
