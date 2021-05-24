@@ -32,8 +32,10 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.83 WIP (In Progress)
+ VERSION 1.83 (Released 2011-05-24)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
 
 Breaking Changes:
 
@@ -61,7 +63,7 @@ Other Changes:
 - Tables: Better preserve widths when columns count changes. (#4046)
 - Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
-  frame and then immediately standling still (would only affect automation/bots). [@rokups]
+  frame and then immediately standing still (would only affect automation/bots). [@rokups]
 - Menus: made MenuItem() in a menu bar reflect the 'selected' argument with a highlight. (#4128) [@mattelegende]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
@@ -74,7 +76,7 @@ Other Changes:
 - LabelText: Fixed clipping of multi-line value text when label is single-line. (#4004)
 - LabelText: Fixed vertical alignment of single-line value text when label is multi-line. (#4004)
 - Combos: Changed the combo popup to use a different id to also using a context menu with the default item id.
-  Fixed using BeginPopupContextItem() with no parameter. (#4167)
+  Fixed using BeginPopupContextItem() with no parameter after a combo. (#4167)
 - Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
 - Tweak computation of io.Framerate so it is less biased toward high-values in the first 120 frames. (#4138)
 - Optimization: Disabling some of MSVC most aggressive Debug runtime checks for some simple/low-level functions
@@ -92,7 +94,7 @@ Other Changes:
   [@1025798851]
 - Backends: OSX: Fix keys remaining stuck when CMD-tabbing to a different application. (#3832) [@rokups]
 - Backends: DirectX9: calling IDirect3DStateBlock9::Capture() after CreateStateBlock() which appears to
-  workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
+  workaround/fix state restoring issues. Unknown exactly why so, bit of a cargo-cult fix. (#3857)
 - Backends: DirectX9: explicitly setting up more graphics states to increase compatibility with unusual
   non-default states. (#4063)
 - Backends: DirectX10, DirectX11: fixed a crash when backing/restoring state if nothing is bound when
@@ -107,7 +109,7 @@ Other Changes:
 - Examples: Vulkan: Prefer using discrete GPU if there are more than one available. (#4012) [@rokups]
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Examples: Android: Make Android example build compatible with Gradle 7.0. (#3446)
-- Docs: Improvements to description of using colored glyphes/emojis. (#4169, #3369)
+- Docs: Improvements to description of using colored glyphs/emojis. (#4169, #3369)
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 
