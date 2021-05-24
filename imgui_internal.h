@@ -1,4 +1,4 @@
-// dear imgui, v1.83 WIP
+// dear imgui, v1.83
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -2233,8 +2233,6 @@ struct IMGUI_API ImGuiTabBar
 // [SECTION] Table support
 //-----------------------------------------------------------------------------
 
-#ifdef IMGUI_HAS_TABLE
-
 #define IM_COL32_DISABLE                IM_COL32(0,0,0,1)   // Special sentinel code which cannot be used as a regular color.
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableSetupDrawChannels()
@@ -2483,8 +2481,6 @@ struct ImGuiTableSettings
     ImGuiTableSettings()        { memset(this, 0, sizeof(*this)); }
     ImGuiTableColumnSettings*   GetColumnSettings()     { return (ImGuiTableColumnSettings*)(this + 1); }
 };
-
-#endif // #ifdef IMGUI_HAS_TABLE
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGui internal API

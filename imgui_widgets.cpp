@@ -1,4 +1,4 @@
-// dear imgui, v1.83 WIP
+// dear imgui, v1.83
 // (widgets code)
 
 /*
@@ -1584,7 +1584,9 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     bool hovered, held;
     bool pressed = ButtonBehavior(frame_bb, id, &hovered, &held);
-    bool popup_open = IsPopupOpen(id, ImGuiPopupFlags_None);
+
+    const ImGuiID popup_id = ImHashStr("##ComboPopup", 0, id);
+    bool popup_open = IsPopupOpen(popup_id, ImGuiPopupFlags_None);
 
     const ImU32 frame_col = GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     const float value_x2 = ImMax(frame_bb.Min.x, frame_bb.Max.x - arrow_size);
@@ -1614,7 +1616,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     {
         if (window->DC.NavLayerCurrent == 0)
             window->NavLastIds[0] = id;
-        OpenPopupEx(id, ImGuiPopupFlags_None);
+        OpenPopupEx(popup_id, ImGuiPopupFlags_None);
         popup_open = true;
     }
 
@@ -6307,7 +6309,7 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
 // Plot/Graph widgets are not very good.
 // Consider writing your own, or using a third-party one, see:
 // - ImPlot https://github.com/epezent/implot
-// - others https://github.com/ocornut/imgui/wiki/Useful-Widgets
+// - others https://github.com/ocornut/imgui/wiki/Useful-Extensions
 //-------------------------------------------------------------------------
 
 int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 frame_size)
@@ -6896,11 +6898,11 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
         // Mimic the exact layout spacing of BeginMenu() to allow MenuItem() inside a menu bar, which is a little misleading but may be useful
-        // Note that in this situation we render neither the shortcut neither the selected tick mark
+        // Note that in this situation: we don't render the shortcut, we render a highlight instead of the selected tick mark.
         float w = label_size.x;
         window->DC.CursorPos.x += IM_FLOOR(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x * 2.0f, style.ItemSpacing.y));
-        pressed = Selectable(label, false, flags, ImVec2(w, 0.0f));
+        pressed = Selectable(label, selected, flags, ImVec2(w, 0.0f));
         PopStyleVar();
         window->DC.CursorPos.x += IM_FLOOR(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
     }

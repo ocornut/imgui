@@ -1,4 +1,4 @@
-// dear imgui, v1.83 WIP
+// dear imgui, v1.83
 // (demo code)
 
 // Help:
@@ -54,6 +54,7 @@ Index of this file:
 // - sub section: ShowDemoWindowTables()
 // - sub section: ShowDemoWindowMisc()
 // [SECTION] About Window / ShowAboutWindow()
+// [SECTION] Font Viewer / ShowFontAtlas()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
 // [SECTION] Example App: Debug Console / ShowExampleAppConsole()
@@ -1606,7 +1607,7 @@ static void ShowDemoWindowWidgets()
     // Plot/Graph widgets are not very good.
     // Consider writing your own, or using a third-party one, see:
     // - ImPlot https://github.com/epezent/implot
-    // - others https://github.com/ocornut/imgui/wiki/Useful-Widgets
+    // - others https://github.com/ocornut/imgui/wiki/Useful-Extensions
     if (ImGui::TreeNode("Plots Widgets"))
     {
         static bool animate = true;
@@ -1655,7 +1656,7 @@ static void ShowDemoWindowWidgets()
         };
         static int func_type = 0, display_count = 70;
         ImGui::Separator();
-        ImGui::SetNextItemWidth(100);
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
         ImGui::Combo("func", &func_type, "Sin\0Saw\0");
         ImGui::SameLine();
         ImGui::SliderInt("Sample count", &display_count, 1, 400);
@@ -2448,7 +2449,7 @@ static void ShowDemoWindowLayout()
         //   the POV of the parent window). See 'Demo->Querying Status (Active/Focused/Hovered etc.)' for details.
         {
             static int offset_x = 0;
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
             ImGui::DragInt("Offset X", &offset_x, 1.0f, -1000, 1000);
 
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
@@ -2470,14 +2471,14 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Widgets Width"))
     {
+        static float f = 0.0f;
+        static bool show_indented_items = true;
+        ImGui::Checkbox("Show indented items", &show_indented_items);
+
         // Use SetNextItemWidth() to set the width of a single upcoming item.
         // Use PushItemWidth()/PopItemWidth() to set the width of a group of items.
         // In real code use you'll probably want to choose width values that are proportional to your font size
         // e.g. Using '20.0f * GetFontSize()' as width instead of '200.0f', etc.
-
-        static float f = 0.0f;
-        static bool show_indented_items = true;
-        ImGui::Checkbox("Show indented items", &show_indented_items);
 
         ImGui::Text("SetNextItemWidth/PushItemWidth(100)");
         ImGui::SameLine(); HelpMarker("Fixed width.");
@@ -5818,31 +5819,15 @@ void ImGui::ShowAboutWindow(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] Style Editor / ShowStyleEditor()
+// [SECTION] Font viewer / ShowFontAtlas()
 //-----------------------------------------------------------------------------
-// - ShowStyleSelector()
 // - ShowFontSelector()
-// - ShowStyleEditor()
+// - ShowFont()
+// - ShowFontAtlas()
 //-----------------------------------------------------------------------------
 
-// Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
-// Here we use the simplified Combo() api that packs items into a single literal string.
-// Useful for quick combo boxes where the choices are known locally.
-bool ImGui::ShowStyleSelector(const char* label)
-{
-    static int style_idx = -1;
-    if (ImGui::Combo(label, &style_idx, "Dark\0Light\0Classic\0"))
-    {
-        switch (style_idx)
-        {
-        case 0: ImGui::StyleColorsDark(); break;
-        case 1: ImGui::StyleColorsLight(); break;
-        case 2: ImGui::StyleColorsClassic(); break;
-        }
-        return true;
-    }
-    return false;
-}
+// This isn't worth putting in public API but we want Metrics to use it
+namespace ImGui { void ShowFontAtlas(ImFontAtlas* atlas); }
 
 // Demo helper function to select among loaded fonts.
 // Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
@@ -5871,7 +5856,7 @@ void ImGui::ShowFontSelector(const char* label)
 }
 
 // [Internal] Display details for a single font, called by ShowStyleEditor().
-static void NodeFont(ImFont* font)
+static void ShowFont(ImFont* font)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
@@ -5881,9 +5866,13 @@ static void NodeFont(ImFont* font)
     if (!font_details_opened)
         return;
 
+    // Display preview text
     ImGui::PushFont(font);
     ImGui::Text("The quick brown fox jumps over the lazy dog");
     ImGui::PopFont();
+
+    // Display details
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::DragFloat("Font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
     ImGui::SameLine(); HelpMarker(
         "Note than the default embedded font is NOT meant to be scaled.\n\n"
@@ -5901,9 +5890,10 @@ static void NodeFont(ImFont* font)
             if (const ImFontConfig* cfg = &font->ConfigData[config_i])
                 ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
                     config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH, cfg->GlyphOffset.x, cfg->GlyphOffset.y);
+
+    // Display all glyphs of the fonts in separate pages of 256 characters
     if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
     {
-        // Display all glyphs of the fonts in separate pages of 256 characters
         const ImU32 glyph_col = ImGui::GetColorU32(ImGuiCol_Text);
         for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
         {
@@ -5956,6 +5946,50 @@ static void NodeFont(ImFont* font)
         ImGui::TreePop();
     }
     ImGui::TreePop();
+}
+
+void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
+{
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+    {
+        ImFont* font = atlas->Fonts[i];
+        ImGui::PushID(font);
+        ShowFont(font);
+        ImGui::PopID();
+    }
+    if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+    {
+        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
+        ImGui::TreePop();
+    }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] Style Editor / ShowStyleEditor()
+//-----------------------------------------------------------------------------
+// - ShowStyleSelector()
+// - ShowStyleEditor()
+//-----------------------------------------------------------------------------
+
+// Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
+// Here we use the simplified Combo() api that packs items into a single literal string.
+// Useful for quick combo boxes where the choices are known locally.
+bool ImGui::ShowStyleSelector(const char* label)
+{
+    static int style_idx = -1;
+    if (ImGui::Combo(label, &style_idx, "Dark\0Light\0Classic\0"))
+    {
+        switch (style_idx)
+        {
+        case 0: ImGui::StyleColorsDark(); break;
+        case 1: ImGui::StyleColorsLight(); break;
+        case 2: ImGui::StyleColorsClassic(); break;
+        }
+        return true;
+    }
+    return false;
 }
 
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
@@ -6114,21 +6148,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGuiIO& io = ImGui::GetIO();
             ImFontAtlas* atlas = io.Fonts;
             HelpMarker("Read FAQ and docs/FONTS.md for details on font loading.");
-            ImGui::PushItemWidth(120);
-            for (int i = 0; i < atlas->Fonts.Size; i++)
-            {
-                ImFont* font = atlas->Fonts[i];
-                ImGui::PushID(font);
-                NodeFont(font);
-                ImGui::PopID();
-            }
-            if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
-            {
-                ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-                ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
-                ImGui::TreePop();
-            }
+            ImGui::ShowFontAtlas(atlas);
 
             // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
             // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
@@ -6140,6 +6160,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "rebuild the font atlas, and call style.ScaleAllSizes() on a reference ImGuiStyle structure.\n"
                 "Using those settings here will give you poor quality results.");
             static float window_scale = 1.0f;
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
             if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp)) // Scale only this window
                 ImGui::SetWindowFontScale(window_scale);
             ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp); // Scale everything
@@ -6159,7 +6180,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             HelpMarker("Faster lines using texture data. Require backend to render with bilinear filtering (not point/nearest filtering).");
 
             ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
-            ImGui::PushItemWidth(100);
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
             ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
 

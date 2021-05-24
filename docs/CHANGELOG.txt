@@ -100,8 +100,10 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.83 WIP (In Progress)
+ VERSION 1.83 (Released 2011-05-24)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
 
 Breaking Changes:
 
@@ -123,11 +125,14 @@ Other Changes:
 - Nav, InputText: Fixed accidental menu toggling while typing non-ascii characters using AltGR. [@rokups] (#370)
 - Nav: Fixed using SetItemDefaultFocus() on windows with _NavFlattened flag. (#787)
 - Nav: Fixed Tabbing initial activation from skipping the first item if it is tabbable through. (#787)
+- Nav: Fixed fast CTRL+Tab (where keys are only held for one single frame) from properly enabling the
+  menu layer of target window if it doesn't have other active layers.
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
 - Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
 - TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
-  frame and then immediately standling still (would only affect automation/bots). [@rokups]
+  frame and then immediately standing still (would only affect automation/bots). [@rokups]
+- Menus: made MenuItem() in a menu bar reflect the 'selected' argument with a highlight. (#4128) [@mattelegende]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
@@ -138,6 +143,8 @@ Other Changes:
   is used. (#4155, #4156) [@michael-swan]
 - LabelText: Fixed clipping of multi-line value text when label is single-line. (#4004)
 - LabelText: Fixed vertical alignment of single-line value text when label is multi-line. (#4004)
+- Combos: Changed the combo popup to use a different id to also using a context menu with the default item id.
+  Fixed using BeginPopupContextItem() with no parameter after a combo. (#4167)
 - Popups: Added 'OpenPopup(ImGuiID id)' overload to facilitate calling from nested stacks. (#3993, #331) [@zlash]
 - Tweak computation of io.Framerate so it is less biased toward high-values in the first 120 frames. (#4138)
 - Optimization: Disabling some of MSVC most aggressive Debug runtime checks for some simple/low-level functions
@@ -148,13 +155,14 @@ Other Changes:
   par with original version. Now incorporating the correct revert.
 - ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
 - Demo: Improved popups demo and comments.
+- Metrics: Added "Fonts" section with same information as available in "Style Editor">"Fonts".
 - Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
   [@1025798851]
 - Backends: OSX: Fix keys remaining stuck when CMD-tabbing to a different application. (#3832) [@rokups]
 - Backends: DirectX9: calling IDirect3DStateBlock9::Capture() after CreateStateBlock() which appears to
-  workaround/fix state restoring issues. Unknown exactly why so, but bit of a cargo-cult fix. (#3857)
+  workaround/fix state restoring issues. Unknown exactly why so, bit of a cargo-cult fix. (#3857)
 - Backends: DirectX9: explicitly setting up more graphics states to increase compatibility with unusual
   non-default states. (#4063)
 - Backends: DirectX10, DirectX11: fixed a crash when backing/restoring state if nothing is bound when
@@ -169,6 +177,7 @@ Other Changes:
 - Examples: Vulkan: Prefer using discrete GPU if there are more than one available. (#4012) [@rokups]
 - Examples: SDL2: Link with shell32.lib required by SDL2main.lib since SDL 2.0.12. [#3988]
 - Examples: Android: Make Android example build compatible with Gradle 7.0. (#3446)
+- Docs: Improvements to description of using colored glyphs/emojis. (#4169, #3369)
 - Docs: Improvements to minor mistakes in documentation comments (#3923) [@ANF-Studios]
 
 Docking+Viewports Branch:
@@ -495,6 +504,7 @@ Other Changes:
 - Examples: DirectX12: Move ImGui::Render() call above the first barrier to clarify its lack of effect on the graphics pipe.
 - CI: Fix testing for Windows DLL builds. (#3603, #3601) [@iboB]
 - Docs: Improved the wiki and added a https://github.com/ocornut/imgui/wiki/Useful-Widgets page. [@Xipiryon]
+  [2021/05/20: moved to https://github.com/ocornut/imgui/wiki/Useful-Extensions]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md, and improved them.
 - Docs: Consistently renamed all occurrences of "binding" and "back-end" to "backend" in comments and docs.
 
