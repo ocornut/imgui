@@ -414,6 +414,11 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         FreeTypeFont& font_face = src_tmp.Font;
         IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas));
 
+#ifndef IMGUI_DISABLE_SDF
+        // not supported by FreeType
+        cfg.SignedDistanceFont = false;
+#endif
+
         // Find index from cfg.DstFont (we allow the user to set cfg.DstFont. Also it makes casual debugging nicer than when storing indices)
         src_tmp.DstIndex = -1;
         for (int output_i = 0; output_i < atlas->Fonts.Size && src_tmp.DstIndex == -1; output_i++)
@@ -730,7 +735,7 @@ static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size
     return block;
 }
 
-static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas)
+static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas, ImDispatch dispatcher)
 {
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
     FT_MemoryRec_ memory_rec = {};
