@@ -4106,20 +4106,20 @@ void ImGui::UpdateDebugToolItemPicker()
     if (g.DebugItemPickerActive)
     {
         const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
-        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (ImGui::IsKeyPressedMap(ImGuiKey_Escape))
+        SetMouseCursor(ImGuiMouseCursor_Hand);
+        if (IsKeyPressedMap(ImGuiKey_Escape))
             g.DebugItemPickerActive = false;
-        if (ImGui::IsMouseClicked(0) && hovered_id)
+        if (IsMouseClicked(0) && hovered_id)
         {
             g.DebugItemPickerBreakId = hovered_id;
             g.DebugItemPickerActive = false;
         }
-        ImGui::SetNextWindowBgAlpha(0.60f);
-        ImGui::BeginTooltip();
-        ImGui::Text("HoveredId: 0x%08X", hovered_id);
-        ImGui::Text("Press ESC to abort picking.");
-        ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
-        ImGui::EndTooltip();
+        SetNextWindowBgAlpha(0.60f);
+        BeginTooltip();
+        Text("HoveredId: 0x%08X", hovered_id);
+        Text("Press ESC to abort picking.");
+        TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
+        EndTooltip();
     }
 }
 
