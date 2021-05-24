@@ -1020,19 +1020,27 @@ static void ShowDemoWindowWidgets()
             flags &= ~ImGuiComboFlags_NoPreview;     // Clear the other flag, as we cannot combine both
         if (ImGui::CheckboxFlags("ImGuiComboFlags_NoPreview", &flags, ImGuiComboFlags_NoPreview))
             flags &= ~ImGuiComboFlags_NoArrowButton; // Clear the other flag, as we cannot combine both
+        ImGui::CheckboxFlags("ImGuiComboFlags_ColorPreview", &flags, ImGuiComboFlags_ColorPreview);
 
         // Using the generic BeginCombo() API, you have full control over how to display the combo contents.
         // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
         // stored in the object itself, etc.)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
+        ImVec4 colors[] = { ImVec4(1.0f, 0.0f, 0.0f, 1.0f), ImVec4(1.0f, 1.0f, 0.0f, 0.5f), ImVec4(0.0f, 0.5f, 1.0f, 0.75f) };
         static int item_current_idx = 0; // Here we store our selection data as an index.
         const char* combo_label = items[item_current_idx];  // Label to preview before opening the combo (technically it could be anything)
-        if (ImGui::BeginCombo("combo 1", combo_label, flags))
+        ImVec4 combo_color = colors[item_current_idx % IM_ARRAYSIZE(colors)];
+        if (ImGui::BeginCombo("combo 1", combo_label, flags, combo_color))
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
                 const bool is_selected = (item_current_idx == n);
-                if (ImGui::Selectable(items[n], is_selected))
+
+                ImGuiSelectableFlags selectable_flags = 0;
+                if (flags & ImGuiComboFlags_ColorPreview)
+                    selectable_flags |= ImGuiSelectableFlags_ColorPreview;
+
+                if (ImGui::Selectable(items[n], is_selected, selectable_flags, ImVec2(0, 0), colors[n % IM_ARRAYSIZE(colors)]))
                     item_current_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)

@@ -1550,7 +1550,7 @@ static float CalcMaxPopupHeightFromItemCount(int items_count)
     return (g.FontSize + g.Style.ItemSpacing.y) * items_count - g.Style.ItemSpacing.y + (g.Style.WindowPadding.y * 2);
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags, const ImVec4& preview_col)
 {
     // Always consume the SetNextWindowSizeConstraint() call in our early return paths
     ImGuiContext& g = *GImGui;
@@ -1597,6 +1597,12 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (preview_value != NULL && !(flags & ImGuiComboFlags_NoPreview))
     {
         ImVec2 preview_pos = frame_bb.Min + style.FramePadding;
+        if (flags & ImGuiComboFlags_ColorPreview)
+        {
+            const float color_size = total_bb.GetHeight() - style.FramePadding.y * 2.0f;
+            RenderColorRectWithAlphaCheckerboard(window->DrawList, preview_pos, preview_pos + ImVec2(color_size, color_size), GetColorU32(preview_col), color_size * 0.5f, ImVec2());
+            preview_pos.x += total_bb.GetHeight();
+        }
         if (g.LogEnabled)
             LogSetNextTextDecoration("{", "}");
         RenderTextClipped(preview_pos, ImVec2(value_x2, frame_bb.Max.y), preview_value, NULL, NULL, ImVec2(0.0f, 0.0f));
@@ -6009,7 +6015,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
 // But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID or use ##unique_id.
 // With this scheme, ImGuiSelectableFlags_SpanAllColumns and ImGuiSelectableFlags_AllowItemOverlap are also frequently used flags.
 // FIXME: Selectable() with (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
-bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg, const ImVec4& preview_col)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6035,7 +6041,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         size.x = ImMax(label_size.x, max_x - min_x);
 
     // Text stays at the submission position, but bounding box may be extended on both sides
-    const ImVec2 text_min = pos;
+    ImVec2 text_min = pos;
     const ImVec2 text_max(min_x + size.x, pos.y + size.y);
 
     // Selectables are meant to be tightly packed together with no click-gap, so we extend their box to cover spacing between selectable.
@@ -6141,6 +6147,13 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     else if (span_all_columns && g.CurrentTable)
         TablePopBackgroundChannel();
 
+    if (flags & ImGuiSelectableFlags_ColorPreview)
+    {
+        const float color_size = text_max.y - text_min.y;
+        RenderColorRectWithAlphaCheckerboard(window->DrawList, text_min, text_min + ImVec2(color_size, color_size), GetColorU32(preview_col), color_size * 0.5f, ImVec2());
+        text_min.x += color_size + style.ItemInnerSpacing.x;
+    }
+
     if (flags & ImGuiSelectableFlags_Disabled) PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
     RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
@@ -6153,9 +6166,9 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     return pressed;
 }
 
-bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg, const ImVec4& preview_col)
 {
-    if (Selectable(label, *p_selected, flags, size_arg))
+    if (Selectable(label, *p_selected, flags, size_arg, preview_col))
     {
         *p_selected = !*p_selected;
         return true;

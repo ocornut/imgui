@@ -495,7 +495,7 @@ namespace ImGui
     // Widgets: Combo Box
     // - The BeginCombo()/EndCombo() api allows you to manage your contents and selection state however you want it, by creating e.g. Selectable() items.
     // - The old Combo() api are helpers over BeginCombo()/EndCombo() which are kept available for convenience purpose. This is analogous to how ListBox are created.
-    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0);
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0, const ImVec4& preview_col = ImVec4(0,0,0,0));
     IMGUI_API void          EndCombo(); // only call EndCombo() if BeginCombo() returns true!
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1);
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1);      // Separate items with \0 within a string, end item-list with \0\0. e.g. "One\0Two\0Three\0"
@@ -597,8 +597,8 @@ namespace ImGui
     // Widgets: Selectables
     // - A selectable highlights when hovered, and can display another color when selected.
     // - Neighbors selectable extend their highlight bounds in order to leave no gap between them. This is so a series of selected Selectable appear contiguous.
-    IMGUI_API bool          Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so you can modify your selection state. size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height
-    IMGUI_API bool          Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0));      // "bool* p_selected" point to the selection state (read-write), as a convenient helper.
+    IMGUI_API bool          Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0), const ImVec4& preview_col = ImVec4(0, 0, 0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so you can modify your selection state. size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height
+    IMGUI_API bool          Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0), const ImVec4& preview_col = ImVec4(0, 0, 0, 0));      // "bool* p_selected" point to the selection state (read-write), as a convenient helper.
 
     // Widgets: List Boxes
     // - This is essentially a thin wrapper to using BeginChild/EndChild with some stylistic changes.
@@ -1033,7 +1033,8 @@ enum ImGuiSelectableFlags_
     ImGuiSelectableFlags_SpanAllColumns     = 1 << 1,   // Selectable frame can span all columns (text will still fit in current column)
     ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2,   // Generate press events on double clicks too
     ImGuiSelectableFlags_Disabled           = 1 << 3,   // Cannot be selected, display grayed out text
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 4    // (WIP) Hit testing to allow subsequent widgets to overlap this one
+    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 4,   // (WIP) Hit testing to allow subsequent widgets to overlap this one
+    ImGuiSelectableFlags_ColorPreview       = 1 << 5,   // Show a square of the given color to the left of the text
 };
 
 // Flags for ImGui::BeginCombo()
@@ -1047,6 +1048,7 @@ enum ImGuiComboFlags_
     ImGuiComboFlags_HeightLargest           = 1 << 4,   // As many fitting items as possible
     ImGuiComboFlags_NoArrowButton           = 1 << 5,   // Display on the preview box without the square arrow button
     ImGuiComboFlags_NoPreview               = 1 << 6,   // Display only a square arrow button
+    ImGuiComboFlags_ColorPreview            = 1 << 7,   // Show a square of the given color to the left side of the preview text
     ImGuiComboFlags_HeightMask_             = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
 };
 
