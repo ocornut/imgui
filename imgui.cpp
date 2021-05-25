@@ -2182,22 +2182,19 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
-// FIXME-IMSTR: probably unneeded.
 const char* ImStrstr(ImStrv haystack, ImStrv needle)
 {
     const char un0 = (char)*needle.Begin;
-    while ((!haystack.End && *haystack.Begin) || (haystack.End && haystack.Begin < haystack.End))
+    const char* p = haystack.Begin;
+    const size_t needle_len_m1 = needle.length() - 1;
+    while (true)
     {
-        if (*haystack.Begin == un0)
-        {
-            const char* b = needle.Begin + 1;
-            for (const char* a = haystack.Begin + 1; b < needle.End; a++, b++)
-                if (*a != *b)
-                    break;
-            if (b == needle.End)
-                return haystack.Begin;
-        }
-        haystack.Begin++;
+        p = (const char*)memchr(p, un0, haystack.End - p);
+        if (p == NULL || (size_t)(haystack.End - p) - 1u < needle_len_m1)
+            return NULL;
+        if (needle_len_m1 == 0 || memcmp(p + 1, needle.Begin + 1, needle_len_m1) == 0)
+            return p;
+        p += 1;
     }
     return NULL;
 }
