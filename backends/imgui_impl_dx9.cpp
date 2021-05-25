@@ -203,7 +203,7 @@ static int                          g_VertexBufferSize = 4096;
 static int                          g_IndexBufferSize  = 8192;
 // Direct3D9 state
 static IDirect3DStateBlock9*        g_pd3dState        = NULL;
-static D3DMATRIX                    g_LastMVP[3];
+static D3DMATRIX                    g_LastMVP[3]       = {};
 // Direct3D9 programmable rendering pipeline data
 static bool                         g_IsShaderPipeline = false;
 static IDirect3DVertexDeclaration9* g_pInputLayout     = NULL;
