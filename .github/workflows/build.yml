@@ -204,7 +204,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev libvulkan-dev
 
     - name: Build example_null (extra warnings, gcc 32-bit)
       run: |
@@ -361,6 +361,9 @@ jobs:
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
+
+    - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+      run: g++ -c -I. -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
   MacOS:
     runs-on: macos-latest

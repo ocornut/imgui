@@ -15,6 +15,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-05-24: OpenGL: Access GL_CLIP_ORIGIN when "GL_ARB_clip_control" extension is detected, inside of just OpenGL 4.5 version.
 //  2021-05-19: OpenGL: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-04-06: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater.
 //  2021-02-18: OpenGL: Change blending equation to preserve alpha in output buffer.
@@ -146,6 +147,11 @@ using namespace gl;
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
 #endif
 
+// Desktop GL use extension detection
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
+#endif
+
 // OpenGL Data
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
@@ -154,6 +160,7 @@ static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static GLint        g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
 static GLuint       g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
+static bool         g_HasClipOrigin = false;
 
 // Forward Declarations
 static void ImGui_ImplOpenGL3_InitPlatformInterface();
@@ -238,6 +245,19 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     GLint current_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
+    // Detect extensions we support
+    g_HasClipOrigin = (g_GlVersion >= 450);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
+    GLint num_extensions = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &num_extensions);
+    for (GLint i = 0; i < num_extensions; i++)
+    {
+        const char* extension = (const char*)glGetStringi(GL_EXTENSIONS, i);
+        if (strcmp(extension, "GL_ARB_clip_control") == 0)
+            g_HasClipOrigin = true;
+    }
+#endif
+
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOpenGL3_InitPlatformInterface();
 
@@ -277,7 +297,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
 #if defined(GL_CLIP_ORIGIN)
     bool clip_origin_lower_left = true;
-    if (g_GlVersion >= 450)
+    if (g_HasClipOrigin)
     {
         GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
         if (current_clip_origin == GL_UPPER_LEFT)

@@ -100,6 +100,18 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.84 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+- Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
+  Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
+  implying that the file is required.
+- Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.83 (Released 2011-05-24)
 -----------------------------------------------------------------------
 
