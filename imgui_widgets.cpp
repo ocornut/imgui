@@ -7765,7 +7765,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     tab->Flags = flags;
 
     // Append name with zero-terminator
-    tab->NameOffset = (ImS16)tab_bar->TabsNames.size();
+    tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
     tab_bar->TabsNames.append(label, label + strlen(label) + 1);
 
     // Update selected tab
