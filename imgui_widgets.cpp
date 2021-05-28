@@ -1568,8 +1568,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     const float arrow_size = (flags & ImGuiComboFlags_NoArrowButton) ? 0.0f : GetFrameHeight();
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const float expected_w = CalcItemWidth();
-    const float w = (flags & ImGuiComboFlags_NoPreview) ? arrow_size : expected_w;
+    const float w = (flags & ImGuiComboFlags_NoPreview) ? arrow_size : CalcItemWidth();
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
     ItemSize(total_bb, style.FramePadding.y);
@@ -1608,8 +1607,6 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     if ((pressed || g.NavActivateId == id) && !popup_open)
     {
-        if (window->DC.NavLayerCurrent == 0)
-            window->NavLastIds[0] = id;
         OpenPopupEx(popup_id, ImGuiPopupFlags_None);
         popup_open = true;
     }
@@ -1644,11 +1641,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         {
             // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
             ImVec2 size_expected = CalcWindowNextAutoFitSize(popup_window);
-            if (flags & ImGuiComboFlags_PopupAlignLeft)
-                popup_window->AutoPosLastDirection = ImGuiDir_Left; // "Below, Toward Left"
-            else
-                popup_window->AutoPosLastDirection = ImGuiDir_Down; // "Below, Toward Right (default)"
-            ImRect r_outer = GetWindowAllowedExtentRect(popup_window);
+            popup_window->AutoPosLastDirection = (flags & ImGuiComboFlags_PopupAlignLeft) ? ImGuiDir_Left : ImGuiDir_Down; // Left = "Below, Toward Left", Down = "Below, Toward Right (default)"
+            ImRect r_outer = GetPopupAllowedExtentRect(popup_window);
             ImVec2 pos = FindBestWindowPosForPopupEx(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, frame_bb, ImGuiPopupPositionPolicy_ComboBox);
             SetNextWindowPos(pos);
         }
