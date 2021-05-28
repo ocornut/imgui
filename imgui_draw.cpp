@@ -789,8 +789,14 @@ if (USE_NEW_CODE)
         const float half_thickness_aa = half_thickness + AA_SIZE;
         const unsigned int first_vtx_idx = _VtxCurrentIdx;
 
+        // Declare temporary variables in outer scope. Declared without a default value would trigger static analyser, and doing it in inner-scope would be more wasteful.
+        float mlx, mly, mrx, mry;                                   // Left and right miters
+        float mlax = 0.0f, mlay = 0.0f, mrax = 0.0f, mray = 0.0f;   // Left and right miters including anti-aliasing
+        float b1x = 0.0f, b1y = 0.0f, b2x = 0.0f, b2y = 0.0f;       // First and second bevel point
+        float b1ax = 0.0f, b1ay = 0.0f, b2ax = 0.0f, b2ay = 0.0f;   // First and second bevel point including anti-aliasing
+
         float sqlen1 = 0.0f;
-        float dx1, dy1;
+        float dx1 = 0.0f, dy1 = 0.0f;
         if (closed)
         {
             dx1 = points[0].x - points[points_count - 1].x;
@@ -823,8 +829,6 @@ if (USE_NEW_CODE)
             }
 
             float miter_l_recip = dx1 * dy2 - dy1 * dx2;
-            float mlx, mly, mrx, mry;     // Left and right miters
-            float mlax, mlay, mrax, mray; // Left and right miters including anti-aliasing
             const bool bevel = (dx1 * dx2 + dy1 * dy2) > 1e-5f;
             if (ImFabs(miter_l_recip) > 1e-5f)
             {
@@ -869,8 +873,6 @@ if (USE_NEW_CODE)
             // The two bevel vertices if the angle is right or obtuse
             // miter_sign == 1, iff the outer (maybe bevelled) edge is on the right, -1 iff it is on the left
             int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
-            float b1x, b1y, b2x, b2y;     // First and second bevel point
-            float b1ax, b1ay, b2ax, b2ay; // First and second bevel point including anti-aliasing
             if (bevel)
             {
                 // FIXME-OPT: benchmark if doing these computations only once in AA case saves cycles
