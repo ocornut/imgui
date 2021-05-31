@@ -6100,8 +6100,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
     window->IsFallbackWindow = (g.CurrentWindowStack.Size == 0 && g.WithinFrameScopeWithImplicitWindow);
 
-    // Update the Appearing flag
-    bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
+    // Update the Appearing flag (note: the BeginDocked() path may also set this to true later)
+    bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1); // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -6136,6 +6136,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         bool has_dock_node = (window->DockId != 0 || window->DockNode != NULL);
         bool new_auto_dock_node = !has_dock_node && GetWindowAlwaysWantOwnTabBar(window);
+        bool dock_node_was_visible = window->DockNodeIsVisible;
+        bool dock_tab_was_visible = window->DockTabIsVisible;
         if (has_dock_node || new_auto_dock_node)
         {
             BeginDocked(window, p_open);
@@ -6145,6 +6147,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Docking currently override constraints
             g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
+        }
+
+        // Update the Appearing flag (again)
+        if (window->DockTabIsVisible && !dock_tab_was_visible && dock_node_was_visible && !window->Appearing)
+        {
+            window->Appearing = true;
+            SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
         }
     }
 
@@ -12957,7 +12966,7 @@ void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* windo
         window->DockId = 0;
     window->Collapsed = false;
     window->DockIsActive = false;
-    window->DockTabIsVisible = false;
+    window->DockNodeIsVisible = window->DockTabIsVisible = false;
     window->Size = window->SizeFull = FixLargeWindowsWhenUndocking(window->SizeFull, window->Viewport);
 
     MarkIniSettingsDirty();
@@ -15503,7 +15512,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         else
         {
             window->DockIsActive = true;
-            window->DockTabIsVisible = false;
+            window->DockNodeIsVisible = window->DockTabIsVisible = false;
         }
         return;
     }
@@ -15518,7 +15527,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     if (node->HostWindow == NULL)
     {
         window->DockIsActive = (node->State == ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing);
-        window->DockTabIsVisible = false;
+        window->DockNodeIsVisible = window->DockTabIsVisible = false;
         if (node->Windows.Size > 1)
             DockNodeHideWindowDuringHostWindowCreation(window);
         return;
@@ -15542,6 +15551,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     SetNextWindowSize(node->Size);
     g.NextWindowData.PosUndock = false; // Cancel implicit undocking of SetNextWindowPos()
     window->DockIsActive = true;
+    window->DockNodeIsVisible = true;
     window->DockTabIsVisible = false;
     if (node->SharedFlags & ImGuiDockNodeFlags_KeepAliveOnly)
         return;

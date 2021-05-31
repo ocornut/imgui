@@ -108,7 +108,10 @@ Other Changes:
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
->>>>>>> master
+
+Docking+Viewports Branch:
+
+- Docking: Fix IsWindowAppearing() and ImGuiCond_Appearing on docked windows. (#4177, #3982, #1497, #1061)
 
 
 -----------------------------------------------------------------------
