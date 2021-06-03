@@ -6108,13 +6108,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
         window_just_activated_by_user |= (window != popup_ref.Window);
     }
-    window->Appearing = window_just_activated_by_user;
-    if (window->Appearing)
-        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
 
     // Update Flags, LastFrameActive, BeginOrderXXX fields
+    const bool window_was_appearing = window->Appearing;
     if (first_begin_of_the_frame)
     {
+        window->Appearing = window_just_activated_by_user;
+        if (window->Appearing)
+            SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
+
         window->FlagsPreviousFrame = window->Flags;
         window->Flags = (ImGuiWindowFlags)flags;
         window->LastFrameActive = current_frame;
@@ -6147,17 +6149,17 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Docking currently override constraints
             g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
+
+            // Amend the Appearing flag
+            if (window->DockTabIsVisible && !dock_tab_was_visible && dock_node_was_visible && !window->Appearing && !window_was_appearing)
+            {
+                window->Appearing = true;
+                SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
+            }
         }
         else
         {
             window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
-        }
-
-        // Update the Appearing flag (again)
-        if (window->DockTabIsVisible && !dock_tab_was_visible && dock_node_was_visible && !window->Appearing)
-        {
-            window->Appearing = true;
-            SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
         }
     }
 
@@ -6940,6 +6942,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
                 skip_items = true;
         window->SkipItems = skip_items;
+
+        // Sanity check: there are two spots which can set Appearing = true
+        // - when 'window_just_activated_by_user' is set -> HiddenFramesCannotSkipItems is set -> SkipItems always false
+        // - in BeginDocked() path when DockNodeIsVisible == DockTabIsVisible == true -> hidden _should_ be all zero // FIXME: Not formally proven, hence the assert.
+        if (window->SkipItems && !window->Appearing)
+            IM_ASSERT(window->Appearing == false); // Please report on GitHub if this triggers: https://github.com/ocornut/imgui/issues/4177
     }
 
     return !window->SkipItems;
