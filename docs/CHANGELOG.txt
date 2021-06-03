@@ -111,6 +111,7 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Docking: Clicking on the right-most close button of a docking node closes all windows. (#4186)
 - Docking: Fix IsWindowAppearing() and ImGuiCond_Appearing on docked windows. (#4177, #3982, #1497, #1061)
 
 

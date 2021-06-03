@@ -14027,11 +14027,11 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text] * ImVec4(1.0f,1.0f,1.0f,0.4f));
         }
         if (CloseButton(host_window->GetID("#CLOSE"), close_button_pos))
-            if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_bar->VisibleTabId))
-            {
-                node->WantCloseTabId = tab->ID;
-                TabBarCloseTab(tab_bar, tab);
-            }
+        {
+            node->WantCloseAll = true;
+            for (int n = 0; n < tab_bar->Tabs.Size; n++)
+                TabBarCloseTab(tab_bar, &tab_bar->Tabs[n]);
+        }
         //if (IsItemActive())
         //    focus_tab_id = tab_bar->SelectedTabId;
         if (!close_button_is_enabled)
