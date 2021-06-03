@@ -3298,8 +3298,9 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
     ImGuiContext& g = *ctx;
-    for (int i = 0; i != g.Tables.GetSize(); i++)
-        g.Tables.GetByIndex(i)->SettingsOffset = -1;
+    for (int i = 0; i != g.Tables.GetBufSize(); i++)
+        if (ImGuiTable* table = g.Tables.TryGetBufData(i))
+            table->SettingsOffset = -1;
     g.SettingsTables.clear();
 }
 
@@ -3307,12 +3308,12 @@ static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandle
 static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
     ImGuiContext& g = *ctx;
-    for (int i = 0; i != g.Tables.GetSize(); i++)
-    {
-        ImGuiTable* table = g.Tables.GetByIndex(i);
-        table->IsSettingsRequestLoad = true;
-        table->SettingsOffset = -1;
-    }
+    for (int i = 0; i != g.Tables.GetBufSize(); i++)
+        if (ImGuiTable* table = g.Tables.TryGetBufData(i))
+        {
+            table->IsSettingsRequestLoad = true;
+            table->SettingsOffset = -1;
+        }
 }
 
 static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)

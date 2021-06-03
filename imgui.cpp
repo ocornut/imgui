@@ -11023,10 +11023,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         cfg->ShowTablesRects |= Combo("##show_table_rects_type", &cfg->ShowTablesRectsType, trt_rects_names, TRT_Count, TRT_Count);
         if (cfg->ShowTablesRects && g.NavWindow != NULL)
         {
-            for (int table_n = 0; table_n < g.Tables.GetSize(); table_n++)
+            for (int table_n = 0; table_n < g.Tables.GetBufSize(); table_n++)
             {
-                ImGuiTable* table = g.Tables.GetByIndex(table_n);
-                if (table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
+                ImGuiTable* table = g.Tables.TryGetBufData(table_n);
+                if (table == NULL || table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
                     continue;
 
                 BulletText("Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
@@ -11108,18 +11108,24 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Details for TabBars
-    if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetSize()))
+    if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetAliveCount()))
     {
-        for (int n = 0; n < g.TabBars.GetSize(); n++)
-            DebugNodeTabBar(g.TabBars.GetByIndex(n), "TabBar");
+        for (int n = 0; n < g.TabBars.GetBufSize(); n++)
+            if (ImGuiTabBar* tab_bar = g.TabBars.TryGetBufData(n))
+            {
+                PushID(tab_bar);
+                DebugNodeTabBar(tab_bar, "TabBar");
+                PopID();
+            }
         TreePop();
     }
 
     // Details for Tables
-    if (TreeNode("Tables", "Tables (%d)", g.Tables.GetSize()))
+    if (TreeNode("Tables", "Tables (%d)", g.Tables.GetAliveCount()))
     {
-        for (int n = 0; n < g.Tables.GetSize(); n++)
-            DebugNodeTable(g.Tables.GetByIndex(n));
+        for (int n = 0; n < g.Tables.GetBufSize(); n++)
+            if (ImGuiTable* table = g.Tables.TryGetBufData(n))
+                DebugNodeTable(table);
         TreePop();
     }
 
@@ -11253,10 +11259,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Overlay: Display Tables Rectangles
     if (cfg->ShowTablesRects)
     {
-        for (int table_n = 0; table_n < g.Tables.GetSize(); table_n++)
+        for (int table_n = 0; table_n < g.Tables.GetBufSize(); table_n++)
         {
-            ImGuiTable* table = g.Tables.GetByIndex(table_n);
-            if (table->LastFrameActive < g.FrameCount - 1)
+            ImGuiTable* table = g.Tables.TryGetBufData(table_n);
+            if (table == NULL || table->LastFrameActive < g.FrameCount - 1)
                 continue;
             ImDrawList* draw_list = GetForegroundDrawList(table->OuterWindow);
             if (cfg->ShowTablesRectsType >= TRT_ColumnsRect)
@@ -11560,7 +11566,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
     p += ImFormatString(p, buf_end - p, "%s 0x%08X (%d tabs)%s", label, tab_bar->ID, tab_bar->Tabs.Size, is_active ? "" : " *Inactive*");
     IM_UNUSED(p);
     if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
-    bool open = TreeNode(tab_bar, "%s", buf);
+    bool open = TreeNode(label, "%s", buf);
     if (!is_active) { PopStyleColor(); }
     if (is_active && IsItemHovered())
     {
