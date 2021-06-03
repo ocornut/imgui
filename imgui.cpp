@@ -6148,6 +6148,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Docking currently override constraints
             g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
         }
+        else
+        {
+            window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
+        }
 
         // Update the Appearing flag (again)
         if (window->DockTabIsVisible && !dock_tab_was_visible && dock_node_was_visible && !window->Appearing)
@@ -15457,6 +15461,9 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
 
+    // Clear fields ahead so most early-out paths don't have to do it
+    window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
+
     const bool auto_dock_node = GetWindowAlwaysWantOwnTabBar(window);
     if (auto_dock_node)
     {
@@ -15506,14 +15513,9 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextNewFrameUpdateDocking()
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
         if (root_node->LastFrameAlive < g.FrameCount)
-        {
             DockContextProcessUndockWindow(ctx, window);
-        }
         else
-        {
             window->DockIsActive = true;
-            window->DockNodeIsVisible = window->DockTabIsVisible = false;
-        }
         return;
     }
 
@@ -15526,8 +15528,8 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // FIXME-DOCK: replace ->HostWindow NULL compare with something more explicit (~was initially intended as a first frame test)
     if (node->HostWindow == NULL)
     {
-        window->DockIsActive = (node->State == ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing);
-        window->DockNodeIsVisible = window->DockTabIsVisible = false;
+        if (node->State == ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing)
+            window->DockIsActive = true;
         if (node->Windows.Size > 1)
             DockNodeHideWindowDuringHostWindowCreation(window);
         return;
