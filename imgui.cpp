@@ -11023,9 +11023,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         cfg->ShowTablesRects |= Combo("##show_table_rects_type", &cfg->ShowTablesRectsType, trt_rects_names, TRT_Count, TRT_Count);
         if (cfg->ShowTablesRects && g.NavWindow != NULL)
         {
-            for (int table_n = 0; table_n < g.Tables.GetBufSize(); table_n++)
+            for (int table_n = 0; table_n < g.Tables.GetMapSize(); table_n++)
             {
-                ImGuiTable* table = g.Tables.TryGetBufData(table_n);
+                ImGuiTable* table = g.Tables.TryGetMapData(table_n);
                 if (table == NULL || table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
                     continue;
 
@@ -11110,8 +11110,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Details for TabBars
     if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetAliveCount()))
     {
-        for (int n = 0; n < g.TabBars.GetBufSize(); n++)
-            if (ImGuiTabBar* tab_bar = g.TabBars.TryGetBufData(n))
+        for (int n = 0; n < g.TabBars.GetMapSize(); n++)
+            if (ImGuiTabBar* tab_bar = g.TabBars.TryGetMapData(n))
             {
                 PushID(tab_bar);
                 DebugNodeTabBar(tab_bar, "TabBar");
@@ -11123,8 +11123,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Details for Tables
     if (TreeNode("Tables", "Tables (%d)", g.Tables.GetAliveCount()))
     {
-        for (int n = 0; n < g.Tables.GetBufSize(); n++)
-            if (ImGuiTable* table = g.Tables.TryGetBufData(n))
+        for (int n = 0; n < g.Tables.GetMapSize(); n++)
+            if (ImGuiTable* table = g.Tables.TryGetMapData(n))
                 DebugNodeTable(table);
         TreePop();
     }
@@ -11259,9 +11259,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Overlay: Display Tables Rectangles
     if (cfg->ShowTablesRects)
     {
-        for (int table_n = 0; table_n < g.Tables.GetBufSize(); table_n++)
+        for (int table_n = 0; table_n < g.Tables.GetMapSize(); table_n++)
         {
-            ImGuiTable* table = g.Tables.TryGetBufData(table_n);
+            ImGuiTable* table = g.Tables.TryGetMapData(table_n);
             if (table == NULL || table->LastFrameActive < g.FrameCount - 1)
                 continue;
             ImDrawList* draw_list = GetForegroundDrawList(table->OuterWindow);

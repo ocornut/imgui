@@ -612,7 +612,7 @@ struct IMGUI_API ImPool
     ImVector<T>     Buf;        // Contiguous data
     ImGuiStorage    Map;        // ID->Index
     ImPoolIdx       FreeIdx;    // Next free idx to use
-    ImPoolIdx       AliveCount; // Number of active/alive items (for display purpose only)
+    ImPoolIdx       AliveCount; // Number of active/alive items (for display purpose)
 
     ImPool()    { FreeIdx = AliveCount = 0; }
     ~ImPool()   { Clear(); }
@@ -627,13 +627,14 @@ struct IMGUI_API ImPool
     void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); AliveCount--; }
     void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
 
-    // To iterate a ImPool: for (int n = 0; n < pool.GetBufSize(); n++) if (T* t = pool.TryGetBufData(n)) { ... }
-    // Can be avoided if you know .Remove() has never been called on the pool, or AliveCount == GetBufSize()
-    int         GetAliveCount() const               { return AliveCount; }      // Number of active/alive items in the pool (for display purpose only)
-    int         GetBufSize() const                  { IM_ASSERT(Buf.Size == Map.Data.Size); return Buf.Size; }
-    T*          TryGetBufData(ImPoolIdx n)          { int idx = Map.Data[n].val_i; if (idx == -1) return NULL; return GetByIndex(idx); }
+    // To iterate a ImPool: for (int n = 0; n < pool.GetMapSize(); n++) if (T* t = pool.TryGetMapData(n)) { ... }
+    // Can be avoided if you know .Remove() has never been called on the pool, or AliveCount == GetMapSize()
+    int         GetAliveCount() const               { return AliveCount; }      // Number of active/alive items in the pool (for display purpose)
+    int         GetBufSize() const                  { return Buf.Size; }
+    int         GetMapSize() const                  { return Map.Data.Size; }   // It is the map we need iterate to find valid items, since we don't have "alive" storage anywhere
+    T*          TryGetMapData(ImPoolIdx n)          { int idx = Map.Data[n].val_i; if (idx == -1) return NULL; return GetByIndex(idx); }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    int         GetSize()                           { return GetBufSize(); } // For ImPlot: should use GetMapSize() from (IMGUI_VERSION_NUM >= 18303)
+    int         GetSize()                           { return GetMapSize(); } // For ImPlot: should use GetMapSize() from (IMGUI_VERSION_NUM >= 18304)
 #endif
 };
 
