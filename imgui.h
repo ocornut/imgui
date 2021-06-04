@@ -62,7 +62,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.84 WIP"
-#define IMGUI_VERSION_NUM           18302
+#define IMGUI_VERSION_NUM           18304
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
@@ -92,12 +92,12 @@ Index of this file:
 #endif
 
 // Helper Macros - IM_FMTARGS, IM_FMTLIST: Apply printf-style warnings to our formatting functions.
-#if !defined(IMGUI_USE_STB_SPRINTF) && defined(__clang__)
-#define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1)))
-#define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
-#elif !defined(IMGUI_USE_STB_SPRINTF) && defined(__GNUC__) && defined(__MINGW32__)
+#if !defined(IMGUI_USE_STB_SPRINTF) && defined(__MINGW32__)
 #define IM_FMTARGS(FMT)             __attribute__((format(gnu_printf, FMT, FMT+1)))
 #define IM_FMTLIST(FMT)             __attribute__((format(gnu_printf, FMT, 0)))
+#elif !defined(IMGUI_USE_STB_SPRINTF) && (defined(__clang__) || defined(__GNUC__))
+#define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1)))
+#define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
 #else
 #define IM_FMTARGS(FMT)
 #define IM_FMTLIST(FMT)

@@ -9221,7 +9221,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
 }
 
 // Note that this is used for popups, which can overlap the non work-area of individual viewports.
-ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
+ImRect ImGui::GetPopupAllowedExtentRect(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     ImRect r_screen;
@@ -9246,7 +9246,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
 
-    ImRect r_outer = GetWindowAllowedExtentRect(window);
+    ImRect r_outer = GetPopupAllowedExtentRect(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
         // Child menus typically request _any_ position within the parent menu item, and then we move the new menu outside the parent bounds.
@@ -16249,10 +16249,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         cfg->ShowTablesRects |= Combo("##show_table_rects_type", &cfg->ShowTablesRectsType, trt_rects_names, TRT_Count, TRT_Count);
         if (cfg->ShowTablesRects && g.NavWindow != NULL)
         {
-            for (int table_n = 0; table_n < g.Tables.GetSize(); table_n++)
+            for (int table_n = 0; table_n < g.Tables.GetMapSize(); table_n++)
             {
-                ImGuiTable* table = g.Tables.GetByIndex(table_n);
-                if (table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
+                ImGuiTable* table = g.Tables.TryGetMapData(table_n);
+                if (table == NULL || table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
                     continue;
 
                 BulletText("Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
@@ -16369,23 +16369,24 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Details for TabBars
-    if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetSize()))
+    if (TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetAliveCount()))
     {
-        for (int n = 0; n < g.TabBars.GetSize(); n++)
-        {
-            ImGuiTabBar* tab_bar = g.TabBars.GetByIndex(n);
-            PushID(tab_bar);
-            DebugNodeTabBar(tab_bar, "TabBar");
-            PopID();
-        }
+        for (int n = 0; n < g.TabBars.GetMapSize(); n++)
+            if (ImGuiTabBar* tab_bar = g.TabBars.TryGetMapData(n))
+            {
+                PushID(tab_bar);
+                DebugNodeTabBar(tab_bar, "TabBar");
+                PopID();
+            }
         TreePop();
     }
 
     // Details for Tables
-    if (TreeNode("Tables", "Tables (%d)", g.Tables.GetSize()))
+    if (TreeNode("Tables", "Tables (%d)", g.Tables.GetAliveCount()))
     {
-        for (int n = 0; n < g.Tables.GetSize(); n++)
-            DebugNodeTable(g.Tables.GetByIndex(n));
+        for (int n = 0; n < g.Tables.GetMapSize(); n++)
+            if (ImGuiTable* table = g.Tables.TryGetMapData(n))
+                DebugNodeTable(table);
         TreePop();
     }
 
@@ -16555,10 +16556,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Overlay: Display Tables Rectangles
     if (cfg->ShowTablesRects)
     {
-        for (int table_n = 0; table_n < g.Tables.GetSize(); table_n++)
+        for (int table_n = 0; table_n < g.Tables.GetMapSize(); table_n++)
         {
-            ImGuiTable* table = g.Tables.GetByIndex(table_n);
-            if (table->LastFrameActive < g.FrameCount - 1)
+            ImGuiTable* table = g.Tables.TryGetMapData(table_n);
+            if (table == NULL || table->LastFrameActive < g.FrameCount - 1)
                 continue;
             ImDrawList* draw_list = GetForegroundDrawList(table->OuterWindow);
             if (cfg->ShowTablesRectsType >= TRT_ColumnsRect)
