@@ -61,7 +61,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.84 WIP"
-#define IMGUI_VERSION_NUM           18304
+#define IMGUI_VERSION_NUM           18305
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 
@@ -1164,29 +1164,29 @@ enum ImGuiTableColumnFlags_
 {
     // Input configuration flags
     ImGuiTableColumnFlags_None                  = 0,
-    ImGuiTableColumnFlags_DefaultHide           = 1 << 0,   // Default as a hidden/disabled column.
-    ImGuiTableColumnFlags_DefaultSort           = 1 << 1,   // Default as a sorting column.
-    ImGuiTableColumnFlags_WidthStretch          = 1 << 2,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is _SizingStretchSame or _SizingStretchProp).
-    ImGuiTableColumnFlags_WidthFixed            = 1 << 3,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is _SizingFixedFit and table is resizable).
-    ImGuiTableColumnFlags_NoResize              = 1 << 4,   // Disable manual resizing.
-    ImGuiTableColumnFlags_NoReorder             = 1 << 5,   // Disable manual reordering this column, this will also prevent other columns from crossing over this column.
-    ImGuiTableColumnFlags_NoHide                = 1 << 6,   // Disable ability to hide/disable this column.
-    ImGuiTableColumnFlags_NoClip                = 1 << 7,   // Disable clipping for this column (all NoClip columns will render in a same draw command).
-    ImGuiTableColumnFlags_NoSort                = 1 << 8,   // Disable ability to sort on this field (even if ImGuiTableFlags_Sortable is set on the table).
-    ImGuiTableColumnFlags_NoSortAscending       = 1 << 9,   // Disable ability to sort in the ascending direction.
-    ImGuiTableColumnFlags_NoSortDescending      = 1 << 10,  // Disable ability to sort in the descending direction.
-    ImGuiTableColumnFlags_NoHeaderWidth         = 1 << 11,  // Disable header text width contribution to automatic column width.
-    ImGuiTableColumnFlags_PreferSortAscending   = 1 << 12,  // Make the initial sort direction Ascending when first sorting on this column (default).
-    ImGuiTableColumnFlags_PreferSortDescending  = 1 << 13,  // Make the initial sort direction Descending when first sorting on this column.
-    ImGuiTableColumnFlags_IndentEnable          = 1 << 14,  // Use current Indent value when entering cell (default for column 0).
-    ImGuiTableColumnFlags_IndentDisable         = 1 << 15,  // Ignore current Indent value when entering cell (default for columns > 0). Indentation changes _within_ the cell will still be honored.
-    ImGuiTableColumnFlags_NoHeaderLabel         = 1 << 16,  // TableHeadersRow() will not submit label for this column. Convenient for some small columns. Name will still appear in context menu.
+    ImGuiTableColumnFlags_DefaultHide           = 1 << 1,   // Default as a hidden/disabled column.
+    ImGuiTableColumnFlags_DefaultSort           = 1 << 2,   // Default as a sorting column.
+    ImGuiTableColumnFlags_WidthStretch          = 1 << 3,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is _SizingStretchSame or _SizingStretchProp).
+    ImGuiTableColumnFlags_WidthFixed            = 1 << 4,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is _SizingFixedFit and table is resizable).
+    ImGuiTableColumnFlags_NoResize              = 1 << 5,   // Disable manual resizing.
+    ImGuiTableColumnFlags_NoReorder             = 1 << 6,   // Disable manual reordering this column, this will also prevent other columns from crossing over this column.
+    ImGuiTableColumnFlags_NoHide                = 1 << 7,   // Disable ability to hide/disable this column.
+    ImGuiTableColumnFlags_NoClip                = 1 << 8,   // Disable clipping for this column (all NoClip columns will render in a same draw command).
+    ImGuiTableColumnFlags_NoSort                = 1 << 9,   // Disable ability to sort on this field (even if ImGuiTableFlags_Sortable is set on the table).
+    ImGuiTableColumnFlags_NoSortAscending       = 1 << 10,  // Disable ability to sort in the ascending direction.
+    ImGuiTableColumnFlags_NoSortDescending      = 1 << 11,  // Disable ability to sort in the descending direction.
+    ImGuiTableColumnFlags_NoHeaderLabel         = 1 << 12,  // TableHeadersRow() will not submit label for this column. Convenient for some small columns. Name will still appear in context menu.
+    ImGuiTableColumnFlags_NoHeaderWidth         = 1 << 13,  // Disable header text width contribution to automatic column width.
+    ImGuiTableColumnFlags_PreferSortAscending   = 1 << 14,  // Make the initial sort direction Ascending when first sorting on this column (default).
+    ImGuiTableColumnFlags_PreferSortDescending  = 1 << 15,  // Make the initial sort direction Descending when first sorting on this column.
+    ImGuiTableColumnFlags_IndentEnable          = 1 << 16,  // Use current Indent value when entering cell (default for column 0).
+    ImGuiTableColumnFlags_IndentDisable         = 1 << 17,  // Ignore current Indent value when entering cell (default for columns > 0). Indentation changes _within_ the cell will still be honored.
 
     // Output status flags, read-only via TableGetColumnFlags()
-    ImGuiTableColumnFlags_IsEnabled             = 1 << 20,  // Status: is enabled == not hidden by user/api (referred to as "Hide" in _DefaultHide and _NoHide) flags.
-    ImGuiTableColumnFlags_IsVisible             = 1 << 21,  // Status: is visible == is enabled AND not clipped by scrolling.
-    ImGuiTableColumnFlags_IsSorted              = 1 << 22,  // Status: is currently part of the sort specs
-    ImGuiTableColumnFlags_IsHovered             = 1 << 23,  // Status: is hovered by mouse
+    ImGuiTableColumnFlags_IsEnabled             = 1 << 24,  // Status: is enabled == not hidden by user/api (referred to as "Hide" in _DefaultHide and _NoHide) flags.
+    ImGuiTableColumnFlags_IsVisible             = 1 << 25,  // Status: is visible == is enabled AND not clipped by scrolling.
+    ImGuiTableColumnFlags_IsSorted              = 1 << 26,  // Status: is currently part of the sort specs
+    ImGuiTableColumnFlags_IsHovered             = 1 << 27,  // Status: is hovered by mouse
 
     // [Internal] Combinations and masks
     ImGuiTableColumnFlags_WidthMask_            = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed,
