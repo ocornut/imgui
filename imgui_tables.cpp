@@ -1475,11 +1475,22 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
     IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
 
-    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)columns : 0;
+    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount) : 0;
     table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
     table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImGuiTableColumnIdx)rows : 0;
     table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
+
+    // Ensure frozen columns are ordered in their section. We still allow multiple frozen columns to be reordered.
+    for (int column_n = 0; column_n < table->FreezeColumnsRequest; column_n++)
+    {
+        int order_n = table->DisplayOrderToIndex[column_n];
+        if (order_n != column_n && order_n >= table->FreezeColumnsRequest)
+        {
+            ImSwap(table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder, table->Columns[table->DisplayOrderToIndex[column_n]].DisplayOrder);
+            ImSwap(table->DisplayOrderToIndex[order_n], table->DisplayOrderToIndex[column_n]);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -2012,6 +2023,7 @@ float ImGui::TableGetMaxColumnWidth(const ImGuiTable* table, int column_n)
     if (table->Flags & ImGuiTableFlags_ScrollX)
     {
         // Frozen columns can't reach beyond visible width else scrolling will naturally break.
+        // (we use DisplayOrder as within a set of multiple frozen column reordering is possible)
         if (column->DisplayOrder < table->FreezeColumnsRequest)
         {
             max_width = (table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - column->DisplayOrder) * min_column_distance) - column->MinX;
@@ -2500,7 +2512,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const bool is_hovered = (table->HoveredColumnBorder == column_n);
             const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceCurrent);
             const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
-            const bool is_frozen_separator = (table->FreezeColumnsCount != -1 && table->FreezeColumnsCount == order_n + 1);
+            const bool is_frozen_separator = (table->FreezeColumnsCount == order_n + 1);
             if (column->MaxX > table->InnerClipRect.Max.x && !is_resized)
                 continue;
 
