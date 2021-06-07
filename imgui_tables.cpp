@@ -1164,9 +1164,8 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         if ((table->Flags & ImGuiTableFlags_NoBordersInBody) && table->IsUsingHeaders == false)
             continue;
 
-        if (table->FreezeColumnsCount > 0)
-            if (column->MaxX < table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsCount - 1]].MaxX)
-                continue;
+        if (!column->IsVisibleX && table->LastResizedColumn != column_n)
+            continue;
 
         ImGuiID column_id = TableGetColumnResizeID(table, column_n, table->InstanceCurrent);
         ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, border_y2_hit);
