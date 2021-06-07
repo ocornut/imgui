@@ -37,6 +37,8 @@ HOW TO UPDATE?
 
 Other Changes:
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
+- Tables: Clarified that TableSetColumnEnabled() requires the table to use the ImGuiTableFlags_Hideable flag,
+  because it manipulates the user-accessible show/hide state. (#3935)
 - Tables: Added ImGuiTableColumnFlags_NoHeaderLabel to request TableHeadersRow() to not submit label for a column.
   Convenient for some small columns. Name will still appear in context menu. (#4206).
 - Tables: Fix columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
