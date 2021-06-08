@@ -5,7 +5,7 @@ Build font atlases using FreeType instead of stb_truetype (which is the default 
 
 ### Usage
 
-1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype`, `vcpkg integrate install`).
+1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype --triplet=x64-windows`, `vcpkg integrate install`).
 2. Add imgui_freetype.h/cpp alongside your project files.
 3. Add `#define IMGUI_ENABLE_FREETYPE` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file
 
