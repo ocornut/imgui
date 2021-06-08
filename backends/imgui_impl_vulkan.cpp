@@ -1551,17 +1551,17 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[wd->SemaphoreIndex];
     {
+        {
+          err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+          check_vk_result(err);
+          fd = &wd->Frames[wd->FrameIndex];
+        }
         for (;;)
         {
             err = vkWaitForFences(v->Device, 1, &fd->Fence, VK_TRUE, 100);
             if (err == VK_SUCCESS) break;
             if (err == VK_TIMEOUT) continue;
             check_vk_result(err);
-        }
-        {
-            err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
-            check_vk_result(err);
-            fd = &wd->Frames[wd->FrameIndex];
         }
         {
             err = vkResetCommandPool(v->Device, fd->CommandPool, 0);
