@@ -254,7 +254,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     for (GLint i = 0; i < num_extensions; i++)
     {
         const char* extension = (const char*)glGetStringi(GL_EXTENSIONS, i);
-        if (strcmp(extension, "GL_ARB_clip_control") == 0)
+        if (extension != NULL && strcmp(extension, "GL_ARB_clip_control") == 0)
             g_HasClipOrigin = true;
     }
 #endif

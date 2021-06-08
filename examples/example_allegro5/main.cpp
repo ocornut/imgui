@@ -2,6 +2,14 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+// On Windows, you can install Allegro5 using vcpkg:
+//   git clone https://github.com/Microsoft/vcpkg
+//   cd vcpkg
+//   bootstrap - vcpkg.bat
+//   vcpkg install allegro5 --triplet=x86-windows   ; for win32
+//   vcpkg install allegro5 --triplet=x64-windows   ; for win64
+//   vcpkg integrate install                        ; register include and libs in Visual Studio
+
 #include <stdint.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
