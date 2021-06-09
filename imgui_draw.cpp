@@ -2012,9 +2012,7 @@ void    ImFontAtlas::ClearTexData()
 void    ImFontAtlas::ClearFonts()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    for (int i = 0; i < Fonts.Size; i++)
-        IM_DELETE(Fonts[i]);
-    Fonts.clear();
+    Fonts.clear_delete();
 }
 
 void    ImFontAtlas::Clear()
@@ -2574,9 +2572,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         }
     }
 
-    // Cleanup temporary (ImVector doesn't honor destructor)
-    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
-        src_tmp_array[src_i].~ImFontBuildSrcData();
+    // Cleanup
+    src_tmp_array.clear_destruct();
 
     ImFontAtlasBuildFinish(atlas);
     return true;
