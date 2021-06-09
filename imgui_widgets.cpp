@@ -7987,11 +7987,13 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             if (undocking_tab)
             {
                 // Undock
+                // FIXME: refactor to share more code with e.g. StartMouseMovingWindow
                 DockContextQueueUndockWindow(&g, docked_window);
                 g.MovingWindow = docked_window;
                 SetActiveID(g.MovingWindow->MoveId, g.MovingWindow);
                 g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
                 g.ActiveIdNoClearOnFocusLoss = true;
+                SetActiveIdUsingNavAndKeys();
             }
         }
     }
