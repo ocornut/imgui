@@ -688,8 +688,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     // Cleanup
     for (int buf_i = 0; buf_i < buf_bitmap_buffers.Size; buf_i++)
         IM_FREE(buf_bitmap_buffers[buf_i]);
-    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
-        src_tmp_array[src_i].~ImFontBuildSrcDataFT();
+    src_tmp_array.clear_destruct();
 
     ImFontAtlasBuildFinish(atlas);
 
