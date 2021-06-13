@@ -242,7 +242,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
                 if (r.right > r.left && r.bottom > r.top)
                 {
                     D3D12_GPU_DESCRIPTOR_HANDLE texture_handle = {};
-                    texture_handle.ptr = (UINT64)(intptr_t)pcmd->GetTexID();
+                    texture_handle.ptr = (UINT64)(pcmd->GetTexID());
                     ctx->SetGraphicsRootDescriptorTable(1, texture_handle);
                     ctx->RSSetScissorRects(1, &r);
                     ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
