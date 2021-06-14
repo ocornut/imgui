@@ -50,6 +50,8 @@ Other Changes:
 - Backends: Win32: Rework to handle certains Windows 8.1/10 features without a manifest. (#4200, #4191)
   - ImGui_ImplWin32_GetDpiScaleForMonitor() will handle per-monitor DPI on Windows 10 without a manifest.
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
+- Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
+  about building on 32-bit systems. (#4225) [@kingofthebongo2008]
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
 - Examples: SDL2: Accomodate for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
