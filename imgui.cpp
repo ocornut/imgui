@@ -1071,6 +1071,8 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickMaxDist = 6.0f;
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
+    for (int i = 0; i < ImGuiKey_COUNT; i++)
+        ScancodeMap[i] = -1;
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
@@ -4626,6 +4628,21 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key)
 {
     IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
     ImGuiContext& g = *GImGui;
+    return g.IO.KeyMap[imgui_key];
+}
+
+int ImGui::GetUntranslatedKeyIndex(ImGuiKey imgui_key)
+{
+    IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
+    ImGuiContext& g = *GImGui;
+
+    if (g.IO.BackendFlags & ImGuiBackednFlags_HasUntranslatedKeys)
+    {
+        int key_index = g.IO.ScancodeMap[imgui_key];
+        if (key_index >= 0)
+            return key_index;
+    }
+
     return g.IO.KeyMap[imgui_key];
 }
 

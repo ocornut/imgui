@@ -850,7 +850,8 @@ namespace ImGui
     // Inputs Utilities: Keyboard
     // - For 'int user_key_index' you can use your own indices/enums according to how your backend/engine stored them in io.KeysDown[].
     // - We don't know the meaning of those value. You can use GetKeyIndex() to map a ImGuiKey_ value into the user index.
-    IMGUI_API int           GetKeyIndex(ImGuiKey imgui_key);                                    // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
+    IMGUI_API int           GetKeyIndex(ImGuiKey imgui_key);                                    // map ImGuiKey_* values into user's key index == io.KeyMap[key]
+    IMGUI_API int           GetUntranslatedKeyIndex(ImGuiKey imgui_key);                        // map ImGuiKey_* values into user's key index == io.ScancodeMap[key] if supported, otherwise act like GetKeyIndex
     IMGUI_API bool          IsKeyDown(int user_key_index);                                      // is key being held. == io.KeysDown[user_key_index].
     IMGUI_API bool          IsKeyPressed(int user_key_index, bool repeat = true);               // was key pressed (went from !Down to Down)? if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
     IMGUI_API bool          IsKeyReleased(int user_key_index);                                  // was key released (went from Down to !Down)?
@@ -1335,6 +1336,13 @@ enum ImGuiKey_
     ImGuiKey_X,                 // for text edit CTRL+X: cut
     ImGuiKey_Y,                 // for text edit CTRL+Y: redo
     ImGuiKey_Z,                 // for text edit CTRL+Z: undo
+    ImGuiKey_Q,
+    ImGuiKey_D,
+    ImGuiKey_W,
+    ImGuiKey_S,
+    ImGuiKey_F,
+    ImGuiKey_E,
+    ImGuiKey_R,
     ImGuiKey_COUNT
 };
 
@@ -1406,7 +1414,8 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Backend Platform supports gamepad and currently has one connected.
     ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Backend Platform supports honoring GetMouseCursor() value to change the OS cursor shape.
     ImGuiBackendFlags_HasSetMousePos        = 1 << 2,   // Backend Platform supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
-    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3    // Backend Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
+    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3,   // Backend Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
+    ImGuiBackednFlags_HasUntranslatedKeys   = 1 << 4,   // Back-end Platform supports physical keyboard layout mapping to ImGuiKey_XXX.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -1792,7 +1801,8 @@ struct ImGuiIO
     float       MouseDoubleClickTime;           // = 0.30f          // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;        // = 6.0f           // Distance threshold to stay in to validate a double-click, in pixels.
     float       MouseDragThreshold;             // = 6.0f           // Distance threshold before considering we are dragging.
-    int         KeyMap[ImGuiKey_COUNT];         // <unset>          // Map of indices into the KeysDown[512] entries array which represent your "native" keyboard state.
+    int         KeyMap[ImGuiKey_COUNT];         // <unset>          // Map of logical ImGuiKey_XXX key indices into the KeysDown[512] entries array which represent your "native" keyboard state.
+    int         ScancodeMap[ImGuiKey_COUNT];    // <unset>          // Map of physical ImGuiKey_XXXX key indices into the KeysDown[512] entries array which represent your "native" keyboard state.
     float       KeyRepeatDelay;                 // = 0.250f         // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float       KeyRepeatRate;                  // = 0.050f         // When holding a key/button, rate at which it repeats, in seconds.
     void*       UserData;                       // = NULL           // Store your own data for retrieval by callbacks.

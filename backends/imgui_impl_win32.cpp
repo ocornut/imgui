@@ -70,6 +70,37 @@ static INT64                g_TicksPerSecond = 0;
 static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 static bool                 g_HasGamepad = false;
 static bool                 g_WantUpdateHasGamepad = true;
+static bool                 g_WantUpdateScancodes = true;
+
+static void ImGui_ImplWin32_UpdateScancodes()
+{
+    if (!g_WantUpdateScancodes)
+        return;
+
+    g_WantUpdateScancodes = false;
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    for (int i = 0; i < IM_ARRAYSIZE(io.ScancodeMap); ++i)
+        io.ScancodeMap[i] = -1;
+
+    HKL layout = LoadKeyboardLayoutA("00000409", 0); // U.S. English
+    if (layout == NULL)
+        return;
+
+    for (int i = 0; i < IM_ARRAYSIZE(io.ScancodeMap); ++i)
+    {
+        int scancode = io.KeyMap[i] > 0 ? (int)MapVirtualKey(io.KeyMap[i], MAPVK_VK_TO_VSC) : 0;
+        if (scancode > 0)
+        {
+            auto us_vk = MapVirtualKeyExA(scancode, MAPVK_VSC_TO_VK, layout);
+            if (us_vk > 0)
+                io.ScancodeMap[i] = us_vk;
+        }
+    }
+
+    UnloadKeyboardLayout(layout);
+}
 
 // XInput DLL and functions
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -91,6 +122,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags |= ImGuiBackednFlags_HasUntranslatedKeys;     // We can support mapping keys scancodes into ImGuiKey_XXX (optional, useful in games)
     io.BackendPlatformName = "imgui_impl_win32";
     io.ImeWindowHandle = hwnd;
 
@@ -117,6 +149,15 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.KeyMap[ImGuiKey_X] = 'X';
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
+    io.KeyMap[ImGuiKey_Q] = 'Q';
+    io.KeyMap[ImGuiKey_D] = 'D';
+    io.KeyMap[ImGuiKey_W] = 'W';
+    io.KeyMap[ImGuiKey_S] = 'S';
+    io.KeyMap[ImGuiKey_F] = 'F';
+    io.KeyMap[ImGuiKey_E] = 'E';
+    io.KeyMap[ImGuiKey_R] = 'R';
+
+    ImGui_ImplWin32_UpdateScancodes();
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -300,6 +341,8 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplWin32_UpdateGamepads();
+
+    ImGui_ImplWin32_UpdateScancodes();
 }
 
 // Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.
@@ -391,6 +434,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_DEVICECHANGE:
         if ((UINT)wParam == DBT_DEVNODES_CHANGED)
             g_WantUpdateHasGamepad = true;
+        return 0;
+    case WM_INPUTLANGCHANGE:
+        if (io.BackendFlags & ImGuiBackednFlags_HasUntranslatedKeys)
+            g_WantUpdateScancodes = true;
         return 0;
     }
     return 0;
