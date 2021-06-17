@@ -946,7 +946,8 @@ const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbi
 static ImGuiViewportP*  AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& platform_pos, const ImVec2& size, ImGuiViewportFlags flags);
 static void             UpdateViewportsNewFrame();
 static void             UpdateViewportsEndFrame();
-static void             UpdateSelectWindowViewport(ImGuiWindow* window);
+static void             WindowSelectViewport(ImGuiWindow* window);
+static void             WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_window_in_stack);
 static bool             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
 static bool             UpdateTryMergeWindowIntoHostViewports(ImGuiWindow* window);
 static bool             GetWindowAlwaysWantOwnViewport(ImGuiWindow* window);
@@ -6315,7 +6316,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // SELECT VIEWPORT
         // We need to do this before using any style/font sizes, as viewport with a different DPI may affect font sizes.
 
-        UpdateSelectWindowViewport(window);
+        WindowSelectViewport(window);
         SetCurrentViewport(window, window->Viewport);
         window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
@@ -6447,85 +6448,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 SetCurrentWindow(window);
             }
 
-        bool viewport_rect_changed = false;
         if (window->ViewportOwned)
-        {
-            // Synchronize window --> viewport in most situations
-            // Synchronize viewport -> window in case the platform window has been moved or resized from the OS/WM
-            if (window->Viewport->PlatformRequestMove)
-            {
-                window->Pos = window->Viewport->Pos;
-                MarkIniSettingsDirty(window);
-            }
-            else if (memcmp(&window->Viewport->Pos, &window->Pos, sizeof(window->Pos)) != 0)
-            {
-                viewport_rect_changed = true;
-                window->Viewport->Pos = window->Pos;
-            }
-
-            if (window->Viewport->PlatformRequestResize)
-            {
-                window->Size = window->SizeFull = window->Viewport->Size;
-                MarkIniSettingsDirty(window);
-            }
-            else if (memcmp(&window->Viewport->Size, &window->Size, sizeof(window->Size)) != 0)
-            {
-                viewport_rect_changed = true;
-                window->Viewport->Size = window->Size;
-            }
-            window->Viewport->UpdateWorkRect();
-
-            // The viewport may have changed monitor since the global update in UpdateViewportsNewFrame()
-            // Either a SetNextWindowPos() call in the current frame or a SetWindowPos() call in the previous frame may have this effect.
-            if (viewport_rect_changed)
-                UpdateViewportPlatformMonitor(window->Viewport);
-
-            // Update common viewport flags
-            const ImGuiViewportFlags viewport_flags_to_clear = ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoRendererClear;
-            ImGuiViewportFlags viewport_flags = window->Viewport->Flags & ~viewport_flags_to_clear;
-            const bool is_modal = (flags & ImGuiWindowFlags_Modal) != 0;
-            const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
-            if (flags & ImGuiWindowFlags_Tooltip)
-                viewport_flags |= ImGuiViewportFlags_TopMost;
-            if ((g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window) && !is_modal)
-                viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
-            if (g.IO.ConfigViewportsNoDecoration || is_short_lived_floating_window)
-                viewport_flags |= ImGuiViewportFlags_NoDecoration;
-
-            // Not correct to set modal as topmost because:
-            // - Because other popups can be stacked above a modal (e.g. combo box in a modal)
-            // - ImGuiViewportFlags_TopMost is currently handled different in backends: in Win32 it is "appear top most" whereas in GLFW and SDL it is "stay topmost"
-            //if (flags & ImGuiWindowFlags_Modal)
-            //    viewport_flags |= ImGuiViewportFlags_TopMost;
-
-            // For popups and menus that may be protruding out of their parent viewport, we enable _NoFocusOnClick so that clicking on them
-            // won't steal the OS focus away from their parent window (which may be reflected in OS the title bar decoration).
-            // Setting _NoFocusOnClick would technically prevent us from bringing back to front in case they are being covered by an OS window from a different app,
-            // but it shouldn't be much of a problem considering those are already popups that are closed when clicking elsewhere.
-            if (is_short_lived_floating_window && !is_modal)
-                viewport_flags |= ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoFocusOnClick;
-
-            // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
-            // We don't default to the main viewport because.
-            if (window->WindowClass.ParentViewportId)
-                window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
-            else if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && parent_window_in_stack)
-                window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
-            else
-                window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
-            if (window->WindowClass.ViewportFlagsOverrideSet)
-                viewport_flags |= window->WindowClass.ViewportFlagsOverrideSet;
-            if (window->WindowClass.ViewportFlagsOverrideClear)
-                viewport_flags &= ~window->WindowClass.ViewportFlagsOverrideClear;
-
-            // We can also tell the backend that clearing the platform window won't be necessary,
-            // as our window background is filling the viewport and we have disabled BgAlpha.
-            // FIXME: Work on support for per-viewport transparency (#2766)
-            if (!(flags & ImGuiWindowFlags_NoBackground))
-                viewport_flags |= ImGuiViewportFlags_NoRendererClear;
-
-            window->Viewport->Flags = viewport_flags;
-        }
+            WindowSyncOwnedViewport(window, parent_window_in_stack);
 
         // Calculate the range of allowed position for that window (to be movable and visible past safe area padding)
         // When clamping to stay visible, we will enforce that window->Pos stays inside of visibility_rect.
@@ -11409,7 +11333,8 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 // - UpdateViewportsNewFrame() [Internal]
 // - UpdateViewportsEndFrame() [Internal]
 // - AddUpdateViewport() [Internal]
-// - UpdateSelectWindowViewport() [Internal]
+// - WindowSelectViewport() [Internal]
+// - WindowSyncOwnedViewport() [Internal]
 // - UpdatePlatformWindows()
 // - RenderPlatformWindowsDefault()
 // - FindPlatformMonitorForPos() [Internal]
@@ -11425,6 +11350,7 @@ ImGuiViewport* ImGui::GetMainViewport()
     return g.Viewports[0];
 }
 
+// FIXME: This leaks access to viewports not listed in PlatformIO.Viewports[]. Problematic? (#4236)
 ImGuiViewport* ImGui::FindViewportByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -11856,7 +11782,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
 }
 
 // FIXME-VIEWPORT: This is all super messy and ought to be clarified or rewritten.
-static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
+static void ImGui::WindowSelectViewport(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
@@ -11981,6 +11907,89 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     // If the OS window has a title bar, hide our imgui title bar
     //if (window->ViewportOwned && !(window->Viewport->Flags & ImGuiViewportFlags_NoDecoration))
     //    window->Flags |= ImGuiWindowFlags_NoTitleBar;
+}
+
+void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_window_in_stack)
+{
+    ImGuiContext& g = *GImGui;
+
+    bool viewport_rect_changed = false;
+
+    // Synchronize window --> viewport in most situations
+    // Synchronize viewport -> window in case the platform window has been moved or resized from the OS/WM
+    if (window->Viewport->PlatformRequestMove)
+    {
+        window->Pos = window->Viewport->Pos;
+        MarkIniSettingsDirty(window);
+    }
+    else if (memcmp(&window->Viewport->Pos, &window->Pos, sizeof(window->Pos)) != 0)
+    {
+        viewport_rect_changed = true;
+        window->Viewport->Pos = window->Pos;
+    }
+
+    if (window->Viewport->PlatformRequestResize)
+    {
+        window->Size = window->SizeFull = window->Viewport->Size;
+        MarkIniSettingsDirty(window);
+    }
+    else if (memcmp(&window->Viewport->Size, &window->Size, sizeof(window->Size)) != 0)
+    {
+        viewport_rect_changed = true;
+        window->Viewport->Size = window->Size;
+    }
+    window->Viewport->UpdateWorkRect();
+
+    // The viewport may have changed monitor since the global update in UpdateViewportsNewFrame()
+    // Either a SetNextWindowPos() call in the current frame or a SetWindowPos() call in the previous frame may have this effect.
+    if (viewport_rect_changed)
+        UpdateViewportPlatformMonitor(window->Viewport);
+
+    // Update common viewport flags
+    const ImGuiViewportFlags viewport_flags_to_clear = ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoRendererClear;
+    ImGuiViewportFlags viewport_flags = window->Viewport->Flags & ~viewport_flags_to_clear;
+    ImGuiWindowFlags window_flags = window->Flags;
+    const bool is_modal = (window_flags & ImGuiWindowFlags_Modal) != 0;
+    const bool is_short_lived_floating_window = (window_flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
+    if (window_flags & ImGuiWindowFlags_Tooltip)
+        viewport_flags |= ImGuiViewportFlags_TopMost;
+    if ((g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window) && !is_modal)
+        viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
+    if (g.IO.ConfigViewportsNoDecoration || is_short_lived_floating_window)
+        viewport_flags |= ImGuiViewportFlags_NoDecoration;
+
+    // Not correct to set modal as topmost because:
+    // - Because other popups can be stacked above a modal (e.g. combo box in a modal)
+    // - ImGuiViewportFlags_TopMost is currently handled different in backends: in Win32 it is "appear top most" whereas in GLFW and SDL it is "stay topmost"
+    //if (flags & ImGuiWindowFlags_Modal)
+    //    viewport_flags |= ImGuiViewportFlags_TopMost;
+
+    // For popups and menus that may be protruding out of their parent viewport, we enable _NoFocusOnClick so that clicking on them
+    // won't steal the OS focus away from their parent window (which may be reflected in OS the title bar decoration).
+    // Setting _NoFocusOnClick would technically prevent us from bringing back to front in case they are being covered by an OS window from a different app,
+    // but it shouldn't be much of a problem considering those are already popups that are closed when clicking elsewhere.
+    if (is_short_lived_floating_window && !is_modal)
+        viewport_flags |= ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoFocusOnClick;
+
+    // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
+    if (window->WindowClass.ParentViewportId)
+        window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
+    else if ((window_flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && parent_window_in_stack)
+        window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
+    else
+        window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
+    if (window->WindowClass.ViewportFlagsOverrideSet)
+        viewport_flags |= window->WindowClass.ViewportFlagsOverrideSet;
+    if (window->WindowClass.ViewportFlagsOverrideClear)
+        viewport_flags &= ~window->WindowClass.ViewportFlagsOverrideClear;
+
+    // We can also tell the backend that clearing the platform window won't be necessary,
+    // as our window background is filling the viewport and we have disabled BgAlpha.
+    // FIXME: Work on support for per-viewport transparency (#2766)
+    if (!(window_flags & ImGuiWindowFlags_NoBackground))
+        viewport_flags |= ImGuiViewportFlags_NoRendererClear;
+
+    window->Viewport->Flags = viewport_flags;
 }
 
 // Called by user at the end of the main loop, after EndFrame()
