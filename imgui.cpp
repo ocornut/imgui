@@ -12127,6 +12127,81 @@ static void RenderViewportsThumbnails()
     ImGui::Dummy(bb_full.GetSize() * SCALE);
 }
 
+static void ShowEncodingViewerChar(ImFont* font, ImWchar c, const char* c_utf8)
+{
+    ImGui::TableNextColumn();
+    if (font->FindGlyphNoFallback(c))
+        ImGui::TextUnformatted(c_utf8);
+    else
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "(not in font)");
+
+    ImGui::TableNextColumn();
+    char utf8_code[] = "0x.. 0x.. 0x.. 0x..";
+    for (int byte_index = 0; c_utf8[byte_index]; byte_index++)
+    {
+        if (byte_index > 0)
+            utf8_code[byte_index * 5 - 1] = ' ';
+        ImFormatString(utf8_code + (byte_index * 5) + 2, 3, "%02X", (int)(unsigned char)c_utf8[byte_index]);
+    }
+    ImGui::TextUnformatted(utf8_code);
+    ImGui::TableNextColumn();
+    ImGui::Text("U+%04X", (int)c);
+}
+
+static void ShowUTF8EncodingViewer()
+{
+    static char buf[256] = "";
+    static ImFontGlyphRangesBuilder range_builder;
+    static ImVector<ImWchar> ranges;
+    static bool unique_glyphs = false;
+
+    ImGui::SetNextItemWidth(-FLT_MIN);
+
+    bool rebuild = false;
+    rebuild |= ImGui::InputText("##Sample Text", buf, IM_ARRAYSIZE(buf));
+    rebuild |= ImGui::Checkbox("Sorted unique glyphs", &unique_glyphs);
+    if (rebuild && unique_glyphs)
+    {
+        range_builder.Clear();
+        range_builder.AddText(buf);
+        ranges.clear();
+        range_builder.BuildRanges(&ranges);
+    }
+    if (ImGui::BeginTable("list", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0.0f, ImGui::GetFontSize() * 15)))
+    {
+        ImGui::TableSetupColumn("Glyph");
+        ImGui::TableSetupColumn("UTF-8");
+        ImGui::TableSetupColumn("Codepoint");
+        ImGui::TableHeadersRow();
+
+        ImFont* font = ImGui::GetFont();
+        if (unique_glyphs)
+        {
+            for (int range_index = 0; range_index < ranges.Size && ranges[range_index] != 0; range_index += 2)
+                for (ImWchar c = ranges[range_index]; c <= ranges[range_index + 1]; c++)
+                {
+                    char c_utf8[4 + 1];
+                    ImTextStrToUtf8(c_utf8, IM_ARRAYSIZE(c_utf8), &c, &c + 1);
+                    ShowEncodingViewerChar(font, c, c_utf8);
+                }
+        }
+        else
+        {
+            for (const char* p = buf; p[0] != 0;)
+            {
+                unsigned int c;
+                int c_utf8_len = ImTextCharFromUtf8(&c, p, NULL);
+                char c_utf8[4 + 1];
+                memcpy(c_utf8, p, c_utf8_len);
+                c_utf8[c_utf8_len] = 0;
+                ShowEncodingViewerChar(font, (ImWchar)c, c_utf8);
+                p += c_utf8_len;
+            }
+        }
+        ImGui::EndTable();
+    }
+}
+
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
 static void MetricsHelpMarker(const char* desc)
 {
@@ -12283,6 +12358,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 }
                 Unindent();
             }
+        }
+
+        if (TreeNode("UTF-8 Encoding viewer"))
+        {
+            ShowUTF8EncodingViewer();
+            TreePop();
         }
 
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
