@@ -2613,8 +2613,7 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
     if (!table->IsLayoutLocked)
         TableUpdateLayout(table);
 
-    if (table->IsSortSpecsDirty)
-        TableSortSpecsBuild(table);
+    TableSortSpecsBuild(table);
 
     return &table->SortSpecs;
 }
@@ -2753,14 +2752,18 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
 
 void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 {
-    IM_ASSERT(table->IsSortSpecsDirty);
-    TableSortSpecsSanitize(table);
+    bool dirty = table->IsSortSpecsDirty;
+    if (dirty)
+    {
+        TableSortSpecsSanitize(table);
+        table->SortSpecsMulti.resize(table->SortSpecsCount <= 1 ? 0 : table->SortSpecsCount);
+        table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
+        table->IsSortSpecsDirty = false; // Mark as not dirty for us
+    }
 
     // Write output
-    ImGuiTableTempData* temp_data = table->TempData;
-    temp_data->SortSpecsMulti.resize(table->SortSpecsCount <= 1 ? 0 : table->SortSpecsCount);
-    ImGuiTableColumnSortSpecs* sort_specs = (table->SortSpecsCount == 0) ? NULL : (table->SortSpecsCount == 1) ? &temp_data->SortSpecsSingle : temp_data->SortSpecsMulti.Data;
-    if (sort_specs != NULL)
+    ImGuiTableColumnSortSpecs* sort_specs = (table->SortSpecsCount == 0) ? NULL : (table->SortSpecsCount == 1) ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
+    if (dirty && sort_specs != NULL)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
@@ -2773,10 +2776,9 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
             sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
             sort_spec->SortDirection = column->SortDirection;
         }
+
     table->SortSpecs.Specs = sort_specs;
     table->SortSpecs.SpecsCount = table->SortSpecsCount;
-    table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
-    table->IsSortSpecsDirty = false; // Mark as not dirty for us
 }
 
 //-------------------------------------------------------------------------
@@ -3465,7 +3467,8 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->MemoryCompacted == false);
     table->SortSpecs.Specs = NULL;
-    table->IsSortSpecsDirty = true;
+    table->SortSpecsMulti.clear();
+    table->IsSortSpecsDirty = true; // FIXME: shouldn't have to leak into user performing a sort
     table->ColumnsNames.clear();
     table->MemoryCompacted = true;
     for (int n = 0; n < table->ColumnsCount; n++)
@@ -3476,7 +3479,6 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
 void ImGui::TableGcCompactTransientBuffers(ImGuiTableTempData* temp_data)
 {
     temp_data->DrawSplitter.ClearFreeMemory();
-    temp_data->SortSpecsMulti.clear();
     temp_data->LastTimeActive = -1.0f;
 }
 
