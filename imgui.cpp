@@ -11807,7 +11807,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
     if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasViewport) == 0)
     {
         // By default inherit from parent window
-        if (window->Viewport == NULL && window->ParentWindow && !window->ParentWindow->IsFallbackWindow)
+        if (window->Viewport == NULL && window->ParentWindow && (!window->ParentWindow->IsFallbackWindow || window->ParentWindow->WasActive))
             window->Viewport = window->ParentWindow->Viewport;
 
         // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
@@ -11972,12 +11972,6 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
         viewport_flags |= ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoFocusOnClick;
 
     // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
-    if (window->WindowClass.ParentViewportId)
-        window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
-    else if ((window_flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && parent_window_in_stack)
-        window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
-    else
-        window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
     if (window->WindowClass.ViewportFlagsOverrideSet)
         viewport_flags |= window->WindowClass.ViewportFlagsOverrideSet;
     if (window->WindowClass.ViewportFlagsOverrideClear)
@@ -11990,6 +11984,15 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
         viewport_flags |= ImGuiViewportFlags_NoRendererClear;
 
     window->Viewport->Flags = viewport_flags;
+
+    // Update parent viewport ID
+    // (the !IsFallbackWindow test mimic the one done in WindowSelectViewport())
+    if (window->WindowClass.ParentViewportId)
+        window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
+    else if ((window_flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && parent_window_in_stack && (!parent_window_in_stack->IsFallbackWindow || parent_window_in_stack->WasActive))
+        window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
+    else
+        window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
 }
 
 // Called by user at the end of the main loop, after EndFrame()
