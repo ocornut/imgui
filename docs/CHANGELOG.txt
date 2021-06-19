@@ -54,6 +54,7 @@ Other Changes:
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
+- Backends: OpenGL3: Destroy vertex/fragment shader objects right after they are linked into main shader. (#4244) [@Crowbarous]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
 - Examples: SDL2: Accomodate for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
 
