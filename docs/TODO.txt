@@ -88,6 +88,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: hover tooltip could show unclamped text
+ - input text: support for INSERT key to toggle overwrite mode. currently disabled because stb_textedit behavior is unsatisfactory on multi-line. (#2863)
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
@@ -183,14 +184,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
  - combo: flag for BeginCombo to not return true when unchanged (#1182)
- - combo: a way/helper to customize the combo preview (#1658)
+ - combo: a way/helper to customize the combo preview (#1658) -> exeperimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
- - listbox: refactor and clean the begin/end api
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
  - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?) (wip stash)
  - listbox: user may want to initial scroll to focus on the one selected value?
- - listbox: expose hovered item for a basic ListBox
+ - listbox: expose hovered item for a simplified ListBox api
  - listbox: keyboard navigation.
  - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
@@ -247,12 +247,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
  - style editor: color child window height expressed in multiple of line height.
 
+ - log: improve logging of ArrowButton, ListBox, TabItem
+ - log: carry on indent / tree depth when opening a child window
+ - log: enabling log ends up pushing and growing vertices buffers because we don't distinguish layout vs render clipping
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons() all together.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
- - log: enabling log ends up pushing and growing vertices buffersbecause we don't distinguish layout vs render clipping
 
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
@@ -350,7 +352,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
+ - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787, #343)
 
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)

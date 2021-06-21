@@ -48,7 +48,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+ifeq ($(OS), Windows_NT)
 	ECHO_MESSAGE = "MinGW"
 	LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 

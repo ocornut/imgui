@@ -1,5 +1,5 @@
 // dear imgui: Platform Backend for GLFW
-// This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan..)
+// This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan, WebGPU..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (Requires: GLFW 3.1+)
 
@@ -9,7 +9,8 @@
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange' (note: the resizing cursors requires GLFW 3.4+).
 //  [X] Platform: Keyboard arrays indexed using GLFW_KEY_* codes, e.g. ImGui::IsKeyPressed(GLFW_KEY_SPACE).
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
@@ -113,10 +114,13 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
         g_PrevUserCallbackKey(window, key, scancode, action, mods);
 
     ImGuiIO& io = ImGui::GetIO();
-    if (action == GLFW_PRESS)
-        io.KeysDown[key] = true;
-    if (action == GLFW_RELEASE)
-        io.KeysDown[key] = false;
+    if (key >= 0 && key < IM_ARRAYSIZE(io.KeysDown))
+    {
+        if (action == GLFW_PRESS)
+            io.KeysDown[key] = true;
+        if (action == GLFW_RELEASE)
+            io.KeysDown[key] = false;
+    }
 
     // Modifiers are not reliable across systems
     io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
@@ -149,7 +153,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendPlatformName = "imgui_impl_glfw";
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -229,6 +233,11 @@ bool ImGui_ImplGlfw_InitForOpenGL(GLFWwindow* window, bool install_callbacks)
 bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
 {
     return ImGui_ImplGlfw_Init(window, install_callbacks, GlfwClientApi_Vulkan);
+}
+
+bool ImGui_ImplGlfw_InitForOther(GLFWwindow* window, bool install_callbacks)
+{
+    return ImGui_ImplGlfw_Init(window, install_callbacks, GlfwClientApi_Unknown);
 }
 
 void ImGui_ImplGlfw_Shutdown()

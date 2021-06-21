@@ -1,6 +1,10 @@
 
 # How to Build
 
+- On Windows with Visual Studio's IDE
+
+Use the provided project file (.vcxproj). Add to solution (imgui_examples.sln) if necessary.
+
 - On Windows with Visual Studio's CLI
 
 ```
@@ -14,12 +18,12 @@ cl /Zi /MD /I.. /I..\.. /I%SDL2_DIR%\include /I..\libs\gl3w main.cpp ..\..\backe
 - On Linux and similar Unixes
 
 ```
-c++ `sdl2-config --cflags` -I .. -I ../.. -I ../libs/gl3w main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -lGL -ldl
+c++ `sdl2-config --cflags` -I .. -I ../.. -I ../../backends -I ../libs/gl3w main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -lGL -ldl
 ```
 
 - On Mac OS X
 
 ```
 brew install sdl2
-c++ `sdl2-config --cflags` -I .. -I ../.. -I ../libs/gl3w main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -framework OpenGl -framework CoreFoundation
+c++ `sdl2-config --cflags` -I .. -I ../.. -I ../../backends -I ../libs/gl3w main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -framework OpenGl -framework CoreFoundation
 ```

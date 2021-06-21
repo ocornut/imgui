@@ -5,12 +5,16 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-05-19: Metal: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
+//  2021-02-18: Metal: Change blending equation to preserve alpha in output buffer.
+//  2021-01-25: Metal: Fixed texture storage mode when building on Mac Catalyst.
 //  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
@@ -113,7 +117,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     [g_sharedMetalContext makeFontTextureWithDevice:device];
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture; // ImTextureID == void*
+    io.Fonts->SetTexID((__bridge void *)g_sharedMetalContext.fontTexture); // ImTextureID == void*
 
     return (g_sharedMetalContext.fontTexture != nil);
 }
@@ -122,7 +126,7 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     g_sharedMetalContext.fontTexture = nil;
-    io.Fonts->TexID = nullptr;
+    io.Fonts->SetTexID(nullptr);
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
@@ -238,7 +242,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                                                                                                 height:(NSUInteger)height
                                                                                              mipmapped:NO];
     textureDescriptor.usage = MTLTextureUsageShaderRead;
-#if TARGET_OS_OSX
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
     textureDescriptor.storageMode = MTLStorageModeManaged;
 #else
     textureDescriptor.storageMode = MTLStorageModeShared;
@@ -385,10 +389,10 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     pipelineDescriptor.colorAttachments[0].pixelFormat = self.framebufferDescriptor.colorPixelFormat;
     pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
     pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
-    pipelineDescriptor.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
     pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
     pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+    pipelineDescriptor.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
+    pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
     pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
     pipelineDescriptor.depthAttachmentPixelFormat = self.framebufferDescriptor.depthPixelFormat;
     pipelineDescriptor.stencilAttachmentPixelFormat = self.framebufferDescriptor.stencilPixelFormat;
@@ -520,8 +524,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
 
                     // Bind texture, Draw
-                    if (pcmd->TextureId != NULL)
-                        [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(pcmd->TextureId) atIndex:0];
+                    if (ImTextureID tex_id = pcmd->GetTexID())
+                        [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
 
                     [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
                     [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle

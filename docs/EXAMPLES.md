@@ -3,7 +3,11 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/EXAMP
 ## Dear ImGui: Examples
 
 **The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone, ready-to-build) for variety of
-platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder.
+platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder (see [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md)).
+
+The purpose of Examples is to showcase integration with backends, let you try Dear ImGui, and guide you toward
+integrating Dear ImGui in your own application/game/engine.
+**Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
 
 You can find Windows binaries for some of those example applications at:
   http://www.dearimgui.org/binaries
@@ -79,6 +83,10 @@ Changelog, so if you want to update them later it will be easier to catch up wit
 Allegro 5 example. <BR>
 = main.cpp + imgui_impl_allegro5.cpp
 
+[example_android_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_android_opengl3/) <BR>
+Android + OpenGL3 (ES) example. <BR>
+= main.cpp + imgui_impl_android.cpp + imgui_impl_opengl3.cpp
+
 [example_apple_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_metal/) <BR>
 OSX & iOS + Metal example. <BR>
 = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
@@ -97,6 +105,10 @@ Emcripten + SDL2 + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp <BR>
 Note that other examples based on SDL or GLFW + OpenGL could easily be modified to work with Emscripten.
 We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
+
+[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
+Emcripten + GLFW + WebGPU example. <BR>
+= main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
 
 [example_glfw_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_metal/) <BR>
 GLFW (Mac) + Metal example. <BR>
@@ -198,9 +210,9 @@ This is quite long and tedious, because: DirectX12.
 
 **Building**
 
-Unfortunately in 2020 it is still tedious to create and maintain portable build files using external
+Unfortunately nowadays it is still tedious to create and maintain portable build files using external
 libraries (the kind we're using here to create a window and render 3D triangles) without relying on
-third party software. For most examples here we choose to provide:
+third party software and build systems. For most examples here we choose to provide:
  - Makefiles for Linux/OSX
  - Batch files for Visual Studio 2008+
  - A .sln project file for Visual Studio 2012+

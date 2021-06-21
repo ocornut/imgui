@@ -5,19 +5,18 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/FONTS
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default. We embed it in the source code so you can use Dear ImGui without any file system access. ProggyClean does not scale smoothly, therefore it is recommended that you load your own file when using Dear ImGui in an application aiming to look nice and wanting to support multiple resolutions.
 
-You may also load external .TTF/.OTF files. 
+You may also load external .TTF/.OTF files.
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
 
-**Read the FAQ:** https://www.dearimgui.org/faq (there is a Fonts section!)
-
-**Use the Discord server**: http://discord.dearimgui.org and not the GitHub issue tracker for basic font loading questions.
+**Also read the FAQ:** https://www.dearimgui.org/faq (there is a Fonts section!)
 
 ## Index
 - [Readme First](#readme-first)
 - [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#font-loading-instructions)
-- [Using Icons](#using-icons)
-- [Using FreeType Rasterizer](#using-freetype-rasterizer)
+- [Using Icon Fonts](#using-icon-fonts)
+- [Using FreeType Rasterizer (imgui_freetype)](#using-freetype-rasterizer-imgui_freetype)
+- [Using Colorful Glyphs/Emojis](#using-colorful-glyphsemojis)
 - [Using Custom Glyph Ranges](#using-custom-glyph-ranges)
 - [Using Custom Colorful Icons](#using-custom-colorful-icons)
 - [Using Font Data Embedded In Source Code](#using-font-data-embedded-in-source-code)
@@ -28,7 +27,7 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 ---------------------------------------
  ## Readme First
 
-- All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas. 
+- All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas.
 
 - You can use the style editor `ImGui::ShowStyleEditor()` in the "Fonts" section to browse your fonts and understand what's going on if you have an issue. You can also reach it in `Demo->Tools->Style Editor->Fonts`:
 
@@ -70,11 +69,13 @@ If you get an assert stating "Could not load font file!", your font filename is 
 
 **Load multiple fonts:**
 ```cpp
+// Init
 ImGuiIO& io = ImGui::GetIO();
 ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
 ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
-
-// Select font at runtime
+```
+```cpp
+// In application loop: select font at runtime
 ImGui::Text("Hello"); // use the default font (which is the first loaded font)
 ImGui::PushFont(font2);
 ImGui::Text("Hello with another font");
@@ -145,29 +146,28 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 **Font Atlas too large?**
 
 - If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
-- In particular, using a large range such as `GetGlyphRangesChineseSimplifiedCommon()` is not recommended unless you set `OversampleH`/`OversampleV` to 1 and use a small font size.
-- Mind the fact that some graphics drivers have texture size limitation.
-- If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+- Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
 Some solutions:
 
 1. Reduce glyphs ranges by calculating them from source localization data.
-   You can use the `ImFontGlyphRangesBuilder` for this purpose, this will be the biggest win!
-2. You may reduce oversampling, e.g. `font_config.OversampleH = font_config.OversampleV = 1`, this will largely reduce your texture size.
+   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
+2. You may reduce oversampling, e.g. `font_config.OversampleH = 2`, this will largely reduce your texture size.
+   Note that while OversampleH = 2 looks visibly very close to 3 in most situations, with OversampleH = 1 the quality drop will be noticeable.
 3. Set `io.Fonts.TexDesiredWidth` to specify a texture width to minimize texture height (see comment in `ImFontAtlas::Build()` function).
 4. Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 5. Read about oversampling [here](https://github.com/nothings/stb/blob/master/tests/oversample).
-6. To support the extended range of unicode beyond 0xFFFF (e.g. emoticons, dingbats, symbols, shapes, ancient languages, etc...) add `#define IMGUI_USE_WCHAR32`in your `imconfig.h`
+6. To support the extended range of unicode beyond 0xFFFF (e.g. emoticons, dingbats, symbols, shapes, ancient languages, etc...) add `#define IMGUI_USE_WCHAR32`in your `imconfig.h`.
 
 ##### [Return to Index](#index)
 
-## Using Icons
+## Using Icon Fonts
 
 Using an icon font (such as [FontAwesome](http://fontawesome.io) or [OpenFontIcons](https://github.com/traverseda/OpenFontIcons)) is an easy and practical way to use icons in your Dear ImGui application.
 A common pattern is to merge the icon font within your main font, so you can embed icons directly from your strings without having to change fonts back and forth.
 
 To refer to the icon UTF-8 codepoints from your C++ code, you may use those headers files created by Juliette Foucaut: https://github.com/juliettef/IconFontCppHeaders.
-  
+
 So you can use `ICON_FA_SEARCH` as a string that will render as a "Search" icon.
 
 Example Setup:
@@ -198,13 +198,35 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 
 ##### [Return to Index](#index)
 
-## Using FreeType Rasterizer
+## Using FreeType Rasterizer (imgui_freetype)
 
 - Dear ImGui uses imstb\_truetype.h to rasterize fonts (with optional oversampling). This technique and its implementation are not ideal for fonts rendered at small sizes, which may appear a little blurry or hard to read.
 - There is an implementation of the ImFontAtlas builder using FreeType that you can use in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
 - FreeType supports auto-hinting which tends to improve the readability of small fonts.
 - Read documentation in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
 - Correct sRGB space blending will have an important effect on your font rendering quality.
+
+##### [Return to Index](#index)
+
+## Using Colorful Glyphs/Emojis
+
+- Rendering of colored emojis is only supported by imgui_freetype with FreeType 2.10+.
+- You will need to load fonts with the `ImGuiFreeTypeBuilderFlags_LoadColor` flag.
+- Emojis are frequently encoded in upper Unicode layers (character codes >0x10000) and will need dear imgui compiled with `IMGUI_USE_WCHAR32`.
+- Not all types of color fonts are supported by FreeType at the moment.
+- Stateful Unicode features such as skin tone modifiers are not supported by the text renderer.
+
+![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)
+
+```cpp
+io.Fonts->AddFontFromFileTTF("../../../imgui_dev/data/fonts/NotoSans-Regular.ttf", 16.0f);
+static ImWchar ranges[] = { 0x1, 0x1FFFF, 0 };
+static ImFontConfig cfg;
+cfg.OversampleH = cfg.OversampleV = 1;
+cfg.MergeMode = true;
+cfg.FontBuilderFlags |= ImGuiFreeTypeBuilderFlags_LoadColor;
+io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg, ranges);
+```
 
 ##### [Return to Index](#index)
 
@@ -227,7 +249,7 @@ io.Fonts->Build();                                     // Build the atlas while 
 
 ## Using Custom Colorful Icons
 
-**(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
+As an alternative to rendering colorful glyphs using imgui_freetype with `ImGuiFreeTypeBuilderFlags_LoadColor`, you may allocate your own space in the texture atlas and write yourself into it. **(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
 
 - You can use the `ImFontAtlas::AddCustomRect()` and `ImFontAtlas::AddCustomRectFontGlyph()` api to register rectangles that will be packed into the font atlas texture. Register them before building the atlas, then call Build()`.
 - You can then use `ImFontAtlas::GetCustomRectByIndex(int)` to query the position/size of your rectangle within the texture, and blit/copy any graphics data of your choice into those rectangles.
@@ -316,7 +338,7 @@ Some fonts files are available in the `misc/fonts/` folder:
 <br>https://fonts.google.com/specimen/Roboto
 
 **Cousine-Regular.ttf**, by Steve Matteson
-<br>Digitized data copyright (c) 2010 Google Corporation. 
+<br>Digitized data copyright (c) 2010 Google Corporation.
 <br>Licensed under the SIL Open Font License, Version 1.1
 <br>https://fonts.google.com/specimen/Cousine
 

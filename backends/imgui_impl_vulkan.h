@@ -6,7 +6,8 @@
 // Missing features:
 //  [ ] Renderer: User texture binding. Changes of ImTextureID aren't supported by this backend! See https://github.com/ocornut/imgui/pull/914
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
@@ -22,25 +23,42 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+
+// [Configuration] in order to use a custom Vulkan function loader:
+// (1) You'll need to disable default Vulkan function prototypes.
+//     We provide a '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES' convenience configuration flag.
+//     In order to make sure this is visible from the imgui_impl_vulkan.cpp compilation unit:
+//     - Add '#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES' in your imconfig.h file
+//     - Or as a compilation flag in your build system
+//     - Or uncomment here (not recommended because you'd be modifying imgui sources!)
+//     - Do not simply add it in a .cpp file!
+// (2) Call ImGui_ImplVulkan_LoadFunctions() before ImGui_ImplVulkan_Init() with your custom function.
+// If you have no idea what this is, leave it alone!
+//#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+
+// Vulkan includes
+#if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
+#define VK_NO_PROTOTYPES
+#endif
 #include <vulkan/vulkan.h>
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance          Instance;
-    VkPhysicalDevice    PhysicalDevice;
-    VkDevice            Device;
-    uint32_t            QueueFamily;
-    VkQueue             Queue;
-    VkPipelineCache     PipelineCache;
-    VkDescriptorPool    DescriptorPool;
-    uint32_t            Subpass;
-    uint32_t            MinImageCount;          // >= 2
-    uint32_t            ImageCount;             // >= MinImageCount
-    VkSampleCountFlagBits        MSAASamples;   // >= VK_SAMPLE_COUNT_1_BIT
-    const VkAllocationCallbacks* Allocator;
-    void                (*CheckVkResultFn)(VkResult err);
+    VkInstance                      Instance;
+    VkPhysicalDevice                PhysicalDevice;
+    VkDevice                        Device;
+    uint32_t                        QueueFamily;
+    VkQueue                         Queue;
+    VkPipelineCache                 PipelineCache;
+    VkDescriptorPool                DescriptorPool;
+    uint32_t                        Subpass;
+    uint32_t                        MinImageCount;          // >= 2
+    uint32_t                        ImageCount;             // >= MinImageCount
+    VkSampleCountFlagBits           MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT
+    const VkAllocationCallbacks*    Allocator;
+    void                            (*CheckVkResultFn)(VkResult err);
 };
 
 // Called by user code
@@ -52,6 +70,9 @@ IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer comm
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
+// Optional: load Vulkan functions with a custom function loader
+// This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
+IMGUI_IMPL_API bool     ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = NULL);
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers

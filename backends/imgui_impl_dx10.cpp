@@ -5,12 +5,15 @@
 //  [X] Renderer: User texture backend. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-05-19: DirectX10: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
+//  2021-02-18: DirectX10: Change blending equation to preserve alpha in output buffer.
 //  2019-07-21: DirectX10: Backup, clear and restore Geometry Shader is any is bound when calling ImGui_ImplDX10_RenderDrawData().
 //  2019-05-29: DirectX10: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX10: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
@@ -189,7 +192,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         DXGI_FORMAT                 IndexBufferFormat;
         ID3D10InputLayout*          InputLayout;
     };
-    BACKUP_DX10_STATE old;
+    BACKUP_DX10_STATE old = {};
     old.ScissorRectsCount = old.ViewportsCount = D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
     ctx->RSGetScissorRects(&old.ScissorRectsCount, old.ScissorRects);
     ctx->RSGetViewports(&old.ViewportsCount, old.Viewports);
@@ -237,7 +240,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
                 ctx->RSSetScissorRects(1, &r);
 
                 // Bind texture, Draw
-                ID3D10ShaderResourceView* texture_srv = (ID3D10ShaderResourceView*)pcmd->TextureId;
+                ID3D10ShaderResourceView* texture_srv = (ID3D10ShaderResourceView*)pcmd->GetTexID();
                 ctx->PSSetShaderResources(0, 1, &texture_srv);
                 ctx->DrawIndexed(pcmd->ElemCount, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset);
             }
@@ -292,6 +295,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
         g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
+        IM_ASSERT(pTexture != NULL);
 
         // Create texture view
         D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
@@ -305,7 +309,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
     }
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)g_pFontTextureView;
+    io.Fonts->SetTexID((ImTextureID)g_pFontTextureView);
 
     // Create texture sampler
     {
@@ -439,8 +443,8 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         desc.SrcBlend = D3D10_BLEND_SRC_ALPHA;
         desc.DestBlend = D3D10_BLEND_INV_SRC_ALPHA;
         desc.BlendOp = D3D10_BLEND_OP_ADD;
-        desc.SrcBlendAlpha = D3D10_BLEND_INV_SRC_ALPHA;
-        desc.DestBlendAlpha = D3D10_BLEND_ZERO;
+        desc.SrcBlendAlpha = D3D10_BLEND_ONE;
+        desc.DestBlendAlpha = D3D10_BLEND_INV_SRC_ALPHA;
         desc.BlendOpAlpha = D3D10_BLEND_OP_ADD;
         desc.RenderTargetWriteMask[0] = D3D10_COLOR_WRITE_ENABLE_ALL;
         g_pd3dDevice->CreateBlendState(&desc, &g_pBlendState);
@@ -482,7 +486,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
         return;
 
     if (g_pFontSampler) { g_pFontSampler->Release(); g_pFontSampler = NULL; }
-    if (g_pFontTextureView) { g_pFontTextureView->Release(); g_pFontTextureView = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    if (g_pFontTextureView) { g_pFontTextureView->Release(); g_pFontTextureView = NULL; ImGui::GetIO().Fonts->SetTexID(NULL); } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
 

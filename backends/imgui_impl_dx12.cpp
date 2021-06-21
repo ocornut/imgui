@@ -7,14 +7,22 @@
 
 // Important: to compile on 32-bit systems, this backend requires code to be compiled with '#define ImTextureID ImU64'.
 // This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
-// This define is set in the example .vcxproj file and need to be replicated in your app or by adding it to your imconfig.h file.
+// To build this on 32-bit systems:
+// - [Solution 1] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'ImTextureID=ImU64' (this is what we do in the 'example_win32_direct12/example_win32_direct12.vcxproj' project file)
+// - [Solution 2] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'IMGUI_USER_CONFIG="my_imgui_config.h"' and inside 'my_imgui_config.h' add '#define ImTextureID ImU64' and as many other options as you like.
+// - [Solution 3] IDE/msbuild: edit imconfig.h and add '#define ImTextureID ImU64' (prefer solution 2 to create your own config file!)
+// - [Solution 4] command-line: add '/D ImTextureID=ImU64' to your cl.exe command-line (this is what we do in the example_win32_direct12/build_win32.bat file)
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-05-19: DirectX12: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
+//  2021-02-18: DirectX12: Change blending equation to preserve alpha in output buffer.
+//  2021-01-11: DirectX12: Improve Windows 7 compatibility (for D3D12On7) by loading d3d12.dll dynamically.
 //  2020-09-16: DirectX12: Avoid rendering calls with zero-sized scissor rectangle since it generates a validation layer warning.
 //  2020-09-08: DirectX12: Clarified support for building on 32-bit systems by redefining ImTextureID.
 //  2019-10-18: DirectX12: *BREAKING CHANGE* Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
@@ -237,7 +245,9 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
                 const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
                 if (r.right > r.left && r.bottom > r.top)
                 {
-                    ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
+                    D3D12_GPU_DESCRIPTOR_HANDLE texture_handle = {};
+                    texture_handle.ptr = (UINT64)pcmd->GetTexID();
+                    ctx->SetGraphicsRootDescriptorTable(1, texture_handle);
                     ctx->RSSetScissorRects(1, &r);
                     ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
@@ -393,8 +403,15 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     }
 
     // Store our identifier
+    // READ THIS IF THE STATIC_ASSERT() TRIGGERS:
+    // - Important: to compile on 32-bit systems, this backend requires code to be compiled with '#define ImTextureID ImU64'.
+    // - This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
+    // [Solution 1] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'ImTextureID=ImU64' (this is what we do in the 'example_win32_direct12/example_win32_direct12.vcxproj' project file)
+    // [Solution 2] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'IMGUI_USER_CONFIG="my_imgui_config.h"' and inside 'my_imgui_config.h' add '#define ImTextureID ImU64' and as many other options as you like.
+    // [Solution 3] IDE/msbuild: edit imconfig.h and add '#define ImTextureID ImU64' (prefer solution 2 to create your own config file!)
+    // [Solution 4] command-line: add '/D ImTextureID=ImU64' to your cl.exe command-line (this is what we do in the example_win32_direct12/build_win32.bat file)
     static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;
+    io.Fonts->SetTexID((ImTextureID)g_hFontSrvGpuDescHandle.ptr);
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
@@ -452,8 +469,34 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
+        // Load d3d12.dll and D3D12SerializeRootSignature() function address dynamically to facilitate using with D3D12On7.
+        // See if any version of d3d12.dll is already loaded in the process. If so, give preference to that.
+        static HINSTANCE d3d12_dll = ::GetModuleHandleA("d3d12.dll");
+        if (d3d12_dll == NULL)
+        {
+            // Attempt to load d3d12.dll from local directories. This will only succeed if
+            // (1) the current OS is Windows 7, and
+            // (2) there exists a version of d3d12.dll for Windows 7 (D3D12On7) in one of the following directories.
+            // See https://github.com/ocornut/imgui/pull/3696 for details.
+            const char* localD3d12Paths[] = { ".\\d3d12.dll", ".\\d3d12on7\\d3d12.dll", ".\\12on7\\d3d12.dll" }; // A. current directory, B. used by some games, C. used in Microsoft D3D12On7 sample
+            for (int i = 0; i < IM_ARRAYSIZE(localD3d12Paths); i++)
+                if ((d3d12_dll = ::LoadLibraryA(localD3d12Paths[i])) != NULL)
+                    break;
+
+            // If failed, we are on Windows >= 10.
+            if (d3d12_dll == NULL)
+                d3d12_dll = ::LoadLibraryA("d3d12.dll");
+
+            if (d3d12_dll == NULL)
+                return false;
+        }
+
+        PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
+        if (D3D12SerializeRootSignatureFn == NULL)
+            return false;
+
         ID3DBlob* blob = NULL;
-        if (D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL) != S_OK)
+        if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL) != S_OK)
             return false;
 
         g_pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&g_pRootSignature));
@@ -558,8 +601,8 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
         desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-        desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-        desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+        desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+        desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
         desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
         desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     }
@@ -613,7 +656,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(g_pFontTextureResource);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    io.Fonts->SetTexID(NULL); // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 
     for (UINT i = 0; i < g_numFramesInFlight; i++)
     {
