@@ -940,7 +940,7 @@ static void ShowDemoWindowWidgets()
             ImGui::SameLine(); HelpMarker("Use SetCursorPos and TextWrapPos to horizontally align text blocks.");
             ImGui::PushTextAlignment(text_align);
             
-            float max_wrap_width = ImGui::GetContentRegionAvailWidth();
+            float max_wrap_width = ImGui::GetContentRegionAvail().x;
             if (wrap_width < max_wrap_width) {
                 ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + fabs(max_wrap_width - wrap_width) * text_align, ImGui::GetCursorPosY()));
             }
