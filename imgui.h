@@ -403,6 +403,8 @@ namespace ImGui
     IMGUI_API float         CalcItemWidth();                                                // width of item given pushed settings and current cursor position. NOT necessarily the width of last item unlike most 'Item' functions.
     IMGUI_API void          PushTextWrapPos(float wrap_local_pos_x = 0.0f);                 // push word-wrapping position for Text*() commands. < 0.0f: no wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap at 'wrap_pos_x' position in window local space
     IMGUI_API void          PopTextWrapPos();
+    IMGUI_API void          PushTextAlignment(float alignment = 0.0f);                      // push text alignment position for TextWrapped*() commands. 0.0f: no alignment; 1.0f: align right; 0.5f: align center
+    IMGUI_API void          PopTextAlignment();
 
     // Style read access
     IMGUI_API ImFont*       GetFont();                                                      // get current font

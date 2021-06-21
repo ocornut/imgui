@@ -3034,6 +3034,7 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
     window->DC.ChildWindows.clear();
     window->DC.ItemWidthStack.clear();
     window->DC.TextWrapPosStack.clear();
+    window->DC.TextAlignmentStack.clear();
 }
 
 void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
@@ -6262,6 +6263,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.TextWrapPos = -1.0f; // disabled
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
+        window->DC.TextAlignmentStack.resize(0);
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -6601,6 +6603,20 @@ void ImGui::PopTextWrapPos()
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
     window->DC.TextWrapPosStack.pop_back();
+}
+
+void ImGui::PushTextAlignment(float alignment)
+{
+    ImGuiWindow *window = GetCurrentWindow();
+    window->DC.TextAlignmentStack.push_back(window->DC.TextAlignment);
+    window->DC.TextAlignment = alignment;
+}
+
+void ImGui::PopTextAlignment()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.TextAlignment = window->DC.TextAlignmentStack.back();
+    window->DC.TextAlignmentStack.pop_back();
 }
 
 bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
