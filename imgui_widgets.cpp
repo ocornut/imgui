@@ -160,6 +160,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
         text_end = text + strlen(text); // FIXME-OPT
 
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
+    const float text_alignment = window->DC.TextAlignment;
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = (wrap_pos_x >= 0.0f);
     if (text_end - text > 2000 && !wrap_enabled)
@@ -239,14 +240,17 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
     {
         const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
         const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
+        const float text_offset = wrap_enabled ? IM_ROUND((wrap_width - text_size.x) * text_alignment) : 0.0f;
+        const ImVec2 final_pos = ImVec2(text_pos.x + text_offset, text_pos.y);
 
-        ImRect bb(text_pos, text_pos + text_size);
+        ImRect bb(final_pos, final_pos + text_size);
         ItemSize(text_size, 0.0f);
         if (!ItemAdd(bb, 0))
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
+        // we use text_size.x here as wrap_width to correctly handle text alignment
+        RenderTextWrapped(bb.Min, text_begin, text_end, text_size.x, text_alignment);
     }
 }
 
@@ -4599,7 +4603,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, 0.0f, is_multiline ? NULL : &clip_rect);
         }
 
         // Draw blinking cursor
@@ -4630,7 +4634,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, 0.0f, is_multiline ? NULL : &clip_rect);
         }
     }
 
