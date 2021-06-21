@@ -6702,6 +6702,7 @@ static void ShowExampleAppLayout(bool* p_open)
             ImGui::BeginChild("left pane", ImVec2(150, 0), true);
             for (int i = 0; i < 100; i++)
             {
+                // FIXME: Good candidate to use ImGuiSelectableFlags_SelectOnNav
                 char label[128];
                 sprintf(label, "MyObject %d", i);
                 if (ImGui::Selectable(label, selected == i))
