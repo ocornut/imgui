@@ -1931,13 +1931,13 @@ struct ImGuiIO
     ImVec2      MousePosPrev;                   // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
     ImVec2      MouseClickedPos[5];             // Position at time of clicking
     double      MouseClickedTime[5];            // Time of last click (used to figure out double-click)
-    bool        MouseClicked[5];                // Mouse button went from !Down to Down
-    char        MouseMultiClickTracker[5];      // Track multiple clicks over multiple frames
-    char        MouseMultiClickCount[5];        // Has mouse button been clicked multiple times in a row?
+    bool        MouseClicked[5];                // Mouse button went from !Down to Down (same as MouseClickedCount[x] != 0)
+    bool        MouseDoubleClicked[5];          // Has mouse button been double-clicked? (same as MouseClickedCount[x] == 2)
+    ImU16       MouseClickedCount[5];           // == 0 (not clicked), == 1 (same as MouseClicked[]), == 2 (double-clicked), == 3 (triple-clicked) etc. when going from !Down to Down
+    ImU16       MouseClickedLastCount[5];       // Count successive number of clicks. Stays valid after mouse release. Reset after another click is done.
     bool        MouseReleased[5];               // Mouse button went from Down to !Down
     bool        MouseDownOwned[5];              // Track if button was clicked inside a dear imgui window or over void blocked by a popup. We don't request mouse capture from the application if click started outside ImGui bounds.
     bool        MouseDownOwnedUnlessPopupClose[5];//Track if button was clicked inside a dear imgui window.
-    char        MouseDownMultiClickCount[5];    // Track number of mouse down clicks in a row
     float       MouseDownDuration[5];           // Duration the mouse button has been down (0.0f == just clicked)
     float       MouseDownDurationPrev[5];       // Previous time the mouse button has been down
     ImVec2      MouseDragMaxDistanceAbs[5];     // Maximum distance, absolute, on each axis, of how much mouse has traveled from the clicking point
