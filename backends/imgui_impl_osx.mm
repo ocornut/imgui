@@ -8,7 +8,7 @@
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-06-23: Inputs: Added a fix for shortcuts using CTRL key instead of CMD key.
 //  2021-04-19: Inputs: Added a fix for keys remaining stuck in pressed state when CMD-tabbing into different application.
 //  2021-01-27: Inputs: Added a fix for mouse position not being reported when mouse buttons other than left one are down.
 //  2020-10-28: Inputs: Added a fix for handling keypad-enter key.
@@ -303,12 +304,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (NSUInteger i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
+            if (!io.KeySuper && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
                 io.AddInputCharacter((unsigned int)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);
-            if (key != -1 && key < 256 && !io.KeyCtrl)
+            if (key != -1 && key < 256 && !io.KeySuper)
                 resetKeys();
             if (key != -1)
                 io.KeysDown[key] = true;
