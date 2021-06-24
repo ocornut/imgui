@@ -43,7 +43,7 @@ jobs:
           cd examples/example_null
           pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
           pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
-          plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log
+          plog-converter -a 'GA:1,2;OP:1' -d V1071 -t errorfile -w pvs-studio.log
 
   Discord-CI:
     runs-on: ubuntu-18.04
