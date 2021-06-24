@@ -48,6 +48,7 @@ Other Changes:
 - Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
+- Fonts: Functions with a 'float size_pixels' parameter can accept zero if it is set in ImFontSize::SizePixels.
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.

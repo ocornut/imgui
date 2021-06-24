@@ -2167,7 +2167,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
     IM_ASSERT(font_cfg.FontData == NULL);
     font_cfg.FontData = ttf_data;
     font_cfg.FontDataSize = ttf_size;
-    font_cfg.SizePixels = size_pixels;
+    font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     if (glyph_ranges)
         font_cfg.GlyphRanges = glyph_ranges;
     return AddFont(&font_cfg);
