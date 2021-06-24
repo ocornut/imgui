@@ -2033,11 +2033,7 @@ void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_wid
 {
     // Build atlas on demand
     if (TexPixelsAlpha8 == NULL)
-    {
-        if (ConfigData.empty())
-            AddFontDefault();
         Build();
-    }
 
     *out_pixels = TexPixelsAlpha8;
     if (out_width) *out_width = TexWidth;
@@ -2257,6 +2253,10 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
+
+    // Default font is none are specified
+    if (ConfigData.Size == 0)
+        AddFontDefault();
 
     // Select builder
     // - Note that we do not reassign to atlas->FontBuilderIO, since it is likely to point to static data which
