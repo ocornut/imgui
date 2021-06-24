@@ -159,7 +159,7 @@ int main(int, char**)
         if (g_pd3dDevice->BeginScene() >= 0)
         {
             ImGui::Render();
-            ImGui_ImplDX9_UpdateTextures();
+            //ImGui_ImplDX9_UpdateTextures();
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             g_pd3dDevice->EndScene();
         }

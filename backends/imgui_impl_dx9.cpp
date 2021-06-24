@@ -50,10 +50,11 @@ struct ImGui_ImplDX9_Data
     LPDIRECT3DVERTEXBUFFER9     pVB;
     LPDIRECT3DINDEXBUFFER9      pIB;
     ImVector<LPDIRECT3DTEXTURE9>FontTextures;
+    int                         FontTexturesUpdateFrame;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
-    ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
+    ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); FontTexturesUpdateFrame = -1; VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
 struct CUSTOMVERTEX
@@ -156,8 +157,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
 
-    // Create and grow buffers if needed
+    // Update textures if not done already
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    if (bd->FontTexturesUpdateFrame != ImGui::GetFrameCount())
+        ImGui_ImplDX9_UpdateTextures();
+
+    // Create and grow buffers if needed
     if (!bd->pVB || bd->VertexBufferSize < draw_data->TotalVtxCount)
     {
         if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
@@ -440,19 +445,8 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
 void ImGui_ImplDX9_NewFrame()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplDX9_Init()?");
-    ImGuiIO& io = ImGui::GetIO();
-
-    if (bd->FontTextures.empty())
-    {
-        if (io.Fonts->TexData.TexPixels == nullptr || io.Fonts->IsDirty())
-        {
-            if (io.Fonts->ConfigData.empty())
-                io.Fonts->AddFontDefault();
-            io.Fonts->Build();
-        }
-    }
+    IM_UNUSED(bd);
 }
 
 static void ImGui_ImplDX9_DeleteTextures(ImVector<LPDIRECT3DTEXTURE9>& textures)
@@ -467,6 +461,13 @@ static void ImGui_ImplDX9_DeleteTextures(ImVector<LPDIRECT3DTEXTURE9>& textures)
 void ImGui_ImplDX9_UpdateTextures()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+
+    // We automatically call this from _RenderDrawData() but allow user to call it explicitely earlier is desired
+    const int frame_count = ImGui::GetFrameCount();
+    if (bd->FontTexturesUpdateFrame == frame_count)
+        return;
+    bd->FontTexturesUpdateFrame = frame_count;
+
     ImVector<LPDIRECT3DTEXTURE9>& textures = bd->FontTextures;
     ImTextureUpdateData* update_data = ImGui::GetTextureUpdateData();
 
