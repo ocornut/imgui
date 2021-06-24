@@ -335,7 +335,7 @@ namespace ImGui
     IMGUI_API void          EndFrame();                                 // ends the Dear ImGui frame. automatically called by Render(). If you don't need to render data (skipping rendering) you may call EndFrame() without Render()... but you'll have wasted CPU already! If you don't need to render, better to not create any windows and not call NewFrame() at all!
     IMGUI_API void          Render();                                   // ends the Dear ImGui frame, finalize the draw data. You can then get call GetDrawData().
     IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render.
-    IMGUI_API ImTextureUpdateData GetTextureUpdateData();
+    IMGUI_API ImTextureUpdateData* GetTextureUpdateData();
 
     // Demo, Debug, Information
     IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create Demo window. demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
@@ -2969,6 +2969,7 @@ struct ImTexture
     ImTextureType       Type;
     unsigned short      FontAtlasPage;
 
+    // FIXME-TEXUPDATE: Explain why explicit
     ImTexture() {}
     explicit ImTexture(ImFontAtlas* font_atlas);
     explicit ImTexture(ImTextureID texture_id);
@@ -3413,8 +3414,7 @@ struct ImFontAtlas
     IMGUI_API bool              IsDirty();                  // Returns true if the font needs to be (re-)built. User code should call GetTexData*** and update either the whole texture or dirty region as required.
     IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    IMGUI_API void                BuildTextureUpdateData(ImTextureUpdateData* texture_update_data);
-    IMGUI_API ImTextureUpdateData GetTextureUpdateData();
+    IMGUI_API ImTextureUpdateData* GetTextureUpdateData();
     bool                        IsBuilt() const             { return Fonts.Size > 0 && TexReady; } // Bit ambiguous: used to detect when user didn't built texture but effectively we should check TexID != 0 except that would be backend dependent...
     void                        SetTexID(ImTextureID id)    { TexData.TexID = id; }
     ImTextureID                 GetTexID() const            { return TexData.TexID; }
@@ -3482,6 +3482,7 @@ struct ImFontAtlas
     ImVector<ImFontConfig>      ConfigData;         // Configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     ImVector<ImTextureData>     TexPages;
+    ImTextureUpdateData         TexUpdateData;      // Only access via GetTextureUpdateData()
 
     // [Internal] Font builder
     const ImFontBuilderIO*      FontBuilderIO;      // Opaque interface to a font builder (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE).
@@ -3601,7 +3602,7 @@ inline ImTexture::ImTexture(ImFontAtlas* font_atlas)
 {
     FontAtlas = font_atlas;
     Type = ImTextureType_Atlas;
-    FontAtlasPage = (unsigned short)font_atlas->TexPages.Size;
+    FontAtlasPage = (unsigned short)font_atlas->TexPages.Size; // FIXME-TEXUPDATE: Current?
 }
 
 inline ImTexture::ImTexture(ImTextureID texture_id)

@@ -10379,102 +10379,87 @@ static const char* fonts[] =
 
 struct FontDemoState
 {
-    int     selected_font_index;
-    float   selected_font_size;
+    bool    want_rebuild;
     int     font_index;
     float   font_size;
 
     FontDemoState()
     {
-        selected_font_index = -1;
-        selected_font_size = -1.0f;
+        want_rebuild = true;
         font_index = 0;
-        font_size = 16.0f;
+        font_size = 13.0f;
     }
 };
 
-static FontDemoState font_demo_state;
+static FontDemoState font_demo_state1;
 static FontDemoState font_demo_state2;
 
-static void UpdateFontDemo(FontDemoState& state)
+static void RebuildAtlas(FontDemoState& state)
 {
-    int&    selected_font_index = state.selected_font_index;
-    float&  selected_font_size  = state.selected_font_size;
-    int&    font_index          = state.font_index;
-    float&  font_size           = state.font_size;
+    ImGuiIO& io = ImGui::GetIO();
+    if (!state.want_rebuild)
+        return;
+    state.want_rebuild = false;
 
-    //if (selected_font_index >= 0 || selected_font_size > 0.0f)
+    io.Fonts->Locked = false; // FIXME-TEXUPDATE: #thedmd: remove this
+    io.Fonts->PushTexPage();
+    io.Fonts->Clear();
+
+    ImFontConfig cfg;
+    cfg.SizePixels = state.font_size;
+    cfg.OversampleH = cfg.OversampleV = 1;
+
+    if (state.font_index == 0)
     {
-        ImGuiIO& io = ImGui::GetIO();
-
-        if (selected_font_index < 0)
-            selected_font_index = font_index;
-        if (selected_font_size < 0)
-            selected_font_size = font_size;
-
-        io.Fonts->Locked = false; // #thedmd: remove this
-        io.Fonts->PushTexPage();
-        io.Fonts->Clear();
-        if (selected_font_index == 0)
-        {
-            io.Fonts->AddFontDefault();
-        }
-        else
-        {
-            char path[256];
-            strcpy(path, font_path_prefix);
-            strcat(path, fonts[selected_font_index]);
-            io.Fonts->AddFontFromFileTTF(path, font_size);
-        }
-
-        font_index = selected_font_index;
-        font_size = selected_font_size;
-
-        selected_font_index = -1;
-        selected_font_size = -1.0f;
-
-        io.Fonts->Build();
-        io.Fonts->Locked = true; // #thedmd: remove this
-        ImGui::SetCurrentFont(ImGui::GetDefaultFont());
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
-        draw_list->_OnChangedTexture();
-
-        draw_list = ImGui::GetForegroundDrawList();
-        draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
-        draw_list->_OnChangedTexture();
-
-        draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
-        draw_list->_OnChangedTexture();
+        io.Fonts->AddFontDefault(&cfg);
     }
+    else
+    {
+        char path[256];
+        sprintf(path, "%s%s", font_path_prefix, fonts[state.font_index]);
+        io.Fonts->AddFontFromFileTTF(path, 0.0f, &cfg);
+    }
+    io.Fonts->Build();
+    io.Fonts->Locked = true; // FIXME-TEXUPDATE: #thedmd: remove this
 }
 
 static void ShowFontDemo(FontDemoState& state)
 {
-    int&    selected_font_index = state.selected_font_index;
-    float&  selected_font_size  = state.selected_font_size;
-    int&    font_index          = state.font_index;
-    float&  font_size           = state.font_size;
+    ImGuiIO& io = ImGui::GetIO();
 
-    UpdateFontDemo(state);
+    RebuildAtlas(state);
 
-    if (ImGui::BeginCombo("Font", fonts[font_index]))
+    // FIXME-TEXUPDATE: What is this doing?
+    ImGui::SetCurrentFont(ImGui::GetDefaultFont());
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTexture();
+
+    draw_list = ImGui::GetForegroundDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTexture();
+
+    draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTexture();
+
+    if (ImGui::BeginCombo("Font", fonts[state.font_index]))
     {
         for (int i = 0; i < IM_ARRAYSIZE(fonts); ++i)
         {
             if (ImGui::Selectable(fonts[i]))
-                selected_font_index = i;
+            {
+                state.font_index = i;
+                state.want_rebuild = true;
+            }
         }
 
         ImGui::EndCombo();
     }
 
-    float size = font_size;
-    if (ImGui::SliderFloat("Size", &size, 6.0f, 48.0f))
-        selected_font_size = size;
+    if (ImGui::SliderFloat("Size", &state.font_size, 6.0f, 48.0f, "%.0f"))
+        state.want_rebuild = true;
 
-    ImGuiIO& io = ImGui::GetIO();
     ImFontAtlas* atlas = io.Fonts;
     //if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
     ImGui::Text("Atlas texture (%dx%d pixels)", atlas->TexData.TexWidth, atlas->TexData.TexHeight);
@@ -10493,17 +10478,22 @@ void ImGui::ShowFontDemoWindow()
         ImGuiIO& io = ImGui::GetIO();
 
         ImGuiBackendFlags backend_flags = io.BackendFlags;
+        ImGui::Text("Backends: '%s' + '%s'", io.BackendPlatformName ? io.BackendPlatformName : "", io.BackendRendererName ? io.BackendRendererName : "");
         ImGui::CheckboxFlags("io.BackendFlags: RendererHasTexReload", &backend_flags, ImGuiBackendFlags_RendererHasTexReload);
-        if (io.BackendPlatformName)
-            ImGui::TextUnformatted(io.BackendPlatformName);
-        if (io.BackendRendererName)
-            ImGui::TextUnformatted(io.BackendRendererName);
+        static bool always_rebuild = true;
 
-        ImGui::PushID(0);
-        ShowFontDemo(font_demo_state);
+        ImGui::Checkbox("Rebuild every frame", &always_rebuild);
+        if (always_rebuild)
+            font_demo_state1.want_rebuild = font_demo_state2.want_rebuild = true;
+        ImGui::SameLine(); HelpMarker("Otherwise last rebuilt will be applied to current atlas.");
+
+        ImGui::Separator();
+
+        ImGui::PushID("state1");
+        ShowFontDemo(font_demo_state1);
         ImGui::PopID();
 
-        ImGui::PushID(1);
+        ImGui::PushID("state2");
         ShowFontDemo(font_demo_state2);
         ImGui::PopID();
 

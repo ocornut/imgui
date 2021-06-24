@@ -464,15 +464,19 @@ static void ImGui_ImplDX9_DeleteTextures(ImVector<LPDIRECT3DTEXTURE9>& textures)
         textures[i]->Release();
 }
 
-static void ImGui_ImplDX9_UpdateTextures(ImVector<LPDIRECT3DTEXTURE9>& textures, const ImVector<ImTextureData*>& textures_data)
+void ImGui_ImplDX9_UpdateTextures()
 {
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    ImVector<LPDIRECT3DTEXTURE9>& textures = bd->FontTextures;
+    ImTextureUpdateData* update_data = ImGui::GetTextureUpdateData();
+
     ImVector<LPDIRECT3DTEXTURE9> discarded = textures;
 
-    bool recreate_all = textures.empty();
+    bool recreate_all = (textures.Size == 0);
 
-    for (int i = 0; i < textures_data.Size; ++i)
+    for (int i = 0; i < update_data->Textures.Size; ++i)
     {
-        ImTextureData* texture_data = textures_data[i];
+        ImTextureData* texture_data = update_data->Textures[i];
 
         LPDIRECT3DTEXTURE9 current_texture = (LPDIRECT3DTEXTURE9)texture_data->GetTexID();
         if (current_texture == nullptr || recreate_all || texture_data->IsDirty())
@@ -492,21 +496,15 @@ static void ImGui_ImplDX9_UpdateTextures(ImVector<LPDIRECT3DTEXTURE9>& textures,
             texture_data->MarkClean();
         }
         else if (current_texture)
+        {
             discarded.find_erase_unsorted(current_texture);
+        }
     }
 
     ImGui_ImplDX9_DeleteTextures(discarded);
 
     for (int i = 0; i < discarded.Size; ++i)
         textures.find_erase_unsorted(discarded[i]);
-}
-
-void ImGui_ImplDX9_UpdateTextures()
-{
-    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    ImTextureUpdateData texture_update_data = ImGui::GetTextureUpdateData();
-
-    ImGui_ImplDX9_UpdateTextures(bd->FontTextures, texture_update_data.Textures);
 }
 
 //-----------------------------------------------------------------------------

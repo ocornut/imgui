@@ -2648,19 +2648,15 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 4;
 }
 
-void ImFontAtlas::BuildTextureUpdateData(ImTextureUpdateData* texture_update_data)
+ImTextureUpdateData* ImFontAtlas::GetTextureUpdateData()
 {
-    texture_update_data->Textures.reserve(texture_update_data->Textures.Size + TexPages.Size + 1);
-    texture_update_data->Textures.push_back(&TexData);
+    ImTextureUpdateData* tex_update_data = &TexUpdateData;
+    tex_update_data->Textures.resize(0);
+    tex_update_data->Textures.reserve(TexPages.Size + 1);
+    tex_update_data->Textures.push_back(&TexData);
     for (int i = 0; i < TexPages.Size; ++i)
-        texture_update_data->Textures.push_back(&TexPages[i]);
-}
-
-ImTextureUpdateData ImFontAtlas::GetTextureUpdateData()
-{
-    ImTextureUpdateData result;
-    BuildTextureUpdateData(&result);
-    return result;
+        tex_update_data->Textures.push_back(&TexPages[i]);
+    return tex_update_data;
 }
 
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)

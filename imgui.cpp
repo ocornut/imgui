@@ -4740,7 +4740,7 @@ ImDrawData* ImGui::GetDrawData()
     return viewport->DrawDataP.Valid ? &viewport->DrawDataP : NULL;
 }
 
-ImTextureUpdateData ImGui::GetTextureUpdateData()
+ImTextureUpdateData* ImGui::GetTextureUpdateData()
 {
     ImGuiContext& g = *GImGui;
     return g.IO.Fonts->GetTextureUpdateData();
