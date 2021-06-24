@@ -36,7 +36,9 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Other Changes:
-- TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
+- Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument display a dot instead of a '*' so it
+  is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
+  Added extra comments to clarify the purpose of this flag in the context of docked windows.
 - Tables: Added ImGuiTableColumnFlags_Disabled acting a master disable over (hidden from user/context menu). (#3935)
 - Tables: Clarified that TableSetColumnEnabled() requires the table to use the ImGuiTableFlags_Hideable flag,
   because it manipulates the user-accessible show/hide state. (#3935)
@@ -44,6 +46,7 @@ Other Changes:
   Convenient for some small columns. Name will still appear in context menu. (#4206).
 - Tables: Fix columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
 - Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
+- TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
