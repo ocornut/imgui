@@ -41,7 +41,8 @@
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
 
 #ifdef _MSC_VER
-#pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
+#pragma warning (disable: 4505)     // unreferenced local function has been removed (stb stuff)
+#pragma warning (disable: 26812)    // [Static Analyzer] The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
 #endif
 
 #if defined(__GNUC__)
@@ -600,13 +601,15 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     if (src_load_color)
     {
-        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight * 4);
-        memset(atlas->TexPixelsRGBA32, 0, atlas->TexWidth * atlas->TexHeight * 4);
+        size_t tex_size = (size_t)atlas->TexWidth * atlas->TexHeight * 4;
+        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(tex_size);
+        memset(atlas->TexPixelsRGBA32, 0, tex_size);
     }
     else
     {
-        atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
-        memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+        size_t tex_size = (size_t)atlas->TexWidth * atlas->TexHeight * 1;
+        atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(tex_size);
+        memset(atlas->TexPixelsAlpha8, 0, tex_size);
     }
 
     // 8. Copy rasterized font characters back into the main texture

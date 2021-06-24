@@ -420,6 +420,8 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
 	if (RtlVerifyVersionInfoFn == NULL)
 		if (HMODULE ntdllModule = ::GetModuleHandleA("ntdll.dll"))
 			RtlVerifyVersionInfoFn = (PFN_RtlVerifyVersionInfo)GetProcAddress(ntdllModule, "RtlVerifyVersionInfo");
+    if (RtlVerifyVersionInfoFn == NULL)
+        return FALSE;
 
 	RTL_OSVERSIONINFOEXW versionInfo = { };
 	ULONGLONG conditionMask = 0;
