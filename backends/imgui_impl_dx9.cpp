@@ -49,12 +49,12 @@ struct ImGui_ImplDX9_Data
     LPDIRECT3DDEVICE9           pd3dDevice;
     LPDIRECT3DVERTEXBUFFER9     pVB;
     LPDIRECT3DINDEXBUFFER9      pIB;
-    ImVector<LPDIRECT3DTEXTURE9>FontTextures;
-    int                         FontTexturesUpdateFrame;
+    ImVector<LPDIRECT3DTEXTURE9>Textures;
+    int                         TexturesUpdateFrame;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
-    ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); FontTexturesUpdateFrame = -1; VertexBufferSize = 5000; IndexBufferSize = 10000; }
+    ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); TexturesUpdateFrame = -1; VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
 struct CUSTOMVERTEX
@@ -77,9 +77,6 @@ static ImGui_ImplDX9_Data* ImGui_ImplDX9_GetBackendData()
 {
     return ImGui::GetCurrentContext() ? (ImGui_ImplDX9_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
-
-// Functions
-static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(const ImTextureData& texture_data);
 
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
@@ -159,7 +156,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 
     // Update textures if not done already
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    if (bd->FontTexturesUpdateFrame != ImGui::GetFrameCount())
+    if (bd->TexturesUpdateFrame != ImGui::GetFrameCount())
         ImGui_ImplDX9_UpdateTextures();
 
     // Create and grow buffers if needed
@@ -340,17 +337,17 @@ static bool ImGui_ImplDX9_CheckFormatSupport(IDirect3DDevice9* pDevice, D3DFORMA
     return support;
 }
 
-static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture, const ImTextureData& texture_data)
+static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 gpu_tex, const ImTextureData* in_tex_data)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    unsigned char*     pixels          = (unsigned char*)texture_data.TexPixels;
-    int                width           = texture_data.TexWidth;
-    int                height          = texture_data.TexHeight;
+    unsigned char*  pixels  = (unsigned char*)in_tex_data->TexPixels;
+    int             width   = in_tex_data->TexWidth;
+    int             height  = in_tex_data->TexHeight;
 
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     const bool rgba_support = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
-    if (!rgba_support && texture_data.TexFormat == ImTextureFormat_RGBA32)
+    if (!rgba_support && in_tex_data->TexFormat == ImTextureFormat_RGBA32)
     {
         int bytes_per_pixel = 4;
         ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
@@ -362,16 +359,15 @@ static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture
     const bool rgba_support = false;
 #endif
 
+    // Create or recreate texture if needed
     D3DSURFACE_DESC surface_desc = {};
-    if (texture)
-        texture->GetLevelDesc(0, &surface_desc);
-
-    // Upload texture to graphics system
-    if (texture == nullptr || surface_desc.Width != (UINT)width || surface_desc.Height != (UINT)height)
+    if (gpu_tex != nullptr)
+        gpu_tex->GetLevelDesc(0, &surface_desc);
+    if (gpu_tex == nullptr || surface_desc.Width != (UINT)width || surface_desc.Height != (UINT)height)
     {
         // Create texture
-        texture = nullptr;
-        if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, nullptr) < 0)
+        gpu_tex = nullptr;
+        if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &gpu_tex, nullptr) < 0)
             return false;
 
         // Store size
@@ -379,6 +375,7 @@ static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture
         surface_desc.Height = height;
     }
 
+    // Update pixels
     {
         D3DLOCKED_RECT tex_locked_rect;
         RECT dirty_rect;
@@ -386,7 +383,7 @@ static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture
         dirty_rect.right = width;
         dirty_rect.top = 0;
         dirty_rect.bottom = height;
-        if (texture->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
+        if (gpu_tex->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
             return false;
 
         if (tex_locked_rect.Pitch == (width * 4))
@@ -409,16 +406,15 @@ static LPDIRECT3DTEXTURE9 ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture
                 read_ptr += src_stride;
             }
         }
-        texture->UnlockRect(0);
+        gpu_tex->UnlockRect(0);
     }
 
-    // Upload the dirty region
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!rgba_support && texture_data.TexFormat == ImTextureFormat_RGBA32)
+    if (!rgba_support && in_tex_data->TexFormat == ImTextureFormat_RGBA32)
         ImGui::MemFree(pixels);
 #endif
 
-    return texture;
+    return gpu_tex;
 }
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
@@ -437,9 +433,9 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         return;
     if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
-    for (int i = 0; i < bd->FontTextures.Size; ++i)
-        bd->FontTextures[i]->Release();
-    bd->FontTextures.resize(0);
+    for (int i = 0; i < bd->Textures.Size; ++i)
+        bd->Textures[i]->Release();
+    bd->Textures.resize(0);
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -449,42 +445,33 @@ void ImGui_ImplDX9_NewFrame()
     IM_UNUSED(bd);
 }
 
-static void ImGui_ImplDX9_DeleteTextures(ImVector<LPDIRECT3DTEXTURE9>& textures)
-{
-    if (textures.empty())
-        return;
-
-    for (int i = 0; i < textures.Size; ++i)
-        textures[i]->Release();
-}
-
+// FIXME-TEXUPDATE: Can we somehow allow multiple "observer" for the dirty data? (local + remote client).... means that we don't store IsDirty() in texture but instead maybe counter?
 void ImGui_ImplDX9_UpdateTextures()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
 
     // We automatically call this from _RenderDrawData() but allow user to call it explicitely earlier is desired
     const int frame_count = ImGui::GetFrameCount();
-    if (bd->FontTexturesUpdateFrame == frame_count)
+    if (bd->TexturesUpdateFrame == frame_count)
         return;
-    bd->FontTexturesUpdateFrame = frame_count;
+    bd->TexturesUpdateFrame = frame_count;
 
-    ImVector<LPDIRECT3DTEXTURE9>& textures = bd->FontTextures;
+    // Get texture list
+    ImVector<LPDIRECT3DTEXTURE9>& textures = bd->Textures;
     ImTextureUpdateData* update_data = ImGui::GetTextureUpdateData();
-
-    ImVector<LPDIRECT3DTEXTURE9> discarded = textures;
+    ImVector<LPDIRECT3DTEXTURE9> discarded = textures; // FIXME-TEXUPDATE: This would allocate every frame, try to avoid it (holding on a static ImVector<> buffer?)
 
     bool recreate_all = (textures.Size == 0);
-
     for (int i = 0; i < update_data->Textures.Size; ++i)
     {
-        ImTextureData* texture_data = update_data->Textures[i];
+        ImTextureData* in_tex_data = update_data->Textures[i];
 
-        LPDIRECT3DTEXTURE9 current_texture = (LPDIRECT3DTEXTURE9)texture_data->GetTexID();
-        if (current_texture == nullptr || recreate_all || texture_data->IsDirty())
+        LPDIRECT3DTEXTURE9 current_texture = (LPDIRECT3DTEXTURE9)in_tex_data->GetTexID();
+        if (current_texture == nullptr || recreate_all || in_tex_data->IsDirty())
         {
-            texture_data->EnsureFormat(ImTextureFormat_RGBA32);
+            in_tex_data->EnsureFormat(ImTextureFormat_RGBA32);
 
-            LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_UpdateTexture(current_texture, *texture_data);
+            LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_UpdateTexture(current_texture, in_tex_data);
             if (current_texture != nullptr && new_texture != current_texture)
                 textures.find_erase_unsorted(current_texture);
 
@@ -493,8 +480,8 @@ void ImGui_ImplDX9_UpdateTextures()
 
             discarded.find_erase_unsorted(new_texture);
 
-            texture_data->SetTexID(new_texture);
-            texture_data->MarkClean();
+            in_tex_data->SetTexID(new_texture);
+            in_tex_data->MarkClean();
         }
         else if (current_texture)
         {
@@ -502,10 +489,12 @@ void ImGui_ImplDX9_UpdateTextures()
         }
     }
 
-    ImGui_ImplDX9_DeleteTextures(discarded);
-
+    // Remove unused textures
     for (int i = 0; i < discarded.Size; ++i)
+    {
+        discarded[i]->Release();
         textures.find_erase_unsorted(discarded[i]);
+    }
 }
 
 //-----------------------------------------------------------------------------
