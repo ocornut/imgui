@@ -5040,6 +5040,11 @@ void ImGui::NewFrame()
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePre);
 
+    // Check that font atlas was built or backend support texture reload in which case we can build now
+    ImFontAtlas* atlas = g.IO.Fonts;
+    if (!atlas->IsBuilt() && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTexReload))
+        atlas->Build();
+
     // Check and assert for various common IO and Configuration mistakes
     ErrorCheckNewFrameSanityChecks();
 
