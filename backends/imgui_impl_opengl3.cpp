@@ -14,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-06-25: OpenGL: Use OES_vertex_array extension on Emscripten + backup/restore current state.
 //  2021-06-21: OpenGL: Destroy individual vertex/fragment shader objects right after they are linked into the main shader.
 //  2021-05-24: OpenGL: Access GL_CLIP_ORIGIN when "GL_ARB_clip_control" extension is detected, inside of just OpenGL 4.5 version.
 //  2021-05-19: OpenGL: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
@@ -94,6 +95,12 @@
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
+#if defined(__EMSCRIPTEN__)
+#ifndef GL_GLEXT_PROTOTYPES
+#define GL_GLEXT_PROTOTYPES
+#endif
+#include <GLES2/gl2ext.h>
+#endif
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
 #include <OpenGLES/ES3/gl.h>    // Use GL ES 3
@@ -130,6 +137,17 @@ using namespace gl;
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
+#endif
+
+// Vertex arrays are not supported on ES2/WebGL1 unless Emscripten which uses an extension
+#ifndef IMGUI_IMPL_OPENGL_ES2
+#define IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
+#elif defined(__EMSCRIPTEN__)
+#define IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
+#define glBindVertexArray       glBindVertexArrayOES
+#define glGenVertexArrays       glGenVertexArraysOES
+#define glDeleteVertexArrays    glDeleteVertexArraysOES
+#define GL_VERTEX_ARRAY_BINDING GL_VERTEX_ARRAY_BINDING_OES
 #endif
 
 // Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
@@ -323,7 +341,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 #endif
 
     (void)vertex_array_object;
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glBindVertexArray(vertex_array_object);
 #endif
 
@@ -358,7 +376,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLuint last_sampler; if (g_GlVersion >= 330) { glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&last_sampler); } else { last_sampler = 0; }
 #endif
     GLuint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, (GLint*)&last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GLuint last_vertex_array_object; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, (GLint*)&last_vertex_array_object);
 #endif
 #ifdef GL_POLYGON_MODE
@@ -385,7 +403,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glGenVertexArrays(1, &vertex_array_object);
 #endif
     ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
@@ -443,7 +461,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Destroy the temporary VAO
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glDeleteVertexArrays(1, &vertex_array_object);
 #endif
 
@@ -455,7 +473,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         glBindSampler(0, last_sampler);
 #endif
     glActiveTexture(last_active_texture);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glBindVertexArray(last_vertex_array_object);
 #endif
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
@@ -559,7 +577,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GLint last_texture, last_array_buffer;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GLint last_vertex_array;
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 #endif
@@ -732,7 +750,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Restore modified GL state
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glBindVertexArray(last_vertex_array);
 #endif
 

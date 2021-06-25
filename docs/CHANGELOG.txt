@@ -63,6 +63,7 @@ Other Changes:
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
 - Backends: OpenGL3: Destroy vertex/fragment shader objects right after they are linked into main shader. (#4244) [@Crowbarous]
+- Backends: OpenGL3: Use OES_vertex_array extension on Emscripten + backup/restore current state. (#4266, #4267) [@harry75369]
 - Backends: OSX: Added a fix for shortcuts using CTRL key instead of CMD key. (#4253) [@rokups]
 - Examples: OSX+OpenGL2: Fix event forwarding (fix key remaining stuck when using shortcuts with Cmd/Super key).
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
