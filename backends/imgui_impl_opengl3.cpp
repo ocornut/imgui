@@ -91,6 +91,12 @@
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
+#if defined(__EMSCRIPTEN__)
+#ifndef GL_GLEXT_PROTOTYPES
+#define GL_GLEXT_PROTOTYPES
+#endif
+#include <GLES2/gl2ext.h>
+#endif
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
 #include <OpenGLES/ES3/gl.h>    // Use GL ES 3
@@ -301,8 +307,10 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 #endif
 
     (void)vertex_array_object;
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     glBindVertexArray(vertex_array_object);
+#elif defined(__EMSCRIPTEN__)
+    glBindVertexArrayOES(vertex_array_object);
 #endif
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
@@ -336,8 +344,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLuint last_sampler; if (g_GlVersion >= 330) { glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&last_sampler); } else { last_sampler = 0; }
 #endif
     GLuint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, (GLint*)&last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     GLuint last_vertex_array_object; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, (GLint*)&last_vertex_array_object);
+#elif defined(__EMSCRIPTEN__)
+    GLuint last_vertex_array_object; glGetIntegerv(GL_VERTEX_ARRAY_BINDING_OES, (GLint*)&last_vertex_array_object);
 #endif
 #ifdef GL_POLYGON_MODE
     GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
@@ -363,8 +373,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     glGenVertexArrays(1, &vertex_array_object);
+#elif defined(__EMSCRIPTEN__)
+    glGenVertexArraysOES(1, &vertex_array_object);
 #endif
     ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
 
@@ -421,8 +433,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Destroy the temporary VAO
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     glDeleteVertexArrays(1, &vertex_array_object);
+#elif defined(__EMSCRIPTEN__)
+    glDeleteVertexArraysOES(1, &vertex_array_object);
 #endif
 
     // Restore modified GL state
@@ -433,8 +447,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         glBindSampler(0, last_sampler);
 #endif
     glActiveTexture(last_active_texture);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     glBindVertexArray(last_vertex_array_object);
+#elif defined(__EMSCRIPTEN__)
+    glBindVertexArrayOES(last_vertex_array_object);
 #endif
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
@@ -537,9 +553,12 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GLint last_texture, last_array_buffer;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if! defined(IMGUI_IMPL_OPENGL_ES2)
     GLint last_vertex_array;
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+#elif defined(__EMSCRIPTEN__)
+    GLint last_vertex_array;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING_OES, &last_vertex_array);
 #endif
 
     // Parse GLSL version string
@@ -704,8 +723,10 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Restore modified GL state
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
     glBindVertexArray(last_vertex_array);
+#elif defined(__EMSCRIPTEN__)
+    glBindVertexArrayOES(last_vertex_array);
 #endif
 
     return true;
