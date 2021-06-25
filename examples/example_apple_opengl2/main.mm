@@ -140,9 +140,6 @@
 }
 
 // Forward Mouse/Keyboard events to Dear ImGui OSX backend.
--(void)keyUp:(NSEvent *)event               { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)keyDown:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)flagsChanged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseDown:(NSEvent *)event           { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)rightMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)otherMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
@@ -155,7 +152,6 @@
 -(void)mouseDragged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)rightMouseDragged:(NSEvent *)event   { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)otherMouseDragged:(NSEvent *)event   { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)scrollWheel:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
 
 @end
 
@@ -243,6 +239,15 @@
     if ([view openGLContext] == nil)
         NSLog(@"No OpenGL Context!");
 
+    // Some events do not raise callbacks of ImGuiExampleView in some circumstances (for example when CMD key is held down).
+    // This monitor taps into global event stream and captures these events.
+    NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
+    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
+     {
+         ImGui_ImplOSX_HandleEvent(event, view);
+         return event;
+     }];
+    
     // Setup Dear ImGui context
     // FIXME: This example doesn't have proper cleanup...
     IMGUI_CHECKVERSION();
