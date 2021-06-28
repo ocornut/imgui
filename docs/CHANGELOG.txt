@@ -55,6 +55,8 @@ Other Changes:
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.
+- Backends: Reorganized most backends (Win32, SDL, GLFW, OpenGL2/3, DX9/10/11/12, Vulkan, Allegro) to pull data
+  from a single structure to facilitate usage with multiple-contexts. (#586, #1851, #2004, #3012, #3934, #4141)
 - Backends: Win32: Rework to handle certains Windows 8.1/10 features without a manifest. (#4200, #4191)
   - ImGui_ImplWin32_GetDpiScaleForMonitor() will handle per-monitor DPI on Windows 10 without a manifest.
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
