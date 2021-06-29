@@ -237,19 +237,18 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
-#if defined(IMGUI_IMPL_OPENGL_ES2)
     if (glsl_version == NULL)
+    {
+#if defined(IMGUI_IMPL_OPENGL_ES2)
         glsl_version = "#version 100";
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
-    if (glsl_version == NULL)
         glsl_version = "#version 300 es";
 #elif defined(__APPLE__)
-    if (glsl_version == NULL)
         glsl_version = "#version 150";
 #else
-    if (glsl_version == NULL)
         glsl_version = "#version 130";
 #endif
+    }
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(bd->GlslVersionString));
     strcpy(bd->GlslVersionString, glsl_version);
     strcat(bd->GlslVersionString, "\n");

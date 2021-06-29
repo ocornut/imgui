@@ -326,14 +326,10 @@ void ImGui_ImplGlfw_Shutdown()
         glfwSetScrollCallback(bd->Window, bd->PrevUserCallbackScroll);
         glfwSetKeyCallback(bd->Window, bd->PrevUserCallbackKey);
         glfwSetCharCallback(bd->Window, bd->PrevUserCallbackChar);
-        bd->InstalledCallbacks = false;
     }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
-    {
         glfwDestroyCursor(bd->MouseCursors[cursor_n]);
-        bd->MouseCursors[cursor_n] = NULL;
-    }
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
