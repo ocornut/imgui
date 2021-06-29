@@ -63,11 +63,11 @@ struct ImGui_ImplOpenGL2_Data
     ImGui_ImplOpenGL2_Data() { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplOpenGL2_Data*  g_Data;
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_CreateBackendData()   { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplOpenGL2_Data); return g_Data; }
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_GetBackendData()      { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                     ImGui_ImplOpenGL2_DestroyBackendData()  { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_CreateBackendData()   { return IM_NEW(ImGui_ImplOpenGL2_Data)(); }
+static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_GetBackendData()      { return (ImGui_ImplOpenGL2_Data*)ImGui::GetIO().BackendRendererUserData; }
+static void                     ImGui_ImplOpenGL2_DestroyBackendData()  { IM_DELETE(ImGui_ImplOpenGL2_GetBackendData()); }
 
 // Functions
 bool    ImGui_ImplOpenGL2_Init()

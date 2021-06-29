@@ -62,11 +62,11 @@ struct ImGui_ImplDX10_Data
     ImGui_ImplDX10_Data()       { memset(this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplDX10_Data* g_Data;
-static ImGui_ImplDX10_Data* ImGui_ImplDX10_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplDX10_Data); return g_Data; }
-static ImGui_ImplDX10_Data* ImGui_ImplDX10_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                 ImGui_ImplDX10_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplDX10_Data*     ImGui_ImplDX10_CreateBackendData()  { return IM_NEW(ImGui_ImplDX10_Data)(); }
+static ImGui_ImplDX10_Data*     ImGui_ImplDX10_GetBackendData()     { return (ImGui_ImplDX10_Data*)ImGui::GetIO().BackendRendererUserData; }
+static void                     ImGui_ImplDX10_DestroyBackendData() { IM_DELETE(ImGui_ImplDX10_GetBackendData()); }
 
 struct VERTEX_CONSTANT_BUFFER
 {

@@ -69,14 +69,16 @@ struct ImGui_ImplSDL2_Data
     char*       ClipboardTextData;
     bool        MouseCanUseGlobalState;
 
-    ImGui_ImplSDL2_Data() { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplSDL2_Data()   { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplSDL2_Data* g_Data;
-static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplSDL2_Data); return g_Data; }
-static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                 ImGui_ImplSDL2_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+// FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_CreateBackendData()  { return IM_NEW(ImGui_ImplSDL2_Data)(); }
+static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_GetBackendData()     { return (ImGui_ImplSDL2_Data*)ImGui::GetIO().BackendPlatformUserData; }
+static void                 ImGui_ImplSDL2_DestroyBackendData() { IM_DELETE(ImGui_ImplSDL2_GetBackendData()); }
 
 // Functions
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)

@@ -82,11 +82,13 @@ struct ImGui_ImplWin32_Data
     ImGui_ImplWin32_Data()      { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplWin32_Data*    g_Data;
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplWin32_Data); return g_Data; }
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return ImGui::GetCurrentContext() ? g_Data : NULL; }
-static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+// FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { return IM_NEW(ImGui_ImplWin32_Data)(); }
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData; }
+static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(ImGui_ImplWin32_GetBackendData()); }
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)

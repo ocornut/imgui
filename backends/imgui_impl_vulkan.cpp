@@ -110,11 +110,12 @@ struct ImGui_ImplVulkan_Data
     }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplVulkan_Data*   g_Data;
-static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_CreateBackendData()    { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplVulkan_Data); return g_Data; }
-static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_GetBackendData()       { return ImGui::GetCurrentContext() ? g_Data : NULL; }
-static void                     ImGui_ImplVulkan_DestroyBackendData()   { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not tested and probably dysfunctional in this backend.
+static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_CreateBackendData()    { return IM_NEW(ImGui_ImplVulkan_Data)(); }
+static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_GetBackendData()       { return (ImGui_ImplVulkan_Data*)ImGui::GetIO().BackendRendererUserData; }
+static void                     ImGui_ImplVulkan_DestroyBackendData()   { IM_DELETE(ImGui_ImplVulkan_GetBackendData()); }
 
 // Forward Declarations
 bool ImGui_ImplVulkan_CreateDeviceObjects();
