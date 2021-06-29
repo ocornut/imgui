@@ -49,7 +49,7 @@
 #endif
 
 // DirectX data
-struct FrameResources
+struct ImGui_ImplDX12_RenderBuffers
 {
     ID3D12Resource*     IndexBuffer;
     ID3D12Resource*     VertexBuffer;
@@ -59,19 +59,19 @@ struct FrameResources
 
 struct ImGui_ImplDX12_Data
 {
-    ID3D12Device*               pd3dDevice;
-    ID3D12RootSignature*        pRootSignature;
-    ID3D12PipelineState*        pPipelineState;
-    DXGI_FORMAT                 RTVFormat;
-    ID3D12Resource*             pFontTextureResource;
-    D3D12_CPU_DESCRIPTOR_HANDLE hFontSrvCpuDescHandle;
-    D3D12_GPU_DESCRIPTOR_HANDLE hFontSrvGpuDescHandle;
+    ID3D12Device*                   pd3dDevice;
+    ID3D12RootSignature*            pRootSignature;
+    ID3D12PipelineState*            pPipelineState;
+    DXGI_FORMAT                     RTVFormat;
+    ID3D12Resource*                 pFontTextureResource;
+    D3D12_CPU_DESCRIPTOR_HANDLE     hFontSrvCpuDescHandle;
+    D3D12_GPU_DESCRIPTOR_HANDLE     hFontSrvGpuDescHandle;
 
-    FrameResources*             pFrameResources;
-    UINT                        numFramesInFlight;
-    UINT                        frameIndex;
+    ImGui_ImplDX12_RenderBuffers*   pFrameResources;
+    UINT                            numFramesInFlight;
+    UINT                            frameIndex;
 
-    ImGui_ImplDX12_Data()       { memset(this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
+    ImGui_ImplDX12_Data()           { memset(this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
 
 // Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
@@ -93,7 +93,7 @@ struct VERTEX_CONSTANT_BUFFER
     float   mvp[4][4];
 };
 
-static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, FrameResources* fr)
+static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_ImplDX12_RenderBuffers* fr)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
 
@@ -161,7 +161,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     bd->frameIndex = bd->frameIndex + 1;
-    FrameResources* fr = &bd->pFrameResources[bd->frameIndex % bd->numFramesInFlight];
+    ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[bd->frameIndex % bd->numFramesInFlight];
 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == NULL || fr->VertexBufferSize < draw_data->TotalVtxCount)
@@ -433,10 +433,8 @@ static void ImGui_ImplDX12_CreateFontsTexture()
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
 {
-    if (ImGui::GetCurrentContext() == NULL)
-        return false;
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    if (!bd->pd3dDevice)
+    if (!bd || !bd->pd3dDevice)
         return false;
     if (bd->pPipelineState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
@@ -668,12 +666,10 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
 
 void    ImGui_ImplDX12_InvalidateDeviceObjects()
 {
-    if (ImGui::GetCurrentContext() == NULL)
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    if (!bd || !bd->pd3dDevice)
         return;
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    if (!bd->pd3dDevice)
-        return;
 
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
@@ -682,7 +678,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
 
     for (UINT i = 0; i < bd->numFramesInFlight; i++)
     {
-        FrameResources* fr = &bd->pFrameResources[i];
+        ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[i];
         SafeRelease(fr->IndexBuffer);
         SafeRelease(fr->VertexBuffer);
     }
@@ -704,7 +700,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     bd->RTVFormat = rtv_format;
     bd->hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
     bd->hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
-    bd->pFrameResources = new FrameResources[num_frames_in_flight];
+    bd->pFrameResources = new ImGui_ImplDX12_RenderBuffers[num_frames_in_flight];
     bd->numFramesInFlight = num_frames_in_flight;
     bd->frameIndex = UINT_MAX;
     IM_UNUSED(cbv_srv_heap); // Unused in master branch (will be used by multi-viewports)
@@ -712,7 +708,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     // Create buffers with a default size (they will later be grown as needed)
     for (int i = 0; i < num_frames_in_flight; i++)
     {
-        FrameResources* fr = &bd->pFrameResources[i];
+        ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[i];
         fr->IndexBuffer = NULL;
         fr->VertexBuffer = NULL;
         fr->IndexBufferSize = 10000;
@@ -729,12 +725,6 @@ void ImGui_ImplDX12_Shutdown()
 
     ImGui_ImplDX12_InvalidateDeviceObjects();
     delete[] bd->pFrameResources;
-    bd->pFrameResources = NULL;
-    bd->pd3dDevice = NULL;
-    bd->hFontSrvCpuDescHandle.ptr = 0;
-    bd->hFontSrvGpuDescHandle.ptr = 0;
-    bd->numFramesInFlight = 0;
-    bd->frameIndex = UINT_MAX;
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
     ImGui_ImplDX12_DestroyBackendData();

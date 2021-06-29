@@ -2760,7 +2760,7 @@ struct ImFont
 // [SECTION] Viewports
 //-----------------------------------------------------------------------------
 
-// Flags stored in ImGuiViewport::Flags
+// Flags stored in ImGuiViewport::Flags, giving indications to the platform backends.
 enum ImGuiViewportFlags_
 {
     ImGuiViewportFlags_None                     = 0,
