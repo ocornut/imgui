@@ -601,20 +601,20 @@ void ImGui_ImplDX11_NewFrame()
 //--------------------------------------------------------------------------------------------------------
 
 // Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
-struct ImGuiViewportDataDx11
+struct ImGui_ImplDX11_ViewportData
 {
-    IDXGISwapChain*             SwapChain;
-    ID3D11RenderTargetView*     RTView;
+    IDXGISwapChain*                 SwapChain;
+    ID3D11RenderTargetView*         RTView;
 
-    ImGuiViewportDataDx11()     { SwapChain = NULL; RTView = NULL; }
-    ~ImGuiViewportDataDx11()    { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
+    ImGui_ImplDX11_ViewportData()   { SwapChain = NULL; RTView = NULL; }
+    ~ImGui_ImplDX11_ViewportData()  { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
 };
 
 static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    ImGuiViewportDataDx11* data = IM_NEW(ImGuiViewportDataDx11)();
-    viewport->RendererUserData = data;
+    ImGui_ImplDX11_ViewportData* vd = IM_NEW(ImGui_ImplDX11_ViewportData)();
+    viewport->RendererUserData = vd;
 
     // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
     // Some backend will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
@@ -636,15 +636,15 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     sd.Flags = 0;
 
-    IM_ASSERT(data->SwapChain == NULL && data->RTView == NULL);
-    bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &data->SwapChain);
+    IM_ASSERT(vd->SwapChain == NULL && vd->RTView == NULL);
+    bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
 
     // Create the render target
-    if (data->SwapChain)
+    if (vd->SwapChain)
     {
         ID3D11Texture2D* pBackBuffer;
-        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &vd->RTView);
         pBackBuffer->Release();
     }
 }
@@ -652,15 +652,15 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
-    if (ImGuiViewportDataDx11* data = (ImGuiViewportDataDx11*)viewport->RendererUserData)
+    if (ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData)
     {
-        if (data->SwapChain)
-            data->SwapChain->Release();
-        data->SwapChain = NULL;
-        if (data->RTView)
-            data->RTView->Release();
-        data->RTView = NULL;
-        IM_DELETE(data);
+        if (vd->SwapChain)
+            vd->SwapChain->Release();
+        vd->SwapChain = NULL;
+        if (vd->RTView)
+            vd->RTView->Release();
+        vd->RTView = NULL;
+        IM_DELETE(vd);
     }
     viewport->RendererUserData = NULL;
 }
@@ -668,19 +668,19 @@ static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    ImGuiViewportDataDx11* data = (ImGuiViewportDataDx11*)viewport->RendererUserData;
-    if (data->RTView)
+    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    if (vd->RTView)
     {
-        data->RTView->Release();
-        data->RTView = NULL;
+        vd->RTView->Release();
+        vd->RTView = NULL;
     }
-    if (data->SwapChain)
+    if (vd->SwapChain)
     {
         ID3D11Texture2D* pBackBuffer = NULL;
-        data->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
-        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
+        vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
         if (pBackBuffer == NULL) { fprintf(stderr, "ImGui_ImplDX11_SetWindowSize() failed creating buffers.\n"); return; }
-        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &vd->RTView);
         pBackBuffer->Release();
     }
 }
@@ -688,18 +688,18 @@ static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    ImGuiViewportDataDx11* data = (ImGuiViewportDataDx11*)viewport->RendererUserData;
+    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-    bd->pd3dDeviceContext->OMSetRenderTargets(1, &data->RTView, NULL);
+    bd->pd3dDeviceContext->OMSetRenderTargets(1, &vd->RTView, NULL);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
-        bd->pd3dDeviceContext->ClearRenderTargetView(data->RTView, (float*)&clear_color);
+        bd->pd3dDeviceContext->ClearRenderTargetView(vd->RTView, (float*)&clear_color);
     ImGui_ImplDX11_RenderDrawData(viewport->DrawData);
 }
 
 static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    ImGuiViewportDataDx11* data = (ImGuiViewportDataDx11*)viewport->RendererUserData;
-    data->SwapChain->Present(0, 0); // Present without vsync
+    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    vd->SwapChain->Present(0, 0); // Present without vsync
 }
 
 static void ImGui_ImplDX11_InitPlatformInterface()

@@ -522,25 +522,25 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 //--------------------------------------------------------------------------------------------------------
 
 // Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
-struct ImGuiViewportDataSDL2
+struct ImGui_ImplSDL2_ViewportData
 {
     SDL_Window*     Window;
     Uint32          WindowID;
     bool            WindowOwned;
     SDL_GLContext   GLContext;
 
-    ImGuiViewportDataSDL2() { Window = NULL; WindowID = 0; WindowOwned = false; GLContext = NULL; }
-    ~ImGuiViewportDataSDL2() { IM_ASSERT(Window == NULL && GLContext == NULL); }
+    ImGui_ImplSDL2_ViewportData() { Window = NULL; WindowID = 0; WindowOwned = false; GLContext = NULL; }
+    ~ImGui_ImplSDL2_ViewportData() { IM_ASSERT(Window == NULL && GLContext == NULL); }
 };
 
 static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    ImGuiViewportDataSDL2* data = IM_NEW(ImGuiViewportDataSDL2)();
-    viewport->PlatformUserData = data;
+    ImGui_ImplSDL2_ViewportData* vd = IM_NEW(ImGui_ImplSDL2_ViewportData)();
+    viewport->PlatformUserData = vd;
 
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ImGuiViewportDataSDL2* main_viewport_data = (ImGuiViewportDataSDL2*)main_viewport->PlatformUserData;
+    ImGui_ImplSDL2_ViewportData* main_viewport_data = (ImGui_ImplSDL2_ViewportData*)main_viewport->PlatformUserData;
 
     // Share GL resources with main context
     bool use_opengl = (main_viewport_data->GLContext != NULL);
@@ -565,43 +565,43 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 #if SDL_HAS_ALWAYS_ON_TOP
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #endif
-    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    data->WindowOwned = true;
+    vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    vd->WindowOwned = true;
     if (use_opengl)
     {
-        data->GLContext = SDL_GL_CreateContext(data->Window);
+        vd->GLContext = SDL_GL_CreateContext(vd->Window);
         SDL_GL_SetSwapInterval(0);
     }
     if (use_opengl && backup_context)
-        SDL_GL_MakeCurrent(data->Window, backup_context);
+        SDL_GL_MakeCurrent(vd->Window, backup_context);
 
-    viewport->PlatformHandle = (void*)data->Window;
+    viewport->PlatformHandle = (void*)vd->Window;
 #if defined(_WIN32)
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
-    if (SDL_GetWindowWMInfo(data->Window, &info))
+    if (SDL_GetWindowWMInfo(vd->Window, &info))
         viewport->PlatformHandleRaw = info.info.win.window;
 #endif
 }
 
 static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
 {
-    if (ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData)
+    if (ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData)
     {
-        if (data->GLContext && data->WindowOwned)
-            SDL_GL_DeleteContext(data->GLContext);
-        if (data->Window && data->WindowOwned)
-            SDL_DestroyWindow(data->Window);
-        data->GLContext = NULL;
-        data->Window = NULL;
-        IM_DELETE(data);
+        if (vd->GLContext && vd->WindowOwned)
+            SDL_GL_DeleteContext(vd->GLContext);
+        if (vd->Window && vd->WindowOwned)
+            SDL_DestroyWindow(vd->Window);
+        vd->GLContext = NULL;
+        vd->Window = NULL;
+        IM_DELETE(vd);
     }
     viewport->PlatformUserData = viewport->PlatformHandle = NULL;
 }
 
 static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
 #if defined(_WIN32)
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
@@ -623,83 +623,83 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
     }
 #endif
 
-    SDL_ShowWindow(data->Window);
+    SDL_ShowWindow(vd->Window);
 }
 
 static ImVec2 ImGui_ImplSDL2_GetWindowPos(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
     int x = 0, y = 0;
-    SDL_GetWindowPosition(data->Window, &x, &y);
+    SDL_GetWindowPosition(vd->Window, &x, &y);
     return ImVec2((float)x, (float)y);
 }
 
 static void ImGui_ImplSDL2_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    SDL_SetWindowPosition(data->Window, (int)pos.x, (int)pos.y);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    SDL_SetWindowPosition(vd->Window, (int)pos.x, (int)pos.y);
 }
 
 static ImVec2 ImGui_ImplSDL2_GetWindowSize(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
     int w = 0, h = 0;
-    SDL_GetWindowSize(data->Window, &w, &h);
+    SDL_GetWindowSize(vd->Window, &w, &h);
     return ImVec2((float)w, (float)h);
 }
 
 static void ImGui_ImplSDL2_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    SDL_SetWindowSize(data->Window, (int)size.x, (int)size.y);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    SDL_SetWindowSize(vd->Window, (int)size.x, (int)size.y);
 }
 
 static void ImGui_ImplSDL2_SetWindowTitle(ImGuiViewport* viewport, const char* title)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    SDL_SetWindowTitle(data->Window, title);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    SDL_SetWindowTitle(vd->Window, title);
 }
 
 #if SDL_HAS_WINDOW_ALPHA
 static void ImGui_ImplSDL2_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    SDL_SetWindowOpacity(data->Window, alpha);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    SDL_SetWindowOpacity(vd->Window, alpha);
 }
 #endif
 
 static void ImGui_ImplSDL2_SetWindowFocus(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    SDL_RaiseWindow(data->Window);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    SDL_RaiseWindow(vd->Window);
 }
 
 static bool ImGui_ImplSDL2_GetWindowFocus(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    return (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    return (SDL_GetWindowFlags(vd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 static bool ImGui_ImplSDL2_GetWindowMinimized(ImGuiViewport* viewport)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    return (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_MINIMIZED) != 0;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    return (SDL_GetWindowFlags(vd->Window) & SDL_WINDOW_MINIMIZED) != 0;
 }
 
 static void ImGui_ImplSDL2_RenderWindow(ImGuiViewport* viewport, void*)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    if (data->GLContext)
-        SDL_GL_MakeCurrent(data->Window, data->GLContext);
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    if (vd->GLContext)
+        SDL_GL_MakeCurrent(vd->Window, vd->GLContext);
 }
 
 static void ImGui_ImplSDL2_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    if (data->GLContext)
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    if (vd->GLContext)
     {
-        SDL_GL_MakeCurrent(data->Window, data->GLContext);
-        SDL_GL_SwapWindow(data->Window);
+        SDL_GL_MakeCurrent(vd->Window, vd->GLContext);
+        SDL_GL_SwapWindow(vd->Window);
     }
 }
 
@@ -709,9 +709,9 @@ static void ImGui_ImplSDL2_SwapBuffers(ImGuiViewport* viewport, void*)
 #include <SDL_vulkan.h>
 static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface)
 {
-    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
     (void)vk_allocator;
-    SDL_bool ret = SDL_Vulkan_CreateSurface(data->Window, (VkInstance)vk_instance, (VkSurfaceKHR*)out_vk_surface);
+    SDL_bool ret = SDL_Vulkan_CreateSurface(vd->Window, (VkInstance)vk_instance, (VkSurfaceKHR*)out_vk_surface);
     return ret ? 0 : 1; // ret ? VK_SUCCESS : VK_NOT_READY
 }
 #endif // SDL_HAS_VULKAN
@@ -748,13 +748,13 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ImGuiViewportDataSDL2* data = IM_NEW(ImGuiViewportDataSDL2)();
-    data->Window = window;
-    data->WindowID = SDL_GetWindowID(window);
-    data->WindowOwned = false;
-    data->GLContext = sdl_gl_context;
-    main_viewport->PlatformUserData = data;
-    main_viewport->PlatformHandle = data->Window;
+    ImGui_ImplSDL2_ViewportData* vd = IM_NEW(ImGui_ImplSDL2_ViewportData)();
+    vd->Window = window;
+    vd->WindowID = SDL_GetWindowID(window);
+    vd->WindowOwned = false;
+    vd->GLContext = sdl_gl_context;
+    main_viewport->PlatformUserData = vd;
+    main_viewport->PlatformHandle = vd->Window;
 }
 
 static void ImGui_ImplSDL2_ShutdownPlatformInterface()

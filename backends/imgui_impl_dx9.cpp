@@ -393,52 +393,52 @@ void ImGui_ImplDX9_NewFrame()
 //--------------------------------------------------------------------------------------------------------
 
 // Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
-struct ImGuiViewportDataDx9
+struct ImGui_ImplDX9_ViewportData
 {
     IDirect3DSwapChain9*    SwapChain;
     D3DPRESENT_PARAMETERS   d3dpp;
 
-    ImGuiViewportDataDx9()  { SwapChain = NULL; ZeroMemory(&d3dpp, sizeof(D3DPRESENT_PARAMETERS)); }
-    ~ImGuiViewportDataDx9() { IM_ASSERT(SwapChain == NULL); }
+    ImGui_ImplDX9_ViewportData()  { SwapChain = NULL; ZeroMemory(&d3dpp, sizeof(D3DPRESENT_PARAMETERS)); }
+    ~ImGui_ImplDX9_ViewportData() { IM_ASSERT(SwapChain == NULL); }
 };
 
 static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    ImGuiViewportDataDx9* data = IM_NEW(ImGuiViewportDataDx9)();
-    viewport->RendererUserData = data;
+    ImGui_ImplDX9_ViewportData* vd = IM_NEW(ImGui_ImplDX9_ViewportData)();
+    viewport->RendererUserData = vd;
 
     // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
     // Some backends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
     HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
 
-    ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
-    data->d3dpp.Windowed = TRUE;
-    data->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    data->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
-    data->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
-    data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
-    data->d3dpp.hDeviceWindow = hwnd;
-    data->d3dpp.EnableAutoDepthStencil = FALSE;
-    data->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
-    data->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync
+    ZeroMemory(&vd->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
+    vd->d3dpp.Windowed = TRUE;
+    vd->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    vd->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
+    vd->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
+    vd->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    vd->d3dpp.hDeviceWindow = hwnd;
+    vd->d3dpp.EnableAutoDepthStencil = FALSE;
+    vd->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
+    vd->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync
 
-    HRESULT hr = bd->pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain); IM_UNUSED(hr);
+    HRESULT hr = bd->pd3dDevice->CreateAdditionalSwapChain(&vd->d3dpp, &vd->SwapChain); IM_UNUSED(hr);
     IM_ASSERT(hr == D3D_OK);
-    IM_ASSERT(data->SwapChain != NULL);
+    IM_ASSERT(vd->SwapChain != NULL);
 }
 
 static void ImGui_ImplDX9_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
-    if (ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData)
+    if (ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData)
     {
-        if (data->SwapChain)
-            data->SwapChain->Release();
-        data->SwapChain = NULL;
-        ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
-        IM_DELETE(data);
+        if (vd->SwapChain)
+            vd->SwapChain->Release();
+        vd->SwapChain = NULL;
+        ZeroMemory(&vd->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
+        IM_DELETE(vd);
     }
     viewport->RendererUserData = NULL;
 }
@@ -446,14 +446,14 @@ static void ImGui_ImplDX9_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX9_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
-    if (data->SwapChain)
+    ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData;
+    if (vd->SwapChain)
     {
-        data->SwapChain->Release();
-        data->SwapChain = NULL;
-        data->d3dpp.BackBufferWidth = (UINT)size.x;
-        data->d3dpp.BackBufferHeight = (UINT)size.y;
-        HRESULT hr = bd->pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain); IM_UNUSED(hr);
+        vd->SwapChain->Release();
+        vd->SwapChain = NULL;
+        vd->d3dpp.BackBufferWidth = (UINT)size.x;
+        vd->d3dpp.BackBufferHeight = (UINT)size.y;
+        HRESULT hr = bd->pd3dDevice->CreateAdditionalSwapChain(&vd->d3dpp, &vd->SwapChain); IM_UNUSED(hr);
         IM_ASSERT(hr == D3D_OK);
     }
 }
@@ -461,13 +461,13 @@ static void ImGui_ImplDX9_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+    ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData;
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
     LPDIRECT3DSURFACE9 render_target = NULL;
     LPDIRECT3DSURFACE9 last_render_target = NULL;
     LPDIRECT3DSURFACE9 last_depth_stencil = NULL;
-    data->SwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &render_target);
+    vd->SwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &render_target);
     bd->pd3dDevice->GetRenderTarget(0, &last_render_target);
     bd->pd3dDevice->GetDepthStencilSurface(&last_depth_stencil);
     bd->pd3dDevice->SetRenderTarget(0, render_target);
@@ -491,8 +491,8 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 
 static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
-    HRESULT hr = data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, 0);
+    ImGui_ImplDX9_ViewportData* vd = (ImGui_ImplDX9_ViewportData*)viewport->RendererUserData;
+    HRESULT hr = vd->SwapChain->Present(NULL, NULL, vd->d3dpp.hDeviceWindow, NULL, 0);
     // Let main application handle D3DERR_DEVICELOST by resetting the device.
     IM_ASSERT(hr == D3D_OK || hr == D3DERR_DEVICELOST);
 }
