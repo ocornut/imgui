@@ -35,6 +35,11 @@ HOW TO UPDATE?
  VERSION 1.84 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
+  Kept inline redirection function (will obsolete).
+
 Other Changes:
 - Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument display a dot instead of a '*' so it
   is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
