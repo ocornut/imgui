@@ -2002,6 +2002,7 @@ void    ImFontAtlas::ClearInputData()
     ConfigData.clear();
     CustomRects.clear();
     PackIdMouseCursors = PackIdLines = -1;
+    TexReady = false;
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -2014,12 +2015,14 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexPixelsUseColors = false;
+    // Important: we leave TexReady untouched
 }
 
 void    ImFontAtlas::ClearFonts()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     Fonts.clear_delete();
+    TexReady = false;
 }
 
 void    ImFontAtlas::Clear()
@@ -2092,6 +2095,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
     // Invalidate texture
+    TexReady = false;
     ClearTexData();
     return new_font_cfg.DstFont;
 }
@@ -2795,6 +2799,8 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
     for (int i = 0; i < atlas->Fonts.Size; i++)
         if (atlas->Fonts[i]->DirtyLookupTables)
             atlas->Fonts[i]->BuildLookupTable();
+
+    atlas->TexReady = true;
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)

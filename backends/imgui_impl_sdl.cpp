@@ -381,6 +381,7 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplSDL2_Init()?");
     IM_ASSERT(bd->Window == window); // FIXME: Should remove parameter from ImGui_ImplSDL2_NewFrame()
 
     // Setup display size (every frame to accommodate for window resizing)

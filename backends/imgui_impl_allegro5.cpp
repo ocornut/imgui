@@ -430,6 +430,8 @@ static void ImGui_ImplAllegro5_UpdateMouseCursor()
 void ImGui_ImplAllegro5_NewFrame()
 {
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplAllegro5_Init()?");
+
     if (!bd->Texture)
         ImGui_ImplAllegro5_CreateDeviceObjects();
 

@@ -289,6 +289,7 @@ void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplWin32_Init()?");
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect = { 0, 0, 0, 0 };

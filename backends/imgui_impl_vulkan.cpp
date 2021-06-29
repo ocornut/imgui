@@ -1060,6 +1060,9 @@ void ImGui_ImplVulkan_Shutdown()
 
 void ImGui_ImplVulkan_NewFrame()
 {
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplVulkan_Init()?");
+    IM_UNUSED(bd);
 }
 
 void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
