@@ -35,6 +35,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-06-08: Fix ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
 //  2021-03-23: Inputs: Clearing keyboard down array when losing focus (WM_KILLFOCUS).
 //  2021-02-18: Added ImGui_ImplWin32_EnableAlphaCompositing(). Non Visual Studio users will need to link with dwmapi.lib (MinGW/gcc: use -ldwmapi).
@@ -65,47 +66,76 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 //  2017-10-23: Inputs: Using Win32 ::SetCapture/::GetCapture() to retrieve mouse positions outside the client area when dragging.
 //  2016-11-12: Inputs: Only call Win32 ::SetCursor(NULL) when io.MouseDrawCursor is set.
 
-// Win32 Data
-static HWND                 g_hWnd = NULL;
-static INT64                g_Time = 0;
-static INT64                g_TicksPerSecond = 0;
-static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
-static bool                 g_HasGamepad = false;
-static bool                 g_WantUpdateHasGamepad = true;
-static bool                 g_WantUpdateMonitors = true;
-
 // Forward Declarations
 static void ImGui_ImplWin32_InitPlatformInterface();
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
-// XInput DLL and functions
+// Win32
+struct ImGui_ImplWin32_Data
+{
+    HWND                        hWnd;
+    INT64                       Time;
+    INT64                       TicksPerSecond;
+    ImGuiMouseCursor            LastMouseCursor;
+    bool                        HasGamepad;
+    bool                        WantUpdateHasGamepad;
+    bool                        WantUpdateMonitors;
+
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-static HMODULE                      g_XInputDLL = NULL;
-static PFN_XInputGetCapabilities    g_XInputGetCapabilities = NULL;
-static PFN_XInputGetState           g_XInputGetState = NULL;
+    HMODULE                     XInputDLL;
+    PFN_XInputGetCapabilities   XInputGetCapabilities;
+    PFN_XInputGetState          XInputGetState;
+#endif
+
+    ImGui_ImplWin32_Data()      { memset(this, 0, sizeof(*this)); }
+};
+
+#if 1
+// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
+static ImGui_ImplWin32_Data*    g_Data;
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplWin32_Data); return g_Data; }
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return ImGui::GetCurrentContext() ? g_Data : NULL; }
+static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(g_Data); g_Data = NULL; }
+#else
+// FIXME: mouse cursor is a shared resource.
+// FIXME: facilitate calling ImGui_ImplWin32_WndProcHandler() handler and letting us do the right dispatch
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { return IM_NEW(ImGui_ImplWin32_Data)(); }
+static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData; }
+static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(ImGui_ImplWin32_GetBackendData()); }
 #endif
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
 {
-    if (!::QueryPerformanceFrequency((LARGE_INTEGER*)&g_TicksPerSecond))
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
+
+    INT64 perf_frequency, perf_counter;
+    if (!::QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency))
         return false;
-    if (!::QueryPerformanceCounter((LARGE_INTEGER*)&g_Time))
+    if (!::QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
         return false;
 
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_CreateBackendData();
+    bd->hWnd = (HWND)hwnd;
+    bd->WantUpdateHasGamepad = true;
+    bd->WantUpdateMonitors = true;
+    bd->TicksPerSecond = perf_frequency;
+    bd->Time = perf_counter;
+    bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
+
     // Setup backend capabilities flags
-    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformUserData = (void*)bd;
+    io.BackendPlatformName = "imgui_impl_win32";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
-    io.BackendPlatformName = "imgui_impl_win32";
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
-    g_hWnd = (HWND)hwnd;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->hWnd;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplWin32_InitPlatformInterface();
 
@@ -146,9 +176,9 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
         if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n]))
         {
-            g_XInputDLL = dll;
-            g_XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
-            g_XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+            bd->XInputDLL = dll;
+            bd->XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
+            bd->XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
             break;
         }
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -158,23 +188,19 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
 
 void    ImGui_ImplWin32_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGui_ImplWin32_ShutdownPlatformInterface();
 
     // Unload XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    if (g_XInputDLL)
-        ::FreeLibrary(g_XInputDLL);
-    g_XInputDLL = NULL;
-    g_XInputGetCapabilities = NULL;
-    g_XInputGetState = NULL;
+    if (bd->XInputDLL)
+        ::FreeLibrary(bd->XInputDLL);
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 
-    g_hWnd = NULL;
-    g_Time = 0;
-    g_TicksPerSecond = 0;
-    g_LastMouseCursor = ImGuiMouseCursor_COUNT;
-    g_HasGamepad = false;
-    g_WantUpdateHasGamepad = true;
+    io.BackendPlatformName = NULL;
+    io.BackendPlatformUserData = NULL;
+    ImGui_ImplWin32_DestroyBackendData();
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()
@@ -215,7 +241,8 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
 static void ImGui_ImplWin32_UpdateMousePos()
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(g_hWnd != 0);
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    IM_ASSERT(bd->hWnd != 0);
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     // (When multi-viewports are enabled, all imgui positions are same as OS positions)
@@ -223,7 +250,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
     {
         POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
         if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-            ::ClientToScreen(g_hWnd, &pos);
+            ::ClientToScreen(bd->hWnd, &pos);
         ::SetCursorPos(pos.x, pos.y);
     }
 
@@ -236,8 +263,8 @@ static void ImGui_ImplWin32_UpdateMousePos()
         return;
     if (HWND focused_hwnd = ::GetForegroundWindow())
     {
-        if (::IsChild(focused_hwnd, g_hWnd))
-            focused_hwnd = g_hWnd;
+        if (::IsChild(focused_hwnd, bd->hWnd))
+            focused_hwnd = bd->hWnd;
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
@@ -249,7 +276,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
         {
             // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window.)
             // This is the position you can get with GetCursorPos() + ScreenToClient() or from WM_MOUSEMOVE.
-            if (focused_hwnd == g_hWnd)
+            if (focused_hwnd == bd->hWnd)
             {
                 POINT mouse_client_pos = mouse_screen_pos;
                 ::ScreenToClient(focused_hwnd, &mouse_client_pos);
@@ -275,22 +302,23 @@ static void ImGui_ImplWin32_UpdateGamepads()
 {
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
 
     // Calling XInputGetState() every frame on disconnected gamepads is unfortunately too slow.
     // Instead we refresh gamepad availability by calling XInputGetCapabilities() _only_ after receiving WM_DEVICECHANGE.
-    if (g_WantUpdateHasGamepad)
+    if (bd->WantUpdateHasGamepad)
     {
         XINPUT_CAPABILITIES caps;
-        g_HasGamepad = g_XInputGetCapabilities ? (g_XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
-        g_WantUpdateHasGamepad = false;
+        bd->HasGamepad = bd->XInputGetCapabilities ? (bd->XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
+        bd->WantUpdateHasGamepad = false;
     }
 
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
     XINPUT_STATE xinput_state;
-    if (g_HasGamepad && g_XInputGetState && g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
+    if (bd->HasGamepad && bd->XInputGetState && bd->XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
     {
         const XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
@@ -341,28 +369,29 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
 
 static void ImGui_ImplWin32_UpdateMonitors()
 {
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGui::GetPlatformIO().Monitors.resize(0);
     ::EnumDisplayMonitors(NULL, NULL, ImGui_ImplWin32_UpdateMonitors_EnumFunc, 0);
-    g_WantUpdateMonitors = false;
+    bd->WantUpdateMonitors = false;
 }
 
 void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect = { 0, 0, 0, 0 };
-    ::GetClientRect(g_hWnd, &rect);
+    ::GetClientRect(bd->hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
-    if (g_WantUpdateMonitors)
+    if (bd->WantUpdateMonitors)
         ImGui_ImplWin32_UpdateMonitors();
 
     // Setup time step
     INT64 current_time = 0;
     ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
-    io.DeltaTime = (float)(current_time - g_Time) / g_TicksPerSecond;
-    g_Time = current_time;
+    io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
+    bd->Time = current_time;
 
     // Read keyboard modifiers inputs
     io.KeyCtrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
@@ -376,9 +405,9 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
-    if (g_LastMouseCursor != mouse_cursor)
+    if (bd->LastMouseCursor != mouse_cursor)
     {
-        g_LastMouseCursor = mouse_cursor;
+        bd->LastMouseCursor = mouse_cursor;
         ImGui_ImplWin32_UpdateMouseCursor();
     }
 
@@ -412,6 +441,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
 
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+
     switch (msg)
     {
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
@@ -474,10 +505,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
     case WM_DEVICECHANGE:
         if ((UINT)wParam == DBT_DEVNODES_CHANGED)
-            g_WantUpdateHasGamepad = true;
+            bd->WantUpdateHasGamepad = true;
         return 0;
     case WM_DISPLAYCHANGE:
-        g_WantUpdateMonitors = true;
+        bd->WantUpdateMonitors = true;
         return 0;
     }
     return 0;
@@ -544,7 +575,8 @@ typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWAR
 void ImGui_ImplWin32_EnableDpiAwareness()
 {
     // Make sure monitors will be updated with latest correct scaling
-    g_WantUpdateMonitors = true;
+    if (ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData())
+        bd->WantUpdateMonitors = true;
 
     if (_IsWindows10OrGreater())
     {
@@ -694,13 +726,14 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
 {
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     if (ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData)
     {
         if (::GetCapture() == data->Hwnd)
         {
             // Transfer capture so if we started dragging from a window that later disappears, we'll still receive the MOUSEUP event.
             ::ReleaseCapture();
-            ::SetCapture(g_hWnd);
+            ::SetCapture(bd->hWnd);
         }
         if (data->Hwnd && data->HwndOwned)
             ::DestroyWindow(data->Hwnd);
@@ -942,11 +975,12 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGuiViewportDataWin32* data = IM_NEW(ImGuiViewportDataWin32)();
-    data->Hwnd = g_hWnd;
+    data->Hwnd = bd->hWnd;
     data->HwndOwned = false;
     main_viewport->PlatformUserData = data;
-    main_viewport->PlatformHandle = (void*)g_hWnd;
+    main_viewport->PlatformHandle = (void*)bd->hWnd;
 }
 
 static void ImGui_ImplWin32_ShutdownPlatformInterface()

@@ -5,7 +5,7 @@
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Multi-viewport support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
@@ -21,6 +21,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: OpenGL: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-01-03: OpenGL: Backup, setup and restore GL_SHADE_MODEL state, disable GL_STENCIL_TEST and disable GL_NORMAL_ARRAY client state to increase compatibility with legacy OpenGL applications.
 //  2020-01-23: OpenGL: Backup, setup and restore GL_TEXTURE_ENV to increase compatibility with legacy OpenGL applications.
@@ -57,8 +58,18 @@
 #include <GL/gl.h>
 #endif
 
-// OpenGL Data
-static GLuint       g_FontTexture = 0;
+struct ImGui_ImplOpenGL2_Data
+{
+    GLuint       FontTexture;
+
+    ImGui_ImplOpenGL2_Data() { memset(this, 0, sizeof(*this)); }
+};
+
+// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
+static ImGui_ImplOpenGL2_Data*  g_Data;
+static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_CreateBackendData()   { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplOpenGL2_Data); return g_Data; }
+static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_GetBackendData()      { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
+static void                     ImGui_ImplOpenGL2_DestroyBackendData()  { IM_DELETE(g_Data); g_Data = NULL; }
 
 // Forward Declarations
 static void ImGui_ImplOpenGL2_InitPlatformInterface();
@@ -67,25 +78,36 @@ static void ImGui_ImplOpenGL2_ShutdownPlatformInterface();
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
-    // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+
+    // Setup backend capabilities flags
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_CreateBackendData();
+    io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl2";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOpenGL2_InitPlatformInterface();
+
     return true;
 }
 
 void    ImGui_ImplOpenGL2_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+
     ImGui_ImplOpenGL2_ShutdownPlatformInterface();
     ImGui_ImplOpenGL2_DestroyDeviceObjects();
+    io.BackendRendererName = NULL;
+    io.BackendRendererUserData = NULL;
+    ImGui_ImplOpenGL2_DestroyBackendData();
 }
 
 void    ImGui_ImplOpenGL2_NewFrame()
 {
-    if (!g_FontTexture)
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    if (!bd->FontTexture)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
 }
 
@@ -226,6 +248,7 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
@@ -233,15 +256,15 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
     // Upload texture to graphics system
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
-    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    glGenTextures(1, &bd->FontTexture);
+    glBindTexture(GL_TEXTURE_2D, bd->FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontTexture);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -251,12 +274,13 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
 
 void ImGui_ImplOpenGL2_DestroyFontsTexture()
 {
-    if (g_FontTexture)
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    if (bd->FontTexture)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        glDeleteTextures(1, &g_FontTexture);
+        glDeleteTextures(1, &bd->FontTexture);
         io.Fonts->SetTexID(0);
-        g_FontTexture = 0;
+        bd->FontTexture = 0;
     }
 }
 
