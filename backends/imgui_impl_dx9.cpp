@@ -471,6 +471,9 @@ void ImGui_ImplDX9_UpdateTextures()
         {
             in_tex_data->EnsureFormat(ImTextureFormat_RGBA32);
 
+            if (current_texture != NULL && textures.find(current_texture) == textures.end())
+                current_texture = NULL; // Make sure we do not access textures released by ImGui_ImplDX9_InvalidateDeviceObjects()
+
             LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_UpdateTexture(current_texture, in_tex_data);
             if (current_texture != nullptr && new_texture != current_texture)
                 textures.find_erase_unsorted(current_texture);
