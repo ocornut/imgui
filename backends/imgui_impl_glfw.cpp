@@ -90,9 +90,10 @@ struct ImGui_ImplGlfw_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
-static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_CreateBackendData()  { return IM_NEW(ImGui_ImplGlfw_Data)(); }
-static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()     { return (ImGui_ImplGlfw_Data*)ImGui::GetIO().BackendPlatformUserData; }
-static void                 ImGui_ImplGlfw_DestroyBackendData() { IM_DELETE(ImGui_ImplGlfw_GetBackendData()); }
+static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplGlfw_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
+}
 
 // Functions
 static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
@@ -167,15 +168,15 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
 
-    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_CreateBackendData();
-    bd->Window = window;
-    bd->Time = 0.0;
-
     // Setup backend capabilities flags
+    ImGui_ImplGlfw_Data* bd = IM_NEW(ImGui_ImplGlfw_Data)();
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_glfw";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+
+    bd->Window = window;
+    bd->Time = 0.0;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
@@ -282,7 +283,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
-    ImGui_ImplGlfw_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons()

@@ -86,9 +86,10 @@ struct ImGui_ImplWin32_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { return IM_NEW(ImGui_ImplWin32_Data)(); }
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData; }
-static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(ImGui_ImplWin32_GetBackendData()); }
+static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
+}
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -102,18 +103,19 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     if (!::QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
         return false;
 
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_CreateBackendData();
+    // Setup backend capabilities flags
+    ImGui_ImplWin32_Data* bd = IM_NEW(ImGui_ImplWin32_Data)();
+    io.BackendPlatformUserData = (void*)bd;
+    io.BackendPlatformName = "imgui_impl_win32";
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+
     bd->hWnd = (HWND)hwnd;
     bd->WantUpdateHasGamepad = true;
     bd->TicksPerSecond = perf_frequency;
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 
-    // Setup backend capabilities flags
-    io.BackendPlatformUserData = (void*)bd;
-    io.BackendPlatformName = "imgui_impl_win32";
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.ImeWindowHandle = hwnd;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
@@ -176,7 +178,7 @@ void    ImGui_ImplWin32_Shutdown()
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
-    ImGui_ImplWin32_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()

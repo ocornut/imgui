@@ -74,25 +74,19 @@ struct ImGui_ImplDX12_Data
     ImGui_ImplDX12_Data()           { memset(this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
 
-// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
-// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
-static ImGui_ImplDX12_Data*     ImGui_ImplDX12_CreateBackendData()  { return IM_NEW(ImGui_ImplDX12_Data)(); }
-static ImGui_ImplDX12_Data*     ImGui_ImplDX12_GetBackendData()     { return (ImGui_ImplDX12_Data*)ImGui::GetIO().BackendRendererUserData; }
-static void                     ImGui_ImplDX12_DestroyBackendData() { IM_DELETE(ImGui_ImplDX12_GetBackendData()); }
-
-template<typename T>
-static void SafeRelease(T*& res)
-{
-    if (res)
-        res->Release();
-    res = NULL;
-}
-
 struct VERTEX_CONSTANT_BUFFER
 {
     float   mvp[4][4];
 };
 
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplDX12_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
+
+// Functions
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_ImplDX12_RenderBuffers* fr)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -148,6 +142,14 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     // Setup blend factor
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     ctx->OMSetBlendFactor(blend_factor);
+}
+
+template<typename T>
+static inline void SafeRelease(T*& res)
+{
+    if (res)
+        res->Release();
+    res = NULL;
 }
 
 // Render function
@@ -691,7 +693,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_CreateBackendData();
+    ImGui_ImplDX12_Data* bd = IM_NEW(ImGui_ImplDX12_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx12";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
@@ -727,7 +729,7 @@ void ImGui_ImplDX12_Shutdown()
     delete[] bd->pFrameResources;
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplDX12_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void ImGui_ImplDX12_NewFrame()

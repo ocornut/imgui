@@ -65,9 +65,10 @@ struct ImGui_ImplOpenGL2_Data
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_CreateBackendData()   { return IM_NEW(ImGui_ImplOpenGL2_Data)(); }
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_GetBackendData()      { return (ImGui_ImplOpenGL2_Data*)ImGui::GetIO().BackendRendererUserData; }
-static void                     ImGui_ImplOpenGL2_DestroyBackendData()  { IM_DELETE(ImGui_ImplOpenGL2_GetBackendData()); }
+static ImGui_ImplOpenGL2_Data* ImGui_ImplOpenGL2_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL2_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
@@ -76,7 +77,7 @@ bool    ImGui_ImplOpenGL2_Init()
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_CreateBackendData();
+    ImGui_ImplOpenGL2_Data* bd = IM_NEW(ImGui_ImplOpenGL2_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl2";
 
@@ -86,11 +87,12 @@ bool    ImGui_ImplOpenGL2_Init()
 void    ImGui_ImplOpenGL2_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
 
     ImGui_ImplOpenGL2_DestroyDeviceObjects();
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplOpenGL2_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void    ImGui_ImplOpenGL2_NewFrame()

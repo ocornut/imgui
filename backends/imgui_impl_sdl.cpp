@@ -77,9 +77,10 @@ struct ImGui_ImplSDL2_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
-static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_CreateBackendData()  { return IM_NEW(ImGui_ImplSDL2_Data)(); }
-static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_GetBackendData()     { return (ImGui_ImplSDL2_Data*)ImGui::GetIO().BackendPlatformUserData; }
-static void                 ImGui_ImplSDL2_DestroyBackendData() { IM_DELETE(ImGui_ImplSDL2_GetBackendData()); }
+static ImGui_ImplSDL2_Data* ImGui_ImplSDL2_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplSDL2_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
+}
 
 // Functions
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)
@@ -153,14 +154,14 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window)
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
 
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_CreateBackendData();
-    bd->Window = window;
-
     // Setup backend capabilities flags
+    ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_sdl";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
+
+    bd->Window = window;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
@@ -253,21 +254,15 @@ void ImGui_ImplSDL2_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    bd->Window = NULL;
 
-    // Destroy last known clipboard data
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = NULL;
-
-    // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_FreeCursor(bd->MouseCursors[cursor_n]);
-    memset(bd->MouseCursors, 0, sizeof(bd->MouseCursors));
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
-    ImGui_ImplSDL2_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
