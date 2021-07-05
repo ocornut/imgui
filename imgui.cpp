@@ -13442,7 +13442,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         else
         {
             // FIXME-DOCKING: Missing policies for conflict resolution, hence the "Experimental" tag on this.
-            node->LocalFlags &= ~window->WindowClass.DockNodeFlagsOverrideClear;
+            //node->LocalFlags &= ~window->WindowClass.DockNodeFlagsOverrideClear;
             node->LocalFlags |= window->WindowClass.DockNodeFlagsOverrideSet;
         }
     }
@@ -16677,6 +16677,33 @@ void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
     TreePop();
 }
 
+static void DebugNodeDockNodeFlags(ImGuiDockNodeFlags* p_flags, const char* label, bool enabled)
+{
+    using namespace ImGui;
+    PushID(label);
+    PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+    Text("%s:", label);
+    if (!enabled)
+        PushDisabled();
+    CheckboxFlags("NoSplit", p_flags, ImGuiDockNodeFlags_NoSplit);
+    CheckboxFlags("NoResize", p_flags, ImGuiDockNodeFlags_NoResize);
+    CheckboxFlags("NoResizeX", p_flags, ImGuiDockNodeFlags_NoResizeX);
+    CheckboxFlags("NoResizeY",p_flags, ImGuiDockNodeFlags_NoResizeY);
+    CheckboxFlags("NoTabBar", p_flags, ImGuiDockNodeFlags_NoTabBar);
+    CheckboxFlags("HiddenTabBar", p_flags, ImGuiDockNodeFlags_HiddenTabBar);
+    CheckboxFlags("NoWindowMenuButton", p_flags, ImGuiDockNodeFlags_NoWindowMenuButton);
+    CheckboxFlags("NoCloseButton", p_flags, ImGuiDockNodeFlags_NoCloseButton);
+    CheckboxFlags("NoDocking", p_flags, ImGuiDockNodeFlags_NoDocking);
+    CheckboxFlags("NoDockingSplitMe", p_flags, ImGuiDockNodeFlags_NoDockingSplitMe);
+    CheckboxFlags("NoDockingSplitOther", p_flags, ImGuiDockNodeFlags_NoDockingSplitOther);
+    CheckboxFlags("NoDockingOverMe", p_flags, ImGuiDockNodeFlags_NoDockingOverMe);
+    CheckboxFlags("NoDockingOverOther", p_flags, ImGuiDockNodeFlags_NoDockingOverOther);
+    if (!enabled)
+        PopDisabled();
+    PopStyleVar();
+    PopID();
+}
+
 // [DEBUG] Display contents of ImDockNode
 void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
 {
@@ -16709,15 +16736,7 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
             node->WantLockSizeOnce ? " WantLockSizeOnce" : "");
         if (TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
         {
-            CheckboxFlags("LocalFlags: NoDocking", &node->LocalFlags, ImGuiDockNodeFlags_NoDocking);
-            CheckboxFlags("LocalFlags: NoSplit", &node->LocalFlags, ImGuiDockNodeFlags_NoSplit);
-            CheckboxFlags("LocalFlags: NoResize", &node->LocalFlags, ImGuiDockNodeFlags_NoResize);
-            CheckboxFlags("LocalFlags: NoResizeX", &node->LocalFlags, ImGuiDockNodeFlags_NoResizeX);
-            CheckboxFlags("LocalFlags: NoResizeY", &node->LocalFlags, ImGuiDockNodeFlags_NoResizeY);
-            CheckboxFlags("LocalFlags: NoTabBar", &node->LocalFlags, ImGuiDockNodeFlags_NoTabBar);
-            CheckboxFlags("LocalFlags: HiddenTabBar", &node->LocalFlags, ImGuiDockNodeFlags_HiddenTabBar);
-            CheckboxFlags("LocalFlags: NoWindowMenuButton", &node->LocalFlags, ImGuiDockNodeFlags_NoWindowMenuButton);
-            CheckboxFlags("LocalFlags: NoCloseButton", &node->LocalFlags, ImGuiDockNodeFlags_NoCloseButton);
+            DebugNodeDockNodeFlags(&node->LocalFlags, "LocalFlags", true);
             TreePop();
         }
         if (node->ParentNode)
