@@ -716,9 +716,11 @@ static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditSta
       state->has_preferred_x = 0;
       return 1;
    }
-   // remove the undo since we didn't actually insert the characters
-   if (state->undostate.undo_point)
-      --state->undostate.undo_point;
+   // [DEAR IMGUI]
+   //// remove the undo since we didn't actually insert the characters
+   //if (state->undostate.undo_point)
+   //   --state->undostate.undo_point;
+   // note: paste failure will leave deleted selection, may be restored with an undo (see https://github.com/nothings/stb/issues/734 for details)
    return 0;
 }
 

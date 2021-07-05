@@ -121,6 +121,8 @@ Other Changes:
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
 - ColorEdit4: Alpha default to 255 (instead of 0) when omitted in hex input. (#3973) [@squadack]
+- InputText: Fix handling of paste failure (buffer full) which in some cases could corrupt the undo stack. (#4038)
+  (fix submitted to https://github.com/nothings/stb/pull/1158) [@Unit2Ed, @ocornut]
 - InputText: Do not filter private unicode codepoints (e.g. icons) when pasted from clipboard. (#4005) [@dougbinks]
 - InputText: Align caret/cursor to pixel coordinates. (#4080) [@elvissteinjr]
 - InputText: Fixed CTRL+Arrow or OSX double-click leaking the presence of spaces when ImGuiInputTextFlags_Password
