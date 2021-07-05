@@ -449,10 +449,10 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
     if (RtlVerifyVersionInfoFn == NULL)
         return FALSE;
 
-	RTL_OSVERSIONINFOEXW versionInfo = { };
-	ULONGLONG conditionMask = 0;
-	versionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
-	versionInfo.dwMajorVersion = major;
+    RTL_OSVERSIONINFOEXW versionInfo = { };
+    ULONGLONG conditionMask = 0;
+    versionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+    versionInfo.dwMajorVersion = major;
 	versionInfo.dwMinorVersion = minor;
 	VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
 	VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);

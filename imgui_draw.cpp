@@ -3206,7 +3206,7 @@ void ImFont::BuildLookupTable()
         if (FallbackGlyph == NULL)
         {
             FallbackGlyph = &Glyphs.back();
-            FallbackChar = FallbackGlyph->Codepoint;
+            FallbackChar = (ImWchar)FallbackGlyph->Codepoint;
         }
     }
 
