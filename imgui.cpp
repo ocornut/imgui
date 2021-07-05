@@ -14336,7 +14336,11 @@ static void ImGui::DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockN
         data->IsCenterAvailable = false;
     else if ((!host_node || !host_node->IsEmpty()) && root_payload_as_host && root_payload_as_host->IsSplitNode() && (root_payload_as_host->OnlyNodeWithWindows == NULL)) // Is _visibly_ split?
         data->IsCenterAvailable = false;
-    else if ((dst_node_flags & ImGuiDockNodeFlags_NoDockingOverMe) || (src_node_flags & ImGuiDockNodeFlags_NoDockingOverOther))
+    else if (dst_node_flags & ImGuiDockNodeFlags_NoDockingOverMe)
+        data->IsCenterAvailable = false;
+    else if ((src_node_flags & ImGuiDockNodeFlags_NoDockingOverOther) && (!host_node || !host_node->IsEmpty()))
+        data->IsCenterAvailable = false;
+    else if ((src_node_flags & ImGuiDockNodeFlags_NoDockingOverEmpty) && host_node && host_node->IsEmpty())
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
@@ -16707,6 +16711,7 @@ static void DebugNodeDockNodeFlags(ImGuiDockNodeFlags* p_flags, const char* labe
     CheckboxFlags("NoDockingSplitOther", p_flags, ImGuiDockNodeFlags_NoDockingSplitOther);
     CheckboxFlags("NoDockingOverMe", p_flags, ImGuiDockNodeFlags_NoDockingOverMe);
     CheckboxFlags("NoDockingOverOther", p_flags, ImGuiDockNodeFlags_NoDockingOverOther);
+    CheckboxFlags("NoDockingOverEmpty", p_flags, ImGuiDockNodeFlags_NoDockingOverEmpty);
     if (!enabled)
         PopDisabled();
     PopStyleVar();
