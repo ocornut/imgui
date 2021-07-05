@@ -144,6 +144,9 @@ Docking+Viewports Branch:
 
 - Docking: Clicking on the right-most close button of a docking node closes all windows. (#4186)
 - Docking: Fix IsWindowAppearing() and ImGuiCond_Appearing on docked windows. (#4177, #3982, #1497, #1061)
+- Docking: Reworked node flags saving/inheritance so that flags enforced by docked windows via the
+  DockNodeFlagsOverrideSet mechanism are are not left in empty dockspace nodes once the windows gets undocked.
+  (#4292, #3834, #3633, #3521, #3492, #3335, #2999, #2648)
 - Docking: (Internal/Experimental) Removed DockNodeFlagsOverrideClear flags from ImGuiWindowClass as
   it is ambiguous how to apply them and we haven't got a use out of them yet.
 - Viewports: Fix popup/tooltip created without a parent window from being given a ParentViewportId value

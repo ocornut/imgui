@@ -1312,12 +1312,14 @@ enum ImGuiDockNodeState
     ImGuiDockNodeState_HostWindowVisible
 };
 
-// sizeof() 116~160
+// sizeof() 156~192
 struct IMGUI_API ImGuiDockNode
 {
     ImGuiID                 ID;
-    ImGuiDockNodeFlags      SharedFlags;                // Flags shared by all nodes of a same dockspace hierarchy (inherited from the root node)
-    ImGuiDockNodeFlags      LocalFlags;                 // Flags specific to this node
+    ImGuiDockNodeFlags      SharedFlags;                // (Write) Flags shared by all nodes of a same dockspace hierarchy (inherited from the root node)
+    ImGuiDockNodeFlags      LocalFlags;                 // (Write) Flags specific to this node
+    ImGuiDockNodeFlags      LocalFlagsInWindows;        // (Write) Flags specific to this node, applied from windows
+    ImGuiDockNodeFlags      MergedFlags;                // (Read)  Effective flags (== SharedFlags | LocalFlagsInNode | LocalFlagsInWindows)
     ImGuiDockNodeState      State;
     ImGuiDockNode*          ParentNode;
     ImGuiDockNode*          ChildNodes[2];              // [Split node only] Child nodes (left/right or top/bottom). Consider switching to an array.
@@ -1356,16 +1358,18 @@ struct IMGUI_API ImGuiDockNode
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
     bool                    IsRootNode() const      { return ParentNode == NULL; }
-    bool                    IsDockSpace() const     { return (LocalFlags & ImGuiDockNodeFlags_DockSpace) != 0; }
-    bool                    IsFloatingNode() const  { return ParentNode == NULL && (LocalFlags & ImGuiDockNodeFlags_DockSpace) == 0; }
-    bool                    IsCentralNode() const   { return (LocalFlags & ImGuiDockNodeFlags_CentralNode) != 0; }
-    bool                    IsHiddenTabBar() const  { return (LocalFlags & ImGuiDockNodeFlags_HiddenTabBar) != 0; } // Hidden tab bar can be shown back by clicking the small triangle
-    bool                    IsNoTabBar() const      { return (LocalFlags & ImGuiDockNodeFlags_NoTabBar) != 0; }     // Never show a tab bar
+    bool                    IsDockSpace() const     { return (MergedFlags & ImGuiDockNodeFlags_DockSpace) != 0; }
+    bool                    IsFloatingNode() const  { return ParentNode == NULL && (MergedFlags & ImGuiDockNodeFlags_DockSpace) == 0; }
+    bool                    IsCentralNode() const   { return (MergedFlags & ImGuiDockNodeFlags_CentralNode) != 0; }
+    bool                    IsHiddenTabBar() const  { return (MergedFlags & ImGuiDockNodeFlags_HiddenTabBar) != 0; } // Hidden tab bar can be shown back by clicking the small triangle
+    bool                    IsNoTabBar() const      { return (MergedFlags & ImGuiDockNodeFlags_NoTabBar) != 0; }     // Never show a tab bar
     bool                    IsSplitNode() const     { return ChildNodes[0] != NULL; }
     bool                    IsLeafNode() const      { return ChildNodes[0] == NULL; }
     bool                    IsEmpty() const         { return ChildNodes[0] == NULL && Windows.Size == 0; }
-    ImGuiDockNodeFlags      GetMergedFlags() const  { return SharedFlags | LocalFlags; }
     ImRect                  Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
+
+    void                    SetLocalFlags(ImGuiDockNodeFlags flags) { LocalFlags = flags; UpdateMergedFlags(); }
+    void                    UpdateMergedFlags()     { MergedFlags = SharedFlags | LocalFlags | LocalFlagsInWindows; }
 };
 
 // List of colors that are stored at the time of Begin() into Docked Windows.
