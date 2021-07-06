@@ -446,6 +446,12 @@ void ImGui_ImplDX9_NewFrame()
 }
 
 // FIXME-TEXUPDATE: Can we somehow allow multiple "observer" for the dirty data? (local + remote client).... means that we don't store IsDirty() in texture but instead maybe counter?
+// FIXME-TEXUPDATE: Can we somehow design the update data so that "no update" result in a trivial and obvious early out?
+// FIXME-TEXUPDATE: Aim to make this function less complex, so it's more evident for custom backend implementers what to do
+// - why do we need the "recreate_all" flag?
+// - could imgui track past requested textures and automatically submit the "destroy list" ? that would remove complexity on backend side
+// - similarly texture that don't need an update may not need to be in the list (would fulfill the earlier point to allow for trivial early out)
+// FIXME-TEXUPDATE: [advanced] Make sure the design of backend functions can allow advanced user to update for multiple atlas?
 void ImGui_ImplDX9_UpdateTextures()
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
@@ -471,8 +477,18 @@ void ImGui_ImplDX9_UpdateTextures()
         {
             in_tex_data->EnsureFormat(ImTextureFormat_RGBA32);
 
-            if (current_texture != NULL && textures.find(current_texture) == textures.end())
-                current_texture = NULL; // Make sure we do not access textures released by ImGui_ImplDX9_InvalidateDeviceObjects()
+            // Make sure we do not access textures released by ImGui_ImplDX9_InvalidateDeviceObjects()
+            // FIXME-TEXUPDATE: this can be break!
+            //  g_TexturesID = { 0x0001, 0x0002 }
+            //  ImGui_ImplDX9_InvalidateDeviceObjects() -> destroy 0x0001, 0x0002, but values are kept in TexID fields
+            //  ImGui_ImplDX9_UpdateTextures()
+            //   - update_data contains two textures
+            //   - first one create a new texture, DX9 return 0x0002 (UNLIKELY BUT TECHNICALLY POSSIBLE)
+            //   - second one has TexID = 0x0002 but it is contained in textures array so we don't NULL it <-- ERROR
+            // Conclusion: we should invalidate tex id! maybe add bool TexIDValid, SetTexID() can set it to true....
+            // ImGui_ImplDX9_InvalidateDeviceObjects() could clear it... maybe helper call in ImFontAtlas...
+            if (current_texture != NULL && !textures.contains(current_texture))
+                current_texture = NULL;
 
             LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_UpdateTexture(current_texture, in_tex_data);
             if (current_texture != nullptr && new_texture != current_texture)
