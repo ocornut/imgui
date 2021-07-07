@@ -3537,13 +3537,6 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
         g.MovingWindow = window;
 }
 
-typedef struct tagRECT
-{
-    LONG    left;
-    LONG    top;
-    LONG    right;
-    LONG    bottom;
-} RECT; // I'm not sure if this already exists in the library. I didn't find it anywhere so it's defined here to keep everything regarding this pull request closer together.
 typedef BOOL(WINAPI* PFN_GetWindowRect)(HWND hWnd, LPRECT lpRect);
 typedef BOOL(WINAPI* PFN_MoveWindow)(HWND hWnd, int  X, int  Y, int  nWidth, int  nHeight, BOOL bRepaint); // for dynamically loading the winapi functions need. 
 
