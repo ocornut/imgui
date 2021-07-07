@@ -82,6 +82,7 @@ struct ImGui_ImplGlfw_Data
     GLFWscrollfun           PrevUserCallbackScroll;
     GLFWkeyfun              PrevUserCallbackKey;
     GLFWcharfun             PrevUserCallbackChar;
+    GLFWmonitorfun          PrevUserCallbackMonitor;
 
     ImGui_ImplGlfw_Data()   { memset(this, 0, sizeof(*this)); }
 };
@@ -89,6 +90,9 @@ struct ImGui_ImplGlfw_Data
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+// - Because glfwPollEvents() process all windows and some events may be called outside of it, you will need to register your own callbacks
+//   (passing install_callbacks=false in ImGui_ImplGlfw_InitXXX functions), set the current dear imgui context and then call our callbacks.
+// - Otherwise we may need to store a GLFWWindow* -> ImGuiContext* map and handle this in the backend, adding a little bit of extra complexity to it.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
 static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 {
@@ -161,6 +165,11 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(c);
+}
+
+void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
+{
+	// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
@@ -237,6 +246,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->PrevUserCallbackScroll = NULL;
     bd->PrevUserCallbackKey = NULL;
     bd->PrevUserCallbackChar = NULL;
+    bd->PrevUserCallbackMonitor = NULL;
     if (install_callbacks)
     {
         bd->InstalledCallbacks = true;
@@ -244,6 +254,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         bd->PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
         bd->PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+        bd->PrevUserCallbackMonitor = glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
     }
 
     bd->ClientApi = client_api;
@@ -276,6 +287,7 @@ void ImGui_ImplGlfw_Shutdown()
         glfwSetScrollCallback(bd->Window, bd->PrevUserCallbackScroll);
         glfwSetKeyCallback(bd->Window, bd->PrevUserCallbackKey);
         glfwSetCharCallback(bd->Window, bd->PrevUserCallbackChar);
+        glfwSetMonitorCallback(bd->PrevUserCallbackMonitor);
     }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
