@@ -12617,7 +12617,8 @@ static ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID 
 ImGuiID ImGui::DockContextGenNodeID(ImGuiContext* ctx)
 {
     // Generate an ID for new node (the exact ID value doesn't matter as long as it is not already used)
-    // FIXME-OPT FIXME-DOCK: This is suboptimal, even if the node count is small enough not to be a worry. We should poke in ctx->Nodes to find a suitable ID faster.
+    // FIXME-OPT FIXME-DOCK: This is suboptimal, even if the node count is small enough not to be a worry.0
+    // We should poke in ctx->Nodes to find a suitable ID faster. Even more so trivial that ctx->Nodes lookup is already sorted.
     ImGuiID id = 0x0001;
     while (DockContextFindNodeByID(ctx, id) != NULL)
         id++;
@@ -15125,11 +15126,11 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
 ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
 {
     ImGuiContext* ctx = GImGui;
-    ImGuiDockNode* node = NULL;
 
     if (id != 0)
         DockBuilderRemoveNode(id);
 
+    ImGuiDockNode* node = NULL;
     if (flags & ImGuiDockNodeFlags_DockSpace)
     {
         DockSpace(id, ImVec2(0, 0), (flags & ~ImGuiDockNodeFlags_DockSpace) | ImGuiDockNodeFlags_KeepAliveOnly);
@@ -15152,6 +15153,10 @@ void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
         return;
     DockBuilderRemoveNodeDockedWindows(node_id, true);
     DockBuilderRemoveNodeChildNodes(node_id);
+    // Node may have moved or deleted if e.g. any merge happened
+    node = DockContextFindNodeByID(ctx, node_id);
+    if (node == NULL)
+        return;
     if (node->IsCentralNode() && node->ParentNode)
         node->ParentNode->SetLocalFlags(node->ParentNode->LocalFlags | ImGuiDockNodeFlags_CentralNode);
     DockContextRemoveNode(ctx, node, true);
@@ -15334,11 +15339,12 @@ void ImGui::DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVect
     IM_ASSERT(dst_node_id != 0);
     IM_ASSERT(out_node_remap_pairs != NULL);
 
+    DockBuilderRemoveNode(dst_node_id);
+
     ImGuiDockNode* src_node = DockContextFindNodeByID(ctx, src_node_id);
     IM_ASSERT(src_node != NULL);
 
     out_node_remap_pairs->clear();
-    DockBuilderRemoveNode(dst_node_id);
     DockBuilderCopyNodeRec(src_node, dst_node_id, out_node_remap_pairs);
 
     IM_ASSERT((out_node_remap_pairs->Size % 2) == 0);
