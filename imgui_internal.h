@@ -1038,12 +1038,14 @@ struct IMGUI_API ImGuiMenuColumns
     ImU32       TotalWidth;
     ImU32       NextTotalWidth;
     ImU16       Spacing;
-    ImU16       Offsets[2];         // Offset of:         Shortcut, Check mark (locked in Update)
-    ImU16       Widths[3];          // Width of:   Label, Shortcut, Check mark (accumulator for current frame)
+    ImU16       OffsetShortcut;     // Offsets are locked in Update()
+    ImU16       OffsetMark;
+    ImU16       Widths[3];          // Width of:   Label, Shortcut, Mark (accumulators for current frame)
 
     ImGuiMenuColumns() { memset(this, 0, sizeof(*this)); }
     void        Update(float spacing, bool window_reappearing);
-    float       DeclColumns(float w_label, float w_shortcut, float w_checkmark);
+    float       DeclColumns(float w_label, float w_shortcut, float w_mark);
+    void        CalcNextTotalWidth(bool update_offsets);
 };
 
 // Internal state of the currently focused/edited text input box
