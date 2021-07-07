@@ -13520,6 +13520,20 @@ static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
     }
 }
 
+static void DockNodeSetupHostWindow(ImGuiDockNode* node, ImGuiWindow* host_window)
+{
+    // Remove ourselves from any previous different host window
+    // This can happen if a user mistakenly does (see #4295 for details):
+    //  - N+0: DockBuilderAddNode(id, 0)    // missing ImGuiDockNodeFlags_DockSpace
+    //  - N+1: NewFrame()                   // will create floating host window for that node
+    //  - N+1: DockSpace(id)                // requalify node as dockspace, moving host window
+    if (node->HostWindow && node->HostWindow != host_window && node->HostWindow->DockNodeAsHost == node)
+        node->HostWindow->DockNodeAsHost = NULL;
+
+    host_window->DockNodeAsHost = node;
+    node->HostWindow = host_window;
+}
+
 static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
@@ -13668,8 +13682,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             PopStyleVar();
             beginned_into_host_window = true;
 
-            node->HostWindow = host_window = g.CurrentWindow;
-            host_window->DockNodeAsHost = node;
+            host_window = g.CurrentWindow;
+            DockNodeSetupHostWindow(node, host_window);
             host_window->DC.CursorPos = host_window->Pos;
             node->Pos = host_window->Pos;
             node->Size = host_window->Size;
@@ -14986,9 +15000,8 @@ ImGuiID ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags 
     PopStyleVar();
 
     ImGuiWindow* host_window = g.CurrentWindow;
-    host_window->DockNodeAsHost = node;
+    DockNodeSetupHostWindow(node, host_window);
     host_window->ChildId = window->GetID(title);
-    node->HostWindow = host_window;
     node->OnlyNodeWithWindows = NULL;
 
     IM_ASSERT(node->IsRootNode());
