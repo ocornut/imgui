@@ -13023,6 +13023,7 @@ void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* windo
     window->DockIsActive = false;
     window->DockNodeIsVisible = window->DockTabIsVisible = false;
     window->Size = window->SizeFull = FixLargeWindowsWhenUndocking(window->SizeFull, window->Viewport);
+    window->DockNodeAsHost = NULL;
 
     MarkIniSettingsDirty();
 }
