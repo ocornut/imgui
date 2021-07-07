@@ -3537,6 +3537,16 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
         g.MovingWindow = window;
 }
 
+typedef struct tagRECT
+{
+    LONG    left;
+    LONG    top;
+    LONG    right;
+    LONG    bottom;
+} RECT; // I'm not sure if this already exists in the library. I didn't find it anywhere so it's defined here to keep everything regarding this pull request closer together.
+typedef BOOL(WINAPI* PFN_GetWindowRect)(HWND hWnd, LPRECT lpRect);
+typedef BOOL(WINAPI* PFN_MoveWindow)(HWND hWnd, int  X, int  Y, int  nWidth, int  nHeight, BOOL bRepaint); // for dynamically loading the winapi functions need. 
+
 // Handle mouse moving window
 // Note: moving window with the navigation keys (Square + d-pad / CTRL+TAB + Arrows) are processed in NavUpdateWindowing()
 // FIXME: We don't have strong guarantee that g.MovingWindow stay synched with g.ActiveId == g.MovingWindow->MoveId.
@@ -3558,7 +3568,18 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
             if (moving_window->Pos.x != pos.x || moving_window->Pos.y != pos.y)
             {
                 MarkIniSettingsDirty(moving_window);
-                SetWindowPos(moving_window, pos, ImGuiCond_Always);
+                if (moving_window->Flags & ImGuiWindowFlags_MoveHWND) {
+                    const static HINSTANCE user32_dll = ::LoadLibraryA("User32.dll");
+                    if (const PFN_GetWindowRect GetWindowRectFn = (PFN_GetWindowRect)::GetProcAddress(user32_dll, "GetWindowRect")) {
+                        if (const PFN_MoveWindow MoveWindowFn = (PFN_MoveWindow)::GetProcAddress(user32_dll, "MoveWindow")) {
+                            ImGuiIO io = ImGui::GetIO();
+                            RECT current_rect;
+                            GetWindowRectFn((HWND)io.ImeWindowHandle, &current_rect);
+                            MoveWindowFn((HWND)io.ImeWindowHandle, current_rect.left + pos.x, current_rect.top + pos.y, current_rect.right - current_rect.left, current_rect.bottom - current_rect.top, true);
+                        }
+                    }
+                }
+                else SetWindowPos(moving_window, pos, ImGuiCond_Always);
             }
             FocusWindow(g.MovingWindow);
         }
