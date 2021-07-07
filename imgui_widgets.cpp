@@ -6591,38 +6591,32 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 //-------------------------------------------------------------------------
 
 // Helpers for internal use
-void ImGuiMenuColumns::Update(int count, float spacing, bool clear)
+void ImGuiMenuColumns::Update(float spacing, bool window_reappearing)
 {
-    IM_ASSERT(count == IM_ARRAYSIZE(Pos));
-    IM_UNUSED(count);
-    Width = NextWidth = 0.0f;
-    Spacing = spacing;
-    if (clear)
-        memset(NextWidths, 0, sizeof(NextWidths));
-    for (int i = 0; i < IM_ARRAYSIZE(Pos); i++)
+    if (window_reappearing)
+        memset(Widths, 0, sizeof(Widths));
+    TotalWidth = NextTotalWidth = 0;
+    Spacing = (ImU16)spacing;
+    for (int i = 0; i < IM_ARRAYSIZE(Widths); i++)
     {
-        if (i > 0 && NextWidths[i] > 0.0f)
-            Width += Spacing;
-        Pos[i] = IM_FLOOR(Width);
-        Width += NextWidths[i];
-        NextWidths[i] = 0.0f;
+        if (i > 0 && Widths[i] > 0)
+            TotalWidth += Spacing;
+        if (i > 0)
+            Offsets[i - 1] = (ImU16)TotalWidth;
+        TotalWidth += Widths[i];
+        Widths[i] = 0;
     }
 }
 
-float ImGuiMenuColumns::DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
+float ImGuiMenuColumns::DeclColumns(float w_label, float w_shortcut, float w_checkmark)
 {
-    NextWidth = 0.0f;
-    NextWidths[0] = ImMax(NextWidths[0], w0);
-    NextWidths[1] = ImMax(NextWidths[1], w1);
-    NextWidths[2] = ImMax(NextWidths[2], w2);
-    for (int i = 0; i < IM_ARRAYSIZE(Pos); i++)
-        NextWidth += NextWidths[i] + ((i > 0 && NextWidths[i] > 0.0f) ? Spacing : 0.0f);
-    return ImMax(Width, NextWidth);
-}
-
-float ImGuiMenuColumns::CalcExtraSpace(float avail_w) const
-{
-    return ImMax(0.0f, avail_w - Width);
+    Widths[0] = ImMax(Widths[0], (ImU16)w_label);
+    Widths[1] = ImMax(Widths[1], (ImU16)w_shortcut);
+    Widths[2] = ImMax(Widths[2], (ImU16)w_checkmark);
+    NextTotalWidth = 0;
+    for (int i = 0; i < IM_ARRAYSIZE(Widths); i++)
+        NextTotalWidth += Widths[i] + ((i > 0 && Widths[i] > 0) ? Spacing : 0);
+    return (float)ImMax(TotalWidth, NextTotalWidth);
 }
 
 // FIXME: Provided a rectangle perhaps e.g. a BeginMenuBarEx() could be used anywhere..
@@ -6835,7 +6829,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         float extra_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
         pressed = Selectable(label, menu_is_open, ImGuiSelectableFlags_NoHoldingActiveID | ImGuiSelectableFlags_SelectOnClick | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_SpanAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(min_w, 0.0f));
         ImU32 text_col = GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
-        RenderArrow(window->DrawList, pos + ImVec2(window->DC.MenuColumns.Pos[2] + extra_w + g.FontSize * 0.30f, 0.0f), text_col, ImGuiDir_Right);
+        RenderArrow(window->DrawList, pos + ImVec2(window->DC.MenuColumns.Offsets[1] + extra_w + g.FontSize * 0.30f, 0.0f), text_col, ImGuiDir_Right);
     }
 
     const bool hovered = enabled && ItemHoverable(window->DC.LastItemRect, id);
@@ -6988,11 +6982,11 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
         if (shortcut_w > 0.0f)
         {
             PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-            RenderText(pos + ImVec2(window->DC.MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
+            RenderText(pos + ImVec2(window->DC.MenuColumns.Offsets[0] + extra_w, 0.0f), shortcut, NULL, false);
             PopStyleColor();
         }
         if (selected)
-            RenderCheckMark(window->DrawList, pos + ImVec2(window->DC.MenuColumns.Pos[2] + extra_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
+            RenderCheckMark(window->DrawList, pos + ImVec2(window->DC.MenuColumns.Offsets[1] + extra_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
     }
 
     IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
