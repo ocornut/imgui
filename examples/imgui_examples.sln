@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_vulkan", "examp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_directx11", "example_sdl_directx11\example_sdl_directx11.vcxproj", "{9E1987E3-1F19-45CA-B9C9-D31E791836D8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_win32_opengl2", "example_win32_opengl2\example_win32_opengl2.vcxproj", "{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -121,6 +123,14 @@ Global
 		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|Win32.Build.0 = Release|Win32
 		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|x64.ActiveCfg = Release|x64
 		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|x64.Build.0 = Release|x64
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Debug|Win32.Build.0 = Debug|Win32
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Debug|x64.ActiveCfg = Debug|x64
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Debug|x64.Build.0 = Debug|x64
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Release|Win32.ActiveCfg = Release|Win32
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Release|Win32.Build.0 = Release|Win32
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Release|x64.ActiveCfg = Release|x64
+		{BCBD1AF7-9365-47A0-BFE6-6D4E1994BD4D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
