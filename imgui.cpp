@@ -6592,24 +6592,27 @@ void ImGui::PopItemFlag()
 }
 
 // PushDisabled()/PopDisabled()
+// - Those can be nested but this cannot be used to enable an already disabled section (a single PushDisabled(true) in the stack is enough to keep things disabled)
 // - Those are not yet exposed in imgui.h because we are unsure of how to alter the style in a way that works for everyone.
 //   We may rework this. Hypothetically, a future styling system may set a flag which make widgets use different colors.
 // - Feedback welcome at https://github.com/ocornut/imgui/issues/211
 // - You may trivially implement your own variation of this if needed.
 //   Here we test (CurrentItemFlags & ImGuiItemFlags_Disabled) to allow nested PushDisabled() calls.
-void ImGui::PushDisabled()
+void ImGui::PushDisabled(bool disabled)
 {
     ImGuiContext& g = *GImGui;
-    if ((g.CurrentItemFlags & ImGuiItemFlags_Disabled) == 0)
+    bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+    if (!was_disabled && disabled)
         PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.6f);
-    PushItemFlag(ImGuiItemFlags_Disabled, true);
+    PushItemFlag(ImGuiItemFlags_Disabled, was_disabled || disabled);
 }
 
 void ImGui::PopDisabled()
 {
     ImGuiContext& g = *GImGui;
+    bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     PopItemFlag();
-    if ((g.CurrentItemFlags & ImGuiItemFlags_Disabled) == 0)
+    if (was_disabled && (g.CurrentItemFlags & ImGuiItemFlags_Disabled) == 0)
         PopStyleVar();
 }
 
