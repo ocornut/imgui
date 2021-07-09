@@ -6858,7 +6858,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         PopStyleColor();
     PopID();
 
-    const bool hovered = enabled && ItemHoverable(window->DC.LastItemRect, id);
+    const bool hovered = (g.HoveredId == id) && enabled;
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
