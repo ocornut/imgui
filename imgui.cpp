@@ -3216,7 +3216,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     if (g.NavDisableMouseHover)
         return false;
-    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None) || (g.CurrentItemFlags & ImGuiItemFlags_Disabled))
+    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
     {
         g.HoveredIdDisabled = true;
         return false;
@@ -3225,9 +3225,17 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
     // hover test in widgets code. We could also decide to split this function is two.
     if (id != 0)
-    {
         SetHoveredID(id);
 
+    // When disabled we'll return false but still set HoveredId
+    if (g.CurrentItemFlags & ImGuiItemFlags_Disabled)
+    {
+        g.HoveredIdDisabled = true;
+        return false;
+    }
+
+    if (id != 0)
+    {
         // [DEBUG] Item Picker tool!
         // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
         // the cost of this tool near-zero. We can get slightly better call-stack and support picking non-hovered
