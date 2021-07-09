@@ -488,14 +488,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (flags & ImGuiButtonFlags_Disabled)
-    {
-        if (out_hovered) *out_hovered = false;
-        if (out_held) *out_held = false;
-        if (g.ActiveId == id) ClearActiveID();
-        return false;
-    }
-
     // Default only reacts to left mouse button
     if ((flags & ImGuiButtonFlags_MouseButtonMask_) == 0)
         flags |= ImGuiButtonFlags_MouseButtonDefault_;
@@ -6139,7 +6131,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     }
 
     bool item_add;
-    if (flags & ImGuiSelectableFlags_Disabled)
+    const bool disabled_item = (flags & ImGuiSelectableFlags_Disabled) != 0;
+    if (disabled_item)
     {
         ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
         g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
@@ -6160,6 +6153,12 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (!item_add)
         return false;
 
+    const bool disabled_global = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+    if (disabled_item && !disabled_global)
+        PushDisabled(true);
+    if (disabled_item || disabled_global)
+        selected = false;
+
     // FIXME: We can standardize the behavior of those two, we could also keep the fast path of override ClipRect + full push on render only,
     // which would be advantageous since most selectable are not selected.
     if (span_all_columns && window->DC.CurrentColumns)
@@ -6172,12 +6171,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_NoHoldingActiveID) { button_flags |= ImGuiButtonFlags_NoHoldingActiveId; }
     if (flags & ImGuiSelectableFlags_SelectOnClick)     { button_flags |= ImGuiButtonFlags_PressedOnClick; }
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
-    if (flags & ImGuiSelectableFlags_Disabled)          { button_flags |= ImGuiButtonFlags_Disabled; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
     if (flags & ImGuiSelectableFlags_AllowItemOverlap)  { button_flags |= ImGuiButtonFlags_AllowItemOverlap; }
-
-    if (flags & ImGuiSelectableFlags_Disabled)
-        selected = false;
 
     const bool was_selected = selected;
     bool hovered, held;
@@ -6228,13 +6223,14 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     else if (span_all_columns && g.CurrentTable)
         TablePopBackgroundChannel();
 
-    if (flags & ImGuiSelectableFlags_Disabled) PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
     RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
-    if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(g.CurrentItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
         CloseCurrentPopup();
+
+    if (disabled_item && !disabled_global)
+        PopDisabled();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
     return pressed;
