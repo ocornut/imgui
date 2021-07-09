@@ -64,13 +64,29 @@ static void *get_proc(const char *proc)
 }
 #else
 #include <dlfcn.h>
+#ifdef __EGL__
+#include <stdio.h>
+#include <EGL/egl.h>
+#include <stdlib.h>
+#else
 #include <GL/glx.h>
+#endif
 
-static void *libgl;
+static void *libgl = NULL;
 
 static void open_libgl(void)
 {
+#ifdef __EGL__
+	libgl = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
+	if(NULL == libgl) {
+		fprintf(stderr, "open libGLESv2.so failed\n");
+	}
+#else
 	libgl = dlopen("libGL.so.1", RTLD_LAZY | RTLD_GLOBAL);
+	if(NULL == libgl) {
+		fprintf(stderr, "open libGL.so failed\n");
+	}
+#endif
 }
 
 static void close_libgl(void)
@@ -80,9 +96,12 @@ static void close_libgl(void)
 
 static void *get_proc(const char *proc)
 {
-	void *res;
-
+	void *res = NULL;
+#ifdef __EGL__
+	res = eglGetProcAddress(proc);
+#else
 	res = (void*)glXGetProcAddress((const GLubyte *) proc);
+#endif
 	if (!res)
 		res = dlsym(libgl, proc);
 	return res;
@@ -98,8 +117,12 @@ static int parse_version(void)
 	if (!glGetIntegerv)
 		return -1;
 
+#ifdef __EGL__
+	sscanf((const char*)glGetString(GL_VERSION), "OpenGL ES %d.%d ", &version.major, &version.minor);
+#else
 	glGetIntegerv(GL_MAJOR_VERSION, &version.major);
 	glGetIntegerv(GL_MINOR_VERSION, &version.minor);
+#endif
 
 	if (version.major < 3)
 		return -1;
