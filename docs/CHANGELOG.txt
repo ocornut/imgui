@@ -103,6 +103,14 @@ Other changes:
  VERSION 1.84 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
+  Kept inline redirection function (will obsolete).
+- Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
+  not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
+  return value of ButtonBehavior() rather than (HoveredId == id).
+
 Other Changes:
 - Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument display a dot instead of a '*' so it
   is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
@@ -115,25 +123,40 @@ Other Changes:
 - Tables: Fix columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
 - Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
+- InputInt/InputFloat: When used with Steps values and _ReadOnly flag, the step button look disabled. (#211)
+- Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
+- Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
+- Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
+- Nav: Disabled items are not candidate for default focus. (#211, #787)
+- Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
+- Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)
+- Disabled: disabled mode doesn't prevent Selectable() from looking selected. (#211)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
 - Fonts: Functions with a 'float size_pixels' parameter can accept zero if it is set in ImFontSize::SizePixels.
 - Fonts: Prefer using U+FFFD character for fallback instead of '?', if available. (#4269)
 - Fonts: Use U+FF0E dot character to construct an ellipsis if U+002E '.' is not available. (#4269)
 - Fonts: Add U+FFFD ("replacement character") to default asian glyphs ranges. (#4269)
+- Fonts: Fix calling ClearTexData() (clearing CPU side font data) triggering an assert in NewFrame(). (#3487)
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.
-- Backends: Reorganized most backends (Win32, SDL, GLFW, OpenGL2/3, DX9/10/11/12, Vulkan, Allegro) to pull data
-  from a single structure to facilitate usage with multiple-contexts. (#586, #1851, #2004, #3012, #3934, #4141)
+- Backends: Reorganized most backends (Win32, SDL, GLFW, OpenGL2/3, DX9/10/11/12, Vulkan, Allegro) to pull their
+  data from a single structure stored inside the main Dear ImGui context. This facilitate/allow usage of standard
+  backends with multiple-contexts BUT is only partially tested and not well supported. It is generally advised to
+  instead use the multi-viewports feature of docking branch where a single Dear ImGui context can be used accross
+  multiple windows. (#586, #1851, #2004, #3012, #3934, #4141)
 - Backends: Win32: Rework to handle certains Windows 8.1/10 features without a manifest. (#4200, #4191)
   - ImGui_ImplWin32_GetDpiScaleForMonitor() will handle per-monitor DPI on Windows 10 without a manifest.
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
+- Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
+  '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
 - Backends: DX9: Explicitly disable texture state stages after >= 1. (#4268) [@NZJenkins]
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
 - Backends: OpenGL3: Destroy vertex/fragment shader objects right after they are linked into main shader. (#4244) [@Crowbarous]
 - Backends: OpenGL3: Use OES_vertex_array extension on Emscripten + backup/restore current state. (#4266, #4267) [@harry75369]
+- Backends: GLFW: Installing and exposed ImGui_ImplGlfw_MonitorCallback() for forward compatibility with docking branch.
 - Backends: OSX: Added a fix for shortcuts using CTRL key instead of CMD key. (#4253) [@rokups]
 - Examples: OSX+OpenGL2: Fix event forwarding (fix key remaining stuck when using shortcuts with Cmd/Super key).
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
@@ -196,6 +219,8 @@ Other Changes:
   consistent with the compile-time default. (#3922)
 - DragScalar: Add default value for v_speed argument to match higher-level functions. (#3922) [@eliasdaler]
 - ColorEdit4: Alpha default to 255 (instead of 0) when omitted in hex input. (#3973) [@squadack]
+- InputText: Fix handling of paste failure (buffer full) which in some cases could corrupt the undo stack. (#4038)
+  (fix submitted to https://github.com/nothings/stb/pull/1158) [@Unit2Ed, @ocornut]
 - InputText: Do not filter private unicode codepoints (e.g. icons) when pasted from clipboard. (#4005) [@dougbinks]
 - InputText: Align caret/cursor to pixel coordinates. (#4080) [@elvissteinjr]
 - InputText: Fixed CTRL+Arrow or OSX double-click leaking the presence of spaces when ImGuiInputTextFlags_Password
@@ -298,6 +323,7 @@ Breaking Changes:
 - Win32+MinGW: Re-enabled IME functions by default even under MinGW. In July 2016, issue #738 had me incorrectly
   disable those default functions for MinGW. MinGW users should: either link with -limm32, either set their
   imconfig file with '#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS'. (#2590, #738) [@actboy168]
+  *EDIT* Undid in 1.84.
 - Backends: Win32: Pragma linking with dwmapi.lib (Vista-era, ~9 kb). MinGW users will need to link with -ldwmapi.
 
 Other Changes:

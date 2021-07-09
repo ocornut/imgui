@@ -103,11 +103,17 @@ struct ImGui_ImplGlfw_Data
     ImGui_ImplGlfw_Data()   { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplGlfw_Data* g_Data;
-static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplGlfw_Data); return g_Data; }
-static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                 ImGui_ImplGlfw_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+// - Because glfwPollEvents() process all windows and some events may be called outside of it, you will need to register your own callbacks
+//   (passing install_callbacks=false in ImGui_ImplGlfw_InitXXX functions), set the current dear imgui context and then call our callbacks.
+// - Otherwise we may need to store a GLFWWindow* -> ImGuiContext* map and handle this in the backend, adding a little bit of extra complexity to it.
+// FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplGlfw_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
+}
 
 // Forward Declarations
 static void ImGui_ImplGlfw_UpdateMonitors();
@@ -199,12 +205,8 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
 
-    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_CreateBackendData();
-    bd->Window = window;
-    bd->Time = 0.0;
-    bd->WantUpdateMonitors = true;
-
     // Setup backend capabilities flags
+    ImGui_ImplGlfw_Data* bd = IM_NEW(ImGui_ImplGlfw_Data)();
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_glfw";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
@@ -213,6 +215,10 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 #if GLFW_HAS_MOUSE_PASSTHROUGH || (GLFW_HAS_WINDOW_HOVERED && defined(_WIN32))
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
 #endif
+
+    bd->Window = window;
+    bd->Time = 0.0;
+    bd->WantUpdateMonitors = true;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
@@ -326,6 +332,7 @@ void ImGui_ImplGlfw_Shutdown()
         glfwSetScrollCallback(bd->Window, bd->PrevUserCallbackScroll);
         glfwSetKeyCallback(bd->Window, bd->PrevUserCallbackKey);
         glfwSetCharCallback(bd->Window, bd->PrevUserCallbackChar);
+        glfwSetMonitorCallback(bd->PrevUserCallbackMonitor);
     }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
@@ -333,7 +340,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
-    ImGui_ImplGlfw_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
@@ -514,6 +521,7 @@ void ImGui_ImplGlfw_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplGlfw_InitForXXX()?");
 
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;

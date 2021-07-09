@@ -191,11 +191,12 @@ struct ImGui_ImplOpenGL3_Data
     ImGui_ImplOpenGL3_Data() { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplOpenGL3_Data*  g_Data;
-static ImGui_ImplOpenGL3_Data*  ImGui_ImplOpenGL3_CreateBackendData()   { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplOpenGL3_Data); return g_Data; }
-static ImGui_ImplOpenGL3_Data*  ImGui_ImplOpenGL3_GetBackendData()      { IM_ASSERT(ImGui::GetCurrentContext() != NULL); return g_Data; }
-static void                     ImGui_ImplOpenGL3_DestroyBackendData()  { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplOpenGL3_Data* ImGui_ImplOpenGL3_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL3_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 // Forward Declarations
 static void ImGui_ImplOpenGL3_InitPlatformInterface();
@@ -207,7 +208,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
-    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_CreateBackendData();
+    // Setup backend capabilities flags
+    ImGui_ImplOpenGL3_Data* bd = IM_NEW(ImGui_ImplOpenGL3_Data)();;
+    io.BackendRendererUserData = (void*)bd;
+    io.BackendRendererName = "imgui_impl_opengl3";
 
     // Query for GL version (e.g. 320 for GL 3.2)
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
@@ -226,9 +230,6 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     bd->GlVersion = 200; // GLES 2
 #endif
 
-    // Setup backend capabilities flags
-    io.BackendRendererUserData = (void*)bd;
-    io.BackendRendererName = "imgui_impl_opengl3";
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
     if (bd->GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
@@ -306,17 +307,20 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 void    ImGui_ImplOpenGL3_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 
     ImGui_ImplOpenGL3_ShutdownPlatformInterface();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplOpenGL3_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void    ImGui_ImplOpenGL3_NewFrame()
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplOpenGL3_Init()?");
+
     if (!bd->ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 }

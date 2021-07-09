@@ -67,11 +67,10 @@ struct ImGui_ImplAllegro5_Data
     ImGui_ImplAllegro5_Data()   { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplAllegro5_Data* g_Data;
-static ImGui_ImplAllegro5_Data* ImGui_ImplAllegro5_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplAllegro5_Data); return g_Data; }
-static ImGui_ImplAllegro5_Data* ImGui_ImplAllegro5_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                     ImGui_ImplAllegro5_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+static ImGui_ImplAllegro5_Data* ImGui_ImplAllegro5_GetBackendData()     { return ImGui::GetCurrentContext() ? (ImGui_ImplAllegro5_Data*)ImGui::GetIO().BackendPlatformUserData : NULL; }
 
 struct ImDrawVertAllegro
 {
@@ -274,13 +273,13 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
 
-    ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_CreateBackendData();
-    bd->Display = display;
-
     // Setup backend capabilities flags
-    io.BackendRendererUserData = (void*)bd;
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+    ImGui_ImplAllegro5_Data* bd = IM_NEW(ImGui_ImplAllegro5_Data)();
+    io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = io.BackendRendererName = "imgui_impl_allegro5";
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+
+    bd->Display = display;
 
     // Create custom vertex declaration.
     // Unfortunately Allegro doesn't support 32-bit packed colors so we have to convert them to 4 floats.
@@ -329,20 +328,18 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 
 void ImGui_ImplAllegro5_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
-
-    bd->Display = NULL;
-    bd->Time = 0.0;
-
     if (bd->VertexDecl)
         al_destroy_vertex_decl(bd->VertexDecl);
-    bd->VertexDecl = NULL;
-
     if (bd->ClipboardTextData)
         al_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = NULL;
-    ImGui_ImplAllegro5_DestroyBackendData();
+
+    io.BackendPlatformUserData = NULL;
+    io.BackendPlatformName = io.BackendRendererName = NULL;
+    IM_DELETE(bd);
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -430,6 +427,8 @@ static void ImGui_ImplAllegro5_UpdateMouseCursor()
 void ImGui_ImplAllegro5_NewFrame()
 {
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplAllegro5_Init()?");
+
     if (!bd->Texture)
         ImGui_ImplAllegro5_CreateDeviceObjects();
 

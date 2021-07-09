@@ -124,12 +124,6 @@ struct ImGui_ImplVulkan_Data
     }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplVulkan_Data*   g_Data;
-static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_CreateBackendData()    { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplVulkan_Data); return g_Data; }
-static ImGui_ImplVulkan_Data*   ImGui_ImplVulkan_GetBackendData()       { return ImGui::GetCurrentContext() ? g_Data : NULL; }
-static void                     ImGui_ImplVulkan_DestroyBackendData()   { IM_DELETE(g_Data); g_Data = NULL; }
-
 // Forward Declarations
 bool ImGui_ImplVulkan_CreateDeviceObjects();
 void ImGui_ImplVulkan_DestroyDeviceObjects();
@@ -342,6 +336,14 @@ static uint32_t __glsl_shader_frag_spv[] =
 //-----------------------------------------------------------------------------
 // FUNCTIONS
 //-----------------------------------------------------------------------------
+
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not tested and probably dysfunctional in this backend.
+static ImGui_ImplVulkan_Data* ImGui_ImplVulkan_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplVulkan_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
@@ -1057,7 +1059,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_CreateBackendData();
+    ImGui_ImplVulkan_Data* bd = IM_NEW(ImGui_ImplVulkan_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_vulkan";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
@@ -1090,6 +1092,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 
 void ImGui_ImplVulkan_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+
     // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();
 
@@ -1102,14 +1107,16 @@ void ImGui_ImplVulkan_Shutdown()
     // Clean up windows
     ImGui_ImplVulkan_ShutdownPlatformInterface();
 
-    ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplVulkan_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void ImGui_ImplVulkan_NewFrame()
 {
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplVulkan_Init()?");
+    IM_UNUSED(bd);
 }
 
 void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)

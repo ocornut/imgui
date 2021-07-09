@@ -91,19 +91,14 @@ struct ImGui_ImplWin32_Data
     ImGui_ImplWin32_Data()      { memset(this, 0, sizeof(*this)); }
 };
 
-#if 1
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplWin32_Data*    g_Data;
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplWin32_Data); return g_Data; }
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return ImGui::GetCurrentContext() ? g_Data : NULL; }
-static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(g_Data); g_Data = NULL; }
-#else
-// FIXME: mouse cursor is a shared resource.
-// FIXME: facilitate calling ImGui_ImplWin32_WndProcHandler() handler and letting us do the right dispatch
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_CreateBackendData()     { return IM_NEW(ImGui_ImplWin32_Data)(); }
-static ImGui_ImplWin32_Data*    ImGui_ImplWin32_GetBackendData()        { return (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData; }
-static void                     ImGui_ImplWin32_DestroyBackendData()    { IM_DELETE(ImGui_ImplWin32_GetBackendData()); }
-#endif
+// Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+// FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
+// FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData : NULL;
+}
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -117,21 +112,21 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     if (!::QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
         return false;
 
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_CreateBackendData();
-    bd->hWnd = (HWND)hwnd;
-    bd->WantUpdateHasGamepad = true;
-    bd->WantUpdateMonitors = true;
-    bd->TicksPerSecond = perf_frequency;
-    bd->Time = perf_counter;
-    bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
-
     // Setup backend capabilities flags
+    ImGui_ImplWin32_Data* bd = IM_NEW(ImGui_ImplWin32_Data)();
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_win32";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
+
+    bd->hWnd = (HWND)hwnd;
+    bd->WantUpdateHasGamepad = true;
+    bd->WantUpdateMonitors = true;
+    bd->TicksPerSecond = perf_frequency;
+    bd->Time = perf_counter;
+    bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -200,7 +195,7 @@ void    ImGui_ImplWin32_Shutdown()
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
-    ImGui_ImplWin32_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 static bool ImGui_ImplWin32_UpdateMouseCursor()
@@ -379,6 +374,7 @@ void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplWin32_Init()?");
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect = { 0, 0, 0, 0 };
@@ -541,10 +537,10 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
     if (RtlVerifyVersionInfoFn == NULL)
         return FALSE;
 
-	RTL_OSVERSIONINFOEXW versionInfo = { };
-	ULONGLONG conditionMask = 0;
-	versionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
-	versionInfo.dwMajorVersion = major;
+    RTL_OSVERSIONINFOEXW versionInfo = { };
+    ULONGLONG conditionMask = 0;
+    versionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+    versionInfo.dwMajorVersion = major;
 	versionInfo.dwMinorVersion = minor;
 	VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
 	VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);

@@ -67,11 +67,12 @@ struct ImGui_ImplDX12_Data
     ImGui_ImplDX12_Data()       { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplDX12_Data* g_Data;
-static ImGui_ImplDX12_Data* ImGui_ImplDX12_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplDX12_Data); return g_Data; }
-static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                 ImGui_ImplDX12_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplDX12_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 // Buffers used during the rendering of a frame
 struct ImGui_ImplDX12_RenderBuffers
@@ -155,21 +156,6 @@ struct ImGui_ImplDX12_ViewportData
     }
 };
 
-template<typename T>
-static void SafeRelease(T*& res)
-{
-    if (res)
-        res->Release();
-    res = NULL;
-}
-
-static void ImGui_ImplDX12_DestroyRenderBuffers(ImGui_ImplDX12_RenderBuffers* render_buffers)
-{
-    SafeRelease(render_buffers->IndexBuffer);
-    SafeRelease(render_buffers->VertexBuffer);
-    render_buffers->IndexBufferSize = render_buffers->VertexBufferSize = 0;
-}
-
 struct VERTEX_CONSTANT_BUFFER
 {
     float   mvp[4][4];
@@ -235,6 +221,14 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     // Setup blend factor
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     ctx->OMSetBlendFactor(blend_factor);
+}
+
+template<typename T>
+static inline void SafeRelease(T*& res)
+{
+    if (res)
+        res->Release();
+    res = NULL;
 }
 
 // Render function
@@ -750,6 +744,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     return true;
 }
 
+static void ImGui_ImplDX12_DestroyRenderBuffers(ImGui_ImplDX12_RenderBuffers* render_buffers)
+{
+    SafeRelease(render_buffers->IndexBuffer);
+    SafeRelease(render_buffers->VertexBuffer);
+    render_buffers->IndexBufferSize = render_buffers->VertexBufferSize = 0;
+}
+
 void    ImGui_ImplDX12_InvalidateDeviceObjects()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -769,21 +770,21 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_CreateBackendData();
-    bd->pd3dDevice = device;
-    bd->RTVFormat = rtv_format;
-    bd->hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
-    bd->hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
-    bd->numFramesInFlight = num_frames_in_flight;
-    bd->pd3dSrvDescHeap = cbv_srv_heap;
-
     // Setup backend capabilities flags
+    ImGui_ImplDX12_Data* bd = IM_NEW(ImGui_ImplDX12_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx12";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplDX12_InitPlatformInterface();
+
+    bd->pd3dDevice = device;
+    bd->RTVFormat = rtv_format;
+    bd->hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
+    bd->hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
+    bd->numFramesInFlight = num_frames_in_flight;
+    bd->pd3dSrvDescHeap = cbv_srv_heap;
 
     // Create a dummy ImGui_ImplDX12_ViewportData holder for the main viewport,
     // Since this is created and managed by the application, we will only use the ->Resources[] fields.
@@ -815,12 +816,14 @@ void ImGui_ImplDX12_Shutdown()
 
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplDX12_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void ImGui_ImplDX12_NewFrame()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX12_Init()?");
+
     if (!bd->pPipelineState)
         ImGui_ImplDX12_CreateDeviceObjects();
 }

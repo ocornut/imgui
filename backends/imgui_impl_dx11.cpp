@@ -65,16 +65,17 @@ struct ImGui_ImplDX11_Data
     ImGui_ImplDX11_Data()       { memset(this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplDX11_Data* g_Data;
-static ImGui_ImplDX11_Data* ImGui_ImplDX11_CreateBackendData()  { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplDX11_Data); return g_Data; }
-static ImGui_ImplDX11_Data* ImGui_ImplDX11_GetBackendData()     { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                 ImGui_ImplDX11_DestroyBackendData() { IM_DELETE(g_Data); g_Data = NULL; }
-
 struct VERTEX_CONSTANT_BUFFER
 {
     float   mvp[4][4];
 };
+
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplDX11_Data* ImGui_ImplDX11_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplDX11_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 // Forward Declarations
 static void ImGui_ImplDX11_InitPlatformInterface();
@@ -542,7 +543,7 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_CreateBackendData();
+    ImGui_ImplDX11_Data* bd = IM_NEW(ImGui_ImplDX11_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx11";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
@@ -579,17 +580,19 @@ void ImGui_ImplDX11_Shutdown()
 
     ImGui_ImplDX11_ShutdownPlatformInterface();
     ImGui_ImplDX11_InvalidateDeviceObjects();
-    if (bd->pFactory)             { bd->pFactory->Release(); bd->pFactory = NULL; }
-    if (bd->pd3dDevice)           { bd->pd3dDevice->Release(); bd->pd3dDevice = NULL; }
-    if (bd->pd3dDeviceContext)    { bd->pd3dDeviceContext->Release(); bd->pd3dDeviceContext = NULL; }
+    if (bd->pFactory)             { bd->pFactory->Release(); }
+    if (bd->pd3dDevice)           { bd->pd3dDevice->Release(); }
+    if (bd->pd3dDeviceContext)    { bd->pd3dDeviceContext->Release(); }
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplDX11_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void ImGui_ImplDX11_NewFrame()
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX11_Init()?");
+
     if (!bd->pFontSampler)
         ImGui_ImplDX11_CreateDeviceObjects();
 }

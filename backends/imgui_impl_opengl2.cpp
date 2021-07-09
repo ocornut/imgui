@@ -65,11 +65,12 @@ struct ImGui_ImplOpenGL2_Data
     ImGui_ImplOpenGL2_Data() { memset(this, 0, sizeof(*this)); }
 };
 
-// Wrapping access to backend data (to facilitate multiple-contexts stored in io.BackendPlatformUserData)
-static ImGui_ImplOpenGL2_Data*  g_Data;
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_CreateBackendData()   { IM_ASSERT(g_Data == NULL); g_Data = IM_NEW(ImGui_ImplOpenGL2_Data); return g_Data; }
-static ImGui_ImplOpenGL2_Data*  ImGui_ImplOpenGL2_GetBackendData()      { return ImGui::GetCurrentContext() != NULL ? g_Data : NULL; }
-static void                     ImGui_ImplOpenGL2_DestroyBackendData()  { IM_DELETE(g_Data); g_Data = NULL; }
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplOpenGL2_Data* ImGui_ImplOpenGL2_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL2_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
 
 // Forward Declarations
 static void ImGui_ImplOpenGL2_InitPlatformInterface();
@@ -82,7 +83,7 @@ bool    ImGui_ImplOpenGL2_Init()
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
-    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_CreateBackendData();
+    ImGui_ImplOpenGL2_Data* bd = IM_NEW(ImGui_ImplOpenGL2_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl2";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
@@ -96,17 +97,20 @@ bool    ImGui_ImplOpenGL2_Init()
 void    ImGui_ImplOpenGL2_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
 
     ImGui_ImplOpenGL2_ShutdownPlatformInterface();
     ImGui_ImplOpenGL2_DestroyDeviceObjects();
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
-    ImGui_ImplOpenGL2_DestroyBackendData();
+    IM_DELETE(bd);
 }
 
 void    ImGui_ImplOpenGL2_NewFrame()
 {
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplOpenGL2_Init()?");
+
     if (!bd->FontTexture)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
 }
