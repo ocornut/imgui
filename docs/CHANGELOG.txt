@@ -52,6 +52,7 @@ Other Changes:
 - Tables: Fix columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
 - Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
+- InputInt/InputFloat: When used with Steps values and _ReadOnly flag, the step button look disabled. (#211)
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
 - Nav: Disabled items are not candidate for default focus. (#211, #787)

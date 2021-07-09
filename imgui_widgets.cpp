@@ -3444,7 +3444,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         style.FramePadding.x = style.FramePadding.y;
         ImGuiButtonFlags button_flags = ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups;
         if (flags & ImGuiInputTextFlags_ReadOnly)
-            button_flags |= ImGuiButtonFlags_Disabled;
+            PushDisabled(true);
         SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("-", ImVec2(button_size, button_size), button_flags))
         {
@@ -3457,6 +3457,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
             DataTypeApplyOp(data_type, '+', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
         }
+        if (flags & ImGuiInputTextFlags_ReadOnly)
+            PopDisabled();
 
         const char* label_end = FindRenderedTextEnd(label);
         if (label != label_end)
