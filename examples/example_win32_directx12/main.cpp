@@ -46,6 +46,7 @@ static IDXGISwapChain3*             g_pSwapChain = NULL;
 static HANDLE                       g_hSwapChainWaitableObject = NULL;
 static ID3D12Resource*              g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
+static bool                         g_wndMinimized = false;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
@@ -135,6 +136,13 @@ int main(int, char**)
         }
         if (done)
             break;
+
+        // Don't render if the window is minimized
+        if (g_wndMinimized)
+        {
+            Sleep(1); // Let the processor sleep a bit
+            continue;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
@@ -478,6 +486,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CreateRenderTarget();
             ImGui_ImplDX12_CreateDeviceObjects();
         }
+        g_wndMinimized = (wParam == SIZE_MINIMIZED);
         return 0;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
