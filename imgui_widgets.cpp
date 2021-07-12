@@ -2534,6 +2534,7 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     PopID();
+
     return value_changed;
 }
 
@@ -6583,6 +6584,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 // - EndMainMenuBar()
 // - BeginMenu()
 // - EndMenu()
+// - MenuItemEx() [Internal]
 // - MenuItem()
 //-------------------------------------------------------------------------
 
@@ -6852,7 +6854,6 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     }
     if (!enabled)
         PopDisabled();
-    PopID();
 
     const bool hovered = (g.HoveredId == id) && enabled;
     if (menuset_is_open)
@@ -6927,6 +6928,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         ClosePopupToLevel(g.BeginPopupStack.Size, true);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
+    PopID();
 
     if (!menu_is_open && want_open && g.OpenPopupStack.Size > g.BeginPopupStack.Size)
     {
@@ -7022,11 +7024,11 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         if (selected)
             RenderCheckMark(window->DrawList, pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize  * 0.866f);
     }
+    IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     if (!enabled)
         PopDisabled();
     PopID();
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
 
