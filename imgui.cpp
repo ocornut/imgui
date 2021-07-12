@@ -4654,6 +4654,45 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key)
     return g.IO.KeyMap[imgui_key];
 }
 
+const char* ImGui::GetKeyName(ImGuiKey imgui_key)
+{
+    static const char* const key_names[] =
+    {
+        "", "Tab", "Left Arrow", "Right Arrow", "Up Arrow", "Down Arrow", "Page Up", "Page Down", "Home",
+        "End", "Insert", "Delete", "Backspace", "Space", "Enter", "Escape", "Apostrophe", "Comma",
+        "Minus", "Period", "Slash", "Semicolon", "Equal", "Left Bracket", "Backslash", "Right Bracket",
+        "Grave Accent", "Caps Lock", "Scroll Lock", "Num Lock", "Print Screen", "Pause",
+        "Key Pad 0", "Key Pad 1", "Key Pad 2", "Key Pad 3", "Key Pad 4", "Key Pad 5", "Key Pad 6",
+        "Key Pad 7", "Key Pad 8", "Key Pad 9", "Key Pad Decimal", "Key Pad Divide", "Key Pad Multiply",
+        "Key Pad Subtract", "Key Pad Add", "Key Pad Enter", "Key Pad Equal", "Left Shift", "Left Control",
+        "Left Alt", "Left Super", "Right Shift", "Right Control", "Right Alt", "Right Super", "Menu",
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I",
+        "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "F1", "F2",
+        "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
+    };
+
+    IM_STATIC_ASSERT(ImGuiKey_COUNT == IM_ARRAYSIZE(key_names));
+
+    if (imgui_key < 0 || imgui_key >= ImGuiKey_COUNT)
+        return "";
+
+    return key_names[imgui_key];
+}
+
+int ImGui::FindImGuiKey(int user_key_index)
+{
+    ImGuiContext& g = *GImGui;
+
+    if (user_key_index < 0 || user_key_index >= IM_ARRAYSIZE(g.IO.KeysDown))
+        return ImGuiKey_None;
+
+    for (int n = 0; n < ImGuiKey_COUNT; ++n)
+        if (g.IO.KeyMap[n] == user_key_index)
+            return n;
+
+    return ImGuiKey_None;
+}
+
 // Note that dear imgui doesn't know the semantic of each entry of io.KeysDown[]!
 // Use your own indices/enums according to how your backend/engine stored them into io.KeysDown[]!
 bool ImGui::IsKeyDown(int user_key_index)

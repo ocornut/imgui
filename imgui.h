@@ -864,6 +864,8 @@ namespace ImGui
     // - For 'int user_key_index' you can use your own indices/enums according to how your backend/engine stored them in io.KeysDown[].
     // - We don't know the meaning of those value. You can use GetKeyIndex() to map a ImGuiKey_ value into the user index.
     IMGUI_API int           GetKeyIndex(ImGuiKey imgui_key);                                    // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
+    IMGUI_API const char*   GetKeyName(ImGuiKey imgui_key);                                     // returns English name of the key
+    IMGUI_API int           FindImGuiKey(int user_key_index);                                   // finds ImGuiKey_* associated to specified user_key_index. Returns ImGuiKey_None if not found.
     IMGUI_API bool          IsKeyDown(int user_key_index);                                      // is key being held. == io.KeysDown[user_key_index].
     IMGUI_API bool          IsKeyPressed(int user_key_index, bool repeat = true);               // was key pressed (went from !Down to Down)? if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
     IMGUI_API bool          IsKeyReleased(int user_key_index);                                  // was key released (went from Down to !Down)?
@@ -1326,6 +1328,7 @@ enum ImGuiSortDirection_
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
 enum ImGuiKey_
 {
+    ImGuiKey_None,
     ImGuiKey_Tab,
     ImGuiKey_LeftArrow,
     ImGuiKey_RightArrow,
@@ -1341,13 +1344,96 @@ enum ImGuiKey_
     ImGuiKey_Space,
     ImGuiKey_Enter,
     ImGuiKey_Escape,
+    ImGuiKey_Apostrophe,     // '
+    ImGuiKey_Comma,          // ,
+    ImGuiKey_Minus,          // -
+    ImGuiKey_Period,         // .
+    ImGuiKey_Slash,          // /
+    ImGuiKey_Semicolon,      // ;
+    ImGuiKey_Equal,          // =
+    ImGuiKey_LeftBracket,    // [
+    ImGuiKey_Backslash,      // \ (this text inhibit multiline comment caused by backlash)
+    ImGuiKey_RightBracket,   // ]
+    ImGuiKey_GraveAccent,    // `
+    ImGuiKey_CapsLock,
+    ImGuiKey_ScrollLock,
+    ImGuiKey_NumLock,
+    ImGuiKey_PrintScreen,
+    ImGuiKey_Pause,
+    ImGuiKey_KeyPad0,
+    ImGuiKey_KeyPad1,
+    ImGuiKey_KeyPad2,
+    ImGuiKey_KeyPad3,
+    ImGuiKey_KeyPad4,
+    ImGuiKey_KeyPad5,
+    ImGuiKey_KeyPad6,
+    ImGuiKey_KeyPad7,
+    ImGuiKey_KeyPad8,
+    ImGuiKey_KeyPad9,
+    ImGuiKey_KeyPadDecimal,
+    ImGuiKey_KeyPadDivide,
+    ImGuiKey_KeyPadMultiply,
+    ImGuiKey_KeyPadSubtract,
+    ImGuiKey_KeyPadAdd,
     ImGuiKey_KeyPadEnter,
-    ImGuiKey_A,                 // for text edit CTRL+A: select all
-    ImGuiKey_C,                 // for text edit CTRL+C: copy
-    ImGuiKey_V,                 // for text edit CTRL+V: paste
-    ImGuiKey_X,                 // for text edit CTRL+X: cut
-    ImGuiKey_Y,                 // for text edit CTRL+Y: redo
-    ImGuiKey_Z,                 // for text edit CTRL+Z: undo
+    ImGuiKey_KeyPadEqual,
+    ImGuiKey_LeftShift,
+    ImGuiKey_LeftControl,
+    ImGuiKey_LeftAlt,
+    ImGuiKey_LeftSuper,
+    ImGuiKey_RightShift,
+    ImGuiKey_RightControl,
+    ImGuiKey_RightAlt,
+    ImGuiKey_RightSuper,
+    ImGuiKey_Menu,
+    ImGuiKey_0,         //
+    ImGuiKey_1,         //
+    ImGuiKey_2,         //
+    ImGuiKey_3,         //
+    ImGuiKey_4,         //
+    ImGuiKey_5,         //
+    ImGuiKey_6,         //
+    ImGuiKey_7,         //
+    ImGuiKey_8,         //
+    ImGuiKey_9,         //
+    ImGuiKey_A,         // for text edit CTRL+A: select all
+    ImGuiKey_B,         //
+    ImGuiKey_C,         // for text edit CTRL+C: copy
+    ImGuiKey_D,         //
+    ImGuiKey_E,         //
+    ImGuiKey_F,         //
+    ImGuiKey_G,         //
+    ImGuiKey_H,         //
+    ImGuiKey_I,         //
+    ImGuiKey_J,         //
+    ImGuiKey_K,         //
+    ImGuiKey_L,         //
+    ImGuiKey_M,         //
+    ImGuiKey_N,         //
+    ImGuiKey_O,         //
+    ImGuiKey_P,         //
+    ImGuiKey_Q,         //
+    ImGuiKey_R,         //
+    ImGuiKey_S,         //
+    ImGuiKey_T,         //
+    ImGuiKey_U,         //
+    ImGuiKey_V,         // for text edit CTRL+V: paste
+    ImGuiKey_W,         //
+    ImGuiKey_X,         // for text edit CTRL+X: cut
+    ImGuiKey_Y,         // for text edit CTRL+Y: redo
+    ImGuiKey_Z,         // for text edit CTRL+Z: undo
+    ImGuiKey_F1,        //
+    ImGuiKey_F2,        //
+    ImGuiKey_F3,        //
+    ImGuiKey_F4,        //
+    ImGuiKey_F5,        //
+    ImGuiKey_F6,        //
+    ImGuiKey_F7,        //
+    ImGuiKey_F8,        //
+    ImGuiKey_F9,        //
+    ImGuiKey_F10,       //
+    ImGuiKey_F11,       //
+    ImGuiKey_F12,       //
     ImGuiKey_COUNT
 };
 

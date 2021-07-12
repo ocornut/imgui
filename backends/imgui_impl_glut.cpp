@@ -50,28 +50,111 @@ bool ImGui_ImplGLUT_Init()
     g_Time = 0;
 
     // Glut has 1 function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.
-    io.KeyMap[ImGuiKey_Tab]         = '\t'; // == 9 == CTRL+I
-    io.KeyMap[ImGuiKey_LeftArrow]   = 256 + GLUT_KEY_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow]  = 256 + GLUT_KEY_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow]     = 256 + GLUT_KEY_UP;
-    io.KeyMap[ImGuiKey_DownArrow]   = 256 + GLUT_KEY_DOWN;
-    io.KeyMap[ImGuiKey_PageUp]      = 256 + GLUT_KEY_PAGE_UP;
-    io.KeyMap[ImGuiKey_PageDown]    = 256 + GLUT_KEY_PAGE_DOWN;
-    io.KeyMap[ImGuiKey_Home]        = 256 + GLUT_KEY_HOME;
-    io.KeyMap[ImGuiKey_End]         = 256 + GLUT_KEY_END;
-    io.KeyMap[ImGuiKey_Insert]      = 256 + GLUT_KEY_INSERT;
-    io.KeyMap[ImGuiKey_Delete]      = 127;
-    io.KeyMap[ImGuiKey_Backspace]   = 8;  // == CTRL+H
-    io.KeyMap[ImGuiKey_Space]       = ' ';
-    io.KeyMap[ImGuiKey_Enter]       = 13; // == CTRL+M
-    io.KeyMap[ImGuiKey_Escape]      = 27;
-    io.KeyMap[ImGuiKey_KeyPadEnter] = 13; // == CTRL+M
-    io.KeyMap[ImGuiKey_A]           = 'A';
-    io.KeyMap[ImGuiKey_C]           = 'C';
-    io.KeyMap[ImGuiKey_V]           = 'V';
-    io.KeyMap[ImGuiKey_X]           = 'X';
-    io.KeyMap[ImGuiKey_Y]           = 'Y';
-    io.KeyMap[ImGuiKey_Z]           = 'Z';
+    io.KeyMap[ImGuiKey_Tab]             = '\t'; // == 9 == CTRL+I
+    io.KeyMap[ImGuiKey_LeftArrow]       = 256 + GLUT_KEY_LEFT;
+    io.KeyMap[ImGuiKey_RightArrow]      = 256 + GLUT_KEY_RIGHT;
+    io.KeyMap[ImGuiKey_UpArrow]         = 256 + GLUT_KEY_UP;
+    io.KeyMap[ImGuiKey_DownArrow]       = 256 + GLUT_KEY_DOWN;
+    io.KeyMap[ImGuiKey_PageUp]          = 256 + GLUT_KEY_PAGE_UP;
+    io.KeyMap[ImGuiKey_PageDown]        = 256 + GLUT_KEY_PAGE_DOWN;
+    io.KeyMap[ImGuiKey_Home]            = 256 + GLUT_KEY_HOME;
+    io.KeyMap[ImGuiKey_End]             = 256 + GLUT_KEY_END;
+    io.KeyMap[ImGuiKey_Insert]          = 256 + GLUT_KEY_INSERT;
+    io.KeyMap[ImGuiKey_Delete]          = 127;
+    io.KeyMap[ImGuiKey_Backspace]       = 8;  // == CTRL+H
+    io.KeyMap[ImGuiKey_Space]           = ' ';
+    io.KeyMap[ImGuiKey_Enter]           = 13; // == CTRL+M
+    io.KeyMap[ImGuiKey_Escape]          = 27;
+    io.KeyMap[ImGuiKey_Apostrophe]      = 39; // '
+    io.KeyMap[ImGuiKey_Comma]           = 44; // ,
+    io.KeyMap[ImGuiKey_Minus]           = 45; // -
+    io.KeyMap[ImGuiKey_Period]          = 46; // .
+    io.KeyMap[ImGuiKey_Slash]           = 47; // /
+    io.KeyMap[ImGuiKey_Semicolon]       = 59; // ;
+    io.KeyMap[ImGuiKey_Equal]           = 61; // =
+    io.KeyMap[ImGuiKey_LeftBracket]     = 91; // [
+    io.KeyMap[ImGuiKey_Backslash]       = 92; // \ (this text inhibit multiline comment caused by backlash)
+    io.KeyMap[ImGuiKey_RightBracket]    = 93; // ]
+    io.KeyMap[ImGuiKey_GraveAccent]     = 96; // `
+    io.KeyMap[ImGuiKey_CapsLock]        = 0; // not supported
+    io.KeyMap[ImGuiKey_ScrollLock]      = 0; // not supported
+    io.KeyMap[ImGuiKey_NumLock]         = 256 + 0x006D; // GLUT_KEY_NUM_LOCK
+    io.KeyMap[ImGuiKey_PrintScreen]     = 0; // not supported
+    io.KeyMap[ImGuiKey_Pause]           = 0; // not supported
+    io.KeyMap[ImGuiKey_KeyPad0]         = '0'; // == 0
+    io.KeyMap[ImGuiKey_KeyPad1]         = '1'; // == 1
+    io.KeyMap[ImGuiKey_KeyPad2]         = '2'; // == 2
+    io.KeyMap[ImGuiKey_KeyPad3]         = '3'; // == 3
+    io.KeyMap[ImGuiKey_KeyPad4]         = '4'; // == 4
+    io.KeyMap[ImGuiKey_KeyPad5]         = '5'; // == 5
+    io.KeyMap[ImGuiKey_KeyPad6]         = '6'; // == 6
+    io.KeyMap[ImGuiKey_KeyPad7]         = '7'; // == 7
+    io.KeyMap[ImGuiKey_KeyPad8]         = '8'; // == 8
+    io.KeyMap[ImGuiKey_KeyPad9]         = '9'; // == 9
+    io.KeyMap[ImGuiKey_KeyPadDecimal]   = 46; // == . (US - locale dependent)
+    io.KeyMap[ImGuiKey_KeyPadDivide]    = 47; // == /
+    io.KeyMap[ImGuiKey_KeyPadMultiply]  = 42;
+    io.KeyMap[ImGuiKey_KeyPadSubtract]  = 45; // == -
+    io.KeyMap[ImGuiKey_KeyPadAdd]       = 43; //
+    io.KeyMap[ImGuiKey_KeyPadEnter]     = 13; // == Enter
+    io.KeyMap[ImGuiKey_KeyPadEqual]     = 0; // not supported
+    io.KeyMap[ImGuiKey_LeftShift]       = 256 + 0x0070; // GLUT_KEY_SHIFT_L
+    io.KeyMap[ImGuiKey_LeftControl]     = 256 + 0x0072; // GLUT_KEY_CTRL_L
+    io.KeyMap[ImGuiKey_LeftAlt]         = 256 + 0x0074; // GLUT_KEY_ALT_L
+    io.KeyMap[ImGuiKey_LeftSuper]       = 0; // not supported
+    io.KeyMap[ImGuiKey_RightShift]      = 256 + 0x0071; // GLUT_KEY_SHIFT_R
+    io.KeyMap[ImGuiKey_RightControl]    = 256 + 0x0073; // GLUT_KEY_CTRL_R
+    io.KeyMap[ImGuiKey_RightAlt]        = 256 + 0x0075; // GLUT_KEY_ALT_R
+    io.KeyMap[ImGuiKey_RightSuper]      = 0; // not supported
+    io.KeyMap[ImGuiKey_Menu]            = 0; // not supported
+    io.KeyMap[ImGuiKey_0]               = '0';
+    io.KeyMap[ImGuiKey_1]               = '1';
+    io.KeyMap[ImGuiKey_2]               = '2';
+    io.KeyMap[ImGuiKey_3]               = '3';
+    io.KeyMap[ImGuiKey_4]               = '4';
+    io.KeyMap[ImGuiKey_5]               = '5';
+    io.KeyMap[ImGuiKey_6]               = '6';
+    io.KeyMap[ImGuiKey_7]               = '7';
+    io.KeyMap[ImGuiKey_8]               = '8';
+    io.KeyMap[ImGuiKey_9]               = '9';
+    io.KeyMap[ImGuiKey_A]               = 'A';
+    io.KeyMap[ImGuiKey_B]               = 'B';
+    io.KeyMap[ImGuiKey_C]               = 'C';
+    io.KeyMap[ImGuiKey_D]               = 'D';
+    io.KeyMap[ImGuiKey_E]               = 'E';
+    io.KeyMap[ImGuiKey_F]               = 'F';
+    io.KeyMap[ImGuiKey_G]               = 'G';
+    io.KeyMap[ImGuiKey_H]               = 'H';
+    io.KeyMap[ImGuiKey_I]               = 'I';
+    io.KeyMap[ImGuiKey_J]               = 'J';
+    io.KeyMap[ImGuiKey_K]               = 'K';
+    io.KeyMap[ImGuiKey_L]               = 'L';
+    io.KeyMap[ImGuiKey_M]               = 'M';
+    io.KeyMap[ImGuiKey_N]               = 'N';
+    io.KeyMap[ImGuiKey_O]               = 'O';
+    io.KeyMap[ImGuiKey_P]               = 'P';
+    io.KeyMap[ImGuiKey_Q]               = 'Q';
+    io.KeyMap[ImGuiKey_R]               = 'R';
+    io.KeyMap[ImGuiKey_S]               = 'S';
+    io.KeyMap[ImGuiKey_T]               = 'T';
+    io.KeyMap[ImGuiKey_U]               = 'U';
+    io.KeyMap[ImGuiKey_V]               = 'V';
+    io.KeyMap[ImGuiKey_W]               = 'W';
+    io.KeyMap[ImGuiKey_X]               = 'X';
+    io.KeyMap[ImGuiKey_Y]               = 'Y';
+    io.KeyMap[ImGuiKey_Z]               = 'Z';
+    io.KeyMap[ImGuiKey_F1]              = 256 + GLUT_KEY_F1;
+    io.KeyMap[ImGuiKey_F2]              = 256 + GLUT_KEY_F2;
+    io.KeyMap[ImGuiKey_F3]              = 256 + GLUT_KEY_F3;
+    io.KeyMap[ImGuiKey_F4]              = 256 + GLUT_KEY_F4;
+    io.KeyMap[ImGuiKey_F5]              = 256 + GLUT_KEY_F5;
+    io.KeyMap[ImGuiKey_F6]              = 256 + GLUT_KEY_F6;
+    io.KeyMap[ImGuiKey_F7]              = 256 + GLUT_KEY_F7;
+    io.KeyMap[ImGuiKey_F8]              = 256 + GLUT_KEY_F8;
+    io.KeyMap[ImGuiKey_F9]              = 256 + GLUT_KEY_F9;
+    io.KeyMap[ImGuiKey_F10]             = 256 + GLUT_KEY_F10;
+    io.KeyMap[ImGuiKey_F11]             = 256 + GLUT_KEY_F11;
+    io.KeyMap[ImGuiKey_F12]             = 256 + GLUT_KEY_F12;
 
     return true;
 }
