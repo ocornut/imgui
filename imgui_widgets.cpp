@@ -611,10 +611,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         }
     }
 
-    // Release active id if turning disabled
-    if (g.ActiveId == id && (g.CurrentItemFlags & ImGuiItemFlags_Disabled))
-        ClearActiveID();
-
     // Process while held
     bool held = false;
     if (g.ActiveId == id)

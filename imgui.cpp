@@ -3234,6 +3234,9 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     // When disabled we'll return false but still set HoveredId
     if (g.CurrentItemFlags & ImGuiItemFlags_Disabled)
     {
+        // Release active id if turning disabled
+        if (g.ActiveId == id)
+            ClearActiveID();
         g.HoveredIdDisabled = true;
         return false;
     }
