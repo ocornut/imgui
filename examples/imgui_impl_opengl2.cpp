@@ -69,7 +69,7 @@ void    ImGui_ImplOpenGL2_Shutdown()
 
 void    ImGui_ImplOpenGL2_NewFrame()
 {
-    ImGui_ImplOpenGL2_UpdateFontsTexture();
+    ImGui::GetIO().Fonts->CheckOverflow();
 }
 
 static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height)
@@ -114,6 +114,8 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so.
 void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
+    ImGui_ImplOpenGL2_UpdateFontsTexture();
+
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);

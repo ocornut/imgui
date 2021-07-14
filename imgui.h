@@ -2246,7 +2246,7 @@ struct ImFontGlyph
     float           AdvanceX;           // Distance to next character (= data from font + ImFontConfig::GlyphExtraSpacing.x baked in)
     float           X0, Y0, X1, Y1;     // Glyph corners
     float           Xoff, Yoff;
-    //float           U0, V0, U1, V1;     // Texture coordinates
+    float           U0, V0, U1, V1;     // Texture coordinates
     int             NextGlyph;
     short           GlyphSize;
     ImFontTexture*  FontTexture;
@@ -2282,11 +2282,15 @@ enum ImFontAtlasFlags_
     ImFontAtlasFlags_NoBakedLines       = 1 << 2    // Don't build thick line textures into the atlas (save a little texture memory). The AntiAliasedLinesUseTex features uses them, otherwise they will be rendered using polygons (more expensive for CPU/GPU).
 };
 
+
+
 struct ImFontTexRow
 {
-    int                   x;
-    int                   y;
-    int                   h;
+    int                   X;
+    int                   Y;
+    int                   H;
+    int                   ColumnWidth;
+    int                   RowStartX;
 };
 
 struct ImFontTexture
@@ -2305,6 +2309,8 @@ struct ImFontTexture
     ImVec2                  DirtyBotRight;
     ImVector<unsigned char> TexData;
     ImVec2                  TexUvScale;
+    int                     ColumnStartX;
+    int                     ColumnWidth;
 };
 
 // Load and rasterize multiple TTF/OTF fonts into a same texture. The font atlas will build a single texture holding:
@@ -2338,7 +2344,10 @@ struct ImFontAtlas
     IMGUI_API void              ClearTexData();             // Clear output texture data (CPU side). Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              ClearFonts();               // Clear output font data (glyphs storage, UV coordinates).
     IMGUI_API void              Clear();                    // Clear all input and output.
-   
+    IMGUI_API void              CheckOverflow();            // Check for glyph overflow on the previous frame. Called by the backend *_UpdateFontsTexture
+    IMGUI_API void              PrepareFontTexture();       // Renders mouse cursors, baked anti-aliased lines etc on the font texture
+    IMGUI_API void              CopyCustomRects(ImFontTexture* dest, ImFontTexture* src);
+
     //-------------------------------------------
     // [BETA] Custom Rectangles/Glyphs API
     //-------------------------------------------
@@ -2365,6 +2374,7 @@ struct ImFontAtlas
     //-------------------------------------------
 
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
+    bool                        GlyphOverflow;      // True when glyphs overflow to the overflow texture triggering a recreation of the font texture
     ImFontAtlasFlags            Flags;              // Build flags (see ImFontAtlasFlags_)
     // FIXME-DYNAMICFONT: Add support for glyph padding
     //int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0.
@@ -2374,11 +2384,14 @@ struct ImFontAtlas
     // FIXME-DYNAMICFONT: Add support for changing font texture during runtime
     int                         TexWidth;           // Texture width used when creating a new font texture.
     int                         TexHeight;          // Texture height used when creating a new font texture.
+    int                         OverflowTexWidth;   // Texture width used when creating a new overflow font texture.
+    int                         OverflowTexHeight;  // Texture height used when creating a new overflow font texture.
     ImVec2                      TexUvScale;         // = (1.0f/TexWidth, 1.0f/TexHeight)
-    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel on all the font textures
-    ImVector<unsigned char>     EmptyFontTexturePixelData; //Pixel data for an empty font texture with a white pixel
+    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel on primary font textures
+    ImVector<unsigned char>     EmptyFontTexturePixelData; //Pixel data for an empty font texture
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontTexture*>    FontTextures;
+    ImVector<ImFontTexture*>    CachedFontTextures;
                                                     
     ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Configuration data
@@ -2397,11 +2410,15 @@ struct ImFontAtlas
 // Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 #define IM_HASH_LUT_SIZE 256
+#define IM_HASH_MIN_FONT_SIZE 10
+#define IM_HASH_MAX_FONT_SIZE 30
+#define IM_HASH_NUM_SIZES (IM_HASH_MAX_FONT_SIZE - IM_HASH_MIN_FONT_SIZE)
 struct FontBackEnd;
 struct ImFont
 {
     float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
+    ImVector<ImFontGlyph>       CachedGlyphs;       // Glyphs no longer on the primary font texture that needs to be copied next time it will be rendered
     const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
     ImVec2                      DisplayOffset;      // 8     // in  // = (0,0)    // Offset font rendering by xx pixels
 
@@ -2415,17 +2432,19 @@ struct ImFont
     // FIXME-DYNAMICFONT: Add support for base font scale
     float                       Scale;              // 4     // in  // = 1.f      // Base font scale, multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     float                       Ascent, Descent;    // 4+4   // out //            // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
-    // FIXME-DYNAMICFONT: Add supprot for surface metrics
+    // FIXME-DYNAMICFONT: Add support for surface metrics
     //int                         MetricsTotalSurface;// 4     // out //            // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     //ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     
-    int                         lut[IM_HASH_LUT_SIZE]; //Lookup table
+    int                         LookupTable[IM_HASH_NUM_SIZES][IM_HASH_LUT_SIZE]; //Lookup table
+    int                         CachedLookupTable[IM_HASH_NUM_SIZES][IM_HASH_LUT_SIZE];
+    
     FontBackEnd*                PrivData;           //Private data to underlying font engine
 
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
-    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size, ImFontGlyph** backup_glyph = NULL);
+    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size);
     // FIXME-DYNAMICFONT: Add support for findglyphnofallback
     IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c, float size) const;
     float                       GetCharAdvance(ImWchar c, float size);

@@ -1723,9 +1723,14 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 void FONT_BackEndInit();
 void FONT_BackEndShutdown();
 
+
+#define OVERFLOW_TEXTURE_WIDTH 256
+#define OVERFLOW_TEXTURE_HEIGHT 256
+
 ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 {
     Locked = false;
+    GlyphOverflow = false;
     Flags = 0;
     // FIXME-DYNAMICFONT: Add support for glyph padding
     //TexGlyphPadding = 1;
@@ -1733,6 +1738,12 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 
     TexWidth = tex_width;
     TexHeight = tex_height;
+    OverflowTexWidth = OVERFLOW_TEXTURE_WIDTH;
+    OverflowTexHeight = OVERFLOW_TEXTURE_HEIGHT;
+
+    IM_ASSERT(OverflowTexWidth < TexWidth);
+    IM_ASSERT(OverflowTexHeight < TexHeight);
+
     TexUvScale = ImVec2(1.f/ (float) TexWidth, 1.f/ (float) (TexHeight));
     PackIdMouseCursors = PackIdLines = -1;
 
@@ -1750,12 +1761,21 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
         }
     }*/
     
-    //Create first font texture
+    //Create primary font texture
     FontTextures.push_back(IM_NEW(ImFontTexture(TexWidth, TexHeight, EmptyFontTexturePixelData.Data)));
 
+    //Create overflow font texture
+    FontTextures.push_back(IM_NEW(ImFontTexture(OverflowTexWidth, OverflowTexHeight, EmptyFontTexturePixelData.Data)));
+
+    PrepareFontTexture();
+
+    FONT_BackEndInit();
+}
+
+void ImFontAtlas::PrepareFontTexture() {
     //If we bake lines the mouse cursor rect should have the same height as the pyramid to make sure the pyramid is not on a separate line
     if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors))
-        PackIdMouseCursors = AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, ImMax(FONT_ATLAS_DEFAULT_TEX_DATA_H, (this->Flags & ImFontAtlasFlags_NoBakedLines) ? 0 : IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1));
+        PackIdMouseCursors = AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W, ImMax(FONT_ATLAS_DEFAULT_TEX_DATA_H * 2 + 1, (this->Flags & ImFontAtlasFlags_NoBakedLines) ? 0 : IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1));
     else
         PackIdMouseCursors = AddCustomRectRegular(2, ImMax(FONT_ATLAS_DEFAULT_TEX_DATA_H, (this->Flags & ImFontAtlasFlags_NoBakedLines) ? 0 : IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1));    
         
@@ -1768,10 +1788,10 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 
         if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors)) {
             // Render/copy pixels
-            const int x_for_white = r->X;
-            const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
-            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
-            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
+            const int y_for_white = r->Y;
+            const int y_for_black = r->Y + FONT_ATLAS_DEFAULT_TEX_DATA_H + 1;
+            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, r->X, y_for_white, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
+            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, r->X, y_for_black, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
             
         }
         else {
@@ -1819,7 +1839,12 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
         
     }
 
-    FONT_BackEndInit();
+    if(!(this->Flags & ImFontAtlasFlags_NoMouseCursors)) {
+        //Set the first column to the same width as the mouse cursors and the baked lines to obtain more optimal texture usage
+        IM_ASSERT(FontTextures.Size);
+        IM_ASSERT(FontTextures.front()->FontTexRows.Size);
+        FontTextures.front()->ColumnWidth = FontTextures.front()->FontTexRows.front().X;
+    }
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -1853,6 +1878,106 @@ void    ImFontAtlas::ClearInputData()
     PackIdMouseCursors = PackIdLines = -1;
 }
 
+void ImFontAtlas::CheckOverflow()
+{
+
+    if(GlyphOverflow) {
+        // Make sure the CachedFontTextures container match FontTextures container
+        // regarding number of textures and size of the textures
+
+        ImFontTexture** cached_font_texture_it = CachedFontTextures.begin();
+        for(ImFontTexture** font_texture_it = FontTextures.begin(); font_texture_it != FontTextures.end(); ++font_texture_it) {
+            ImFontTexture* font_texture_ptr = *font_texture_it;
+            ImFontTexture* cached_font_texture_ptr;
+            if(cached_font_texture_it == CachedFontTextures.end()) {
+                CachedFontTextures.push_back(IM_NEW(ImFontTexture(font_texture_ptr->TexWidth
+                                                                  , font_texture_ptr->TexHeight
+                                                                  , EmptyFontTexturePixelData.Data)));
+                cached_font_texture_it = CachedFontTextures.end();
+                cached_font_texture_it--;
+                cached_font_texture_ptr = *cached_font_texture_it;
+            }
+            else {
+                cached_font_texture_ptr = *cached_font_texture_it;
+
+                if(cached_font_texture_ptr->TexWidth != font_texture_ptr->TexWidth
+                   || cached_font_texture_ptr->TexHeight != font_texture_ptr->TexHeight) {
+                        cached_font_texture_ptr->TexWidth = font_texture_ptr->TexWidth;
+                        cached_font_texture_ptr->TexHeight = font_texture_ptr->TexHeight;
+                        cached_font_texture_ptr->TexData.resize(cached_font_texture_ptr->TexWidth * cached_font_texture_ptr->TexHeight * 4);
+
+                        cached_font_texture_ptr->TexUvScale = ImVec2(1.f/(float) (cached_font_texture_ptr->TexWidth), 1.f/(float) (cached_font_texture_ptr->TexHeight));
+                }
+
+                memset(cached_font_texture_ptr->TexData.Data, 0, cached_font_texture_ptr->TexData.Size);
+
+                cached_font_texture_ptr->ColumnStartX = 0;
+                cached_font_texture_ptr->ColumnWidth = cached_font_texture_ptr->TexWidth;
+
+            }
+
+            // Move the font texture to the cache
+            cached_font_texture_ptr->FontTexRows.clear();
+            ImSwap(font_texture_ptr->TexID, cached_font_texture_ptr->TexID);
+            ImSwap(*font_texture_it, *cached_font_texture_it);
+
+
+            ++cached_font_texture_it;
+        }
+        
+        CopyCustomRects(FontTextures.front(), CachedFontTextures.front());
+
+        // Set the first column to the same width as the mouse cursors and the baked lines to obtain more optimal texture usage
+        IM_ASSERT(FontTextures.Size);
+        IM_ASSERT(FontTextures.front()->FontTexRows.Size);
+        FontTextures.front()->ColumnWidth = FontTextures.front()->FontTexRows.front().X;
+            
+        // Store all old glyphs
+        for(ImFont** font_ptr = Fonts.begin(); font_ptr != Fonts.end(); ++font_ptr) {
+            ImFont* font_p = *font_ptr;
+            font_p->CachedGlyphs.clear();
+            font_p->CachedGlyphs.swap(font_p->Glyphs);
+            memcpy(font_p->CachedLookupTable, font_p->LookupTable, sizeof(font_p->LookupTable));
+            for(int j = 0; j < IM_HASH_NUM_SIZES; ++j) {
+                for (int i = 0; i < IM_HASH_LUT_SIZE; ++i) font_p->LookupTable[j][i] = -1;
+            }
+        }
+
+        GlyphOverflow = false;
+    }
+}
+
+
+void ImFontAtlas::CopyCustomRects(ImFontTexture* dest, ImFontTexture* src) {
+    ImVector<ImFontAtlasCustomRect> old_custom_rects;
+    old_custom_rects.swap(CustomRects); //Take CustomRects guts
+
+    //CustomRects.clear();
+
+    // Copy the old custom rects to the new texture
+    for(ImFontAtlasCustomRect* old_custom_rect = old_custom_rects.begin(); old_custom_rect != old_custom_rects.end(); ++old_custom_rect) {
+        int new_custom_rect_id = AddCustomRectRegular(old_custom_rect->Width, old_custom_rect->Height);
+
+        ImFontAtlasCustomRect* r = this->GetCustomRectByIndex(new_custom_rect_id);
+
+        //Copy pixel data row by row
+        unsigned int x = r->X;
+        unsigned int y = r->Y;
+        unsigned int width = r->Width;
+        unsigned int height = r->Height;
+        
+        unsigned char* dest_pixel = &dest->TexData.Data[(y*dest->TexWidth + x) * 4];
+        unsigned char* src_pixels = &src->TexData.Data[(old_custom_rect->Y*src->TexWidth + old_custom_rect->X) * 4];
+        for (int rows_left = height; rows_left; rows_left--) {
+            memcpy(dest_pixel, src_pixels, width * 4);
+            dest_pixel = dest_pixel + dest->TexWidth * 4;
+            src_pixels = src_pixels + src->TexWidth * 4;
+        }
+    }
+    dest->MarkAsDirty(0, 0, dest->TexWidth, dest->TexHeight);
+}
+
+
 void    ImFontAtlas::ClearTexData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
@@ -1861,6 +1986,11 @@ void    ImFontAtlas::ClearTexData()
         IM_DELETE(FontTextures[i]);
 
     FontTextures.clear();
+
+    for (int i = 0; i < CachedFontTextures.Size; i++)
+        IM_DELETE(CachedFontTextures[i]);
+
+    CachedFontTextures.clear();
 }
 
 void    ImFontAtlas::ClearFonts()
@@ -1971,6 +2101,8 @@ int FONT_InitFont(FontBackEnd *backend, const unsigned char *data, unsigned int 
     backend->Info.LineSpacing = (float)FT_CEIL(metrics.height);
     backend->Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender);
     backend->Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
+
+    (void) offset;
     return 1;
 #else
     return stbtt_InitFont(backend->stbtt_backend, data, offset);
@@ -2031,6 +2163,10 @@ void FONT_MakeGlyphBitmap(FontBackEnd *backend, ImVector<unsigned char> *final_o
     const u_int32_t src_pitch = ft_bitmap->pitch;
 
     *final_output = u8_to_rgba(src, w, h, src_pitch);
+    (void) out_w;
+    (void) out_h;
+    (void) out_stride;
+    (void) scale_x;
 #else
     ImVector<unsigned char> output;
     output.resize(out_w * out_h, 0);
@@ -2132,6 +2268,8 @@ void FONT_GetGlyphBitmapBox(FontBackEnd *backend, int glyph_index, float scale_x
     *iy0 = -backend->Face->glyph->bitmap_top;
     *ix1 = *ix0 + (int)ft_bitmap->width;
     *iy1 = *iy0 + (int)ft_bitmap->rows;
+    (void) scale_y;
+    (void) scale_x;
 #else
     stbtt_GetGlyphBitmapBox(backend->stbtt_backend, glyph_index, scale_x, scale_y, ix0, iy0, ix1, iy1);
 #endif
@@ -2281,9 +2419,9 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
 
     ImFontTexRow* row;
     FindTextureAndRow(&r.FontTexture, &row, width, height);
-    r.X = row->x;
-    r.Y = row->y;
-    row->x+= width;
+    r.X = row->X;
+    r.Y = row->Y;
+    row->X+= width;
     
 
     CustomRects.push_back(r);
@@ -2334,7 +2472,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     *out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
     out_uv_border[0] = (pos) * TexUvScale;
     out_uv_border[1] = (pos + size) * TexUvScale;
-    pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
+    pos.y += FONT_ATLAS_DEFAULT_TEX_DATA_H + 1;
     out_uv_fill[0] = (pos) * TexUvScale;
     out_uv_fill[1] = (pos + size) * TexUvScale;
     return true;
@@ -2380,7 +2518,9 @@ ImFont::ImFont()
     //memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
 
     // Init hash lookup.
-    for (int i = 0; i < IM_HASH_LUT_SIZE; ++i) lut[i] = -1;
+    for(int j = 0; j < IM_HASH_NUM_SIZES; ++j) {
+        for (int i = 0; i < IM_HASH_LUT_SIZE; ++i) CachedLookupTable[j][i] = LookupTable[j][i] = -1;
+    }
 }
 
 ImFont::~ImFont()
@@ -2408,17 +2548,6 @@ void ImFont::SetFallbackChar(ImWchar c)
     FallbackChar = c;
 }
 
-// FIXME-DYNAMICFONT: Change hash algorithm? This is the algorithm used by fontstash
-static unsigned int hashint(unsigned int a)
-{
-    a += ~(a << 15);
-    a ^= (a >> 10);
-    a += (a << 3);
-    a ^= (a >> 6);
-    a += ~(a << 11);
-    a ^= (a >> 16);
-    return a;
-}
 
 
 void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTexRow** resulting_row, int gw, int gh, bool extra_height)  {
@@ -2429,8 +2558,9 @@ void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTex
     {
         for (int i = 0; i < (*texture)->FontTexRows.Size; ++i)
         {
-            if ((*texture)->FontTexRows[i].h == rh && (*texture)->FontTexRows[i].x + gw + 1 <= (*texture)->TexWidth)
-                br = &(*texture)->FontTexRows[i];
+            ImFontTexRow& row = (*texture)->FontTexRows[i];
+            if (row.H == rh && row.X + gw + 1 <= row.ColumnWidth + row.RowStartX)
+                br = &row;
         }
 
         // If no row is found, there are 3 possibilities:
@@ -2443,32 +2573,45 @@ void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTex
             // Check that there is enough space.
             if ((*texture)->FontTexRows.Size)
             {
-                py = (*texture)->FontTexRows.back().y + (*texture)->FontTexRows.back().h + 1;
+                ImFontTexRow& row = (*texture)->FontTexRows.back();
+                py = row.Y + row.H + 1;
                 if (py + rh > (*texture)->TexHeight)
                 {
-                    if (texture+1 != this->FontTextures.end())
-                    {
-                        texture++;
+                    // Can we create a new column on this texture?
+                    if(row.RowStartX + row.ColumnWidth < (*texture)->TexHeight) {
+                        (*texture)->ColumnStartX = row.RowStartX + row.ColumnWidth;
+                        if( (*texture)->TexWidth - (*texture)->ColumnStartX - (*texture)->ColumnWidth < (*texture)->ColumnWidth)
+                            (*texture)->ColumnWidth = (*texture)->TexWidth - (*texture)->ColumnStartX; //Extend the column to span the whole texture width
+                        py = 0;
                     }
-                    else
-                    {
-                        // Create new texture
-                        this->FontTextures.push_back(IM_NEW(ImFontTexture(this->TexWidth
-                            , this->TexHeight
-                            , this->EmptyFontTexturePixelData.Data)));
-                        texture = &this->FontTextures.back();
-
+                    else { //This texture is full -> Glyph overflow
+                        if (texture+1 != this->FontTextures.end())
+                        {
+                            GlyphOverflow = true;
+                            texture++;
+                        }
+                        else
+                        {
+                            // Overflow texture is full!
+                            this->FontTextures.push_back(IM_NEW(ImFontTexture(this->TexWidth
+                                , this->TexHeight
+                                , this->EmptyFontTexturePixelData.Data)));
+                            texture = &this->FontTextures.back();
+                        
+                        }
+                        continue;
                     }
-                    continue;
                 }
             }
             // Init and add row
             (*texture)->FontTexRows.push_back(ImFontTexRow());
             br = &(*texture)->FontTexRows.back();
             // The first pixel on the first row should remain white for geometry without text
-            br->x = ((*texture)->FontTexRows.Size == 1) ? 1 : 0;
-            br->y = py;
-            br->h = rh;
+            br->X = (*texture)->ColumnStartX;
+            br->Y = py;
+            br->H = rh;
+            br->RowStartX = br->X;
+            br->ColumnWidth = (*texture)->ColumnWidth;
         }
     }
 
@@ -2477,111 +2620,176 @@ void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTex
     *resulting_texture = (*texture);
 }
 
-const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size, ImFontGlyph** backup_glyph) 
+ImFontGlyph* FindGlyphInLookupTable(int i, ImWchar codepoint, short short_size, ImVector<ImFontGlyph>& glyphs) {
+
+    while (i != -1)
+    {
+        if (glyphs[i].Codepoint == codepoint) {
+            if(glyphs[i].GlyphSize == short_size) {
+                return &glyphs[i]; // We have found the glyph with the correct code point and size
+            }
+        }
+        i = glyphs[i].NextGlyph;
+    }
+
+    return NULL;
+}
+
+const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float float_size) 
 {
 
     int i, g, advance, lsb, x0, y0, x1, y1;
     int gw, gh;
-     
+    short short_size = (short) float_size;
+    short lut_relative_size = ImClamp(short_size - IM_HASH_MIN_FONT_SIZE, 0, IM_HASH_NUM_SIZES - 1);
+    ImFontGlyph* glyph_ptr = NULL;
+
     // Find code point and size using lookup table.
-    unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
-    i = this->lut[h];
-    ImFontGlyph* result = NULL;
-    if(backup_glyph) *backup_glyph = NULL;
-    while (i != -1)
-    {
-        if (this->Glyphs[i].Codepoint == codepoint) {
-            if(this->Glyphs[i].GlyphSize == (short) size && !result) {
-                result = &this->Glyphs[i]; // Save the result
-                if(!backup_glyph) break; //Caller didn't want a backup glyph
-                if((this->Glyphs[i].FontTexture && this->Glyphs[i].FontTexture->TexID != NULL) && this->Glyphs[i].FrameCountCreation != ImGui::GetFrameCount()) {
-                    *backup_glyph = NULL; // This glyph has already been rendered and uploeaded to the graphics card. No backup glyph needed.
-                    break;
-                }
-                if(*backup_glyph)
-                    break; //We have already found a backup glyph
-                //We have found the glyph but we still need a backup glyph
-            }
-            else if(backup_glyph && *backup_glyph == NULL) {
-                if(this->Glyphs[i].FontTexture && this->Glyphs[i].FontTexture->TexID && this->Glyphs[i].FrameCountCreation != ImGui::GetFrameCount()) { //Make sure the backup glyph has been rendered and uploaded
-                    *backup_glyph = &this->Glyphs[i]; // Save this as a backup
-                    if(result) break; //Both primary glyph and backup has been found
-                }
-            }
-        }
-        i = this->Glyphs[i].NextGlyph;
-    }
+    unsigned int h = codepoint % IM_HASH_LUT_SIZE;
+    i = this->LookupTable[lut_relative_size][h];
+    
+    ImFontGlyph* result = FindGlyphInLookupTable(i, codepoint, short_size, this->Glyphs);
 
     if(result) return result;
 
-    // Create this glyph.
-    float scale = FONT_ScaleForPixelHeight(this->PrivData, size);
+    // Check if glyph is stored on an old font texture
+    int j = this->CachedLookupTable[lut_relative_size][h];
+    result = FindGlyphInLookupTable(j, codepoint, short_size, this->CachedGlyphs);
+    if(result) {
+        // Find texture and row where the glyph can be fit.
+        ImFontTexture* texture;
+        ImFontTexRow* br;
+        gw = result->X1 - result->X0;
+        gh = result->Y1 - result->Y0;
+        advance = result->AdvanceX;
+        x0 = result->Xoff;
+        y0 = result->Yoff;
+        ContainerAtlas->FindTextureAndRow(&texture, &br, gw, gh, true);
+
+        // Init glyph.
+        ImFontGlyph glyph;
+        glyph.Codepoint = codepoint;
+        glyph.GlyphSize = short_size;
+        glyph.FontTexture = texture;
+        glyph.X0 = (float) (br->X);
+        glyph.Y0 = (float) (br->Y);
+        glyph.X1 = glyph.X0 + gw;
+        glyph.Y1 = glyph.Y0 + gh;
+        glyph.U0 = glyph.X0 / texture->TexWidth;
+        glyph.V0 = glyph.Y0 / texture->TexHeight;
+        glyph.U1 = glyph.X1 / texture->TexWidth;
+        glyph.V1 = glyph.Y1 / texture->TexHeight;
+        glyph.AdvanceX = advance;
+        glyph.Xoff = (float)x0;
+        glyph.Yoff = (float)y0;
+        glyph.NextGlyph = this->LookupTable[lut_relative_size][h];
+
+        // Advance row location.
+        br->X += gw + 1;
+
+        // Insert char to hash lookup.
+        this->Glyphs.push_back(glyph);
+        
+        //Copy pixel data row by row
+        unsigned int src_x = (unsigned int) result->X0;
+        unsigned int src_y = (unsigned int) result->Y0;
+        unsigned int dest_x = (unsigned int) glyph.X0;
+        unsigned int dest_y = (unsigned int) glyph.Y0;
+        unsigned int width = (unsigned int) gw;
+        unsigned int height = (unsigned int) gh;
+        ImFontTexture* src = result->FontTexture;
+        
+        unsigned char* dest_pixel = &texture->TexData.Data[(dest_y*texture->TexWidth + dest_x) * 4];
+        unsigned char* src_pixels = &src->TexData.Data[(src_y*src->TexWidth + src_x) * 4];
+        for (int rows_left = height; rows_left; rows_left--) {
+            memcpy(dest_pixel, src_pixels, width * 4);
+            dest_pixel = dest_pixel + texture->TexWidth * 4;
+            src_pixels = src_pixels + src->TexWidth * 4;
+        }
     
-    g = FONT_FindGlyphIndex(this->PrivData, codepoint);
-    if (!g)
-        return NULL; // Glyph not found
+        texture->MarkAsDirty(0, 0, texture->TexWidth, texture->TexHeight);
 
-    FONT_GetGlyphHMetrics(this->PrivData, g, scale, &advance, &lsb);
-    FONT_GetGlyphBitmapBox(this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
-    gw = x1 - x0;
-    gh = y1 - y0;
+        glyph_ptr = &this->Glyphs.back();
+    }
+    else {
+        // Create this glyph.
+        float scale = FONT_ScaleForPixelHeight(this->PrivData, short_size);
+        
+        g = FONT_FindGlyphIndex(this->PrivData, codepoint);
+        if (!g)
+            return NULL; // Glyph not found
 
-    // Check if glyph is larger than maximum texture size
-    if (gw >= ContainerAtlas->TexWidth || gh >= ContainerAtlas->TexHeight)
-        return 0;
+        FONT_GetGlyphHMetrics(this->PrivData, g, scale, &advance, &lsb);
+        FONT_GetGlyphBitmapBox(this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
+        gw = x1 - x0;
+        gh = y1 - y0;
 
-    // Find texture and row where the glyph can be fit.
-    ImFontTexture* texture;
-    ImFontTexRow* br;
-    ContainerAtlas->FindTextureAndRow(&texture, &br, gw, gh, true);
+        // Check if glyph is larger than maximum texture size
+        if (gw >= ContainerAtlas->TexWidth || gh >= ContainerAtlas->TexHeight)
+            return NULL;
 
-    // Init glyph.
-    ImFontGlyph glyph;
-    glyph.Codepoint = codepoint;
-    glyph.GlyphSize = (short) size;
-    glyph.FontTexture = texture;
-    glyph.X0 = (float) (br->x);
-    glyph.Y0 = (float) (br->y);
-    glyph.X1 = glyph.X0 + gw;
-    glyph.Y1 = glyph.Y0 + gh;
-    glyph.AdvanceX = advance;
-    glyph.Xoff = (float)x0;
-    glyph.Yoff = (float)y0;
-    glyph.NextGlyph = this->lut[h];
-    glyph.FrameCountCreation = ImGui::GetFrameCount();
+        // Find texture and row where the glyph can be fit.
+        ImFontTexture* texture;
+        ImFontTexRow* br;
+        ContainerAtlas->FindTextureAndRow(&texture, &br, gw, gh, true);
 
-    // Advance row location.
-    br->x += gw + 1;
+        // Init glyph.
+        ImFontGlyph glyph;
+        glyph.Codepoint = codepoint;
+        glyph.GlyphSize = short_size;
+        glyph.FontTexture = texture;
+        glyph.X0 = (float) (br->X);
+        glyph.Y0 = (float) (br->Y);
+        glyph.X1 = glyph.X0 + gw;
+        glyph.Y1 = glyph.Y0 + gh;
+        glyph.U0 = glyph.X0 / texture->TexWidth;
+        glyph.V0 = glyph.Y0 / texture->TexHeight;
+        glyph.U1 = glyph.X1 / texture->TexWidth;
+        glyph.V1 = glyph.Y1 / texture->TexHeight;
+        glyph.AdvanceX = advance;
+        glyph.Xoff = (float)x0;
+        glyph.Yoff = (float)y0;
+        glyph.NextGlyph = this->LookupTable[lut_relative_size][h];
 
-    // Insert char to hash lookup.
-    this->Glyphs.push_back(glyph);
+        // Advance row location.
+        br->X += gw + 1;
 
-    ImFontGlyph* glyph_ptr = &this->Glyphs.back();
+        // Insert char to hash lookup.
+        this->Glyphs.push_back(glyph);
 
-    this->lut[h] = this->Glyphs.size() - 1;
+        if(gw != 0 && gh != 0) {
+            glyph_ptr = &this->Glyphs.back();
 
-    if(gw == 0 || gh == 0) return glyph_ptr;
+            // Render glyph
+            ImVector<unsigned char> pixels;
+            FONT_MakeGlyphBitmap((FontBackEnd*)this->PrivData, &pixels, gw, gh, gw, scale, scale, g);
 
-    // Render glyph
-    ImVector<unsigned char> pixels;
-    FONT_MakeGlyphBitmap((FontBackEnd*)this->PrivData, &pixels, gw, gh, gw, scale, scale, g);
+            // Update texture
+            texture->Update((int) glyph_ptr->X0, (int) glyph_ptr->Y0, gw, gh, pixels.Data);
+        }
+    }
 
-    // Update texture
-    texture->Update((int) glyph_ptr->X0, (int) glyph_ptr->Y0, gw, gh, pixels.Data);
-    
+
+    this->LookupTable[lut_relative_size][h] = this->Glyphs.size() - 1;
+
+
 
     return glyph_ptr;
 }
 
 
-const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar codepoint, float size) const
-{
+const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar codepoint, float float_size) const
+{    
+    short short_size = (short) float_size;
+    short lut_relative_size = ImMin(short_size - IM_HASH_MIN_FONT_SIZE, IM_HASH_NUM_SIZES);
+
     // Find code point and size using lookup table.
-    unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
-    int i = this->lut[h];
+    unsigned int h = codepoint % IM_HASH_LUT_SIZE;
+
+    int i = this->LookupTable[lut_relative_size][h];
     while (i != -1)
     {
-        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == (short) size)
+        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == short_size)
             return &this->Glyphs[i];
         i = this->Glyphs[i].NextGlyph;
     }
@@ -2804,10 +3012,10 @@ ImFontQuad GetQuad(ImFontGlyph const& glyph, float x, float y)
     result.x1 = (float) (rx) + scale * (glyph.X1 - glyph.X0);
     result.y1 = (float) (ry) + scale * (glyph.Y1 - glyph.Y0);
 
-    result.u0 = (float) (glyph.X0);
-    result.v0 = (float) (glyph.Y0);
-    result.u1 = (float) (glyph.X1);
-    result.v1 = (float) (glyph.Y1);
+    result.u0 = (float) (glyph.U0);
+    result.v0 = (float) (glyph.V0);
+    result.u1 = (float) (glyph.U1);
+    result.v1 = (float) (glyph.V1);
     return result;
 }
 
@@ -2824,8 +3032,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 {
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
         return;
-    ImFontGlyph* backup_glyph = NULL;
-    if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size, &backup_glyph))
+    
+    if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size))
     {
         float ascender = IM_FLOOR(Ascent * size);
         pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
@@ -2840,18 +3048,12 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float y1 = ascender + q.y0;
         float y2 = ascender + q.y1;
         
-        //If this glyph has not yet been rendered and uploaded to the video card
-        //render a stretched backup glyph instead
-        if(backup_glyph && (glyph_texture->TexID == NULL || glyph->FrameCountCreation == ImGui::GetFrameCount())) { // It takes a frame for the glyph to be uploaded
-            glyph_texture = backup_glyph->FontTexture;
-            q = GetQuad(*backup_glyph, pos.x, pos.y);
-        }
-
         float u1 = q.u0;
         float v1 = q.v0;
         float u2 = q.u1;
         float v2 = q.v1;
 
+/*
         int texture_width = glyph_texture->TexWidth;
         int texture_height = glyph_texture->TexHeight;
         
@@ -2859,7 +3061,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         u2 /= texture_width;
         v1 /= texture_height;
         v2 /= texture_height;
-
+*/
         // FIXME-DYNAMICFONT: Shouldn't use AddImageQuad
         draw_list->AddImageQuad(
             glyph_texture->TexID,
@@ -3006,21 +3208,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         float char_width = 0.0f;
         float ascender = ImFloor(Ascent * size);
-        ImFontGlyph* backup_glyph = NULL; //If the correct glyph has not yet been rendered
-        if (const ImFontGlyph* glyph = FindGlyph((ImWchar)c, size, &backup_glyph))
+        if (const ImFontGlyph* glyph = FindGlyph((ImWchar)c, size))
         {
             ImFontTexture* glyph_texture = glyph->FontTexture;
-
-            //If this glyph has not yet been rendered and uploaded to the video card
-            //render a stretched backup glyph instead
-            bool using_backup_glyph = false;
-            if(backup_glyph && (glyph_texture->TexID == NULL || glyph->FrameCountCreation == ImGui::GetFrameCount())) { // It takes a frame for the glyph to be uploaded
-                glyph_texture = backup_glyph->FontTexture;
-                using_backup_glyph = true;
-            }
-            
-            int texture_width = glyph_texture->TexWidth;
-            int texture_height = glyph_texture->TexHeight;
 
             char_width = IM_ROUND(glyph->AdvanceX);/* scale*/
 
@@ -3043,6 +3233,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     reserved_primitives = true;
                     texture_selected = true;
                 }
+
 
                 if (glyph_texture->TexID != selected_texture) {//Save the glyph for later rendering
                     FontRenderList* render_list = NULL;
@@ -3068,19 +3259,15 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                         font_render_list.push_back(render_list);
                     }
 
-                    ImFontQuad q = GetQuad(*glyph, /*size,*/ x, y);
+                    ImFontQuad q = GetQuad(*glyph, x, y);
 
                     // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
-                    float x1 = q.x0 /* scale*/;
-                    float x2 = q.x1 /* scale*/;
-                    float y1 = ascender + q.y0  /* scale*/;
-                    float y2 = ascender + q.y1 /* scale*/;
+                    float x1 = q.x0;
+                    float x2 = q.x1;
+                    float y1 = ascender + q.y0;
+                    float y2 = ascender + q.y1;
                     if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                     {
-                        //If using a backup glyph we need to change the texture UV's
-                        if(using_backup_glyph) {
-                            q = GetQuad(*backup_glyph, x, y);
-                        }
                         // Render a character
                         float u1 = q.u0;
                         float v1 = q.v0;
@@ -3116,11 +3303,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                                 continue;
                             }
                         }
-
-                        u1 /= (texture_width);
-                        u2 /= (texture_width);
-                        v1 /= (texture_height);
-                        v2 /= (texture_height);
 
                         {
                             
@@ -3158,7 +3340,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                         }
                     }
                 }
-                else { //Immediately render the glyph if we are on the selected font texture
+                else {  //Immediately render the glyph if we are on the selected font texture
                     
                     ImFontQuad q = GetQuad(*glyph, /*size,*/ x, y);
 
@@ -3169,11 +3351,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     float y2 = ascender + q.y1 /* scale*/;
                     if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                     {
-                        //If using a backup glyph we need to change the texture UV's
-                        if(using_backup_glyph) {
-                            q = GetQuad(*backup_glyph, x, y);
-                        }
-
+                        
                         // Render a character
                         float u1 = q.u0;
                         float v1 = q.v0;
@@ -3209,11 +3387,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                                 continue;
                             }
                         }
-
-                        u1 /= (texture_width);
-                        u2 /= (texture_width);
-                        v1 /= (texture_height);
-                        v2 /= (texture_height);
 
                         // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                         {
@@ -3281,8 +3454,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
 ImFontTexture::ImFontTexture(int width, int height, unsigned char* pixels)
 {
+    ColumnStartX = 0;
     TexID = (ImTextureID)NULL;
-    TexWidth = width;
+    TexWidth = ColumnWidth = width;
     TexHeight = height;
     TexData.resize(TexWidth*TexHeight * 4);
     memcpy(TexData.Data, pixels, TexWidth*TexHeight * 4);

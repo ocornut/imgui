@@ -929,8 +929,8 @@ static void ShowDemoWindowWidgets()
         }
 
         ImTextureID my_tex_id = io.Fonts->FontTextures[selected_font_texture]->TexID;
-        float my_tex_w = (float)io.Fonts->TexWidth;
-        float my_tex_h = (float)io.Fonts->TexHeight;
+        float my_tex_w = (float)io.Fonts->FontTextures[selected_font_texture]->TexWidth;
+        float my_tex_h = (float)io.Fonts->FontTextures[selected_font_texture]->TexHeight;
         {
             ImGui::Text("%.0fx%.0f", my_tex_w, my_tex_h);
             ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -3743,7 +3743,7 @@ static void NodeFont(ImFont* font)
             ImGui::BulletText("Input: \'%s\', Oversample: (%d,%d), PixelSnapH: %d",
                 /*config_i,*/ cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
     if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
-    {
+    {/*
         float font_size = ImGui::GetFontSize();
         // Display all glyphs of the fonts in separate pages of 256 characters
         const ImU32 glyph_col = ImGui::GetColorU32(ImGuiCol_Text);
@@ -3752,11 +3752,11 @@ static void NodeFont(ImFont* font)
             // Skip ahead if a large bunch of glyphs are not present in the font (test in chunks of 4k)
             // This is only a small optimization to reduce the number of iterations when IM_UNICODE_MAX_CODEPOINT
             // is large // (if ImWchar==ImWchar32 we will do at least about 272 queries here)
-            /*if (!(base & 4095) && font->IsGlyphRangeUnused(base, base + 4095))
-            {
-                base += 4096 - 256;
-                continue;
-            }*/
+            //if (!(base & 4095) && font->IsGlyphRangeUnused(base, base + 4095))
+            //{
+            //    base += 4096 - 256;
+            //    continue;
+            //}
 
             int count = 0;
             printf("crash?\n");
@@ -3795,7 +3795,7 @@ static void NodeFont(ImFont* font)
             }
             ImGui::Dummy(ImVec2((cell_size + cell_spacing) * 16, (cell_size + cell_spacing) * 16));
             ImGui::TreePop();
-        }
+        }*/
         ImGui::TreePop();
     }
     ImGui::TreePop();
