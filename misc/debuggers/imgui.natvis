@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+.natvis file for Visual Studio debugger.
+Purpose: provide nicer views on data types used by Dear ImGui.
+
+To enable:
+* include file in your VS project (most recommended: not intrusive and always kept up to date!)
+* or copy in %USERPROFILE%\Documents\Visual Studio XXXX\Visualizers (current user)
+* or copy in %VsInstallDirectory%\Common7\Packages\Debugger\Visualizers (all users)
+
+More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-views-of-native-objects?view=vs-2019
+-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+<Type Name="ImVector&lt;*&gt;">
+  <DisplayString>{{Size={Size} Capacity={Capacity}}}</DisplayString>
+  <Expand>
+    <ArrayItems>
+      <Size>Size</Size>
+      <ValuePointer>Data</ValuePointer>
+    </ArrayItems>
+  </Expand>
+</Type>
+
+<Type Name="ImSpan&lt;*&gt;">
+  <DisplayString>{{Size={DataEnd-Data} }}</DisplayString>
+  <Expand>
+    <ArrayItems>
+      <Size>DataEnd-Data</Size>
+      <ValuePointer>Data</ValuePointer>
+    </ArrayItems>
+  </Expand>
+</Type>
+
+<Type Name="ImVec2">
+  <DisplayString>{{x={x,g} y={y,g}}}</DisplayString>
+</Type>
+
+<Type Name="ImVec4">
+  <DisplayString>{{x={x,g} y={y,g} z={z,g} w={w,g}}}</DisplayString>
+</Type>
+
+<Type Name="ImRect">
+  <DisplayString>{{Min=({Min.x,g} {Min.y,g}) Max=({Max.x,g} {Max.y,g}) Size=({Max.x-Min.x,g} {Max.y-Min.y,g})}}</DisplayString>
+  <Expand>
+    <Item Name="Min">Min</Item>
+    <Item Name="Max">Max</Item>
+    <Item Name="[Width]">Max.x - Min.x</Item>
+    <Item Name="[Height]">Max.y - Min.y</Item>
+  </Expand>
+</Type>
+
+<Type Name="ImGuiWindow">
+  <DisplayString>{{Name {Name,s} Active {(Active||WasActive)?1:0,d} Child {(Flags &amp; 0x01000000)?1:0,d} Popup {(Flags &amp; 0x04000000)?1:0,d} Hidden {(Hidden)?1:0,d}}</DisplayString>
+</Type>
+
+</AutoVisualizer>

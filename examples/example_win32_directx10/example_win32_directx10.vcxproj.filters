@@ -18,10 +18,10 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_dx10.h">
+    <ClInclude Include="..\..\backends\imgui_impl_dx10.h">
       <Filter>sources</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_win32.h">
+    <ClInclude Include="..\..\backends\imgui_impl_win32.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,11 +38,14 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_dx10.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_dx10.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_win32.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_win32.cpp">
       <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\imgui_tables.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\imgui_widgets.cpp">
       <Filter>imgui</Filter>
@@ -50,7 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
-    <None Include="..\..\misc\natvis\imgui.natvis">
+    <None Include="..\..\misc\debuggers\imgui.natvis">
       <Filter>sources</Filter>
     </None>
   </ItemGroup>

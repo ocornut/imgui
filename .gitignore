@@ -26,6 +26,9 @@ ipch
 *.VC.db
 *.VC.VC.opendb
 
+## Commonly used CMake directories
+/build*/
+
 ## Xcode artifacts
 project.xcworkspace
 xcuserdata
@@ -34,7 +37,8 @@ xcuserdata
 examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
-examples/example_emscripten/example_emscripten.*
+examples/example_emscripten_opengl3/web/*
+examples/example_emscripten_wgpu/web/*
 
 ## JetBrains IDE artifacts
 .idea

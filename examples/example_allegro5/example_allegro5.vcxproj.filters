@@ -22,11 +22,14 @@
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_allegro5.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_allegro5.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="imconfig_allegro5.h">
       <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\imgui_tables.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\imgui_widgets.cpp">
       <Filter>imgui</Filter>
@@ -42,13 +45,13 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_allegro5.h">
+    <ClInclude Include="..\..\backends\imgui_impl_allegro5.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
-    <None Include="..\..\misc\natvis\imgui.natvis">
+    <None Include="..\..\misc\debuggers\imgui.natvis">
       <Filter>sources</Filter>
     </None>
   </ItemGroup>

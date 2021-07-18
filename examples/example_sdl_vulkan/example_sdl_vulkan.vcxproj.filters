@@ -19,17 +19,20 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_sdl.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_sdl.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_vulkan.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_vulkan.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\imgui_widgets.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\imgui_tables.cpp">
+      <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -42,16 +45,16 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_sdl.h">
+    <ClInclude Include="..\..\backends\imgui_impl_sdl.h">
       <Filter>sources</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_vulkan.h">
+    <ClInclude Include="..\..\backends\imgui_impl_vulkan.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
-    <None Include="..\..\misc\natvis\imgui.natvis">
+    <None Include="..\..\misc\debuggers\imgui.natvis">
       <Filter>sources</Filter>
     </None>
   </ItemGroup>

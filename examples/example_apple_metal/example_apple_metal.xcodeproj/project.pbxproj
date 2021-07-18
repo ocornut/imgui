@@ -9,27 +9,20 @@
 /* Begin PBXBuildFile section */
 		07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
 		07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
-		8307E7CC20E9F9C900473790 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7CB20E9F9C900473790 /* ViewController.mm */; };
-		8307E7CF20E9F9C900473790 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8307E7CD20E9F9C900473790 /* Main.storyboard */; };
-		8307E7DE20E9F9C900473790 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7DD20E9F9C900473790 /* AppDelegate.m */; };
-		8307E7E420E9F9C900473790 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8307E7E220E9F9C900473790 /* Main.storyboard */; };
-		8307E7E720E9F9C900473790 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7E620E9F9C900473790 /* main.m */; };
-		8307E7E820E9F9C900473790 /* Renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7BC20E9F9C700473790 /* Renderer.mm */; };
-		8307E7E920E9F9C900473790 /* Renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7BC20E9F9C700473790 /* Renderer.mm */; };
-		836D2A2E20EE208E0098E909 /* imgui_impl_osx.mm in Sources */ = {isa = PBXBuildFile; fileRef = 836D2A2D20EE208E0098E909 /* imgui_impl_osx.mm */; };
-		836D2A3020EE4A180098E909 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 836D2A2F20EE4A180098E909 /* Default-568h@2x.png */; };
-		836D2A3220EE4A900098E909 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 836D2A3120EE4A900098E909 /* Launch Screen.storyboard */; };
-		83BBE9DE20EB3FFC00295997 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7E620E9F9C900473790 /* main.m */; };
-		83BBE9DF20EB40AE00295997 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7DD20E9F9C900473790 /* AppDelegate.m */; };
-		83BBE9E020EB42D000295997 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7CB20E9F9C900473790 /* ViewController.mm */; };
+		5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822D257677DB0038A28D /* imgui_tables.cpp */; };
+		8309BD8F253CCAAA0045E2A1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8309BD8E253CCAAA0045E2A1 /* UIKit.framework */; };
+		8309BDA5253CCC070045E2A1 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDA0253CCBC10045E2A1 /* main.mm */; };
+		8309BDA8253CCC080045E2A1 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDA0253CCBC10045E2A1 /* main.mm */; };
+		8309BDBB253CCCAD0045E2A1 /* imgui_impl_metal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal.mm */; };
+		8309BDBE253CCCB60045E2A1 /* imgui_impl_metal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal.mm */; };
+		8309BDBF253CCCB60045E2A1 /* imgui_impl_osx.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDB6253CCC9D0045E2A1 /* imgui_impl_osx.mm */; };
+		8309BDC6253CCCFE0045E2A1 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8309BDC5253CCCFE0045E2A1 /* AppKit.framework */; };
+		8309BDFC253CDAB30045E2A1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8309BDF7253CDAAE0045E2A1 /* LaunchScreen.storyboard */; };
+		8309BE04253CDAB60045E2A1 /* MainMenu.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8309BDFA253CDAAE0045E2A1 /* MainMenu.storyboard */; };
 		83BBE9E520EB46B900295997 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9E420EB46B900295997 /* Metal.framework */; };
 		83BBE9E720EB46BD00295997 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9E620EB46BD00295997 /* MetalKit.framework */; };
-		83BBE9E920EB46C100295997 /* ModelIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9E820EB46C100295997 /* ModelIO.framework */; };
 		83BBE9EC20EB471700295997 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9EA20EB471700295997 /* MetalKit.framework */; };
 		83BBE9ED20EB471700295997 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9EB20EB471700295997 /* Metal.framework */; };
-		83BBE9EF20EB471C00295997 /* ModelIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BBE9EE20EB471C00295997 /* ModelIO.framework */; };
-		83BBE9FE20EB54D800295997 /* imgui_impl_metal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83BBE9FD20EB54D800295997 /* imgui_impl_metal.mm */; };
-		83BBE9FF20EB54D800295997 /* imgui_impl_metal.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83BBE9FD20EB54D800295997 /* imgui_impl_metal.mm */; };
 		83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BBEA0120EB54E700295997 /* imgui_draw.cpp */; };
 		83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BBEA0120EB54E700295997 /* imgui_draw.cpp */; };
 		83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BBEA0220EB54E700295997 /* imgui_demo.cpp */; };
@@ -41,31 +34,24 @@
 /* Begin PBXFileReference section */
 		07A82ED62139413C0078D120 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
 		07A82ED72139413C0078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
-		8307E7BB20E9F9C700473790 /* Renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
-		8307E7BC20E9F9C700473790 /* Renderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Renderer.mm; sourceTree = "<group>"; };
+		5079822D257677DB0038A28D /* imgui_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = ../../imgui_tables.cpp; sourceTree = "<group>"; };
 		8307E7C420E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8307E7CA20E9F9C900473790 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		8307E7CB20E9F9C900473790 /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
-		8307E7CE20E9F9C900473790 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		8307E7D320E9F9C900473790 /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-iOS.plist"; sourceTree = "<group>"; };
 		8307E7DA20E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8307E7DC20E9F9C900473790 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		8307E7DD20E9F9C900473790 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		8307E7E320E9F9C900473790 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		8307E7E520E9F9C900473790 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-macOS.plist"; sourceTree = "<group>"; };
-		8307E7E620E9F9C900473790 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		836D2A2C20EE208D0098E909 /* imgui_impl_osx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_osx.h; path = ../../imgui_impl_osx.h; sourceTree = "<group>"; };
-		836D2A2D20EE208E0098E909 /* imgui_impl_osx.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_osx.mm; path = ../../imgui_impl_osx.mm; sourceTree = "<group>"; };
-		836D2A2F20EE4A180098E909 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
-		836D2A3120EE4A900098E909 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		8309BD8E253CCAAA0045E2A1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		8309BDA0253CCBC10045E2A1 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_metal.mm; path = ../../backends/imgui_impl_metal.mm; sourceTree = "<group>"; };
+		8309BDB6253CCC9D0045E2A1 /* imgui_impl_osx.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_osx.mm; path = ../../backends/imgui_impl_osx.mm; sourceTree = "<group>"; };
+		8309BDC5253CCCFE0045E2A1 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		8309BDF7253CDAAE0045E2A1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		8309BDF8253CDAAE0045E2A1 /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-iOS.plist"; sourceTree = "<group>"; };
+		8309BDFA253CDAAE0045E2A1 /* MainMenu.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = MainMenu.storyboard; sourceTree = "<group>"; };
+		8309BDFB253CDAAE0045E2A1 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-macOS.plist"; sourceTree = "<group>"; };
 		83BBE9E420EB46B900295997 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.4.sdk/System/Library/Frameworks/Metal.framework; sourceTree = DEVELOPER_DIR; };
 		83BBE9E620EB46BD00295997 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.4.sdk/System/Library/Frameworks/MetalKit.framework; sourceTree = DEVELOPER_DIR; };
 		83BBE9E820EB46C100295997 /* ModelIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModelIO.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.4.sdk/System/Library/Frameworks/ModelIO.framework; sourceTree = DEVELOPER_DIR; };
 		83BBE9EA20EB471700295997 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		83BBE9EB20EB471700295997 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		83BBE9EE20EB471C00295997 /* ModelIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModelIO.framework; path = System/Library/Frameworks/ModelIO.framework; sourceTree = SDKROOT; };
-		83BBE9FC20EB54D800295997 /* imgui_impl_metal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_metal.h; path = ../../imgui_impl_metal.h; sourceTree = "<group>"; };
-		83BBE9FD20EB54D800295997 /* imgui_impl_metal.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_metal.mm; path = ../../imgui_impl_metal.mm; sourceTree = "<group>"; };
 		83BBEA0020EB54E700295997 /* imgui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui.h; path = ../../imgui.h; sourceTree = "<group>"; };
 		83BBEA0120EB54E700295997 /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = ../../imgui_draw.cpp; sourceTree = "<group>"; };
 		83BBEA0220EB54E700295997 /* imgui_demo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = ../../imgui_demo.cpp; sourceTree = "<group>"; };
@@ -78,7 +64,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				83BBE9E920EB46C100295997 /* ModelIO.framework in Frameworks */,
+				8309BD8F253CCAAA0045E2A1 /* UIKit.framework in Frameworks */,
 				83BBE9E720EB46BD00295997 /* MetalKit.framework in Frameworks */,
 				83BBE9E520EB46B900295997 /* Metal.framework in Frameworks */,
 			);
@@ -88,7 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				83BBE9EF20EB471C00295997 /* ModelIO.framework in Frameworks */,
+				8309BDC6253CCCFE0045E2A1 /* AppKit.framework in Frameworks */,
 				83BBE9EC20EB471700295997 /* MetalKit.framework in Frameworks */,
 				83BBE9ED20EB471700295997 /* Metal.framework in Frameworks */,
 			);
@@ -101,30 +87,10 @@
 			isa = PBXGroup;
 			children = (
 				83BBE9F020EB544400295997 /* imgui */,
-				8307E7BA20E9F9C700473790 /* Shared */,
-				8307E7C620E9F9C900473790 /* iOS */,
-				8307E7DB20E9F9C900473790 /* macOS */,
+				8309BD9E253CCBA70045E2A1 /* example */,
 				8307E7C520E9F9C900473790 /* Products */,
 				83BBE9E320EB46B800295997 /* Frameworks */,
 			);
-			sourceTree = "<group>";
-		};
-		8307E7BA20E9F9C700473790 /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				83BBE9FC20EB54D800295997 /* imgui_impl_metal.h */,
-				83BBE9FD20EB54D800295997 /* imgui_impl_metal.mm */,
-				836D2A2C20EE208D0098E909 /* imgui_impl_osx.h */,
-				836D2A2D20EE208E0098E909 /* imgui_impl_osx.mm */,
-				8307E7DC20E9F9C900473790 /* AppDelegate.h */,
-				8307E7DD20E9F9C900473790 /* AppDelegate.m */,
-				8307E7BB20E9F9C700473790 /* Renderer.h */,
-				8307E7BC20E9F9C700473790 /* Renderer.mm */,
-				8307E7CA20E9F9C900473790 /* ViewController.h */,
-				8307E7CB20E9F9C900473790 /* ViewController.mm */,
-				8307E7E620E9F9C900473790 /* main.m */,
-			);
-			path = Shared;
 			sourceTree = "<group>";
 		};
 		8307E7C520E9F9C900473790 /* Products */ = {
@@ -136,22 +102,30 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		8307E7C620E9F9C900473790 /* iOS */ = {
+		8309BD9E253CCBA70045E2A1 /* example */ = {
 			isa = PBXGroup;
 			children = (
-				836D2A2F20EE4A180098E909 /* Default-568h@2x.png */,
-				8307E7CD20E9F9C900473790 /* Main.storyboard */,
-				8307E7D320E9F9C900473790 /* Info-iOS.plist */,
-				836D2A3120EE4A900098E909 /* Launch Screen.storyboard */,
+				8309BDF6253CDAAE0045E2A1 /* iOS */,
+				8309BDF9253CDAAE0045E2A1 /* macOS */,
+				8309BDA0253CCBC10045E2A1 /* main.mm */,
+			);
+			name = example;
+			sourceTree = "<group>";
+		};
+		8309BDF6253CDAAE0045E2A1 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				8309BDF7253CDAAE0045E2A1 /* LaunchScreen.storyboard */,
+				8309BDF8253CDAAE0045E2A1 /* Info-iOS.plist */,
 			);
 			path = iOS;
 			sourceTree = "<group>";
 		};
-		8307E7DB20E9F9C900473790 /* macOS */ = {
+		8309BDF9253CDAAE0045E2A1 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
-				8307E7E220E9F9C900473790 /* Main.storyboard */,
-				8307E7E520E9F9C900473790 /* Info-macOS.plist */,
+				8309BDFA253CDAAE0045E2A1 /* MainMenu.storyboard */,
+				8309BDFB253CDAAE0045E2A1 /* Info-macOS.plist */,
 			);
 			path = macOS;
 			sourceTree = "<group>";
@@ -159,6 +133,8 @@
 		83BBE9E320EB46B800295997 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8309BDC5253CCCFE0045E2A1 /* AppKit.framework */,
+				8309BD8E253CCAAA0045E2A1 /* UIKit.framework */,
 				83BBE9EE20EB471C00295997 /* ModelIO.framework */,
 				83BBE9EB20EB471700295997 /* Metal.framework */,
 				83BBE9EA20EB471700295997 /* MetalKit.framework */,
@@ -172,6 +148,9 @@
 		83BBE9F020EB544400295997 /* imgui */ = {
 			isa = PBXGroup;
 			children = (
+				5079822D257677DB0038A28D /* imgui_tables.cpp */,
+				8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal.mm */,
+				8309BDB6253CCC9D0045E2A1 /* imgui_impl_osx.mm */,
 				83BBEA0420EB54E700295997 /* imconfig.h */,
 				83BBEA0320EB54E700295997 /* imgui.cpp */,
 				83BBEA0020EB54E700295997 /* imgui.h */,
@@ -226,7 +205,7 @@
 		8307E7B620E9F9C700473790 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0940;
+				LastUpgradeCheck = 1200;
 				ORGANIZATIONNAME = "Warren Moore";
 				TargetAttributes = {
 					8307E7C320E9F9C900473790 = {
@@ -263,9 +242,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				836D2A3220EE4A900098E909 /* Launch Screen.storyboard in Resources */,
-				8307E7CF20E9F9C900473790 /* Main.storyboard in Resources */,
-				836D2A3020EE4A180098E909 /* Default-568h@2x.png in Resources */,
+				8309BDFC253CDAB30045E2A1 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,7 +250,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8307E7E420E9F9C900473790 /* Main.storyboard in Resources */,
+				8309BE04253CDAB60045E2A1 /* MainMenu.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -284,15 +261,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8307E7E820E9F9C900473790 /* Renderer.mm in Sources */,
-				8307E7CC20E9F9C900473790 /* ViewController.mm in Sources */,
-				83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
-				83BBE9DF20EB40AE00295997 /* AppDelegate.m in Sources */,
+				8309BDBB253CCCAD0045E2A1 /* imgui_impl_metal.mm in Sources */,
 				83BBEA0920EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */,
-				83BBE9FE20EB54D800295997 /* imgui_impl_metal.mm in Sources */,
-				07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
-				83BBE9DE20EB3FFC00295997 /* main.m in Sources */,
+                83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
+				5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
+                07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
+				8309BDA5253CCC070045E2A1 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,39 +275,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				83BBE9E020EB42D000295997 /* ViewController.mm in Sources */,
-				8307E7E920E9F9C900473790 /* Renderer.mm in Sources */,
-				83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+				8309BDBE253CCCB60045E2A1 /* imgui_impl_metal.mm in Sources */,
+				8309BDBF253CCCB60045E2A1 /* imgui_impl_osx.mm in Sources */,
+                83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
+                83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
+                83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+                5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
 				07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */,
-				8307E7E720E9F9C900473790 /* main.m in Sources */,
-				83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
-				83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
-				83BBE9FF20EB54D800295997 /* imgui_impl_metal.mm in Sources */,
-				836D2A2E20EE208E0098E909 /* imgui_impl_osx.mm in Sources */,
-				8307E7DE20E9F9C900473790 /* AppDelegate.m in Sources */,
+				8309BDA8253CCC080045E2A1 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXVariantGroup section */
-		8307E7CD20E9F9C900473790 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				8307E7CE20E9F9C900473790 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-		8307E7E220E9F9C900473790 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				8307E7E320E9F9C900473790 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		8307E7EE20E9F9C900473790 /* Debug */ = {
@@ -361,6 +315,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -416,6 +371,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -451,6 +407,7 @@
 				PRODUCT_NAME = example_apple_metal;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../**";
 			};
 			name = Debug;
 		};
@@ -467,6 +424,7 @@
 				PRODUCT_NAME = example_apple_metal;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../**";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -484,6 +442,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.imgui.example.apple-metal-macos";
 				PRODUCT_NAME = example_apple_metal;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../**";
 			};
 			name = Debug;
 		};
@@ -500,6 +459,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.imgui.example.apple-metal-macos";
 				PRODUCT_NAME = example_apple_metal;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../**";
 			};
 			name = Release;
 		};

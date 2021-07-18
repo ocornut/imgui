@@ -2,7 +2,7 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
-# Important: This is a "null back-end" application, with no visible output or interaction!
+# Important: This is a "null backend" application, with no visible output or interaction!
 # This is used for testing purpose and continuous integration, and has little use for end-user.
 #
 
@@ -11,12 +11,13 @@ WITH_EXTRA_WARNINGS ?= 0
 WITH_FREETYPE ?= 0
 
 EXE = example_null
+IMGUI_DIR = ../..
 SOURCES = main.cpp
-SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
+SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
-CXXFLAGS += -I../ -I../../
+CXXFLAGS += -I$(IMGUI_DIR)
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
@@ -28,7 +29,7 @@ endif
 # We use the WITH_FREETYPE flag on our CI setup to test compiling misc/freetype/imgui_freetype.cpp
 # (only supported on Linux, and note that the imgui_freetype code currently won't be executed)
 ifeq ($(WITH_FREETYPE), 1)
-	SOURCES += ../../misc/freetype/imgui_freetype.cpp
+	SOURCES += $(IMGUI_DIR)/misc/freetype/imgui_freetype.cpp
 	CXXFLAGS += $(shell pkg-config --cflags freetype2)
 	LIBS += $(shell pkg-config --libs freetype2)
 endif
@@ -56,11 +57,12 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+ifeq ($(OS), Windows_NT)
 	ECHO_MESSAGE = "MinGW"
 	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Wextra -Wpedantic
 	endif
+	LIBS += -limm32
 	CFLAGS = $(CXXFLAGS)
 endif
 
@@ -71,13 +73,13 @@ endif
 %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../%.cpp
+%.o:$(IMGUI_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../../%.cpp
+%.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../../misc/freetype/%.cpp
+%.o:$(IMGUI_DIR)/misc/freetype/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 all: $(EXE)

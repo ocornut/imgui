@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+.natstepfilter file for Visual Studio debugger.
+Purpose: instruct debugger to skip some functions when using StepInto (F11)
+
+To enable:
+* copy in %USERPROFILE%\Documents\Visual Studio XXXX\Visualizers (current user)
+* or copy in %VsInstallDirectory%\Common7\Packages\Debugger\Visualizers (all users)
+If you have multiple VS version installed, the version that matters is the one you are using the IDE/debugger of (not the compiling toolset).
+This is supported since Visual Studio 2012.
+
+Unfortunately, unlike .natvis files, it isn't yet possible to include this file in your project :(
+You may upvote this: https://developercommunity.visualstudio.com/t/allow-natstepfilter-and-natjmc-to-be-included-as-p/561718
+
+More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/just-my-code?view=vs-2019#BKMK_C___Just_My_Code
+-->
+
+<StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
+
+    <!-- Disable stepping into trivial functions -->
+    <Function>
+        <Name>(ImVec2|ImVec4|ImStrv)::.+</Name>
+        <Action>NoStepInto</Action>
+    </Function>
+    <Function>
+        <Name>(ImVector|ImSpan).*::operator.+</Name>
+        <Action>NoStepInto</Action>
+    </Function>
+
+</StepFilter>
