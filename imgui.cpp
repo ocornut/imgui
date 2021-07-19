@@ -7450,7 +7450,6 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     g.LastItemData.Rect = bb;
     g.LastItemData.InFlags = g.CurrentItemFlags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
-    g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
 
     // Directional navigation processing
     if (id != 0)
@@ -7479,6 +7478,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         }
 #endif
     }
+    g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
