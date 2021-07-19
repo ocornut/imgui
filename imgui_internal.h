@@ -120,7 +120,7 @@ struct ImGuiDockNode;               // Docking system node (hold a list of Windo
 struct ImGuiDockNodeSettings;       // Storage for a dock node in .ini file (we preserve those even if the associated dock node isn't active during the session)
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
-struct ImGuiLastItemDataBackup;     // Backup and restore IsItemHovered() internal data
+struct ImGuiLastItemData;           // Status storage for last submitted items
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
 struct ImGuiMetricsConfig;          // Storage for ShowMetricsWindow() and DebugNodeXXX() functions
@@ -1192,6 +1192,25 @@ struct ImGuiNextItemData
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; } // Also cleared manually by ItemAdd()!
 };
 
+// Status storage for the last submitted item
+struct ImGuiLastItemData
+{
+    ImGuiID                 ID;
+    ImGuiItemFlags          InFlags;            // See ImGuiItemFlags_
+    ImGuiItemStatusFlags    StatusFlags;        // See ImGuiItemStatusFlags_
+    ImRect                  Rect;
+    ImRect                  DisplayRect;
+
+    ImGuiLastItemData()     { memset(this, 0, sizeof(*this)); }
+};
+
+// Data saved for each window pushed into the stack
+struct ImGuiWindowStackData
+{
+    ImGuiWindow*            Window;
+    ImGuiLastItemData       ParentLastItemDataBackup;
+};
+
 struct ImGuiShrinkWidthItem
 {
     int         Index;
@@ -1588,7 +1607,7 @@ struct ImGuiContext
     ImVector<ImGuiWindow*>  Windows;                            // Windows, sorted in display order, back to front
     ImVector<ImGuiWindow*>  WindowsFocusOrder;                  // Root windows, sorted in focus order, back to front.
     ImVector<ImGuiWindow*>  WindowsTempSortBuffer;              // Temporary buffer used in EndFrame() to reorder windows so parents are kept before their child
-    ImVector<ImGuiWindow*>  CurrentWindowStack;
+    ImVector<ImGuiWindowStackData> CurrentWindowStack;
     ImGuiStorage            WindowsById;                        // Map window's ImGuiID to ImGuiWindow*
     int                     WindowsActiveCount;                 // Number of unique windows submitted by frame
     ImVec2                  WindowsHoverPadding;                // Padding around resizable windows for which hovering on counts as hovering the window == ImMax(style.TouchExtraPadding, WINDOWS_HOVER_PADDING)
@@ -1602,7 +1621,6 @@ struct ImGuiContext
     float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
-    ImGuiItemFlags          CurrentItemFlags;                   // == g.ItemFlagsStack.back()
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
     bool                    HoveredIdAllowOverlap;
@@ -1636,8 +1654,10 @@ struct ImGuiContext
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
     // Next window/item data
-    ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
+    ImGuiItemFlags          CurrentItemFlags;                      // == g.ItemFlagsStack.back()
     ImGuiNextItemData       NextItemData;                       // Storage for SetNextItem** functions
+    ImGuiLastItemData       LastItemData;                       // Storage for last submitted item (setup by ItemAdd)
+    ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
 
     // Shared stacks
     ImVector<ImGuiColorMod> ColorStack;                         // Stack for PushStyleColor()/PopStyleColor() - inherited by Begin()
@@ -1848,7 +1868,6 @@ struct ImGuiContext
         WheelingWindow = NULL;
         WheelingWindowTimer = 0.0f;
 
-        CurrentItemFlags = ImGuiItemFlags_None;
         HoveredId = HoveredIdPreviousFrame = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdUsingMouseWheel = HoveredIdPreviousFrameUsingMouseWheel = false;
@@ -1877,6 +1896,8 @@ struct ImGuiContext
         ActiveIdPreviousFrameWindow = NULL;
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
+
+        CurrentItemFlags = ImGuiItemFlags_None;
 
         CurrentDpiScale = 0.0f;
         CurrentViewport = NULL;
@@ -2001,12 +2022,6 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec1                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     ImVec1                  ColumnsOffset;          // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     ImVec1                  GroupOffset;
-
-    // Last item status
-    ImGuiID                 LastItemId;             // ID for last item
-    ImGuiItemStatusFlags    LastItemStatusFlags;    // Status flags for last item (see ImGuiItemStatusFlags_)
-    ImRect                  LastItemRect;           // Interaction rect for last item
-    ImRect                  LastItemDisplayRect;    // End-user display rect for last item (only valid if LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect)
 
     // Keyboard/Gamepad navigation
     ImGuiNavLayer           NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
@@ -2175,19 +2190,6 @@ public:
     ImRect      TitleBarRect() const    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const   { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_MenuBar) ? DC.MenuBarOffset.y + CalcFontSize() + g.Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-};
-
-// Backup and restore just enough data to be able to use IsItemHovered() on item A after another B in the same window has overwritten the data.
-struct ImGuiLastItemDataBackup
-{
-    ImGuiID                 LastItemId;
-    ImGuiItemStatusFlags    LastItemStatusFlags;
-    ImRect                  LastItemRect;
-    ImRect                  LastItemDisplayRect;
-
-    ImGuiLastItemDataBackup() { Backup(); }
-    void Backup()           { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemStatusFlags = window->DC.LastItemStatusFlags; LastItemRect = window->DC.LastItemRect; LastItemDisplayRect = window->DC.LastItemDisplayRect; }
-    void Restore() const    { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemStatusFlags = LastItemStatusFlags; window->DC.LastItemRect = LastItemRect; window->DC.LastItemDisplayRect = LastItemDisplayRect; }
 };
 
 //-----------------------------------------------------------------------------
@@ -2609,11 +2611,11 @@ namespace ImGui
     IMGUI_API ImVec2        ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_rect);
 
     // Basic Accessors
-    inline ImGuiID          GetItemID()     { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemId; }   // Get ID of last item (~~ often same ImGui::GetID(label) beforehand)
-    inline ImGuiItemStatusFlags GetItemStatusFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemStatusFlags; }
+    inline ImGuiID          GetItemID()     { ImGuiContext& g = *GImGui; return g.LastItemData.ID; }   // Get ID of last item (~~ often same ImGui::GetID(label) beforehand)
+    inline ImGuiItemStatusFlags GetItemStatusFlags(){ ImGuiContext& g = *GImGui; return g.LastItemData.StatusFlags; }
+    inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.LastItemData.InFlags; }
     inline ImGuiID          GetActiveID()   { ImGuiContext& g = *GImGui; return g.ActiveId; }
     inline ImGuiID          GetFocusID()    { ImGuiContext& g = *GImGui; return g.NavId; }
-    inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.CurrentItemFlags; }
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetFocusID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
@@ -2631,7 +2633,7 @@ namespace ImGui
     IMGUI_API bool          ItemHoverable(const ImRect& bb, ImGuiID id);
     IMGUI_API void          ItemFocusable(ImGuiWindow* window, ImGuiID id);
     IMGUI_API bool          IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged);
-    IMGUI_API void          SetLastItemData(ImGuiWindow* window, ImGuiID item_id, ImGuiItemStatusFlags status_flags, const ImRect& item_rect);
+    IMGUI_API void          SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemStatusFlags status_flags, const ImRect& item_rect);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_w, float default_h);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
     IMGUI_API void          PushMultiItemsWidths(int components, float width_full);
@@ -2947,7 +2949,7 @@ namespace ImGui
 
     // Debug Tools
     IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
-    inline void             DebugDrawItemRect(ImU32 col = IM_COL32(255,0,0,255))    { ImGuiContext& g = *GImGui; ImGuiWindow* window = g.CurrentWindow; GetForegroundDrawList(window)->AddRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max, col); }
+    inline void             DebugDrawItemRect(ImU32 col = IM_COL32(255,0,0,255))    { ImGuiContext& g = *GImGui; ImGuiWindow* window = g.CurrentWindow; GetForegroundDrawList(window)->AddRect(g.LastItemData.Rect.Min, g.LastItemData.Rect.Max, col); }
     inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
 
     IMGUI_API void          ShowFontAtlas(ImFontAtlas* atlas);

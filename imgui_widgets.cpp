@@ -502,7 +502,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = window;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    if (id != 0 && window->DC.LastItemId != id)
+    if (id != 0 && g.LastItemData.ID != id)
         IMGUI_TEST_ENGINE_ITEM_ADD(bb, id);
 #endif
 
@@ -611,10 +611,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         }
     }
 
-    // Release active id if turning disabled
-    if (g.ActiveId == id && (g.CurrentItemFlags & ImGuiItemFlags_Disabled))
-        ClearActiveID();
-
     // Process while held
     bool held = false;
     if (g.ActiveId == id)
@@ -684,8 +680,9 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, id))
         return false;
 
-    if (g.CurrentItemFlags & ImGuiItemFlags_ButtonRepeat)
+    if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
+
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
 
@@ -702,7 +699,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
     //    CloseCurrentPopup();
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return pressed;
 }
 
@@ -760,7 +757,7 @@ bool ImGui::ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size, ImGuiBu
     if (!ItemAdd(bb, id))
         return false;
 
-    if (g.CurrentItemFlags & ImGuiItemFlags_ButtonRepeat)
+    if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
 
     bool hovered, held;
@@ -1085,7 +1082,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id))
     {
-        IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+        IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
         return false;
     }
 
@@ -1101,7 +1098,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     RenderNavHighlight(total_bb, id);
     RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
     ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
-    bool mixed_value = (g.CurrentItemFlags & ImGuiItemFlags_MixedValue) != 0;
+    bool mixed_value = (g.LastItemData.InFlags & ImGuiItemFlags_MixedValue) != 0;
     if (mixed_value)
     {
         // Undocumented tristate/mixed/indeterminate checkbox (#2644)
@@ -1121,7 +1118,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (label_size.x > 0.0f)
         RenderText(label_pos, label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
 
@@ -1223,7 +1220,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (label_size.x > 0.0f)
         RenderText(label_pos, label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return pressed;
 }
 
@@ -1447,7 +1444,7 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
     bb_interact.Expand(axis == ImGuiAxis_Y ? ImVec2(0.0f, hover_extend) : ImVec2(hover_extend, 0.0f));
     ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
     if (hovered)
-        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HoveredRect; // for IsItemHovered(), because bb_interact is larger than bb
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect; // for IsItemHovered(), because bb_interact is larger than bb
     if (g.ActiveId != id)
         SetItemAllowOverlap();
 
@@ -1705,9 +1702,9 @@ bool ImGui::BeginComboPreview()
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiComboPreviewData* preview_data = &g.ComboPreviewData;
 
-    if (window->SkipItems || !window->ClipRect.Overlaps(window->DC.LastItemRect)) // FIXME: Because we don't have a ImGuiItemStatusFlags_Visible flag to test last ItemAdd() result
+    if (window->SkipItems || !window->ClipRect.Overlaps(g.LastItemData.Rect)) // FIXME: Because we don't have a ImGuiItemStatusFlags_Visible flag to test last ItemAdd() result
         return false;
-    IM_ASSERT(window->DC.LastItemRect.Min.x == preview_data->PreviewRect.Min.x && window->DC.LastItemRect.Min.y == preview_data->PreviewRect.Min.y); // Didn't call after BeginCombo/EndCombo block or forgot to pass ImGuiComboFlags_CustomPreview flag?
+    IM_ASSERT(g.LastItemData.Rect.Min.x == preview_data->PreviewRect.Min.x && g.LastItemData.Rect.Min.y == preview_data->PreviewRect.Min.y); // Didn't call after BeginCombo/EndCombo block or forgot to pass ImGuiComboFlags_CustomPreview flag?
     if (!window->ClipRect.Contains(preview_data->PreviewRect)) // Narrower test (optional)
         return false;
 
@@ -1816,8 +1813,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     }
 
     EndCombo();
+
     if (value_changed)
-        MarkItemEdited(g.CurrentWindow->DC.LastItemId);
+        MarkItemEdited(g.LastItemData.ID);
 
     return value_changed;
 }
@@ -2353,7 +2351,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
     }
     if (g.ActiveId != id)
         return false;
-    if ((g.CurrentItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
+    if ((g.LastItemData.InFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     switch (data_type)
@@ -2407,7 +2405,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = temp_input_allowed && (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_Focused) != 0;
+        const bool focus_requested = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Focused) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         const bool double_clicked = (hovered && g.IO.MouseDoubleClicked[0]);
         if (focus_requested || clicked || double_clicked || g.NavActivateId == id || g.NavInputId == id)
@@ -2456,7 +2454,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return value_changed;
 }
 
@@ -2544,6 +2542,7 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     PopID();
+
     return value_changed;
 }
 
@@ -2956,7 +2955,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
     IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flag!  Has the 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
 
     ImGuiContext& g = *GImGui;
-    if ((g.CurrentItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
+    if ((g.LastItemData.InFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     switch (data_type)
@@ -3022,7 +3021,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = temp_input_allowed && (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_Focused) != 0;
+        const bool focus_requested = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Focused) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         if (focus_requested || clicked || g.NavActivateId == id || g.NavInputId == id)
         {
@@ -3067,7 +3066,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return value_changed;
 }
 
@@ -3479,7 +3478,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
             value_changed = DataTypeApplyOpFromText(buf, g.InputTextState.InitialTextA.Data, data_type, p_data, format);
     }
     if (value_changed)
-        MarkItemEdited(window->DC.LastItemId);
+        MarkItemEdited(g.LastItemData.ID);
 
     return value_changed;
 }
@@ -4013,8 +4012,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
 
-    const bool focus_requested_by_code = (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_FocusedByCode) != 0;
-    const bool focus_requested_by_tabbing = (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+    const bool focus_requested_by_code = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByCode) != 0;
+    const bool focus_requested_by_tabbing = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
@@ -4736,7 +4735,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (value_changed && !(flags & ImGuiInputTextFlags_NoMarkEdited))
         MarkItemEdited(id);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
         return enter_pressed;
     else
@@ -4919,7 +4918,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 // Store current color and open a picker
                 g.ColorPickerRef = col_v4;
                 OpenPopup("picker");
-                SetNextWindowPos(window->DC.LastItemRect.GetBL() + ImVec2(-1, style.ItemSpacing.y));
+                SetNextWindowPos(g.LastItemData.Rect.GetBL() + ImVec2(-1, style.ItemSpacing.y));
             }
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
@@ -4976,7 +4975,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // Drag and Drop Target
     // NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
-    if ((window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect) && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropTarget())
+    if ((g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredRect) && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropTarget())
     {
         bool accepted_drag_drop = false;
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
@@ -4998,10 +4997,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // When picker is being actively used, use its active id so IsItemActive() will function on ColorEdit4().
     if (picker_active_window && g.ActiveId != 0 && g.ActiveIdWindow == picker_active_window)
-        window->DC.LastItemId = g.ActiveId;
+        g.LastItemData.ID = g.ActiveId;
 
     if (value_changed)
-        MarkItemEdited(window->DC.LastItemId);
+        MarkItemEdited(g.LastItemData.ID);
 
     return value_changed;
 }
@@ -5397,7 +5396,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     if (value_changed && memcmp(backup_initial_col, col, components * sizeof(float)) == 0)
         value_changed = false;
     if (value_changed)
-        MarkItemEdited(window->DC.LastItemId);
+        MarkItemEdited(g.LastItemData.ID);
 
     PopID();
 
@@ -5830,14 +5829,14 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         window->DC.TreeJumpToParentOnPopMask |= (1 << window->DC.TreeDepth);
 
     bool item_add = ItemAdd(interact_bb, id);
-    window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
-    window->DC.LastItemDisplayRect = frame_bb;
+    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
+    g.LastItemData.DisplayRect = frame_bb;
 
     if (!item_add)
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushOverrideID(id);
-        IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.LastItemStatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
+        IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
         return is_open;
     }
 
@@ -5911,7 +5910,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         {
             is_open = !is_open;
             window->DC.StateStorage->SetInt(id, is_open);
-            window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
+            g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
         }
     }
     if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
@@ -5919,7 +5918,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     // In this branch, TreeNodeBehavior() cannot toggle the selection so this will never trigger.
     if (selected != was_selected) //-V547
-        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
     const ImU32 text_col = GetColorU32(ImGuiCol_Text);
@@ -5963,7 +5962,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
         TreePushOverrideID(id);
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
     return is_open;
 }
 
@@ -6067,14 +6066,14 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
         // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
         // FIXME: CloseButton can overlap into text, need find a way to clip the text somehow.
         ImGuiContext& g = *GImGui;
-        ImGuiLastItemDataBackup last_item_backup;
+        ImGuiLastItemData last_item_backup = g.LastItemData;
         float button_size = g.FontSize;
-        float button_x = ImMax(window->DC.LastItemRect.Min.x, window->DC.LastItemRect.Max.x - g.Style.FramePadding.x * 2.0f - button_size);
-        float button_y = window->DC.LastItemRect.Min.y;
+        float button_x = ImMax(g.LastItemData.Rect.Min.x, g.LastItemData.Rect.Max.x - g.Style.FramePadding.x * 2.0f - button_size);
+        float button_y = g.LastItemData.Rect.Min.y;
         ImGuiID close_button_id = GetIDWithSeed("#CLOSE", NULL, id);
         if (CloseButton(close_button_id, ImVec2(button_x, button_y)))
             *p_visible = false;
-        last_item_backup.Restore();
+        g.LastItemData = last_item_backup;
     }
 
     return is_open;
@@ -6167,7 +6166,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         return false;
 
     const bool disabled_global = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
-    if (disabled_item && !disabled_global)
+    if (disabled_item && !disabled_global) // Only testing this as an optimization
         PushDisabled(true);
 
     // FIXME: We can standardize the behavior of those two, we could also keep the fast path of override ClipRect + full push on render only,
@@ -6217,7 +6216,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // In this branch, Selectable() cannot toggle the selection so this will never trigger.
     if (selected != was_selected) //-V547
-        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
     if (held && (flags & ImGuiSelectableFlags_DrawHoveredWhenHeld))
@@ -6237,13 +6236,13 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(g.CurrentItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
+    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(g.LastItemData.InFlags & ImGuiItemFlags_SelectableDontClosePopup))
         CloseCurrentPopup();
 
     if (disabled_item && !disabled_global)
         PopDisabled();
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return pressed;
 }
 
@@ -6376,8 +6375,9 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
             PopID();
         }
     EndListBox();
+
     if (value_changed)
-        MarkItemEdited(g.CurrentWindow->DC.LastItemId);
+        MarkItemEdited(g.LastItemData.ID);
 
     return value_changed;
 }
@@ -6596,6 +6596,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 // - EndMainMenuBar()
 // - BeginMenu()
 // - EndMenu()
+// - MenuItemEx() [Internal]
 // - MenuItem()
 //-------------------------------------------------------------------------
 
@@ -6869,7 +6870,6 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     }
     if (!enabled)
         PopDisabled();
-    PopID();
 
     const bool hovered = (g.HoveredId == id) && enabled;
     if (menuset_is_open)
@@ -6943,7 +6943,8 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (want_close && IsPopupOpen(id, ImGuiPopupFlags_None))
         ClosePopupToLevel(g.BeginPopupStack.Size, true);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
+    PopID();
 
     if (!menu_is_open && want_open && g.OpenPopupStack.Size > g.BeginPopupStack.Size)
     {
@@ -7039,11 +7040,11 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         if (selected)
             RenderCheckMark(window->DrawList, pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize  * 0.866f);
     }
+    IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     if (!enabled)
         PopDisabled();
     PopID();
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.LastItemStatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
 
@@ -7905,7 +7906,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // If the user called us with *p_open == false, we early out and don't render.
     // We make a call to ItemAdd() so that attempts to use a contextual popup menu with an implicit ID won't use an older ID.
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     if (p_open && !*p_open)
     {
         PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
@@ -8282,12 +8283,12 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 
     if (close_button_visible)
     {
-        ImGuiLastItemDataBackup last_item_backup;
+        ImGuiLastItemData last_item_backup = g.LastItemData;
         PushStyleVar(ImGuiStyleVar_FramePadding, frame_padding);
         if (CloseButton(close_button_id, button_pos))
             close_button_pressed = true;
         PopStyleVar();
-        last_item_backup.Restore();
+        g.LastItemData = last_item_backup;
 
         // Close with middle mouse button
         if (!(flags & ImGuiTabItemFlags_NoCloseWithMiddleMouseButton) && IsMouseClicked(2))

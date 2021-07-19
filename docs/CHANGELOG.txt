@@ -131,6 +131,8 @@ Other Changes:
 - Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
 - Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)
 - Disabled: disabled mode doesn't prevent Selectable() from looking selected. (#211)
+- Disabled: fixed IsItemHovered() returning true on disabled item when navigated to. (#211)
+- Disabled: fixed IsItemHovered() if popped disabled state after item, or when using Selectable_Disabled. (#211)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
 - Fonts: Functions with a 'float size_pixels' parameter can accept zero if it is set in ImFontSize::SizePixels.
 - Fonts: Prefer using U+FFFD character for fallback instead of '?', if available. (#4269)
