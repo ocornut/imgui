@@ -62,7 +62,17 @@ Breaking Changes:
 Other Changes:
 - IO: Added io.AddFocusEvent() api for backend to tell when host window has gained/lost focus. (#4388) [@thedmd]
   If you use a custom backend, consider adding support for this!
-- Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument display a dot instead of a '*' so it
+- Disabled: added BeginDisabled()/EndDisabled() api to create a scope where interactions are disabled. (#211)
+  - Added style.DisabledAlpha (default to 0.60f) and ImGuiStyleVar_DisabledAlpha. (#211)
+  - Unlike the internal-and-undocumented-but-somehow-known PushItemFlag(ImGuiItemFlags_Disabled), this also alters
+    visuals. Currently this is done by lowering alpha of all widgets. Future styling system may do that differently.
+  - Disabled items set HoveredId, allowing e.g. HoveredIdTimer to run. (#211, #3419) [@rokups]
+  - Disabled items more consistently release ActiveId if the active item got disabled. (#211)
+  - Nav: Fixed disabled items from beig candidate for default focus. (#211, #787)
+  - Fixed Selectable() selection not showing when disabled. (#211)
+  - Fixed IsItemHovered() returning true on disabled item when navigated to. (#211)
+  - Fixed IsItemHovered() if popped disabled state after item, or when using Selectable_Disabled. (#211)
+- Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument displays a dot instead of a '*' so it
   is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
   Added extra comments to clarify the purpose of this flag in the context of docked windows.
 - Tables: Added ImGuiTableColumnFlags_Disabled acting a master disable over (hidden from user/context menu). (#3935)
@@ -81,12 +91,6 @@ Other Changes:
 - Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
 - Popups: fix BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
 - Nav: Alt doesn't toggle menu layer if other modifiers are held. (#4439)
-- Nav: Disabled items are not candidate for default focus. (#211, #787)
-- Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
-- Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)
-- Disabled: disabled mode doesn't prevent Selectable() from looking selected. (#211)
-- Disabled: fixed IsItemHovered() returning true on disabled item when navigated to. (#211)
-- Disabled: fixed IsItemHovered() if popped disabled state after item, or when using Selectable_Disabled. (#211)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
 - Fonts: Functions with a 'float size_pixels' parameter can accept zero if it is set in ImFontSize::SizePixels.
 - Fonts: Prefer using U+FFFD character for fallback instead of '?', if available. (#4269)
