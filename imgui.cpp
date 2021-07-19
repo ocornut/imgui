@@ -3232,7 +3232,8 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         SetHoveredID(id);
 
     // When disabled we'll return false but still set HoveredId
-    if (g.CurrentItemFlags & ImGuiItemFlags_Disabled)
+    ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
+    if (item_flags & ImGuiItemFlags_Disabled)
     {
         // Release active id if turning disabled
         if (g.ActiveId == id)
@@ -3277,7 +3278,7 @@ void ImGui::ItemFocusable(ImGuiWindow* window, ImGuiID id)
 
     // Increment counters
     // FIXME: ImGuiItemFlags_Disabled should disable more.
-    const bool is_tab_stop = (g.CurrentItemFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
+    const bool is_tab_stop = (g.LastItemData.InFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
     window->DC.FocusCounterRegular++;
     if (is_tab_stop)
     {
