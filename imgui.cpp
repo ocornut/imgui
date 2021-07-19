@@ -1070,7 +1070,7 @@ ImGuiIO::ImGuiIO()
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f / 60.0f;
     IniSavingRate = 5.0f;
-    IniFilename = "imgui.ini";
+    IniFilename = "imgui.ini"; // Important: "imgui.ini" is relative to current working dir, most apps will want to lock this to an absolute path (e.g. same path as executables).
     LogFilename = "imgui_log.txt";
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
@@ -3278,6 +3278,7 @@ void ImGui::SetLastItemData(ImGuiWindow* window, ImGuiID item_id, ImGuiItemFlags
     window->DC.LastItemRect = item_rect;
 }
 
+// Called by ItemAdd()
 // Process TAB/Shift+TAB. Be mindful that this function may _clear_ the ActiveID when tabbing out.
 void ImGui::ItemFocusable(ImGuiWindow* window, ImGuiID id)
 {
@@ -7455,9 +7456,17 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
+    // Equivalent to calling SetLastItemData()
+    window->DC.LastItemId = id;
+    window->DC.LastItemRect = bb;
+    window->DC.LastItemInFlags = g.CurrentItemFlags;
+    window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
+    g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
+
+    // Directional navigation processing
     if (id != 0)
     {
-        // Navigation processing runs prior to clipping early-out
+        // Runs prior to clipping early-out
         //  (a) So that NavInitRequest can be honored, for newly opened windows to select a default widget
         //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests
         //      unfortunately, but it is still limited to one window. It may not scale very well for windows with ten of
@@ -7481,13 +7490,6 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         }
 #endif
     }
-
-    // Equivalent to calling SetLastItemData()
-    window->DC.LastItemId = id;
-    window->DC.LastItemRect = bb;
-    window->DC.LastItemInFlags = g.CurrentItemFlags;
-    window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
-    g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
@@ -8856,7 +8858,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
     //    return;
 
-    const ImGuiItemFlags item_flags = g.CurrentItemFlags;
+    const ImGuiItemFlags item_flags = window->DC.LastItemInFlags;
     const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
 
     // Process Init Request
@@ -9885,6 +9887,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             // We build a throwaway ID based on current ID stack + relative AABB of items in window.
             // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled.
             // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
+            // Rely on keeping other window->LastItemXXX fields intact.
             source_id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
             bool is_hovered = ItemHoverable(window->DC.LastItemRect, source_id);
             if (is_hovered && g.IO.MouseClicked[mouse_button])
