@@ -41,6 +41,14 @@
 #endif
 
 // DirectX data
+struct ImGui_ImplDX10_TextureResource
+{
+	ID3D10Texture2D*		    pFontTexture;
+	ID3D10ShaderResourceView*   pFontTextureView;
+	ImGui_ImplDX10_TextureResource() { memset(this, 0, sizeof(*this)); }
+};
+typedef ImVector<ImGui_ImplDX10_TextureResource> ImGui_ImplDX10_TexturesContainer;
+
 struct ImGui_ImplDX10_Data
 {
     ID3D10Device*               pd3dDevice;
@@ -52,7 +60,7 @@ struct ImGui_ImplDX10_Data
     ID3D10Buffer*               pVertexConstantBuffer;
     ID3D10PixelShader*          pPixelShader;
     ID3D10SamplerState*         pFontSampler;
-    ID3D10ShaderResourceView*   pFontTextureView;
+	ImGui_ImplDX10_TexturesContainer   Textures;
     ID3D10RasterizerState*      pRasterizerState;
     ID3D10BlendState*           pBlendState;
     ID3D10DepthStencilState*    pDepthStencilState;
@@ -77,7 +85,7 @@ static ImGui_ImplDX10_Data* ImGui_ImplDX10_GetBackendData()
 // Functions
 static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device* ctx)
 {
-    ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
+	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
 
     // Setup viewport
     D3D10_VIEWPORT vp;
@@ -110,9 +118,12 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
 }
 
 // Render function
+static void ImGui_ImplDX10_UpdateFontTextures();
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 {
-    // Avoid rendering when minimized
+	ImGui_ImplDX10_UpdateFontTextures();
+	
+	// Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
 
@@ -285,14 +296,10 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
-static void ImGui_ImplDX10_CreateFontsTexture()
+static ImGui_ImplDX10_TextureResource ImGui_ImplDX10_CreateTexture(int width, int height, unsigned char* pixels)
 {
-    // Build texture atlas
-    ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+	ImGui_ImplDX10_TextureResource result;
+	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
 
     // Upload texture to graphics system
     {
@@ -308,13 +315,12 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
         desc.CPUAccessFlags = 0;
 
-        ID3D10Texture2D* pTexture = NULL;
         D3D10_SUBRESOURCE_DATA subResource;
         subResource.pSysMem = pixels;
         subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
-        bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
-        IM_ASSERT(pTexture != NULL);
+        bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &result.pFontTexture);
+        IM_ASSERT(result.pFontTexture != NULL);
 
         // Create texture view
         D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
@@ -323,15 +329,12 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = desc.MipLevels;
         srv_desc.Texture2D.MostDetailedMip = 0;
-        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srv_desc, &bd->pFontTextureView);
-        pTexture->Release();
+        bd->pd3dDevice->CreateShaderResourceView(result.pFontTexture, &srv_desc, &result.pFontTextureView);
+		IM_ASSERT(result.pFontTextureView != NULL);
     }
 
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)bd->pFontTextureView);
-
     // Create texture sampler
-    {
+    if(!bd->pFontSampler) {
         D3D10_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
@@ -344,6 +347,58 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         desc.MaxLOD = 0.f;
         bd->pd3dDevice->CreateSamplerState(&desc, &bd->pFontSampler);
     }
+
+	return result;
+}
+
+static void ImGui_ImplDX10_UpdateTexture(ImGui_ImplDX10_TextureResource* texture, int x, int y, int width, int height, unsigned char* pixels)
+{
+	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
+	D3D10_BOX box;
+	box.left = x;
+	box.right = x + width;
+	box.top = y;
+	box.bottom = y + height;
+	box.front = 0;
+	box.back = 1;
+	bd->pd3dDevice->UpdateSubresource(texture->pFontTexture, 0, &box, pixels, width * 4, 0);
+}
+
+static void ImGui_ImplDX10_UpdateFontTextures()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
+
+	if (io.Fonts->Fonts.Size == 0) //Load a font if there is none
+		io.Fonts->AddFontDefault();
+
+	// FIXME-DYNAMICFONT: Add support for resizing textures
+	for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+		ImFontTexture* font_texture_ptr = *font_texture;
+		if (font_texture_ptr->TexID == NULL) {
+			//This Direct3D texture has not yet been created. Create it.
+			ImGui_ImplDX10_TextureResource new_texture = ImGui_ImplDX10_CreateTexture(font_texture_ptr->TexWidth, font_texture_ptr->TexHeight, font_texture_ptr->TexData.Data);
+			font_texture_ptr->TexID = (ImTextureID)(intptr_t)new_texture.pFontTextureView;
+			font_texture_ptr->IsDirty = false;
+			bd->Textures.push_back(new_texture);
+		}
+
+		if (font_texture_ptr->IsDirty) {
+			//Update whole affected rows
+			int x = 0, y = static_cast<int>(font_texture_ptr->DirtyTopLeft.y);
+			int width = font_texture_ptr->TexWidth, height = static_cast<int>(font_texture_ptr->DirtyBotRight.y) - static_cast<int>(font_texture_ptr->DirtyTopLeft.y) + 1;
+			
+			//Find the texture resource with corresponding TexID
+			ImGui_ImplDX10_TextureResource* texture = bd->Textures.begin();
+			for (; texture != bd->Textures.end(); ++texture) {
+				if (texture->pFontTextureView == (ID3D10ShaderResourceView*)(intptr_t)font_texture_ptr->TexID)
+					break;
+			}
+
+			ImGui_ImplDX10_UpdateTexture(texture, x, y, width, height, &font_texture_ptr->TexData.Data[y*width * 4]);
+			font_texture_ptr->IsDirty = false;
+		}
+	}
 }
 
 bool    ImGui_ImplDX10_CreateDeviceObjects()
@@ -495,9 +550,6 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         bd->pd3dDevice->CreateDepthStencilState(&desc, &bd->pDepthStencilState);
     }
 
-    // FIXME-DYNAMICFONT: ImGui_ImplDX10_UpdateFontsTexture should replace this function and be called every frame
-    ImGui_ImplDX10_CreateFontsTexture();
-
     return true;
 }
 
@@ -508,7 +560,29 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
         return;
 
     if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = NULL; }
-    if (bd->pFontTextureView)       { bd->pFontTextureView->Release(); bd->pFontTextureView = NULL; ImGui::GetIO().Fonts->SetTexID(NULL); } // We copied bd->pFontTextureView to io.Fonts->TexID so let's clear that as well.
+
+	if (bd->Textures.Size) {
+		ImGuiIO& io = ImGui::GetIO();
+
+		for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+			ImFontTexture* font_texture_ptr = *font_texture;
+			ID3D10ShaderResourceView* directx_texture_view = (ID3D10ShaderResourceView*)font_texture_ptr->TexID;
+
+			//Find the texture resource with corresponding TexID
+			ImGui_ImplDX10_TextureResource* texture = bd->Textures.begin();
+			for (; texture != bd->Textures.end(); ++texture) {
+				if (texture->pFontTextureView == directx_texture_view)
+					break;
+			}
+
+			texture->pFontTextureView->Release();
+			texture->pFontTextureView = NULL;
+			texture->pFontTexture->Release();
+			texture->pFontTexture = NULL;
+			font_texture_ptr->TexID = 0;
+		}
+	}
+
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = NULL; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = NULL; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = NULL; }
@@ -564,9 +638,11 @@ void ImGui_ImplDX10_Shutdown()
 
 void ImGui_ImplDX10_NewFrame()
 {
-    ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
-    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX10_Init()?");
+	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
+	IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX10_Init()?");
 
-    if (!bd->pFontSampler)
-        ImGui_ImplDX10_CreateDeviceObjects();
+	if (!bd->pVertexShader)
+		ImGui_ImplDX10_CreateDeviceObjects();
+
+	ImGui::GetIO().Fonts->CheckOverflow();
 }

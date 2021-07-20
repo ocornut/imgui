@@ -376,7 +376,7 @@ void ImGui_ImplDX9_UpdateFontTextures()
 	for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
 		ImFontTexture* font_texture_ptr = *font_texture;
 		if (font_texture_ptr->TexID == NULL) {
-			//This OpenGL texure has not yet been created. Create it.
+			//This Direct3D texture has not yet been created. Create it.
 			LPDIRECT3DTEXTURE9 new_texture = ImGui_ImplDX9_CreateTexture(font_texture_ptr->TexWidth, font_texture_ptr->TexHeight, 4, font_texture_ptr->TexData.Data);
 			font_texture_ptr->TexID = (ImTextureID) (intptr_t) new_texture;
 			font_texture_ptr->IsDirty = false;
