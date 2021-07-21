@@ -34,6 +34,7 @@ static FrameContext                 g_frameContext[NUM_FRAMES_IN_FLIGHT] = {};
 static UINT                         g_frameIndex = 0;
 
 static int const                    NUM_BACK_BUFFERS = 3;
+static UINT const                   SWAP_CHAIN_FLAGS = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 static ID3D12Device*                g_pd3dDevice = NULL;
 static ID3D12DescriptorHeap*        g_pd3dRtvDescHeap = NULL;
 static ID3D12DescriptorHeap*        g_pd3dSrvDescHeap = NULL;
@@ -54,7 +55,6 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 void WaitForLastSubmittedFrame();
 FrameContext* WaitForNextFrameResources();
-void ResizeSwapChain(HWND hWnd, int width, int height);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
@@ -432,31 +432,6 @@ FrameContext* WaitForNextFrameResources()
     return frameCtx;
 }
 
-void ResizeSwapChain(HWND hWnd, int width, int height)
-{
-    DXGI_SWAP_CHAIN_DESC1 sd;
-    g_pSwapChain->GetDesc1(&sd);
-    sd.Width = width;
-    sd.Height = height;
-
-    IDXGIFactory4* dxgiFactory = NULL;
-    g_pSwapChain->GetParent(IID_PPV_ARGS(&dxgiFactory));
-
-    g_pSwapChain->Release();
-    CloseHandle(g_hSwapChainWaitableObject);
-
-    IDXGISwapChain1* swapChain1 = NULL;
-    dxgiFactory->CreateSwapChainForHwnd(g_pd3dCommandQueue, hWnd, &sd, NULL, NULL, &swapChain1);
-    swapChain1->QueryInterface(IID_PPV_ARGS(&g_pSwapChain));
-    swapChain1->Release();
-    dxgiFactory->Release();
-
-    g_pSwapChain->SetMaximumFrameLatency(NUM_BACK_BUFFERS);
-
-    g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
-    assert(g_hSwapChainWaitableObject != NULL);
-}
-
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -474,7 +449,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             WaitForLastSubmittedFrame();
             ImGui_ImplDX12_InvalidateDeviceObjects();
             CleanupRenderTarget();
-            ResizeSwapChain(hWnd, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam));
+            HRESULT result = g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, SWAP_CHAIN_FLAGS);
+            assert(SUCCEEDED(result) && "Failed to resize swapchain.");
             CreateRenderTarget();
             ImGui_ImplDX12_CreateDeviceObjects();
         }
