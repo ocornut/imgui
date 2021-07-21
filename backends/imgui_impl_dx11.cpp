@@ -738,6 +738,7 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
             break;
     }
     IM_ASSERT(SUCCEEDED(hr));
+    bd->pFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
 
     // Create the render target
     if (vd->SwapChain != nullptr)
