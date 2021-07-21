@@ -96,6 +96,8 @@ Other Changes:
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
 - Examples: SDL2: Accomodate for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
+- Examples: DirectX 12: Fixed Alt+Enter fullscreen. (#4346) [@PathogenDavid]
+- Examples: DirectX 12: Removed unecessary recreation of backend-owned device objects when window is resized. (#4347) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------
