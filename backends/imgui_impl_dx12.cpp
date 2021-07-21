@@ -898,6 +898,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     IDXGISwapChain1* swap_chain = NULL;
     res = dxgi_factory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, NULL, NULL, &swap_chain);
     IM_ASSERT(res == S_OK);
+    res = dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN | DXGI_MWA_NO_WINDOW_CHANGES);
+    IM_ASSERT(res == S_OK);
 
     dxgi_factory->Release();
 
