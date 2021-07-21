@@ -41,6 +41,14 @@
 #endif
 
 // DirectX11 data
+struct ImGui_ImplDX11_TextureResource
+{
+	ID3D11Texture2D*		    pFontTexture;
+	ID3D11ShaderResourceView*   pFontTextureView;
+	ImGui_ImplDX11_TextureResource() { memset(this, 0, sizeof(*this)); }
+};
+typedef ImVector<ImGui_ImplDX11_TextureResource> ImGui_ImplDX11_TextureContainer;
+
 struct ImGui_ImplDX11_Data
 {
     ID3D11Device*               pd3dDevice;
@@ -53,7 +61,7 @@ struct ImGui_ImplDX11_Data
     ID3D11Buffer*               pVertexConstantBuffer;
     ID3D11PixelShader*          pPixelShader;
     ID3D11SamplerState*         pFontSampler;
-    ID3D11ShaderResourceView*   pFontTextureView;
+    ImGui_ImplDX11_TextureContainer Textures;
     ID3D11RasterizerState*      pRasterizerState;
     ID3D11BlendState*           pBlendState;
     ID3D11DepthStencilState*    pDepthStencilState;
@@ -114,8 +122,11 @@ static void ImGui_ImplDX11_SetupRenderState(ImDrawData* draw_data, ID3D11DeviceC
 }
 
 // Render function
+static void ImGui_ImplDX11_UpdateFontTextures();
 void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
 {
+	ImGui_ImplDX11_UpdateFontTextures();
+
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
@@ -297,15 +308,12 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
-static void ImGui_ImplDX11_CreateFontsTexture()
+static ImGui_ImplDX11_TextureResource ImGui_ImplDX11_CreateTexture(int width, int height, unsigned char* pixels)
 {
     // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
+	ImGui_ImplDX11_TextureResource result;
+	ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+    
     // Upload texture to graphics system
     {
         D3D11_TEXTURE2D_DESC desc;
@@ -320,13 +328,12 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         desc.CPUAccessFlags = 0;
 
-        ID3D11Texture2D* pTexture = NULL;
         D3D11_SUBRESOURCE_DATA subResource;
         subResource.pSysMem = pixels;
         subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
-        bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
-        IM_ASSERT(pTexture != NULL);
+        bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &result.pFontTexture);
+        IM_ASSERT(result.pFontTexture != NULL);
 
         // Create texture view
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -335,15 +342,12 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = desc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
-        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &bd->pFontTextureView);
-        pTexture->Release();
+        bd->pd3dDevice->CreateShaderResourceView(result.pFontTexture, &srvDesc, &result.pFontTextureView);
+		IM_ASSERT(result.pFontTextureView != NULL);
     }
 
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)bd->pFontTextureView);
-
     // Create texture sampler
-    {
+    if(!bd->pFontSampler) {
         D3D11_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -356,7 +360,60 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         desc.MaxLOD = 0.f;
         bd->pd3dDevice->CreateSamplerState(&desc, &bd->pFontSampler);
     }
+
+	return result;
 }
+
+static void ImGui_ImplDX11_UpdateTexture(ImGui_ImplDX11_TextureResource* texture, int x, int y, int width, int height, unsigned char* pixels)
+{
+	ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+	D3D11_BOX box;
+	box.left = x;
+	box.right = x + width;
+	box.top = y;
+	box.bottom = y + height;
+	box.front = 0;
+	box.back = 1;
+	bd->pd3dDeviceContext->UpdateSubresource(texture->pFontTexture, 0, &box, pixels, width * 4, 0);
+}
+
+static void ImGui_ImplDX11_UpdateFontTextures()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+
+	if (io.Fonts->Fonts.Size == 0) //Load a font if there is none
+		io.Fonts->AddFontDefault();
+
+	// FIXME-DYNAMICFONT: Add support for resizing textures
+	for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+		ImFontTexture* font_texture_ptr = *font_texture;
+		if (font_texture_ptr->TexID == NULL) {
+			//This Direct3D texture has not yet been created. Create it.
+			ImGui_ImplDX11_TextureResource new_texture = ImGui_ImplDX11_CreateTexture(font_texture_ptr->TexWidth, font_texture_ptr->TexHeight, font_texture_ptr->TexData.Data);
+			font_texture_ptr->TexID = (ImTextureID)(intptr_t)new_texture.pFontTextureView;
+			font_texture_ptr->IsDirty = false;
+			bd->Textures.push_back(new_texture);
+		}
+
+		if (font_texture_ptr->IsDirty) {
+			//Update whole affected rows
+			int x = 0, y = static_cast<int>(font_texture_ptr->DirtyTopLeft.y);
+			int width = font_texture_ptr->TexWidth, height = static_cast<int>(font_texture_ptr->DirtyBotRight.y) - static_cast<int>(font_texture_ptr->DirtyTopLeft.y) + 1;
+
+			//Find the texture resource with corresponding TexID
+			ImGui_ImplDX11_TextureResource* texture = bd->Textures.begin();
+			for (; texture != bd->Textures.end(); ++texture) {
+				if (texture->pFontTextureView == (ID3D11ShaderResourceView*)(intptr_t)font_texture_ptr->TexID)
+					break;
+			}
+
+			ImGui_ImplDX11_UpdateTexture(texture, x, y, width, height, &font_texture_ptr->TexData.Data[y*width * 4]);
+			font_texture_ptr->IsDirty = false;
+		}
+	}
+}
+
 
 bool    ImGui_ImplDX11_CreateDeviceObjects()
 {
@@ -507,8 +564,6 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         bd->pd3dDevice->CreateDepthStencilState(&desc, &bd->pDepthStencilState);
     }
 
-    ImGui_ImplDX11_CreateFontsTexture();
-
     return true;
 }
 
@@ -519,8 +574,29 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
         return;
 
     if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = NULL; }
-    if (bd->pFontTextureView)       { bd->pFontTextureView->Release(); bd->pFontTextureView = NULL; ImGui::GetIO().Fonts->SetTexID(NULL); } // We copied data->pFontTextureView to io.Fonts->TexID so let's clear that as well.
-    if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = NULL; }
+	if (bd->Textures.Size) {
+		ImGuiIO& io = ImGui::GetIO();
+
+		for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+			ImFontTexture* font_texture_ptr = *font_texture;
+			ID3D11ShaderResourceView* directx_texture_view = (ID3D11ShaderResourceView*)font_texture_ptr->TexID;
+
+			//Find the texture resource with corresponding TexID
+			ImGui_ImplDX11_TextureResource* texture = bd->Textures.begin();
+			for (; texture != bd->Textures.end(); ++texture) {
+				if (texture->pFontTextureView == directx_texture_view)
+					break;
+			}
+
+			texture->pFontTextureView->Release();
+			texture->pFontTextureView = NULL;
+			texture->pFontTexture->Release();
+			texture->pFontTexture = NULL;
+			font_texture_ptr->TexID = 0;
+		}
+	}
+	
+	if (bd->pIB) { bd->pIB->Release(); bd->pIB = NULL; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = NULL; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = NULL; }
     if (bd->pDepthStencilState)     { bd->pDepthStencilState->Release(); bd->pDepthStencilState = NULL; }
@@ -582,6 +658,8 @@ void ImGui_ImplDX11_NewFrame()
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX11_Init()?");
 
-    if (!bd->pFontSampler)
+    if (!bd->pVertexShader)
         ImGui_ImplDX11_CreateDeviceObjects();
+
+	ImGui::GetIO().Fonts->CheckOverflow();
 }
