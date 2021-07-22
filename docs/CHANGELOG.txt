@@ -181,7 +181,8 @@ Docking+Viewports Branch:
 - Viewports: Fix popup/tooltip created without a parent window from being given a ParentViewportId value
   from the implicit/fallback window. (#4236, #2409)
 - Backends: Vulkan: Fix the use of the incorrect fence for secondary viewports. (#4208) [@FunMiles]
-- Examples: Disabled DXGI window management features (such as Alt+Enter fullscreen) for DirectX 10/11 samples. (#4350) [@PathogenDavid]
+- Examples: Disabled DXGI's automatic alt+enter fullscreen for DirectX 10/11 samples. Applications are free to
+  leave this enabled, but it does not work properly with multiple viewports. (#4350) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------

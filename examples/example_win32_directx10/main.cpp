@@ -206,11 +206,12 @@ bool CreateDeviceD3D(HWND hWnd)
     if (D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, D3D10_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice) != S_OK)
         return false;
 
-    // Disable DXGI's window management features
-    // (This doesn't play nice with multiple viewports and must be done on all windows associated with the device.)
+    // Disable DXGI's window management features (namely automatic alt+enter fullscreen)
+    // You are free to leave this enabled, but it will not work properly with multiple viewports
+    // For DirectX 10, this must be done for all windows associated with the device
     IDXGIFactory* pSwapChainFactory;
     if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
-        pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN | DXGI_MWA_NO_WINDOW_CHANGES);
+        pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES);
 
     CreateRenderTarget();
     return true;
