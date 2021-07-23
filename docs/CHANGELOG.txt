@@ -99,7 +99,7 @@ Other Changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.83 (Released 2011-05-24)
+ VERSION 1.83 (Released 2021-05-24)
 -----------------------------------------------------------------------
 
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
