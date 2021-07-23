@@ -31,7 +31,7 @@ project "ImGui"
         "backends/imgui_impl_opengl3.cpp",
         "backends/imgui_impl_opengl3.h",
 
-        "premake5.lua",
+        "build.lua",
 	}
 	
 	-- Dependencies --
@@ -67,6 +67,8 @@ project "ImGui"
 		{ 
 			"_CRT_SECURE_NO_WARNINGS",
 		}
+
+		flags { "MultiProcessorCompile" }
 
 	-- debug
 	filter "configurations:Debug"
