@@ -23,9 +23,10 @@ You may install Allegro using vcpkg:
 ```
 git clone https://github.com/Microsoft/vcpkg
 cd vcpkg
-.\bootstrap-vcpkg.bat
-.\vcpkg install allegro5
-.\vcpkg integrate install    ; optional, automatically register include/libs in Visual Studio
+bootstrap-vcpkg.bat
+vcpkg install allegro5 --triplet=x86-windows	; for win32
+vcpkg install allegro5 --triplet=x64-windows	; for win64
+vcpkg integrate install						    ; register include / libs in Visual Studio
 ```
 
 Build:

@@ -212,7 +212,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
  - combo: flag for BeginCombo to not return true when unchanged (#1182)
- - combo: a way/helper to customize the combo preview (#1658)
+ - combo: a way/helper to customize the combo preview (#1658) -> exeperimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
@@ -244,6 +244,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
+ - menus: hovering a disabled BeginMenu or MenuItem won't close another menu
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
  - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
