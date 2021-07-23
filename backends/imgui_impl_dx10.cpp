@@ -550,6 +550,8 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         bd->pd3dDevice->CreateDepthStencilState(&desc, &bd->pDepthStencilState);
     }
 
+	ImGui_ImplDX10_UpdateFontTextures();
+
     return true;
 }
 

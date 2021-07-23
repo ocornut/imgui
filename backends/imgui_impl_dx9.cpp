@@ -341,9 +341,9 @@ void ImGui_ImplDX9_UpdateTexture(LPDIRECT3DTEXTURE9 texture, int x, int y, int w
 	D3DLOCKED_RECT tex_locked_rect;
 	RECT dirty_rect;
 	dirty_rect.left = x;
-	dirty_rect.right = x + width-1;
+	dirty_rect.right = x + width;
 	dirty_rect.top = y;
-	dirty_rect.bottom = y + height-1;
+	dirty_rect.bottom = y + height;
 	if (texture->LockRect(0, &tex_locked_rect, &dirty_rect, 0) != D3D_OK)
 		return;
 
@@ -415,5 +415,9 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
 
 void ImGui_ImplDX9_NewFrame()
 {
+	ImGuiIO& io = ImGui::GetIO();
+	if(!io.Fonts->Fonts.Size)
+		ImGui_ImplDX9_UpdateFontTextures();
+
 	ImGui::GetIO().Fonts->CheckOverflow();
 }

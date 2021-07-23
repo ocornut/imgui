@@ -26,8 +26,8 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL2_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_UpdateFontsTexture();
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_UpdateFontTextures();
 //IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_CreateFontsTexture();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_DestroyFontTextures();
-//IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_DestroyDeviceObjects();

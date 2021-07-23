@@ -564,6 +564,8 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         bd->pd3dDevice->CreateDepthStencilState(&desc, &bd->pDepthStencilState);
     }
 
+	ImGui_ImplDX11_UpdateFontTextures();
+
     return true;
 }
 
