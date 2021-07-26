@@ -39,6 +39,9 @@ Breaking Changes:
 
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
+- Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
+  - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
+  - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
 - Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
   not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
   return value of ButtonBehavior() rather than (HoveredId == id).
