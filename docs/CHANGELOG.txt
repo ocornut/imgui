@@ -45,6 +45,10 @@ Other Changes:
   (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
   but it allows testing for triple clicks and more).
 - Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
+- Modals, Popups, Windows: changes how appearing windows are interrupting popups and modals. (#4317) [@rokups]
+  - appearing windows created from within the begin stack of a popup/modal will no longer close it.
+  - appearing windows created not within the begin stack of a modal will no longer close the modal,
+    and automatically appear behind it.
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
 - Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
   configuration flag. This is part of an effort to generalize the use of keyboard inputs. (#4023, #787).
