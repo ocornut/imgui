@@ -39,6 +39,9 @@ Breaking Changes:
 
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
+- Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
+  - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
+  - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
 - Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
   not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
   return value of ButtonBehavior() rather than (HoveredId == id).
@@ -59,6 +62,7 @@ Other Changes:
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
 - Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
+- Popups: fix BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
 - Nav: Disabled items are not candidate for default focus. (#211, #787)
 - Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
 - Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)
@@ -92,6 +96,8 @@ Other Changes:
 - Backends: OpenGL3: Use OES_vertex_array extension on Emscripten + backup/restore current state. (#4266, #4267) [@harry75369]
 - Backends: GLFW: Installing and exposed ImGui_ImplGlfw_MonitorCallback() for forward compatibility with docking branch.
 - Backends: OSX: Added a fix for shortcuts using CTRL key instead of CMD key. (#4253) [@rokups]
+- Examples: DX12: Fixed handling of Alt+Enter in example app (using swapchain's ResizeBuffers). (#4346) [@PathogenDavid]
+- Examples: DX12: Removed unecessary recreation of backend-owned device objects when window is resized. (#4347) [@PathogenDavid]
 - Examples: OSX+OpenGL2: Fix event forwarding (fix key remaining stuck when using shortcuts with Cmd/Super key).
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
@@ -99,7 +105,7 @@ Other Changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.83 (Released 2011-05-24)
+ VERSION 1.83 (Released 2021-05-24)
 -----------------------------------------------------------------------
 
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
