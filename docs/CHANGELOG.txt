@@ -37,6 +37,13 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
+  - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
+  - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
+- Backends: GLFW: backend now needs to use glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: this is already done for you.
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
+    with glfwSetCursorEnterCallback(), and forward events to the backend via ImGui_ImplGlfw_CursorEnterCallback().
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
 - Backends: SDL2: backend needs to set 'SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")' in order to
@@ -44,9 +51,6 @@ Breaking Changes:
   This is unfortunately a global SDL setting, so enabling it _might_ have a side-effect on your application.
   It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
   you can ignore SDL_MOUSEBUTTONDOWN that events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED event).
-- Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
-  - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
-  - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
 - Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
   not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
   return value of ButtonBehavior() rather than (HoveredId == id).
@@ -93,8 +97,11 @@ Other Changes:
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
   '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
-- Backends: SDL2: Mouse position is correctly reported when the host platform window is hovered but not focused.
-  (requires SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH). (#3751, #4377, #2445)
+- Backends: GLFW: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
+  (backend now uses glfwSetCursorEnterCallback(). If you called ImGui_ImplGlfw_InitXXX with install_callbacks=false, you will
+  need to install this callback and forward the data to the backend via ImGui_ImplGlfw_CursorEnterCallback).
+- Backends: SDL2: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
+  (requires SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH).
 - Backends: DX9: Explicitly disable texture state stages after >= 1. (#4268) [@NZJenkins]
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]

@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-07-29: *BREAKING CHANGE*: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using glfwSetCursorEnterCallback). If you called ImGui_ImplGlfw_InitXXX() with install_callbacks = false, you MUST install the glfwSetCursorEnterCallback() callback and the forward to the backend via ImGui_ImplGlfw_CursorEnterCallback().
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2020-01-17: Inputs: Disable error callback while assigning mouse cursors because some X11 setup don't have them and it generates errors.
 //  2019-12-05: Inputs: Added support for new mouse cursors added in GLFW 3.4+ (resizing cursors, not allowed cursor).
@@ -73,11 +74,13 @@ struct ImGui_ImplGlfw_Data
     GLFWwindow*             Window;
     GlfwClientApi           ClientApi;
     double                  Time;
+    GLFWwindow*             MouseWindow;
     bool                    MouseJustPressed[ImGuiMouseButton_COUNT];
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
     bool                    InstalledCallbacks;
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
+    GLFWcursorenterfun      PrevUserCallbackCursorEnter;
     GLFWmousebuttonfun      PrevUserCallbackMousebutton;
     GLFWscrollfun           PrevUserCallbackScroll;
     GLFWkeyfun              PrevUserCallbackKey;
@@ -155,6 +158,17 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
 #else
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 #endif
+}
+
+void ImGui_ImplGlfw_CursorEnterCallback(GLFWwindow* window, int entered)
+{
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (bd->PrevUserCallbackCursorEnter != NULL)
+        bd->PrevUserCallbackCursorEnter(window, entered);
+    if (entered)
+        bd->MouseWindow = window;
+    if (!entered && bd->MouseWindow == window)
+        bd->MouseWindow = NULL;
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
@@ -250,6 +264,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     if (install_callbacks)
     {
         bd->InstalledCallbacks = true;
+        bd->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, ImGui_ImplGlfw_CursorEnterCallback);
         bd->PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         bd->PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
@@ -311,26 +326,26 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
         bd->MouseJustPressed[i] = false;
     }
 
-    // Update mouse position
-    const ImVec2 mouse_pos_backup = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 #ifdef __EMSCRIPTEN__
     const bool focused = true; // Emscripten
 #else
     const bool focused = glfwGetWindowAttrib(bd->Window, GLFW_FOCUSED) != 0;
 #endif
-    if (focused)
+    GLFWwindow* mouse_window = (bd->MouseWindow == bd->Window || focused) ? bd->Window : NULL;
+
+    // Update mouse position
+    const ImVec2 mouse_pos_backup = io.MousePos;
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    if (io.WantSetMousePos)
     {
-        if (io.WantSetMousePos)
-        {
+        if (focused)
             glfwSetCursorPos(bd->Window, (double)mouse_pos_backup.x, (double)mouse_pos_backup.y);
-        }
-        else
-        {
-            double mouse_x, mouse_y;
-            glfwGetCursorPos(bd->Window, &mouse_x, &mouse_y);
-            io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
-        }
+    }
+    else if (mouse_window != NULL)
+    {
+        double mouse_x, mouse_y;
+        glfwGetCursorPos(mouse_window, &mouse_x, &mouse_y);
+        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
     }
 }
 
