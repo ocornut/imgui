@@ -1,7 +1,7 @@
 // dear imgui: Platform Backend for SDL2
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 // (Info: SDL2 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
-// (Requires: SDL 2.0. Prefer SDL 2.0.4+ for full feature support.)
+// (Prefer SDL 2.0.5+ for full feature support.)
 
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
@@ -18,7 +18,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2021-06:29: *BREAKING CHANGE* Removed 'SDL_Window* window' parameter to ImGui_ImplSDL2_NewFrame() which was unnecessary.
+//  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using SDL_GetMouseFocus() + SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, requires SDL 2.0.5+)
+//  2021-06-29: *BREAKING CHANGE* Removed 'SDL_Window* window' parameter to ImGui_ImplSDL2_NewFrame() which was unnecessary.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-03-22: Rework global mouse pos availability check listing supported platforms explicitly, effectively fixing mouse access on Raspberry Pi. (#2837, #3950)
 //  2020-05-25: Misc: Report a zero display-size when window is minimized, to be consistent with other backends.
@@ -59,6 +60,7 @@
 #endif
 
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH    SDL_VERSION_ATLEAST(2,0,5)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 
 struct ImGui_ImplSDL2_Data
@@ -220,6 +222,15 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window)
     (void)window;
 #endif
 
+    // Set SDL hint to receive mouse click events on window focus, otherwise SDL doesn't emit the event.
+    // Without this, when clicking to gain focus, our widgets wouldn't activate even though they showed as hovered.
+    // (This is unfortunately a global SDL setting, so enabling it might have a side-effect on your application.
+    // It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
+    // you can ignore SDL_MOUSEBUTTONDOWN events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED)
+#if SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+#endif
+
     return true;
 }
 
@@ -284,8 +295,14 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     bd->MousePressed[0] = bd->MousePressed[1] = bd->MousePressed[2] = false;
 
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS)
-    SDL_Window* focused_window = SDL_GetKeyboardFocus();
-    if (bd->Window == focused_window)
+    SDL_Window* focused_window = SDL_GetKeyboardFocus(); // Mouse position won't be reported unless window is focused.
+#if SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH
+    SDL_Window* hovered_window = SDL_GetMouseFocus();    // This is better but is only reliably useful with SDL 2.0.5+ and SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH enabled.
+    SDL_Window* mouse_window = (bd->Window == focused_window || bd->Window == hovered_window) ? bd->Window : NULL;
+#else
+    SDL_Window* mouse_window = (bd->Window == focused_window) ? bd->Window : NULL;
+#endif
+    if (mouse_window != NULL)
     {
         if (bd->MouseCanUseGlobalState)
         {
@@ -293,7 +310,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
             // The creation of a new windows at runtime and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
             // Won't use this workaround on SDL backends that have no global mouse position, like Wayland or RPI
             int wx, wy;
-            SDL_GetWindowPosition(focused_window, &wx, &wy);
+            SDL_GetWindowPosition(mouse_window, &wx, &wy);
             SDL_GetGlobalMouseState(&mx, &my);
             mx -= wx;
             my -= wy;
@@ -306,6 +323,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     bool any_mouse_button_down = ImGui::IsAnyMouseDown();
     SDL_CaptureMouse(any_mouse_button_down ? SDL_TRUE : SDL_FALSE);
 #else
+    // SDL 2.0.3 and non-windowed systems
     if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS)
         io.MousePos = ImVec2((float)mx, (float)my);
 #endif

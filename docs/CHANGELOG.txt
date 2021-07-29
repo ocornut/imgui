@@ -39,6 +39,11 @@ Breaking Changes:
 
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
+- Backends: SDL2: backend needs to set 'SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")' in order to
+  receive mouse clicks events on window focus, otherwise SDL doesn't emit the event. (#3751, #4377, #2445)
+  This is unfortunately a global SDL setting, so enabling it _might_ have a side-effect on your application.
+  It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
+  you can ignore SDL_MOUSEBUTTONDOWN that events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED event).
 - Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
   - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
   - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
@@ -88,6 +93,8 @@ Other Changes:
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
   '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
+- Backends: SDL2: Mouse position is correctly reported when the host platform window is hovered but not focused.
+  (requires SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH). (#3751, #4377, #2445)
 - Backends: DX9: Explicitly disable texture state stages after >= 1. (#4268) [@NZJenkins]
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
@@ -163,7 +170,7 @@ Other Changes:
 - ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
 - Demo: Improved popups demo and comments.
 - Metrics: Added "Fonts" section with same information as available in "Style Editor">"Fonts".
-- Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
+- Backends: SDL2: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
   [@1025798851]
