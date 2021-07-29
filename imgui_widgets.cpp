@@ -1027,6 +1027,8 @@ bool ImGui::ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size
     if (window->SkipItems)
         return false;
 
+    ImGui::KeepAliveID(id);
+
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size + padding * 2);
     ItemSize(bb);
     if (!ItemAdd(bb, id))
