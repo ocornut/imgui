@@ -33,6 +33,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using TrackMouseEvent() to receive WM_MOUSELEAVE events).
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-06-08: Fix ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
 //  2021-03-23: Inputs: Clearing keyboard down array when losing focus (WM_KILLFOCUS).
@@ -67,6 +68,8 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 struct ImGui_ImplWin32_Data
 {
     HWND                        hWnd;
+    HWND                        MouseHwnd;
+    bool                        MouseTracked;
     INT64                       Time;
     INT64                       TicksPerSecond;
     ImGuiMouseCursor            LastMouseCursor;
@@ -230,11 +233,17 @@ static void ImGui_ImplWin32_UpdateMousePos()
 
     // Set mouse position
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    HWND focused_window = ::GetForegroundWindow();
+    HWND hovered_window = bd->MouseHwnd;
+    HWND mouse_window = NULL;
+    if (hovered_window && (hovered_window == bd->hWnd) || ::IsChild(hovered_window, bd->hWnd))
+        mouse_window = hovered_window;
+    else if (focused_window && (focused_window == bd->hWnd) || ::IsChild(focused_window, bd->hWnd))
+        mouse_window = focused_window;
     POINT pos;
-    if (HWND active_window = ::GetForegroundWindow())
-        if (active_window == bd->hWnd || ::IsChild(active_window, bd->hWnd))
-            if (::GetCursorPos(&pos) && ::ScreenToClient(bd->hWnd, &pos))
-                io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+    if (mouse_window)
+        if (::GetCursorPos(&pos) && ::ScreenToClient(mouse_window, &pos))
+            io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
 
 // Gamepad navigation mapping
@@ -356,6 +365,21 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 
     switch (msg)
     {
+    case WM_MOUSEMOVE:
+        // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
+        bd->MouseHwnd = hwnd;
+        if (!bd->MouseTracked)
+        {
+            TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
+            ::TrackMouseEvent(&tme);
+            bd->MouseTracked = true;
+        }
+        break;
+    case WM_MOUSELEAVE:
+        if (bd->MouseHwnd == hwnd)
+            bd->MouseHwnd = NULL;
+        bd->MouseTracked = false;
+        break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
