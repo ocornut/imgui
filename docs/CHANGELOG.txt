@@ -105,8 +105,20 @@ Other changes:
 
 Breaking Changes:
 
+- Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
+  - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
+  - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
+- Backends: GLFW: backend now needs to use glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: this is already done for you.
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
+    with glfwSetCursorEnterCallback(), and forward events to the backend via ImGui_ImplGlfw_CursorEnterCallback().
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
+- Backends: SDL2: backend needs to set 'SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")' in order to
+  receive mouse clicks events on window focus, otherwise SDL doesn't emit the event. (#3751, #4377, #2445)
+  This is unfortunately a global SDL setting, so enabling it _might_ have a side-effect on your application.
+  It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
+  you can ignore SDL_MOUSEBUTTONDOWN that events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED event).
 - Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
   not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
   return value of ButtonBehavior() rather than (HoveredId == id).
@@ -127,6 +139,7 @@ Other Changes:
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
 - Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
+- Popups: fix BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
 - Nav: Disabled items are not candidate for default focus. (#211, #787)
 - Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
 - Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)
@@ -152,6 +165,12 @@ Other Changes:
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
   '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
+- Backends: Win32: Mouse position is correctly reported when the host window is hovered but not focused. (#2445, #2696, #3751, #4377)
+- Backends: GLFW: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
+  (backend now uses glfwSetCursorEnterCallback(). If you called ImGui_ImplGlfw_InitXXX with install_callbacks=false, you will
+  need to install this callback and forward the data to the backend via ImGui_ImplGlfw_CursorEnterCallback).
+- Backends: SDL2: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
+  (requires SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH).
 - Backends: DX9: Explicitly disable texture state stages after >= 1. (#4268) [@NZJenkins]
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
@@ -160,6 +179,8 @@ Other Changes:
 - Backends: OpenGL3: Use OES_vertex_array extension on Emscripten + backup/restore current state. (#4266, #4267) [@harry75369]
 - Backends: GLFW: Installing and exposed ImGui_ImplGlfw_MonitorCallback() for forward compatibility with docking branch.
 - Backends: OSX: Added a fix for shortcuts using CTRL key instead of CMD key. (#4253) [@rokups]
+- Examples: DX12: Fixed handling of Alt+Enter in example app (using swapchain's ResizeBuffers). (#4346) [@PathogenDavid]
+- Examples: DX12: Removed unecessary recreation of backend-owned device objects when window is resized. (#4347) [@PathogenDavid]
 - Examples: OSX+OpenGL2: Fix event forwarding (fix key remaining stuck when using shortcuts with Cmd/Super key).
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
@@ -184,7 +205,7 @@ Docking+Viewports Branch:
 
 
 -----------------------------------------------------------------------
- VERSION 1.83 (Released 2011-05-24)
+ VERSION 1.83 (Released 2021-05-24)
 -----------------------------------------------------------------------
 
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
@@ -242,7 +263,7 @@ Other Changes:
 - ImDrawList: Fixed PathArcTo() regression from 1.82 preventing use of counter-clockwise angles. (#4030, #3491) [@thedmd]
 - Demo: Improved popups demo and comments.
 - Metrics: Added "Fonts" section with same information as available in "Style Editor">"Fonts".
-- Backends: SDL: Rework global mouse pos availability check listing supported platforms explicitly,
+- Backends: SDL2: Rework global mouse pos availability check listing supported platforms explicitly,
   effectively fixing mouse access on Raspberry Pi. (#2837, #3950) [@lethal-guitar, @hinxx]
 - Backends: Win32: Clearing keyboard down array when losing focus (WM_KILLFOCUS). (#2062, #3532, #3961)
   [@1025798851]
