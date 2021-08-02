@@ -390,6 +390,19 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
         if (ev->keyboard.display == bd->Display)
             io.KeysDown[ev->keyboard.keycode] = (ev->type == ALLEGRO_EVENT_KEY_DOWN);
         return true;
+    case ALLEGRO_EVENT_DISPLAY_SWITCH_OUT:
+        if (ev->display.source == bd->Display)
+            io.AddFocusEvent(false);
+        return false; // don't consume event
+    case ALLEGRO_EVENT_DISPLAY_SWITCH_IN:
+        if (ev->display.source == bd->Display)
+        {
+            io.AddFocusEvent(true);
+#if defined(ALLEGRO_UNSTABLE)
+            al_clear_keyboard_state(bd->Display);
+#endif
+        }
+        return false; // don't consume event
     }
     return false;
 }

@@ -431,9 +431,11 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             io.KeyAlt = down;
         return 0;
     }
+    case WM_SETFOCUS:
+        io.AddFocusEvent(true);
+        return 0;
     case WM_KILLFOCUS:
-        memset(io.KeysDown, 0, sizeof(io.KeysDown));
-        io.KeyCtrl = io.KeyShift = io.KeyAlt = io.KeySuper = false;
+        io.AddFocusEvent(false);
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.

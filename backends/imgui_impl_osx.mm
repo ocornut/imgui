@@ -60,14 +60,24 @@ static void resetKeys()
 
 @interface ImFocusObserver : NSObject
 
+- (void)onApplicationBecomeActive:(NSNotification*)aNotification;
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification;
 
 @end
 
 @implementation ImFocusObserver
 
+- (void)onApplicationBecomeActive:(NSNotification*)aNotification
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddFocusEvent(true);
+}
+
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddFocusEvent(false);
+
     // Unfocused applications do not receive input events, therefore we must manually
     // release any pressed keys when application loses focus, otherwise they would remain
     // stuck in a pressed state. https://github.com/ocornut/imgui/issues/3832
@@ -155,6 +165,10 @@ bool ImGui_ImplOSX_Init()
     };
 
     g_FocusObserver = [[ImFocusObserver alloc] init];
+    [[NSNotificationCenter defaultCenter] addObserver:g_FocusObserver
+                                             selector:@selector(onApplicationBecomeActive:)
+                                                 name:NSApplicationDidBecomeActiveNotification
+                                               object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:g_FocusObserver
                                              selector:@selector(onApplicationBecomeInactive:)
                                                  name:NSApplicationDidResignActiveNotification

@@ -80,6 +80,7 @@ struct ImGui_ImplGlfw_Data
     bool                    InstalledCallbacks;
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
+    GLFWwindowfocusfun      PrevUserCallbackWindowFocus;
     GLFWcursorenterfun      PrevUserCallbackCursorEnter;
     GLFWmousebuttonfun      PrevUserCallbackMousebutton;
     GLFWscrollfun           PrevUserCallbackScroll;
@@ -158,6 +159,16 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
 #else
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 #endif
+}
+
+void ImGui_ImplGlfw_WindowFocusCallback(GLFWwindow* window, int focused)
+{
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (bd->PrevUserCallbackWindowFocus != NULL)
+        bd->PrevUserCallbackWindowFocus(window, focused);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddFocusEvent(focused != 0);
 }
 
 void ImGui_ImplGlfw_CursorEnterCallback(GLFWwindow* window, int entered)
@@ -256,6 +267,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     glfwSetErrorCallback(prev_error_callback);
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
+    bd->PrevUserCallbackWindowFocus = NULL;
     bd->PrevUserCallbackMousebutton = NULL;
     bd->PrevUserCallbackScroll = NULL;
     bd->PrevUserCallbackKey = NULL;
@@ -264,6 +276,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     if (install_callbacks)
     {
         bd->InstalledCallbacks = true;
+        bd->PrevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, ImGui_ImplGlfw_WindowFocusCallback);
         bd->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, ImGui_ImplGlfw_CursorEnterCallback);
         bd->PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
@@ -298,6 +311,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     if (bd->InstalledCallbacks)
     {
+        glfwSetWindowFocusCallback(bd->Window, bd->PrevUserCallbackWindowFocus);
         glfwSetCursorEnterCallback(bd->Window, bd->PrevUserCallbackCursorEnter);
         glfwSetMouseButtonCallback(bd->Window, bd->PrevUserCallbackMousebutton);
         glfwSetScrollCallback(bd->Window, bd->PrevUserCallbackScroll);

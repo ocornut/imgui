@@ -148,6 +148,15 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 #endif
             return true;
         }
+    case SDL_WINDOWEVENT:
+        {
+            if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+                io.AddFocusEvent(true);
+            else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+                io.AddFocusEvent(false);
+
+            return false; // don't consume event
+        }
     }
     return false;
 }

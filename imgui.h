@@ -1869,6 +1869,7 @@ struct ImGuiIO
     IMGUI_API void  AddInputCharacterUTF16(ImWchar16 c);        // Queue new character input from an UTF-16 character, it can be a surrogate
     IMGUI_API void  AddInputCharactersUTF8(const char* str);    // Queue new characters input from an UTF-8 string
     IMGUI_API void  ClearInputCharacters();                     // Clear the text input buffer manually
+    IMGUI_API void  AddFocusEvent(bool gain);                   // Notifies ImGui when underlying windows lose or gain input focus
 
     //------------------------------------------------------------------
     // Output - Updated by NewFrame() or EndFrame()/Render()

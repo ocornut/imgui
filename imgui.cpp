@@ -1180,6 +1180,21 @@ void ImGuiIO::ClearInputCharacters()
     InputQueueCharacters.resize(0);
 }
 
+void ImGuiIO::AddFocusEvent(bool gain)
+{
+    if (!gain)
+    {
+        // Reset pressed buttons when focus is lost
+        memset(KeysDown, 0, sizeof(KeysDown));
+        for (int n = 0; n < IM_ARRAYSIZE(KeysDownDuration); n++)
+            KeysDownDuration[n] = KeysDownDurationPrev[n] = -1.0f;
+        KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
+        KeyMods = 0;
+        for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
+            NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
+    }
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
