@@ -98,6 +98,7 @@ Other Changes:
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
   '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
 - Backends: Win32: Mouse position is correctly reported when the host window is hovered but not focused. (#2445, #2696, #3751, #4377)
+- Backends: Fixed keyboard modifiers being reported when host window doesn't have focus. (#2622)
 - Backends: GLFW: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
   (backend now uses glfwSetCursorEnterCallback(). If you called ImGui_ImplGlfw_InitXXX with install_callbacks=false, you will
   need to install this callback and forward the data to the backend via ImGui_ImplGlfw_CursorEnterCallback).
