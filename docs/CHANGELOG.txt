@@ -40,10 +40,13 @@ Breaking Changes:
 - Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
   - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
   - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
-- Backends: GLFW: backend now needs to use glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
+- Backends: GLFW: backend now uses glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
+- Backends: GLFW: backend now uses glfwSetWindowFocusCallback(). (#4388) [@thedmd]
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: this is already done for you.
-  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
-    with glfwSetCursorEnterCallback(), and forward events to the backend via ImGui_ImplGlfw_CursorEnterCallback().
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callbacks
+    and forward them to the backend:
+    - Register glfwSetCursorEnterCallback, forward events to ImGui_ImplGlfw_CursorEnterCallback().
+    - Register glfwSetWindowFocusCallback, forward events to ImGui_ImplGlfw_WindowFocusCallback().
 - Backends: SDL2: removed unnecessary SDL_Window* parameter from ImGui_ImplSDL2_NewFrame(). (#3244) [@funchal]
   Kept inline redirection function (will obsolete).
 - Backends: SDL2: backend needs to set 'SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")' in order to
@@ -56,6 +59,8 @@ Breaking Changes:
   return value of ButtonBehavior() rather than (HoveredId == id).
 
 Other Changes:
+- IO: Added io.AddFocusEvent() api for backend to tell when host window has gained/lost focus. (#4388) [@thedmd]
+  If you use a custom backend, consider adding support for this!
 - Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument display a dot instead of a '*' so it
   is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
   Added extra comments to clarify the purpose of this flag in the context of docked windows.
@@ -101,6 +106,9 @@ Other Changes:
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
   '#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS' for those compilers. Undo change from 1.82. (#2590, #738, #4185, #4301)
 - Backends: Win32: Mouse position is correctly reported when the host window is hovered but not focused. (#2445, #2696, #3751, #4377)
+- Backends: Win32, SDL2, GLFW, OSX, Allegro: now calling io.AddFocusEvent() on focus gain/loss. (#4388) [@thedmd]
+  This allow us to ignore certain inputs on focus loss (previously relied on mouse loss but backends are now
+  reporting mouse even when host window is unfocused, as per #2445, #2696, #3751, #4377)
 - Backends: Fixed keyboard modifiers being reported when host window doesn't have focus. (#2622)
 - Backends: GLFW: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
   (backend now uses glfwSetCursorEnterCallback(). If you called ImGui_ImplGlfw_InitXXX with install_callbacks=false, you will

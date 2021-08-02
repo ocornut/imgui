@@ -33,7 +33,8 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host window doesn't have focus.
+//  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
+//  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host windo doesn't have focus.
 //  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using TrackMouseEvent() to receive WM_MOUSELEAVE events).
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-06-08: Fixed ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
@@ -431,9 +432,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             io.KeyAlt = down;
         return 0;
     }
+    case WM_SETFOCUS:
     case WM_KILLFOCUS:
-        memset(io.KeysDown, 0, sizeof(io.KeysDown));
-        io.KeyCtrl = io.KeyShift = io.KeyAlt = io.KeySuper = false;
+        io.AddFocusEvent(msg == WM_SETFOCUS);
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.

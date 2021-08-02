@@ -1180,6 +1180,22 @@ void ImGuiIO::ClearInputCharacters()
     InputQueueCharacters.resize(0);
 }
 
+void ImGuiIO::AddFocusEvent(bool focused)
+{
+    if (focused)
+        return;
+
+    // Clear buttons state when focus is lost
+    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
+    memset(KeysDown, 0, sizeof(KeysDown));
+    for (int n = 0; n < IM_ARRAYSIZE(KeysDownDuration); n++)
+        KeysDownDuration[n] = KeysDownDurationPrev[n] = -1.0f;
+    KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
+    KeyMods = KeyModsPrev = ImGuiKeyModFlags_None;
+    for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
+        NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
@@ -9694,8 +9710,9 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingToggleLayer = false;
 
         // Apply layer toggle on release
-        // FIXME: We lack an explicit IO variable for "is the platform window focused", so compare mouse validity to detect the common case of backend clearing releases all keys on ALT-TAB
-        if (!io.KeyAlt && g.NavWindowingToggleLayer)
+        // Important: we don't assume that Alt was previously held in order to handle loss of focus when backend calls io.AddFocusEvent(false)
+        // Important: as before version <18314 we lacked an explicit IO event for focus gain/loss, we also compare mouse validity to detect old backends clearing mouse pos on focus loss.
+        if (!(io.KeyMods & ImGuiKeyModFlags_Alt) && (io.KeyModsPrev & ImGuiKeyModFlags_Alt) && g.NavWindowingToggleLayer)
             if (g.ActiveId == 0 || g.ActiveIdAllowOverlap)
                 if (IsMousePosValid(&io.MousePos) == IsMousePosValid(&io.MousePosPrev))
                     apply_toggle_layer = true;

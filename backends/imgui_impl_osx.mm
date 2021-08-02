@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-17: Calling io.AddFocusEvent() on NSApplicationDidBecomeActiveNotification/NSApplicationDidResignActiveNotification events.
 //  2021-06-23: Inputs: Added a fix for shortcuts using CTRL key instead of CMD key.
 //  2021-04-19: Inputs: Added a fix for keys remaining stuck in pressed state when CMD-tabbing into different application.
 //  2021-01-27: Inputs: Added a fix for mouse position not being reported when mouse buttons other than left one are down.
@@ -60,14 +61,24 @@ static void resetKeys()
 
 @interface ImFocusObserver : NSObject
 
+- (void)onApplicationBecomeActive:(NSNotification*)aNotification;
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification;
 
 @end
 
 @implementation ImFocusObserver
 
+- (void)onApplicationBecomeActive:(NSNotification*)aNotification
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddFocusEvent(true);
+}
+
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddFocusEvent(false);
+
     // Unfocused applications do not receive input events, therefore we must manually
     // release any pressed keys when application loses focus, otherwise they would remain
     // stuck in a pressed state. https://github.com/ocornut/imgui/issues/3832
@@ -155,6 +166,10 @@ bool ImGui_ImplOSX_Init()
     };
 
     g_FocusObserver = [[ImFocusObserver alloc] init];
+    [[NSNotificationCenter defaultCenter] addObserver:g_FocusObserver
+                                             selector:@selector(onApplicationBecomeActive:)
+                                                 name:NSApplicationDidBecomeActiveNotification
+                                               object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:g_FocusObserver
                                              selector:@selector(onApplicationBecomeInactive:)
                                                  name:NSApplicationDidResignActiveNotification
