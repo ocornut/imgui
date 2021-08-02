@@ -72,7 +72,6 @@ static void ImGui_ImplWin32_InitPlatformInterface();
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
-// Win32
 struct ImGui_ImplWin32_Data
 {
     HWND                        hWnd;
@@ -259,7 +258,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
 
     // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     // (When multi-viewports are enabled, all Dear ImGui positions are same as OS positions)
-    if (io.WantSetMousePos && mouse_window != NULL)
+    if (io.WantSetMousePos)
     {
         POINT pos = { (int)mouse_pos_prev.x, (int)mouse_pos_prev.y };
         if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)

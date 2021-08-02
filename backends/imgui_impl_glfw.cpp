@@ -369,7 +369,7 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MouseHoveredViewport = 0;
 
-    // Update mouse button
+    // Update mouse buttons
     // (if a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame)
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
@@ -384,10 +384,11 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 
 #ifdef __EMSCRIPTEN__
         const bool focused = true;
-        IM_ASSERT(platform_io.Viewports.Size == 1);
 #else
         const bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
 #endif
+        GLFWwindow* mouse_window = (bd->MouseWindow == window || focused) ? window : NULL;
+
         // Update mouse buttons
         if (focused)
             for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
@@ -399,10 +400,10 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
             glfwSetCursorPos(window, (double)(mouse_pos_prev.x - viewport->Pos.x), (double)(mouse_pos_prev.y - viewport->Pos.y));
 
         // Set Dear ImGui mouse position from OS position
-        if (bd->MouseWindow == window || focused)
+        if (mouse_window != NULL)
         {
             double mouse_x, mouse_y;
-            glfwGetCursorPos(window, &mouse_x, &mouse_y);
+            glfwGetCursorPos(mouse_window, &mouse_x, &mouse_y);
             if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
             {
                 // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)

@@ -74,7 +74,7 @@
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
 
- // SDL Data
+// SDL Data
 struct ImGui_ImplSDL2_Data
 {
     SDL_Window* Window;
@@ -254,7 +254,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)window;
-#if defined(_WIN32)
+#ifdef _WIN32
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     if (SDL_GetWindowWMInfo(window, &info))
@@ -318,7 +318,6 @@ void ImGui_ImplSDL2_Shutdown()
 
     ImGui_ImplSDL2_ShutdownPlatformInterface();
 
-    // Destroy last known clipboard data
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
@@ -332,12 +331,12 @@ void ImGui_ImplSDL2_Shutdown()
 // This code is incredibly messy because some of the functions we need for full viewport support are not available in SDL < 2.0.4.
 static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO();
 
     ImVec2 mouse_pos_prev = io.MousePos;
-    io.MouseHoveredViewport = 0;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    io.MouseHoveredViewport = 0;
 
     // Update mouse buttons
     int mouse_x_local, mouse_y_local;
@@ -391,7 +390,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
         else
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-            // Unlike local position obtained earlier this will be valid when straying out of bounds too.
+            // Unlike local position obtained earlier this will be valid when straying out of bounds.
             int window_x, window_y;
             SDL_GetWindowPosition(mouse_window, &window_x, &window_y);
             io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
