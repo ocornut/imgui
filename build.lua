@@ -70,6 +70,12 @@ project "ImGui"
 
 		flags { "MultiProcessorCompile" }
 
+    filter "system:linux"
+        links
+        {
+            "GL,
+        }
+
 	-- debug
 	filter "configurations:Debug"
 		runtime "Debug"
