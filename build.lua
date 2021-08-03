@@ -73,7 +73,7 @@ project "ImGui"
     filter "system:linux"
         links
         {
-            "GL,
+            "GL",
         }
 
 	-- debug
