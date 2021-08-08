@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-08: Input: Fixed mapping for gamepad and prevents devices (such as mice, keyboards, etc.) from being reported as joysticks which would prevent gamepads from being used.
 //  2021-07-29: *BREAKING CHANGE*: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using glfwSetCursorEnterCallback). If you called ImGui_ImplGlfw_InitXXX() with install_callbacks = false, you MUST install the glfwSetCursorEnterCallback() callback and the forward to the backend via ImGui_ImplGlfw_CursorEnterCallback().
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2020-01-17: Inputs: Disable error callback while assigning mouse cursors because some X11 setup don't have them and it generates errors.
@@ -55,6 +56,8 @@
 #define GLFW_HAS_WINDOW_ALPHA         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
 #define GLFW_HAS_PER_MONITOR_DPI      (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorContentScale
 #define GLFW_HAS_VULKAN               (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
+#define GLFW_HAS_JOYSTICK_CALLBACK    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwSetJoystickCallback
+#define GLFW_HAS_GAMEPAD              (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetGamepadState, glfwJoystickIsGamepad
 #ifdef GLFW_RESIZE_NESW_CURSOR        // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2019-11-29 (cursors defines) // FIXME: Remove when GLFW 3.4 is released?
 #define GLFW_HAS_NEW_CURSORS          (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3400) // 3.4+ GLFW_RESIZE_ALL_CURSOR, GLFW_RESIZE_NESW_CURSOR, GLFW_RESIZE_NWSE_CURSOR, GLFW_NOT_ALLOWED_CURSOR
 #else
@@ -78,6 +81,8 @@ struct ImGui_ImplGlfw_Data
     bool                    MouseJustPressed[ImGuiMouseButton_COUNT];
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
     bool                    InstalledCallbacks;
+    int                     JoystickIndex;
+    bool                    WantUpdateJoystickIndex;
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     GLFWcursorenterfun      PrevUserCallbackCursorEnter;
@@ -86,6 +91,9 @@ struct ImGui_ImplGlfw_Data
     GLFWkeyfun              PrevUserCallbackKey;
     GLFWcharfun             PrevUserCallbackChar;
     GLFWmonitorfun          PrevUserCallbackMonitor;
+#if GLFW_HAS_JOYSTICK_CALLBACK
+    GLFWjoystickfun         PrevUserCallbackJoystick;
+#endif
 
     ImGui_ImplGlfw_Data()   { memset(this, 0, sizeof(*this)); }
 };
@@ -186,6 +194,17 @@ void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 	// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
 }
 
+void ImGui_ImplGlfw_JoystickCallback(int jid, int event)
+{
+#if GLFW_HAS_JOYSTICK_CALLBACK
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (bd->PrevUserCallbackJoystick != NULL)
+        bd->PrevUserCallbackJoystick(jid, event);
+
+    bd->WantUpdateJoystickIndex = true;
+#endif
+}
+
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -200,6 +219,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     bd->Window = window;
     bd->Time = 0.0;
+    bd->WantUpdateJoystickIndex = true;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
@@ -261,6 +281,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->PrevUserCallbackKey = NULL;
     bd->PrevUserCallbackChar = NULL;
     bd->PrevUserCallbackMonitor = NULL;
+#if GLFW_HAS_JOYSTICK_CALLBACK
+    bd->PrevUserCallbackJoystick = NULL;
+#endif
     if (install_callbacks)
     {
         bd->InstalledCallbacks = true;
@@ -270,6 +293,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         bd->PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
         bd->PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
         bd->PrevUserCallbackMonitor = glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
+#if GLFW_HAS_JOYSTICK_CALLBACK
+        bd->PrevUserCallbackJoystick = glfwSetJoystickCallback(ImGui_ImplGlfw_JoystickCallback);
+#endif
     }
 
     bd->ClientApi = client_api;
@@ -304,6 +330,9 @@ void ImGui_ImplGlfw_Shutdown()
         glfwSetKeyCallback(bd->Window, bd->PrevUserCallbackKey);
         glfwSetCharCallback(bd->Window, bd->PrevUserCallbackChar);
         glfwSetMonitorCallback(bd->PrevUserCallbackMonitor);
+#if GLFW_HAS_JOYSTICK_CALLBACK
+        glfwSetJoystickCallback(bd->PrevUserCallbackJoystick);
+#endif
     }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
@@ -375,38 +404,110 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
 static void ImGui_ImplGlfw_UpdateGamepads()
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
 
+    io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+
+    if (bd->WantUpdateJoystickIndex)
+    {
+        bd->JoystickIndex = -1; // -1 invalid (if no suitable gamepad will be found)
+
+        // Filter available joyticks for possible gamepad.
+        for (int jid = GLFW_JOYSTICK_1; jid < GLFW_JOYSTICK_LAST; jid++)
+        {
+#if GLFW_HAS_GAMEPAD
+            if (glfwJoystickIsGamepad(jid))
+            {
+                bd->JoystickIndex = jid;
+                break;
+            }
+#else
+            if (!glfwJoystickPresent(jid))
+                continue;
+
+            int axes_count = 0, buttons_count = 0;
+            glfwGetJoystickAxes(jid, &axes_count);
+            glfwGetJoystickButtons(jid, &buttons_count);
+
+            // Might be a good filter for gamepads
+            if (axes_count >= 2 && buttons_count >= 10)
+            {
+                bd->JoystickIndex = jid;
+                break;
+            }
+#endif
+        }
+
+#if GLFW_HAS_JOYSTICK_CALLBACK
+        bd->WantUpdateJoystickIndex = false;
+#endif
+    }
+    
+    if (bd->JoystickIndex < 0)
+        return;
+
     // Update gamepad inputs
-    #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }
-    #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; }
+#if GLFW_HAS_GAMEPAD
+    #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { io.NavInputs[NAV_NO] = (state.buttons[BUTTON_NO] == GLFW_PRESS) ? 1.0f : 0.0f; }
+    #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (state.axes[AXIS_NO] - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (v > 0.0f) io.NavInputs[NAV_NO] = v; }
+#else
+    #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { io.NavInputs[NAV_NO] = (buttons[BUTTON_NO] == GLFW_PRESS) ? 1.0f : 0.0f; }
+    #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes[AXIS_NO] - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (v > 0.0f) io.NavInputs[NAV_NO] = v; }
+#endif
+
+#if GLFW_HAS_GAMEPAD
+    GLFWgamepadstate state;
+    if (!glfwGetGamepadState(bd->JoystickIndex, &state))
+        return;
+#else
     int axes_count = 0, buttons_count = 0;
-    const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
-    const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
-    MAP_BUTTON(ImGuiNavInput_Activate,   0);     // Cross / A
-    MAP_BUTTON(ImGuiNavInput_Cancel,     1);     // Circle / B
-    MAP_BUTTON(ImGuiNavInput_Menu,       2);     // Square / X
-    MAP_BUTTON(ImGuiNavInput_Input,      3);     // Triangle / Y
-    MAP_BUTTON(ImGuiNavInput_DpadLeft,   13);    // D-Pad Left
-    MAP_BUTTON(ImGuiNavInput_DpadRight,  11);    // D-Pad Right
-    MAP_BUTTON(ImGuiNavInput_DpadUp,     10);    // D-Pad Up
-    MAP_BUTTON(ImGuiNavInput_DpadDown,   12);    // D-Pad Down
-    MAP_BUTTON(ImGuiNavInput_FocusPrev,  4);     // L1 / LB
-    MAP_BUTTON(ImGuiNavInput_FocusNext,  5);     // R1 / RB
-    MAP_BUTTON(ImGuiNavInput_TweakSlow,  4);     // L1 / LB
-    MAP_BUTTON(ImGuiNavInput_TweakFast,  5);     // R1 / RB
+    const float* axes = glfwGetJoystickAxes(bd->JoystickIndex, &axes_count);
+    const unsigned char* buttons = glfwGetJoystickButtons(bd->JoystickIndex, &buttons_count);
+
+    if (axes_count < 2 || buttons_count < 10)
+        return;
+#endif
+
+#if GLFW_HAS_GAMEPAD
+    MAP_BUTTON(ImGuiNavInput_Activate,  GLFW_GAMEPAD_BUTTON_A);                 // Cross / A
+    MAP_BUTTON(ImGuiNavInput_Cancel,    GLFW_GAMEPAD_BUTTON_B);                 // Circle / B
+    MAP_BUTTON(ImGuiNavInput_Menu,      GLFW_GAMEPAD_BUTTON_X);                 // Square / X
+    MAP_BUTTON(ImGuiNavInput_Input,     GLFW_GAMEPAD_BUTTON_Y);                 // Triangle / Y
+    MAP_BUTTON(ImGuiNavInput_DpadLeft,  GLFW_GAMEPAD_BUTTON_DPAD_LEFT);         // D-Pad Left
+    MAP_BUTTON(ImGuiNavInput_DpadRight, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);        // D-Pad Right
+    MAP_BUTTON(ImGuiNavInput_DpadUp,    GLFW_GAMEPAD_BUTTON_DPAD_UP);           // D-Pad Up
+    MAP_BUTTON(ImGuiNavInput_DpadDown,  GLFW_GAMEPAD_BUTTON_DPAD_DOWN);         // D-Pad Down
+    MAP_BUTTON(ImGuiNavInput_FocusPrev, GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);       // L1 / LB
+    MAP_BUTTON(ImGuiNavInput_FocusNext, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER);      // R1 / RB
+    MAP_BUTTON(ImGuiNavInput_TweakSlow, GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);       // L1 / LB
+    MAP_BUTTON(ImGuiNavInput_TweakFast, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER);      // R1 / RB
+#else
+    MAP_BUTTON(ImGuiNavInput_Activate,  0);                     // Cross / A
+    MAP_BUTTON(ImGuiNavInput_Cancel,    1);                     // Circle / B
+    MAP_BUTTON(ImGuiNavInput_Menu,      2);                     // Square / X
+    MAP_BUTTON(ImGuiNavInput_Input,     3);                     // Triangle / Y
+    MAP_BUTTON(ImGuiNavInput_DpadLeft,  buttons_count - 1);     // D-Pad Left
+    MAP_BUTTON(ImGuiNavInput_DpadRight, buttons_count - 3);     // D-Pad Right
+    MAP_BUTTON(ImGuiNavInput_DpadUp,    buttons_count - 4);     // D-Pad Up
+    MAP_BUTTON(ImGuiNavInput_DpadDown,  buttons_count - 2);     // D-Pad Down
+    MAP_BUTTON(ImGuiNavInput_FocusPrev, 4);                     // L1 / LB
+    MAP_BUTTON(ImGuiNavInput_FocusNext, 5);                     // R1 / RB
+    MAP_BUTTON(ImGuiNavInput_TweakSlow, 4);                     // L1 / LB
+    MAP_BUTTON(ImGuiNavInput_TweakFast, 5);                     // R1 / RB
+#endif
+    
     MAP_ANALOG(ImGuiNavInput_LStickLeft, 0,  -0.3f,  -0.9f);
     MAP_ANALOG(ImGuiNavInput_LStickRight,0,  +0.3f,  +0.9f);
-    MAP_ANALOG(ImGuiNavInput_LStickUp,   1,  +0.3f,  +0.9f);
-    MAP_ANALOG(ImGuiNavInput_LStickDown, 1,  -0.3f,  -0.9f);
+    MAP_ANALOG(ImGuiNavInput_LStickUp,   1,  -0.3f,  -0.9f);
+    MAP_ANALOG(ImGuiNavInput_LStickDown, 1,  +0.3f,  +0.9f);
+
     #undef MAP_BUTTON
     #undef MAP_ANALOG
-    if (axes_count > 0 && buttons_count > 0)
-        io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-    else
-        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 }
 
 void ImGui_ImplGlfw_NewFrame()
