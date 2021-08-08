@@ -68,6 +68,7 @@ Other Changes:
 - Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
 - InputInt/InputFloat: When used with Steps values and _ReadOnly flag, the step button look disabled. (#211)
+- InputText: Fixed named filtering flags disabling newline or tabs in multiline inputs (#4409, #4410) [@kfsone]
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
 - Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
