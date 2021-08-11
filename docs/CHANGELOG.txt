@@ -92,7 +92,9 @@ Other Changes:
 - Fonts: Prefer using U+FFFD character for fallback instead of '?', if available. (#4269)
 - Fonts: Use U+FF0E dot character to construct an ellipsis if U+002E '.' is not available. (#4269)
 - Fonts: Add U+FFFD ("replacement character") to default asian glyphs ranges. (#4269)
-- Fonts: Fix calling ClearTexData() (clearing CPU side font data) triggering an assert in NewFrame(). (#3487)
+- Fonts: Fixed calling ClearTexData() (clearing CPU side font data) triggering an assert in NewFrame(). (#3487)
+- DrawList: Fixed AddCircle/AddCircleFilled() with auto-tesselation not using accelerated paths for small circles.
+  Fixed AddCircle/AddCircleFilled() with 12 segments which had a broken edge. (#4419, #4421) [@thedmd]
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.
