@@ -21,6 +21,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2021-07-29: *BREAKING CHANGE*: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using glfwSetCursorEnterCallback). If you called ImGui_ImplGlfw_InitXXX() with install_callbacks = false, you MUST install the glfwSetCursorEnterCallback() callback and the forward to the backend via ImGui_ImplGlfw_CursorEnterCallback().
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2020-01-17: Inputs: Disable error callback while assigning mouse cursors because some X11 setup don't have them and it generates errors.
 //  2019-12-05: Inputs: Added support for new mouse cursors added in GLFW 3.4+ (resizing cursors, not allowed cursor).
@@ -87,6 +88,7 @@ struct ImGui_ImplGlfw_Data
     GLFWwindow*             Window;
     GlfwClientApi           ClientApi;
     double                  Time;
+    GLFWwindow*             MouseWindow;
     bool                    MouseJustPressed[ImGuiMouseButton_COUNT];
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
     GLFWwindow*             KeyOwnerWindows[512];
@@ -94,6 +96,7 @@ struct ImGui_ImplGlfw_Data
     bool                    WantUpdateMonitors;
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
+    GLFWcursorenterfun      PrevUserCallbackCursorEnter;
     GLFWmousebuttonfun      PrevUserCallbackMousebutton;
     GLFWscrollfun           PrevUserCallbackScroll;
     GLFWkeyfun              PrevUserCallbackKey;
@@ -182,6 +185,17 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
 #else
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 #endif
+}
+
+void ImGui_ImplGlfw_CursorEnterCallback(GLFWwindow* window, int entered)
+{
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (bd->PrevUserCallbackCursorEnter != NULL)
+        bd->PrevUserCallbackCursorEnter(window, entered);
+    if (entered)
+        bd->MouseWindow = window;
+    if (!entered && bd->MouseWindow == window)
+        bd->MouseWindow = NULL;
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
@@ -280,6 +294,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     if (install_callbacks)
     {
         bd->InstalledCallbacks = true;
+        bd->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, ImGui_ImplGlfw_CursorEnterCallback);
         bd->PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         bd->PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
@@ -328,6 +343,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     if (bd->InstalledCallbacks)
     {
+        glfwSetCursorEnterCallback(bd->Window, bd->PrevUserCallbackCursorEnter);
         glfwSetMouseButtonCallback(bd->Window, bd->PrevUserCallbackMousebutton);
         glfwSetScrollCallback(bd->Window, bd->PrevUserCallbackScroll);
         glfwSetKeyCallback(bd->Window, bd->PrevUserCallbackKey);
@@ -346,57 +362,60 @@ void ImGui_ImplGlfw_Shutdown()
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
-
-    // Update buttons
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+
+    const ImVec2 mouse_pos_prev = io.MousePos;
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    io.MouseHoveredViewport = 0;
+
+    // Update mouse buttons
+    // (if a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame)
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
         io.MouseDown[i] = bd->MouseJustPressed[i] || glfwGetMouseButton(bd->Window, i) != 0;
         bd->MouseJustPressed[i] = false;
     }
 
-    // Update mouse position
-    const ImVec2 mouse_pos_backup = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    io.MouseHoveredViewport = 0;
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     for (int n = 0; n < platform_io.Viewports.Size; n++)
     {
         ImGuiViewport* viewport = platform_io.Viewports[n];
         GLFWwindow* window = (GLFWwindow*)viewport->PlatformHandle;
-        IM_ASSERT(window != NULL);
+
 #ifdef __EMSCRIPTEN__
         const bool focused = true;
-        IM_ASSERT(platform_io.Viewports.Size == 1);
 #else
         const bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
 #endif
+        GLFWwindow* mouse_window = (bd->MouseWindow == window || focused) ? window : NULL;
+
+        // Update mouse buttons
         if (focused)
+            for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+                io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;
+
+        // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        // (When multi-viewports are enabled, all Dear ImGui positions are same as OS positions)
+        if (io.WantSetMousePos && focused)
+            glfwSetCursorPos(window, (double)(mouse_pos_prev.x - viewport->Pos.x), (double)(mouse_pos_prev.y - viewport->Pos.y));
+
+        // Set Dear ImGui mouse position from OS position
+        if (mouse_window != NULL)
         {
-            if (io.WantSetMousePos)
+            double mouse_x, mouse_y;
+            glfwGetCursorPos(mouse_window, &mouse_x, &mouse_y);
+            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
             {
-                glfwSetCursorPos(window, (double)(mouse_pos_backup.x - viewport->Pos.x), (double)(mouse_pos_backup.y - viewport->Pos.y));
+                // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+                int window_x, window_y;
+                glfwGetWindowPos(window, &window_x, &window_y);
+                io.MousePos = ImVec2((float)mouse_x + window_x, (float)mouse_y + window_y);
             }
             else
             {
-                double mouse_x, mouse_y;
-                glfwGetCursorPos(window, &mouse_x, &mouse_y);
-                if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-                {
-                    // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
-                    int window_x, window_y;
-                    glfwGetWindowPos(window, &window_x, &window_y);
-                    io.MousePos = ImVec2((float)mouse_x + window_x, (float)mouse_y + window_y);
-                }
-                else
-                {
-                    // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-                    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
-                }
+                // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+                io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
             }
-            for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-                io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;
         }
 
         // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
@@ -633,6 +652,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     glfwSetWindowPos(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
     // Install GLFW callbacks for secondary viewports
+    glfwSetCursorEnterCallback(vd->Window, ImGui_ImplGlfw_CursorEnterCallback);
     glfwSetMouseButtonCallback(vd->Window, ImGui_ImplGlfw_MouseButtonCallback);
     glfwSetScrollCallback(vd->Window, ImGui_ImplGlfw_ScrollCallback);
     glfwSetKeyCallback(vd->Window, ImGui_ImplGlfw_KeyCallback);

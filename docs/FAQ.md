@@ -225,8 +225,11 @@ End();
 
 - If you have a same ID twice in the same location, you'll have a conflict:
 ```cpp
+Begin("MyWindow");
 Button("OK");
-Button("OK");          // ID collision! Interacting with either button will trigger the first one.
+Button("OK");      // ERROR: ID collision with the first button! Interacting with either button will trigger the first one.
+Button("");        // ERROR: ID collision with Begin("MyWindow")!
+End();
 ```
 Fear not! this is easy to solve and there are many ways to solve it!
 
@@ -238,8 +241,9 @@ are going to be created:
 ```cpp
 Begin("MyWindow");
 Button("Play");        // Label = "Play",   ID = hash of ("MyWindow", "Play")
-Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from above
-Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from above
+Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from other buttons
+Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from other buttons
+Button("##foo");       // Label = "",       ID = hash of ("MyWindow", "##foo")       // Different from window
 End();
 ```
 - If you want to completely hide the label, but still need an ID:
@@ -257,7 +261,7 @@ sprintf(buf, "My game (%f FPS)###MyGame", fps);
 Begin(buf);            // Variable title,   ID = hash of "MyGame"
 ```
 - Solving ID conflict in a more general manner:
-Use PushID() / PopID() to create scopes and manipulate the ID stack, as to avoid ID conflicts
+Use `PushID()` / `PopID()` to create scopes and manipulate the ID stack, as to avoid ID conflicts
 within the same window. This is the most convenient way of distinguishing ID when iterating and
 creating many UI elements programmatically.
 You can push a pointer, a string or an integer value into the ID stack.
@@ -297,7 +301,7 @@ PushID("node");
   PopID();
 PopID();
 ```
-- Tree nodes implicitly creates a scope for you by calling PushID().
+- Tree nodes implicitly creates a scope for you by calling `PushID()`:
 ```cpp
 Button("Click");       // Label = "Click",  ID = hash of (..., "Click")
 if (TreeNode("node"))  // <-- this function call will do a PushID() for you (unless instructed not to, with a special flag)
