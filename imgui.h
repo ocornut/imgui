@@ -1388,13 +1388,12 @@ enum ImGuiNavInput_
 
     // [Internal] Don't use directly! This is used internally to differentiate keyboard from gamepad inputs for behaviors that require to differentiate them.
     // Keyboard behavior that have no corresponding gamepad mapping (e.g. CTRL+TAB) will be directly reading from io.KeysDown[] instead of io.NavInputs[].
-    ImGuiNavInput_KeyMenu_,      // toggle menu                                  // = io.KeyAlt
     ImGuiNavInput_KeyLeft_,      // move left                                    // = Arrow keys
     ImGuiNavInput_KeyRight_,     // move right
     ImGuiNavInput_KeyUp_,        // move up
     ImGuiNavInput_KeyDown_,      // move down
     ImGuiNavInput_COUNT,
-    ImGuiNavInput_InternalStart_ = ImGuiNavInput_KeyMenu_
+    ImGuiNavInput_InternalStart_ = ImGuiNavInput_KeyLeft_
 };
 
 // Configuration flags stored in io.ConfigFlags. Set by user/application.
@@ -1896,6 +1895,7 @@ struct ImGuiIO
     //------------------------------------------------------------------
 
     ImGuiKeyModFlags KeyMods;                   // Key mods flags (same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags), updated by NewFrame()
+    ImGuiKeyModFlags KeyModsPrev;               // Previous key mods
     ImVec2      MousePosPrev;                   // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
     ImVec2      MouseClickedPos[5];             // Position at time of clicking
     double      MouseClickedTime[5];            // Time of last click (used to figure out double-click)
