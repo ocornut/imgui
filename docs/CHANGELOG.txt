@@ -89,6 +89,7 @@ Other Changes:
 - Demo: Fixed requirement in 1.83 to link with imgui_demo.cpp if IMGUI_DISABLE_METRICS_WINDOW is not set. (#4171)
   Normally the right way to disable compiling the demo is to set IMGUI_DISABLE_DEMO_WINDOWS, but we want to avoid
   implying that the file is required.
+- Metrics: Fixed a crash when inspecting the individual draw command of a foreground drawlist. [@rokups]
 - Backends: Reorganized most backends (Win32, SDL, GLFW, OpenGL2/3, DX9/10/11/12, Vulkan, Allegro) to pull their
   data from a single structure stored inside the main Dear ImGui context. This facilitate/allow usage of standard
   backends with multiple-contexts BUT is only partially tested and not well supported. It is generally advised to
