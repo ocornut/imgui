@@ -66,7 +66,7 @@ or view this file with any Markdown viewer.
 
 **This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
 
-(The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
+(The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
 
 ##### [Return to Index](#index)
 
