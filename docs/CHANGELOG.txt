@@ -72,6 +72,7 @@ Other Changes:
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
 - Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
 - Popups: fix BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
+- Nav: Alt doesn't toggle menu layer if other modifiers are held. (#4439)
 - Nav: Disabled items are not candidate for default focus. (#211, #787)
 - Disabled: disabled items set HoveredId, allowing e.g. HoveredIdTimer to function. (#211, #3419) [@rokups]
 - Disabled: disabled mode more consistently release active id if the active item got disabled. (#211)

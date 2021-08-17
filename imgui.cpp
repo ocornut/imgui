@@ -9123,9 +9123,15 @@ static void ImGui::NavUpdate()
         if (io.KeyAlt && !io.KeyCtrl)
             io.NavInputs[ImGuiNavInput_KeyMenu_]  = 1.0f;
 
-        // We automatically cancel toggling nav layer when any text has been typed while holding Alt. (See #370)
-        if (io.KeyAlt && !io.KeyCtrl && g.NavWindowingToggleLayer && io.InputQueueCharacters.Size > 0)
-            g.NavWindowingToggleLayer = false;
+        // We cancel toggling nav layer when any text has been typed while holding Alt. (See #370)
+        // We cancel toggling nav layer when other modifiers are pressed. (See #4439)
+        if (g.NavWindowingToggleLayer && g.NavInputSource == ImGuiInputSource_Keyboard)
+        {
+            if (io.KeyAlt && !io.KeyCtrl && io.InputQueueCharacters.Size > 0)
+                g.NavWindowingToggleLayer = false;
+            if (io.KeyCtrl || io.KeyShift || io.KeySuper)
+                g.NavWindowingToggleLayer = false;
+        }
 
         #undef NAV_MAP_KEY
     }
@@ -9643,7 +9649,7 @@ static void ImGui::NavUpdateWindowing()
         {
             g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow;
             g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
-            g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
+            g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
         }
 
@@ -9687,8 +9693,11 @@ static void ImGui::NavUpdateWindowing()
 
     // Keyboard: Press and Release ALT to toggle menu layer
     // FIXME: We lack an explicit IO variable for "is the imgui window focused", so compare mouse validity to detect the common case of backend clearing releases all keys on ALT-TAB
-    if (IsNavInputTest(ImGuiNavInput_KeyMenu_, ImGuiInputReadMode_Pressed))
+    if (IsNavInputTest(ImGuiNavInput_KeyMenu_, ImGuiInputReadMode_Pressed) && g.IO.KeyMods == ImGuiKeyModFlags_Alt)
+    {
         g.NavWindowingToggleLayer = true;
+        g.NavInputSource = ImGuiInputSource_Keyboard;
+    }
     if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && g.NavWindowingToggleLayer && IsNavInputTest(ImGuiNavInput_KeyMenu_, ImGuiInputReadMode_Released))
         if (IsMousePosValid(&g.IO.MousePos) == IsMousePosValid(&g.IO.MousePosPrev))
             apply_toggle_layer = true;
