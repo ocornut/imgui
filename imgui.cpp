@@ -9960,7 +9960,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             if (g.DragDropAcceptIdPrev && (g.DragDropAcceptFlags & ImGuiDragDropFlags_AcceptNoPreviewTooltip))
             {
                 ImGuiWindow* tooltip_window = g.CurrentWindow;
-                tooltip_window->SkipItems = true;
+                tooltip_window->Hidden = tooltip_window->SkipItems = true;
                 tooltip_window->HiddenFramesCanSkipItems = 1;
             }
         }
