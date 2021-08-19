@@ -1185,13 +1185,8 @@ void ImGuiIO::ClearInputCharacters()
     InputQueueCharacters.resize(0);
 }
 
-void ImGuiIO::AddFocusEvent(bool focused)
+void ImGuiIO::ClearInputKeys()
 {
-    if (focused)
-        return;
-
-    // Clear buttons state when focus is lost
-    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
     memset(KeysDown, 0, sizeof(KeysDown));
     for (int n = 0; n < IM_ARRAYSIZE(KeysDownDuration); n++)
         KeysDownDuration[n] = KeysDownDurationPrev[n] = -1.0f;
@@ -1199,6 +1194,13 @@ void ImGuiIO::AddFocusEvent(bool focused)
     KeyMods = KeyModsPrev = ImGuiKeyModFlags_None;
     for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
         NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
+}
+
+void ImGuiIO::AddFocusEvent(bool focused)
+{
+    // We intentionally overwrite this and process in NewFrame(), in order to give a chance
+    // to multi-viewports backends to queue AddFocusEvent(false),AddFocusEvent(true) in same frame.
+    AppFocusLost = !focused;
 }
 
 //-----------------------------------------------------------------------------
@@ -4069,6 +4071,14 @@ void ImGui::NewFrame()
     g.DragDropWithinSource = false;
     g.DragDropWithinTarget = false;
     g.DragDropHoldJustPressedId = 0;
+
+    // Clear buttons state when focus is lost
+    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
+    if (g.IO.AppFocusLost)
+    {
+        g.IO.ClearInputKeys();
+        g.IO.AppFocusLost = false;
+    }
 
     // Update keyboard input state
     // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
