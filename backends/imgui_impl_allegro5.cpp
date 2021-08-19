@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: Renderer: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-02-18: Change blending equation to preserve alpha in output buffer.
@@ -389,6 +390,19 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_KEY_UP:
         if (ev->keyboard.display == bd->Display)
             io.KeysDown[ev->keyboard.keycode] = (ev->type == ALLEGRO_EVENT_KEY_DOWN);
+        return true;
+    case ALLEGRO_EVENT_DISPLAY_SWITCH_OUT:
+        if (ev->display.source == bd->Display)
+            io.AddFocusEvent(false);
+        return true;
+    case ALLEGRO_EVENT_DISPLAY_SWITCH_IN:
+        if (ev->display.source == bd->Display)
+        {
+            io.AddFocusEvent(true);
+#if defined(ALLEGRO_UNSTABLE)
+            al_clear_keyboard_state(bd->Display);
+#endif
+        }
         return true;
     }
     return false;
