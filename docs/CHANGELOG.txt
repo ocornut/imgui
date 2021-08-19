@@ -130,6 +130,9 @@ Other Changes:
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
 - Examples: SDL2: Accomodate for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
+- Examples: OpenGL3+GLFW/SDL: Added minimal OpenGL loader imgui_impl_opengl3_loader.h and use it in OpenGL3 backend.
+  Support for using custom OpenGL loader in the backend is removed, IMGUI_IMPL_OPENGL_LOADER_XX (except ES2/ES3) are
+  no longer used. [@rokups]
 
 
 -----------------------------------------------------------------------

@@ -31,35 +31,6 @@ LIBS =
 ## OPENGL LOADER / OPENGL ES
 ##---------------------------------------------------------------------
 
-## See below for OpenGL ES option (no loader required) - comment out
-## the following if you want to use OpenGL ES instead of Desktop GL.
-
-## Using OpenGL loader: gl3w [default]
-SOURCES += ../libs/gl3w/GL/gl3w.c
-CXXFLAGS += -I../libs/gl3w -DIMGUI_IMPL_OPENGL_LOADER_GL3W
-
-## Using OpenGL loader: glew
-## (This assumes a system-wide installation)
-# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLEW
-# LIBS += -lGLEW
-
-## Using OpenGL loader: glad
-# SOURCES += ../libs/glad/src/glad.c
-# CXXFLAGS += -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
-
-## Using OpenGL loader: glad2
-# SOURCES += ../libs/glad/src/gl.c
-# CXXFLAGS += -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD2
-
-## Using OpenGL loader: glbinding
-## This assumes a system-wide installation
-## of either version 3.0.0 (or newer)
-# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING3
-# LIBS += -lglbinding
-## or the older version 2.x
-# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING2
-# LIBS += -lglbinding
-
 ## Using OpenGL ES, no loader required
 ## This assumes a GL ES library available in the system, e.g. libGLESv2.so
 # CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
