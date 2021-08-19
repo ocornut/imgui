@@ -75,9 +75,6 @@ LDFLAGS += --shell-file shell_minimal.html $(EMS)
 %.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../libs/gl3w/GL/%.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
 all: $(EXE)
 	@echo Build complete for $(EXE)
 

@@ -7,19 +7,10 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
-#else
-// About Desktop OpenGL function loaders:
-//  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
-//  Here we are using our own minimal loader based on gl3w. You may use another loader/header of your choice (glext, glLoadGen, etc.),
-//  or chose to manually implement your own.
-#include "imgui_impl_opengl3_loader.h"
 #endif
-
-// Include glfw3.h after our OpenGL definitions
-#include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.

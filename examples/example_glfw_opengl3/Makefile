@@ -28,10 +28,9 @@ CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
 ##---------------------------------------------------------------------
-## OPENGL LOADER / OPENGL ES
+## OPENGL ES
 ##---------------------------------------------------------------------
 
-## Using OpenGL ES, no loader required
 ## This assumes a GL ES library available in the system, e.g. libGLESv2.so
 # CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
 # LINUX_GL_LIBS = -lGLESv2
@@ -79,12 +78,6 @@ endif
 
 %.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-%.o:../libs/gl3w/GL/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-%.o:../libs/glad/src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
