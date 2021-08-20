@@ -32,14 +32,17 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.84 WIP (In Progress)
+ VERSION 1.84 (Released 2021-08-20)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84
 
 Breaking Changes:
 
 - Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
   - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
   - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
+- Backends: OpenGL3: added a third source file "imgui_impl_opengl3_loader.h". [@rokups]
 - Backends: GLFW: backend now uses glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
 - Backends: GLFW: backend now uses glfwSetWindowFocusCallback(). (#4388) [@thedmd]
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: this is already done for you.
@@ -53,13 +56,13 @@ Breaking Changes:
   receive mouse clicks events on window focus, otherwise SDL doesn't emit the event. (#3751, #4377, #2445)
   This is unfortunately a global SDL setting, so enabling it _might_ have a side-effect on your application.
   It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
-  you can ignore SDL_MOUSEBUTTONDOWN that events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED event).
-- Backends: OpenGL3: added a third source file "imgui_impl_opengl3_loader.h". [@rokups]
+  you can ignore SDL_MOUSEBUTTONDOWN events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED event).
 - Internals: (for custom widgets): because disabled items now sets HoveredId, if you want custom widgets to
   not react as hovered when disabled, in the majority of use cases it is preferable to check the "hovered"
   return value of ButtonBehavior() rather than (HoveredId == id).
 
 Other Changes:
+
 - IO: Added io.AddFocusEvent() api for backend to tell when host window has gained/lost focus. (#4388) [@thedmd]
   If you use a custom backend, consider adding support for this!
 - Disabled: added BeginDisabled()/EndDisabled() api to create a scope where interactions are disabled. (#211)
@@ -68,11 +71,11 @@ Other Changes:
     visuals. Currently this is done by lowering alpha of all widgets. Future styling system may do that differently.
   - Disabled items set HoveredId, allowing e.g. HoveredIdTimer to run. (#211, #3419) [@rokups]
   - Disabled items more consistently release ActiveId if the active item got disabled. (#211)
-  - Nav: Fixed disabled items from beig candidate for default focus. (#211, #787)
+  - Nav: Fixed disabled items from being candidate for default focus. (#211, #787)
   - Fixed Selectable() selection not showing when disabled. (#211)
   - Fixed IsItemHovered() returning true on disabled item when navigated to. (#211)
-  - Fixed IsItemHovered() if popped disabled state after item, or when using Selectable_Disabled. (#211)
-- Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItmeFlags_UnsavedDocument displays a dot instead of a '*' so it
+  - Fixed IsItemHovered() when popping disabled state after item, or when using Selectable_Disabled. (#211)
+- Windows: ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument displays a dot instead of a '*' so it
   is independent from font style. When in a tab, the dot is displayed at the same position as the close button.
   Added extra comments to clarify the purpose of this flag in the context of docked windows.
 - Tables: Added ImGuiTableColumnFlags_Disabled acting a master disable over (hidden from user/context menu). (#3935)
@@ -80,22 +83,22 @@ Other Changes:
   because it manipulates the user-accessible show/hide state. (#3935)
 - Tables: Added ImGuiTableColumnFlags_NoHeaderLabel to request TableHeadersRow() to not submit label for a column.
   Convenient for some small columns. Name will still appear in context menu. (#4206).
-- Tables: Fix columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
-- Tables: Fix invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
+- Tables: Fixed columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
+- Tables: Fixed invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
 - TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
 - InputInt/InputFloat: When used with Steps values and _ReadOnly flag, the step button look disabled. (#211)
 - InputText: Fixed named filtering flags disabling newline or tabs in multiline inputs (#4409, #4410) [@kfsone]
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
-- Drag and Drop: fix using AcceptDragDropPayload() with ImGuiDragDropFlags_AcceptNoPreviewTooltip. [@JeffM2501]
+- Drag and Drop: Fixed using AcceptDragDropPayload() with ImGuiDragDropFlags_AcceptNoPreviewTooltip. [@JeffM2501]
 - Menus: MenuItem() and BeginMenu() are not affected/overlapping when style.SelectableTextAlign is altered.
-- Menus: fix hovering a disabled menu or menu item not closing other menus. (#211)
-- Popups: fix BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
+- Menus: Fixed hovering a disabled menu or menu item not closing other menus. (#211)
+- Popups: Fixed BeginPopup/OpenPopup sequence failing when there are no focused windows. (#4308) [@rokups]
 - Nav: Alt doesn't toggle menu layer if other modifiers are held. (#4439)
 - Fixed printf-style format checks on non-MinGW flavors. (#4183, #3592)
 - Fonts: Functions with a 'float size_pixels' parameter can accept zero if it is set in ImFontSize::SizePixels.
 - Fonts: Prefer using U+FFFD character for fallback instead of '?', if available. (#4269)
 - Fonts: Use U+FF0E dot character to construct an ellipsis if U+002E '.' is not available. (#4269)
-- Fonts: Add U+FFFD ("replacement character") to default asian glyphs ranges. (#4269)
+- Fonts: Added U+FFFD ("replacement character") to default asian glyphs ranges. (#4269)
 - Fonts: Fixed calling ClearTexData() (clearing CPU side font data) triggering an assert in NewFrame(). (#3487)
 - DrawList: Fixed AddCircle/AddCircleFilled() with auto-tesselation not using accelerated paths for small circles.
   Fixed AddCircle/AddCircleFilled() with 12 segments which had a broken edge. (#4419, #4421) [@thedmd]
@@ -106,9 +109,9 @@ Other Changes:
 - Backends: Reorganized most backends (Win32, SDL, GLFW, OpenGL2/3, DX9/10/11/12, Vulkan, Allegro) to pull their
   data from a single structure stored inside the main Dear ImGui context. This facilitate/allow usage of standard
   backends with multiple-contexts BUT is only partially tested and not well supported. It is generally advised to
-  instead use the multi-viewports feature of docking branch where a single Dear ImGui context can be used accross
+  instead use the multi-viewports feature of docking branch where a single Dear ImGui context can be used across
   multiple windows. (#586, #1851, #2004, #3012, #3934, #4141)
-- Backends: Win32: Rework to handle certains Windows 8.1/10 features without a manifest. (#4200, #4191)
+- Backends: Win32: Rework to handle certain Windows 8.1/10 features without a manifest. (#4200, #4191)
   - ImGui_ImplWin32_GetDpiScaleForMonitor() will handle per-monitor DPI on Windows 10 without a manifest.
   - ImGui_ImplWin32_EnableDpiAwareness() will call SetProcessDpiAwareness() fallback on Windows 8.1 without a manifest.
 - Backends: Win32: IME functions are disabled by default for non-Visual Studio compilers (MinGW etc.). Enable with
@@ -122,7 +125,7 @@ Other Changes:
   (backend now uses glfwSetCursorEnterCallback(). If you called ImGui_ImplGlfw_InitXXX with install_callbacks=false, you will
   need to install this callback and forward the data to the backend via ImGui_ImplGlfw_CursorEnterCallback).
 - Backends: SDL2: Mouse position is correctly reported when the host window is hovered but not focused. (#3751, #4377, #2445)
-  (requires SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH).
+  (enabled with SDL 2.0.5+ as SDL_GetMouseFocus() is only usable with SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH).
 - Backends: DX9: Explicitly disable texture state stages after >= 1. (#4268) [@NZJenkins]
 - Backends: DX12: Fix texture casting crash on 32-bit systems (introduced on 2021/05/19 and v1.83) + added comments
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
@@ -136,12 +139,12 @@ Other Changes:
 - Backends: GLFW: Installing and exposed ImGui_ImplGlfw_MonitorCallback() for forward compatibility with docking branch.
 - Backends: OSX: Added a fix for shortcuts using CTRL key instead of CMD key. (#4253) [@rokups]
 - Examples: DX12: Fixed handling of Alt+Enter in example app (using swapchain's ResizeBuffers). (#4346) [@PathogenDavid]
-- Examples: DX12: Removed unecessary recreation of backend-owned device objects when window is resized. (#4347) [@PathogenDavid]
+- Examples: DX12: Removed unnecessary recreation of backend-owned device objects when window is resized. (#4347) [@PathogenDavid]
 - Examples: OpenGL3+GLFW,SDL: Remove include cruft to support variety of GL loaders (no longer necessary). [@rokups]
 - Examples: OSX+OpenGL2: Fix event forwarding (fix key remaining stuck when using shortcuts with Cmd/Super key).
   Other OSX examples were not affected. (#4253, #1873) [@rokups]
 - Examples: Updated all .vcxproj to VS2015 (toolset v140) to facilitate usage with vcpkg.
-- Examples: SDL2: Accomodate for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
+- Examples: SDL2: Accommodate  for vcpkg install having headers in SDL2/SDL.h vs SDL.h.
 
 
 -----------------------------------------------------------------------

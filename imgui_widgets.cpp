@@ -1,4 +1,4 @@
-// dear imgui, v1.84 WIP
+// dear imgui, v1.84
 // (widgets code)
 
 /*
@@ -6239,7 +6239,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         EndDisabled();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
-    return pressed;
+    return pressed; //-V1020
 }
 
 bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)

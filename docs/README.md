@@ -141,7 +141,7 @@ Some of the goals for 2021 are:
 
 ### Gallery
 
-For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/3793)!
+For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/4451)!
 
 For a list of third-party widgets and extensions, check out the [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page.
 
@@ -174,7 +174,7 @@ Advanced users may want to use the `docking` branch with [Multi-Viewport](https:
 
 **Who uses Dear ImGui?**
 
-See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes), [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors), [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for an idea of who is using Dear ImGui. Please add your game/software if you can! Also see the [Gallery Threads](https://github.com/ocornut/imgui/issues/3793)!
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes), [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors), [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for an idea of who is using Dear ImGui. Please add your game/software if you can! Also see the [Gallery Threads](https://github.com/ocornut/imgui/issues/4451)!
 
 How to help
 -----------
@@ -196,10 +196,16 @@ Sponsors
 Ongoing Dear ImGui development is currently financially supported by users and private sponsors:
 
 *Platinum-chocolate sponsors*
-- [Blizzard](https://careers.blizzard.com/en-us/openings/engineering/all/all/all/1), [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse)
+- [Blizzard](https://careers.blizzard.com/en-us/openings/engineering/all/all/all/1)
 
-*Double-chocolate and Salty caramel sponsors*
-- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Adobe](https://www.adobe.com/products/medium.html), [Aras Pranckevičius](https://aras-p.info), [Arkane Studios](https://www.arkane-studios.com), [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Kylotonn](https://www.kylotonn.com), [Next Level Games](https://www.nextlevelgames.com), [RAD Game Tools](http://www.radgametools.com/), [O-Net Communications (USA)](http://en.o-netcom.com), [Supercell](https://supercell.com), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui)
+*Double-chocolate sponsors*
+- [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui)
+
+*Chocolate sponsors*
+- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Adobe](https://www.adobe.com/products/medium.html), [Aras Pranckevičius](https://aras-p.info), [Arkane Studios](https://www.arkane-studios.com), [Epic](https://www.unrealengine.com/en-US/megagrants), [RAD Game Tools](http://www.radgametools.com/)
+
+*Salty-caramel sponsors*
+- [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Kylotonn](https://www.kylotonn.com), [Next Level Games](https://www.nextlevelgames.com), [O-Net Communications (USA)](http://en.o-netcom.com), [Supercell](https://supercell.com).
 
 Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors) for past sponsors.
 From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations.
