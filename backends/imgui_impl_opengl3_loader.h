@@ -25,6 +25,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 // We embed our own OpenGL loader to not require user to provide their own or to have to use ours, which proved to be endless problems for users.
 // Our loader is custom-generated, based on gl3w but automatically filtered to only include enums/functions that we use in this source file.
 // Regenerate with: python gl3w_gen.py --imgui-dir /path/to/imgui/
@@ -138,6 +139,7 @@ typedef khronos_uint8_t GLubyte;
 #define GL_SCISSOR_BOX                    0x0C10
 #define GL_SCISSOR_TEST                   0x0C11
 #define GL_UNPACK_ROW_LENGTH              0x0CF2
+#define GL_PACK_ALIGNMENT                 0x0D05
 #define GL_TEXTURE_2D                     0x0DE1
 #define GL_UNSIGNED_BYTE                  0x1401
 #define GL_UNSIGNED_SHORT                 0x1403
@@ -159,6 +161,7 @@ typedef void (APIENTRYP PFNGLCLEARCOLORPROC) (GLfloat red, GLfloat green, GLfloa
 typedef void (APIENTRYP PFNGLDISABLEPROC) (GLenum cap);
 typedef void (APIENTRYP PFNGLENABLEPROC) (GLenum cap);
 typedef void (APIENTRYP PFNGLPIXELSTOREIPROC) (GLenum pname, GLint param);
+typedef void (APIENTRYP PFNGLREADPIXELSPROC) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
 typedef void (APIENTRYP PFNGLGETINTEGERVPROC) (GLenum pname, GLint *data);
 typedef const GLubyte *(APIENTRYP PFNGLGETSTRINGPROC) (GLenum name);
 typedef GLboolean (APIENTRYP PFNGLISENABLEDPROC) (GLenum cap);
@@ -173,6 +176,7 @@ GLAPI void APIENTRY glClearColor (GLfloat red, GLfloat green, GLfloat blue, GLfl
 GLAPI void APIENTRY glDisable (GLenum cap);
 GLAPI void APIENTRY glEnable (GLenum cap);
 GLAPI void APIENTRY glPixelStorei (GLenum pname, GLint param);
+GLAPI void APIENTRY glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
 GLAPI void APIENTRY glGetIntegerv (GLenum pname, GLint *data);
 GLAPI const GLubyte *APIENTRY glGetString (GLenum name);
 GLAPI GLboolean APIENTRY glIsEnabled (GLenum cap);
@@ -221,7 +225,6 @@ typedef khronos_intptr_t GLintptr;
 #define GL_ARRAY_BUFFER                   0x8892
 #define GL_ELEMENT_ARRAY_BUFFER           0x8893
 #define GL_ARRAY_BUFFER_BINDING           0x8894
-#define GL_ELEMENT_ARRAY_BUFFER_BINDING   0x8895
 #define GL_STREAM_DRAW                    0x88E0
 typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
@@ -298,6 +301,7 @@ typedef khronos_uint16_t GLhalf;
 #define GL_MAJOR_VERSION                  0x821B
 #define GL_MINOR_VERSION                  0x821C
 #define GL_NUM_EXTENSIONS                 0x821D
+#define GL_FRAMEBUFFER_SRGB               0x8DB9
 #define GL_VERTEX_ARRAY_BINDING           0x85B5
 typedef void (APIENTRYP PFNGLGETBOOLEANI_VPROC) (GLenum target, GLuint index, GLboolean *data);
 typedef void (APIENTRYP PFNGLGETINTEGERI_VPROC) (GLenum target, GLuint index, GLint *data);
@@ -344,12 +348,8 @@ typedef void (APIENTRY  *GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum
 #endif /* GL_VERSION_4_3 */
 #ifndef GL_VERSION_4_5
 #define GL_CLIP_ORIGIN                    0x935C
-typedef void (APIENTRYP PFNGLCLIPCONTROLPROC) (GLenum origin, GLenum depth);
 typedef void (APIENTRYP PFNGLGETTRANSFORMFEEDBACKI_VPROC) (GLuint xfb, GLenum pname, GLuint index, GLint *param);
 typedef void (APIENTRYP PFNGLGETTRANSFORMFEEDBACKI64_VPROC) (GLuint xfb, GLenum pname, GLuint index, GLint64 *param);
-#ifdef GL_GLEXT_PROTOTYPES
-GLAPI void APIENTRY glClipControl (GLenum origin, GLenum depth);
-#endif
 #endif /* GL_VERSION_4_5 */
 #ifndef GL_ARB_bindless_texture
 typedef khronos_uint64_t GLuint64EXT;
@@ -430,7 +430,6 @@ union GL3WProcs {
         PFNGLBUFFERDATAPROC              BufferData;
         PFNGLCLEARPROC                   Clear;
         PFNGLCLEARCOLORPROC              ClearColor;
-        PFNGLCLIPCONTROLPROC             ClipControl;
         PFNGLCOMPILESHADERPROC           CompileShader;
         PFNGLCREATEPROGRAMPROC           CreateProgram;
         PFNGLCREATESHADERPROC            CreateShader;
@@ -461,6 +460,7 @@ union GL3WProcs {
         PFNGLLINKPROGRAMPROC             LinkProgram;
         PFNGLPIXELSTOREIPROC             PixelStorei;
         PFNGLPOLYGONMODEPROC             PolygonMode;
+        PFNGLREADPIXELSPROC              ReadPixels;
         PFNGLSCISSORPROC                 Scissor;
         PFNGLSHADERSOURCEPROC            ShaderSource;
         PFNGLTEXIMAGE2DPROC              TexImage2D;
@@ -488,7 +488,6 @@ GL3W_API extern union GL3WProcs gl3wProcs;
 #define glBufferData                     gl3wProcs.gl.BufferData
 #define glClear                          gl3wProcs.gl.Clear
 #define glClearColor                     gl3wProcs.gl.ClearColor
-#define glClipControl                    gl3wProcs.gl.ClipControl
 #define glCompileShader                  gl3wProcs.gl.CompileShader
 #define glCreateProgram                  gl3wProcs.gl.CreateProgram
 #define glCreateShader                   gl3wProcs.gl.CreateShader
@@ -519,6 +518,7 @@ GL3W_API extern union GL3WProcs gl3wProcs;
 #define glLinkProgram                    gl3wProcs.gl.LinkProgram
 #define glPixelStorei                    gl3wProcs.gl.PixelStorei
 #define glPolygonMode                    gl3wProcs.gl.PolygonMode
+#define glReadPixels                     gl3wProcs.gl.ReadPixels
 #define glScissor                        gl3wProcs.gl.Scissor
 #define glShaderSource                   gl3wProcs.gl.ShaderSource
 #define glTexImage2D                     gl3wProcs.gl.TexImage2D
@@ -528,6 +528,7 @@ GL3W_API extern union GL3WProcs gl3wProcs;
 #define glUseProgram                     gl3wProcs.gl.UseProgram
 #define glVertexAttribPointer            gl3wProcs.gl.VertexAttribPointer
 #define glViewport                       gl3wProcs.gl.Viewport
+
 #ifdef __cplusplus
 }
 #endif
@@ -672,7 +673,6 @@ static const char *proc_names[] = {
     "glBufferData",
     "glClear",
     "glClearColor",
-    "glClipControl",
     "glCompileShader",
     "glCreateProgram",
     "glCreateShader",
@@ -703,6 +703,7 @@ static const char *proc_names[] = {
     "glLinkProgram",
     "glPixelStorei",
     "glPolygonMode",
+    "glReadPixels",
     "glScissor",
     "glShaderSource",
     "glTexImage2D",
