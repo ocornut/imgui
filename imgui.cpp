@@ -6621,7 +6621,7 @@ void ImGui::PopItemFlag()
 // - Those can be nested but this cannot be used to enable an already disabled section (a single BeginDisabled(true) in the stack is enough to keep things disabled)
 // - Visually this is currently altering alpha, but it is expected that in a future styling system this would work differently.
 // - Feedback welcome at https://github.com/ocornut/imgui/issues/211
-// - BeginDisabled(false) essentially does nothing but is provided to facilitate use of boolean expressions
+// - BeginDisabled(false) essentially does nothing useful but is provided to facilitate use of boolean expressions. If you can avoid calling BeginDisabled(False)/EndDisabled() best to avoid it.
 // - Optimized shortcuts instead of PushStyleVar() + PushItemFlag()
 void ImGui::BeginDisabled(bool disabled)
 {
@@ -6630,8 +6630,8 @@ void ImGui::BeginDisabled(bool disabled)
     g.DisabledAlphaBackup = g.Style.Alpha;
     if (!was_disabled && disabled)
         g.Style.Alpha *= g.Style.DisabledAlpha; // PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * g.Style.DisabledAlpha);
-    //PushItemFlag(ImGuiItemFlags_Disabled, was_disabled || disabled);
-    g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
+    if (was_disabled || disabled)
+        g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
     g.ItemFlagsStack.push_back(g.CurrentItemFlags);
 }
 
