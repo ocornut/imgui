@@ -989,7 +989,7 @@ static void*                GImAllocatorUserData = NULL;
 ImGuiStyle::ImGuiStyle()
 {
     Alpha                   = 1.0f;             // Global alpha applies to everything in Dear ImGui.
-    DisabledAlpha           = 0.60f;            // Additional alpha multiplier for disabled items (multiply over current value of Alpha).
+    DisabledAlpha           = 0.60f;            // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowRounding          = 0.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows. Large values tend to lead to variety of artifacts and are not recommended.
     WindowBorderSize        = 1.0f;             // Thickness of border around windows. Generally set to 0.0f or 1.0f. Other values not well tested.
@@ -6622,22 +6622,31 @@ void ImGui::PopItemFlag()
 // - Visually this is currently altering alpha, but it is expected that in a future styling system this would work differently.
 // - Feedback welcome at https://github.com/ocornut/imgui/issues/211
 // - BeginDisabled(false) essentially does nothing but is provided to facilitate use of boolean expressions
+// - Optimized shortcuts instead of PushStyleVar() + PushItemFlag()
 void ImGui::BeginDisabled(bool disabled)
 {
     ImGuiContext& g = *GImGui;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     if (!was_disabled && disabled)
-        PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * g.Style.DisabledAlpha);
-    PushItemFlag(ImGuiItemFlags_Disabled, was_disabled || disabled);
+    {
+        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * g.Style.DisabledAlpha);
+        g.DisabledAlphaBackup = g.Style.Alpha;
+        g.Style.Alpha *= g.Style.DisabledAlpha;
+    }
+    //PushItemFlag(ImGuiItemFlags_Disabled, was_disabled || disabled);
+    g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
+    g.ItemFlagsStack.push_back(g.CurrentItemFlags);
 }
 
 void ImGui::EndDisabled()
 {
     ImGuiContext& g = *GImGui;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
-    PopItemFlag();
+    //PopItemFlag();
+    g.ItemFlagsStack.pop_back();
+    g.CurrentItemFlags &= ~ImGuiItemFlags_Disabled;
     if (was_disabled && (g.CurrentItemFlags & ImGuiItemFlags_Disabled) == 0)
-        PopStyleVar();
+        g.Style.Alpha = g.DisabledAlphaBackup; //PopStyleVar();
 }
 
 // FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
