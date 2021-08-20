@@ -6627,12 +6627,9 @@ void ImGui::BeginDisabled(bool disabled)
 {
     ImGuiContext& g = *GImGui;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+    g.DisabledAlphaBackup = g.Style.Alpha;
     if (!was_disabled && disabled)
-    {
-        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * g.Style.DisabledAlpha);
-        g.DisabledAlphaBackup = g.Style.Alpha;
-        g.Style.Alpha *= g.Style.DisabledAlpha;
-    }
+        g.Style.Alpha *= g.Style.DisabledAlpha; // PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * g.Style.DisabledAlpha);
     //PushItemFlag(ImGuiItemFlags_Disabled, was_disabled || disabled);
     g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
     g.ItemFlagsStack.push_back(g.CurrentItemFlags);
