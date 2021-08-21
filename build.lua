@@ -1,10 +1,10 @@
 project "ImGui"
 
+	-- Output Directories --
 	location "%{wks.location}/Dependencies/imgui"
 
-	-- Output Directories --
-	targetdir ("%{wks.location}/bin/"     .. outputdir)
-	objdir    ("%{wks.location}/bin-int/" .. outputdir)
+	targetdir (target_dir)
+	objdir    (object_dir)
 
 	-- Compiler --
 	kind "StaticLib"
@@ -13,41 +13,45 @@ project "ImGui"
 	-- Project Files ---
 	files
 	{
-        "imconfig.h",
-        "imgui.cpp",
-        "imgui.h",
-        "imgui_demo.cpp",
-        "imgui_demo.h",
-        "imgui_draw.cpp",
-        "imgui_internal.h",
-        "imgui_tables.cpp",
-        "imgui_widgets.cpp",
-        "imstb_rectpact.h",
-        "imstb_textedit.h",
-        "imstb_truetype.h",
+        -- imgui
+		"imconfig.h",
+		"imgui.cpp",
+		"imgui.h",
+		"imgui_demo.cpp",
+		"imgui_demo.h",
+		"imgui_draw.cpp",
+		"imgui_internal.h",
+		"imgui_tables.cpp",
+		"imgui_widgets.cpp",
+		"imstb_rectpact.h",
+		"imstb_textedit.h",
+		"imstb_truetype.h",
 
-        "backends/imgui_impl_glfw.cpp",
-        "backends/imgui_impl_glfw.h",
-        "backends/imgui_impl_opengl3.cpp",
-        "backends/imgui_impl_opengl3.h",
+        -- backends
+		"backends/imgui_impl_glfw.cpp",
+		"backends/imgui_impl_glfw.h",
+		"backends/imgui_impl_opengl3.cpp",
+		"backends/imgui_impl_opengl3.h",
 
-        "build.lua",
+        -- build.lua
+		"%{prj.location}/build.lua",
 	}
 	
-	-- Dependencies --
-    includedirs
-    {
-        "%{prj.location}/",
+	-- Includes --
+	includedirs
+	{
+		"%{prj.location}/",
 
-        (dependenciesdir .. "GLAD/include"),
-        (dependenciesdir .. "GLFW/include")
-    }
+        "%{include_dirs.glad}",
+        "%{include_dirs.glfw}",
+	}
 
-    links
-    {
-        "GLAD",
-        "GLFW"
-    }
+    -- Links --
+	links
+	{
+		"GLAD",
+		"GLFW"
+	}
 
 	--- Filters ---
 	-- windows
@@ -57,10 +61,10 @@ project "ImGui"
 
 		files
 		{
-            "backends/imgui_impl_dx11.cpp",
-            "backends/imgui_impl_dx11.h",
-            "backends/imgui_impl_win32.cpp",
-            "backends/imgui_impl_win32.h",
+			"backends/imgui_impl_dx11.cpp",
+			"backends/imgui_impl_dx11.h",
+			"backends/imgui_impl_win32.cpp",
+			"backends/imgui_impl_win32.h",
 		}
 
 		defines 
@@ -70,11 +74,11 @@ project "ImGui"
 
 		flags { "MultiProcessorCompile" }
 
-    filter "system:linux"
-        links
-        {
-            "GL",
-        }
+	filter "system:linux"
+		links
+		{
+			"GL",
+		}
 
 	-- debug
 	filter "configurations:Debug"
@@ -89,4 +93,4 @@ project "ImGui"
 	-- distribution
 	filter "configurations:Distribution"
 		runtime "Release"
-		optimize "on"
+		optimize "full"
