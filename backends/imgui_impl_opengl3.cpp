@@ -14,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-23: OpenGL: Fixed ES 3.0 shader ("#version 300 es") use normal precision floats to avoid wobbly rendering at HD resolutions.
 //  2021-08-19: OpenGL: Embed and use our own minimal GL loader (imgui_impl_opengl3_loader.h), removing requirement and support for third-party loader.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-06-25: OpenGL: Use OES_vertex_array extension on Emscripten + backup/restore current state.
@@ -625,7 +626,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "}\n";
 
     const GLchar* vertex_shader_glsl_300_es =
-        "precision mediump float;\n"
+        "precision highp float;\n"
         "layout (location = 0) in vec2 Position;\n"
         "layout (location = 1) in vec2 UV;\n"
         "layout (location = 2) in vec4 Color;\n"

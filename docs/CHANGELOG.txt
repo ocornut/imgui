@@ -38,6 +38,8 @@ HOW TO UPDATE?
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.2
 
 - Disabled: Fixed nested BeginDisabled()/EndDisabled() calls. (#211, #4452, #4453, #4462) [@Legulysse]
+- Backends: OpenGL3: OpenGL: Fixed ES 3.0 shader ("#version 300 es") to use normal precision
+  floats. Avoid wobbly rendering at HD resolutions. (#4463) [@nicolasnoble]
 
 
 -----------------------------------------------------------------------
