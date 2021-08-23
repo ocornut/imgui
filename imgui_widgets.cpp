@@ -3969,13 +3969,15 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     ImGuiItemStatusFlags item_status_flags = 0;
     if (is_multiline)
     {
+        ImVec2 backup_pos = window->DC.CursorPos;
+        ItemSize(total_bb, style.FramePadding.y);
         if (!ItemAdd(total_bb, id, &frame_bb, ImGuiItemAddFlags_Focusable))
         {
-            ItemSize(total_bb, style.FramePadding.y);
             EndGroup();
             return false;
         }
         item_status_flags = g.LastItemData.StatusFlags;
+        window->DC.CursorPos = backup_pos;
 
         // We reproduce the contents of BeginChildFrame() in order to provide 'label' so our window internal data are easier to read/debug.
         PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);

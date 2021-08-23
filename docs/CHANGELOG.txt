@@ -42,6 +42,8 @@ Breaking Changes:
 
 Other Changes:
 
+- InputTextMultiline: Fixed label size not being included into window contents rect unless
+  the whole widget is clipped.
 - imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
   (which apparently happens with Freetype 2.11). (#4394, #4145?).
 
