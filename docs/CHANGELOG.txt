@@ -30,6 +30,18 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.85 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
+  Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
+  very useful in practice, and the only use of it in the demo was illfit.
+
+
+Other Changes:
 
 -----------------------------------------------------------------------
  VERSION 1.84.2 (Released 2021-08-23)
