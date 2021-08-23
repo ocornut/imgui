@@ -40,8 +40,11 @@ Breaking Changes:
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
 
-
 Other Changes:
+
+- imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
+  (which apparently happens with Freetype 2.11). (#4394, #4145?).
+
 
 -----------------------------------------------------------------------
  VERSION 1.84.2 (Released 2021-08-23)
