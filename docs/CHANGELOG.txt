@@ -99,6 +99,11 @@ Other changes:
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
 
 
+Docking+Viewports Branch:
+
+- Docking: fixed settings load issue when mouse wheeling. (#4310)
+
+
 -----------------------------------------------------------------------
  VERSION 1.84.1 (Released 2021-08-20)
 -----------------------------------------------------------------------
