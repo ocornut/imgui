@@ -443,13 +443,14 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
                 }
 
-                // Apply Scissor, Bind texture, Draw
-                uint32_t clip_rect[4];
-                clip_rect[0] = (uint32_t)(clip_scale.x * (pcmd->ClipRect.x - clip_off.x));
-                clip_rect[1] = (uint32_t)(clip_scale.y * (pcmd->ClipRect.y - clip_off.y));
-                clip_rect[2] = (uint32_t)(clip_scale.x * (pcmd->ClipRect.z - clip_off.x));
-                clip_rect[3] = (uint32_t)(clip_scale.y * (pcmd->ClipRect.w - clip_off.y));
-                wgpuRenderPassEncoderSetScissorRect(pass_encoder, clip_rect[0], clip_rect[1], clip_rect[2] - clip_rect[0], clip_rect[3] - clip_rect[1]);
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                    continue;
+
+                // Apply scissor/clipping rectangle, Draw
+                wgpuRenderPassEncoderSetScissorRect(pass_encoder, (uint32_t)clip_min.x, (uint32_t)clip_min.y, (uint32_t)(clip_max.x - clip_min.x), (uint32_t)(clip_max.y - clip_min.y));
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
             }
         }

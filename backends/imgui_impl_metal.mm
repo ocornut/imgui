@@ -5,13 +5,14 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-24: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted. (#4464)
 //  2021-05-19: Metal: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-02-18: Metal: Change blending equation to preserve alpha in output buffer.
 //  2021-01-25: Metal: Fixed texture storage mode when building on Mac Catalyst.
@@ -504,36 +505,37 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec4 clip_rect;
-                clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
-                clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
-                clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
-                clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
 
-                if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+                // Clamp to viewport as setScissorRect() won't accept values that are off bounds
+                if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
+                if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
+                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                    continue;
+
+                // Apply scissor/clipping rectangle
+                MTLScissorRect scissorRect =
                 {
-                    // Apply scissor/clipping rectangle
-                    MTLScissorRect scissorRect =
-                    {
-                        .x = NSUInteger(clip_rect.x),
-                        .y = NSUInteger(clip_rect.y),
-                        .width = NSUInteger(clip_rect.z - clip_rect.x),
-                        .height = NSUInteger(clip_rect.w - clip_rect.y)
-                    };
-                    [commandEncoder setScissorRect:scissorRect];
+                    .x = NSUInteger(clip_min.x),
+                    .y = NSUInteger(clip_min.y),
+                    .width = NSUInteger(clip_max.x - clip_min.x),
+                    .height = NSUInteger(clip_max.y - clip_min.y)
+                };
+                [commandEncoder setScissorRect:scissorRect];
 
+                // Bind texture, Draw
+                if (ImTextureID tex_id = pcmd->GetTexID())
+                    [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
 
-                    // Bind texture, Draw
-                    if (ImTextureID tex_id = pcmd->GetTexID())
-                        [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
-
-                    [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
-                    [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                                               indexCount:pcmd->ElemCount
-                                                indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
-                                              indexBuffer:indexBuffer.buffer
-                                        indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
-                }
+                [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
+                [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                                           indexCount:pcmd->ElemCount
+                                            indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
+                                          indexBuffer:indexBuffer.buffer
+                                    indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
             }
         }
 
