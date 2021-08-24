@@ -14,13 +14,5 @@ IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_da
 // Called by Init/NewFrame/Shutdown
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer_CreateFontsTexture();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_DestroyFontsTexture();
-
-
-
-
-
-
-
-
-
-
+IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_DestroyDeviceObjects();

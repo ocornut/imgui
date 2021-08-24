@@ -26,22 +26,38 @@
 #  define WINGDIAPI __declspec(dllimport)     // Some Windows OpenGL headers need this
 #endif
 
-SDL_Renderer *g_SDLRenderer = NULL;
-SDL_Texture  *g_SDLFontTexture = NULL;
+struct ImGui_ImplSDLRenderer_Data
+{
+    SDL_Renderer *SDLRenderer;
+    SDL_Texture  *FontTexture;
+    ImGui_ImplSDLRenderer_Data() { memset(this, 0, sizeof(*this)); }
+};
 
+// Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
+// It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
+static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
+{
+    return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+}
+
+// Functions
 bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
 {
-    // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+
+    // Setup backend capabilities flags
+    ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
+    io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_SDLRenderer";
 
-    g_SDLRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    if (g_SDLRenderer == NULL) {
+    bd->SDLRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    if (bd->SDLRenderer == NULL) {
         SDL_Log("Error creating SDL renderer");
         return false;
     } else {
         SDL_RendererInfo info;
-        SDL_GetRendererInfo(g_SDLRenderer, &info);
+        SDL_GetRendererInfo(bd->SDLRenderer, &info);
         SDL_Log("Current SDL Renderer: %s", info.name);
     }
     return true;
@@ -49,7 +65,15 @@ bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
 
 void ImGui_ImplSDLRenderer_Shutdown()
 {
-    SDL_DestroyRenderer(g_SDLRenderer);
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+
+    ImGui_ImplSDLRenderer_DestroyDeviceObjects();
+    SDL_DestroyRenderer(bd->SDLRenderer);
+
+    io.BackendRendererName = NULL;
+    io.BackendRendererUserData = NULL;
+    IM_DELETE(bd);
 
     if (SDL_GetError()) {
         SDL_Log("Ending with SDL error: %s", SDL_GetError());
@@ -60,8 +84,11 @@ void ImGui_ImplSDLRenderer_Shutdown()
 
 void ImGui_ImplSDLRenderer_NewFrame()
 {
-    if (! g_SDLFontTexture) {
-        ImGui_ImplSDLRenderer_CreateFontsTexture();
+    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplSDLRenderer_Init()?");
+
+    if (!bd->FontTexture) {
+        ImGui_ImplSDLRenderer_CreateDeviceObjects();
     }
 }
 
@@ -74,17 +101,18 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
         return;
     
     // Setup desired GL state
-    //  ImGui_ImplOpenGL2_SetupRenderState(draw_data, fb_width, fb_height);
+    //  ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    SDL_SetRenderDrawColor(g_SDLRenderer, clear_color.x * 255, clear_color.y * 255, clear_color.z * 255 , clear_color.w * 255);
-    SDL_RenderClear(g_SDLRenderer);
+    SDL_SetRenderDrawColor(bd->SDLRenderer, clear_color.x * 255, clear_color.y * 255, clear_color.z * 255 , clear_color.w * 255);
+    SDL_RenderClear(bd->SDLRenderer);
 
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
 
@@ -101,7 +129,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
                     SDL_Log("Aie SetupRenderState ?");
-                    // ImGui_ImplOpenGL2_SetupRenderState(draw_data, fb_width, fb_height);
+                    // ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
                 } else { 
                     pcmd->UserCallback(cmd_list, pcmd);
                 }
@@ -123,7 +151,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     r.w = clip_rect.z - clip_rect.x;
                     r.h = clip_rect.w - clip_rect.y;
 
-                    SDL_RenderSetClipRect(g_SDLRenderer, &r);
+                    SDL_RenderSetClipRect(bd->SDLRenderer, &r);
 
 
                     int xy_stride = sizeof(ImDrawVert);
@@ -135,9 +163,9 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     int col_stride = sizeof(ImDrawVert);
                     int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-                    SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? g_SDLFontTexture : NULL);
+                    SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? bd->FontTexture : NULL);
 
-                    SDL_RenderGeometryRaw(g_SDLRenderer, tex, 
+                    SDL_RenderGeometryRaw(bd->SDLRenderer, tex, 
                             xy, xy_stride, color,
                             col_stride, 
                             uv, uv_stride, 
@@ -150,7 +178,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
         }
     }
 
-    SDL_RenderPresent(g_SDLRenderer);
+    SDL_RenderPresent(bd->SDLRenderer);
 }
 
 // Called by Init/NewFrame/Shutdown
@@ -158,29 +186,41 @@ bool ImGui_ImplSDLRenderer_CreateFontsTexture()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
-    g_SDLFontTexture = SDL_CreateTexture(g_SDLRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (g_SDLFontTexture == NULL) {
+    bd->FontTexture = SDL_CreateTexture(bd->SDLRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
+    if (bd->FontTexture == NULL) {
         SDL_Log("error creating texture");
         return false;
     }
-    SDL_UpdateTexture(g_SDLFontTexture, NULL, pixels, 4 * width);
-    SDL_SetTextureBlendMode(g_SDLFontTexture, SDL_BLENDMODE_BLEND);
+    SDL_UpdateTexture(bd->FontTexture, NULL, pixels, 4 * width);
+    SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
     // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_SDLFontTexture);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 
     return true;
 }
 
 void ImGui_ImplSDLRenderer_DestroyFontsTexture()
 {
-    if (g_SDLFontTexture) {
-        ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    if (bd->FontTexture) {
         io.Fonts->SetTexID(0);
-        SDL_DestroyTexture(g_SDLFontTexture);
-        g_SDLFontTexture = NULL;
+        SDL_DestroyTexture(bd->FontTexture);
+        bd->FontTexture = NULL;
     }
+}
+
+bool ImGui_ImplSDLRenderer_CreateDeviceObjects()
+{
+    return ImGui_ImplSDLRenderer_CreateFontsTexture();
+}
+
+void ImGui_ImplSDLRenderer_DestroyDeviceObjects()
+{
+    ImGui_ImplSDLRenderer_DestroyFontsTexture();
 }
 
