@@ -1,4 +1,5 @@
 // dear imgui: Renderer Backend for SDL_Renderer, with Platform Backend SDL 
+// (Requires: SDL 2.0.18+)
 
 // Implemented features:
 

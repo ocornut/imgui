@@ -82,6 +82,7 @@ List of high-level Frameworks Backends (combining Platform + Renderer):
 
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
+    imgui_impl_sdlrenderer.cpp ; use SDL2 and SDL_Renderer, any SDL backend (opengl, gles, gles2, d3d9, d3d11, metal or software) can be used underneath
 
 Emscripten is also supported.
 The [example_emscripten_opengl3](https://github.com/ocornut/imgui/tree/master/examples/example_emscripten_opengl3) app uses imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp, but other combos are possible.

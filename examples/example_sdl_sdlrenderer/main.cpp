@@ -4,6 +4,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // See imgui_impl_sdl.cpp for details.
+// (Requires: SDL 2.0.18+)
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
