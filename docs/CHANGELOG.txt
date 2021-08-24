@@ -44,6 +44,8 @@ Other Changes:
 
 - InputTextMultiline: Fixed label size not being included into window contents rect unless
   the whole widget is clipped.
+- TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
+  to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Fonts: imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
   (which apparently happens with Freetype 2.11). (#4394, #4145?).
 - Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)
