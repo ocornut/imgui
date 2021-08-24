@@ -46,7 +46,8 @@ Other Changes:
   the whole widget is clipped.
 - imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
   (which apparently happens with Freetype 2.11). (#4394, #4145?).
-- Backends: OpenGL3: Fix our new GL loader conflicting with user using GL3W. (#4445)
+- Backends: OpenGL3: Fixed our new GL loader conflicting with user using GL3W. (#4445)
+- Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
 
 
 -----------------------------------------------------------------------
