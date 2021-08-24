@@ -1,4 +1,4 @@
-// dear imgui, v1.83 WIP
+// dear imgui, v1.85 WIP
 // (drawing and font code)
 
 /*
@@ -54,9 +54,12 @@ Index of this file:
 
 // Visual Studio warnings
 #ifdef _MSC_VER
-#pragma warning (disable: 4127) // condition expression is constant
-#pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
-#pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#pragma warning (disable: 4127)     // condition expression is constant
+#pragma warning (disable: 4505)     // unreferenced local function has been removed (stb stuff)
+#pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#pragma warning (disable: 6255)     // [Static Analyzer] _alloca indicates failure by raising a stack overflow exception.  Consider using _malloca instead.
+#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26812)    // [Static Analyzer] The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -105,6 +108,9 @@ namespace IMGUI_STB_NAMESPACE
 #ifdef _MSC_VER
 #pragma warning (push)
 #pragma warning (disable: 4456)                             // declaration of 'xx' hides previous local declaration
+#pragma warning (disable: 6011)                             // (stb_rectpack) Dereferencing NULL pointer 'cur->next'.
+#pragma warning (disable: 6385)                             // (stb_truetype) Reading invalid data from 'buffer':  the readable size is '_Old_3`kernel_width' bytes, but '3' bytes may be read.
+#pragma warning (disable: 28182)                            // (stb_rectpack) Dereferencing NULL pointer. 'cur' contains the same NULL value as 'cur->next' did.
 #endif
 
 #if defined(__clang__)
@@ -145,7 +151,7 @@ namespace IMGUI_STB_NAMESPACE
 #define STBTT_sqrt(x)       ImSqrt(x)
 #define STBTT_pow(x,y)      ImPow(x,y)
 #define STBTT_fabs(x)       ImFabs(x)
-#define STBTT_ifloor(x)     ((int)ImFloorStd(x))
+#define STBTT_ifloor(x)     ((int)ImFloorSigned(x))
 #define STBTT_iceil(x)      ((int)ImCeil(x))
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -485,6 +491,18 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 #define ImDrawCmd_HeaderCompare(CMD_LHS, CMD_RHS)   (memcmp(CMD_LHS, CMD_RHS, ImDrawCmd_HeaderSize))    // Compare ClipRect, TextureId, VtxOffset
 #define ImDrawCmd_HeaderCopy(CMD_DST, CMD_SRC)      (memcpy(CMD_DST, CMD_SRC, ImDrawCmd_HeaderSize))    // Copy ClipRect, TextureId, VtxOffset
 
+// Try to merge two last draw commands
+void ImDrawList::_TryMergeDrawCmds()
+{
+    ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
+    ImDrawCmd* prev_cmd = curr_cmd - 1;
+    if (ImDrawCmd_HeaderCompare(curr_cmd, prev_cmd) == 0 && curr_cmd->UserCallback == NULL && prev_cmd->UserCallback == NULL)
+    {
+        prev_cmd->ElemCount += curr_cmd->ElemCount;
+        CmdBuffer.pop_back();
+    }
+}
+
 // Our scheme may appears a bit unusual, basically we want the most-common calls AddLine AddRect etc. to not have to perform any check so we always have a command ready in the stack.
 // The cost of figuring out if a new command has to be added or if we can merge is paid in those Update** functions only.
 void ImDrawList::_OnChangedClipRect()
@@ -687,9 +705,11 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 }
 
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
-// Those macros expects l-values.
-#define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     do { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = 1.0f / ImSqrt(d2); VX *= inv_len; VY *= inv_len; } } while (0)
-#define IM_FIXNORMAL2F(VX,VY)               do { float d2 = VX*VX + VY*VY; if (d2 < 0.5f) d2 = 0.5f; float inv_lensq = 1.0f / d2; VX *= inv_lensq; VY *= inv_lensq; } while (0)
+// - Those macros expects l-values and need to be used as their own statement.
+// - Those macros are intentionally not surrounded by the 'do {} while (0)' idiom because even that translates to runtime with debug compilers.
+#define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrt(d2); VX *= inv_len; VY *= inv_len; } } (void)0
+#define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
+#define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
@@ -1037,7 +1057,6 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min_sample <= a_max_sample);
 
     // Calculate arc auto segment step size
     if (a_step <= 0)
@@ -1046,17 +1065,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
     // Make sure we never do steps larger than one quarter of the circle
     a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
 
-    // Normalize a_min_sample to always start lie in [0..IM_DRAWLIST_ARCFAST_SAMPLE_MAX] range.
-    if (a_min_sample < 0)
-    {
-        int normalized_sample = a_min_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
-        if (normalized_sample < 0)
-            normalized_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
-        a_max_sample += (normalized_sample - a_min_sample);
-        a_min_sample = normalized_sample;
-    }
-
-    const int sample_range = a_max_sample - a_min_sample;
+    const int sample_range = ImAbs(a_max_sample - a_min_sample);
     const int a_next_step = a_step;
 
     int samples = sample_range + 1;
@@ -1082,16 +1091,40 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
     ImVec2* out_ptr = _Path.Data + (_Path.Size - samples);
 
     int sample_index = a_min_sample;
-    for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
+    if (sample_index < 0 || sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
     {
-        // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
-        if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
-            sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        sample_index = sample_index % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        if (sample_index < 0)
+            sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+    }
 
-        const ImVec2 s = _Data->ArcFastVtx[sample_index];
-        out_ptr->x = center.x + s.x * radius;
-        out_ptr->y = center.y + s.y * radius;
-        out_ptr++;
+    if (a_max_sample >= a_min_sample)
+    {
+        for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
+        {
+            // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
+            if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+                sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+            const ImVec2 s = _Data->ArcFastVtx[sample_index];
+            out_ptr->x = center.x + s.x * radius;
+            out_ptr->y = center.y + s.y * radius;
+            out_ptr++;
+        }
+    }
+    else
+    {
+        for (int a = a_min_sample; a >= a_max_sample; a -= a_step, sample_index -= a_step, a_step = a_next_step)
+        {
+            // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
+            if (sample_index < 0)
+                sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+
+            const ImVec2 s = _Data->ArcFastVtx[sample_index];
+            out_ptr->x = center.x + s.x * radius;
+            out_ptr->y = center.y + s.y * radius;
+            out_ptr++;
+        }
     }
 
     if (extra_max_sample)
@@ -1116,7 +1149,6 @@ void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, fl
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min <= a_max);
 
     // Note that we are adding a point at both a_min and a_max.
     // If you are trying to draw a full closed circle you don't want the overlapping points!
@@ -1136,7 +1168,6 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min_of_12 <= a_max_of_12);
     _PathArcToFastEx(center, radius, a_min_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, a_max_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, 0);
 }
 
@@ -1147,7 +1178,6 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
         _Path.push_back(center);
         return;
     }
-    IM_ASSERT(a_min <= a_max);
 
     if (num_segments > 0)
     {
@@ -1158,28 +1188,33 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     // Automatic segment count
     if (radius <= _Data->ArcFastRadiusCutoff)
     {
+        const bool a_is_reverse = a_max < a_min;
+
         // We are going to use precomputed values for mid samples.
         // Determine first and last sample in lookup table that belong to the arc.
-        const int a_min_sample = (int)ImCeil(IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f));
-        const int a_max_sample = (int)(      IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (IM_PI * 2.0f));
-        const int a_mid_samples = ImMax(a_max_sample - a_min_sample, 0);
+        const float a_min_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f);
+        const float a_max_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (IM_PI * 2.0f);
+
+        const int a_min_sample = a_is_reverse ? (int)ImFloorSigned(a_min_sample_f) : (int)ImCeil(a_min_sample_f);
+        const int a_max_sample = a_is_reverse ? (int)ImCeil(a_max_sample_f) : (int)ImFloorSigned(a_max_sample_f);
+        const int a_mid_samples = a_is_reverse ? ImMax(a_min_sample - a_max_sample, 0) : ImMax(a_max_sample - a_min_sample, 0);
 
         const float a_min_segment_angle = a_min_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
         const float a_max_segment_angle = a_max_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
-        const bool a_emit_start = (a_min_segment_angle - a_min) > 0.0f;
-        const bool a_emit_end = (a_max - a_max_segment_angle) > 0.0f;
+        const bool a_emit_start = (a_min_segment_angle - a_min) != 0.0f;
+        const bool a_emit_end = (a_max - a_max_segment_angle) != 0.0f;
 
         _Path.reserve(_Path.Size + (a_mid_samples + 1 + (a_emit_start ? 1 : 0) + (a_emit_end ? 1 : 0)));
         if (a_emit_start)
             _Path.push_back(ImVec2(center.x + ImCos(a_min) * radius, center.y + ImSin(a_min) * radius));
-        if (a_max_sample >= a_min_sample)
+        if (a_mid_samples > 0)
             _PathArcToFastEx(center, radius, a_min_sample, a_max_sample, 0);
         if (a_emit_end)
             _Path.push_back(ImVec2(center.x + ImCos(a_max) * radius, center.y + ImSin(a_max) * radius));
     }
     else
     {
-        const float arc_length = a_max - a_min;
+        const float arc_length = ImAbs(a_max - a_min);
         const int circle_segment_count = _CalcCircleAutoSegmentCount(radius);
         const int arc_segment_count = ImMax((int)ImCeil(circle_segment_count * arc_length / (IM_PI * 2.0f)), (int)(2.0f * IM_PI / arc_length));
         _PathArcToN(center, radius, a_min, a_max, arc_segment_count);
@@ -1444,24 +1479,22 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
         return;
 
-    // Obtain segment count
     if (num_segments <= 0)
     {
-        // Automatic segment count
-        num_segments = _CalcCircleAutoSegmentCount(radius);
+        // Use arc with automatic segment count
+        _PathArcToFastEx(center, radius - 0.5f, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
+        _Path.Size--;
     }
     else
     {
         // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
         num_segments = ImClamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
+
+        // Because we are filling a closed shape we remove 1 from the count of segments/points
+        const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
+        PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
     }
 
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    if (num_segments == 12)
-        PathArcToFast(center, radius - 0.5f, 0, 12 - 1);
-    else
-        PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
     PathStroke(col, ImDrawFlags_Closed, thickness);
 }
 
@@ -1470,24 +1503,22 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
         return;
 
-    // Obtain segment count
     if (num_segments <= 0)
     {
-        // Automatic segment count
-        num_segments = _CalcCircleAutoSegmentCount(radius);
+        // Use arc with automatic segment count
+        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
+        _Path.Size--;
     }
     else
     {
         // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
         num_segments = ImClamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
+
+        // Because we are filling a closed shape we remove 1 from the count of segments/points
+        const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
+        PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    if (num_segments == 12)
-        PathArcToFast(center, radius, 0, 12 - 1);
-    else
-        PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     PathFillConvex(col);
 }
 
@@ -1967,6 +1998,7 @@ void    ImFontAtlas::ClearInputData()
     ConfigData.clear();
     CustomRects.clear();
     PackIdMouseCursors = PackIdLines = -1;
+    // Important: we leave TexReady untouched
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -1979,14 +2011,14 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexPixelsUseColors = false;
+    // Important: we leave TexReady untouched
 }
 
 void    ImFontAtlas::ClearFonts()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    for (int i = 0; i < Fonts.Size; i++)
-        IM_DELETE(Fonts[i]);
-    Fonts.clear();
+    Fonts.clear_delete();
+    TexReady = false;
 }
 
 void    ImFontAtlas::Clear()
@@ -2000,11 +2032,7 @@ void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_wid
 {
     // Build atlas on demand
     if (TexPixelsAlpha8 == NULL)
-    {
-        if (ConfigData.empty())
-            AddFontDefault();
         Build();
-    }
 
     *out_pixels = TexPixelsAlpha8;
     if (out_width) *out_width = TexWidth;
@@ -2063,6 +2091,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
     // Invalidate texture
+    TexReady = false;
     ClearTexData();
     return new_font_cfg.DstFont;
 }
@@ -2134,7 +2163,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
     IM_ASSERT(font_cfg.FontData == NULL);
     font_cfg.FontData = ttf_data;
     font_cfg.FontDataSize = ttf_size;
-    font_cfg.SizePixels = size_pixels;
+    font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     if (glyph_ranges)
         font_cfg.GlyphRanges = glyph_ranges;
     return AddFont(&font_cfg);
@@ -2224,6 +2253,10 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
+
+    // Default font is none are specified
+    if (ConfigData.Size == 0)
+        AddFontDefault();
 
     // Select builder
     // - Note that we do not reassign to atlas->FontBuilderIO, since it is likely to point to static data which
@@ -2546,9 +2579,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         }
     }
 
-    // Cleanup temporary (ImVector doesn't honor destructor)
-    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
-        src_tmp_array[src_i].~ImFontBuildSrcData();
+    // Cleanup
+    src_tmp_array.clear_destruct();
 
     ImFontAtlasBuildFinish(atlas);
     return true;
@@ -2764,22 +2796,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
         if (atlas->Fonts[i]->DirtyLookupTables)
             atlas->Fonts[i]->BuildLookupTable();
 
-    // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
-    // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
-    // FIXME: Also note that 0x2026 is currently seldom included in our font ranges. Because of this we are more likely to use three individual dots.
-    for (int i = 0; i < atlas->Fonts.size(); i++)
-    {
-        ImFont* font = atlas->Fonts[i];
-        if (font->EllipsisChar != (ImWchar)-1)
-            continue;
-        const ImWchar ellipsis_variants[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
-        for (int j = 0; j < IM_ARRAYSIZE(ellipsis_variants); j++)
-            if (font->FindGlyphNoFallback(ellipsis_variants[j]) != NULL) // Verify glyph exists
-            {
-                font->EllipsisChar = ellipsis_variants[j];
-                break;
-            }
-    }
+    atlas->TexReady = true;
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -2800,6 +2817,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesKorean()
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
         0x3131, 0x3163, // Korean alphabets
         0xAC00, 0xD7A3, // Korean characters
+        0xFFFD, 0xFFFD, // Invalid
         0,
     };
     return &ranges[0];
@@ -2814,6 +2832,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChineseFull()
         0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
         0x31F0, 0x31FF, // Katakana Phonetic Extensions
         0xFF00, 0xFFEF, // Half-width characters
+        0xFFFD, 0xFFFD, // Invalid
         0x4e00, 0x9FAF, // CJK Ideograms
         0,
     };
@@ -2890,7 +2909,8 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
         0x2000, 0x206F, // General Punctuation
         0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
         0x31F0, 0x31FF, // Katakana Phonetic Extensions
-        0xFF00, 0xFFEF  // Half-width characters
+        0xFF00, 0xFFEF, // Half-width characters
+        0xFFFD, 0xFFFD  // Invalid
     };
     static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00) * 2 + 1] = { 0 };
     if (!full_ranges[0])
@@ -2979,7 +2999,8 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
         0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
         0x31F0, 0x31FF, // Katakana Phonetic Extensions
-        0xFF00, 0xFFEF  // Half-width characters
+        0xFF00, 0xFFEF, // Half-width characters
+        0xFFFD, 0xFFFD  // Invalid
     };
     static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00)*2 + 1] = { 0 };
     if (!full_ranges[0])
@@ -3078,8 +3099,9 @@ ImFont::ImFont()
 {
     FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
-    FallbackChar = (ImWchar)'?';
+    FallbackChar = (ImWchar)-1;
     EllipsisChar = (ImWchar)-1;
+    DotChar = (ImWchar)-1;
     FallbackGlyph = NULL;
     ContainerAtlas = NULL;
     ConfigData = NULL;
@@ -3108,6 +3130,14 @@ void    ImFont::ClearOutputData()
     DirtyLookupTables = true;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
+}
+
+static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_chars, int candidate_chars_count)
+{
+    for (int n = 0; n < candidate_chars_count; n++)
+        if (font->FindGlyphNoFallback(candidate_chars[n]) != NULL)
+            return candidate_chars[n];
+    return (ImWchar)-1;
 }
 
 void ImFont::BuildLookupTable()
@@ -3152,9 +3182,31 @@ void ImFont::BuildLookupTable()
     SetGlyphVisible((ImWchar)' ', false);
     SetGlyphVisible((ImWchar)'\t', false);
 
-    // Setup fall-backs
+    // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
+    // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
+    // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
+    const ImWchar ellipsis_chars[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
+    const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
+    if (EllipsisChar == (ImWchar)-1)
+        EllipsisChar = FindFirstExistingGlyph(this, ellipsis_chars, IM_ARRAYSIZE(ellipsis_chars));
+    if (DotChar == (ImWchar)-1)
+        DotChar = FindFirstExistingGlyph(this, dots_chars, IM_ARRAYSIZE(dots_chars));
+
+    // Setup fallback character
+    const ImWchar fallback_chars[] = { (ImWchar)IM_UNICODE_CODEPOINT_INVALID, (ImWchar)'?', (ImWchar)' ' };
     FallbackGlyph = FindGlyphNoFallback(FallbackChar);
-    FallbackAdvanceX = FallbackGlyph ? FallbackGlyph->AdvanceX : 0.0f;
+    if (FallbackGlyph == NULL)
+    {
+        FallbackChar = FindFirstExistingGlyph(this, fallback_chars, IM_ARRAYSIZE(fallback_chars));
+        FallbackGlyph = FindGlyphNoFallback(FallbackChar);
+        if (FallbackGlyph == NULL)
+        {
+            FallbackGlyph = &Glyphs.back();
+            FallbackChar = (ImWchar)FallbackGlyph->Codepoint;
+        }
+    }
+
+    FallbackAdvanceX = FallbackGlyph->AdvanceX;
     for (int i = 0; i < max_codepoint + 1; i++)
         if (IndexAdvanceX[i] < 0.0f)
             IndexAdvanceX[i] = FallbackAdvanceX;
@@ -3177,12 +3229,6 @@ void ImFont::SetGlyphVisible(ImWchar c, bool visible)
 {
     if (ImFontGlyph* glyph = (ImFontGlyph*)(void*)FindGlyph((ImWchar)c))
         glyph->Visible = visible ? 1 : 0;
-}
-
-void ImFont::SetFallbackChar(ImWchar c)
-{
-    FallbackChar = c;
-    BuildLookupTable();
 }
 
 void ImFont::GrowIndex(int new_size)
@@ -3469,6 +3515,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     return text_size;
 }
 
+// Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
 void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c) const
 {
     const ImFontGlyph* glyph = FindGlyph(c);
@@ -3483,6 +3530,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
+// Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
 void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
@@ -3684,6 +3732,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 // - RenderMouseCursor()
 // - RenderArrowPointingAt()
 // - RenderRectFilledRangeH()
+// - RenderRectFilledWithHole()
 //-----------------------------------------------------------------------------
 // Function in need of a redesign (legacy mess)
 // - RenderColorRectWithAlphaCheckerboard()
@@ -3752,7 +3801,7 @@ void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, Im
     if (font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
     {
         pos -= offset;
-        const ImTextureID tex_id = font_atlas->TexID;
+        ImTextureID tex_id = font_atlas->TexID;
         draw_list->PushTextureID(tex_id);
         draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale,    uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale,    uv[2], uv[3], col_shadow);

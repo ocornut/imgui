@@ -40,7 +40,7 @@ endif
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	ifneq ($(WITH_EXTRA_WARNINGS), 0)
+	ifeq ($(WITH_EXTRA_WARNINGS), 1)
 		CXXFLAGS += -Wextra -Wpedantic
 		ifeq ($(shell $(CXX) -v 2>&1 | grep -c "clang version"), 1)
 			CXXFLAGS += -Wshadow -Wsign-conversion
@@ -51,15 +51,15 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	ifneq ($(WITH_EXTRA_WARNINGS), 0)
-		CXXFLAGS += -Weverything -Wno-reserved-id-macro -Wno-c++98-compat-pedantic -Wno-padded -Wno-c++11-long-long
+	ifeq ($(WITH_EXTRA_WARNINGS), 1)
+		CXXFLAGS += -Weverything -Wno-reserved-id-macro -Wno-c++98-compat-pedantic -Wno-padded -Wno-c++11-long-long -Wno-poison-system-directories
 	endif
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(OS), Windows_NT)
 	ECHO_MESSAGE = "MinGW"
-	ifneq ($(WITH_EXTRA_WARNINGS), 0)
+	ifeq ($(WITH_EXTRA_WARNINGS), 1)
 		CXXFLAGS += -Wextra -Wpedantic
 	endif
 	LIBS += -limm32

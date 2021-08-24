@@ -54,7 +54,6 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 void WaitForLastSubmittedFrame();
 FrameContext* WaitForNextFrameResources();
-void ResizeSwapChain(HWND hWnd, int width, int height);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
@@ -117,21 +116,24 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    MSG msg;
-    ZeroMemory(&msg, sizeof(msg));
-    while (msg.message != WM_QUIT)
+    bool done = false;
+    while (!done)
     {
         // Poll and handle messages (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        if (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+        MSG msg;
+        while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
         {
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
-            continue;
+            if (msg.message == WM_QUIT)
+                done = true;
         }
+        if (done)
+            break;
 
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
@@ -349,7 +351,7 @@ bool CreateDeviceD3D(HWND hWnd)
 void CleanupDeviceD3D()
 {
     CleanupRenderTarget();
-    if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = NULL; }
+    if (g_pSwapChain) { g_pSwapChain->SetFullscreenState(false, NULL); g_pSwapChain->Release(); g_pSwapChain = NULL; }
     if (g_hSwapChainWaitableObject != NULL) { CloseHandle(g_hSwapChainWaitableObject); }
     for (UINT i = 0; i < NUM_FRAMES_IN_FLIGHT; i++)
         if (g_frameContext[i].CommandAllocator) { g_frameContext[i].CommandAllocator->Release(); g_frameContext[i].CommandAllocator = NULL; }
@@ -429,31 +431,6 @@ FrameContext* WaitForNextFrameResources()
     return frameCtx;
 }
 
-void ResizeSwapChain(HWND hWnd, int width, int height)
-{
-    DXGI_SWAP_CHAIN_DESC1 sd;
-    g_pSwapChain->GetDesc1(&sd);
-    sd.Width = width;
-    sd.Height = height;
-
-    IDXGIFactory4* dxgiFactory = NULL;
-    g_pSwapChain->GetParent(IID_PPV_ARGS(&dxgiFactory));
-
-    g_pSwapChain->Release();
-    CloseHandle(g_hSwapChainWaitableObject);
-
-    IDXGISwapChain1* swapChain1 = NULL;
-    dxgiFactory->CreateSwapChainForHwnd(g_pd3dCommandQueue, hWnd, &sd, NULL, NULL, &swapChain1);
-    swapChain1->QueryInterface(IID_PPV_ARGS(&g_pSwapChain));
-    swapChain1->Release();
-    dxgiFactory->Release();
-
-    g_pSwapChain->SetMaximumFrameLatency(NUM_BACK_BUFFERS);
-
-    g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
-    assert(g_hSwapChainWaitableObject != NULL);
-}
-
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -469,11 +446,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
         {
             WaitForLastSubmittedFrame();
-            ImGui_ImplDX12_InvalidateDeviceObjects();
             CleanupRenderTarget();
-            ResizeSwapChain(hWnd, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam));
+            HRESULT result = g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
+            assert(SUCCEEDED(result) && "Failed to resize swapchain.");
             CreateRenderTarget();
-            ImGui_ImplDX12_CreateDeviceObjects();
         }
         return 0;
     case WM_SYSCOMMAND:
