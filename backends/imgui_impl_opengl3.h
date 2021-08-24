@@ -42,7 +42,7 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 
 // Try to detect GLES on matching platforms
 #if defined(__APPLE__)
-#include "TargetConditionals.h"
+#include <TargetConditionals.h>
 #endif
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
 #define IMGUI_IMPL_OPENGL_ES3               // iOS, Android  -> GL ES 3, "#version 300 es"
