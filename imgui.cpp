@@ -13112,8 +13112,11 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         DockSettingsRenameNodeReferences(node->ID, new_node->ID);
         for (int n = 0; n < new_node->Windows.Size; n++)
         {
-            new_node->Windows[n]->Flags &= ~ImGuiWindowFlags_ChildWindow;
-            UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
+            ImGuiWindow* window = new_node->Windows[n];
+            window->Flags &= ~ImGuiWindowFlags_ChildWindow;
+            if (window->ParentWindow)
+                window->ParentWindow->DC.ChildWindows.find_erase(window);
+            UpdateWindowParentAndRootLinks(window, window->Flags, NULL);
         }
         node = new_node;
     }
@@ -13297,6 +13300,8 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     window->DockIsActive = window->DockTabWantClose = false;
     window->DockId = save_dock_id;
     window->Flags &= ~ImGuiWindowFlags_ChildWindow;
+    if (window->ParentWindow)
+        window->ParentWindow->DC.ChildWindows.find_erase(window);
     UpdateWindowParentAndRootLinks(window, window->Flags, NULL); // Update immediately
 
     // Remove window
