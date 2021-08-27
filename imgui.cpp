@@ -907,7 +907,6 @@ namespace ImGui
 static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavUpdateWindowingOverlay();
-static void             NavUpdateMoveResult();
 static void             NavUpdateInitResult();
 static void             NavUpdateCancelRequest();
 static float            NavUpdatePageUpPageDown();
@@ -8940,7 +8939,8 @@ void ImGui::NavMoveRequestCancel()
     NavUpdateAnyRequestFlag();
 }
 
-void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags)
+// Forward will reuse the move request again on the next frame (generally with modifications done to it)
+void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavMoveFlags move_flags)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_None);
@@ -8949,7 +8949,6 @@ void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const Im
     g.NavMoveClipDir = clip_dir;
     g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
     g.NavMoveRequestFlags = move_flags;
-    g.NavWindow->NavRectRel[g.NavLayer] = bb_rel;
 }
 
 // Navigation wrap-around logic is delayed to the end of the frame because this operation is only valid after entire
@@ -9151,16 +9150,7 @@ static void ImGui::NavUpdate()
 
     // Process navigation move request
     if (g.NavMoveRequest)
-        NavUpdateMoveResult();
-
-    // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
-    if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
-    {
-        IM_ASSERT(g.NavMoveRequest);
-        if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
-            g.NavDisableHighlight = false;
-        g.NavMoveRequestForward = ImGuiNavForward_None;
-    }
+        NavMoveRequestApplyResult();
 
     // Apply application mouse position movement, after we had a chance to process move request result.
     if (g.NavMousePosDirty && g.NavIdIsAlive)
@@ -9178,7 +9168,7 @@ static void ImGui::NavUpdate()
     g.NavJustTabbedId = 0;
     IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
 
-    // Store our return window (for returning from Layer 1 to Layer 0) and clear it as soon as we step back in our own Layer 0
+    // Store our return window (for returning from Menu Layer to Main Layer) and clear it as soon as we step back in our own Layer 0
     if (g.NavWindow)
         NavSaveLastChildNavWindowIntoParent(g.NavWindow);
     if (g.NavWindow && g.NavWindow->NavLastChildNavWindow != NULL && g.NavLayer == ImGuiNavLayer_Main)
@@ -9235,12 +9225,11 @@ static void ImGui::NavUpdate()
         }
         g.NavMoveClipDir = g.NavMoveDir;
     }
-    else
+    else if (g.NavMoveRequestForward == ImGuiNavForward_ForwardQueued)
     {
         // Forwarding previous request (which has been modified, e.g. wrap around menus rewrite the requests with a starting rectangle at the other side of the window)
         // (Preserve g.NavMoveRequestFlags, g.NavMoveClipDir which were set by the NavMoveRequestForward() function)
         IM_ASSERT(g.NavMoveDir != ImGuiDir_None && g.NavMoveClipDir != ImGuiDir_None);
-        IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_ForwardQueued);
         IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequestForward %d\n", g.NavMoveDir);
         g.NavMoveRequestForward = ImGuiNavForward_ForwardActive;
     }
@@ -9251,7 +9240,7 @@ static void ImGui::NavUpdate()
     if (nav_keyboard_active)
         nav_scoring_rect_offset_y = NavUpdatePageUpPageDown();
 
-    // If we initiate a movement request and have no current NavId, we initiate a InitDefautRequest that will be used as a fallback if the direction fails to find a match
+    // If we initiate a movement request and have no current NavId, we initiate a InitDefaultRequest that will be used as a fallback if the direction fails to find a match
     if (g.NavMoveDir != ImGuiDir_None)
     {
         g.NavMoveRequest = true;
@@ -9350,10 +9339,14 @@ static void ImGui::NavUpdateInitResult()
     }
 }
 
-// Apply result from previous frame navigation directional move request
-static void ImGui::NavUpdateMoveResult()
+// Apply result from previous frame navigation directional move request. Always called from NavUpdate()
+void ImGui::NavMoveRequestApplyResult()
 {
     ImGuiContext& g = *GImGui;
+
+    if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
+        g.NavMoveRequestForward = ImGuiNavForward_None;
+
     if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
     {
         // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
@@ -9462,6 +9455,7 @@ static void ImGui::NavUpdateCancelRequest()
 }
 
 // Handle PageUp/PageDown/Home/End keys
+// FIXME-NAV: how to get Home/End to aim at the beginning/end of a 2D grid?
 static float ImGui::NavUpdatePageUpPageDown()
 {
     ImGuiContext& g = *GImGui;
@@ -9544,14 +9538,14 @@ static void ImGui::NavEndFrame()
         NavUpdateWindowingOverlay();
 
     // Perform wrap-around in menus
-    // FIXME-NAV: Wrap support could be moved to the scoring function and than WrapX would function without an extra frame. This is essentially same as tabbing!
+    // FIXME-NAV: Wrap (not Loop) support could be handled by the scoring function and then WrapX would function without an extra frame.
     ImGuiWindow* window = g.NavWindow;
     const ImGuiNavMoveFlags move_flags = g.NavMoveRequestFlags;
     const ImGuiNavMoveFlags wanted_flags = ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX | ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY;
     if (window && NavMoveRequestButNoResultYet() && (g.NavMoveRequestFlags & wanted_flags) && g.NavMoveRequestForward == ImGuiNavForward_None)
     {
-        ImRect bb_rel = window->NavRectRel[0];
-
+        bool do_forward = false;
+        ImRect bb_rel = window->NavRectRel[g.NavLayer];
         ImGuiDir clip_dir = g.NavMoveDir;
         if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
         {
@@ -9562,7 +9556,7 @@ static void ImGui::NavEndFrame()
                 bb_rel.TranslateY(-bb_rel.GetHeight());
                 clip_dir = ImGuiDir_Up;
             }
-            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+            do_forward = true;
         }
         if (g.NavMoveDir == ImGuiDir_Right && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
         {
@@ -9572,7 +9566,7 @@ static void ImGui::NavEndFrame()
                 bb_rel.TranslateY(+bb_rel.GetHeight());
                 clip_dir = ImGuiDir_Down;
             }
-            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+            do_forward = true;
         }
         if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
         {
@@ -9583,7 +9577,7 @@ static void ImGui::NavEndFrame()
                 bb_rel.TranslateX(-bb_rel.GetWidth());
                 clip_dir = ImGuiDir_Left;
             }
-            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+            do_forward = true;
         }
         if (g.NavMoveDir == ImGuiDir_Down && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
         {
@@ -9593,7 +9587,12 @@ static void ImGui::NavEndFrame()
                 bb_rel.TranslateX(+bb_rel.GetWidth());
                 clip_dir = ImGuiDir_Right;
             }
-            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+            do_forward = true;
+        }
+        if (do_forward)
+        {
+            window->NavRectRel[g.NavLayer] = bb_rel;
+            NavMoveRequestForward(g.NavMoveDir, clip_dir, move_flags);
         }
     }
 }
