@@ -8437,7 +8437,7 @@ void ImGui::EndPopup()
     IM_ASSERT(window->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
     IM_ASSERT(g.BeginPopupStack.Size > 0);
 
-    // Make all menus and popups wrap around for now, may need to expose that policy.
+    // Make all menus and popups wrap around for now, may need to expose that policy (e.g. focus scope could include wrap/loop policy flags used by new move requests)
     if (g.NavWindow == window)
         NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY);
 
@@ -8952,14 +8952,14 @@ void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const Im
     g.NavWindow->NavRectRel[g.NavLayer] = bb_rel;
 }
 
-void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags)
+// Navigation wrap-around logic is delayed to the end of the frame because this operation is only valid after entire
+// popup is assembled and in case of appended popups it is not clear which EndPopup() call is final.
+void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags wrap_flags)
 {
     ImGuiContext& g = *GImGui;
-
-    // Navigation wrap-around logic is delayed to the end of the frame because this operation is only valid after entire
-    // popup is assembled and in case of appended popups it is not clear which EndPopup() call is final.
-    g.NavWrapRequestWindow = window;
-    g.NavWrapRequestFlags = move_flags;
+    IM_ASSERT(wrap_flags != 0); // Call with _WrapX, _WrapY, _LoopX, _LoopY
+    if (g.NavWindow == window && g.NavMoveRequest && g.NavLayer == ImGuiNavLayer_Main)
+        g.NavMoveRequestFlags |= wrap_flags;
 }
 
 // FIXME: This could be replaced by updating a frame number in each window when (window == NavWindow) and (NavLayer == 0).
@@ -9105,8 +9105,6 @@ static void ImGui::NavUpdate()
     ImGuiIO& io = g.IO;
 
     io.WantSetMousePos = false;
-    g.NavWrapRequestWindow = NULL;
-    g.NavWrapRequestFlags = ImGuiNavMoveFlags_None;
 #if 0
     if (g.NavScoringCount > 0) IMGUI_DEBUG_LOG("NavScoringCount %d for '%s' layer %d (Init:%d, Move:%d)\n", g.FrameCount, g.NavScoringCount, g.NavWindow ? g.NavWindow->Name : "NULL", g.NavLayer, g.NavInitRequest || g.NavInitResultId != 0, g.NavMoveRequest);
 #endif
@@ -9546,11 +9544,12 @@ static void ImGui::NavEndFrame()
         NavUpdateWindowingOverlay();
 
     // Perform wrap-around in menus
-    ImGuiWindow* window = g.NavWrapRequestWindow;
-    ImGuiNavMoveFlags move_flags = g.NavWrapRequestFlags;
-    if (window != NULL && g.NavWindow == window && NavMoveRequestButNoResultYet() && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == ImGuiNavLayer_Main)
+    // FIXME-NAV: Wrap support could be moved to the scoring function and than WrapX would function without an extra frame. This is essentially same as tabbing!
+    ImGuiWindow* window = g.NavWindow;
+    const ImGuiNavMoveFlags move_flags = g.NavMoveRequestFlags;
+    const ImGuiNavMoveFlags wanted_flags = ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX | ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY;
+    if (window && NavMoveRequestButNoResultYet() && (g.NavMoveRequestFlags & wanted_flags) && g.NavMoveRequestForward == ImGuiNavForward_None)
     {
-        IM_ASSERT(move_flags != 0); // No points calling this with no wrapping
         ImRect bb_rel = window->NavRectRel[0];
 
         ImGuiDir clip_dir = g.NavMoveDir;
