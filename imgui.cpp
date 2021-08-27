@@ -909,6 +909,7 @@ static void             NavUpdateWindowing();
 static void             NavUpdateWindowingOverlay();
 static void             NavUpdateMoveResult();
 static void             NavUpdateInitResult();
+static void             NavUpdateCancelRequest();
 static float            NavUpdatePageUpPageDown();
 static inline void      NavUpdateAnyRequestFlag();
 static void             NavEndFrame();
@@ -9193,43 +9194,7 @@ static void ImGui::NavUpdate()
     io.NavVisible = (io.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL);
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
-    if (IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed))
-    {
-        IMGUI_DEBUG_LOG_NAV("[nav] ImGuiNavInput_Cancel\n");
-        if (g.ActiveId != 0)
-        {
-            if (!IsActiveIdUsingNavInput(ImGuiNavInput_Cancel))
-                ClearActiveID();
-        }
-        else if (g.NavLayer != ImGuiNavLayer_Main)
-        {
-            // Leave the "menu" layer
-            NavRestoreLayer(ImGuiNavLayer_Main);
-        }
-        else if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
-        {
-            // Exit child window
-            ImGuiWindow* child_window = g.NavWindow;
-            ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
-            IM_ASSERT(child_window->ChildId != 0);
-            ImRect child_rect = child_window->Rect();
-            FocusWindow(parent_window);
-            SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, ImRect(child_rect.Min - parent_window->Pos, child_rect.Max - parent_window->Pos));
-        }
-        else if (g.OpenPopupStack.Size > 0)
-        {
-            // Close open popup/menu
-            if (!(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
-                ClosePopupToLevel(g.OpenPopupStack.Size - 1, true);
-        }
-        else
-        {
-            // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
-            if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
-                g.NavWindow->NavLastIds[0] = 0;
-            g.NavId = g.NavFocusScopeId = 0;
-        }
-    }
+    NavUpdateCancelRequest();
 
     // Process manual activation request
     g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavInputId = 0;
@@ -9450,6 +9415,52 @@ static void ImGui::NavUpdateMoveResult()
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
     g.NavDisableHighlight = false;
     g.NavDisableMouseHover = g.NavMousePosDirty = true;
+}
+
+// Process NavCancel input (to close a popup, get back to parent, clear focus)
+// FIXME: In order to support e.g. Escape to clear a selection we'll need:
+// - either to store the equivalent of ActiveIdUsingKeyInputMask for a FocusScope and test for it.
+// - either to move most/all of those tests to the epilogue/end functions of the scope they are dealing with (e.g. exit child window in EndChild()) or in EndFrame(), to allow an earlier intercept
+static void ImGui::NavUpdateCancelRequest()
+{
+    ImGuiContext& g = *GImGui;
+    if (!IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed))
+        return;
+
+    IMGUI_DEBUG_LOG_NAV("[nav] ImGuiNavInput_Cancel\n");
+    if (g.ActiveId != 0)
+    {
+        if (!IsActiveIdUsingNavInput(ImGuiNavInput_Cancel))
+            ClearActiveID();
+    }
+    else if (g.NavLayer != ImGuiNavLayer_Main)
+    {
+        // Leave the "menu" layer
+        NavRestoreLayer(ImGuiNavLayer_Main);
+    }
+    else if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
+    {
+        // Exit child window
+        ImGuiWindow* child_window = g.NavWindow;
+        ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
+        IM_ASSERT(child_window->ChildId != 0);
+        ImRect child_rect = child_window->Rect();
+        FocusWindow(parent_window);
+        SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, ImRect(child_rect.Min - parent_window->Pos, child_rect.Max - parent_window->Pos));
+    }
+    else if (g.OpenPopupStack.Size > 0)
+    {
+        // Close open popup/menu
+        if (!(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
+            ClosePopupToLevel(g.OpenPopupStack.Size - 1, true);
+    }
+    else
+    {
+        // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
+        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
+            g.NavWindow->NavLastIds[0] = 0;
+        g.NavId = g.NavFocusScopeId = 0;
+    }
 }
 
 // Handle PageUp/PageDown/Home/End keys
