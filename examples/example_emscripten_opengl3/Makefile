@@ -23,15 +23,18 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
+CPPFLAGS =
+LDFLAGS =
+EMS =
 
 ##---------------------------------------------------------------------
 ## EMSCRIPTEN OPTIONS
 ##---------------------------------------------------------------------
 
-EMS += -s USE_SDL=2 -s WASM=1
-EMS += -s ALLOW_MEMORY_GROWTH=1
-EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s NO_EXIT_RUNTIME=0
-EMS += -s ASSERTIONS=1
+# ("EMS" options gets added to both CPPFLAGS and LDFLAGS, whereas some options are for linker only)
+EMS += -s USE_SDL=2
+EMS += -s DISABLE_EXCEPTION_CATCHING=1
+LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
 
 # Uncomment next line to fix possible rendering bugs with Emscripten version older then 1.39.0 (https://github.com/ocornut/imgui/issues/2877)
 #EMS += -s BINARYEN_TRAP_MODE=clamp
@@ -43,7 +46,8 @@ EMS += -s ASSERTIONS=1
 # (Default value is 0. Set to 1 to enable file-system and include the misc/fonts/ folder as part of the build.)
 USE_FILE_SYSTEM ?= 0
 ifeq ($(USE_FILE_SYSTEM), 0)
-EMS += -s NO_FILESYSTEM=1 -DIMGUI_DISABLE_FILE_FUNCTIONS
+LDFLAGS += -s NO_FILESYSTEM=1
+CPPFLAGS += -DIMGUI_DISABLE_FILE_FUNCTIONS
 endif
 ifeq ($(USE_FILE_SYSTEM), 1)
 LDFLAGS += --no-heap-copy --preload-file ../../misc/fonts@/fonts
@@ -53,12 +57,10 @@ endif
 ## FINAL BUILD FLAGS
 ##---------------------------------------------------------------------
 
-CPPFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CPPFLAGS += -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 #CPPFLAGS += -g
-CPPFLAGS += -Wall -Wformat -Os
-CPPFLAGS += $(EMS)
-LIBS += $(EMS)
-LDFLAGS += --shell-file shell_minimal.html
+CPPFLAGS += -Wall -Wformat -Os $(EMS)
+LDFLAGS += --shell-file shell_minimal.html $(EMS)
 
 ##---------------------------------------------------------------------
 ## BUILD RULES
@@ -73,9 +75,6 @@ LDFLAGS += --shell-file shell_minimal.html
 %.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../libs/gl3w/GL/%.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
 all: $(EXE)
 	@echo Build complete for $(EXE)
 
@@ -86,7 +85,7 @@ serve: all
 	python3 -m http.server -d $(WEB_DIR)
 
 $(EXE): $(OBJS) $(WEB_DIR)
-	$(CXX) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
+	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
 clean:
 	rm -rf $(OBJS) $(WEB_DIR)

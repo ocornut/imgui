@@ -6,6 +6,14 @@
 // !!! If someone or something is teaching you GLUT today, you are being abused. Please show some resistance. !!!
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
+// On Windows, you can install Freeglut using vcpkg:
+//   git clone https://github.com/Microsoft/vcpkg
+//   cd vcpkg
+//   bootstrap - vcpkg.bat
+//   vcpkg install freeglut --triplet=x86-windows   ; for win32
+//   vcpkg install freeglut --triplet=x64-windows   ; for win64
+//   vcpkg integrate install                        ; register include and libs in Visual Studio
+
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 #include "imgui_impl_opengl2.h"

@@ -5,7 +5,7 @@ Build font atlases using FreeType instead of stb_truetype (which is the default 
 
 ### Usage
 
-1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype`, `vcpkg integrate install`).
+1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype --triplet=x64-windows`, `vcpkg integrate install`).
 2. Add imgui_freetype.h/cpp alongside your project files.
 3. Add `#define IMGUI_ENABLE_FREETYPE` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file
 
@@ -28,3 +28,10 @@ See https://gist.github.com/ocornut/b3a9ecf13502fd818799a452969649ad
 
 Small, thin anti-aliased fonts are typically benefiting a lots from Freetype's hinting:
 ![comparing_font_rasterizers](https://user-images.githubusercontent.com/8225057/107550178-fef87f00-6bd0-11eb-8d09-e2edb2f0ccfc.gif)
+
+### Colorful glyphs/emojis
+
+You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain colorful glyphs. See
+["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/edit/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
+
+![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)

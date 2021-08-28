@@ -204,7 +204,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev libvulkan-dev
 
     - name: Build example_null (extra warnings, gcc 32-bit)
       run: |
@@ -225,6 +225,18 @@ jobs:
       run: |
         make -C examples/example_null clean
         CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, empty IM_ASSERT)
+      run: |
+          cat > example_single_file.cpp <<'EOF'
+
+          #define IM_ASSERT(x)
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+
+          EOF
+          g++ -I. -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
 
     - name: Build example_null (freetype)
       run: |
@@ -254,10 +266,11 @@ jobs:
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with large ImDrawIdx)
+    - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
+        #define ImTextureID void*
         #define ImDrawIdx unsigned int
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
@@ -360,6 +373,9 @@ jobs:
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
+
+    - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+      run: g++ -c -I. -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
   MacOS:
     runs-on: macos-latest

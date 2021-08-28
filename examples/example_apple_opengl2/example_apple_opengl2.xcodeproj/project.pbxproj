@@ -287,7 +287,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = ../libs/gl3w;
 				USER_HEADER_SEARCH_PATHS = ../..;
 			};
 			name = Debug;
@@ -298,7 +297,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = ../libs/gl3w;
 				USER_HEADER_SEARCH_PATHS = ../..;
 			};
 			name = Release;

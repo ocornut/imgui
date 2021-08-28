@@ -117,21 +117,18 @@ GLFW (Mac) + Metal example. <BR>
 [example_glfw_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_opengl2/) <BR>
 GLFW + OpenGL2 example (legacy, fixed pipeline). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp <BR>
-**DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)** <BR>
-**Prefer using OPENGL3 code (with gl3w/glew/glad/glad2/glbinding, you can replace the OpenGL function loader)** <BR>
+**DO NOT USE THIS IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)** <BR>
 This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
 If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
 make things more complicated, will require your code to reset many OpenGL attributes to their initial
 state, and might confuse your GPU driver. One star, not recommended.
 
 [example_glfw_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_opengl3/) <BR>
-GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (programmable pipeline). <BR>
+GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (modern, programmable pipeline). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern OpenGL calls and custom shaders. <BR>
+This may actually also work with OpenGL 2.x contexts! <BR>
 Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-(Please be mindful that accessing OpenGL3+ functions requires a function loader, which are a frequent
-source for confusion for new users. We use a loader in imgui_impl_opengl3.cpp which may be different
-from the one your app normally use. Read imgui_impl_opengl3.h for details and how to change it.)
 
 [example_glfw_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/) <BR>
 GLFW (Win32, Mac, Linux) + Vulkan example. <BR>
@@ -167,7 +164,6 @@ SDL2 (Mac) + Metal example. <BR>
 SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline). <BR>
 = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp <BR>
 **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)** <BR>
-**Prefer using OPENGL3 code (with gl3w/glew/glad/glad2/glbinding, you can replace the OpenGL function loader)** <BR>
 This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
 If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
 make things more complicated, will require your code to reset many OpenGL attributes to their initial
@@ -177,10 +173,7 @@ state, and might confuse your GPU driver. One star, not recommended.
 SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern OpenGL calls and custom shaders. <BR>
-Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-(Please be mindful that accessing OpenGL3+ functions requires a function loader, which are a frequent
-source for confusion for new users. We use a loader in imgui_impl_opengl3.cpp which may be different
-from the one your app normally use. Read imgui_impl_opengl3.h for details and how to change it.)
+This may actually also work with OpenGL 2.x contexts! <BR>
 
 [example_sdl_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>

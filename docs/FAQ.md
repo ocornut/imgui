@@ -66,7 +66,7 @@ or view this file with any Markdown viewer.
 
 **This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
 
-(The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
+(The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
 
 ##### [Return to Index](#index)
 
@@ -160,8 +160,9 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 ---
 
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
-This usually means that: your font texture wasn't uploaded into GPU, or your shader or other rendering state are not reading from the right texture (e.g. texture wasn't bound).
-If this happens using the standard backends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+Your renderer is not using the font texture correctly or it hasn't be uploaded to GPU.
+- If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+- If this happens with a custom backend: make sure you have uploaded the font texture to the GPU, that all shaders are rendering states are setup properly (e.g. texture is bound). Compare your code to existing backends and use a graphics debugger such as [RenderDoc](https://renderdoc.org) to debug your rendering states.
 
 ##### [Return to Index](#index)
 
@@ -224,8 +225,11 @@ End();
 
 - If you have a same ID twice in the same location, you'll have a conflict:
 ```cpp
+Begin("MyWindow");
 Button("OK");
-Button("OK");          // ID collision! Interacting with either button will trigger the first one.
+Button("OK");      // ERROR: ID collision with the first button! Interacting with either button will trigger the first one.
+Button("");        // ERROR: ID collision with Begin("MyWindow")!
+End();
 ```
 Fear not! this is easy to solve and there are many ways to solve it!
 
@@ -237,8 +241,9 @@ are going to be created:
 ```cpp
 Begin("MyWindow");
 Button("Play");        // Label = "Play",   ID = hash of ("MyWindow", "Play")
-Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from above
-Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from above
+Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from other buttons
+Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from other buttons
+Button("##foo");       // Label = "",       ID = hash of ("MyWindow", "##foo")       // Different from window
 End();
 ```
 - If you want to completely hide the label, but still need an ID:
@@ -256,7 +261,7 @@ sprintf(buf, "My game (%f FPS)###MyGame", fps);
 Begin(buf);            // Variable title,   ID = hash of "MyGame"
 ```
 - Solving ID conflict in a more general manner:
-Use PushID() / PopID() to create scopes and manipulate the ID stack, as to avoid ID conflicts
+Use `PushID()` / `PopID()` to create scopes and manipulate the ID stack, as to avoid ID conflicts
 within the same window. This is the most convenient way of distinguishing ID when iterating and
 creating many UI elements programmatically.
 You can push a pointer, a string or an integer value into the ID stack.
@@ -296,7 +301,7 @@ PushID("node");
   PopID();
 PopID();
 ```
-- Tree nodes implicitly creates a scope for you by calling PushID().
+- Tree nodes implicitly creates a scope for you by calling `PushID()`:
 ```cpp
 Button("Click");       // Label = "Click",  ID = hash of (..., "Click")
 if (TreeNode("node"))  // <-- this function call will do a PushID() for you (unless instructed not to, with a special flag)
@@ -370,7 +375,7 @@ ImGui::Image((void*)texture, ImVec2(texture->Width, texture->Height));
 The renderer function called after ImGui::Render() will receive that same value that the user code passed:
 ```cpp
 // Cast ImTextureID / void* stored in the draw command as our texture type
-MyTexture* texture = (MyTexture*)pcmd->TextureId;
+MyTexture* texture = (MyTexture*)pcmd->GetTexID();
 MyEngineBindTexture2D(texture);
 ```
 Once you understand this design you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui.
@@ -609,7 +614,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors)
-- [Gallery](https://github.com/ocornut/imgui/issues/3488)
+- [Gallery](https://github.com/ocornut/imgui/issues/4451)
 
 ##### [Return to Index](#index)
 
@@ -655,7 +660,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
-You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3488). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and help other teams and programmers with taking decisions.
+You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/4451). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and help other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)
