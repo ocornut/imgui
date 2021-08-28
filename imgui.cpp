@@ -5677,30 +5677,25 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     float button_sz = g.FontSize;
     ImVec2 close_button_pos;
     ImVec2 collapse_button_pos;
-    if (has_close_button)
+    if (has_close_button && style.WindowCloseButtonPosition == ImGuiDir_Left)
     {
-        if (style.WindowCloseButtonPosition == ImGuiDir_Left)
-        {
-            close_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
-            pad_l += button_sz;
-        }
-        else if (style.WindowCloseButtonPosition == ImGuiDir_Right)
-        {
-            pad_r += button_sz;
-            close_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
-        }
+        close_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
+        pad_l += button_sz;
     }
-    if (has_collapse_button) {
-        if (style.WindowMenuButtonPosition == ImGuiDir_Right)
-        {
-            pad_r += button_sz;
-            collapse_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
-        }
-        else if (style.WindowMenuButtonPosition == ImGuiDir_Left)
-        {
-            collapse_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
-            pad_l += button_sz;
-        }
+    if (has_close_button && style.WindowCloseButtonPosition == ImGuiDir_Right)
+    {
+        pad_r += button_sz;
+        close_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
+    {
+        pad_r += button_sz;
+        collapse_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Left)
+    {
+        collapse_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
+        pad_l += button_sz;
     }
 
     // Collapse button (submitting first so it gets priority when choosing a navigation init fallback)
