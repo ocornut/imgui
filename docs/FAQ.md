@@ -94,6 +94,8 @@ Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
 Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp). <BR>
 The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
 
+For first-time users having issues compiling/linking/running or issues loading fonts, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions).
+
 ##### [Return to Index](#index)
 
 ---

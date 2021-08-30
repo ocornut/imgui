@@ -15,7 +15,10 @@
 // - Wiki                  https://github.com/ocornut/imgui/wiki (lots of good stuff there)
 // - Glossary              https://github.com/ocornut/imgui/wiki/Glossary
 // - Issues & support      https://github.com/ocornut/imgui/issues
-// - Discussions           https://github.com/ocornut/imgui/discussions
+
+// Getting Started?
+// - For first-time users having issues compiling/linking/running or issues loading fonts:
+//   please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
 
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
