@@ -47,6 +47,9 @@ Other Changes:
   the whole widget is clipped.
 - TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
+- IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
+  This allows apps to receive the click on void when that click is used to close popup (by default,
+  clicking on a void when a popup is open will close the popup but not release io.WantCaptureMouse).
 - Fonts: imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
   (which apparently happens with Freetype 2.11). (#4394, #4145?).
 - Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)

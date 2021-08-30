@@ -64,7 +64,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.85 WIP"
-#define IMGUI_VERSION_NUM           18409
+#define IMGUI_VERSION_NUM           18410
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 
@@ -1918,6 +1918,7 @@ struct ImGuiIO
     // [Internal] Dear ImGui will maintain those fields. Forward compatibility not guaranteed!
     //------------------------------------------------------------------
 
+    bool        WantCaptureMouseUnlessPopupClose;// Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
     ImGuiKeyModFlags KeyMods;                   // Key mods flags (same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags), updated by NewFrame()
     ImGuiKeyModFlags KeyModsPrev;               // Previous key mods
     ImVec2      MousePosPrev;                   // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
@@ -1926,7 +1927,8 @@ struct ImGuiIO
     bool        MouseClicked[5];                // Mouse button went from !Down to Down
     bool        MouseDoubleClicked[5];          // Has mouse button been double-clicked?
     bool        MouseReleased[5];               // Mouse button went from Down to !Down
-    bool        MouseDownOwned[5];              // Track if button was clicked inside a dear imgui window. We don't request mouse capture from the application if click started outside ImGui bounds.
+    bool        MouseDownOwned[5];              // Track if button was clicked inside a dear imgui window or over void blocked by a popup. We don't request mouse capture from the application if click started outside ImGui bounds.
+    bool        MouseDownOwnedUnlessPopupClose[5];//Track if button was clicked inside a dear imgui window.
     bool        MouseDownWasDoubleClick[5];     // Track if button down was a double-click
     float       MouseDownDuration[5];           // Duration the mouse button has been down (0.0f == just clicked)
     float       MouseDownDurationPrev[5];       // Previous time the mouse button has been down
