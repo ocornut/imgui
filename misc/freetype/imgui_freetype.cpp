@@ -6,6 +6,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021/08/23: fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL.
 //  2021/03/05: added ImGuiFreeTypeBuilderFlags_Bitmap to load bitmap glyphs.
 //  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a prefered texture format.
 //  2021/01/28: added support for color-layered glyphs via ImGuiFreeTypeBuilderFlags_LoadColor (require Freetype 2.10+).
@@ -539,7 +540,8 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
 
             // Render glyph into a bitmap (currently held by FreeType)
             const FT_Bitmap* ft_bitmap = src_tmp.Font.RenderGlyphAndGetInfo(&src_glyph.Info);
-            IM_ASSERT(ft_bitmap);
+            if (ft_bitmap == NULL)
+                continue;
 
             // Allocate new temporary chunk if needed
             const int bitmap_size_in_bytes = src_glyph.Info.Width * src_glyph.Info.Height * 4;

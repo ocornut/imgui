@@ -6,13 +6,14 @@
 //  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-08-24: Fix for latest specs.
 //  2021-05-24: Add support for draw_data->FramebufferScale.
 //  2021-05-19: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-05-16: Update to latest WebGPU specs (compatible with Emscripten 2.0.20 and Chrome Canary 92).
@@ -442,13 +443,14 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                     wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, NULL);
                 }
 
-                // Apply Scissor, Bind texture, Draw
-                uint32_t clip_rect[4];
-                clip_rect[0] = (uint32_t)(clip_scale.x * (pcmd->ClipRect.x - clip_off.x));
-                clip_rect[1] = (uint32_t)(clip_scale.y * (pcmd->ClipRect.y - clip_off.y));
-                clip_rect[2] = (uint32_t)(clip_scale.x * (pcmd->ClipRect.z - clip_off.x));
-                clip_rect[3] = (uint32_t)(clip_scale.y * (pcmd->ClipRect.w - clip_off.y));
-                wgpuRenderPassEncoderSetScissorRect(pass_encoder, clip_rect[0], clip_rect[1], clip_rect[2] - clip_rect[0], clip_rect[3] - clip_rect[1]);
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                    continue;
+
+                // Apply scissor/clipping rectangle, Draw
+                wgpuRenderPassEncoderSetScissorRect(pass_encoder, (uint32_t)clip_min.x, (uint32_t)clip_min.y, (uint32_t)(clip_max.x - clip_min.x), (uint32_t)(clip_max.y - clip_min.y));
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
             }
         }
@@ -544,7 +546,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
         ImGui_ImplWGPU_InvalidateDeviceObjects();
 
     // Create render pipeline
-    WGPURenderPipelineDescriptor2 graphics_pipeline_desc = {};
+    WGPURenderPipelineDescriptor graphics_pipeline_desc = {};
     graphics_pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
     graphics_pipeline_desc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
     graphics_pipeline_desc.primitive.frontFace = WGPUFrontFace_CW;
@@ -610,7 +612,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Configure disabled depth-stencil state
     graphics_pipeline_desc.depthStencil = nullptr;
 
-    g_pipelineState = wgpuDeviceCreateRenderPipeline2(g_wgpuDevice, &graphics_pipeline_desc);
+    g_pipelineState = wgpuDeviceCreateRenderPipeline(g_wgpuDevice, &graphics_pipeline_desc);
 
     ImGui_ImplWGPU_CreateFontsTexture();
     ImGui_ImplWGPU_CreateUniformBuffer();
