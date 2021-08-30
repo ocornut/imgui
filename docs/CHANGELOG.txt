@@ -42,6 +42,7 @@ Breaking Changes:
 
 Other Changes:
 
+- Windows: fixed background order of overlapping childs submitted sequentially. (#4493)
 - InputTextMultiline: Fixed label size not being included into window contents rect unless
   the whole widget is clipped.
 - TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
