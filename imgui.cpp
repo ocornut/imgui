@@ -13356,7 +13356,8 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
             erased = true;
             break;
         }
-    IM_ASSERT(erased);
+    if (!erased)
+        IM_ASSERT(erased);
     if (node->VisibleWindow == window)
         node->VisibleWindow = NULL;
 
