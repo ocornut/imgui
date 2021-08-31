@@ -7929,6 +7929,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     else if (p_open == NULL)
         flags |= ImGuiTabItemFlags_NoCloseButton;
 
+    if (docked_window != NULL)
+        flags |= ImGuiTabItemFlags_DockedWindow;
+
     // Calculate tab contents size
     ImVec2 size = TabItemCalcSize(label, p_open != NULL);
 
@@ -8271,7 +8274,20 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     }
 
     const float button_sz = g.FontSize;
-    const ImVec2 button_pos(ImMax(bb.Min.x, bb.Max.x - frame_padding.x * 2.0f - button_sz), bb.Min.y);
+    ImVec2 button_pos;
+    
+    bool close_on_left = (close_button_id != 0);
+    if ((flags & ImGuiTabItemFlags_DockedWindow) != 0) {
+        close_on_left = close_on_left && (g.Style.WindowTabCloseButtonPosition == ImGuiDir_Left);
+    } else {
+        close_on_left = close_on_left && (g.Style.TabCloseButtonPosition == ImGuiDir_Left);
+    }
+    if (close_on_left) {
+        button_pos.x = bb.Min.x;
+    } else {
+        button_pos.x = ImMax(bb.Min.x, bb.Max.x - frame_padding.x * 2.0f - button_sz);
+    }
+    button_pos.y = bb.Min.y;
 
     // Close Button & Unsaved Marker
     // We are relying on a subtle and confusing distinction between 'hovered' and 'g.HoveredId' which happens because we are using ImGuiButtonFlags_AllowOverlapMode + SetItemAllowOverlap()
@@ -8314,6 +8330,12 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
         text_pixel_clip_bb.Max.x -= close_button_visible ? (button_sz) : (button_sz * 0.80f);
         text_ellipsis_clip_bb.Max.x -= unsaved_marker_visible ? (button_sz * 0.80f) : 0.0f;
         ellipsis_max_x = text_pixel_clip_bb.Max.x;
+    }
+    if (close_on_left) {
+        text_pixel_clip_bb.Min.x += button_sz + frame_padding.x;
+        text_pixel_clip_bb.Max.x += button_sz + frame_padding.x;
+        text_ellipsis_clip_bb.Min.x += button_sz + frame_padding.x;
+        text_ellipsis_clip_bb.Max.x += button_sz + frame_padding.x;
     }
     RenderTextEllipsis(draw_list, text_ellipsis_clip_bb.Min, text_ellipsis_clip_bb.Max, text_pixel_clip_bb.Max.x, ellipsis_max_x, label, NULL, &label_size);
 

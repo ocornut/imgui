@@ -5983,6 +5983,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             int window_menu_button_position = style.WindowMenuButtonPosition + 1;
             if (ImGui::Combo("WindowMenuButtonPosition", (int*)&window_menu_button_position, "None\0Left\0Right\0"))
                 style.WindowMenuButtonPosition = window_menu_button_position - 1;
+            ImGui::Combo("WindowCloseButtonPosition", (int*)&style.WindowCloseButtonPosition, "Left\0Right\0");
+            ImGui::Combo("WindowTabCloseButtonPosition", (int*)&style.WindowTabCloseButtonPosition, "Left\0Right\0");
+            ImGui::Combo("TabCloseButtonPosition", (int*)&style.TabCloseButtonPosition, "Left\0Right\0");
             ImGui::Combo("ColorButtonPosition", (int*)&style.ColorButtonPosition, "Left\0Right\0");
             ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f");
             ImGui::SameLine(); HelpMarker("Alignment applies when a button is larger than its text content.");
