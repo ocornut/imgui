@@ -6687,10 +6687,11 @@ void ImGui::EndMenuBar()
     // Nav: When a move request within one of our child menu failed, capture the request to navigate among our siblings.
     if (NavMoveRequestButNoResultYet() && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
     {
+        // Try to find out if the request is for one of our child menu
         ImGuiWindow* nav_earliest_child = g.NavWindow;
         while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
             nav_earliest_child = nav_earliest_child->ParentWindow;
-        if (nav_earliest_child->ParentWindow == window && nav_earliest_child->DC.ParentLayoutType == ImGuiLayoutType_Horizontal && (g.NavMoveRequestFlags & ImGuiNavMoveFlags_Forwarded) == 0)
+        if (nav_earliest_child->ParentWindow == window && nav_earliest_child->DC.ParentLayoutType == ImGuiLayoutType_Horizontal && (g.NavMoveFlags & ImGuiNavMoveFlags_Forwarded) == 0)
         {
             // To do so we claim focus back, restore NavId and then process the movement request for yet another frame.
             // This involve a one-frame delay which isn't very problematic in this situation. We could remove it by scoring in advance for multiple window (probably not worth bothering)
@@ -6700,7 +6701,7 @@ void ImGui::EndMenuBar()
             SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
             g.NavDisableMouseHover = g.NavMousePosDirty = true;
-            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveRequestFlags); // Repeat
+            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags); // Repeat
         }
     }
 

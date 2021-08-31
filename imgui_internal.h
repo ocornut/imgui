@@ -1180,9 +1180,10 @@ enum ImGuiNavMoveFlags_
     ImGuiNavMoveFlags_WrapX                 = 1 << 2,   // On failed request, request from opposite side one line down (when NavDir==right) or one line up (when NavDir==left)
     ImGuiNavMoveFlags_WrapY                 = 1 << 3,   // This is not super useful but provided for completeness
     ImGuiNavMoveFlags_AllowCurrentNavId     = 1 << 4,   // Allow scoring and considering the current NavId as a move target candidate. This is used when the move source is offset (e.g. pressing PageDown actually needs to send a Up move request, if we are pressing PageDown from the bottom-most item we need to stay in place)
-    ImGuiNavMoveFlags_AlsoScoreVisibleSet   = 1 << 5,   // Store alternate result in NavMoveResultLocalVisibleSet that only comprise elements that are already fully visible (used by PageUp/PageDown)
+    ImGuiNavMoveFlags_AlsoScoreVisibleSet   = 1 << 5,   // Store alternate result in NavMoveResultLocalVisible that only comprise elements that are already fully visible (used by PageUp/PageDown)
     ImGuiNavMoveFlags_ScrollToEdge          = 1 << 6,
-    ImGuiNavMoveFlags_Forwarded             = 1 << 7
+    ImGuiNavMoveFlags_Forwarded             = 1 << 7,
+    ImGuiNavMoveFlags_DebugNoResult         = 1 << 8
 };
 
 enum ImGuiNavLayer
@@ -1511,27 +1512,31 @@ struct ImGuiContext
     ImGuiKeyModFlags        NavJustMovedToKeyMods;
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
-    ImRect                  NavScoringRect;                     // Rectangle used for scoring, in screen space. Based of window->NavRectRel[], modified for directional navigation scoring.
-    int                     NavScoringCount;                    // Metrics for debugging
     ImGuiNavLayer           NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRectRel is valid
     bool                    NavMousePosDirty;                   // When set we will update mouse position if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) if set (NB: this not enabled by default)
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
+
+    // Navigation: Init & Move Requests
     bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitRequest this is to perform early out in ItemAdd()
     bool                    NavInitRequest;                     // Init request for appearing window to select first item
     bool                    NavInitRequestFromMove;
     ImGuiID                 NavInitResultId;                    // Init request result (first item of the window, or one for which SetItemDefaultFocus() was called)
     ImRect                  NavInitResultRectRel;               // Init request result rectangle (relative to parent window)
-    bool                    NavMoveRequest;                     // Move request for this frame
-    bool                    NavMoveRequestForwardToNextFrame;
-    ImGuiNavMoveFlags       NavMoveRequestFlags;
-    ImGuiKeyModFlags        NavMoveRequestKeyMods;
-    ImGuiDir                NavMoveDir, NavMoveDirLast;         // Direction of the move request (left/right/up/down), direction of the previous move request
+    bool                    NavMoveSubmitted;                   // Move request submitted, will process result on next NewFrame()
+    bool                    NavMoveScoringItems;                // Move request submitted, still scoring incoming items
+    bool                    NavMoveForwardToNextFrame;
+    ImGuiNavMoveFlags       NavMoveFlags;
+    ImGuiKeyModFlags        NavMoveKeyMods;
+    ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
+    ImGuiDir                NavMoveDirForDebug;
     ImGuiDir                NavMoveClipDir;                     // FIXME-NAV: Describe the purpose of this better. Might want to rename?
+    ImRect                  NavScoringRect;                     // Rectangle used for scoring, in screen space. Based of window->NavRectRel[], modified for directional navigation scoring.
+    int                     NavScoringCount;                    // Metrics for debugging
     ImGuiNavItemData        NavMoveResultLocal;                 // Best move request candidate within NavWindow
-    ImGuiNavItemData        NavMoveResultLocalVisibleSet;       // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
+    ImGuiNavItemData        NavMoveResultLocalVisible;          // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
     ImGuiNavItemData        NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using ImGuiWindowFlags_NavFlattened flag)
 
     // Navigation: Windowing (CTRL+TAB for list, or Menu button + keys or directional pads to move/resize)
@@ -1714,8 +1719,6 @@ struct ImGuiContext
         NavJustTabbedId = NavJustMovedToId = NavJustMovedToFocusScopeId = NavNextActivateId = 0;
         NavJustMovedToKeyMods = ImGuiKeyModFlags_None;
         NavInputSource = ImGuiInputSource_None;
-        NavScoringRect = ImRect();
-        NavScoringCount = 0;
         NavLayer = ImGuiNavLayer_Main;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;
@@ -1726,11 +1729,13 @@ struct ImGuiContext
         NavInitRequest = false;
         NavInitRequestFromMove = false;
         NavInitResultId = 0;
-        NavMoveRequest = false;
-        NavMoveRequestForwardToNextFrame = false;
-        NavMoveRequestFlags = ImGuiNavMoveFlags_None;
-        NavMoveRequestKeyMods = ImGuiKeyModFlags_None;
-        NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
+        NavMoveSubmitted = false;
+        NavMoveScoringItems = false;
+        NavMoveForwardToNextFrame = false;
+        NavMoveFlags = ImGuiNavMoveFlags_None;
+        NavMoveKeyMods = ImGuiKeyModFlags_None;
+        NavMoveDir = NavMoveDirForDebug = NavMoveClipDir = ImGuiDir_None;
+        NavScoringCount = 0;
 
         NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
@@ -2452,7 +2457,7 @@ namespace ImGui
 
     // Gamepad/Keyboard Navigation
     IMGUI_API void          NavInitWindow(ImGuiWindow* window, bool force_reinit);
-    IMGUI_API bool          NavMoveRequestButNoResultYet(); // Should be called ~NavMoveRequestIsActiveButNoResultYet()
+    IMGUI_API bool          NavMoveRequestButNoResultYet();
     IMGUI_API void          NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavMoveFlags move_flags);
     IMGUI_API void          NavMoveRequestCancel();
     IMGUI_API void          NavMoveRequestApplyResult();
