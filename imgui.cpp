@@ -8682,6 +8682,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 //-----------------------------------------------------------------------------
 
 // FIXME-NAV: The existence of SetNavID vs SetFocusID properly needs to be clarified/reworked.
+// In our terminology those should be interchangeable. Those two functions are merely a legacy artifact, so at minimum naming should be clarified.
 void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
@@ -9039,14 +9040,14 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
     if (window->NavLastIds[layer] != 0)
     {
         SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = g.NavMousePosDirty = true;
     }
     else
     {
         g.NavLayer = layer;
         NavInitWindow(window, true);
     }
+    g.NavDisableHighlight = false;
+    g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
 
 static inline void ImGui::NavUpdateAnyRequestFlag()
@@ -9211,6 +9212,7 @@ static void ImGui::NavUpdate()
             {
                 io.MousePos = io.MousePosPrev = NavCalcPreferredRefPos();
                 io.WantSetMousePos = true;
+                //IMGUI_DEBUG_LOG("SetMousePos: (%.1f,%.1f)\n", io.MousePos.x, io.MousePos.y);
             }
         g.NavMousePosDirty = false;
     }
@@ -9310,6 +9312,7 @@ static void ImGui::NavUpdateInitResult()
     // FIXME-NAV: On _NavFlattened windows, g.NavWindow will only be updated during subsequent frame. Not a problem currently.
     IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
     SetNavID(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
+    g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
     if (g.NavInitRequestFromMove)
     {
         g.NavDisableHighlight = false;
@@ -9415,9 +9418,10 @@ void ImGui::NavMoveRequestApplyResult()
 {
     ImGuiContext& g = *GImGui;
 
+    // No result
+    // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
     {
-        // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
         if (g.NavId != 0)
         {
             g.NavDisableHighlight = false;
@@ -9470,8 +9474,12 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
     }
+
+    // Focus
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+
+    // Enable nav highlight
     g.NavDisableHighlight = false;
     g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
@@ -9863,14 +9871,16 @@ static void ImGui::NavUpdateWindowing()
             FocusWindow(new_nav_window);
             new_nav_window->NavLastChildNavWindow = old_nav_window;
         }
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = true;
 
-        // Reinitialize navigation when entering menu bar with the Alt key.
+        // Toggle layer
         const ImGuiNavLayer new_nav_layer = (g.NavWindow->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) ? (ImGuiNavLayer)((int)g.NavLayer ^ 1) : ImGuiNavLayer_Main;
-        if (new_nav_layer == ImGuiNavLayer_Menu)
-            g.NavWindow->NavLastIds[new_nav_layer] = 0;
-        NavRestoreLayer(new_nav_layer);
+        if (new_nav_layer != g.NavLayer)
+        {
+            // Reinitialize navigation when entering menu bar with the Alt key (FIXME: could be a properly of the layer?)
+            if (new_nav_layer == ImGuiNavLayer_Menu)
+                g.NavWindow->NavLastIds[new_nav_layer] = 0;
+            NavRestoreLayer(new_nav_layer);
+        }
     }
 }
 
