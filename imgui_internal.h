@@ -1124,6 +1124,7 @@ struct ImGuiLastItemData
     ImGuiItemFlags          InFlags;            // See ImGuiItemFlags_
     ImGuiItemStatusFlags    StatusFlags;        // See ImGuiItemStatusFlags_
     ImRect                  Rect;               // Full rectangle
+    ImRect                  NavRect;            // Navigation scoring rectangle (not displayed)
     ImRect                  DisplayRect;        // Display rectangle (only if ImGuiItemStatusFlags_HasDisplayRect is set)
 
     ImGuiLastItemData()     { memset(this, 0, sizeof(*this)); }

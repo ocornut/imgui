@@ -7498,6 +7498,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     // (DisplayRect is left untouched, made valid when ImGuiItemStatusFlags_HasDisplayRect is set)
     g.LastItemData.ID = id;
     g.LastItemData.Rect = bb;
+    g.LastItemData.NavRect = nav_bb_arg ? *nav_bb_arg : bb;
     g.LastItemData.InFlags = g.CurrentItemFlags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
 
@@ -7517,7 +7518,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         if (g.NavId == id || g.NavAnyRequest)
             if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
                 if (window == g.NavWindow || ((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened))
-                    NavProcessItem(window, id, nav_bb_arg ? *nav_bb_arg : bb);
+                    NavProcessItem(window, id, g.LastItemData.NavRect);
 
         // [DEBUG] Item Picker tool, when enabling the "extended" version we perform the check in ItemAdd()
 #ifdef IMGUI_DEBUG_TOOL_ITEM_PICKER_EX
@@ -8710,7 +8711,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
     g.NavFocusScopeId = window->DC.NavFocusScopeIdCurrent;
     window->NavLastIds[nav_layer] = id;
     if (g.LastItemData.ID == id)
-        window->NavRectRel[nav_layer] = ImRect(g.LastItemData.Rect.Min - window->Pos, g.LastItemData.Rect.Max - window->Pos);
+        window->NavRectRel[nav_layer] = ImRect(g.LastItemData.NavRect.Min - window->Pos, g.LastItemData.NavRect.Max - window->Pos);
 
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
         g.NavDisableMouseHover = true;
