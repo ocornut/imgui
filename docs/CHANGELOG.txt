@@ -49,6 +49,7 @@ Other Changes:
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
   the NavEnableSetMousePos config flag is set.
+- Menus: adjust closing logic to accomodate for varying font size and dpi.
 - PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
 - IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
   This allows apps to receive the click on void when that click is used to close popup (by default,
