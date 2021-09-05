@@ -281,7 +281,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(uint32_
 
 static WGPUBindGroup ImGui_ImplWGPU_CreateImageBindGroup(WGPUBindGroupLayout layout, WGPUTextureView texture)
 {
-    WGPUBindGroupEntry image_bg_entries[] = { { 0, 0, 0, 0, 0, texture } };
+    WGPUBindGroupEntry image_bg_entries[] = { { nullptr, 0, 0, 0, 0, 0, texture } };
 
     WGPUBindGroupDescriptor image_bg_descriptor = {};
     image_bg_descriptor.layout = layout;
@@ -478,7 +478,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         tex_desc.sampleCount = 1;
         tex_desc.format = WGPUTextureFormat_RGBA8Unorm;
         tex_desc.mipLevelCount = 1;
-        tex_desc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_Sampled;
+        tex_desc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding;
         g_resources.FontTexture = wgpuDeviceCreateTexture(g_wgpuDevice, &tex_desc);
 
         WGPUTextureViewDescriptor tex_view_desc = {};
@@ -571,7 +571,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     WGPUVertexBufferLayout buffer_layouts[1];
     buffer_layouts[0].arrayStride = sizeof(ImDrawVert);
-    buffer_layouts[0].stepMode = WGPUInputStepMode_Vertex;
+    buffer_layouts[0].stepMode = WGPUVertexStepMode_Vertex;
     buffer_layouts[0].attributeCount = 3;
     buffer_layouts[0].attributes = attribute_desc;
 
@@ -624,8 +624,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     WGPUBindGroupEntry common_bg_entries[] =
     {
-        { 0, g_resources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
-        { 1, 0, 0, 0, g_resources.Sampler, 0 },
+        { nullptr, 0, g_resources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
+        { nullptr, 1, 0, 0, 0, g_resources.Sampler, 0 },
     };
 
     WGPUBindGroupDescriptor common_bg_descriptor = {};
