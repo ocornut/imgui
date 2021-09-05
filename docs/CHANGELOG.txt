@@ -93,7 +93,7 @@ Other Changes:
 - Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)
 - Backends: Added more implicit asserts to detect invalid/redundant calls to Shutdown functions. (#4562)
 - Backends: OpenGL3: Fixed our custom GL loader conflicting with user using GL3W. (#4445) [@rokups]
-- Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
+- Backends: WebGPU: Fixed for latest specs. (#4472, #4512) [@Kangz, @bfierz]
 - Backends: SDL_Renderer: Added SDL_Renderer backend compatible with upcoming SDL 2.0.18. (#3926) [@1bsyl]
 - Backends: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted via
   a direct unclipped PushClipRect() call. (#4464)
