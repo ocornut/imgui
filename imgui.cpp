@@ -3106,7 +3106,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = id;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavActivateInputId == id || g.NavJustTabbedId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
     }
 
     // Clear declaration of inputs claimed by the widget
@@ -7063,6 +7063,7 @@ void ImGui::ActivateItem(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     g.NavNextActivateId = id;
+    g.NavNextActivateFlags = ImGuiActivateFlags_None;
 }
 
 void ImGui::PushFocusScope(ImGuiID id)
@@ -9232,19 +9233,28 @@ static void ImGui::NavUpdate()
     NavUpdateCancelRequest();
 
     // Process manual activation request
-    g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavInputId = 0;
+    g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavActivateInputId = 0;
+    g.NavActivateFlags = ImGuiActivateFlags_None;
     if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         bool activate_down = IsNavInputDown(ImGuiNavInput_Activate);
+        bool input_down = IsNavInputDown(ImGuiNavInput_Input);
         bool activate_pressed = activate_down && IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed);
+        bool input_pressed = input_down && IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
         if (g.ActiveId == 0 && activate_pressed)
+        {
             g.NavActivateId = g.NavId;
+            g.NavActivateFlags = ImGuiActivateFlags_PreferTweak;
+        }
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && input_pressed)
+        {
+            g.NavActivateInputId = g.NavId;
+            g.NavActivateFlags = ImGuiActivateFlags_PreferInput;
+        }
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_down)
             g.NavActivateDownId = g.NavId;
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_pressed)
             g.NavActivatePressedId = g.NavId;
-        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed))
-            g.NavInputId = g.NavId;
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         g.NavDisableHighlight = true;
@@ -9254,7 +9264,13 @@ static void ImGui::NavUpdate()
     // Process programmatic activation request
     // FIXME-NAV: Those should eventually be queued (unlike focus they don't cancel each others)
     if (g.NavNextActivateId != 0)
-        g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavInputId = g.NavNextActivateId;
+    {
+        if (g.NavNextActivateFlags & ImGuiActivateFlags_PreferInput)
+            g.NavActivateInputId = g.NavNextActivateId;
+        else
+            g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavNextActivateId;
+        g.NavActivateFlags = g.NavNextActivateFlags;
+    }
     g.NavNextActivateId = 0;
 
     // Process move requests
@@ -11393,7 +11409,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
         Text("NavInputSource: %s", input_source_names[g.NavInputSource]);
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
-        Text("NavActivateId: 0x%08X, NavInputId: 0x%08X", g.NavActivateId, g.NavInputId);
+        Text("NavActivateId/DownId/PressedId/InputId: %08X/%08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId, g.NavActivateInputId);
+        Text("NavActivateFlags: %04X", g.NavActivateFlags);
         Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
         Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
         Text("NavWindowingTarget: '%s'", g.NavWindowingTarget ? g.NavWindowingTarget->Name : "NULL");
