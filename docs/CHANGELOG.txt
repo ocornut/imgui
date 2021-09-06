@@ -45,6 +45,8 @@ Other Changes:
 - Windows: Fixed background order of overlapping childs submitted sequentially. (#4493)
 - InputTextMultiline: Fixed label size not being included into window contents rect unless
   the whole widget is clipped.
+- InputText: Allow cancelling/validating input with gamepad nav events to facilitate undoing
+  an accidental press on NavInput (Triangle button on PS4/PS5) without a wired keyboard. (#2321)
 - TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
