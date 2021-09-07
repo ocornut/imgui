@@ -179,7 +179,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 
                 // Apply scissor/clipping rectangle, Draw
                 ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->GetTexID();
-                al_set_clipping_rectangle(clip_min.x, clip_min.y, clip_max.x, clip_max.y);
+                al_set_clipping_rectangle(clip_min.x, clip_min.y, clip_max.x - clip_min.x, clip_max.y - clip_min.y);
                 al_draw_prim(&vertices[0], bd->VertexDecl, texture, idx_offset, idx_offset + pcmd->ElemCount, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
             idx_offset += pcmd->ElemCount;
