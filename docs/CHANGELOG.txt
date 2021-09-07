@@ -30,62 +30,6 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
------------------------------------------------------------------------
- VERSION 1.85 WIP (In Progress)
------------------------------------------------------------------------
-
-Breaking Changes:
-
-- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
-  Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
-  very useful in practice, and the only use of it in the demo was illfit.
-
-Other Changes:
-
-- Windows: Fixed background order of overlapping childs submitted sequentially. (#4493)
-- InputTextMultiline: Fixed label size not being included into window contents rect unless
-  the whole widget is clipped.
-- InputText: Allow cancelling/validating input with gamepad nav events to facilitate undoing
-  an accidental press on NavInput (Triangle button on PS4/PS5) without a wired keyboard. (#2321)
-- TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
-  to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
-- Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
-  the NavEnableSetMousePos config flag is set.
-- Menus: adjust closing logic to accomodate for varying font size and dpi.
-- Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)
-- PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
-- IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
-  This allows apps to receive the click on void when that click is used to close popup (by default,
-  clicking on a void when a popup is open will close the popup but not release io.WantCaptureMouse).
-- Fonts: imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
-  (which apparently happens with Freetype 2.11). (#4394, #4145?).
-- Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)
-- Backends: OpenGL3: Fixed our custom GL loader conflicting with user using GL3W. (#4445) [@rokups]
-- Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
-- Backends: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted via
-  a direct unclipped PushClipRect() call. (#4464)
-- Backends: All renderers: Normalize clipping rect handling across backends. (#4464)
-
-
------------------------------------------------------------------------
- VERSION 1.84.2 (Released 2021-08-23)
------------------------------------------------------------------------
-
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.2
-
-- Disabled: Fixed nested BeginDisabled()/EndDisabled() calls. (#211, #4452, #4453, #4462) [@Legulysse]
-- Backends: OpenGL3: OpenGL: Fixed ES 3.0 shader ("#version 300 es") to use normal precision
-  floats. Avoid wobbly rendering at HD resolutions. (#4463) [@nicolasnoble]
-
-
------------------------------------------------------------------------
- VERSION 1.84.1 (Released 2021-08-20)
------------------------------------------------------------------------
-
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.1
-
-- Disabled: Fixed BeginDisabled(false) - BeginDisabled(true) was working. (#211, #4452, #4453)
-
 
 -----------------------------------------------------------------------
  DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
@@ -155,9 +99,58 @@ Other changes:
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
 
 
+-----------------------------------------------------------------------
+ VERSION 1.85 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
+  Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
+  very useful in practice, and the only use of it in the demo was illfit.
+
+Other Changes:
+
+- Windows: Fixed background order of overlapping childs submitted sequentially. (#4493)
+- InputTextMultiline: Fixed label size not being included into window contents rect unless
+  the whole widget is clipped.
+- InputText: Allow cancelling/validating input with gamepad nav events to facilitate undoing
+  an accidental press on NavInput (Triangle button on PS4/PS5) without a wired keyboard. (#2321)
+- TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
+  to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
+- Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
+  the NavEnableSetMousePos config flag is set.
+- Menus: adjust closing logic to accomodate for varying font size and dpi.
+- Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)
+- PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
+- IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
+  This allows apps to receive the click on void when that click is used to close popup (by default,
+  clicking on a void when a popup is open will close the popup but not release io.WantCaptureMouse).
+- Fonts: imgui_freetype: Fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL
+  (which apparently happens with Freetype 2.11). (#4394, #4145?).
+- Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)
+- Backends: OpenGL3: Fixed our custom GL loader conflicting with user using GL3W. (#4445) [@rokups]
+- Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
+- Backends: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted via
+  a direct unclipped PushClipRect() call. (#4464)
+- Backends: All renderers: Normalize clipping rect handling across backends. (#4464)
+
 Docking+Viewports Branch:
 
 - Docking: fixed settings load issue when mouse wheeling. (#4310)
+- Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin() that
+  returned false because the window is docked. (#4515)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.84.2 (Released 2021-08-23)
+-----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.2
+
+- Disabled: Fixed nested BeginDisabled()/EndDisabled() calls. (#211, #4452, #4453, #4462) [@Legulysse]
+- Backends: OpenGL3: OpenGL: Fixed ES 3.0 shader ("#version 300 es") to use normal precision
+  floats. Avoid wobbly rendering at HD resolutions. (#4463) [@nicolasnoble]
 
 
 -----------------------------------------------------------------------
@@ -166,9 +159,7 @@ Docking+Viewports Branch:
 
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.1
 
-Other Changes:
-
-- Fixed BeginDisabled(false) - BeginDisabled(true) was working. (#211, #4452, #4453)
+- Disabled: Fixed BeginDisabled(false) - BeginDisabled(true) was working. (#211, #4452, #4453)
 
 
 -----------------------------------------------------------------------
