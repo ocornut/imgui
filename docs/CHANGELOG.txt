@@ -108,6 +108,10 @@ Breaking Changes:
 - Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
+- (Docking branch) IsWindowFocused() and IsWindowHovered() with only the _ChildWindows flag
+  and without the _RootWindow flag used to leak docking hierarchy, so a docked window would
+  return as the child of the window hosting the dockspace. This was inconsistent and incorrect
+  with other behaviors so we fixed it. Added a new _DockHierarchy flag to opt-in this behavior.
 
 Other Changes:
 
@@ -137,6 +141,10 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- IsWindowFocused: Fixed using ImGuiFocusedFlags_ChildWindows (without _RootWindow) from leaking the
+  docking hierarchy. Added ImGuiFocusedFlags_DockHierarchy flag to consider docking hierarchy in the test.
+- IsWindowHovered: Fixed using ImGuiHoveredFlags_ChildWindows (without _RootWindow) from leaking the
+  docking hierarchy. Added ImGuiHoveredFlags_DockHierarchy flag to consider docking hierarchy in the test.
 - Docking: fixed settings load issue when mouse wheeling. (#4310)
 - Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin() that
   returned false because the window is docked. (#4515)

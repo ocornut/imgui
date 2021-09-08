@@ -4024,7 +4024,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
 
     // Modal windows prevents mouse from hovering behind them.
     ImGuiWindow* modal_window = GetTopMostPopupModal();
-    if (modal_window && g.HoveredWindow && !IsWindowChildOf(g.HoveredWindow->RootWindowDockTree, modal_window))
+    if (modal_window && g.HoveredWindow && !IsWindowChildOf(g.HoveredWindow->RootWindowDockTree, modal_window, true))
         clear_hovered_windows = true;
 
     // Disabled mouse?
@@ -7254,15 +7254,16 @@ void ImGui::PopTextWrapPos()
     window->DC.TextWrapPosStack.pop_back();
 }
 
-// FIXME: We are exposing the docking hierarchy to end-user here (via IsWindowHovered, IsWindowFocused) which is unusual.
-bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
+bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent, bool dock_hierarchy)
 {
-    if (window->RootWindowDockTree == potential_parent)
+    if ((dock_hierarchy ? window->RootWindowDockTree : window->RootWindow) == potential_parent)
         return true;
     while (window != NULL)
     {
         if (window == potential_parent)
             return true;
+        if (window == (dock_hierarchy ? window->RootWindowDockTree : window->RootWindow))
+            return false;
         window = window->ParentWindow;
     }
     return false;
@@ -7294,13 +7295,14 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     if ((flags & ImGuiHoveredFlags_AnyWindow) == 0)
     {
         IM_ASSERT(cur_window); // Not inside a Begin()/End()
+        const bool dock_hierarchy = (flags & ImGuiHoveredFlags_DockHierarchy) != 0;
 
         if (flags & ImGuiHoveredFlags_RootWindow)
-            cur_window = cur_window->RootWindow;
+            cur_window = dock_hierarchy ? cur_window->RootWindowDockTree : cur_window->RootWindow;
 
         bool result;
         if (flags & ImGuiHoveredFlags_ChildWindows)
-            result = IsWindowChildOf(ref_window, cur_window);
+            result = IsWindowChildOf(ref_window, cur_window, dock_hierarchy);
         else
             result = (ref_window == cur_window);
         if (!result)
@@ -7325,13 +7327,15 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
         return false;
     if (flags & ImGuiFocusedFlags_AnyWindow)
         return true;
+
     IM_ASSERT(cur_window); // Not inside a Begin()/End()
+    const bool dock_hierarchy = (flags & ImGuiHoveredFlags_DockHierarchy) != 0;
 
     if (flags & ImGuiHoveredFlags_RootWindow)
-        cur_window = cur_window->RootWindow;
+        cur_window = dock_hierarchy ? cur_window->RootWindowDockTree : cur_window->RootWindow;
 
     if (flags & ImGuiHoveredFlags_ChildWindows)
-        return IsWindowChildOf(ref_window, cur_window);
+        return IsWindowChildOf(ref_window, cur_window, dock_hierarchy);
     else
         return (ref_window == cur_window);
 }
