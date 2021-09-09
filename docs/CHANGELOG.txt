@@ -146,8 +146,10 @@ Docking+Viewports Branch:
 - IsWindowHovered: Fixed using ImGuiHoveredFlags_ChildWindows (without _RootWindow) from leaking the
   docking hierarchy. Added ImGuiHoveredFlags_DockHierarchy flag to consider docking hierarchy in the test.
 - Docking: fixed settings load issue when mouse wheeling. (#4310)
-- Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin() that
-  returned false because the window is docked. (#4515)
+- Docking + Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin()
+  that returned false because the window is docked. (#4515)
+- Viewports: Viewports: fixed unnecessary creation of temporary viewports when multiple docked windows
+  got reassigned to a new node (created mid-frame) which already has a HostWindow.
 
 
 -----------------------------------------------------------------------
