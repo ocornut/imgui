@@ -148,7 +148,9 @@ Docking+Viewports Branch:
 - Docking: fixed settings load issue when mouse wheeling. (#4310)
 - Docking + Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin()
   that returned false because the window is docked. (#4515)
-- Viewports: Viewports: fixed unnecessary creation of temporary viewports when multiple docked windows
+- Viewports: Fixed a crash while a window owning its viewport disappear while being dragged.
+  It would manifest when e.g. reconfiguring dock nodes while dragging.
+- Viewports: Fixed unnecessary creation of temporary viewports when multiple docked windows
   got reassigned to a new node (created mid-frame) which already has a HostWindow.
 
 
