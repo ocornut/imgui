@@ -6968,11 +6968,12 @@ void ImGui::EndMenu()
     // However, it means that with the current code, a BeginMenu() from outside another menu or a menu-bar won't be closable with the Left direction.
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet() && window->DC.LayoutType == ImGuiLayoutType_Vertical)
-    {
-        ClosePopupToLevel(g.BeginPopupStack.Size, true);
-        NavMoveRequestCancel();
-    }
+    if (g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet() && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+        if (g.NavWindow && (g.NavWindow->RootWindowForNav->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->RootWindowForNav->ParentWindow == window)
+        {
+            ClosePopupToLevel(g.BeginPopupStack.Size, true);
+            NavMoveRequestCancel();
+        }
 
     EndPopup();
 }
