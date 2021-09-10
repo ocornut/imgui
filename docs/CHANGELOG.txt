@@ -152,6 +152,8 @@ Docking+Viewports Branch:
   It would manifest when e.g. reconfiguring dock nodes while dragging.
 - Viewports: Fixed unnecessary creation of temporary viewports when multiple docked windows
   got reassigned to a new node (created mid-frame) which already has a HostWindow.
+- Viewports: Fixed window with viewport ini data immediately merged into a host viewport from
+  leaving a temporary viewport alive for a frame (would leak into backend).
 
 
 -----------------------------------------------------------------------

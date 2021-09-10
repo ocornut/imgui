@@ -11574,6 +11574,10 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
 
 static void SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
+    // Abandon viewport
+    if (window->ViewportOwned && window->Viewport->Window == window)
+        window->Viewport->Size = ImVec2(0.0f, 0.0f);
+
     window->Viewport = viewport;
     window->ViewportId = viewport->ID;
     window->ViewportOwned = (viewport->Window == window);
@@ -11606,6 +11610,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     if (GetWindowAlwaysWantOwnViewport(window))
         return false;
 
+    // FIXME: Can't use g.WindowsFocusOrder[] for root windows only as we care about Z order. If we maintained a DisplayOrder along with FocusOrder we could..
     for (int n = 0; n < g.Windows.Size; n++)
     {
         ImGuiWindow* window_behind = g.Windows[n];
