@@ -7268,8 +7268,11 @@ bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent, 
     {
         if (window == potential_parent)
             return true;
-        if (window == (dock_hierarchy ? window->RootWindowDockTree : window->RootWindow))
-            return false;
+        // 2021-09-11: we broke the unexpressed contract that this function (prior to 6b1e094, #4527)
+        // would follow through popup parents as well. Restoring this for now. May want to add a ImGuiFocusedFlags_PopupHierarchy flag later.
+        if ((window->Flags & ImGuiWindowFlags_Popup) == 0)
+            if (window == (dock_hierarchy ? window->RootWindowDockTree : window->RootWindow))
+                return false;
         window = window->ParentWindow;
     }
     return false;
