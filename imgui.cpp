@@ -956,6 +956,7 @@ static void             EndFrameDrawDimmedBackgrounds();
 // Viewports
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHashStr("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
 static ImGuiViewportP*  AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& platform_pos, const ImVec2& size, ImGuiViewportFlags flags);
+static void             DestroyViewport(ImGuiViewportP* viewport);
 static void             UpdateViewportsNewFrame();
 static void             UpdateViewportsEndFrame();
 static void             WindowSelectViewport(ImGuiWindow* window);
@@ -11747,22 +11748,7 @@ static void ImGui::UpdateViewportsNewFrame()
         // Erase unused viewports
         if (n > 0 && viewport->LastFrameActive < g.FrameCount - 2)
         {
-            // Clear references to this viewport in windows (window->ViewportId becomes the master data)
-            for (int window_n = 0; window_n < g.Windows.Size; window_n++)
-                if (g.Windows[window_n]->Viewport == viewport)
-                {
-                    g.Windows[window_n]->Viewport = NULL;
-                    g.Windows[window_n]->ViewportOwned = false;
-                }
-            if (viewport == g.MouseLastHoveredViewport)
-                g.MouseLastHoveredViewport = NULL;
-            g.Viewports.erase(g.Viewports.Data + n);
-
-            // Destroy
-            IMGUI_DEBUG_LOG_VIEWPORT("Delete Viewport %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
-            DestroyPlatformWindow(viewport); // In most circumstances the platform window will already be destroyed here.
-            IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
-            IM_DELETE(viewport);
+            DestroyViewport(viewport);
             n--;
             continue;
         }
@@ -11794,7 +11780,7 @@ static void ImGui::UpdateViewportsNewFrame()
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
         viewport->Alpha = 1.0f;
 
-        // Translate imgui windows when a Host Viewport has been moved
+        // Translate Dear ImGui windows when a Host Viewport has been moved
         // (This additionally keeps windows at the same place when ImGuiConfigFlags_ViewportsEnable is toggled!)
         const ImVec2 viewport_delta_pos = viewport->Pos - viewport->LastPos;
         if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (viewport_delta_pos.x != 0.0f || viewport_delta_pos.y != 0.0f))
@@ -11972,6 +11958,30 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         window->ViewportOwned = true;
 
     return viewport;
+}
+
+static void ImGui::DestroyViewport(ImGuiViewportP* viewport)
+{
+    // Clear references to this viewport in windows (window->ViewportId becomes the master data)
+    ImGuiContext& g = *GImGui;
+    for (int window_n = 0; window_n < g.Windows.Size; window_n++)
+    {
+        ImGuiWindow* window = g.Windows[window_n];
+        if (window->Viewport != viewport)
+            continue;
+        window->Viewport = NULL;
+        window->ViewportOwned = false;
+    }
+    if (viewport == g.MouseLastHoveredViewport)
+        g.MouseLastHoveredViewport = NULL;
+
+    // Destroy
+    IMGUI_DEBUG_LOG_VIEWPORT("Delete Viewport %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
+    DestroyPlatformWindow(viewport); // In most circumstances the platform window will already be destroyed here.
+    IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
+    IM_ASSERT(g.Viewports[viewport->Idx] == viewport);
+    g.Viewports.erase(g.Viewports.Data + viewport->Idx);
+    IM_DELETE(viewport);
 }
 
 // FIXME-VIEWPORT: This is all super messy and ought to be clarified or rewritten.
