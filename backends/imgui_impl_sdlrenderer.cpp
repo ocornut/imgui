@@ -66,8 +66,8 @@ static void ImGui_ImplSDLRenderer_SetupRenderState()
 	ImGui_ImplSDLRenderer_Data *bd = ImGui_ImplSDLRenderer_GetBackendData();
 
 	// Clear out any viewports and cliprects set by the user
-	SDL_RenderSetViewport(bd->renderer, NULL);
-	SDL_RenderSetClipRect(bd->renderer, NULL);
+	SDL_RenderSetViewport(bd->SDLRenderer, NULL);
+	SDL_RenderSetClipRect(bd->SDLRenderer, NULL);
 }
 
 void ImGui_ImplSDLRenderer_NewFrame()
@@ -148,7 +148,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     int col_stride = sizeof(ImDrawVert);
                     int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-		    SDL_Texture *tex = (SDL_Texture*)pcmd->TextureID;
+		    SDL_Texture *tex = (SDL_Texture*)pcmd->TextureId;
 
                     SDL_RenderGeometryRaw(bd->SDLRenderer, tex, 
                             xy, xy_stride, color,
