@@ -148,7 +148,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     int col_stride = sizeof(ImDrawVert);
                     int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-                    SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? bd->FontTexture : NULL);
+		    SDL_Texture *tex = (SDL_Texture*)pcmd->TextureID;
 
                     SDL_RenderGeometryRaw(bd->SDLRenderer, tex, 
                             xy, xy_stride, color,
