@@ -82,21 +82,29 @@ void ImGui_ImplSDLRenderer_NewFrame()
 
 void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width == 0 || fb_height == 0)
-        return;
-    
-    // Setup desired GL state
-    //  ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
+	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
-    // Will project scissor/clipping rectangles into framebuffer space
-    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+	// If there's a scale factor set by the user, use that instead
+	float rsX = 1.0f;
+	float rsY = 1.0f;
+	SDL_RenderGetScale(bd->SDLRenderer, &rsX, &rsY);
 
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+	ImVec2 renderScale;
+	// If the user has specified a scale factor to SDL_Renderer already (via SDL_RenderSetScale()), SDL will scale whatever we pass
+	// to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
+	renderScale.x = (rsX == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+	renderScale.y = (rsY == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+
+	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+	int fb_width = (int)(draw_data->DisplaySize.x * renderScale.x);
+	int fb_height = (int)(draw_data->DisplaySize.y * renderScale.y);
+	if (fb_width == 0 || fb_height == 0)
+		return;
+
+
+	// Will project scissor/clipping rectangles into framebuffer space
+	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+	ImVec2 clip_scale = renderScale;
 
     ImGui_ImplSDLRenderer_SetupRenderState();
 
