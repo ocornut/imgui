@@ -42,25 +42,18 @@ static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
 }
 
 // Functions
-bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
+bool ImGui_ImplSDLRenderer_Init(SDL_Renderer *renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+    IM_ASSERT(renderer != NULL && "SDL_Renderer not initialized!");
 
     // Setup backend capabilities flags
     ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_SDLRenderer";
 
-    bd->SDLRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    if (bd->SDLRenderer == NULL) {
-        SDL_Log("Error creating SDL renderer");
-        return false;
-    } else {
-        SDL_RendererInfo info;
-        SDL_GetRendererInfo(bd->SDLRenderer, &info);
-        SDL_Log("Current SDL Renderer: %s", info.name);
-    }
+    bd->SDLRenderer = renderer;
     return true;
 }
 
@@ -70,17 +63,10 @@ void ImGui_ImplSDLRenderer_Shutdown()
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
     ImGui_ImplSDLRenderer_DestroyDeviceObjects();
-    SDL_DestroyRenderer(bd->SDLRenderer);
 
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
     IM_DELETE(bd);
-
-    if (SDL_GetError()) {
-        SDL_Log("Ending with SDL error: %s", SDL_GetError());
-    } else {
-        SDL_Log("Ending with no SDL error");
-    }
 }
 
 void ImGui_ImplSDLRenderer_NewFrame()
@@ -110,10 +96,6 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
-
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    SDL_SetRenderDrawColor(bd->SDLRenderer, clear_color.x * 255, clear_color.y * 255, clear_color.z * 255 , clear_color.w * 255);
-    SDL_RenderClear(bd->SDLRenderer);
 
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
 
@@ -178,8 +160,6 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
             idx_buffer += pcmd->ElemCount;
         }
     }
-
-    SDL_RenderPresent(bd->SDLRenderer);
 }
 
 // Called by Init/NewFrame/Shutdown
