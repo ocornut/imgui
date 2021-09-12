@@ -19,14 +19,6 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-// Include OpenGL header (without an OpenGL loader) requires a bit of fiddling
-#if defined(_WIN32) && !defined(APIENTRY)
-#  define APIENTRY __stdcall                  // It is customary to use APIENTRY for OpenGL function pointer declarations on all platforms.  Additionally, the Windows OpenGL header needs APIENTRY.
-#endif
-#if defined(_WIN32) && !defined(WINGDIAPI)
-#  define WINGDIAPI __declspec(dllimport)     // Some Windows OpenGL headers need this
-#endif
-
 struct ImGui_ImplSDLRenderer_Data
 {
     SDL_Renderer *SDLRenderer;
