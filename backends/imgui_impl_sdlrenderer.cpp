@@ -61,6 +61,15 @@ void ImGui_ImplSDLRenderer_Shutdown()
     IM_DELETE(bd);
 }
 
+static void ImGui_ImplSDLRenderer_SetupRenderState()
+{
+	ImGui_ImplSDLRenderer_Data *bd = ImGui_ImplSDLRenderer_GetBackendData();
+
+	// Clear out any viewports and cliprects set by the user
+	SDL_RenderSetViewport(bd->renderer, NULL);
+	SDL_RenderSetClipRect(bd->renderer, NULL);
+}
+
 void ImGui_ImplSDLRenderer_NewFrame()
 {
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
@@ -89,6 +98,8 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
+    ImGui_ImplSDLRenderer_SetupRenderState();
+
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
 
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -103,8 +114,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
-                    SDL_Log("Aie SetupRenderState ?");
-                    // ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
+                    ImGui_ImplSDLRenderer_SetupRenderState();
                 } else { 
                     pcmd->UserCallback(cmd_list, pcmd);
                 }
