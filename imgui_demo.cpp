@@ -887,13 +887,35 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("Word Wrapping"))
         {
             // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
+            ImGui::TextUnformatted("[Left Align]");
             ImGui::TextWrapped(
                 "This text should automatically wrap on the edge of the window. The current implementation "
                 "for text wrapping follows simple rules suitable for English and possibly other languages.");
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+            ImGui::Spacing();
+
+            ImGui::PushTextAlignment(0.5f);
+            ImGui::TextUnformatted("[Center Align]");
+            ImGui::TextWrapped(
+                "This text should automatically wrap on the edge of the window. The current implementation "
+                "for text wrapping follows simple rules suitable for English and possibly other languages.");
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+            ImGui::PopTextAlignment();
+            ImGui::Spacing();
+            
+            ImGui::PushTextAlignment(1.0f);
+            ImGui::TextUnformatted("[Right Align]");
+            ImGui::TextWrapped(
+                "This text should automatically wrap on the edge of the window. The current implementation "
+                "for text wrapping follows simple rules suitable for English and possibly other languages.");
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+            ImGui::PopTextAlignment();
             ImGui::Spacing();
 
             static float wrap_width = 200.0f;
             ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
+            static float text_align = 0.0f;
+            ImGui::SliderFloat("Text alignment", &text_align, 0.0f, 1.0f, "%.2f");
 
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             for (int n = 0; n < 2; n++)
@@ -903,16 +925,44 @@ static void ShowDemoWindowWidgets()
                 ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
                 ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
                 ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+                ImGui::PushTextAlignment(text_align);
                 if (n == 0)
-                    ImGui::Text("The lazy dog is a good dog. This paragraph should fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
-                else
-                    ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+                    ImGui::Text(
+                        "The lazy dog is a good dog. This paragraph should fit within %.0f pixels. "
+                        "Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
+                else {
+                    ImGui::TextWrapped("aaaaaaaa bbbbbbbb, c\n\ttest\r\n  cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+                }
+                ImGui::PopTextAlignment();
 
                 // Draw actual text bounding box, following by marker of our expected limit (should not overlap!)
                 draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
                 draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
                 ImGui::PopTextWrapPos();
             }
+            ImGui::Spacing();
+
+            ImGui::TextUnformatted("[Typesetting Example]");
+            ImGui::SameLine(); HelpMarker("Use SetCursorPos and TextWrapPos to horizontally align text blocks.");
+            ImGui::PushTextAlignment(text_align);
+            
+            float max_wrap_width = ImGui::GetContentRegionAvail().x;
+            if (wrap_width < max_wrap_width) {
+                ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + fabs(max_wrap_width - wrap_width) * text_align, ImGui::GetCursorPosY()));
+            }
+
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrap_width);
+            ImGui::Text(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt "
+                "ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
+                "ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in "
+                "reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur "
+                "sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id "
+                "est laborum.");
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+            ImGui::PopTextWrapPos();
+            
+            ImGui::PopTextAlignment();
 
             ImGui::TreePop();
         }
@@ -3109,7 +3159,7 @@ static void ShowDemoWindowLayout()
                     "(this is often used internally to avoid altering the clipping rectangle and minimize draw calls)");
                 ImVec4 clip_rect(p0.x, p0.y, p1.x, p1.y); // AddText() takes a ImVec4* here so let's convert.
                 draw_list->AddRectFilled(p0, p1, IM_COL32(90, 90, 120, 255));
-                draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize(), text_pos, IM_COL32_WHITE, text_str, NULL, 0.0f, &clip_rect);
+                draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize(), text_pos, IM_COL32_WHITE, text_str, NULL, 0.0f, 0.0f, &clip_rect);
                 break;
             }
             ImGui::EndGroup();

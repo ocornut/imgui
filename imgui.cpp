@@ -2725,7 +2725,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     }
 }
 
-void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
+void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width, float text_alignment)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2735,7 +2735,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, text_alignment);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -2763,11 +2763,11 @@ void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, co
     if (need_clipping)
     {
         ImVec4 fine_clip_rect(clip_min->x, clip_min->y, clip_max->x, clip_max->y);
-        draw_list->AddText(NULL, 0.0f, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, &fine_clip_rect);
+        draw_list->AddText(NULL, 0.0f, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, 0.0f, &fine_clip_rect);
     }
     else
     {
-        draw_list->AddText(NULL, 0.0f, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
+        draw_list->AddText(NULL, 0.0f, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, 0.0f, NULL);
     }
 }
 
@@ -3070,6 +3070,7 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
     window->DC.ChildWindows.clear();
     window->DC.ItemWidthStack.clear();
     window->DC.TextWrapPosStack.clear();
+    window->DC.TextAlignmentStack.clear();
 }
 
 void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
@@ -6334,6 +6335,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.TextWrapPos = -1.0f; // disabled
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
+        window->DC.TextAlignmentStack.resize(0);
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -6707,6 +6709,20 @@ void ImGui::PopTextWrapPos()
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
     window->DC.TextWrapPosStack.pop_back();
+}
+
+void ImGui::PushTextAlignment(float alignment)
+{
+    ImGuiWindow *window = GetCurrentWindow();
+    window->DC.TextAlignmentStack.push_back(window->DC.TextAlignment);
+    window->DC.TextAlignment = alignment;
+}
+
+void ImGui::PopTextAlignment()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.TextAlignment = window->DC.TextAlignmentStack.back();
+    window->DC.TextAlignmentStack.pop_back();
 }
 
 bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
