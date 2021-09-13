@@ -12493,7 +12493,7 @@ void ImGui::DestroyPlatformWindows()
 //    | - DockContextProcessDock()            - process one docking request
 //    | - DockNodeUpdate()
 //    |   - DockNodeUpdateForRootNode()
-//    |     - DockNodeUpdateVisibleFlagAndInactiveChilds()
+//    |     - DockNodeUpdateFlagsAndCollapse()
 //    |     - DockNodeFindInfo()
 //    |   - destroy unused node or tab bar
 //    |   - create dock node host window
@@ -12626,7 +12626,7 @@ namespace ImGui
     static void             DockNodeHideHostWindow(ImGuiDockNode* node);
     static void             DockNodeUpdate(ImGuiDockNode* node);
     static void             DockNodeUpdateForRootNode(ImGuiDockNode* node);
-    static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
+    static void             DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
     static void             DockNodeAddTabBar(ImGuiDockNode* node);
     static void             DockNodeRemoveTabBar(ImGuiDockNode* node);
@@ -13300,7 +13300,7 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 // - ImGuiDockNodeFindInfoResults
 // - DockNodeFindInfo()
 // - DockNodeFindWindowByID()
-// - DockNodeUpdateVisibleFlagAndInactiveChilds()
+// - DockNodeUpdateFlagsAndCollapse()
 // - DockNodeUpdateVisibleFlag()
 // - DockNodeStartMouseMovingWindow()
 // - DockNodeUpdate()
@@ -13568,36 +13568,36 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
 }
 
 // Search function called once by root node in DockNodeUpdate()
-struct ImGuiDockNodeFindInfoResults
+struct ImGuiDockNodeTreeInfo
 {
     ImGuiDockNode*      CentralNode;
     ImGuiDockNode*      FirstNodeWithWindows;
     int                 CountNodesWithWindows;
     //ImGuiWindowClass  WindowClassForMerges;
 
-    ImGuiDockNodeFindInfoResults() { CentralNode = FirstNodeWithWindows = NULL; CountNodesWithWindows = 0; }
+    ImGuiDockNodeTreeInfo() { memset(this, 0, sizeof(*this)); }
 };
 
-static void DockNodeFindInfo(ImGuiDockNode* node, ImGuiDockNodeFindInfoResults* results)
+static void DockNodeFindInfo(ImGuiDockNode* node, ImGuiDockNodeTreeInfo* info)
 {
     if (node->Windows.Size > 0)
     {
-        if (results->FirstNodeWithWindows == NULL)
-            results->FirstNodeWithWindows = node;
-        results->CountNodesWithWindows++;
+        if (info->FirstNodeWithWindows == NULL)
+            info->FirstNodeWithWindows = node;
+        info->CountNodesWithWindows++;
     }
     if (node->IsCentralNode())
     {
-        IM_ASSERT(results->CentralNode == NULL); // Should be only one
+        IM_ASSERT(info->CentralNode == NULL); // Should be only one
         IM_ASSERT(node->IsLeafNode() && "If you get this assert: please submit .ini file + repro of actions leading to this.");
-        results->CentralNode = node;
+        info->CentralNode = node;
     }
-    if (results->CountNodesWithWindows > 1 && results->CentralNode != NULL)
+    if (info->CountNodesWithWindows > 1 && info->CentralNode != NULL)
         return;
     if (node->ChildNodes[0])
-        DockNodeFindInfo(node->ChildNodes[0], results);
+        DockNodeFindInfo(node->ChildNodes[0], info);
     if (node->ChildNodes[1])
-        DockNodeFindInfo(node->ChildNodes[1], results);
+        DockNodeFindInfo(node->ChildNodes[1], info);
 }
 
 static ImGuiWindow* ImGui::DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID id)
@@ -13611,7 +13611,7 @@ static ImGuiWindow* ImGui::DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID i
 
 // - Remove inactive windows/nodes.
 // - Update visibility flag.
-static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
+static void ImGui::DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(node->ParentNode == NULL || node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
@@ -13625,11 +13625,11 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
     // If 'node->ChildNode[0]' delete itself, then 'node->ChildNode[1]->Windows' will be moved into 'node'
     // If 'node->ChildNode[1]' delete itself, then 'node->ChildNode[0]->Windows' will be moved into 'node' and the "remove inactive windows" loop will have run twice on those windows (harmless)
     if (node->ChildNodes[0])
-        DockNodeUpdateVisibleFlagAndInactiveChilds(node->ChildNodes[0]);
+        DockNodeUpdateFlagsAndCollapse(node->ChildNodes[0]);
     if (node->ChildNodes[1])
-        DockNodeUpdateVisibleFlagAndInactiveChilds(node->ChildNodes[1]);
+        DockNodeUpdateFlagsAndCollapse(node->ChildNodes[1]);
 
-    // Remove inactive windows
+    // Remove inactive windows, collapse nodes
     // Merge node flags overrides stored in windows
     node->LocalFlagsInWindows = ImGuiDockNodeFlags_None;
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
@@ -13654,13 +13654,12 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
             }
             DockNodeRemoveWindow(node, window, node->ID);
             window_n--;
+            continue;
         }
-        else
-        {
-            // FIXME-DOCKING: Missing policies for conflict resolution, hence the "Experimental" tag on this.
-            //node->LocalFlagsInWindow &= ~window->WindowClass.DockNodeFlagsOverrideClear;
-            node->LocalFlagsInWindows |= window->WindowClass.DockNodeFlagsOverrideSet;
-        }
+
+        // FIXME-DOCKING: Missing policies for conflict resolution, hence the "Experimental" tag on this.
+        //node->LocalFlagsInWindow &= ~window->WindowClass.DockNodeFlagsOverrideClear;
+        node->LocalFlagsInWindows |= window->WindowClass.DockNodeFlagsOverrideSet;
     }
     node->UpdateMergedFlags();
 
@@ -13707,22 +13706,22 @@ static void ImGui::DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWind
 // Update CentralNode, OnlyNodeWithWindows, LastFocusedNodeID. Copy window class.
 static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
 {
-    DockNodeUpdateVisibleFlagAndInactiveChilds(node);
+    DockNodeUpdateFlagsAndCollapse(node);
 
-    // FIXME-DOCK: Merge this scan into the one above.
     // - Setup central node pointers
     // - Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
-    ImGuiDockNodeFindInfoResults results;
-    DockNodeFindInfo(node, &results);
-    node->CentralNode = results.CentralNode;
-    node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1) ? results.FirstNodeWithWindows : NULL;
-    if (node->LastFocusedNodeId == 0 && results.FirstNodeWithWindows != NULL)
-        node->LastFocusedNodeId = results.FirstNodeWithWindows->ID;
+    // Cannot merge this with DockNodeUpdateFlagsAndCollapse() because FirstNodeWithWindows is found after window removal and child collapsing
+    ImGuiDockNodeTreeInfo info;
+    DockNodeFindInfo(node, &info);
+    node->CentralNode = info.CentralNode;
+    node->OnlyNodeWithWindows = (info.CountNodesWithWindows == 1) ? info.FirstNodeWithWindows : NULL;
+    if (node->LastFocusedNodeId == 0 && info.FirstNodeWithWindows != NULL)
+        node->LastFocusedNodeId = info.FirstNodeWithWindows->ID;
 
     // Copy the window class from of our first window so it can be used for proper dock filtering.
     // When node has mixed windows, prioritize the class with the most constraint (DockingAllowUnclassed = false) as the reference to copy.
     // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
-    if (ImGuiDockNode* first_node_with_windows = results.FirstNodeWithWindows)
+    if (ImGuiDockNode* first_node_with_windows = info.FirstNodeWithWindows)
     {
         node->WindowClass = first_node_with_windows->Windows[0]->WindowClass;
         for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
@@ -14850,6 +14849,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 }
 
 // Update Pos/Size for a node hierarchy (don't affect child Windows yet)
+// (Depth-first, Pre-Order)
 void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size, bool only_write_to_marked_nodes)
 {
     // During the regular dock node update we write to all nodes.
@@ -14879,6 +14879,10 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         ImGuiContext& g = *GImGui;
         const float size_min_each = ImFloor(ImMin(size_avail, g.Style.WindowMinSize[axis] * 2.0f) * 0.5f);
 
+        // FIXME: Blocks 2) and 3) are essentially doing nearly the same thing.
+        // Difference are: write-back to SizeRef; application of a minimum size; rounding before ImFloor()
+        // Clarify and rework differences between Size & SizeRef and purpose of WantLockSizeOnce
+
         // 2) Process locked absolute size (during a splitter resize we preserve the child of nodes not touching the splitter edge)
         if (child_0->WantLockSizeOnce && !child_1->WantLockSizeOnce)
         {
@@ -14896,19 +14900,19 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         {
             // FIXME-DOCK: We cannot honor the requested size, so apply ratio.
             // Currently this path will only be taken if code programmatically sets WantLockSizeOnce
-            float ratio_0 = child_0_size[axis] / (child_0_size[axis] + child_1_size[axis]);
-            child_0_size[axis] = child_0->SizeRef[axis] = ImFloor(size_avail * ratio_0);
+            float split_ratio = child_0_size[axis] / (child_0_size[axis] + child_1_size[axis]);
+            child_0_size[axis] = child_0->SizeRef[axis] = ImFloor(size_avail * split_ratio);
             child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
             IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
         }
 
         // 3) If one window is the central node (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the central node
-        else if (child_1->IsCentralNode() && child_0->SizeRef[axis] != 0.0f)
+        else if (child_0->SizeRef[axis] != 0.0f && child_1->IsCentralNode())
         {
             child_0_size[axis] = ImMin(size_avail - size_min_each, child_0->SizeRef[axis]);
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
-        else if (child_0->IsCentralNode() && child_1->SizeRef[axis] != 0.0f)
+        else if (child_1->SizeRef[axis] != 0.0f && child_0->IsCentralNode())
         {
             child_1_size[axis] = ImMin(size_avail - size_min_each, child_1->SizeRef[axis]);
             child_0_size[axis] = (size_avail - child_1_size[axis]);
@@ -14917,7 +14921,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         {
             // 4) Otherwise distribute according to the relative ratio of each SizeRef value
             float split_ratio = child_0->SizeRef[axis] / (child_0->SizeRef[axis] + child_1->SizeRef[axis]);
-            child_0_size[axis] = ImMax(size_min_each, ImFloor(size_avail * split_ratio + 0.5F));
+            child_0_size[axis] = ImMax(size_min_each, ImFloor(size_avail * split_ratio + 0.5f));
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
 
@@ -14946,6 +14950,7 @@ static void DockNodeTreeUpdateSplitterFindTouchingNode(ImGuiDockNode* node, ImGu
             DockNodeTreeUpdateSplitterFindTouchingNode(node->ChildNodes[1], axis, side, touching_nodes);
 }
 
+// (Depth-First, Pre-Order)
 void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
 {
     if (node->IsLeafNode())
@@ -14980,7 +14985,7 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
             //bb.Max[axis] -= 1;
             PushID(node->ID);
 
-            // Gather list of nodes that are touching the splitter line. Find resizing limits based on those nodes.
+            // Find resizing limits by gathering list of nodes that are touching the splitter line.
             ImVector<ImGuiDockNode*> touching_nodes[2];
             float min_size = g.Style.WindowMinSize[axis];
             float resize_limits[2];
@@ -14988,9 +14993,8 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
             resize_limits[1] = node->ChildNodes[1]->Pos[axis] + node->ChildNodes[1]->Size[axis] - min_size;
 
             ImGuiID splitter_id = GetID("##Splitter");
-            if (g.ActiveId == splitter_id)
+            if (g.ActiveId == splitter_id) // Only process when splitter is active
             {
-                // Only process when splitter is active
                 DockNodeTreeUpdateSplitterFindTouchingNode(child_0, axis, 1, &touching_nodes[0]);
                 DockNodeTreeUpdateSplitterFindTouchingNode(child_1, axis, 0, &touching_nodes[1]);
                 for (int touching_node_n = 0; touching_node_n < touching_nodes[0].Size; touching_node_n++)
@@ -14998,14 +15002,18 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
                 for (int touching_node_n = 0; touching_node_n < touching_nodes[1].Size; touching_node_n++)
                     resize_limits[1] = ImMin(resize_limits[1], touching_nodes[1][touching_node_n]->Rect().Max[axis] - min_size);
 
+                // [DEBUG] Render touching nodes & limits
                 /*
-                // [DEBUG] Render limits
                 ImDrawList* draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList(GetMainViewport());
                 for (int n = 0; n < 2; n++)
+                {
+                    for (int touching_node_n = 0; touching_node_n < touching_nodes[n].Size; touching_node_n++)
+                        draw_list->AddRect(touching_nodes[n][touching_node_n]->Pos, touching_nodes[n][touching_node_n]->Pos + touching_nodes[n][touching_node_n]->Size, IM_COL32(0, 255, 0, 255));
                     if (axis == ImGuiAxis_X)
                         draw_list->AddLine(ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y), ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y + node->ChildNodes[n]->Size.y), IM_COL32(255, 0, 255, 255), 3.0f);
                     else
                         draw_list->AddLine(ImVec2(node->ChildNodes[n]->Pos.x, resize_limits[n]), ImVec2(node->ChildNodes[n]->Pos.x + node->ChildNodes[n]->Size.x, resize_limits[n]), IM_COL32(255, 0, 255, 255), 3.0f);
+                }
                 */
             }
 
