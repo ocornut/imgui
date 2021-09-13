@@ -1170,7 +1170,7 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         KeepAliveID(column_id);
 
         bool hovered = false, held = false;
-        bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick);
+        bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_NoNavFocus);
         if (pressed && IsMouseDoubleClicked(0))
         {
             TableSetColumnWidthAutoSingle(table, column_n);

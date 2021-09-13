@@ -51,6 +51,11 @@ Other Changes:
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
   the NavEnableSetMousePos config flag is set.
+- Nav: Fixed a few widgets from not setting reference keyboard/gamepad navigation ID when
+  activated with mouse. More specifically: BeginTabItem(), the scrolling arrows of BeginTabBar(),
+  the arrow section of TreeNode(), the +/- buttons of InputInt()/InputFloat(), Selectable() with
+  ImGuiSelectableFlags_SelectOnRelease. More generally: any direct use of ButtonBehavior() with
+  the PressedOnClick/PressedOnDoubleClick/PressedOnRelease button policy.
 - Menus: Adjust closing logic to accomodate for varying font size and dpi.
 - Menus: Fixed crash when navigating left inside a child window inside a sub-menu. (#4510).
 - Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)

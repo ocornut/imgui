@@ -571,6 +571,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                         ClearActiveID();
                     else
                         SetActiveID(id, window); // Hold on ID
+                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                        SetFocusID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
                     FocusWindow(window);
                 }
@@ -581,6 +583,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay;
                 if (!has_repeated_at_least_once)
                     pressed = true;
+                if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                    SetFocusID(id, window);
                 ClearActiveID();
             }
 
