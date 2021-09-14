@@ -124,7 +124,14 @@ Other Changes:
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
   the NavEnableSetMousePos config flag is set.
-- Menus: adjust closing logic to accomodate for varying font size and dpi.
+- Nav: Fixed a few widgets from not setting reference keyboard/gamepad navigation ID when
+  activated with mouse. More specifically: BeginTabItem(), the scrolling arrows of BeginTabBar(),
+  the arrow section of TreeNode(), the +/- buttons of InputInt()/InputFloat(), Selectable() with
+  ImGuiSelectableFlags_SelectOnRelease. More generally: any direct use of ButtonBehavior() with
+  the PressedOnClick/PressedOnDoubleClick/PressedOnRelease button policy.
+- Menus: Fixed vertical alignments of MenuItem() calls within a menu bar. (broken in 1.84). (#4538)
+- Menus: Adjust closing logic to accomodate for varying font size and dpi.
+- Menus: Fixed crash when navigating left inside a child window inside a sub-menu. (#4510).
 - Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)
 - PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
 - IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
