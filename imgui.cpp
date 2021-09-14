@@ -12627,6 +12627,7 @@ namespace ImGui
     static void             DockNodeUpdate(ImGuiDockNode* node);
     static void             DockNodeUpdateForRootNode(ImGuiDockNode* node);
     static void             DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node);
+    static void             DockNodeUpdateHasCentralNodeChild(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
     static void             DockNodeAddTabBar(ImGuiDockNode* node);
     static void             DockNodeRemoveTabBar(ImGuiDockNode* node);
@@ -13301,6 +13302,7 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 // - DockNodeFindInfo()
 // - DockNodeFindWindowByID()
 // - DockNodeUpdateFlagsAndCollapse()
+// - DockNodeUpdateHasCentralNodeFlag()
 // - DockNodeUpdateVisibleFlag()
 // - DockNodeStartMouseMovingWindow()
 // - DockNodeUpdate()
@@ -13338,7 +13340,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     AuthorityForPos = AuthorityForSize = ImGuiDataAuthority_DockNode;
     AuthorityForViewport = ImGuiDataAuthority_Auto;
     IsVisible = true;
-    IsFocused = HasCloseButton = HasWindowMenuButton = false;
+    IsFocused = HasCloseButton = HasWindowMenuButton = HasCentralNodeChild = false;
     WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarUpdate = WantHiddenTabBarToggle = false;
     MarkedForPosSizeWrite = false;
 }
@@ -13625,6 +13627,7 @@ static void ImGui::DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node)
     // There is the possibility that one of our child becoming empty will delete itself and moving its sibling contents into 'node'.
     // If 'node->ChildNode[0]' delete itself, then 'node->ChildNode[1]->Windows' will be moved into 'node'
     // If 'node->ChildNode[1]' delete itself, then 'node->ChildNode[0]->Windows' will be moved into 'node' and the "remove inactive windows" loop will have run twice on those windows (harmless)
+    node->HasCentralNodeChild = false;
     if (node->ChildNodes[0])
         DockNodeUpdateFlagsAndCollapse(node->ChildNodes[0]);
     if (node->ChildNodes[1])
@@ -13684,6 +13687,25 @@ static void ImGui::DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node)
     DockNodeUpdateVisibleFlag(node);
 }
 
+// This is rarely called as DockNodeUpdateForRootNode() generally does it most frames.
+static void ImGui::DockNodeUpdateHasCentralNodeChild(ImGuiDockNode* node)
+{
+    node->HasCentralNodeChild = false;
+    if (node->ChildNodes[0])
+        DockNodeUpdateHasCentralNodeChild(node->ChildNodes[0]);
+    if (node->ChildNodes[1])
+        DockNodeUpdateHasCentralNodeChild(node->ChildNodes[1]);
+    if (node->IsRootNode())
+    {
+        ImGuiDockNode* mark_node = node->CentralNode;
+        while (mark_node)
+        {
+            mark_node->HasCentralNodeChild = true;
+            mark_node = mark_node->ParentNode;
+        }
+    }
+}
+
 static void ImGui::DockNodeUpdateVisibleFlag(ImGuiDockNode* node)
 {
     // Update visibility flag
@@ -13732,6 +13754,13 @@ static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
                 node->WindowClass = first_node_with_windows->Windows[n]->WindowClass;
                 break;
             }
+    }
+
+    ImGuiDockNode* mark_node = node->CentralNode;
+    while (mark_node)
+    {
+        mark_node->HasCentralNodeChild = true;
+        mark_node = mark_node->ParentNode;
     }
 }
 
@@ -14791,6 +14820,7 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 
     DockNodeMoveWindows(parent_node->ChildNodes[split_inheritor_child_idx], parent_node);
     DockSettingsRenameNodeReferences(parent_node->ID, parent_node->ChildNodes[split_inheritor_child_idx]->ID);
+    DockNodeUpdateHasCentralNodeChild(DockNodeGetRootNode(parent_node));
     DockNodeTreeUpdatePosSize(parent_node, parent_node->Pos, parent_node->Size);
 
     // Flags transfer (e.g. this is where we transfer the ImGuiDockNodeFlags_CentralNode property)
@@ -14914,12 +14944,12 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         }
 
         // 3) If one window is the central node (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the central node
-        else if (child_0->SizeRef[axis] != 0.0f && child_1->IsCentralNode())
+        else if (child_0->SizeRef[axis] != 0.0f && child_1->HasCentralNodeChild)
         {
             child_0_size[axis] = ImMin(size_avail - size_min_each, child_0->SizeRef[axis]);
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
-        else if (child_1->SizeRef[axis] != 0.0f && child_0->IsCentralNode())
+        else if (child_1->SizeRef[axis] != 0.0f && child_0->HasCentralNodeChild)
         {
             child_1_size[axis] = ImMin(size_avail - size_min_each, child_1->SizeRef[axis]);
             child_0_size[axis] = (size_avail - child_1_size[axis]);
@@ -15696,6 +15726,7 @@ void ImGui::DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_docks
         }
 }
 
+// FIXME-DOCK: This is awkward because in series of split user is likely to loose access to its root node.
 void ImGui::DockBuilderFinish(ImGuiID root_id)
 {
     ImGuiContext* ctx = GImGui;
@@ -15759,6 +15790,7 @@ static ImGuiDockNode* ImGui::DockContextBindNodeToWindow(ImGuiContext* ctx, ImGu
                 ancestor_node = ancestor_node->ParentNode;
         }
         IM_ASSERT(ancestor_node->Size.x > 0.0f && ancestor_node->Size.y > 0.0f);
+        DockNodeUpdateHasCentralNodeChild(DockNodeGetRootNode(ancestor_node));
         DockNodeTreeUpdatePosSize(ancestor_node, ancestor_node->Pos, ancestor_node->Size, true);
     }
 
@@ -16993,11 +17025,12 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
         DebugNodeWindow(node->HostWindow, "HostWindow");
         DebugNodeWindow(node->VisibleWindow, "VisibleWindow");
         BulletText("SelectedTabID: 0x%08X, LastFocusedNodeID: 0x%08X", node->SelectedTabId, node->LastFocusedNodeId);
-        BulletText("Misc:%s%s%s%s%s",
+        BulletText("Misc:%s%s%s%s%s%s",
             node->IsDockSpace() ? " IsDockSpace" : "",
             node->IsCentralNode() ? " IsCentralNode" : "",
             is_alive ? " IsAlive" : "", is_active ? " IsActive" : "",
-            node->WantLockSizeOnce ? " WantLockSizeOnce" : "");
+            node->WantLockSizeOnce ? " WantLockSizeOnce" : "",
+            node->HasCentralNodeChild ? " HasCentralNodeChild" : "");
         if (TreeNode("flags", "Flags Merged: 0x%04X, Local: 0x%04X, InWindows: 0x%04X, Shared: 0x%04X", node->MergedFlags, node->LocalFlags, node->LocalFlagsInWindows, node->SharedFlags))
         {
             if (BeginTable("flags", 4))
