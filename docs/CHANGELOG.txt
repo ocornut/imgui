@@ -145,7 +145,8 @@ Docking+Viewports Branch:
   docking hierarchy. Added ImGuiFocusedFlags_DockHierarchy flag to consider docking hierarchy in the test.
 - IsWindowHovered: Fixed using ImGuiHoveredFlags_ChildWindows (without _RootWindow) from leaking the
   docking hierarchy. Added ImGuiHoveredFlags_DockHierarchy flag to consider docking hierarchy in the test.
-- Docking: fixed settings load issue when mouse wheeling. (#4310)
+- Docking: Fixed settings load issue when mouse wheeling. (#4310)
+- Docking: Fixed manually created floating node with a central node from not hiding when windows are gone.
 - Docking + Drag and Drop: Fixed using BeginDragDropSource() or BeginDragDropTarget() inside a Begin()
   that returned false because the window is docked. (#4515)
 - Viewports: Fixed a crash while a window owning its viewport disappear while being dragged.

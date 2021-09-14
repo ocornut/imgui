@@ -13330,6 +13330,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     State = ImGuiDockNodeState_Unknown;
     HostWindow = VisibleWindow = NULL;
     CentralNode = OnlyNodeWithWindows = NULL;
+    CountNodeWithWindows = 0;
     LastFrameAlive = LastFrameActive = LastFrameFocused = -1;
     LastFocusedNodeId = 0;
     SelectedTabId = 0;
@@ -13715,6 +13716,7 @@ static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
     DockNodeFindInfo(node, &info);
     node->CentralNode = info.CentralNode;
     node->OnlyNodeWithWindows = (info.CountNodesWithWindows == 1) ? info.FirstNodeWithWindows : NULL;
+    node->CountNodeWithWindows = info.CountNodesWithWindows;
     if (node->LastFocusedNodeId == 0 && info.FirstNodeWithWindows != NULL)
         node->LastFocusedNodeId = info.FirstNodeWithWindows->ID;
 
@@ -13764,9 +13766,14 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
     // Early out for hidden root dock nodes (when all DockId references are in inactive windows, or there is only 1 floating window holding on the DockId)
     bool want_to_hide_host_window = false;
-    if (node->Windows.Size <= 1 && node->IsFloatingNode() && node->IsLeafNode())
-        if (!g.IO.ConfigDockingAlwaysTabBar && (node->Windows.Size == 0 || !node->Windows[0]->WindowClass.DockingAlwaysTabBar))
+    if (node->IsFloatingNode())
+    {
+        if (node->Windows.Size <= 1 && node->IsLeafNode())
+            if (!g.IO.ConfigDockingAlwaysTabBar && (node->Windows.Size == 0 || !node->Windows[0]->WindowClass.DockingAlwaysTabBar))
+                want_to_hide_host_window = true;
+        if (node->CountNodeWithWindows == 0)
             want_to_hide_host_window = true;
+    }
     if (want_to_hide_host_window)
     {
         if (node->Windows.Size == 1)
