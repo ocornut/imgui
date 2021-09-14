@@ -19,14 +19,6 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-// Include OpenGL header (without an OpenGL loader) requires a bit of fiddling
-#if defined(_WIN32) && !defined(APIENTRY)
-#  define APIENTRY __stdcall                  // It is customary to use APIENTRY for OpenGL function pointer declarations on all platforms.  Additionally, the Windows OpenGL header needs APIENTRY.
-#endif
-#if defined(_WIN32) && !defined(WINGDIAPI)
-#  define WINGDIAPI __declspec(dllimport)     // Some Windows OpenGL headers need this
-#endif
-
 struct ImGui_ImplSDLRenderer_Data
 {
     SDL_Renderer *SDLRenderer;
@@ -42,25 +34,18 @@ static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
 }
 
 // Functions
-bool ImGui_ImplSDLRenderer_Init(SDL_Window *window)
+bool ImGui_ImplSDLRenderer_Init(SDL_Renderer *renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+    IM_ASSERT(renderer != NULL && "SDL_Renderer not initialized!");
 
     // Setup backend capabilities flags
     ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_SDLRenderer";
 
-    bd->SDLRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    if (bd->SDLRenderer == NULL) {
-        SDL_Log("Error creating SDL renderer");
-        return false;
-    } else {
-        SDL_RendererInfo info;
-        SDL_GetRendererInfo(bd->SDLRenderer, &info);
-        SDL_Log("Current SDL Renderer: %s", info.name);
-    }
+    bd->SDLRenderer = renderer;
     return true;
 }
 
@@ -70,17 +55,19 @@ void ImGui_ImplSDLRenderer_Shutdown()
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
     ImGui_ImplSDLRenderer_DestroyDeviceObjects();
-    SDL_DestroyRenderer(bd->SDLRenderer);
 
     io.BackendRendererName = NULL;
     io.BackendRendererUserData = NULL;
     IM_DELETE(bd);
+}
 
-    if (SDL_GetError()) {
-        SDL_Log("Ending with SDL error: %s", SDL_GetError());
-    } else {
-        SDL_Log("Ending with no SDL error");
-    }
+static void ImGui_ImplSDLRenderer_SetupRenderState()
+{
+	ImGui_ImplSDLRenderer_Data *bd = ImGui_ImplSDLRenderer_GetBackendData();
+
+	// Clear out any viewports and cliprects set by the user
+	SDL_RenderSetViewport(bd->SDLRenderer, NULL);
+	SDL_RenderSetClipRect(bd->SDLRenderer, NULL);
 }
 
 void ImGui_ImplSDLRenderer_NewFrame()
@@ -95,25 +82,31 @@ void ImGui_ImplSDLRenderer_NewFrame()
 
 void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width == 0 || fb_height == 0)
-        return;
-    
-    // Setup desired GL state
-    //  ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
+	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
-    // Will project scissor/clipping rectangles into framebuffer space
-    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+	// If there's a scale factor set by the user, use that instead
+	float rsX = 1.0f;
+	float rsY = 1.0f;
+	SDL_RenderGetScale(bd->SDLRenderer, &rsX, &rsY);
 
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+	ImVec2 renderScale;
+	// If the user has specified a scale factor to SDL_Renderer already (via SDL_RenderSetScale()), SDL will scale whatever we pass
+	// to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
+	renderScale.x = (rsX == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+	renderScale.y = (rsY == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
 
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    SDL_SetRenderDrawColor(bd->SDLRenderer, clear_color.x * 255, clear_color.y * 255, clear_color.z * 255 , clear_color.w * 255);
-    SDL_RenderClear(bd->SDLRenderer);
+	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+	int fb_width = (int)(draw_data->DisplaySize.x * renderScale.x);
+	int fb_height = (int)(draw_data->DisplaySize.y * renderScale.y);
+	if (fb_width == 0 || fb_height == 0)
+		return;
+
+
+	// Will project scissor/clipping rectangles into framebuffer space
+	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+	ImVec2 clip_scale = renderScale;
+
+    ImGui_ImplSDLRenderer_SetupRenderState();
 
     for (int n = 0; n < draw_data->CmdListsCount; n++) {
 
@@ -129,8 +122,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
-                    SDL_Log("Aie SetupRenderState ?");
-                    // ImGui_ImplSDLRenderer_SetupRenderState(draw_data, fb_width, fb_height);
+                    ImGui_ImplSDLRenderer_SetupRenderState();
                 } else { 
                     pcmd->UserCallback(cmd_list, pcmd);
                 }
@@ -164,7 +156,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                     int col_stride = sizeof(ImDrawVert);
                     int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-                    SDL_Texture *tex = (pcmd->TextureId == io.Fonts->TexID ? bd->FontTexture : NULL);
+					SDL_Texture *tex = (SDL_Texture*)pcmd->TextureId;
 
                     SDL_RenderGeometryRaw(bd->SDLRenderer, tex, 
                             xy, xy_stride, color,
@@ -178,8 +170,6 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
             idx_buffer += pcmd->ElemCount;
         }
     }
-
-    SDL_RenderPresent(bd->SDLRenderer);
 }
 
 // Called by Init/NewFrame/Shutdown
@@ -191,7 +181,7 @@ bool ImGui_ImplSDLRenderer_CreateFontsTexture()
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
-    bd->FontTexture = SDL_CreateTexture(bd->SDLRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
+    bd->FontTexture = SDL_CreateTexture(bd->SDLRenderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
     if (bd->FontTexture == NULL) {
         SDL_Log("error creating texture");
         return false;
