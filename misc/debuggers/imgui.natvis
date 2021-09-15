@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+.natvis file for Visual Studio debugger.
+Purpose: provide nicer views on data types used by Dear ImGui.
 
-<!-- natvis file for Visual Studio debugger (you can include this in a project file, or install in visual studio folder) -->
+To enable:
+* include file in your VS project (most recommended: not intrusive and always kept up to date!)
+* or copy in %USERPROFILE%\Documents\Visual Studio XXXX\Visualizers (current user)
+* or copy in %VsInstallDirectory%\Common7\Packages\Debugger\Visualizers (all users)
+
+More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-views-of-native-objects?view=vs-2019
+-->
 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
@@ -13,7 +22,7 @@
     </ArrayItems>
   </Expand>
 </Type>
-  
+
 <Type Name="ImSpan&lt;*&gt;">
   <DisplayString>{{Size={DataEnd-Data} }}</DisplayString>
   <Expand>
@@ -49,5 +58,5 @@
 <Type Name="ImGuiDockNode">
   <DisplayString>{{ID {ID,x} Pos=({Pos.x,g} {Pos.y,g}) Size=({Size.x,g} {Size.y,g}) Parent {(ParentNode==0)?0:ParentNode->ID,x} Childs {(ChildNodes[0] != 0)+(ChildNodes[1] != 0)} Windows {Windows.Size}  }</DisplayString>
 </Type>
-  
+
 </AutoVisualizer>

@@ -8,9 +8,6 @@
       <UniqueIdentifier>{f18ab499-84e1-499f-8eff-9754361e0e52}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="gl3w">
-      <UniqueIdentifier>{f9997b32-5479-4756-9ffc-77793ad3764f}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">
@@ -24,9 +21,6 @@
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\libs\gl3w\GL\gl3w.c">
-      <Filter>gl3w</Filter>
     </ClCompile>
     <ClCompile Include="..\..\backends\imgui_impl_opengl3.cpp">
       <Filter>sources</Filter>
@@ -51,13 +45,10 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\libs\gl3w\GL\gl3w.h">
-      <Filter>gl3w</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libs\gl3w\GL\glcorearb.h">
-      <Filter>gl3w</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\backends\imgui_impl_opengl3.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\backends\imgui_impl_opengl3_loader.h">
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="..\..\backends\imgui_impl_sdl.h">
@@ -66,7 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
-    <None Include="..\..\misc\natvis\imgui.natvis">
+    <None Include="..\..\misc\debuggers\imgui.natvis">
       <Filter>sources</Filter>
     </None>
   </ItemGroup>

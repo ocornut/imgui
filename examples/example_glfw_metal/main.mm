@@ -60,7 +60,7 @@ int main(int, char**)
     if (window == NULL)
         return 1;
 
-    id <MTLDevice> device = MTLCreateSystemDefaultDevice();;
+    id <MTLDevice> device = MTLCreateSystemDefaultDevice();
     id <MTLCommandQueue> commandQueue = [device newCommandQueue];
 
     // Setup Platform/Renderer backends
@@ -99,7 +99,7 @@ int main(int, char**)
             id<CAMetalDrawable> drawable = [layer nextDrawable];
 
             id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color[0] * clear_color[3], clear_color[1] * clear_color[3], clear_color[2] * clear_color[3], clear_color[3]);
             renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
             renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
             renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;

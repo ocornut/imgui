@@ -88,6 +88,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: hover tooltip could show unclamped text
+ - input text: support for INSERT key to toggle overwrite mode. currently disabled because stb_textedit behavior is unsatisfactory on multi-line. (#2863)
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
@@ -211,7 +212,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
  - combo: flag for BeginCombo to not return true when unchanged (#1182)
- - combo: a way/helper to customize the combo preview (#1658)
+ - combo: a way/helper to customize the combo preview (#1658) -> exeperimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
@@ -243,6 +244,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
+ - menus: hovering a disabled BeginMenu or MenuItem won't close another menu
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
  - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
@@ -360,9 +362,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
+ - nav: NavFlattened: init requests don't work properly on flattened siblings.
+ - nav: NavFlattened: pageup/pagedown/home/end don't work properly on flattened siblings.
  - nav: NavFlattened: ESC on a flattened child should select something.
  - nav: NavFlattened: broken: in typical usage scenario, the items of a fully clipped child are currently not considered to enter into a NavFlattened child.
- - nav: NavFlattened: init request doesn't select items that are part of a NavFlattened child
  - nav: NavFlattened: cannot access menu-bar of a flattened child window with Alt/menu key (not a very common use case..).
  - nav: simulate right-click or context activation? (SHIFT+F10)
  - nav/tabbing: refactor old tabbing system and turn into navigation, should pass through all widgets (in submission order?).
@@ -379,7 +382,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
+ - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787, #343)
 
  - viewport: make it possible to have no main/hosting viewport
  - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
@@ -431,7 +434,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
- - backends: opengl: consider gl_lite loader https://github.com/ApoorvaJ/Papaya/blob/3808e39b0f45d4ca4972621c847586e4060c042a/src/libs/gl_lite.h
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)

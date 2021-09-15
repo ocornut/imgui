@@ -3,8 +3,16 @@ name: build
 on:
   push:
   pull_request:
-  schedule:
-    - cron:  '0 9 * * *'
+  workflow_run:
+    # Use a workflow as a trigger of scheduled builds. Forked repositories can disable scheduled builds by disabling
+    # "scheduled" workflow, while maintaining ability to perform local CI builds.
+    workflows:
+      - scheduled
+    branches:
+      - master
+      - docking
+    types:
+      - requested
 
 jobs:
   Windows:
@@ -60,7 +68,7 @@ jobs:
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (with IMGUI_DISABLE_WIN32_FUNCTIONS)
         shell: bash
@@ -73,7 +81,7 @@ jobs:
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (as DLL)
         shell: cmd
@@ -98,22 +106,22 @@ jobs:
       - name: Build Win32 example_glfw_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_glfw_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl_opengl3
         shell: cmd
@@ -122,7 +130,7 @@ jobs:
       - name: Build Win32 example_sdl_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_directx11/example_sdl_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_win32_directx9
         shell: cmd
@@ -135,12 +143,12 @@ jobs:
       - name: Build Win32 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_glfw_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_glfw_opengl3
         shell: cmd
@@ -153,17 +161,17 @@ jobs:
       - name: Build x64 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl3/example_sdl_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_sdl_directx11
         shell: cmd
@@ -172,17 +180,17 @@ jobs:
       - name: Build x64 example_win32_directx9
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx10
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx12
         shell: cmd
@@ -196,7 +204,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev libvulkan-dev
 
     - name: Build example_null (extra warnings, gcc 32-bit)
       run: |
@@ -217,6 +225,18 @@ jobs:
       run: |
         make -C examples/example_null clean
         CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, empty IM_ASSERT)
+      run: |
+          cat > example_single_file.cpp <<'EOF'
+
+          #define IM_ASSERT(x)
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+
+          EOF
+          g++ -I. -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
 
     - name: Build example_null (freetype)
       run: |
@@ -246,10 +266,11 @@ jobs:
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with large ImDrawIdx)
+    - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
+        #define ImTextureID void*
         #define ImDrawIdx unsigned int
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
@@ -344,17 +365,20 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
 
+    - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+      run: g++ -c -I. -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
+
   MacOS:
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -392,7 +416,7 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_glfw_metal
       run: make -C examples/example_glfw_metal
@@ -402,7 +426,7 @@ jobs:
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
-      if: github.event_name == 'schedule'
+      if: github.event_name == 'workflow_run'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
@@ -414,7 +438,7 @@ jobs:
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -450,17 +474,27 @@ jobs:
         popd
         make -C examples/example_emscripten_wgpu
 
+  Android:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build example_android_opengl3
+      run: |
+        cd examples/example_android_opengl3/android
+        gradle assembleDebug
+
   Discord-CI:
     runs-on: ubuntu-18.04
     if: always()
-    needs: [Windows, Linux, MacOS, iOS, Emscripten]
+    needs: [Windows, Linux, MacOS, iOS, Emscripten, Android]
     steps:
     - uses: dearimgui/github_discord_notifier@latest
       with:
         discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
         github-token: ${{ github.token }}
         action-task: discord-jobs
-        discord-filter: "'{{ github.branch }}'.match(/master|docking|tables/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
+        discord-filter: "'{{ github.branch }}'.match(/master|docking/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
         discord-username: GitHub Actions
         discord-job-new-failure-message: ''
         discord-job-fixed-failure-message: ''
