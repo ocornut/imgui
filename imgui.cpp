@@ -5845,12 +5845,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
+    g.CurrentWindow = window;
     ImGuiWindowStackData window_stack_data;
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
+    window_stack_data.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindowStack.push_back(window_stack_data);
-    g.CurrentWindow = window;
-    window->DC.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindow = NULL;
 
     if (flags & ImGuiWindowFlags_Popup)
@@ -6465,10 +6465,10 @@ void ImGui::End()
 
     // Pop from window stack
     g.LastItemData = g.CurrentWindowStack.back().ParentLastItemDataBackup;
-    g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    window->DC.StackSizesOnBegin.CompareWithCurrentState();
+    g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithCurrentState();
+    g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
 
@@ -7348,6 +7348,7 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
     }
 
     ImGuiWindow* window = g.CurrentWindow;
+    ImGuiStackSizes* stack_sizes = &g.CurrentWindowStack.back().StackSizesOnBegin;
     IM_ASSERT(window != NULL);
     while (g.CurrentTabBar != NULL) //-V1044
     {
@@ -7359,7 +7360,7 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
         TreePop();
     }
-    while (g.GroupStack.Size > window->DC.StackSizesOnBegin.SizeOfGroupStack)
+    while (g.GroupStack.Size > stack_sizes->SizeOfGroupStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'", window->Name);
         EndGroup();
@@ -7369,27 +7370,27 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
         PopID();
     }
-    while (g.DisabledStackSize > window->DC.StackSizesOnBegin.SizeOfDisabledStack)
+    while (g.DisabledStackSize > stack_sizes->SizeOfDisabledStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'", window->Name);
         EndDisabled();
     }
-    while (g.ColorStack.Size > window->DC.StackSizesOnBegin.SizeOfColorStack)
+    while (g.ColorStack.Size > stack_sizes->SizeOfColorStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
         PopStyleColor();
     }
-    while (g.ItemFlagsStack.Size > window->DC.StackSizesOnBegin.SizeOfItemFlagsStack)
+    while (g.ItemFlagsStack.Size > stack_sizes->SizeOfItemFlagsStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopItemFlag() in '%s'", window->Name);
         PopItemFlag();
     }
-    while (g.StyleVarStack.Size > window->DC.StackSizesOnBegin.SizeOfStyleVarStack)
+    while (g.StyleVarStack.Size > stack_sizes->SizeOfStyleVarStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
         PopStyleVar();
     }
-    while (g.FocusScopeStack.Size > window->DC.StackSizesOnBegin.SizeOfFocusScopeStack)
+    while (g.FocusScopeStack.Size > stack_sizes->SizeOfFocusScopeStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
         PopFocusScope();

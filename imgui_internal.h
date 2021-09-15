@@ -1123,11 +1123,29 @@ struct ImGuiLastItemData
     ImGuiLastItemData()     { memset(this, 0, sizeof(*this)); }
 };
 
+struct IMGUI_API ImGuiStackSizes
+{
+    short   SizeOfIDStack;
+    short   SizeOfColorStack;
+    short   SizeOfStyleVarStack;
+    short   SizeOfFontStack;
+    short   SizeOfFocusScopeStack;
+    short   SizeOfGroupStack;
+    short   SizeOfItemFlagsStack;
+    short   SizeOfBeginPopupStack;
+    short   SizeOfDisabledStack;
+
+    ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
+    void SetToCurrentState();
+    void CompareWithCurrentState();
+};
+
 // Data saved for each window pushed into the stack
 struct ImGuiWindowStackData
 {
     ImGuiWindow*            Window;
     ImGuiLastItemData       ParentLastItemDataBackup;
+    ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting
 };
 
 struct ImGuiShrinkWidthItem
@@ -1371,23 +1389,6 @@ struct ImGuiMetricsConfig
         ShowWindowsRectsType = -1;
         ShowTablesRectsType = -1;
     }
-};
-
-struct IMGUI_API ImGuiStackSizes
-{
-    short   SizeOfIDStack;
-    short   SizeOfColorStack;
-    short   SizeOfStyleVarStack;
-    short   SizeOfFontStack;
-    short   SizeOfFocusScopeStack;
-    short   SizeOfGroupStack;
-    short   SizeOfItemFlagsStack;
-    short   SizeOfBeginPopupStack;
-    short   SizeOfDisabledStack;
-
-    ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
-    void SetToCurrentState();
-    void CompareWithCurrentState();
 };
 
 //-----------------------------------------------------------------------------
@@ -1867,7 +1868,6 @@ struct IMGUI_API ImGuiWindowTempData
     float                   TextWrapPos;            // Current text wrap pos.
     ImVector<float>         ItemWidthStack;         // Store item widths to restore (attention: .back() is not == ItemWidth)
     ImVector<float>         TextWrapPosStack;       // Store text wrap pos to restore (attention: .back() is not == TextWrapPos)
-    ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting // FIXME: Can be moved to ImGuiWindowStackData
 };
 
 // Storage for one window
