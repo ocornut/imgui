@@ -7316,61 +7316,11 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
     ImGuiContext& g = *GImGui;
     while (g.CurrentWindowStack.Size > 0)
     {
-        while (g.CurrentTable && (g.CurrentTable->OuterWindow == g.CurrentWindow || g.CurrentTable->InnerWindow == g.CurrentWindow))
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing EndTable() in '%s'", g.CurrentTable->OuterWindow->Name);
-            EndTable();
-        }
+        ErrorCheckEndWindowRecover(log_callback, user_data);
         ImGuiWindow* window = g.CurrentWindow;
-        IM_ASSERT(window != NULL);
-        while (g.CurrentTabBar != NULL) //-V1044
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
-            EndTabBar();
-        }
-        while (window->DC.TreeDepth > 0)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
-            TreePop();
-        }
-        while (g.GroupStack.Size > window->DC.StackSizesOnBegin.SizeOfGroupStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'", window->Name);
-            EndGroup();
-        }
-        while (window->IDStack.Size > 1)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
-            PopID();
-        }
-        while (g.DisabledStackSize > window->DC.StackSizesOnBegin.SizeOfDisabledStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'", window->Name);
-            EndDisabled();
-        }
-        while (g.ColorStack.Size > window->DC.StackSizesOnBegin.SizeOfColorStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
-            PopStyleColor();
-        }
-        while (g.ItemFlagsStack.Size > window->DC.StackSizesOnBegin.SizeOfItemFlagsStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing PopItemFlag() in '%s'", window->Name);
-            PopItemFlag();
-        }
-        while (g.StyleVarStack.Size > window->DC.StackSizesOnBegin.SizeOfStyleVarStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
-            PopStyleVar();
-        }
-        while (g.FocusScopeStack.Size > window->DC.StackSizesOnBegin.SizeOfFocusScopeStack)
-        {
-            if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
-            PopFocusScope();
-        }
         if (g.CurrentWindowStack.Size == 1)
         {
-            IM_ASSERT(g.CurrentWindow->IsFallbackWindow);
+            IM_ASSERT(window->IsFallbackWindow);
             break;
         }
         IM_ASSERT(window == g.CurrentWindow);
@@ -7384,6 +7334,65 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
             if (log_callback) log_callback(user_data, "Recovered from missing End() for '%s'", window->Name);
             End();
         }
+    }
+}
+
+// Must be called before End()/EndChild()
+void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data)
+{
+    ImGuiContext& g = *GImGui;
+    while (g.CurrentTable && (g.CurrentTable->OuterWindow == g.CurrentWindow || g.CurrentTable->InnerWindow == g.CurrentWindow))
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndTable() in '%s'", g.CurrentTable->OuterWindow->Name);
+        EndTable();
+    }
+
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(window != NULL);
+    while (g.CurrentTabBar != NULL) //-V1044
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
+        EndTabBar();
+    }
+    while (window->DC.TreeDepth > 0)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
+        TreePop();
+    }
+    while (g.GroupStack.Size > window->DC.StackSizesOnBegin.SizeOfGroupStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'", window->Name);
+        EndGroup();
+    }
+    while (window->IDStack.Size > 1)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
+        PopID();
+    }
+    while (g.DisabledStackSize > window->DC.StackSizesOnBegin.SizeOfDisabledStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'", window->Name);
+        EndDisabled();
+    }
+    while (g.ColorStack.Size > window->DC.StackSizesOnBegin.SizeOfColorStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
+        PopStyleColor();
+    }
+    while (g.ItemFlagsStack.Size > window->DC.StackSizesOnBegin.SizeOfItemFlagsStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopItemFlag() in '%s'", window->Name);
+        PopItemFlag();
+    }
+    while (g.StyleVarStack.Size > window->DC.StackSizesOnBegin.SizeOfStyleVarStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
+        PopStyleVar();
+    }
+    while (g.FocusScopeStack.Size > window->DC.StackSizesOnBegin.SizeOfFocusScopeStack)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
+        PopFocusScope();
     }
 }
 
