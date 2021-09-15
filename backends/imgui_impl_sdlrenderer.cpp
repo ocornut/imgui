@@ -19,6 +19,7 @@
 #include <stdint.h>     // intptr_t
 #endif
 
+#include "SDL.h"
 
 #if SDL_MAJOR_VERSION < 2 || SDL_MINOR_VERSION < 0 || SDL_PATCHLEVEL < 17
 #  error Requires: SDL 2.0.17+ because of SDL_RenderGeometry function
