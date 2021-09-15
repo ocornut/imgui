@@ -6661,11 +6661,14 @@ void ImGui::BeginDisabled(bool disabled)
     if (was_disabled || disabled)
         g.CurrentItemFlags |= ImGuiItemFlags_Disabled;
     g.ItemFlagsStack.push_back(g.CurrentItemFlags);
+    g.DisabledStackSize++;
 }
 
 void ImGui::EndDisabled()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.DisabledStackSize > 0);
+    g.DisabledStackSize--;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     //PopItemFlag();
     g.ItemFlagsStack.pop_back();
@@ -7340,10 +7343,20 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
             if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
             PopID();
         }
+        while (g.DisabledStackSize > window->DC.StackSizesOnBegin.SizeOfDisabledStack)
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'", window->Name);
+            EndDisabled();
+        }
         while (g.ColorStack.Size > window->DC.StackSizesOnBegin.SizeOfColorStack)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
             PopStyleColor();
+        }
+        while (g.ItemFlagsStack.Size > window->DC.StackSizesOnBegin.SizeOfItemFlagsStack)
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing PopItemFlag() in '%s'", window->Name);
+            PopItemFlag();
         }
         while (g.StyleVarStack.Size > window->DC.StackSizesOnBegin.SizeOfStyleVarStack)
         {
@@ -7385,7 +7398,9 @@ void ImGuiStackSizes::SetToCurrentState()
     SizeOfFontStack = (short)g.FontStack.Size;
     SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
     SizeOfGroupStack = (short)g.GroupStack.Size;
+    SizeOfItemFlagsStack = (short)g.ItemFlagsStack.Size;
     SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
+    SizeOfDisabledStack = (short)g.DisabledStackSize;
 }
 
 // Compare to detect usage errors
@@ -7403,6 +7418,8 @@ void ImGuiStackSizes::CompareWithCurrentState()
     // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
     IM_ASSERT(SizeOfGroupStack      == g.GroupStack.Size        && "BeginGroup/EndGroup Mismatch!");
     IM_ASSERT(SizeOfBeginPopupStack == g.BeginPopupStack.Size   && "BeginPopup/EndPopup or BeginMenu/EndMenu Mismatch!");
+    IM_ASSERT(SizeOfDisabledStack   == g.DisabledStackSize      && "BeginDisabled/EndDisabled Mismatch!");
+    IM_ASSERT(SizeOfItemFlagsStack  >= g.ItemFlagsStack.Size    && "PushItemFlag/PopItemFlag Mismatch!");
     IM_ASSERT(SizeOfColorStack      >= g.ColorStack.Size        && "PushStyleColor/PopStyleColor Mismatch!");
     IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
     IM_ASSERT(SizeOfFontStack       >= g.FontStack.Size         && "PushFont/PopFont Mismatch!");

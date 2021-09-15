@@ -1381,7 +1381,9 @@ struct IMGUI_API ImGuiStackSizes
     short   SizeOfFontStack;
     short   SizeOfFocusScopeStack;
     short   SizeOfGroupStack;
+    short   SizeOfItemFlagsStack;
     short   SizeOfBeginPopupStack;
+    short   SizeOfDisabledStack;
 
     ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
     void SetToCurrentState();
@@ -1613,9 +1615,10 @@ struct ImGuiContext
     bool                    DragCurrentAccumDirty;
     float                   DragCurrentAccum;                   // Accumulator for dragging modification. Always high-precision, not rounded by end-user precision settings
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
-    float                   DisabledAlphaBackup;                // Backup for style.Alpha for BeginDisabled()
     float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
-    int                     TooltipOverrideCount;
+    float                   DisabledAlphaBackup;                // Backup for style.Alpha for BeginDisabled()
+    short                   DisabledStackSize;
+    short                   TooltipOverrideCount;
     float                   TooltipSlowDelay;                   // Time before slow tooltips appears (FIXME: This is temporary until we merge in tooltip timer+priority work)
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
@@ -1780,6 +1783,7 @@ struct ImGuiContext
         DragCurrentAccum = 0.0f;
         DragSpeedDefaultRatio = 1.0f / 100.0f;
         DisabledAlphaBackup = 0.0f;
+        DisabledStackSize = 0;
         ScrollbarClickDeltaToGrabCenter = 0.0f;
         TooltipOverrideCount = 0;
         TooltipSlowDelay = 0.50f;
@@ -1863,7 +1867,7 @@ struct IMGUI_API ImGuiWindowTempData
     float                   TextWrapPos;            // Current text wrap pos.
     ImVector<float>         ItemWidthStack;         // Store item widths to restore (attention: .back() is not == ItemWidth)
     ImVector<float>         TextWrapPosStack;       // Store text wrap pos to restore (attention: .back() is not == TextWrapPos)
-    ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting
+    ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting // FIXME: Can be moved to ImGuiWindowStackData
 };
 
 // Storage for one window
