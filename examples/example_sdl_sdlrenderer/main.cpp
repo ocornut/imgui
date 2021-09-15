@@ -50,7 +50,18 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer(window);
-    ImGui_ImplSDLRenderer_Init(window);
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL) {
+        SDL_Log("Error creating SDL renderer");
+        return false;
+    } else {
+        SDL_RendererInfo info;
+        SDL_GetRendererInfo(renderer, &info);
+        SDL_Log("Current SDL Renderer: %s", info.name);
+    }
+
+    ImGui_ImplSDLRenderer_Init(renderer);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -136,6 +147,8 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+
+        SDL_RenderPresent(renderer);
     }
 
     // Cleanup
@@ -144,6 +157,7 @@ int main(int, char**)
     ImGui::DestroyContext();
 
     SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
     SDL_Quit();
 
     return 0;
