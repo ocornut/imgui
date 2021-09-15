@@ -1,5 +1,5 @@
 // dear imgui: Renderer Backend for SDL_Renderer, with Platform Backend SDL 
-// (Requires: SDL 2.0.18+)
+// (Requires: SDL 2.0.17+)
 
 // Implemented features:
 
@@ -17,6 +17,11 @@
 #include <stddef.h>     // intptr_t
 #else
 #include <stdint.h>     // intptr_t
+#endif
+
+
+#if SDL_MAJOR_VERSION < 2 || SDL_MINOR_VERSION < 0 || SDL_PATCHLEVEL < 17
+#  error Requires: SDL 2.0.17+ because of SDL_RenderGeometry function
 #endif
 
 struct ImGui_ImplSDLRenderer_Data

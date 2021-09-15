@@ -4,13 +4,17 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // See imgui_impl_sdl.cpp for details.
-// (Requires: SDL 2.0.18+)
+// (Requires: SDL 2.0.17+)
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include <stdio.h>
 #include <SDL.h>
+
+#if SDL_MAJOR_VERSION < 2 || SDL_MINOR_VERSION < 0 || SDL_PATCHLEVEL < 17
+#  error Requires: SDL 2.0.17+ because of SDL_RenderGeometry function
+#endif
 
 // Main code
 int main(int, char**)
@@ -156,8 +160,8 @@ int main(int, char**)
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;

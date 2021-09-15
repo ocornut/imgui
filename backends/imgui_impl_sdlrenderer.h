@@ -1,5 +1,5 @@
 // dear imgui: Renderer Backend for SDL using SDL_Renderer
-// (Requires: SDL 2.0.18+)
+// (Requires: SDL 2.0.17+)
 
 
 #pragma once
