@@ -62,6 +62,7 @@ Other Changes:
   the PressedOnClick/PressedOnDoubleClick/PressedOnRelease button policy.
 - Nav: Fixed an issue with losing focus on docked windows when pressing Alt while keyboard navigation
   is disabled. (#4547, #4439) [@PathogenDavid]
+- Nav: Improve scrolling behavior when navigating to an item larger than view.
 - TreePush(): removed unnecessary/inconsistent legacy behavior where passing a NULL value to
   the TreePush(const char*) and TreePush(const void*) functions would use an hardcoded replacement.
   The only situation where that change would make a meaningful difference is TreePush((const char*)NULL)
