@@ -3990,6 +3990,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         window->DC.CursorPos = backup_pos;
 
         // We reproduce the contents of BeginChildFrame() in order to provide 'label' so our window internal data are easier to read/debug.
+        // FIXME-NAV: Pressing NavActivate will trigger general child activation right before triggering our own below. Harmless but bizarre.
         PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
         PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
@@ -4027,7 +4028,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool focus_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavActivateInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
+    const bool user_nav_input_start = (g.ActiveId != id) && (g.NavActivateInputId == id || g.NavActivateId == id);
     const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
 
@@ -4255,7 +4256,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_redo  = ((is_shortcut_key && IsKeyPressedMap(ImGuiKey_Y)) || (is_osx_shift_shortcut && IsKeyPressedMap(ImGuiKey_Z))) && !is_readonly && is_undoable;
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
-        const bool is_validate = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter) || IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
+        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter);
+        const bool is_validate_nav = (g.NavInputSource == ImGuiInputSource_Gamepad && IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
         const bool is_cancel   = IsKeyPressedMap(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
 
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
@@ -4278,7 +4280,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             state->OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
-        else if (is_validate)
+        else if (is_validate_enter)
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if (!is_multiline || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
@@ -4291,6 +4293,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                     state->OnKeyPressed((int)c);
             }
+        }
+        else if (is_validate_nav)
+        {
+            IM_ASSERT(!is_validate_enter);
+            enter_pressed = clear_active_id = true;
         }
         else if (is_cancel)
         {

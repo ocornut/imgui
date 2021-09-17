@@ -5118,7 +5118,7 @@ void ImGui::EndChild()
             ItemAdd(bb, window->ChildId);
             RenderNavHighlight(bb, window->ChildId);
 
-            // When browsing a window that has no activable items (scroll only) we keep a highlight on the child
+            // When browsing a window that has no activable items (scroll only) we keep a highlight on the child (pass g.NavId to trick into always displaying)
             if (window->DC.NavLayersActiveMask == 0 && window == g.NavWindow)
                 RenderNavHighlight(ImRect(bb.Min - ImVec2(2, 2), bb.Max + ImVec2(2, 2)), g.NavId, ImGuiNavHighlightFlags_TypeThin);
         }
