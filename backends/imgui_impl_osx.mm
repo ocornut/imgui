@@ -16,6 +16,7 @@
 #include "imgui.h"
 #include "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
+#include <mach/mach_time.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -37,7 +38,8 @@
 @class ImFocusObserver;
 
 // Data
-static CFAbsoluteTime g_Time = 0.0;
+static double         g_HostClockPeriod;
+static double         g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
 static bool           g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
@@ -51,6 +53,19 @@ static ImFocusObserver* g_FocusObserver = NULL;
 + (id)_windowResizeNorthSouthCursor;
 + (id)_windowResizeEastWestCursor;
 @end
+
+static void InitHostClockPeriod()
+{
+    struct mach_timebase_info info;
+    mach_timebase_info(&info);
+    // Period is the reciprocal of frequency.
+    g_HostClockPeriod = 1e-9 * ((double)info.denom / (double)info.numer);
+}
+
+static double GetMachAbsoluteTimeInSeconds()
+{
+    return (double)mach_absolute_time() * g_HostClockPeriod;
+}
 
 static void resetKeys()
 {
@@ -231,9 +246,11 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     }
 
     // Setup time step
-    if (g_Time == 0.0)
-        g_Time = CFAbsoluteTimeGetCurrent();
-    CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
+    if (g_Time == 0.0) {
+        InitHostClockPeriod();
+        g_Time = GetMachAbsoluteTimeInSeconds();
+    }
+    double current_time = GetMachAbsoluteTimeInSeconds();
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
