@@ -78,6 +78,7 @@ Other Changes:
 - Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
 - Backends: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted via
   a direct unclipped PushClipRect() call. (#4464)
+- Backends: OSX: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards. (#4557, #4563) [@lfnoise]
 - Backends: All renderers: Normalize clipping rect handling across backends. (#4464)
 
 

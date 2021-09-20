@@ -16,9 +16,11 @@
 #include "imgui.h"
 #include "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
+#include <mach/mach_time.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-09-21: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards.
 //  2021-08-17: Calling io.AddFocusEvent() on NSApplicationDidBecomeActiveNotification/NSApplicationDidResignActiveNotification events.
 //  2021-06-23: Inputs: Added a fix for shortcuts using CTRL key instead of CMD key.
 //  2021-04-19: Inputs: Added a fix for keys remaining stuck in pressed state when CMD-tabbing into different application.
@@ -37,7 +39,8 @@
 @class ImFocusObserver;
 
 // Data
-static CFAbsoluteTime g_Time = 0.0;
+static double         g_HostClockPeriod = 0.0;
+static double         g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
 static bool           g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
@@ -51,6 +54,18 @@ static ImFocusObserver* g_FocusObserver = NULL;
 + (id)_windowResizeNorthSouthCursor;
 + (id)_windowResizeEastWestCursor;
 @end
+
+static void InitHostClockPeriod()
+{
+    struct mach_timebase_info info;
+    mach_timebase_info(&info);
+    g_HostClockPeriod = 1e-9 * ((double)info.denom / (double)info.numer); // Period is the reciprocal of frequency.
+}
+
+static double GetMachAbsoluteTimeInSeconds()
+{
+    return (double)mach_absolute_time() * g_HostClockPeriod;
+}
 
 static void resetKeys()
 {
@@ -232,8 +247,11 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 
     // Setup time step
     if (g_Time == 0.0)
-        g_Time = CFAbsoluteTimeGetCurrent();
-    CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
+    {
+        InitHostClockPeriod();
+        g_Time = GetMachAbsoluteTimeInSeconds();
+    }
+    double current_time = GetMachAbsoluteTimeInSeconds();
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
