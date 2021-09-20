@@ -571,8 +571,9 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
 
 void ImGui_ImplDX11_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplDX11_InvalidateDeviceObjects();
     if (bd->pFactory)             { bd->pFactory->Release(); }

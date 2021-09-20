@@ -725,8 +725,9 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 
 void ImGui_ImplDX12_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplDX12_InvalidateDeviceObjects();
     delete[] bd->pFrameResources;

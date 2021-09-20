@@ -280,8 +280,9 @@ bool ImGui_ImplSDL2_InitForMetal(SDL_Window* window)
 
 void ImGui_ImplSDL2_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    IM_ASSERT(bd != NULL && "No platform backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);

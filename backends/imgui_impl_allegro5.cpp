@@ -335,8 +335,9 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 
 void ImGui_ImplAllegro5_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+    IM_ASSERT(bd != NULL && "No platform backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
     if (bd->VertexDecl)

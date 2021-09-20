@@ -556,8 +556,9 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 
 void ImGui_ImplDX10_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
+    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplDX10_InvalidateDeviceObjects();
     if (bd->pFactory) { bd->pFactory->Release(); }
