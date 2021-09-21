@@ -130,6 +130,11 @@ This uses more modern OpenGL calls and custom shaders. <BR>
 This may actually also work with OpenGL 2.x contexts! <BR>
 Prefer using that if you are using modern OpenGL in your application (anything with shaders).
 
+[example_sdl_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_sdlrenderer/) <BR>
+Use SDL2 and SDL_Renderer, any SDL backend (opengl, gles, gles2, d3d9, d3d11, metal or software) can be used underneath <BR>
+= main.cpp + imgui_impl_sdl.cpp + imgui_impl_sdlrenderer.cpp <BR>
+It requires SDL 2.0.17+
+
 [example_glfw_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/) <BR>
 GLFW (Win32, Mac, Linux) + Vulkan example. <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp <BR>
