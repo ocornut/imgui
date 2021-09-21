@@ -56,6 +56,8 @@ Other Changes:
   the arrow section of TreeNode(), the +/- buttons of InputInt()/InputFloat(), Selectable() with
   ImGuiSelectableFlags_SelectOnRelease. More generally: any direct use of ButtonBehavior() with
   the PressedOnClick/PressedOnDoubleClick/PressedOnRelease button policy.
+- Nav: Fixed an issue with losing focus on docked windows when pressing Alt while keyboard navigation
+  is disabled. (#4547, #4439) [@PathogenDavid]
 - TreePush(): removed unnecessary/inconsistent legacy behavior where passing a NULL value to
   the TreePush(const char*) and TreePush(const void*) functions would use an hardcoded replacement.
   The only situation where that change would make a meaningful difference is TreePush((const char*)NULL)
