@@ -152,6 +152,8 @@ Docking+Viewports Branch:
   docking hierarchy. Added ImGuiFocusedFlags_DockHierarchy flag to consider docking hierarchy in the test.
 - IsWindowHovered: Fixed using ImGuiHoveredFlags_ChildWindows (without _RootWindow) from leaking the
   docking hierarchy. Added ImGuiHoveredFlags_DockHierarchy flag to consider docking hierarchy in the test.
+- Nav: Fixed an issue with losing focus on docked windows when pressing Alt while keyboard navigation
+  is disabled. (#4547, #4439) [@PathogenDavid]
 - Docking: Improved resizing system so that non-central zone are better at keeping their fixed size.
   The algorithm is still not handling the repartition of size idealy for nested sibling, but it got better.
 - Docking: Fixed settings load issue when mouse wheeling. (#4310)
