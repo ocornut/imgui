@@ -1,15 +1,21 @@
-// dear imgui: Renderer Backend for SDL_Renderer, with Platform Backend SDL 
+// dear imgui: Renderer Backend for SDL_Renderer
 // (Requires: SDL 2.0.17+)
 
+// Important to understand: SDL_Renderer is an _optional_ component of SDL. We do not recommend you use SDL_Renderer
+// because it provide a rather limited API to the end-user. We provide this backend for the sake of completeness.
+// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
+
 // Implemented features:
+//  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
+// Missing features:
+//  [ ] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-
 // CHANGELOG
-//  2021-16-03: Creation 
+//  2021-09-21: Initial version.
 
 #include "imgui.h"
 #include "imgui_impl_sdlrenderer.h"
@@ -19,16 +25,17 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-#include "SDL.h"
-
-#if SDL_MAJOR_VERSION < 2 || SDL_MINOR_VERSION < 0 || SDL_PATCHLEVEL < 17
-#  error Requires: SDL 2.0.17+ because of SDL_RenderGeometry function
+// SDL
+#include <SDL.h>
+#if !SDL_VERSION_ATLEAST(2,0,17)
+#error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
 
+// SDL_Renderer data
 struct ImGui_ImplSDLRenderer_Data
 {
-    SDL_Renderer *SDLRenderer;
-    SDL_Texture  *FontTexture;
+    SDL_Renderer*   SDLRenderer;
+    SDL_Texture*    FontTexture;
     ImGui_ImplSDLRenderer_Data() { memset(this, 0, sizeof(*this)); }
 };
 
@@ -40,7 +47,7 @@ static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
 }
 
 // Functions
-bool ImGui_ImplSDLRenderer_Init(SDL_Renderer *renderer)
+bool ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -49,16 +56,18 @@ bool ImGui_ImplSDLRenderer_Init(SDL_Renderer *renderer)
     // Setup backend capabilities flags
     ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
     io.BackendRendererUserData = (void*)bd;
-    io.BackendRendererName = "imgui_impl_SDLRenderer";
+    io.BackendRendererName = "imgui_impl_sdlrenderer";
 
     bd->SDLRenderer = renderer;
+
     return true;
 }
 
 void ImGui_ImplSDLRenderer_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplSDLRenderer_DestroyDeviceObjects();
 
@@ -69,9 +78,10 @@ void ImGui_ImplSDLRenderer_Shutdown()
 
 static void ImGui_ImplSDLRenderer_SetupRenderState()
 {
-	ImGui_ImplSDLRenderer_Data *bd = ImGui_ImplSDLRenderer_GetBackendData();
+	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
-	// Clear out any viewports and cliprects set by the user
+	// Clear out any viewports and cliprect set by the user
+    // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
 	SDL_RenderSetViewport(bd->SDLRenderer, NULL);
 	SDL_RenderSetClipRect(bd->SDLRenderer, NULL);
 }
@@ -81,9 +91,8 @@ void ImGui_ImplSDLRenderer_NewFrame()
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplSDLRenderer_Init()?");
 
-    if (!bd->FontTexture) {
+    if (!bd->FontTexture)
         ImGui_ImplSDLRenderer_CreateDeviceObjects();
-    }
 }
 
 void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
@@ -91,35 +100,33 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
 
 	// If there's a scale factor set by the user, use that instead
-	float rsX = 1.0f;
-	float rsY = 1.0f;
-	SDL_RenderGetScale(bd->SDLRenderer, &rsX, &rsY);
-
-	ImVec2 renderScale;
-	// If the user has specified a scale factor to SDL_Renderer already (via SDL_RenderSetScale()), SDL will scale whatever we pass
-	// to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
-	renderScale.x = (rsX == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
-	renderScale.y = (rsY == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+    // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
+    // to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
+    float rsx = 1.0f;
+	float rsy = 1.0f;
+	SDL_RenderGetScale(bd->SDLRenderer, &rsx, &rsy);
+    ImVec2 render_scale;
+	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
 
 	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-	int fb_width = (int)(draw_data->DisplaySize.x * renderScale.x);
-	int fb_height = (int)(draw_data->DisplaySize.y * renderScale.y);
+	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
+	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
 	if (fb_width == 0 || fb_height == 0)
 		return;
 
-
 	// Will project scissor/clipping rectangles into framebuffer space
 	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-	ImVec2 clip_scale = renderScale;
+	ImVec2 clip_scale = render_scale;
 
+    // Render command lists
     ImGui_ImplSDLRenderer_SetupRenderState();
-
-    for (int n = 0; n < draw_data->CmdListsCount; n++) {
-
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
-        
+
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -127,53 +134,39 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                     ImGui_ImplSDLRenderer_SetupRenderState();
-                } else { 
+                else
                     pcmd->UserCallback(cmd_list, pcmd);
-                }
             }
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec4 clip_rect;
-                clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
-                clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
-                clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
-                clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
+                if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
+                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                    continue;
 
-                if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
-                {
-                    SDL_Rect r;
-                    r.x = clip_rect.x;
-                    r.y = clip_rect.y;
-                    r.w = clip_rect.z - clip_rect.x;
-                    r.h = clip_rect.w - clip_rect.y;
+                SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
+                SDL_RenderSetClipRect(bd->SDLRenderer, &r);
 
-                    SDL_RenderSetClipRect(bd->SDLRenderer, &r);
+                const float* xy = (const float*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, pos));
+                const float* uv = (const float*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, uv));
+                const int* color = (const int*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
 
-
-                    int xy_stride = sizeof(ImDrawVert);
-                    float *xy = (float *)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, pos));
-
-                    int uv_stride = sizeof(ImDrawVert);
-                    float *uv = (float*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, uv));
-
-                    int col_stride = sizeof(ImDrawVert);
-                    int *color = (int*)((char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col));
-
-					SDL_Texture *tex = (SDL_Texture*)pcmd->TextureId;
-
-                    SDL_RenderGeometryRaw(bd->SDLRenderer, tex, 
-                            xy, xy_stride, color,
-                            col_stride, 
-                            uv, uv_stride, 
-                            cmd_list->VtxBuffer.Size,
-                            idx_buffer, pcmd->ElemCount, sizeof (ImDrawIdx));
-
-                }
+                // Bind texture, Draw
+				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+                SDL_RenderGeometryRaw(bd->SDLRenderer, tex,
+                    xy, (int)sizeof(ImDrawVert),
+                    color, (int)sizeof(ImDrawVert),
+                    uv, (int)sizeof(ImDrawVert),
+                    cmd_list->VtxBuffer.Size,
+                    idx_buffer + pcmd->IdxOffset, pcmd->ElemCount, sizeof(ImDrawIdx));
             }
-            idx_buffer += pcmd->ElemCount;
         }
     }
 }
@@ -181,19 +174,24 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 // Called by Init/NewFrame/Shutdown
 bool ImGui_ImplSDLRenderer_CreateFontsTexture()
 {
-    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+
+    // Build texture atlas
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+
+    // Upload texture to graphics system
     bd->FontTexture = SDL_CreateTexture(bd->SDLRenderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (bd->FontTexture == NULL) {
+    if (bd->FontTexture == NULL)
+    {
         SDL_Log("error creating texture");
         return false;
     }
     SDL_UpdateTexture(bd->FontTexture, NULL, pixels, 4 * width);
     SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
+
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 
@@ -204,7 +202,8 @@ void ImGui_ImplSDLRenderer_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
-    if (bd->FontTexture) {
+    if (bd->FontTexture)
+    {
         io.Fonts->SetTexID(0);
         SDL_DestroyTexture(bd->FontTexture);
         bd->FontTexture = NULL;
@@ -220,4 +219,3 @@ void ImGui_ImplSDLRenderer_DestroyDeviceObjects()
 {
     ImGui_ImplSDLRenderer_DestroyFontsTexture();
 }
-

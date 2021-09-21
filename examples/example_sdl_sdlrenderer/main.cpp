@@ -3,8 +3,9 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// See imgui_impl_sdl.cpp for details.
-// (Requires: SDL 2.0.17+)
+// Important to understand: SDL_Renderer is an _optional_ component of SDL. We do not recommend you use SDL_Renderer
+// because it provide a rather limited API to the end-user. We provide this backend for the sake of completeness.
+// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
@@ -12,8 +13,8 @@
 #include <stdio.h>
 #include <SDL.h>
 
-#if SDL_MAJOR_VERSION < 2 || SDL_MINOR_VERSION < 0 || SDL_PATCHLEVEL < 17
-#  error Requires: SDL 2.0.17+ because of SDL_RenderGeometry function
+#if !SDL_VERSION_ATLEAST(2,0,17)
+#error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
 
 // Main code
@@ -28,18 +29,20 @@ int main(int, char**)
         return -1;
     }
 
-    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
-    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
-
     // Setup window
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+SDL_Renderer example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+
+    // Setup SDL_Renderer instance
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL)
+    {
+        SDL_Log("Error creating SDL_Renderer!");
+        return false;
+    }
+    //SDL_RendererInfo info;
+    //SDL_GetRendererInfo(renderer, &info);
+    //SDL_Log("Current SDL_Renderer: %s", info.name);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -54,17 +57,6 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer(window);
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL) {
-        SDL_Log("Error creating SDL renderer");
-        return false;
-    } else {
-        SDL_RendererInfo info;
-        SDL_GetRendererInfo(renderer, &info);
-        SDL_Log("Current SDL Renderer: %s", info.name);
-    }
-
     ImGui_ImplSDLRenderer_Init(renderer);
 
     // Load Fonts
@@ -150,8 +142,9 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
+        SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
+        SDL_RenderClear(renderer);
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-
         SDL_RenderPresent(renderer);
     }
 
