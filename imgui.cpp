@@ -4072,6 +4072,10 @@ void ImGui::NewFrame()
     g.DragDropWithinTarget = false;
     g.DragDropHoldJustPressedId = 0;
 
+    // Close popups on focus lost (currently wip/opt-in)
+    //if (g.IO.AppFocusLost)
+    //    ClosePopupsExceptModals();
+
     // Clear buttons state when focus is lost
     // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
     if (g.IO.AppFocusLost)
@@ -8359,6 +8363,21 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to
         IMGUI_DEBUG_LOG_POPUP("ClosePopupsOverWindow(\"%s\") -> ClosePopupToLevel(%d)\n", ref_window->Name, popup_count_to_keep);
         ClosePopupToLevel(popup_count_to_keep, restore_focus_to_window_under_popup);
     }
+}
+
+void ImGui::ClosePopupsExceptModals()
+{
+    ImGuiContext& g = *GImGui;
+
+    int popup_count_to_keep;
+    for (popup_count_to_keep = g.OpenPopupStack.Size; popup_count_to_keep > 0; popup_count_to_keep--)
+    {
+        ImGuiWindow* window = g.OpenPopupStack[popup_count_to_keep - 1].Window;
+        if (!window || window->Flags & ImGuiWindowFlags_Modal)
+            break;
+    }
+    if (popup_count_to_keep < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
+        ClosePopupToLevel(popup_count_to_keep, true);
 }
 
 void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup)
