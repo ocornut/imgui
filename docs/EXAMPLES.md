@@ -175,6 +175,12 @@ SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 This uses more modern OpenGL calls and custom shaders. <BR>
 This may actually also work with OpenGL 2.x contexts! <BR>
 
+[example_sdl_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_sdlrenderer/) <BR>
+SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer (most graphics backends are supported underneath) <BR>
+= main.cpp + imgui_impl_sdl.cpp + imgui_impl_sdlrenderer.cpp <BR>
+This requires SDL 2.0.17+ (expected to release November 2021) <BR>
+We do not really recommend using SDL_Renderer as it is a rather primitive API.
+
 [example_sdl_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp <BR>

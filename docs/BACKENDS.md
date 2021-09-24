@@ -75,6 +75,7 @@ List of Renderer Backends:
     imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL 2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
     imgui_impl_opengl3.cpp    ; OpenGL 3/4, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
+    imgui_impl_sdlrenderer.cpp; SDL_Renderer (optional component of SDL2 available from SDL 2.0.18+)
     imgui_impl_vulkan.cpp     ; Vulkan
     imgui_impl_wgpu.cpp       ; WebGPU
 

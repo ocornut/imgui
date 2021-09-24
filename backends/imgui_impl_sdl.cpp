@@ -320,10 +320,16 @@ bool ImGui_ImplSDL2_InitForMetal(SDL_Window* window)
     return ImGui_ImplSDL2_Init(window, NULL);
 }
 
+bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_Init(window, NULL);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    IM_ASSERT(bd != NULL && "No platform backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplSDL2_ShutdownPlatformInterface();
 

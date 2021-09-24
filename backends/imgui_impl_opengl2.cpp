@@ -96,8 +96,9 @@ bool    ImGui_ImplOpenGL2_Init()
 
 void    ImGui_ImplOpenGL2_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplOpenGL2_ShutdownPlatformInterface();
     ImGui_ImplOpenGL2_DestroyDeviceObjects();

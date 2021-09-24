@@ -205,7 +205,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
             ImRect line_rect(pos, pos + ImVec2(FLT_MAX, line_height));
             while (line < text_end)
             {
-                if (IsClippedEx(line_rect, 0, false))
+                if (IsClippedEx(line_rect, 0))
                     break;
 
                 const char* line_end = (const char*)memchr(line, '\n', text_end - line);
@@ -3996,6 +3996,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         window->DC.CursorPos = backup_pos;
 
         // We reproduce the contents of BeginChildFrame() in order to provide 'label' so our window internal data are easier to read/debug.
+        // FIXME-NAV: Pressing NavActivate will trigger general child activation right before triggering our own below. Harmless but bizarre.
         PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
         PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
@@ -4033,7 +4034,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool focus_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavActivateInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
+    const bool user_nav_input_start = (g.ActiveId != id) && (g.NavActivateInputId == id || g.NavActivateId == id);
     const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
 
@@ -4261,7 +4262,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_redo  = ((is_shortcut_key && IsKeyPressedMap(ImGuiKey_Y)) || (is_osx_shift_shortcut && IsKeyPressedMap(ImGuiKey_Z))) && !is_readonly && is_undoable;
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
-        const bool is_validate = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter) || IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
+        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter);
+        const bool is_validate_nav = (IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) && !IsKeyPressedMap(ImGuiKey_Space)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
         const bool is_cancel   = IsKeyPressedMap(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
 
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
@@ -4284,7 +4286,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             state->OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
-        else if (is_validate)
+        else if (is_validate_enter)
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if (!is_multiline || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
@@ -4297,6 +4299,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                     state->OnKeyPressed((int)c);
             }
+        }
+        else if (is_validate_nav)
+        {
+            IM_ASSERT(!is_validate_enter);
+            enter_pressed = clear_active_id = true;
         }
         else if (is_cancel)
         {
@@ -4783,6 +4790,30 @@ bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flag
     return ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoAlpha);
 }
 
+// ColorEdit supports RGB and HSV inputs. In case of RGB input resulting color may have undefined hue and/or saturation.
+// Since widget displays both RGB and HSV values we must preserve hue and saturation to prevent these values resetting.
+static void ColorEditRestoreHS(const float* col, float* H, float* S, float* V)
+{
+    // This check is optional. Suppose we have two color widgets side by side, both widgets display different colors, but both colors have hue and/or saturation undefined.
+    // With color check: hue/saturation is preserved in one widget. Editing color in one widget would reset hue/saturation in another one.
+    // Without color check: common hue/saturation would be displayed in all widgets that have hue/saturation undefined.
+    // g.ColorEditLastColor is stored as ImU32 RGB value: this essentially gives us color equality check with reduced precision.
+    // Tiny external color changes would not be detected and this check would still pass. This is OK, since we only restore hue/saturation _only_ if they are undefined,
+    // therefore this change flipping hue/saturation from undefined to a very tiny value would still be represented in color picker.
+    ImGuiContext& g = *GImGui;
+    if (g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 0)))
+        return;
+
+    // When S == 0, H is undefined.
+    // When H == 1 it wraps around to 0.
+    if (*S == 0.0f || (*H == 0.0f && g.ColorEditLastHue == 1))
+        *H = g.ColorEditLastHue;
+
+    // When V == 0, S is undefined.
+    if (*V == 0.0f)
+        *S = g.ColorEditLastSat;
+}
+
 // Edit colors components (each component in 0.0f..1.0f range).
 // See enum ImGuiColorEditFlags_ for available options. e.g. Only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // With typical options: Left-click on color square to open color picker. Right-click to open option menu. CTRL-Click over input fields to edit them and TAB to go to next item.
@@ -4838,13 +4869,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     {
         // Hue is lost when converting from greyscale rgb (saturation=0). Restore it.
         ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
-        if (memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0)
-        {
-            if (f[1] == 0)
-                f[0] = g.ColorEditLastHue;
-            if (f[2] == 0)
-                f[1] = g.ColorEditLastSat;
-        }
+        ColorEditRestoreHS(col, &f[0], &f[1], &f[2]);
     }
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
@@ -4979,7 +5004,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             g.ColorEditLastHue = f[0];
             g.ColorEditLastSat = f[1];
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
-            memcpy(g.ColorEditLastColor, f, sizeof(float) * 3);
+            g.ColorEditLastColor = ColorConvertFloat4ToU32(ImVec4(f[0], f[1], f[2], 0));
         }
         if ((flags & ImGuiColorEditFlags_DisplayRGB) && (flags & ImGuiColorEditFlags_InputHSV))
             ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
@@ -5114,13 +5139,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     {
         // Hue is lost when converting from greyscale rgb (saturation=0). Restore it.
         ColorConvertRGBtoHSV(R, G, B, H, S, V);
-        if (memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0)
-        {
-            if (S == 0)
-                H = g.ColorEditLastHue;
-            if (V == 0)
-                S = g.ColorEditLastSat;
-        }
+        ColorEditRestoreHS(col, &H, &S, &V);
     }
     else if (flags & ImGuiColorEditFlags_InputHSV)
     {
@@ -5173,6 +5192,10 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         {
             S = ImSaturate((io.MousePos.x - picker_pos.x) / (sv_picker_size - 1));
             V = 1.0f - ImSaturate((io.MousePos.y - picker_pos.y) / (sv_picker_size - 1));
+
+            // Greatly reduces hue jitter and reset to 0 when hue == 255 and color is rapidly modified using SV square.
+            if (g.ColorEditLastColor == ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 0)))
+                H = g.ColorEditLastHue;
             value_changed = value_changed_sv = true;
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
@@ -5246,10 +5269,10 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     {
         if (flags & ImGuiColorEditFlags_InputRGB)
         {
-            ColorConvertHSVtoRGB(H >= 1.0f ? H - 10 * 1e-6f : H, S > 0.0f ? S : 10 * 1e-6f, V > 0.0f ? V : 1e-6f, col[0], col[1], col[2]);
+            ColorConvertHSVtoRGB(H, S, V, col[0], col[1], col[2]);
             g.ColorEditLastHue = H;
             g.ColorEditLastSat = S;
-            memcpy(g.ColorEditLastColor, col, sizeof(float) * 3);
+            g.ColorEditLastColor = ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 0));
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
@@ -5303,13 +5326,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             G = col[1];
             B = col[2];
             ColorConvertRGBtoHSV(R, G, B, H, S, V);
-            if (memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0) // Fix local Hue as display below will use it immediately.
-            {
-                if (S == 0)
-                    H = g.ColorEditLastHue;
-                if (V == 0)
-                    S = g.ColorEditLastSat;
-            }
+            ColorEditRestoreHS(col, &H, &S, &V);   // Fix local Hue as display below will use it immediately.
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
@@ -5992,7 +6009,7 @@ void ImGui::TreePush(const char* str_id)
     ImGuiWindow* window = GetCurrentWindow();
     Indent();
     window->DC.TreeDepth++;
-    PushID(str_id ? str_id : "#TreePush");
+    PushID(str_id);
 }
 
 void ImGui::TreePush(const void* ptr_id)
@@ -6000,7 +6017,7 @@ void ImGui::TreePush(const void* ptr_id)
     ImGuiWindow* window = GetCurrentWindow();
     Indent();
     window->DC.TreeDepth++;
-    PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
+    PushID(ptr_id);
 }
 
 void ImGui::TreePushOverrideID(ImGuiID id)

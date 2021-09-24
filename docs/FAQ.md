@@ -162,7 +162,7 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 ---
 
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
-Your renderer is not using the font texture correctly or it hasn't be uploaded to GPU.
+Your renderer is not using the font texture correctly or it hasn't been uploaded to the GPU.
 - If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - If this happens with a custom backend: make sure you have uploaded the font texture to the GPU, that all shaders are rendering states are setup properly (e.g. texture is bound). Compare your code to existing backends and use a graphics debugger such as [RenderDoc](https://renderdoc.org) to debug your rendering states.
 
