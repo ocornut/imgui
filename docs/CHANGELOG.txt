@@ -116,6 +116,10 @@ Breaking Changes:
 Other Changes:
 
 - Windows: Fixed background order of overlapping childs submitted sequentially. (#4493)
+- IsWindowFocused: Added ImGuiFocusedFlags_NoPopupHierarchy flag allowing to exclude child popups
+  from the tested windows when combined with _ChildWindows.
+- IsWindowHovered: Added ImGuiHoveredFlags_NoPopupHierarchy flag allowing to exclude child popups
+  from the tested windows when combined with _ChildWindows.
 - InputTextMultiline: Fixed label size not being included into window contents rect unless
   the whole widget is clipped.
 - InputText: Allow cancelling/validating input with gamepad nav events to facilitate undoing
