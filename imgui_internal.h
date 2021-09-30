@@ -24,7 +24,7 @@ Index of this file:
 // [SECTION] Docking support
 // [SECTION] Viewport support
 // [SECTION] Settings support
-// [SECTION] Metrics, Debug
+// [SECTION] Metrics, Debug tools
 // [SECTION] Generic context hooks
 // [SECTION] ImGuiContext (main imgui context)
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
@@ -1382,11 +1382,12 @@ struct ImGuiSettingsHandler
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Metrics, Debug
+// [SECTION] Metrics, Debug Tools
 //-----------------------------------------------------------------------------
 
 struct ImGuiMetricsConfig
 {
+    bool        ShowStackTool;
     bool        ShowWindowsRects;
     bool        ShowWindowsBeginOrder;
     bool        ShowTablesRects;
@@ -1397,6 +1398,7 @@ struct ImGuiMetricsConfig
 
     ImGuiMetricsConfig()
     {
+        ShowStackTool = false;
         ShowWindowsRects = false;
         ShowWindowsBeginOrder = false;
         ShowTablesRects = false;
@@ -1405,6 +1407,27 @@ struct ImGuiMetricsConfig
         ShowWindowsRectsType = -1;
         ShowTablesRectsType = -1;
     }
+};
+
+struct ImGuiStackLevelInfo
+{
+    ImGuiID                 ID;
+    ImS8                    QueryFrameCount;            // >= 1: Query in progress
+    bool                    QuerySuccess;               // Obtained result from DebugHookIdInfo()
+    char                    Desc[58];                   // Arbitrarily sized buffer to hold a result (FIXME: could replace Results[] with a chunk stream?)
+
+    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); }
+};
+
+// State for Stack tool queries
+struct ImGuiStackTool
+{
+    int                     LastActiveFrame;
+    int                     StackLevel;                 // -1: query stack and resize Results, >= 0: individual stack level
+    ImGuiID                 QueryId;                    // ID to query details for
+    ImVector<ImGuiStackLevelInfo> Results;
+
+    ImGuiStackTool()        { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -1448,7 +1471,6 @@ struct ImGuiContext
     bool                    WithinEndChild;                     // Set within EndChild()
     bool                    GcCompactAll;                       // Request full GC
     bool                    TestEngineHookItems;                // Will call test engine hooks: ImGuiTestEngineHook_ItemAdd(), ImGuiTestEngineHook_ItemInfo(), ImGuiTestEngineHook_Log()
-    ImGuiID                 TestEngineHookIdInfo;               // Will call test engine hooks: ImGuiTestEngineHook_IdInfo() from GetID()
     void*                   TestEngine;                         // Test engine user data
 
     // Windows state
@@ -1468,6 +1490,7 @@ struct ImGuiContext
     float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
+    ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
     bool                    HoveredIdAllowOverlap;
@@ -1671,8 +1694,9 @@ struct ImGuiContext
 
     // Debug Tools
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
-    ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this id
+    ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
     ImGuiMetricsConfig      DebugMetricsConfig;
+    ImGuiStackTool          DebugStackTool;
 
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
@@ -1697,7 +1721,6 @@ struct ImGuiContext
         WithinFrameScope = WithinFrameScopeWithImplicitWindow = WithinEndChild = false;
         GcCompactAll = false;
         TestEngineHookItems = false;
-        TestEngineHookIdInfo = 0;
         TestEngine = NULL;
 
         WindowsActiveCount = 0;
@@ -1708,6 +1731,7 @@ struct ImGuiContext
         WheelingWindow = NULL;
         WheelingWindowTimer = 0.0f;
 
+        DebugHookIdInfo = 0;
         HoveredId = HoveredIdPreviousFrame = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdUsingMouseWheel = HoveredIdPreviousFrameUsingMouseWheel = false;
@@ -2713,6 +2737,7 @@ namespace ImGui
     inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
 
     IMGUI_API void          ShowFontAtlas(ImFontAtlas* atlas);
+    IMGUI_API void          DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end);
     IMGUI_API void          DebugNodeColumns(ImGuiOldColumns* columns);
     IMGUI_API void          DebugNodeDrawList(ImGuiWindow* window, const ImDrawList* draw_list, const char* label);
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
@@ -2758,14 +2783,12 @@ IMGUI_API void      ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table
 #ifdef IMGUI_ENABLE_TEST_ENGINE
 extern void         ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id);
 extern void         ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags);
-extern void         ImGuiTestEngineHook_IdInfo(ImGuiContext* ctx, ImGuiDataType data_type, ImGuiID id, const void* data_id);
-extern void         ImGuiTestEngineHook_IdInfo(ImGuiContext* ctx, ImGuiDataType data_type, ImGuiID id, const void* data_id, const void* data_id_end);
 extern void         ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...);
+extern const char*  ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id);
+
 #define IMGUI_TEST_ENGINE_ITEM_ADD(_BB,_ID)                 if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemAdd(&g, _BB, _ID)               // Register item bounding box
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemInfo(&g, _ID, _LABEL, _FLAGS)   // Register item label and status flags (optional)
 #define IMGUI_TEST_ENGINE_LOG(_FMT,...)                     if (g.TestEngineHookItems) ImGuiTestEngineHook_Log(&g, _FMT, __VA_ARGS__)          // Custom log entry from user land into test log
-#define IMGUI_TEST_ENGINE_ID_INFO(_ID,_TYPE,_DATA)          if (g.TestEngineHookIdInfo == _ID) ImGuiTestEngineHook_IdInfo(&g, _TYPE, _ID, (const void*)(_DATA));
-#define IMGUI_TEST_ENGINE_ID_INFO2(_ID,_TYPE,_DATA,_DATA2)  if (g.TestEngineHookIdInfo == _ID) ImGuiTestEngineHook_IdInfo(&g, _TYPE, _ID, (const void*)(_DATA), (const void*)(_DATA2));
 #else
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      ((void)0)
 #endif

@@ -82,6 +82,7 @@ CODE
 // [SECTION] VIEWPORTS
 // [SECTION] PLATFORM DEPENDENT HELPERS
 // [SECTION] METRICS/DEBUGGER WINDOW
+// [SECTION] OTHER DEBUG TOOLS (ITEM PICKER, STACK TOOL)
 
 */
 
@@ -924,16 +925,17 @@ static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             NavRestoreLayer(ImGuiNavLayer layer);
 static int              FindWindowFocusIndex(ImGuiWindow* window);
 
-// Error Checking
+// Error Checking and Debug Tools
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
+static void             UpdateDebugToolItemPicker();
+static void             UpdateDebugToolStackQueries();
 
 // Misc
 static void             UpdateSettings();
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateTabFocus();
-static void             UpdateDebugToolItemPicker();
 static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
@@ -2967,10 +2969,9 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
     ImGui::KeepAliveID(id);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
     return id;
 }
 
@@ -2979,10 +2980,9 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
     ImGui::KeepAliveID(id);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
     return id;
 }
 
@@ -2991,10 +2991,9 @@ ImGuiID ImGuiWindow::GetID(int n)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
     ImGui::KeepAliveID(id);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
     return id;
 }
 
@@ -3002,10 +3001,9 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
     return id;
 }
 
@@ -3013,10 +3011,9 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
     return id;
 }
 
@@ -3024,10 +3021,9 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
-#endif
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
     return id;
 }
 
@@ -4159,8 +4155,9 @@ void ImGui::NewFrame()
     g.ItemFlagsStack.push_back(ImGuiItemFlags_None);
     g.GroupStack.resize(0);
 
-    // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+    // [DEBUG] Update debug features
     UpdateDebugToolItemPicker();
+    UpdateDebugToolStackQueries();
 
     // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -4171,31 +4168,6 @@ void ImGui::NewFrame()
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
-}
-
-// [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
-void ImGui::UpdateDebugToolItemPicker()
-{
-    ImGuiContext& g = *GImGui;
-    g.DebugItemPickerBreakId = 0;
-    if (g.DebugItemPickerActive)
-    {
-        const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
-        SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (IsKeyPressedMap(ImGuiKey_Escape))
-            g.DebugItemPickerActive = false;
-        if (IsMouseClicked(0) && hovered_id)
-        {
-            g.DebugItemPickerBreakId = hovered_id;
-            g.DebugItemPickerActive = false;
-        }
-        SetNextWindowBgAlpha(0.60f);
-        BeginTooltip();
-        Text("HoveredId: 0x%08X", hovered_id);
-        Text("Press ESC to abort picking.");
-        TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
-        EndTooltip();
-    }
 }
 
 void ImGui::Initialize(ImGuiContext* context)
@@ -7184,6 +7156,8 @@ void ImGui::PushOverrideID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    if (g.DebugHookIdInfo == id)
+        DebugHookIdInfo(id, ImGuiDataType_ID, NULL, NULL);
     window->IDStack.push_back(id);
 }
 
@@ -7193,11 +7167,10 @@ void ImGui::PushOverrideID(ImGuiID id)
 ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed)
 {
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
-    ImGui::KeepAliveID(id);
-#ifdef IMGUI_ENABLE_TEST_ENGINE
+    KeepAliveID(id);
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
-#endif
+    if (g.DebugHookIdInfo == id)
+        DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
     return id;
 }
 
@@ -11226,22 +11199,23 @@ namespace ImGui { void ShowFontAtlas(ImFontAtlas* atlas); }
 
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+    ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
+    if (cfg->ShowStackTool)
+        ShowStackToolWindow(&cfg->ShowStackTool);
+
     if (!Begin("Dear ImGui Metrics/Debugger", p_open))
     {
         End();
         return;
     }
 
-    ImGuiContext& g = *GImGui;
-    ImGuiIO& io = g.IO;
-    ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
-
     // Basic info
     Text("Dear ImGui %s", GetVersion());
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
-    Text("%d active windows (%d visible)", io.MetricsActiveWindows, io.MetricsRenderWindows);
-    Text("%d active allocations", io.MetricsActiveAllocations);
+    Text("%d visible windows, %d active allocations", io.MetricsRenderWindows, io.MetricsActiveAllocations);
     //SameLine(); if (SmallButton("GC")) { g.GcCompactAll = true; }
 
     Separator();
@@ -11295,11 +11269,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Tools
     if (TreeNode("Tools"))
     {
-        // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
-        if (Button("Item Picker.."))
-            DebugStartItemPicker();
+        // Stack Tool is your best friend!
+        Checkbox("Show stack tool", &cfg->ShowStackTool);
         SameLine();
-        MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
+        MetricsHelpMarker("You can also call ImGui::ShowStackToolWindow() from your code.");
 
         Checkbox("Show windows begin order", &cfg->ShowWindowsBeginOrder);
         Checkbox("Show windows rectangles", &cfg->ShowWindowsRects);
@@ -11317,8 +11290,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
             Unindent();
         }
-        Checkbox("Show ImDrawCmd mesh when hovering", &cfg->ShowDrawCmdMesh);
-        Checkbox("Show ImDrawCmd bounding boxes when hovering", &cfg->ShowDrawCmdBoundingBoxes);
 
         Checkbox("Show tables rectangles", &cfg->ShowTablesRects);
         SameLine();
@@ -11365,6 +11336,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
         }
 
+        // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
+        if (Button("Item Picker.."))
+            DebugStartItemPicker();
+        SameLine();
+        MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
+
         TreePop();
     }
 
@@ -11378,6 +11355,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         drawlist_count += g.Viewports[viewport_i]->DrawDataBuilder.GetDrawListCount();
     if (TreeNode("DrawLists", "DrawLists (%d)", drawlist_count))
     {
+        Checkbox("Show ImDrawCmd mesh when hovering", &cfg->ShowDrawCmdMesh);
+        Checkbox("Show ImDrawCmd bounding boxes when hovering", &cfg->ShowDrawCmdBoundingBoxes);
         for (int viewport_i = 0; viewport_i < g.Viewports.Size; viewport_i++)
         {
             ImGuiViewportP* viewport = g.Viewports[viewport_i];
@@ -12002,6 +11981,186 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
     TreePop();
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] OTHER DEBUG TOOLS (ITEM PICKER, STACK TOOL)
+//-----------------------------------------------------------------------------
+
+// [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+void ImGui::UpdateDebugToolItemPicker()
+{
+    ImGuiContext& g = *GImGui;
+    g.DebugItemPickerBreakId = 0;
+    if (!g.DebugItemPickerActive)
+        return;
+
+    const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
+    SetMouseCursor(ImGuiMouseCursor_Hand);
+    if (IsKeyPressedMap(ImGuiKey_Escape))
+        g.DebugItemPickerActive = false;
+    if (IsMouseClicked(0) && hovered_id)
+    {
+        g.DebugItemPickerBreakId = hovered_id;
+        g.DebugItemPickerActive = false;
+    }
+    SetNextWindowBgAlpha(0.60f);
+    BeginTooltip();
+    Text("HoveredId: 0x%08X", hovered_id);
+    Text("Press ESC to abort picking.");
+    TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
+    EndTooltip();
+}
+
+// [DEBUG] Stack Tool: update queries. Called by NewFrame()
+void ImGui::UpdateDebugToolStackQueries()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiStackTool* tool = &g.DebugStackTool;
+
+    // Clear hook when stack tool is not visible
+    g.DebugHookIdInfo = 0;
+    if (g.FrameCount != tool->LastActiveFrame + 1)
+        return;
+
+    // Update queries. The steps are: -1: query Stack, >= 0: query each stack item
+    // We can only perform 1 ID Info query every frame. This is designed so the GetID() tests are cheap and constant-time
+    const ImGuiID query_id = g.ActiveId ? g.ActiveId : g.HoveredIdPreviousFrame;
+    if (tool->QueryId != query_id)
+    {
+        tool->QueryId = query_id;
+        tool->StackLevel = -1;
+        tool->Results.resize(0);
+    }
+    if (query_id == 0)
+        return;
+
+    // Advance to next stack level when we got our result, or after 2 frames (in case we never get a result)
+    int stack_level = tool->StackLevel;
+    if (stack_level >= 0 && stack_level < tool->Results.Size)
+        if (tool->Results[stack_level].QuerySuccess || tool->Results[stack_level].QueryFrameCount > 2)
+            tool->StackLevel++;
+
+    // Update hook
+    stack_level = tool->StackLevel;
+    if (stack_level == -1)
+        g.DebugHookIdInfo = query_id;
+    if (stack_level >= 0 && stack_level < tool->Results.Size)
+    {
+        g.DebugHookIdInfo = tool->Results[stack_level].ID;
+        tool->Results[stack_level].QueryFrameCount++;
+    }
+}
+
+// [DEBUG] Stack tool: hooks called by GetID() family functions
+void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiStackTool* tool = &g.DebugStackTool;
+
+    // Step 0: stack query
+    // This assume that the ID was computed with the current ID stack, which tends to be the case for our widget.
+    if (tool->StackLevel == -1)
+    {
+        tool->StackLevel++;
+        tool->Results.resize(window->IDStack.Size + 1, ImGuiStackLevelInfo());
+        for (int n = 0; n < window->IDStack.Size + 1; n++)
+            tool->Results[n].ID = (n < window->IDStack.Size) ? window->IDStack[n] : id;
+        return;
+    }
+
+    // Step 1+: query for individual level
+    IM_ASSERT(tool->StackLevel >= 0);
+    if (tool->StackLevel != window->IDStack.Size)
+        return;
+    ImGuiStackLevelInfo* info = &tool->Results[tool->StackLevel];
+    IM_ASSERT(info->ID == id && info->QueryFrameCount > 0);
+
+    int data_len;
+    switch (data_type)
+    {
+    case ImGuiDataType_S32:
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%d", (int)(intptr_t)data_id);
+        break;
+    case ImGuiDataType_String:
+        data_len = data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)strlen((const char*)data_id);
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "\"%.*s\"", data_len, (const char*)data_id);
+        break;
+    case ImGuiDataType_Pointer:
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "(void*)0x%p", data_id);
+        break;
+    case ImGuiDataType_ID:
+        if (info->Desc[0] == 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
+            ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
+        break;
+    default:
+        IM_ASSERT(0);
+    }
+    info->QuerySuccess = true;
+}
+
+// Stack Tool: Display UI
+void ImGui::ShowStackToolWindow(bool* p_open)
+{
+    if (!Begin("Dear ImGui Stack Tool", p_open) || GetCurrentWindow()->BeginCount > 1)
+    {
+        End();
+        return;
+    }
+
+    // Display hovered/active status
+    ImGuiContext& g = *GImGui;
+    const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
+    const ImGuiID active_id = g.ActiveId;
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    Text("HoveredId: 0x%08X (\"%s\"), ActiveId:  0x%08X (\"%s\")", hovered_id, hovered_id ? ImGuiTestEngine_FindItemDebugLabel(&g, hovered_id) : "", active_id, active_id ? ImGuiTestEngine_FindItemDebugLabel(&g, active_id) : "");
+#else
+    Text("HoveredId: 0x%08X, ActiveId:  0x%08X", hovered_id, active_id);
+#endif
+    SameLine();
+    MetricsHelpMarker("Hover an item with the mouse to display elements of the ID Stack leading to the item's final ID.\nEach level of the stack correspond to a PushID() call.\nAll levels of the stack are hashed together to make the final ID of a widget (ID displayed at the bottom level of the stack).\nRead FAQ entry about the ID stack for details.");
+
+    // Display decorated stack
+    ImGuiStackTool* tool = &g.DebugStackTool;
+    tool->LastActiveFrame = g.FrameCount;
+    if (tool->Results.Size > 0 && BeginTable("##table", 3, ImGuiTableFlags_Borders))
+    {
+        const float id_width = CalcTextSize("0xDDDDDDDD").x;
+        TableSetupColumn("Seed", ImGuiTableColumnFlags_WidthFixed, id_width);
+        TableSetupColumn("PushID", ImGuiTableColumnFlags_WidthStretch);
+        TableSetupColumn("Result", ImGuiTableColumnFlags_WidthFixed, id_width);
+        TableHeadersRow();
+        for (int n = 0; n < tool->Results.Size; n++)
+        {
+            ImGuiStackLevelInfo* info = &tool->Results[n];
+            TableNextColumn();
+            Text("0x%08X", (n > 0) ? tool->Results[n - 1].ID : 0);
+
+            TableNextColumn();
+            ImGuiWindow* window = (info->Desc[0] == 0 && n == 0) ? FindWindowByID(info->ID) : NULL;
+            if (window)                                         // Source: window name (because the root ID don't call GetID() and so doesn't get hooked)
+                Text("\"%s\" [window]", window->Name);
+            else if (info->QuerySuccess)                        // Source: GetID() hooks (prioritize over ItemInfo() because we frequently use patterns like: PushID(str), Button("") where they both have same id)
+                TextUnformatted(info->Desc);
+            else if (tool->StackLevel >= tool->Results.Size)    // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
+            {
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+                if (const char* label = ImGuiTestEngine_FindItemDebugLabel(&g, info->ID))    // Source: ImGuiTestEngine's ItemInfo()
+                    Text("??? \"%s\"", label);
+                else
+#endif
+                    TextUnformatted("???");
+            }
+
+            TableNextColumn();
+            Text("0x%08X", info->ID);
+            if (n == tool->Results.Size - 1)
+                TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_Header));
+        }
+        EndTable();
+    }
+    End();
+}
+
 #else
 
 void ImGui::ShowMetricsWindow(bool*) {}
@@ -12017,7 +12176,12 @@ void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings*) {}
 void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>*, const char*) {}
 void ImGui::DebugNodeViewport(ImGuiViewportP*) {}
 
-#endif
+void ImGui::ShowStackToolWindow(bool*) {}
+void ImGui::DebugHookIdInfo(ImGuiID, ImGuiDataType, const void*, const void*) {}
+void ImGui::UpdateDebugToolItemPicker() {}
+void ImGui::UpdateDebugToolStackQueries() {}
+
+#endif // #ifndef IMGUI_DISABLE_METRICS_WINDOW
 
 //-----------------------------------------------------------------------------
 
