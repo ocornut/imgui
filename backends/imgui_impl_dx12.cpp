@@ -481,12 +481,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         staticSampler.RegisterSpace = 0;
         staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        D3D12_ROOT_SIGNATURE_DESC desc = {};
-        desc.NumParameters = _countof(param);
-        desc.pParameters = param;
-        desc.NumStaticSamplers = 1;
-        desc.pStaticSamplers = &staticSampler;
-        desc.Flags =
+        D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc = {};
+        desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+        desc.Desc_1_0.NumParameters = _countof(param);
+        desc.Desc_1_0.pParameters = param;
+        desc.Desc_1_0.NumStaticSamplers = 1;
+        desc.Desc_1_0.pStaticSamplers = &staticSampler;
+        desc.Desc_1_0.Flags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -514,12 +515,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
                 return false;
         }
 
-        PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
-        if (D3D12SerializeRootSignatureFn == NULL)
+        PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignatureFn =
+            (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeVersionedRootSignature");
+        if (D3D12SerializeVersionedRootSignatureFn == NULL)
             return false;
 
         ID3DBlob* blob = NULL;
-        if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL) != S_OK)
+        if (D3D12SerializeVersionedRootSignatureFn(&desc, &blob, NULL) != S_OK)
             return false;
 
         bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
