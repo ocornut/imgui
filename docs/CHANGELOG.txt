@@ -42,7 +42,7 @@ Breaking Changes:
 
 Other Changes:
 
-- Debug: Stack Tool: Added "Stack Tool" available in "Demo->Examples->Stack Tool", "Metrics->Tools",
+- Debug: Stack Tool: Added "Stack Tool" available in "Demo->Tools->Stack Tool", "Metrics->Tools",
   or by calling the ShowStackToolWindow() function. The tool run queries on hovered id to display
   details about individual components that were hashed to create an ID. It helps understanding
   the ID stack system and debugging potential ID collisions. (#4631) [@ocornut, @rokups]

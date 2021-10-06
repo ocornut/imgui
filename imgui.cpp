@@ -11205,7 +11205,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (cfg->ShowStackTool)
         ShowStackToolWindow(&cfg->ShowStackTool);
 
-    if (!Begin("Dear ImGui Metrics/Debugger", p_open))
+    if (!Begin("Dear ImGui Metrics/Debugger", p_open) || GetCurrentWindow()->BeginCount > 1)
     {
         End();
         return;
