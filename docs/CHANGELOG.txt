@@ -57,6 +57,13 @@ Other Changes:
 - TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Disabled: Added assert guard for mismatching BeginDisabled()/EndDisabled() blocks. (#211)
+- Nav: Fixed using SetKeyboardFocusHere() on non-visible/clipped items. It now works and will scroll
+  toward the item. When called during a frame where the parent window is appearing, scrolling will
+  aim to center the item in the window. When calling during a frame where the parent window is already
+  visible, scrolling will aim to scroll as little as possible to make the item visible. We will later
+  expose scroll functions and flags in public API to select those behaviors. (#343, #4079, #2352)
+- Nav: Fixed using SetKeyboardFocusHere() from activating a different item on the next frame if
+  submitted items have changed during that frame. (#432)
 - Nav: Fixed toggling menu layer with Alt or exiting menu layer with Esc not moving mouse when
   the NavEnableSetMousePos config flag is set.
 - Nav: Fixed a few widgets from not setting reference keyboard/gamepad navigation ID when

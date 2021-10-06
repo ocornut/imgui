@@ -3303,7 +3303,6 @@ void ImGui::ItemInputable(ImGuiWindow* window, ImGuiID id)
     // Increment counters
     // FIXME: ImGuiItemFlags_Disabled should disable more.
     const bool is_tab_stop = (g.LastItemData.InFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
-    window->DC.FocusCounterRegular++;
     if (is_tab_stop)
     {
         window->DC.FocusCounterTabStop++;
@@ -3322,11 +3321,6 @@ void ImGui::ItemInputable(ImGuiWindow* window, ImGuiID id)
     // Handle focus requests
     if (g.TabFocusRequestCurrWindow == window)
     {
-        if (window->DC.FocusCounterRegular == g.TabFocusRequestCurrCounterRegular)
-        {
-            g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_FocusedByCode;
-            return;
-        }
         if (is_tab_stop && window->DC.FocusCounterTabStop == g.TabFocusRequestCurrCounterTabStop)
         {
             g.NavJustTabbedId = id; // FIXME-NAV: aim to eventually set in NavUpdate() once we finish the refactor
@@ -3843,7 +3837,6 @@ void ImGui::UpdateTabFocus()
         // - Note that SetKeyboardFocusHere() sets the Next fields mid-frame. To be consistent we also
         //   manipulate the Next fields here even though they will be turned into Curr fields below.
         g.TabFocusRequestNextWindow = g.NavWindow;
-        g.TabFocusRequestNextCounterRegular = INT_MAX;
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
             g.TabFocusRequestNextCounterTabStop = g.NavIdTabCounter + (g.IO.KeyShift ? -1 : 0);
         else
@@ -3852,17 +3845,15 @@ void ImGui::UpdateTabFocus()
 
     // Turn queued focus request into current one
     g.TabFocusRequestCurrWindow = NULL;
-    g.TabFocusRequestCurrCounterRegular = g.TabFocusRequestCurrCounterTabStop = INT_MAX;
+    g.TabFocusRequestCurrCounterTabStop = INT_MAX;
     if (g.TabFocusRequestNextWindow != NULL)
     {
         ImGuiWindow* window = g.TabFocusRequestNextWindow;
         g.TabFocusRequestCurrWindow = window;
-        if (g.TabFocusRequestNextCounterRegular != INT_MAX && window->DC.FocusCounterRegular != -1)
-            g.TabFocusRequestCurrCounterRegular = ImModPositive(g.TabFocusRequestNextCounterRegular, window->DC.FocusCounterRegular + 1);
         if (g.TabFocusRequestNextCounterTabStop != INT_MAX && window->DC.FocusCounterTabStop != -1)
             g.TabFocusRequestCurrCounterTabStop = ImModPositive(g.TabFocusRequestNextCounterTabStop, window->DC.FocusCounterTabStop + 1);
         g.TabFocusRequestNextWindow = NULL;
-        g.TabFocusRequestNextCounterRegular = g.TabFocusRequestNextCounterTabStop = INT_MAX;
+        g.TabFocusRequestNextCounterTabStop = INT_MAX;
     }
 
     g.NavIdTabCounter = INT_MAX;
@@ -6316,7 +6307,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.CurrentColumns = NULL;
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
-        window->DC.FocusCounterRegular = window->DC.FocusCounterTabStop = -1;
+        window->DC.FocusCounterTabStop = -1;
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
@@ -7082,12 +7073,16 @@ void ImGui::PopFocusScope()
 
 void ImGui::SetKeyboardFocusHere(int offset)
 {
-    IM_ASSERT(offset >= -1);    // -1 is allowed but not below
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    g.TabFocusRequestNextWindow = window;
-    g.TabFocusRequestNextCounterRegular = window->DC.FocusCounterRegular + 1 + offset;
-    g.TabFocusRequestNextCounterTabStop = INT_MAX;
+    IM_ASSERT(offset >= -1);    // -1 is allowed but not below
+    g.NavWindow = window;
+    ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
+    NavMoveRequestSubmit(ImGuiDir_None, ImGuiDir_None, ImGuiNavMoveFlags_Tabbing, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
+    if (offset == -1)
+        NavMoveRequestResolveWithLastItem();
+    else
+        g.NavTabbingInputableRemaining = offset + 1;
 }
 
 void ImGui::SetItemDefaultFocus()
@@ -8980,6 +8975,7 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result)
     result->Window = window;
     result->ID = g.LastItemData.ID;
     result->FocusScopeId = window->DC.NavFocusScopeIdCurrent;
+    result->InFlags = g.LastItemData.InFlags;
     result->RectRel = ImRect(g.LastItemData.NavRect.Min - window->Pos, g.LastItemData.NavRect.Max - window->Pos);
 }
 
@@ -9014,18 +9010,30 @@ static void ImGui::NavProcessItem()
     // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRect + scoring from a rect wrapped according to current wrapping policy)
     if (g.NavMoveScoringItems)
     {
+        if (item_flags & ImGuiItemFlags_Inputable)
+            g.NavTabbingInputableRemaining--;
+
         if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
         {
             ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-            if (NavScoreItem(result))
-                NavApplyItemToResult(result);
 
-            // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
-            const float VISIBLE_RATIO = 0.70f;
-            if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
-                if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
-                    if (NavScoreItem(&g.NavMoveResultLocalVisible))
-                        NavApplyItemToResult(&g.NavMoveResultLocalVisible);
+            if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
+            {
+                if (g.NavTabbingInputableRemaining == 0)
+                    NavMoveRequestResolveWithLastItem();
+            }
+            else
+            {
+                if (NavScoreItem(result))
+                    NavApplyItemToResult(result);
+
+                // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
+                const float VISIBLE_RATIO = 0.70f;
+                if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
+                    if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
+                        if (NavScoreItem(&g.NavMoveResultLocalVisible))
+                            NavApplyItemToResult(&g.NavMoveResultLocalVisible);
+            }
         }
     }
 
@@ -9051,6 +9059,10 @@ void ImGui::NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavM
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow != NULL);
+
+    if (move_flags & ImGuiNavMoveFlags_Tabbing)
+        move_flags |= ImGuiNavMoveFlags_AllowCurrentNavId;
+
     g.NavMoveSubmitted = g.NavMoveScoringItems = true;
     g.NavMoveDir = move_dir;
     g.NavMoveDirForDebug = move_dir;
@@ -9059,9 +9071,18 @@ void ImGui::NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavM
     g.NavMoveScrollFlags = scroll_flags;
     g.NavMoveForwardToNextFrame = false;
     g.NavMoveKeyMods = g.IO.KeyMods;
+    g.NavTabbingInputableRemaining = 0;
     g.NavMoveResultLocal.Clear();
     g.NavMoveResultLocalVisible.Clear();
     g.NavMoveResultOther.Clear();
+    NavUpdateAnyRequestFlag();
+}
+
+void ImGui::NavMoveRequestResolveWithLastItem()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavMoveScoringItems = false; // Ensure request doesn't need more processing
+    NavApplyItemToResult(&g.NavMoveResultLocal);
     NavUpdateAnyRequestFlag();
 }
 
@@ -9284,6 +9305,7 @@ static void ImGui::NavUpdate()
     // Process navigation move request
     if (g.NavMoveSubmitted)
         NavMoveRequestApplyResult();
+    g.NavTabbingInputableRemaining = 0;
     g.NavMoveSubmitted = g.NavMoveScoringItems = false;
 
     // Apply application mouse position movement, after we had a chance to process move request result.
@@ -9535,7 +9557,9 @@ void ImGui::NavMoveRequestApplyResult()
     // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (result == NULL)
     {
-        if (g.NavId != 0)
+        if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
+            g.NavMoveFlags |= ImGuiNavMoveFlags_DontSetNavHighlight;
+        if (g.NavId != 0 && (g.NavMoveFlags & ImGuiNavMoveFlags_DontSetNavHighlight) == 0)
         {
             g.NavDisableHighlight = false;
             g.NavDisableMouseHover = true;
@@ -9590,9 +9614,27 @@ void ImGui::NavMoveRequestApplyResult()
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
 
+    // Tabbing: Activates Inputable or Focus non-Inputable
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) && (result->InFlags & ImGuiItemFlags_Inputable))
+    {
+        g.NavNextActivateId = result->ID;
+        g.NavNextActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_TryToPreserveState;
+        g.NavMoveFlags |= ImGuiNavMoveFlags_DontSetNavHighlight;
+    }
+
+    // Activate
+    if (g.NavMoveFlags & ImGuiNavMoveFlags_Activate)
+    {
+        g.NavNextActivateId = result->ID;
+        g.NavNextActivateFlags = ImGuiActivateFlags_None;
+    }
+
     // Enable nav highlight
-    g.NavDisableHighlight = false;
-    g.NavDisableMouseHover = g.NavMousePosDirty = true;
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_DontSetNavHighlight) == 0)
+    {
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = g.NavMousePosDirty = true;
+    }
 }
 
 // Process NavCancel input (to close a popup, get back to parent, clear focus)
