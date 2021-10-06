@@ -1805,7 +1805,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     bool value_changed = false;
     for (int i = 0; i < items_count; i++)
     {
-        PushID((void*)(intptr_t)i);
+        PushID(i);
         const bool item_selected = (i == *current_item);
         const char* item_text;
         if (!items_getter(data, i, &item_text))
@@ -6026,7 +6026,7 @@ void ImGui::TreePushOverrideID(ImGuiID id)
     ImGuiWindow* window = g.CurrentWindow;
     Indent();
     window->DC.TreeDepth++;
-    window->IDStack.push_back(id);
+    PushOverrideID(id);
 }
 
 void ImGui::TreePop()
@@ -6725,7 +6725,7 @@ void ImGui::EndMenuBar()
             SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
             g.NavDisableMouseHover = g.NavMousePosDirty = true;
-            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags); // Repeat
+            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags); // Repeat
         }
     }
 

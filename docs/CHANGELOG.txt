@@ -115,6 +115,10 @@ Breaking Changes:
 
 Other Changes:
 
+- Debug: Stack Tool: Added "Stack Tool" available in "Demo->Examples->Stack Tool", "Metrics->Tools",
+  or by calling the ShowStackToolWindow() function. The tool run queries on hovered id to display
+  details about individual components that were hashed to create an ID. It helps understanding
+  the ID stack system and debugging potential ID collisions. (#4631) [@ocornut, @rokups]
 - Windows: Fixed background order of overlapping childs submitted sequentially. (#4493)
 - IsWindowFocused: Added ImGuiFocusedFlags_NoPopupHierarchy flag allowing to exclude child popups
   from the tested windows when combined with _ChildWindows.
@@ -135,6 +139,7 @@ Other Changes:
   the PressedOnClick/PressedOnDoubleClick/PressedOnRelease button policy.
 - Nav: Fixed an issue with losing focus on docked windows when pressing Alt while keyboard navigation
   is disabled. (#4547, #4439) [@PathogenDavid]
+- Nav: Improve scrolling behavior when navigating to an item larger than view.
 - TreePush(): removed unnecessary/inconsistent legacy behavior where passing a NULL value to
   the TreePush(const char*) and TreePush(const void*) functions would use an hardcoded replacement.
   The only situation where that change would make a meaningful difference is TreePush((const char*)NULL)
@@ -152,6 +157,7 @@ Other Changes:
 - Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)
 - PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
 - Misc: Added asserts for missing PopItemFlag() calls.
+- Misc: Fixed printf-style format checks on Clang+MinGW. (#4626, #4183, #3592) [@guusw]
 - IO: Added 'io.WantCaptureMouseUnlessPopupClose' alternative to `io.WantCaptureMouse'. (#4480)
   This allows apps to receive the click on void when that click is used to close popup (by default,
   clicking on a void when a popup is open will close the popup but not release io.WantCaptureMouse).
@@ -160,7 +166,7 @@ Other Changes:
 - Fonts: Fixed ImFontAtlas::ClearInputData() marking atlas as not built. (#4455, #3487)
 - Backends: Added more implicit asserts to detect invalid/redundant calls to Shutdown functions. (#4562)
 - Backends: OpenGL3: Fixed our custom GL loader conflicting with user using GL3W. (#4445) [@rokups]
-- Backends: WebGPU: Fixed for latest specs. (#4472) [@Kangz]
+- Backends: WebGPU: Fixed for latest specs. (#4472, #4512) [@Kangz, @bfierz]
 - Backends: SDL_Renderer: Added SDL_Renderer backend compatible with upcoming SDL 2.0.18. (#3926) [@1bsyl]
 - Backends: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted via
   a direct unclipped PushClipRect() call. (#4464)

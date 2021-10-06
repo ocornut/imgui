@@ -27,11 +27,11 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 ---------------------------------------
  ## Readme First
 
+- You can use the `Metrics/Debugger` window (available in `Demo>Tools`) to browse your fonts and understand what's going on if you have an issue. You can also reach it in `Demo->Tools->Style Editor->Fonts`. The same information are also available in the Style Editor under Fonts.
+
+![imgui_capture_0008](https://user-images.githubusercontent.com/8225057/135429892-0e41ef8d-33c5-4991-bcf6-f997a0bcfd6b.png)
+
 - All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas.
-
-- You can use the style editor `ImGui::ShowStyleEditor()` in the "Fonts" section to browse your fonts and understand what's going on if you have an issue. You can also reach it in `Demo->Tools->Style Editor->Fonts`:
-
-![imgui_capture_0008](https://user-images.githubusercontent.com/8225057/84162822-1a731f00-aa71-11ea-9b6b-89c2332aa161.png)
 
 - Make sure your font ranges data are persistent (available during the calls to `GetTexDataAsAlpha8()`/`GetTexDataAsRGBA32()/`Build()`.
 
