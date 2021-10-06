@@ -15,6 +15,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
+//  2021-10-06: Backup and restore modified ClipRect/Viewport.
 //  2021-09-21: Initial version.
 
 #include "imgui.h"
@@ -115,6 +116,16 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 	if (fb_width == 0 || fb_height == 0)
 		return;
 
+    // Backup SDL_Renderer state that will be modified to restore it afterwards
+    struct BackupSDLRendererState
+    {
+        SDL_Rect    Viewport;
+        SDL_Rect    ClipRect;
+    };
+    BackupSDLRendererState old = {};
+    SDL_RenderGetViewport(bd->SDLRenderer, &old.Viewport);
+    SDL_RenderGetClipRect(bd->SDLRenderer, &old.ClipRect);
+
 	// Will project scissor/clipping rectangles into framebuffer space
 	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
 	ImVec2 clip_scale = render_scale;
@@ -169,6 +180,10 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
             }
         }
     }
+
+    // Restore modified SDL_Renderer state
+    SDL_RenderSetViewport(bd->SDLRenderer, &old.Viewport);
+    SDL_RenderSetClipRect(bd->SDLRenderer, &old.ClipRect);
 }
 
 // Called by Init/NewFrame/Shutdown
