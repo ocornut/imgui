@@ -54,6 +54,7 @@ Other Changes:
 - InputTextMultiline: Fixed label size not being included into window contents rect unless
   the whole widget is clipped.
 - InputText: Allow activating/cancelling/validating input with gamepad nav events. (#2321, #4552)
+- InputText: Fixed selection rectangle appearing one frame late when selecting all.
 - TextUnformatted: Accept null ranges including (NULL,NULL) without asserting, in order to conform
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#3615)
 - Disabled: Added assert guard for mismatching BeginDisabled()/EndDisabled() blocks. (#211)

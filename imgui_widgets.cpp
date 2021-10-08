@@ -4118,7 +4118,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     // Lock the decision of whether we are going to take the path displaying the cursor or selection
     const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
-    bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
+    bool render_selection = state && (state->HasSelection() || select_all) && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     bool value_changed = false;
     bool enter_pressed = false;
 
