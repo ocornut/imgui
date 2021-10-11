@@ -270,7 +270,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(uint32_
     spirv_desc.codeSize = binary_data_size;
     spirv_desc.code = binary_data;
 
-    WGPUShaderModuleDescriptor desc;
+    WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&spirv_desc);
 
     WGPUProgrammableStageDescriptor stage_desc = {};
