@@ -1,4 +1,4 @@
-// dear imgui, v1.85 WIP
+// dear imgui, v1.85
 // (tables and columns code)
 
 /*

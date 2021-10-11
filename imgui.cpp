@@ -1,4 +1,4 @@
-// dear imgui, v1.85 WIP
+// dear imgui, v1.85
 // (main code and documentation)
 
 // Help:
@@ -380,7 +380,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2021/08/23 (1.85) - removed GetWindowContentRegionWidth() function. keep inline redirection helper. can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead.
+ - 2021/08/23 (1.85) - removed GetWindowContentRegionWidth() function. keep inline redirection helper. can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead for generally 'GetContentRegionAvail().x' is more useful.
  - 2021/07/26 (1.84) - commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
                         - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
                         - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
@@ -9849,7 +9849,7 @@ static int ImGui::FindWindowFocusIndex(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     IM_UNUSED(g);
     int order = window->FocusOrder;
-    IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
+    IM_ASSERT(window->RootWindow == window); // No child window (not testing _ChildWindow because of docking)
     IM_ASSERT(g.WindowsFocusOrder[order] == window);
     return order;
 }
