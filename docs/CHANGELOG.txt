@@ -86,9 +86,11 @@ Other Changes:
   RGB<>HSV round trips every frames. [@rokups]
 - ColorPicker4: Fixed picker being unable to select exact 1.0f color when dragging toward the edges
   of the SV square (previously picked 0.999989986f). (#3517) [@rokups]
-- Menus: Fixed vertical alignments of MenuItem() calls within a menu bar. (broken in 1.84). (#4538)
-- Menus: Adjust closing logic to accomodate for varying font size and dpi.
+- Menus: Fixed vertical alignments of MenuItem() calls within a menu bar (broken in 1.84). (#4538)
+- Menus: Improve closing logic when moving diagonally in empty between between parent and child menus to
+  accomodate for varying font size and dpi.
 - Menus: Fixed crash when navigating left inside a child window inside a sub-menu. (#4510).
+- Menus: Fixed an assertion happening in some situations when closing nested menus (broken in 1.83). (#4640)
 - Drag and Drop: Fixed using BeginDragDropSource() inside a BeginChild() that returned false. (#4515)
 - PlotHistogram: Fixed zero-line position when manually specifying min<0 and max>0. (#4349) [@filippocrocchini]
 - Misc: Added asserts for missing PopItemFlag() calls.

@@ -6551,8 +6551,18 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window)
 {
     ImGuiContext& g = *GImGui;
-
-    const int start_idx = ((under_this_window != NULL) ? FindWindowFocusIndex(under_this_window) : g.WindowsFocusOrder.Size) - 1;
+    int start_idx = g.WindowsFocusOrder.Size - 1;
+    if (under_this_window != NULL)
+    {
+        // Aim at root window behind us, if we are in a child window that's our own root (see #4640)
+        int offset = -1;
+        while (under_this_window->Flags & ImGuiWindowFlags_ChildWindow)
+        {
+            under_this_window = under_this_window->ParentWindow;
+            offset = 0;
+        }
+        start_idx = FindWindowFocusIndex(under_this_window) + offset;
+    }
     for (int i = start_idx; i >= 0; i--)
     {
         // We may later decide to test for different NoXXXInputs based on the active navigation input (mouse vs nav) but that may feel more confusing to the user.
@@ -9838,6 +9848,7 @@ static int ImGui::FindWindowFocusIndex(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     IM_UNUSED(g);
     int order = window->FocusOrder;
+    IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
     IM_ASSERT(g.WindowsFocusOrder[order] == window);
     return order;
 }
