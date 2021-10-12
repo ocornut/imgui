@@ -51,6 +51,20 @@ jobs:
       - name: Build example_null (extra warnings, mingw 64-bit)
         run: mingw32-make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
+      - name: Build example_null (mingw 64-bit, as DLL)
+        shell: bash
+        run: |
+          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
+          echo '#else'                                           >> example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
+          echo '#endif'                                          >> example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -D_EXPORT -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
+          g++ -I. -Wall -Wformat -o example_null.exe examples/example_null/main.cpp -L. -limgui
+          rm -f example_null.exe libimgui.* example_single_file.*
+
       - name: Build example_null (extra warnings, msvc 64-bit)
         shell: cmd
         run: |
