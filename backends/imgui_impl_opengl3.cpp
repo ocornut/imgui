@@ -114,7 +114,9 @@
 #include <GLES3/gl3.h>          // Use GL ES 3
 #endif
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
-#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#if defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM_INCLUDE)
+#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM_INCLUDE
+#endif
 #else
 // Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
 // Helper libraries are often used for this purpose! Here we are using our own minimal custom loader based on gl3w.
