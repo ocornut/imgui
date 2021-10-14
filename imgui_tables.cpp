@@ -1,4 +1,4 @@
-// dear imgui, v1.85
+// dear imgui, v1.86 WIP
 // (tables and columns code)
 
 /*
@@ -340,10 +340,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Acquire temporary buffers
     const int table_idx = g.Tables.GetIndex(table);
-    g.CurrentTableStackIdx++;
-    if (g.CurrentTableStackIdx + 1 > g.TablesTempDataStack.Size)
-        g.TablesTempDataStack.resize(g.CurrentTableStackIdx + 1, ImGuiTableTempData());
-    ImGuiTableTempData* temp_data = table->TempData = &g.TablesTempDataStack[g.CurrentTableStackIdx];
+    if (++g.TablesTempDataStacked > g.TablesTempData.Size)
+        g.TablesTempData.resize(g.TablesTempDataStacked, ImGuiTableTempData());
+    ImGuiTableTempData* temp_data = table->TempData = &g.TablesTempData[g.TablesTempDataStacked - 1];
     temp_data->TableIndex = table_idx;
     table->DrawSplitter = &table->TempData->DrawSplitter;
     table->DrawSplitter->Clear();
@@ -1382,9 +1381,8 @@ void    ImGui::EndTable()
 
     // Clear or restore current table, if any
     IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
-    IM_ASSERT(g.CurrentTableStackIdx >= 0);
-    g.CurrentTableStackIdx--;
-    temp_data = g.CurrentTableStackIdx >= 0 ? &g.TablesTempDataStack[g.CurrentTableStackIdx] : NULL;
+    IM_ASSERT(g.TablesTempDataStacked > 0);
+    temp_data = (--g.TablesTempDataStacked > 0) ? &g.TablesTempData[g.TablesTempDataStacked - 1] : NULL;
     g.CurrentTable = temp_data ? g.Tables.GetByIndex(temp_data->TableIndex) : NULL;
     if (g.CurrentTable)
     {
