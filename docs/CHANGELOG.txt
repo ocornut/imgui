@@ -119,6 +119,10 @@ Other Changes:
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
 - CI: Add MinGW DLL build to test suite. [@rokups]
 
+Docking+Viewports Branch:
+
+- Disabled: Fixed nested BeginDisabled()/EndDisabled() bug in Docking branch due to bad merge. (#4655, #4452, #4453, #4462)
+
 
 -----------------------------------------------------------------------
  VERSION 1.85 (Released 2021-10-12)

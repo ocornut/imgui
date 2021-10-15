@@ -7187,7 +7187,6 @@ void ImGui::BeginDisabled(bool disabled)
 {
     ImGuiContext& g = *GImGui;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
-    g.DisabledAlphaBackup = g.Style.Alpha;
     if (!was_disabled && disabled)
     {
         g.DisabledAlphaBackup = g.Style.Alpha;
