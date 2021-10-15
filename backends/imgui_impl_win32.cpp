@@ -1006,6 +1006,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
 static void ImGui_ImplWin32_ShutdownPlatformInterface()
 {
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(NULL));
+    ImGui::DestroyPlatformWindows();
 }
 
 //---------------------------------------------------------------------------------------------------------

@@ -105,7 +105,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
-- Revert removal of io.ConfigDockingWithShift config option (removed in 1.83). (#4643)
+- Docking: Revert removal of io.ConfigDockingWithShift config option (removed in 1.83). (#4643)
+- Backends: Made it possible to shutdown default Platform Backends before the Renderer backends. (#4656)
 
 
 -----------------------------------------------------------------------

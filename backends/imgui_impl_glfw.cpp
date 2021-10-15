@@ -961,4 +961,5 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 
 static void ImGui_ImplGlfw_ShutdownPlatformInterface()
 {
+    ImGui::DestroyPlatformWindows();
 }
