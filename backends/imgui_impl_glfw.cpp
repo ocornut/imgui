@@ -699,9 +699,10 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
 
             // Release any keys that were pressed in the window being destroyed and are still held down,
             // because we will not receive any release events after window is destroyed.
-            for (int i = 0; i < IM_ARRAYSIZE(bd->KeyOwnerWindows); i++)
-                if (bd->KeyOwnerWindows[i] == vd->Window)
-                    ImGui_ImplGlfw_KeyCallback(vd->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
+            if (bd)
+                for (int i = 0; i < IM_ARRAYSIZE(bd->KeyOwnerWindows); i++)
+                    if (bd->KeyOwnerWindows[i] == vd->Window)
+                        ImGui_ImplGlfw_KeyCallback(vd->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
 
             glfwDestroyWindow(vd->Window);
         }
