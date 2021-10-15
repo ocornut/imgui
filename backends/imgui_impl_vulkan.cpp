@@ -537,6 +537,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         global_idx_offset += cmd_list->IdxBuffer.Size;
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
+
+    // Note: at this point both vkCmdSetViewport() and vkCmdSetScissor() have been called.
+    // Our last values will leak into user/application rendering IF:
+    // - Your app uses a pipeline with VK_DYNAMIC_STATE_VIEWPORT or VK_DYNAMIC_STATE_SCISSOR dynamic state
+    // - And you forgot to call vkCmdSetViewport() and vkCmdSetScissor() yourself to explicitely set that state.
+    // If you use VK_DYNAMIC_STATE_VIEWPORT or VK_DYNAMIC_STATE_SCISSOR you are responsible for setting the values before rendering.
+    // In theory we should aim to backup/restore those values but I am not sure this is possible.
+    // If we add a call to vkCmdSetScissor() to cover the full viewport that would fix things for majority of users BUT would made it harder to notice your bug. (See github #4644)
 }
 
 bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
