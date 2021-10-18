@@ -15,6 +15,7 @@ _"Unfortunately several browsers (including Chrome, Safari, and Internet Explore
   - Emscripten SDK has a handy `emrun` command: `emrun web/example_emscripten_opengl3.html --browser firefox` which will spawn a temporary local webserver (in Firefox). See https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html for details.
   - You may use Python 3 builtin webserver: `python -m http.server -d web` (this is what `make serve` uses).
   - You may use Python 2 builtin webserver: `cd web && python -m SimpleHTTPServer`.
+  - If you are accessing the files over a network, certain browsers, such as firefox, will restrict access Gamepad API to secure contexts only (e.g. https only).
 
 ## Obsolete features:
 
