@@ -688,6 +688,12 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    IM_ASSERT(bd != NULL &&
+              "No platform backend to shutdown, or already shutdown. Did you "
+              "shutdown in the correct order? Note that you need to shutdown "
+              "the Renderer BEFORE the Platform backend (the opposite of "
+              "Initialization)");
+
     if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData)
     {
         if (vd->WindowOwned)
