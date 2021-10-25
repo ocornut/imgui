@@ -39,6 +39,8 @@ Breaking Changes:
 Other Changes:
 
 - Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- InputText: made double-click select word, triple-line select line. Word delimitation logic differs
+  slightly from the one used by CTRL+arrows. (#2244)
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
   likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
   vkCmdSetScissor() explicitly every frame. (#4644)
