@@ -4205,8 +4205,16 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             else
             {
                 // Triple-click: Select line
+                const bool is_eol = ImStb::STB_TEXTEDIT_GETCHAR(state, state->Stb.cursor) == '\n';
                 state->OnKeyPressed(STB_TEXTEDIT_K_LINESTART);
                 state->OnKeyPressed(STB_TEXTEDIT_K_LINEEND | STB_TEXTEDIT_K_SHIFT);
+                state->OnKeyPressed(STB_TEXTEDIT_K_RIGHT | STB_TEXTEDIT_K_SHIFT);
+                if (!is_eol && is_multiline)
+                {
+                    ImSwap(state->Stb.select_start, state->Stb.select_end);
+                    state->Stb.cursor = state->Stb.select_end;
+                }
+                state->CursorFollow = false;
             }
             state->CursorAnimReset();
         }
