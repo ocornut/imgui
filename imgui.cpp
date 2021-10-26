@@ -4909,6 +4909,12 @@ bool ImGui::IsItemDeactivatedAfterEdit()
     return IsItemDeactivated() && (g.ActiveIdPreviousFrameHasBeenEditedBefore || (g.ActiveId == 0 && g.ActiveIdHasBeenEditedBefore));
 }
 
+bool ImGui::IsItemDisabled()
+{
+    ImGuiContext& g = *GImGui;
+    return (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+}
+
 // == GetItemID() == GetFocusID()
 bool ImGui::IsItemFocused()
 {
