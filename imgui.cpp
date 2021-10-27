@@ -9232,7 +9232,8 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
 static ImVec2 ImGui::NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
+    ImGuiWindow* window = g.NavWindow;
+    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !window)
     {
         // Mouse (we need a fallback in case the mouse becomes invalid after being used)
         if (IsMousePosValid(&g.IO.MousePos))
@@ -9241,8 +9242,14 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
     }
     else
     {
-        // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item.
-        ImRect rect_rel = WindowRectRelToAbs(g.NavWindow, g.NavWindow->NavRectRel[g.NavLayer]);
+        // When navigation is active and mouse is disabled, pick a position around the bottom left of the currently navigated item
+        // Take account of upcoming scrolling (maybe set mouse pos should be done in EndFrame?)
+        ImRect rect_rel = WindowRectRelToAbs(window, window->NavRectRel[g.NavLayer]);
+        if (window->LastFrameActive != g.FrameCount && (window->ScrollTarget.x != FLT_MAX || window->ScrollTarget.y != FLT_MAX))
+        {
+            ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
+            rect_rel.Translate(window->Scroll - next_scroll);
+        }
         ImVec2 pos = ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x * 4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
         ImGuiViewport* viewport = GetMainViewport();
         return ImFloor(ImClamp(pos, viewport->Pos, viewport->Pos + viewport->Size)); // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
@@ -9341,19 +9348,12 @@ static void ImGui::NavUpdate()
     g.NavTabbingInputableRemaining = 0;
     g.NavMoveSubmitted = g.NavMoveScoringItems = false;
 
-    // Apply application mouse position movement, after we had a chance to process move request result.
+    // Schedule mouse position update (will be done at the bottom of this function, after 1) processing all move requests and 2) updating scrolling)
+    bool set_mouse_pos = false;
     if (g.NavMousePosDirty && g.NavIdIsAlive)
-    {
-        // Set mouse position given our knowledge of the navigated item position from last frame
-        if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
-            if (!g.NavDisableHighlight && g.NavDisableMouseHover && g.NavWindow)
-            {
-                io.MousePos = io.MousePosPrev = NavCalcPreferredRefPos();
-                io.WantSetMousePos = true;
-                //IMGUI_DEBUG_LOG("SetMousePos: (%.1f,%.1f)\n", io.MousePos.x, io.MousePos.y);
-            }
-        g.NavMousePosDirty = false;
-    }
+        if (!g.NavDisableHighlight && g.NavDisableMouseHover && g.NavWindow)
+            set_mouse_pos = true;
+    g.NavMousePosDirty = false;
     g.NavIdIsAlive = false;
     g.NavJustTabbedId = 0;
     IM_ASSERT(g.NavLayer == ImGuiNavLayer_Main || g.NavLayer == ImGuiNavLayer_Menu);
@@ -9448,6 +9448,15 @@ static void ImGui::NavUpdate()
     {
         g.NavDisableHighlight = true;
         g.NavDisableMouseHover = g.NavMousePosDirty = false;
+    }
+
+    // Update mouse position if requested
+    // (This will take into account the possibility that a Scroll was queued in the window to offset our absolute mouse position before scroll has been applied)
+    if (set_mouse_pos && (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
+    {
+        io.MousePos = io.MousePosPrev = NavCalcPreferredRefPos();
+        io.WantSetMousePos = true;
+        //IMGUI_DEBUG_LOG("SetMousePos: (%.1f,%.1f)\n", io.MousePos.x, io.MousePos.y);
     }
 
     // [DEBUG]
@@ -9614,23 +9623,17 @@ void ImGui::NavMoveRequestApplyResult()
     // Scroll to keep newly navigated item fully into view.
     if (g.NavLayer == ImGuiNavLayer_Main)
     {
-        ImVec2 delta_scroll;
         if (g.NavMoveFlags & ImGuiNavMoveFlags_ScrollToEdgeY)
         {
             // FIXME: Should remove this
             float scroll_target = (g.NavMoveDir == ImGuiDir_Up) ? result->Window->ScrollMax.y : 0.0f;
-            delta_scroll.y = scroll_target - result->Window->Scroll.y;
             SetScrollY(result->Window, scroll_target);
         }
         else
         {
             ImRect rect_abs = WindowRectRelToAbs(result->Window, result->RectRel);
-            delta_scroll = ScrollToRectEx(result->Window, rect_abs, g.NavMoveScrollFlags);
+            ScrollToRectEx(result->Window, rect_abs, g.NavMoveScrollFlags);
         }
-
-        // Offset our result position so mouse position can be applied immediately after in NavUpdate()
-        result->RectRel.TranslateX(-delta_scroll.x);
-        result->RectRel.TranslateY(-delta_scroll.y);
     }
 
     ClearActiveID();
