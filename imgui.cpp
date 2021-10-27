@@ -6719,9 +6719,14 @@ void ImGui::PopTextWrapPos()
 
 static ImGuiWindow* GetCombinedRootWindow(ImGuiWindow* window, bool popup_hierarchy)
 {
-    window = window->RootWindow;
-    if (popup_hierarchy)
-        window = window->RootWindowPopupTree;
+    ImGuiWindow* last_window = NULL;
+    while (last_window != window)
+    {
+        last_window = window;
+        window = window->RootWindow;
+        if (popup_hierarchy)
+            window = window->RootWindowPopupTree;
+    }
     return window;
 }
 

@@ -39,6 +39,8 @@ Breaking Changes:
 Other Changes:
 
 - Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
+- Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
