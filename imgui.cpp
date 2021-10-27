@@ -9619,7 +9619,7 @@ void ImGui::NavMoveRequestApplyResult()
         {
             // FIXME: Should remove this
             float scroll_target = (g.NavMoveDir == ImGuiDir_Up) ? result->Window->ScrollMax.y : 0.0f;
-            delta_scroll.y = result->Window->Scroll.y - scroll_target;
+            delta_scroll.y = scroll_target - result->Window->Scroll.y;
             SetScrollY(result->Window, scroll_target);
         }
         else
