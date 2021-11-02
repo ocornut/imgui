@@ -5489,7 +5489,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         bool hovered, held;
         ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, WINDOWS_HOVER_PADDING);
         ImGuiID border_id = window->GetID(border_n + 4); // == GetWindowResizeBorderID()
-        ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren);
+        ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
         //GetForegroundDrawLists(window)->AddRect(border_rect.Min, border_rect.Max, IM_COL32(255, 255, 0, 255));
         if ((hovered && g.HoveredIdTimer > WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER) || held)
         {
@@ -5678,6 +5678,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse) && (style.WindowMenuButtonPosition != ImGuiDir_None);
 
     // Close & Collapse button are on the Menu NavLayer and don't default focus (unless there's nothing else on that layer)
+    // FIXME-NAV: Might want (or not?) to set the equivalent of ImGuiButtonFlags_NoNavFocus so that mouse clicks on standard title bar items don't necessarily set nav/keyboard ref?
     const ImGuiItemFlags item_flags_backup = g.CurrentItemFlags;
     g.CurrentItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
@@ -9730,7 +9731,7 @@ static float ImGui::NavUpdatePageUpPageDown()
     ImGuiIO& io = g.IO;
 
     ImGuiWindow* window = g.NavWindow;
-    if ((window->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL || g.NavLayer != ImGuiNavLayer_Main)
+    if ((window->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL)
         return 0.0f;
 
     const bool page_up_held = IsKeyDown(io.KeyMap[ImGuiKey_PageUp]) && !IsActiveIdUsingKey(ImGuiKey_PageUp);
@@ -9739,6 +9740,9 @@ static float ImGui::NavUpdatePageUpPageDown()
     const bool end_pressed = IsKeyPressed(io.KeyMap[ImGuiKey_End]) && !IsActiveIdUsingKey(ImGuiKey_End);
     if (page_up_held == page_down_held && home_pressed == end_pressed) // Proceed if either (not both) are pressed, otherwise early out
         return 0.0f;
+
+    if (g.NavLayer != ImGuiNavLayer_Main)
+        NavRestoreLayer(ImGuiNavLayer_Main);
 
     if (window->DC.NavLayersActiveMask == 0x00 && window->DC.NavHasScroll)
     {
