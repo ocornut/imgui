@@ -4912,7 +4912,7 @@ bool ImGui::IsItemDeactivatedAfterEdit()
 bool ImGui::IsItemDisabled()
 {
     ImGuiContext& g = *GImGui;
-    return (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+    return (g.LastItemData.InFlags & ImGuiItemFlags_Disabled) != 0;
 }
 
 // == GetItemID() == GetFocusID()
