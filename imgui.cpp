@@ -926,6 +926,7 @@ static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             NavRestoreLayer(ImGuiNavLayer layer);
+static void             NavRestoreHighlightAfterMove();
 static int              FindWindowFocusIndex(ImGuiWindow* window);
 
 // Error Checking and Debug Tools
@@ -8811,8 +8812,6 @@ void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id
     g.NavFocusScopeId = focus_scope_id;
     g.NavWindow->NavLastIds[nav_layer] = id;
     g.NavWindow->NavRectRel[nav_layer] = rect_rel;
-    //g.NavDisableHighlight = false;
-    //g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
 
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
@@ -9187,6 +9186,11 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
         g.NavLayer = layer;
         NavInitWindow(window, true);
     }
+}
+
+void ImGui::NavRestoreHighlightAfterMove()
+{
+    ImGuiContext& g = *GImGui;
     g.NavDisableHighlight = false;
     g.NavDisableMouseHover = g.NavMousePosDirty = true;
 }
@@ -9486,10 +9490,7 @@ void ImGui::NavInitRequestApplyResult()
     SetNavID(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
     g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
     if (g.NavInitRequestFromMove)
-    {
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = g.NavMousePosDirty = true;
-    }
+        NavRestoreHighlightAfterMove();
 }
 
 void ImGui::NavUpdateCreateMoveRequest()
@@ -9604,10 +9605,7 @@ void ImGui::NavMoveRequestApplyResult()
         if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
             g.NavMoveFlags |= ImGuiNavMoveFlags_DontSetNavHighlight;
         if (g.NavId != 0 && (g.NavMoveFlags & ImGuiNavMoveFlags_DontSetNavHighlight) == 0)
-        {
-            g.NavDisableHighlight = false;
-            g.NavDisableMouseHover = true;
-        }
+            NavRestoreHighlightAfterMove();
         return;
     }
 
@@ -9669,10 +9667,7 @@ void ImGui::NavMoveRequestApplyResult()
 
     // Enable nav highlight
     if ((g.NavMoveFlags & ImGuiNavMoveFlags_DontSetNavHighlight) == 0)
-    {
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = g.NavMousePosDirty = true;
-    }
+        NavRestoreHighlightAfterMove();
 }
 
 // Process NavCancel input (to close a popup, get back to parent, clear focus)
@@ -9695,6 +9690,7 @@ static void ImGui::NavUpdateCancelRequest()
     {
         // Leave the "menu" layer
         NavRestoreLayer(ImGuiNavLayer_Main);
+        NavRestoreHighlightAfterMove();
     }
     else if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
     {
@@ -9705,6 +9701,7 @@ static void ImGui::NavUpdateCancelRequest()
         ImRect child_rect = child_window->Rect();
         FocusWindow(parent_window);
         SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, WindowRectAbsToRel(parent_window, child_rect));
+        NavRestoreHighlightAfterMove();
     }
     else if (g.OpenPopupStack.Size > 0)
     {
@@ -10031,8 +10028,7 @@ static void ImGui::NavUpdateWindowing()
     if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
     {
         ClearActiveID();
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = true;
+        NavRestoreHighlightAfterMove();
         apply_focus_window = NavRestoreLastChildNavWindow(apply_focus_window);
         ClosePopupsOverWindow(apply_focus_window, false);
         FocusWindow(apply_focus_window);
@@ -10079,6 +10075,7 @@ static void ImGui::NavUpdateWindowing()
             if (new_nav_layer == ImGuiNavLayer_Menu)
                 g.NavWindow->NavLastIds[new_nav_layer] = 0;
             NavRestoreLayer(new_nav_layer);
+            NavRestoreHighlightAfterMove();
         }
     }
 }
