@@ -41,6 +41,8 @@ Other Changes:
 - Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
 - Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
+- Clipper: Fixed content height declaration slightly mismatching the one of when not using a clipper.
+  (an additional ItemSpacing.y was declared, affecting scrollbar range).
 - Nav: pressing PageUp/PageDown/Home/End when in Menu layer automatically moves back to Main layer.
 - Nav: fixed resizing window from borders setting navigation to Menu layer.
 - Nav: pressing Esc to exit a child window reactivates the Nav highlight if it was disabled by mouse.
