@@ -117,6 +117,21 @@ Breaking Changes:
 
 Other Changes:
 
+- Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
+- Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
+- Nav: pressing PageUp/PageDown/Home/End when in Menu layer automatically moves back to Main layer.
+- Nav: fixed resizing window from borders setting navigation to Menu layer.
+- Nav: pressing Esc to exit a child window reactivates the Nav highlight if it was disabled by mouse.
+- Nav: (with ImGuiConfigFlags_NavEnableSetMousePos): fixed absolute mouse position when using Home/End
+  leads to scrolling.
+- Nav: (with ImGuiConfigFlags_NavEnableSetMousePos): fixed not setting mouse position when a failed
+  move request (e.g. already at edge) reactivate the navigation highlight.
+- InputText: made double-click select word, triple-line select line. Word delimitation logic differs
+  slightly from the one used by CTRL+arrows. (#2244)
+- Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
+  likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
+  vkCmdSetScissor() explicitly every frame. (#4644)
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
 - CI: Add MinGW DLL build to test suite. [@rokups]
 
