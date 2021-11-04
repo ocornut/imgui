@@ -2357,7 +2357,7 @@ ImGuiListClipper::ImGuiListClipper()
 
 ImGuiListClipper::~ImGuiListClipper()
 {
-    IM_ASSERT(ItemsCount == -1 && "Forgot to call End(), or to Step() until false?");
+    End();
 }
 
 // Use case A: Begin() called from constructor with items_height<0, then called again from Step() in StepNo 1
@@ -2388,22 +2388,24 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    ImGuiContext& g = *GImGui;
-    if (ItemsCount < 0) // Already ended
-        return;
-
     // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
-    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
-    if (ItemsCount < INT_MAX && DisplayStart >= 0)
+    ImGuiContext& g = *GImGui;
+    if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
         ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
     ItemsCount = -1;
-    data->StepNo = data->Ranges.Size;
 
     // Restore temporary buffer and fix back pointers which may be invalidated when nesting
-    IM_ASSERT(g.ClipperTempDataStacked > 0);
-    data = (--g.ClipperTempDataStacked > 0) ? &g.ClipperTempData[g.ClipperTempDataStacked - 1] : NULL;
-    if (data)
-        data->ListClipper->TempData = data;
+    if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
+    {
+        IM_ASSERT(data->ListClipper == this);
+        data->StepNo = data->Ranges.Size;
+        if (--g.ClipperTempDataStacked > 0)
+        {
+            data = &g.ClipperTempData[g.ClipperTempDataStacked - 1];
+            data->ListClipper->TempData = data;
+        }
+        TempData = NULL;
+    }
 }
 
 bool ImGuiListClipper::Step()
