@@ -929,6 +929,7 @@ static void             NavUpdateWindowing();
 static void             NavUpdateWindowingOverlay();
 static void             NavUpdateCancelRequest();
 static void             NavUpdateCreateMoveRequest();
+static void             NavUpdateCreateTabbingRequest();
 static float            NavUpdatePageUpPageDown();
 static inline void      NavUpdateAnyRequestFlag();
 static void             NavUpdateCreateWrappingRequest();
@@ -936,6 +937,7 @@ static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavItemData* result);
 static void             NavApplyItemToResult(ImGuiNavItemData* result);
 static void             NavProcessItem();
+static void             NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
@@ -953,7 +955,6 @@ static void             UpdateDebugToolStackQueries();
 static void             UpdateSettings();
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
-static void             UpdateTabFocus();
 static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
@@ -2316,9 +2317,11 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     int end = (int)((rect.Max.y - pos.y) / items_height);
 
     // When performing a navigation request, ensure we have one item extra in the direction we are moving to
-    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Up)
+    // FIXME: Verify this works with tabbing
+    const bool is_nav_request = (g.NavMoveScoringItems && g.NavWindow && g.NavWindow->RootWindowForNav == window->RootWindowForNav);
+    if (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up)
         start--;
-    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Down)
+    if (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down)
         end++;
 
     start = ImClamp(start, 0, items_count);
@@ -2519,8 +2522,11 @@ bool ImGuiListClipper::Step()
         else
         {
             // Add range selected to be included for navigation
-            if (g.NavMoveScoringItems)
+            const bool is_nav_request = (g.NavMoveScoringItems && g.NavWindow && g.NavWindow->RootWindowForNav == window->RootWindowForNav);
+            if (is_nav_request)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(g.NavScoringNoClipRect.Min.y, g.NavScoringNoClipRect.Max.y, 0, 0));
+            if (is_nav_request && (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) && g.NavTabbingDir == -1)
+                data->Ranges.push_back(ImGuiListClipperRange::FromIndices(ItemsCount - 1, ItemsCount));
 
             // Add focused/active item
             ImRect nav_rect_abs = ImGui::WindowRectRelToAbs(window, window->NavRectRel[0]);
@@ -2528,8 +2534,8 @@ bool ImGuiListClipper::Step()
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
             // Add visible range
-            const int off_min = (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
-            const int off_max = (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
+            const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
+            const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
             data->Ranges.push_back(ImGuiListClipperRange::FromPositions(window->ClipRect.Min.y, window->ClipRect.Max.y, off_min, off_max));
         }
 
@@ -3226,7 +3232,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = id;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavActivateInputId == id || g.NavJustTabbedId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavActivateInputId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
     }
 
     // Clear declaration of inputs claimed by the widget
@@ -3429,48 +3435,6 @@ void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemS
     g.LastItemData.InFlags = in_flags;
     g.LastItemData.StatusFlags = item_flags;
     g.LastItemData.Rect = item_rect;
-}
-
-// Called by ItemAdd()
-// Process TAB/Shift+TAB. Be mindful that this function may _clear_ the ActiveID when tabbing out.
-// [WIP] This will eventually be refactored and moved into NavProcessItem()
-void ImGui::ItemInputable(ImGuiWindow* window, ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(id != 0 && id == g.LastItemData.ID);
-
-    // Increment counters
-    // FIXME: ImGuiItemFlags_Disabled should disable more.
-    const bool is_tab_stop = (g.LastItemData.InFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
-    if (is_tab_stop)
-    {
-        window->DC.FocusCounterTabStop++;
-        if (g.NavId == id)
-            g.NavIdTabCounter = window->DC.FocusCounterTabStop;
-    }
-
-    // Process TAB/Shift-TAB to tab *OUT* of the currently focused item.
-    // (Note that we can always TAB out of a widget that doesn't allow tabbing in)
-    if (g.ActiveId == id && g.TabFocusPressed && g.TabFocusRequestNextWindow == NULL)
-    {
-        g.TabFocusRequestNextWindow = window;
-        g.TabFocusRequestNextCounterTabStop = window->DC.FocusCounterTabStop + (g.IO.KeyShift ? (is_tab_stop ? -1 : 0) : +1); // Modulo on index will be applied at the end of frame once we've got the total counter of items.
-    }
-
-    // Handle focus requests
-    if (g.TabFocusRequestCurrWindow == window)
-    {
-        if (is_tab_stop && window->DC.FocusCounterTabStop == g.TabFocusRequestCurrCounterTabStop)
-        {
-            g.NavJustTabbedId = id; // FIXME-NAV: aim to eventually set in NavUpdate() once we finish the refactor
-            g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_FocusedByTabbing;
-            return;
-        }
-
-        // If another item is about to be focused, we clear our own active id
-        if (g.ActiveId == id)
-            ClearActiveID();
-    }
 }
 
 float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
@@ -4046,44 +4010,6 @@ void ImGui::UpdateMouseWheel()
     }
 }
 
-void ImGui::UpdateTabFocus()
-{
-    ImGuiContext& g = *GImGui;
-
-    // Pressing TAB activate widget focus
-    g.TabFocusPressed = false;
-    if (g.NavWindow && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
-        if (!g.IO.KeyCtrl && !g.IO.KeyAlt && IsKeyPressedMap(ImGuiKey_Tab) && !IsActiveIdUsingKey(ImGuiKey_Tab))
-            g.TabFocusPressed = true;
-    if (g.ActiveId == 0 && g.TabFocusPressed)
-    {
-        // - This path is only taken when no widget are active/tabbed-into yet.
-        //   Subsequent tabbing will be processed by FocusableItemRegister()
-        // - Note that SetKeyboardFocusHere() sets the Next fields mid-frame. To be consistent we also
-        //   manipulate the Next fields here even though they will be turned into Curr fields below.
-        g.TabFocusRequestNextWindow = g.NavWindow;
-        if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
-            g.TabFocusRequestNextCounterTabStop = g.NavIdTabCounter + (g.IO.KeyShift ? -1 : 0);
-        else
-            g.TabFocusRequestNextCounterTabStop = g.IO.KeyShift ? -1 : 0;
-    }
-
-    // Turn queued focus request into current one
-    g.TabFocusRequestCurrWindow = NULL;
-    g.TabFocusRequestCurrCounterTabStop = INT_MAX;
-    if (g.TabFocusRequestNextWindow != NULL)
-    {
-        ImGuiWindow* window = g.TabFocusRequestNextWindow;
-        g.TabFocusRequestCurrWindow = window;
-        if (g.TabFocusRequestNextCounterTabStop != INT_MAX && window->DC.FocusCounterTabStop != -1)
-            g.TabFocusRequestCurrCounterTabStop = ImModPositive(g.TabFocusRequestNextCounterTabStop, window->DC.FocusCounterTabStop + 1);
-        g.TabFocusRequestNextWindow = NULL;
-        g.TabFocusRequestNextCounterTabStop = INT_MAX;
-    }
-
-    g.NavIdTabCounter = INT_MAX;
-}
-
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
 void ImGui::UpdateHoveredWindowAndCaptureFlags()
 {
@@ -4338,9 +4264,6 @@ void ImGui::NewFrame()
 
     // Mouse wheel scrolling, scale
     UpdateMouseWheel();
-
-    // Update legacy TAB focus
-    UpdateTabFocus();
 
     // Mark all windows as not visible and compact unused memory.
     IM_ASSERT(g.WindowsFocusOrder.Size <= g.Windows.Size);
@@ -6874,7 +6797,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.CurrentColumns = NULL;
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
-        window->DC.FocusCounterTabStop = -1;
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
@@ -7780,11 +7702,16 @@ void ImGui::SetKeyboardFocusHere(int offset)
     IM_ASSERT(offset >= -1);    // -1 is allowed but not below
     g.NavWindow = window;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
-    NavMoveRequestSubmit(ImGuiDir_None, ImGuiDir_None, ImGuiNavMoveFlags_Tabbing, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
+    NavMoveRequestSubmit(ImGuiDir_None, offset < 0 ? ImGuiDir_Up : ImGuiDir_Down, ImGuiNavMoveFlags_Tabbing | ImGuiNavMoveFlags_FocusApi, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
     if (offset == -1)
-        NavMoveRequestResolveWithLastItem();
+    {
+        NavMoveRequestResolveWithLastItem(&g.NavMoveResultLocal);
+    }
     else
-        g.NavTabbingInputableRemaining = offset + 1;
+    {
+        g.NavTabbingDir = 1;
+        g.NavTabbingCounter = offset + 1;
+    }
 }
 
 void ImGui::SetItemDefaultFocus()
@@ -8305,11 +8232,6 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     if (is_clipped)
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
-
-    // [WIP] Tab stop handling (previously was using internal FocusableItemRegister() api)
-    // FIXME-NAV: We would now want to move this before the clipping test, but this would require being able to scroll and currently this would mean an extra frame. (#4079, #343)
-    if (extra_flags & ImGuiItemFlags_Inputable)
-        ItemInputable(window, id);
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
     if (IsMouseHoveringRect(bb.Min, bb.Max))
@@ -9762,19 +9684,17 @@ static void ImGui::NavProcessItem()
     // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRect + scoring from a rect wrapped according to current wrapping policy)
     if (g.NavMoveScoringItems)
     {
-        if (item_flags & ImGuiItemFlags_Inputable)
-            g.NavTabbingInputableRemaining--;
-
-        if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
+        const bool is_tab_stop = (item_flags & ImGuiItemFlags_Inputable) && (item_flags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
+        const bool is_tabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) != 0;
+        if (is_tabbing)
+        {
+            if (is_tab_stop || (g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi))
+                NavProcessItemForTabbingRequest(window, id);
+        }
+        else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
         {
             ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-
-            if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
-            {
-                if (g.NavTabbingInputableRemaining == 0)
-                    NavMoveRequestResolveWithLastItem();
-            }
-            else
+            if (!is_tabbing)
             {
                 if (NavScoreItem(result))
                     NavApplyItemToResult(result);
@@ -9797,6 +9717,52 @@ static void ImGui::NavProcessItem()
         g.NavFocusScopeId = window->DC.NavFocusScopeIdCurrent;
         g.NavIdIsAlive = true;
         window->NavRectRel[window->DC.NavLayerCurrent] = WindowRectAbsToRel(window, nav_bb);    // Store item bounding box (relative to window position)
+    }
+}
+
+// Handle "scoring" of an item for a tabbing/focusing request initiated by NavUpdateCreateTabbingRequest().
+// Note that SetKeyboardFocusHere() API calls are considered tabbing requests!
+// - Case 1: no nav/active id:    set result to first eligible item, stop storing.
+// - Case 2: tab forward:         on ref id set counter, on counter elapse store result
+// - Case 3: tab forward wrap:    set result to first eligible item (preemptively), on ref id set counter, on next frame if counter hasn't elapsed store result. // FIXME-TABBING: Could be done as a next-frame forwarded request
+// - Case 4: tab backward:        store all results, on ref id pick prev, stop storing
+// - Case 5: tab backward wrap:   store all results, on ref id if no result keep storing until last // FIXME-TABBING: Could be done as next-frame forwarded requested
+void ImGui::NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+
+    ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+    if (g.NavTabbingDir == +1)
+    {
+        // Tab Forward or SetKeyboardFocusHere() with >= 0
+        if (g.NavTabbingResultFirst.ID == 0)
+            NavApplyItemToResult(&g.NavTabbingResultFirst);
+        if (--g.NavTabbingCounter == 0)
+            NavMoveRequestResolveWithLastItem(result);
+        else if (g.NavId == id)
+            g.NavTabbingCounter = 1;
+    }
+    else if (g.NavTabbingDir == -1)
+    {
+        // Tab Backward
+        if (g.NavId == id)
+        {
+            if (result->ID)
+            {
+                g.NavMoveScoringItems = false;
+                NavUpdateAnyRequestFlag();
+            }
+        }
+        else
+        {
+            NavApplyItemToResult(result);
+        }
+    }
+    else if (g.NavTabbingDir == 0)
+    {
+        // Tab Init
+        if (g.NavTabbingResultFirst.ID == 0)
+            NavMoveRequestResolveWithLastItem(&g.NavTabbingResultFirst);
     }
 }
 
@@ -9823,18 +9789,18 @@ void ImGui::NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavM
     g.NavMoveScrollFlags = scroll_flags;
     g.NavMoveForwardToNextFrame = false;
     g.NavMoveKeyMods = g.IO.KeyMods;
-    g.NavTabbingInputableRemaining = 0;
+    g.NavTabbingCounter = 0;
     g.NavMoveResultLocal.Clear();
     g.NavMoveResultLocalVisible.Clear();
     g.NavMoveResultOther.Clear();
     NavUpdateAnyRequestFlag();
 }
 
-void ImGui::NavMoveRequestResolveWithLastItem()
+void ImGui::NavMoveRequestResolveWithLastItem(ImGuiNavItemData* result)
 {
     ImGuiContext& g = *GImGui;
     g.NavMoveScoringItems = false; // Ensure request doesn't need more processing
-    NavApplyItemToResult(&g.NavMoveResultLocal);
+    NavApplyItemToResult(result);
     NavUpdateAnyRequestFlag();
 }
 
@@ -10073,7 +10039,7 @@ static void ImGui::NavUpdate()
     // Process navigation move request
     if (g.NavMoveSubmitted)
         NavMoveRequestApplyResult();
-    g.NavTabbingInputableRemaining = 0;
+    g.NavTabbingCounter = 0;
     g.NavMoveSubmitted = g.NavMoveScoringItems = false;
 
     // Schedule mouse position update (will be done at the bottom of this function, after 1) processing all move requests and 2) updating scrolling)
@@ -10082,8 +10048,6 @@ static void ImGui::NavUpdate()
         if (!g.NavDisableHighlight && g.NavDisableMouseHover && g.NavWindow)
             set_mouse_pos = true;
     g.NavMousePosDirty = false;
-    g.NavIdIsAlive = false;
-    g.NavJustTabbedId = 0;
     IM_ASSERT(g.NavLayer == ImGuiNavLayer_Main || g.NavLayer == ImGuiNavLayer_Menu);
 
     // Store our return window (for returning from Menu Layer to Main Layer) and clear it as soon as we step back in our own Layer 0
@@ -10145,7 +10109,10 @@ static void ImGui::NavUpdate()
 
     // Process move requests
     NavUpdateCreateMoveRequest();
+    if (g.NavMoveDir == ImGuiDir_None)
+        NavUpdateCreateTabbingRequest();
     NavUpdateAnyRequestFlag();
+    g.NavIdIsAlive = false;
 
     // Scrolling
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
@@ -10317,6 +10284,31 @@ void ImGui::NavUpdateCreateMoveRequest()
     g.NavScoringNoClipRect.Add(scoring_rect);
 }
 
+void ImGui::NavUpdateCreateTabbingRequest()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.NavWindow;
+    IM_ASSERT(g.NavMoveDir == ImGuiDir_None);
+    if (window == NULL || g.NavWindowingTarget != NULL || (window->Flags & ImGuiWindowFlags_NoNavInputs))
+        return;
+
+    const bool tab_pressed = IsKeyPressedMap(ImGuiKey_Tab, true) && !IsActiveIdUsingKey(ImGuiKey_Tab) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
+    if (!tab_pressed)
+        return;
+
+    // Initiate tabbing request
+    // (this is ALWAYS ENABLED, regardless of ImGuiConfigFlags_NavEnableKeyboard flag!)
+    // Initially this was designed to use counters and modulo arithmetic, but that could not work with unsubmitted items (list clipper). Instead we use a strategy close to other move requests.
+    // See NavProcessItemForTabbingRequest() for a description of the various forward/backward tabbing cases with and without wrapping.
+    //// FIXME: We use (g.ActiveId == 0) but (g.NavDisableHighlight == false) might be righter once we can tab through anything
+    g.NavTabbingDir = g.IO.KeyShift ? -1 : (g.ActiveId == 0) ? 0 : +1;
+    ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
+    ImGuiDir clip_dir = (g.NavTabbingDir < 0) ? ImGuiDir_Up : ImGuiDir_Down;
+    NavMoveRequestSubmit(ImGuiDir_None, clip_dir, ImGuiNavMoveFlags_Tabbing, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
+    g.NavTabbingResultFirst.Clear();
+    g.NavTabbingCounter = -1;
+}
+
 // Apply result from previous frame navigation directional move request. Always called from NavUpdate()
 void ImGui::NavMoveRequestApplyResult()
 {
@@ -10328,6 +10320,14 @@ void ImGui::NavMoveRequestApplyResult()
 
     // Select which result to use
     ImGuiNavItemData* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : (g.NavMoveResultOther.ID != 0) ? &g.NavMoveResultOther : NULL;
+
+    // Tabbing forward wrap
+    if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
+        if (g.NavTabbingCounter == 1 || g.NavTabbingDir == 0)
+        {
+            IM_ASSERT(g.NavTabbingResultFirst.ID != 0);
+            result = &g.NavTabbingResultFirst;
+        }
 
     // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (result == NULL)
@@ -10366,8 +10366,9 @@ void ImGui::NavMoveRequestApplyResult()
         }
     }
 
-    ClearActiveID();
     g.NavWindow = result->Window;
+    if (g.ActiveId != result->ID)
+        ClearActiveID();
     if (g.NavId != result->ID)
     {
         // Don't set NavJustMovedToId if just landed on the same spot (which may happen with ImGuiNavMoveFlags_AllowCurrentNavId)
@@ -17746,7 +17747,7 @@ void ImGui::UpdateDebugToolStackQueries()
 
     // Update queries. The steps are: -1: query Stack, >= 0: query each stack item
     // We can only perform 1 ID Info query every frame. This is designed so the GetID() tests are cheap and constant-time
-    const ImGuiID query_id = g.ActiveId ? g.ActiveId : g.HoveredIdPreviousFrame;
+    const ImGuiID query_id = g.HoveredIdPreviousFrame ? g.HoveredIdPreviousFrame : g.ActiveId;
     if (tool->QueryId != query_id)
     {
         tool->QueryId = query_id;
