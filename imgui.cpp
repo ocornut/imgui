@@ -2405,24 +2405,6 @@ void ImGuiListClipper::End()
         data->ListClipper->TempData = data;
 }
 
-void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
-{
-    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
-    IM_ASSERT(DisplayStart < 0); // Only allowed after Begin() and if there has not been a specified range yet.
-    IM_ASSERT(item_min <= item_max);
-    if (item_min < item_max)
-        data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_min, item_max));
-}
-
-void ImGuiListClipper::ForceDisplayRangeByPositions(float y_min, float y_max)
-{
-    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
-    IM_ASSERT(DisplayStart < 0); // Only allowed after Begin() and if there has not been a specified range yet.
-    IM_ASSERT(y_min <= y_max);
-    if (y_min < y_max)
-        data->Ranges.push_back(ImGuiListClipperRange::FromPositions(y_min, y_max, 0, 0));
-}
-
 bool ImGuiListClipper::Step()
 {
     ImGuiContext& g = *GImGui;
