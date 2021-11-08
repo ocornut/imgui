@@ -71,7 +71,7 @@
 #define GLFW_HAS_NEW_CURSORS          (0)
 #endif
 #ifdef GLFW_MOUSE_PASSTHROUGH         // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2020-07-17 (passthrough)
-#define GLFW_HAS_MOUSE_PASSTHROUGH    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3400) // 3.4+ GLFW_MOUSE_PASSTHROUGH
+#define GLFW_HAS_MOUSE_PASSTHROUGH    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 < 3400) // 3.4+ GLFW_MOUSE_PASSTHROUGH
 #else
 #define GLFW_HAS_MOUSE_PASSTHROUGH    (0)
 #endif
