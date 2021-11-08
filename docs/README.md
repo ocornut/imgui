@@ -204,10 +204,10 @@ Ongoing Dear ImGui development is currently financially supported by users and p
 - [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui)
 
 *Chocolate sponsors*
-- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Adobe](https://www.adobe.com/products/medium.html), [Aras Pranckevičius](https://aras-p.info), [Arkane Studios](https://www.arkane-studios.com), [Epic](https://www.unrealengine.com/en-US/megagrants), [RAD Game Tools](http://www.radgametools.com/)
+- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Adobe](https://www.adobe.com/products/medium.html), [Aras Pranckevičius](https://aras-p.info), [Arkane Studios](https://www.arkane-studios.com), [Epic](https://www.unrealengine.com/en-US/megagrants), [RAD Game Tools](http://www.radgametools.com/), [Supercell](https://supercell.com)
 
 *Salty-caramel sponsors*
-- [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Kylotonn](https://www.kylotonn.com), [Next Level Games](https://www.nextlevelgames.com), [O-Net Communications (USA)](http://en.o-netcom.com), [Supercell](https://supercell.com).
+- [Framefield](http://framefield.com), [Grinding Gear Games](https://www.grindinggear.com), [Kylotonn](https://www.kylotonn.com), [Next Level Games](https://www.nextlevelgames.com), [O-Net Communications (USA)](http://en.o-netcom.com)
 
 Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors) for past sponsors.
 From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations.
