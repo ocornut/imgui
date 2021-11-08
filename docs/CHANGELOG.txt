@@ -46,6 +46,7 @@ Other Changes:
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
 - Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
   configuration flag. This is part of an effort to generalize the use of keyboard inputs. (#4023, #787).
+  Note that while this is active you can also moving windows (with arrow) and resize (shift+arrows).
 - Nav: tabbing now cycles through clipped items and scroll accordingly. (#4449)
 - Nav: pressing PageUp/PageDown/Home/End when in Menu layer automatically moves back to Main layer.
 - Nav: fixed resizing window from borders setting navigation to Menu layer.
