@@ -44,6 +44,8 @@ Other Changes:
 - Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
 - Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
+- Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
+  configuration flag. This is part of an effort to generalize the use of keyboard inputs. (#4023, #787).
 - Nav: tabbing now cycles through clipped items and scroll accordingly. (#4449)
 - Nav: pressing PageUp/PageDown/Home/End when in Menu layer automatically moves back to Main layer.
 - Nav: fixed resizing window from borders setting navigation to Menu layer.

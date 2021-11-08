@@ -210,7 +210,8 @@ void ImGui::ShowUserGuide()
         "(double-click to auto fit window to its contents).");
     ImGui::BulletText("CTRL+Click on a slider or drag box to input value as text.");
     ImGui::BulletText("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
-    if (io.FontAllowUserScaling)
+	ImGui::BulletText("CTRL+Tab to select a window.");
+	if (io.FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
     ImGui::BulletText("While inputing text:\n");
     ImGui::Indent();
@@ -228,7 +229,6 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("Return to input text into a widget.");
     ImGui::BulletText("Escape to deactivate a widget, close popup, exit child window.");
     ImGui::BulletText("Alt to jump to the menu layer of a window.");
-    ImGui::BulletText("CTRL+Tab to select a window.");
     ImGui::Unindent();
 }
 
