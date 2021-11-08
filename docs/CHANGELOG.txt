@@ -57,9 +57,11 @@ Other Changes:
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
+- Cliooer: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
+  during a clipping operation. (#3841) [@@GamingMinds-DanielC]
 - Clipper: rework so gamepad/keyboard navigation doesn't create spikes in number of items requested
   by the clipper to display. (#3841)
-- Clipper: Fixed content height declaration slightly mismatching the value of when not using a clipper.
+- Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
   likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
