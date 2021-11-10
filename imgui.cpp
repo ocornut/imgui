@@ -924,7 +924,7 @@ static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavItemData* result);
 static void             NavApplyItemToResult(ImGuiNavItemData* result);
 static void             NavProcessItem();
-static void             NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id);
+static void             NavProcessItemForTabbingRequest(ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
@@ -9056,7 +9056,7 @@ static void ImGui::NavProcessItem()
         if (is_tabbing)
         {
             if (is_tab_stop || (g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi))
-                NavProcessItemForTabbingRequest(window, id);
+                NavProcessItemForTabbingRequest(id);
         }
         else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
         {
@@ -9094,11 +9094,12 @@ static void ImGui::NavProcessItem()
 // - Case 3: tab forward wrap:    set result to first eligible item (preemptively), on ref id set counter, on next frame if counter hasn't elapsed store result. // FIXME-TABBING: Could be done as a next-frame forwarded request
 // - Case 4: tab backward:        store all results, on ref id pick prev, stop storing
 // - Case 5: tab backward wrap:   store all results, on ref id if no result keep storing until last // FIXME-TABBING: Could be done as next-frame forwarded requested
-void ImGui::NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id)
+void ImGui::NavProcessItemForTabbingRequest(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
 
-    ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+    // Always store in NavMoveResultLocal (unlike directional request which uses NavMoveResultOther on sibling/flattened windows)
+    ImGuiNavItemData* result = &g.NavMoveResultLocal;
     if (g.NavTabbingDir == +1)
     {
         // Tab Forward or SetKeyboardFocusHere() with >= 0
