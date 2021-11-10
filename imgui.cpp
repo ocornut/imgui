@@ -1147,6 +1147,8 @@ ImGuiIO::ImGuiIO()
 #endif
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
+    HoverDelayNormal = 0.30f;
+    HoverDelayShort = 0.10f;
     UserData = NULL;
 
     Fonts = NULL;
@@ -3571,6 +3573,24 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
             return false;
     }
 
+    // Handle hover delay
+    // (some ideas: https://www.nngroup.com/articles/timing-exposing-content)
+    float delay;
+    if (flags & ImGuiHoveredFlags_DelayNormal)
+        delay = g.IO.HoverDelayNormal;
+    else if (flags & ImGuiHoveredFlags_DelayShort)
+        delay = g.IO.HoverDelayShort;
+    else
+        delay = 0.0f;
+    if (delay > 0.0f)
+    {
+        ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromRectangle(g.LastItemData.Rect);
+        if ((flags & ImGuiHoveredFlags_NoSharedDelay) && (g.HoverDelayIdPreviousFrame != hover_delay_id))
+            g.HoverDelayTimer = 0.0f;
+        g.HoverDelayId = hover_delay_id;
+        return g.HoverDelayTimer >= delay;
+    }
+
     return true;
 }
 
@@ -4465,6 +4485,23 @@ void ImGui::NewFrame()
             IM_ASSERT(0); // Other values unsupported
     }
 #endif
+
+    // Update hover delay for IsItemHovered() with delays and tooltips
+    g.HoverDelayIdPreviousFrame = g.HoverDelayId;
+    if (g.HoverDelayId != 0)
+    {
+        //if (g.IO.MouseDelta.x == 0.0f && g.IO.MouseDelta.y == 0.0f) // Need design/flags
+        g.HoverDelayTimer += g.IO.DeltaTime;
+        g.HoverDelayClearTimer = 0.0f;
+        g.HoverDelayId = 0;
+    }
+    else if (g.HoverDelayTimer > 0.0f)
+    {
+        // This gives a little bit of leeway before clearing the hover timer, allowing mouse to cross gaps
+        g.HoverDelayClearTimer += g.IO.DeltaTime;
+        if (g.HoverDelayClearTimer >= ImMax(0.20f, g.IO.DeltaTime * 2.0f)) // ~6 frames at 30 Hz + allow for low framerate
+            g.HoverDelayTimer = g.HoverDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
+    }
 
     // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
@@ -12381,7 +12418,7 @@ void ImGui::DebugTextEncoding(const char* str)
 static void MetricsHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -12756,6 +12793,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             active_id_using_key_input_count += g.ActiveIdUsingKeyInputMask[n] ? 1 : 0;
         Text("ActiveIdUsing: NavDirMask: %X, KeyInputMask: %d key(s)", g.ActiveIdUsingNavDirMask, active_id_using_key_input_count);
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
+        Text("HoverDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
         Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
         Unindent();
 

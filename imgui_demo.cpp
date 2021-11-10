@@ -191,7 +191,7 @@ static void ShowExampleMenuFile();
 static void HelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -633,22 +633,6 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine();
         ImGui::Text("%d", counter);
 
-        IMGUI_DEMO_MARKER("Widgets/Basic/Tooltips");
-        ImGui::Text("Hover over me");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("I am a tooltip");
-
-        ImGui::SameLine();
-        ImGui::Text("- or me");
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("I am a fancy tooltip");
-            static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
-            ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
-            ImGui::EndTooltip();
-        }
-
         ImGui::Separator();
         ImGui::LabelText("label", "Value");
 
@@ -770,6 +754,40 @@ static void ShowDemoWindowWidgets()
             ImGui::ListBox("listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
             ImGui::SameLine(); HelpMarker(
                 "Using the simplified one-liner ListBox API here.\nRefer to the \"List boxes\" section below for an explanation of how to use the more flexible and general BeginListBox/EndListBox API.");
+        }
+
+        {
+            // Tooltips
+            IMGUI_DEMO_MARKER("Widgets/Basic/Tooltips");
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Tooltips:");
+
+            ImGui::SameLine();
+            ImGui::Button("Button");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("I am a tooltip");
+
+            ImGui::SameLine();
+            ImGui::Button("Fancy");
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("I am a fancy tooltip");
+                static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
+                ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
+                ImGui::Text("Sin(time) = %f", sinf((float)ImGui::GetTime()));
+                ImGui::EndTooltip();
+            }
+
+            ImGui::SameLine();
+            ImGui::Button("Delayed");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) // Delay best used on items that highlight on hover, so this not a great example!
+                ImGui::SetTooltip("I am a tooltip with a delay.");
+
+            ImGui::SameLine();
+            HelpMarker(
+                "Tooltip are created by using the IsItemHovered() function over any kind of item.");
+
         }
 
         ImGui::TreePop();
@@ -2346,6 +2364,10 @@ static void ShowDemoWindowWidgets()
         if (item_type == 14){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::Combo("ITEM: Combo", &current, items, IM_ARRAYSIZE(items)); }
         if (item_type == 15){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
+        bool hovered_delay_none = ImGui::IsItemHovered();
+        bool hovered_delay_short = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort);
+        bool hovered_delay_normal = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
+
         // Display the values of IsItemHovered() and other common item state functions.
         // Note that the ImGuiHoveredFlags_XXX flags can be combined.
         // Because BulletText is an item itself and that would affect the output of IsItemXXX functions,
@@ -2390,6 +2412,8 @@ static void ShowDemoWindowWidgets()
             ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
             ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
         );
+        ImGui::BulletText(
+            "w/ Hovering Delay: None = %d, Fast %d, Normal = %d", hovered_delay_none, hovered_delay_short, hovered_delay_normal);
 
         if (item_disabled)
             ImGui::EndDisabled();
