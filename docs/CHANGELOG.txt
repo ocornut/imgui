@@ -67,6 +67,8 @@ Other Changes:
   by the clipper to display. (#3841)
 - Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
+- Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
+  tooltip when scrolling. (#143)
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
   likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
   vkCmdSetScissor() explicitly every frame. (#4644)
