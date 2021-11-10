@@ -142,7 +142,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - plot: option/feature: draw unit
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
 
- - clipper: ability to force display 1 item in the list would be convenient (for patterns where we need to set active id etc.) (#3841) (can resurrect ForceDisplayRangeXXX functions removed)
  - clipper: ability to disable the clipping through a simple flag/bool.
  - clipper: ability to run without knowing full count in advance.
  - clipper: horizontal clipping support. (#2580)

@@ -937,7 +937,7 @@ static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavItemData* result);
 static void             NavApplyItemToResult(ImGuiNavItemData* result);
 static void             NavProcessItem();
-static void             NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id);
+static void             NavProcessItemForTabbingRequest(ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
@@ -2445,6 +2445,15 @@ void ImGuiListClipper::End()
         }
         TempData = NULL;
     }
+}
+
+void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
+{
+    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
+    IM_ASSERT(DisplayStart < 0); // Only allowed after Begin() and if there has not been a specified range yet.
+    IM_ASSERT(item_min <= item_max);
+    if (item_min < item_max)
+        data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_min, item_max));
 }
 
 bool ImGuiListClipper::Step()
@@ -5834,7 +5843,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     {
         ImVec2 nav_resize_delta;
         if (g.NavInputSource == ImGuiInputSource_Keyboard && g.IO.KeyShift)
-            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
+            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_RawKeyboard, ImGuiInputReadMode_Down);
         if (g.NavInputSource == ImGuiInputSource_Gamepad)
             nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_Down);
         if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
@@ -6910,9 +6919,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
             IM_ASSERT((flags& ImGuiWindowFlags_NoTitleBar) != 0 || (window->DockIsActive));
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0) // FIXME: Doesn't make sense for ChildWindow??
-                if (!g.LogEnabled)
+            {
+                const bool nav_request = (flags & ImGuiWindowFlags_NavFlattened) && (g.NavAnyRequest && g.NavWindow && g.NavWindow->RootWindowForNav == window->RootWindowForNav);
+                if (!g.LogEnabled && !nav_request)
                     if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
                         window->HiddenFramesCanSkipItems = 1;
+            }
 
             // Hide along with parent or if parent is collapsed
             if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
@@ -9689,7 +9701,7 @@ static void ImGui::NavProcessItem()
         if (is_tabbing)
         {
             if (is_tab_stop || (g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi))
-                NavProcessItemForTabbingRequest(window, id);
+                NavProcessItemForTabbingRequest(id);
         }
         else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
         {
@@ -9727,11 +9739,12 @@ static void ImGui::NavProcessItem()
 // - Case 3: tab forward wrap:    set result to first eligible item (preemptively), on ref id set counter, on next frame if counter hasn't elapsed store result. // FIXME-TABBING: Could be done as a next-frame forwarded request
 // - Case 4: tab backward:        store all results, on ref id pick prev, stop storing
 // - Case 5: tab backward wrap:   store all results, on ref id if no result keep storing until last // FIXME-TABBING: Could be done as next-frame forwarded requested
-void ImGui::NavProcessItemForTabbingRequest(ImGuiWindow* window, ImGuiID id)
+void ImGui::NavProcessItemForTabbingRequest(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
 
-    ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+    // Always store in NavMoveResultLocal (unlike directional request which uses NavMoveResultOther on sibling/flattened windows)
+    ImGuiNavItemData* result = &g.NavMoveResultLocal;
     if (g.NavTabbingDir == +1)
     {
         // Tab Forward or SetKeyboardFocusHere() with >= 0
@@ -9975,6 +9988,8 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
 ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor)
 {
     ImVec2 delta(0.0f, 0.0f);
+    if (dir_sources & ImGuiNavDirSourceFlags_RawKeyboard)
+        delta += ImVec2((float)IsKeyDown(GetKeyIndex(ImGuiKey_RightArrow)) - (float)IsKeyDown(GetKeyIndex(ImGuiKey_LeftArrow)), (float)IsKeyDown(GetKeyIndex(ImGuiKey_DownArrow)) - (float)IsKeyDown(GetKeyIndex(ImGuiKey_UpArrow)));
     if (dir_sources & ImGuiNavDirSourceFlags_Keyboard)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight_, mode)   - GetNavInputAmount(ImGuiNavInput_KeyLeft_,   mode), GetNavInputAmount(ImGuiNavInput_KeyDown_,   mode) - GetNavInputAmount(ImGuiNavInput_KeyUp_,   mode));
     if (dir_sources & ImGuiNavDirSourceFlags_PadDPad)
@@ -10323,11 +10338,8 @@ void ImGui::NavMoveRequestApplyResult()
 
     // Tabbing forward wrap
     if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
-        if (g.NavTabbingCounter == 1 || g.NavTabbingDir == 0)
-        {
-            IM_ASSERT(g.NavTabbingResultFirst.ID != 0);
+        if ((g.NavTabbingCounter == 1 || g.NavTabbingDir == 0) && g.NavTabbingResultFirst.ID)
             result = &g.NavTabbingResultFirst;
-        }
 
     // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (result == NULL)
@@ -10659,10 +10671,9 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingTargetAnim = NULL;
     }
 
-    // Start CTRL-TAB or Square+L/R window selection
-    const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    // Start CTRL+Tab or Square+L/R window selection
     const bool start_windowing_with_gamepad = allow_windowing && !g.NavWindowingTarget && IsNavInputTest(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
-    const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && nav_keyboard_active && io.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab);
+    const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && io.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
@@ -10713,6 +10724,7 @@ static void ImGui::NavUpdateWindowing()
     // Keyboard: Press and Release ALT to toggle menu layer
     // - Testing that only Alt is tested prevents Alt+Shift or AltGR from toggling menu layer.
     // - AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl). But even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
+	const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     if (nav_keyboard_active && io.KeyMods == ImGuiKeyModFlags_Alt && (io.KeyModsPrev & ImGuiKeyModFlags_Alt) == 0)
     {
         g.NavWindowingToggleLayer = true;
@@ -10741,7 +10753,7 @@ static void ImGui::NavUpdateWindowing()
     {
         ImVec2 move_delta;
         if (g.NavInputSource == ImGuiInputSource_Keyboard && !io.KeyShift)
-            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_RawKeyboard, ImGuiInputReadMode_Down);
         if (g.NavInputSource == ImGuiInputSource_Gamepad)
             move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
         if (move_delta.x != 0.0f || move_delta.y != 0.0f)
