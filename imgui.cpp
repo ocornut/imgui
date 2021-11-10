@@ -9685,11 +9685,8 @@ void ImGui::NavMoveRequestApplyResult()
 
     // Tabbing forward wrap
     if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
-        if (g.NavTabbingCounter == 1 || g.NavTabbingDir == 0)
-        {
-            IM_ASSERT(g.NavTabbingResultFirst.ID != 0);
+        if ((g.NavTabbingCounter == 1 || g.NavTabbingDir == 0) && g.NavTabbingResultFirst.ID)
             result = &g.NavTabbingResultFirst;
-        }
 
     // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (result == NULL)
