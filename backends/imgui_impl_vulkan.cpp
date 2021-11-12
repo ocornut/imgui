@@ -550,6 +550,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     size_t upload_size = width * height * 4 * sizeof(char);
 
+    vkQueueWaitIdle(v->Queue);
     if (bd->FontView) {
         vkDestroyImageView(v->Device, bd->FontView, v->Allocator);
     }
