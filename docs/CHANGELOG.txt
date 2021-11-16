@@ -103,16 +103,6 @@ Other changes:
  VERSION 1.86 WIP (In Progress)
 -----------------------------------------------------------------------
 
-Docking+Viewports Branch:
-
-- Docking: Revert removal of io.ConfigDockingWithShift config option (removed in 1.83). (#4643)
-- Backends: Made it possible to shutdown default Platform Backends before the Renderer backends. (#4656)
-
-
------------------------------------------------------------------------
- VERSION 1.86 WIP (In Progress)
------------------------------------------------------------------------
-
 Breaking Changes:
 
 - Removed CalcListClipping() function. Prefer using ImGuiListClipper which can return non-contiguous ranges.
@@ -154,9 +144,12 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Docking: Revert removal of io.ConfigDockingWithShift config option (removed in 1.83). (#4643)
 - Viewports: Made it possible to explicitly assign ImGuiWindowClass::ParentViewportId to 0 in order
   to ensure a window is not parented. Previously this would use the global default (which might be 0,
   but not always as it would depend on io.ConfigViewportsNoDefaultParent). (#3152, #2871)
+- Viewports: Fixed tooltip in own viewport over modal from being incorrectly dimmed. (#4729)
+- Backends: Made it possible to shutdown default Platform Backends before the Renderer backends. (#4656)
 - Disabled: Fixed nested BeginDisabled()/EndDisabled() bug in Docking branch due to bad merge. (#4655, #4452, #4453, #4462)
 
 
