@@ -4365,11 +4365,15 @@ static void AddWindowToDrawData(ImGuiWindow* window, int layer)
     }
 }
 
-// Layer is locked for the root window, however child windows may use a different viewport (e.g. extruding menu)
-static void AddRootWindowToDrawData(ImGuiWindow* window)
+static inline int GetWindowDisplayLayer(ImGuiWindow* window)
 {
-    int layer = (window->Flags & ImGuiWindowFlags_Tooltip) ? 1 : 0;
-    AddWindowToDrawData(window, layer);
+    return (window->Flags & ImGuiWindowFlags_Tooltip) ? 1 : 0;
+}
+
+// Layer is locked for the root window, however child windows may use a different viewport (e.g. extruding menu)
+static inline void AddRootWindowToDrawData(ImGuiWindow* window)
+{
+    AddWindowToDrawData(window, GetWindowDisplayLayer(window));
 }
 
 void ImDrawDataBuilder::FlattenIntoSingleLayer()
@@ -6763,6 +6767,12 @@ bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent, 
 bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below)
 {
     ImGuiContext& g = *GImGui;
+
+    // It would be saner to ensure that display layer is always reflected in the g.Windows[] order, which would likely requires altering all manipulations of that array
+    const int display_layer_delta = GetWindowDisplayLayer(potential_above) - GetWindowDisplayLayer(potential_below);
+    if (display_layer_delta != 0)
+        return display_layer_delta > 0;
+
     for (int i = g.Windows.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* candidate_window = g.Windows[i];
