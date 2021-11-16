@@ -154,6 +154,9 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Viewports: Made it possible to explicitly assign ImGuiWindowClass::ParentViewportId to 0 in order
+  to ensure a window is not parented. Previously this would use the global default (which might be 0,
+  but not always as it would depend on io.ConfigViewportsNoDefaultParent). (#3152, #2871)
 - Disabled: Fixed nested BeginDisabled()/EndDisabled() bug in Docking branch due to bad merge. (#4655, #4452, #4453, #4462)
 
 
