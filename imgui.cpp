@@ -3044,7 +3044,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 
     if (text != text_display_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_display_end);
     }
@@ -3060,7 +3060,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -6956,6 +6956,7 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.FontSize = g.Font->FontSize * font_scale;
     g.FontLineHeight = (g.Font->FontSize + g.Font->ExtraLineHeight) * font_scale;
     g.FontLineAdvance = (g.Font->FontSize + g.Font->ExtraLineHeight + g.Font->ExtraLineAdvance) * font_scale;
+    g.FontBaselineOffset = g.Font->BaselineOffset * font_scale;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
     g.DrawListSharedData.TexUvWhitePixel = atlas->TexUvWhitePixel;
@@ -6964,6 +6965,7 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontLineHeight = g.FontLineHeight;
     g.DrawListSharedData.FontLineAdvance = g.FontLineAdvance;
+    g.DrawListSharedData.FontBaselineOffset = g.FontBaselineOffset;
 }
 
 void ImGui::PushFont(ImFont* font)
@@ -7444,6 +7446,11 @@ float ImGui::GetFontLineHeight()
 float ImGui::GetFontLineAdvance()
 {
     return GImGui->FontLineAdvance;
+}
+
+float ImGui::GetFontBaselineOffset()
+{
+    return GImGui->FontBaselineOffset;
 }
 
 ImVec2 ImGui::GetFontTexUvWhitePixel()
@@ -12324,7 +12331,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
         window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
         window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
 }
@@ -13010,6 +13017,8 @@ void ImGui::DebugNodeFont(ImFont* font)
     DragFloat("Extra line height", &font->ExtraLineHeight, 1.0f, -font->FontSize, FLT_MAX, "%g");
     SetNextItemWidth(GetFontSize() * 8);
     DragFloat("Extra line advance", &font->ExtraLineAdvance, 1.0f, -FLT_MAX, FLT_MAX, "%g");
+    SetNextItemWidth(GetFontSize() * 8);
+    DragFloat("Baseline offset", &font->BaselineOffset, 0.1f, -FLT_MAX, FLT_MAX, "%g");
     Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
     Text("Line Height: %f", font->FontSize + font->ExtraLineHeight);
     Text("Line Advance: %f", font->FontSize + font->ExtraLineHeight + font->ExtraLineAdvance);
