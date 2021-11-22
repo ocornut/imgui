@@ -3044,7 +3044,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 
     if (text != text_display_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_display_end);
     }
@@ -3060,7 +3060,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontBaselineOffset, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -3136,7 +3136,6 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         const ImFont* font = draw_list->_Data->Font;
         const float font_size = draw_list->_Data->FontSize;
         const float font_line_height = draw_list->_Data->FontLineHeight;
-        const float font_line_advance = draw_list->_Data->FontLineAdvance;
         const char* text_end_ellipsis = NULL;
 
         ImWchar ellipsis_char = font->EllipsisChar;
@@ -3161,18 +3160,18 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         // We can now claim the space between pos_max.x and ellipsis_max.x
         const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_total_width) - pos_min.x, 1.0f);
-        float text_size_clipped_x = font->CalcTextSizeA(font_size, font_line_height, font_line_advance, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
+        float text_size_clipped_x = font->CalcTextSizeA(font_size, font_line_height, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
         if (text == text_end_ellipsis && text_end_ellipsis < text_end_full)
         {
             // Always display at least 1 character if there's no room for character + ellipsis
             text_end_ellipsis = text + ImTextCountUtf8BytesFromChar(text, text_end_full);
-            text_size_clipped_x = font->CalcTextSizeA(font_size, font_line_height, font_line_advance, FLT_MAX, 0.0f, text, text_end_ellipsis).x;
+            text_size_clipped_x = font->CalcTextSizeA(font_size, font_line_height, FLT_MAX, 0.0f, text, text_end_ellipsis).x;
         }
         while (text_end_ellipsis > text && ImCharIsBlankA(text_end_ellipsis[-1]))
         {
             // Trim trailing space before ellipsis (FIXME: Supporting non-ascii blanks would be nice, for this we need a function to backtrack in UTF-8 text)
             text_end_ellipsis--;
-            text_size_clipped_x -= font->CalcTextSizeA(font_size, font_line_height, font_line_advance, FLT_MAX, 0.0f, text_end_ellipsis, text_end_ellipsis + 1).x; // Ascii blanks are always 1 byte
+            text_size_clipped_x -= font->CalcTextSizeA(font_size, font_line_height, FLT_MAX, 0.0f, text_end_ellipsis, text_end_ellipsis + 1).x; // Ascii blanks are always 1 byte
         }
 
         // Render text, render ellipsis
@@ -5054,10 +5053,9 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
     const float font_line_height = g.FontLineHeight;
-    const float font_line_advance = g.FontLineAdvance;
     if (text == text_display_end)
         return ImVec2(0.0f, font_line_height);
-    ImVec2 text_size = font->CalcTextSizeA(font_size, font_line_height, font_line_advance, FLT_MAX, wrap_width, text, text_display_end, NULL);
+    ImVec2 text_size = font->CalcTextSizeA(font_size, font_line_height, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
     // Round
     // FIXME: This has been here since Dec 2015 (7b0bf230) but down the line we want this out.
@@ -6955,7 +6953,6 @@ void ImGui::SetCurrentFont(ImFont* font)
     const float font_scale = g.FontBaseScale * (g.CurrentWindow ? g.CurrentWindow->CalcFontScale() : 1.0f);
     g.FontSize = g.Font->FontSize * font_scale;
     g.FontLineHeight = (g.Font->FontSize + g.Font->ExtraLineHeight) * font_scale;
-    g.FontLineAdvance = (g.Font->FontSize + g.Font->ExtraLineHeight + g.Font->ExtraLineAdvance) * font_scale;
     g.FontBaselineOffset = g.Font->BaselineOffset * font_scale;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
@@ -6964,7 +6961,6 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.DrawListSharedData.Font = g.Font;
     g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontLineHeight = g.FontLineHeight;
-    g.DrawListSharedData.FontLineAdvance = g.FontLineAdvance;
     g.DrawListSharedData.FontBaselineOffset = g.FontBaselineOffset;
 }
 
@@ -7441,11 +7437,6 @@ float ImGui::GetFontSize()
 float ImGui::GetFontLineHeight()
 {
     return GImGui->FontLineHeight;
-}
-
-float ImGui::GetFontLineAdvance()
-{
-    return GImGui->FontLineAdvance;
 }
 
 float ImGui::GetFontBaselineOffset()
@@ -12331,7 +12322,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         window->DrawList->AddRectFilled(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_WindowBg, alpha_mul));
         window->DrawList->AddRectFilled(title_r.Min, title_r.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg, alpha_mul));
         window->DrawList->AddRect(thumb_r.Min, thumb_r.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
-        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontLineAdvance, g.FontBaselineOffset, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
+        window->DrawList->AddText(g.Font, g.FontSize, g.FontLineHeight, g.FontBaselineOffset, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
 }
@@ -13016,12 +13007,9 @@ void ImGui::DebugNodeFont(ImFont* font)
     SetNextItemWidth(GetFontSize() * 8);
     DragFloat("Extra line height", &font->ExtraLineHeight, 1.0f, -font->FontSize, FLT_MAX, "%g");
     SetNextItemWidth(GetFontSize() * 8);
-    DragFloat("Extra line advance", &font->ExtraLineAdvance, 1.0f, -FLT_MAX, FLT_MAX, "%g");
-    SetNextItemWidth(GetFontSize() * 8);
     DragFloat("Baseline offset", &font->BaselineOffset, 0.1f, -FLT_MAX, FLT_MAX, "%g");
     Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
     Text("Line Height: %f", font->FontSize + font->ExtraLineHeight);
-    Text("Line Advance: %f", font->FontSize + font->ExtraLineHeight + font->ExtraLineAdvance);
     char c_str[5];
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);

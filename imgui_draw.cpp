@@ -1584,13 +1584,12 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     const float scale = font_size / font->FontSize;
     const float line_height = (font->FontSize + font->ExtraLineHeight) * scale;
-    const float line_advance = (font->FontSize + font->ExtraLineAdvance) * scale;
     const float baseline_offset = font->BaselineOffset * scale;
 
-    AddText(font, font_size, line_height, line_advance, baseline_offset, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect);
+    AddText(font, font_size, line_height, baseline_offset, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, float font_line_height, float font_line_advance, float font_baseline_offset, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(const ImFont* font, float font_size, float font_line_height, float font_baseline_offset, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1616,7 +1615,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, float font_line_he
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, font_line_height, font_line_advance, font_baseline_offset, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
+    font->RenderText(this, font_size, font_line_height, font_baseline_offset, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -3123,7 +3122,6 @@ ImFont::ImFont()
 {
     FontSize = 0.0f;
     ExtraLineHeight = 0.0f;
-    ExtraLineAdvance = 0.0f;
     BaselineOffset = 0.0f;
     FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)-1;
@@ -3448,7 +3446,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     return s;
 }
 
-ImVec2 ImFont::CalcTextSizeA(float size, float line_height, float line_advance, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+ImVec2 ImFont::CalcTextSizeA(float size, float line_height, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
@@ -3478,7 +3476,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float line_height, float line_advance, 
             {
                 if (text_size.x < line_width)
                     text_size.x = line_width;
-                text_size.y += line_advance;
+                text_size.y += line_height;
                 line_width = 0.0f;
                 word_wrap_eol = NULL;
 
@@ -3511,7 +3509,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float line_height, float line_advance, 
             if (c == '\n')
             {
                 text_size.x = ImMax(text_size.x, line_width);
-                text_size.y += line_advance;
+                text_size.y += line_height;
                 line_width = 0.0f;
                 continue;
             }
@@ -3561,13 +3559,12 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 {
     const float scale = size / FontSize;
     const float line_height = (FontSize + ExtraLineHeight) * scale;
-    const float line_advance = (FontSize + ExtraLineAdvance) * scale;
     const float baseline_offset = BaselineOffset * scale;
 
-    RenderText(draw_list, size, line_height, line_advance, baseline_offset, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip);
+    RenderText(draw_list, size, line_height, baseline_offset, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip);
 }
 
-void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, float line_advance, float baseline_offset, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, float baseline_offset, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3590,7 +3587,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, fl
         {
             s = (const char*)memchr(s, '\n', text_end - s);
             s = s ? s + 1 : text_end;
-            y += line_advance;
+            y += line_height;
         }
 
     // For large text, scan for the last visible line in order to avoid over-reserving in the call to PrimReserve()
@@ -3603,7 +3600,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, fl
         {
             s_end = (const char*)memchr(s_end, '\n', text_end - s_end);
             s_end = s_end ? s_end + 1 : text_end;
-            y_end += line_advance;
+            y_end += line_height;
         }
         text_end = s_end;
     }
@@ -3637,7 +3634,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, fl
             if (s >= word_wrap_eol)
             {
                 x = start_x;
-                y += line_advance;
+                y += line_height;
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
@@ -3668,7 +3665,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, float line_height, fl
             if (c == '\n')
             {
                 x = start_x;
-                y += line_advance;
+                y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop
                 continue;
