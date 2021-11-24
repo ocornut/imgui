@@ -16157,7 +16157,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     node->State = ImGuiDockNodeState_HostWindowVisible;
 
     // Undock if we are submitted earlier than the host window
-    if (window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
+    if (!(node->MergedFlags & ImGuiDockNodeFlags_KeepAliveOnly) && window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
