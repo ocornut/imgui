@@ -4484,8 +4484,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback_data.Flags = flags;
                     callback_data.UserData = callback_user_data;
 
+                    char* callback_buf = is_readonly ? buf : state->TextA.Data;
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = state->TextA.Data;
+                    callback_data.Buf = callback_buf;
                     callback_data.BufTextLen = state->CurLenA;
                     callback_data.BufSize = state->BufCapacityA;
                     callback_data.BufDirty = false;
@@ -4500,7 +4501,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == state->TextA.Data);  // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == callback_buf);  // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == state->BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     const bool buf_dirty = callback_data.BufDirty;

@@ -58,6 +58,7 @@ Other Changes:
 - InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
+- InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
