@@ -959,6 +959,7 @@ static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVe
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
+static void             WindowLayoutCloseAndMenuButton(bool has_close_button, bool has_collapse_button, const ImRect& title_bar_rect, ImVec2& close_button_pos, ImVec2& collapse_button_pos, float *pad_l, float* pad_r);
 static void             EndFrameDrawDimmedBackgrounds();
 
 // Viewports
@@ -1033,7 +1034,10 @@ ImGuiStyle::ImGuiStyle()
     WindowBorderSize        = 1.0f;             // Thickness of border around windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
-    WindowMenuButtonPosition= ImGuiDir_Left;    // Position of the collapsing/docking button in the title bar (left/right). Defaults to ImGuiDir_Left.
+    WindowCloseButtonPosition    = ImGuiDir_Right; // Position of the close button in the title bar (left/right). Defaults to ImGuiDir_Right.
+    WindowTabCloseButtonPosition = ImGuiDir_Right; // Position of the close button in the docking tabs for the windows (Left/Right). Defaults to ImGuiDir_Right.
+    TabCloseButtonPosition       = ImGuiDir_Right; // Position of the close button in the tabs (Left/Right). Defaults to ImGuiDir_Right.
+    WindowMenuButtonPosition     = ImGuiDir_Left;  // Position of the collapsing/docking button in the title bar (left/right). Defaults to ImGuiDir_Left.
     ChildRounding           = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
     ChildBorderSize         = 1.0f;             // Thickness of border around child windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     PopupRounding           = 0.0f;             // Radius of popup window corners rounding. Set to 0.0f to have rectangular child windows
@@ -6041,6 +6045,39 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     }
 }
 
+void ImGui::WindowLayoutCloseAndMenuButton(bool has_close_button, bool has_collapse_button, const ImRect& title_bar_rect, ImVec2& close_button_pos, ImVec2& collapse_button_pos, float *pad_l, float* pad_r) 
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiStyle& style = g.Style;
+    float button_sz = g.FontSize;
+
+    if (has_close_button && style.WindowCloseButtonPosition == ImGuiDir_Left)
+    {
+        close_button_pos = ImVec2(title_bar_rect.Min.x + *pad_l - style.FramePadding.x, title_bar_rect.Min.y);
+        *pad_l += button_sz;
+    }
+    if (has_close_button && style.WindowCloseButtonPosition == ImGuiDir_Right)
+    {
+        *pad_r += button_sz;
+        close_button_pos = ImVec2(title_bar_rect.Max.x - *pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
+    {
+        *pad_r += button_sz;
+        collapse_button_pos = ImVec2(title_bar_rect.Max.x - *pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Left)
+    {
+        collapse_button_pos = ImVec2(title_bar_rect.Min.x + *pad_l - style.FramePadding.x, title_bar_rect.Min.y);
+        *pad_l += button_sz;
+    }
+
+    if (*pad_l > style.FramePadding.x)
+        *pad_l += g.Style.ItemInnerSpacing.x;
+    if (*pad_r > style.FramePadding.x)
+        *pad_r += g.Style.ItemInnerSpacing.x;
+}
+
 // Render title text, collapse button, close button
 // When inside a dock node, this is handled in DockNodeCalcTabBarLayout() instead.
 void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open)
@@ -6063,23 +6100,10 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     float pad_l = style.FramePadding.x;
     float pad_r = style.FramePadding.x;
     float button_sz = g.FontSize;
+
     ImVec2 close_button_pos;
     ImVec2 collapse_button_pos;
-    if (has_close_button)
-    {
-        pad_r += button_sz;
-        close_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
-    }
-    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
-    {
-        pad_r += button_sz;
-        collapse_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
-    }
-    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Left)
-    {
-        collapse_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
-        pad_l += button_sz;
-    }
+    WindowLayoutCloseAndMenuButton(has_close_button, has_collapse_button, title_bar_rect, close_button_pos, collapse_button_pos, &pad_l, &pad_r);
 
     // Collapse button (submitting first so it gets priority when choosing a navigation init fallback)
     if (has_collapse_button)
@@ -6101,10 +6125,6 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
 
     // As a nice touch we try to ensure that centered title text doesn't get affected by visibility of Close/Collapse button,
     // while uncentered title text will still reach edges correctly.
-    if (pad_l > style.FramePadding.x)
-        pad_l += g.Style.ItemInnerSpacing.x;
-    if (pad_r > style.FramePadding.x)
-        pad_r += g.Style.ItemInnerSpacing.x;
     if (style.WindowTitleAlign.x > 0.0f && style.WindowTitleAlign.x < 1.0f)
     {
         float centerness = ImSaturate(1.0f - ImFabs(style.WindowTitleAlign.x - 0.5f) * 2.0f); // 0.0f on either edges, 1.0f on center
@@ -7907,6 +7927,9 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(g.Style.WindowCloseButtonPosition == ImGuiDir_Left || g.Style.WindowCloseButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(g.Style.WindowTabCloseButtonPosition == ImGuiDir_Left || g.Style.WindowTabCloseButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(g.Style.TabCloseButtonPosition == ImGuiDir_Left || g.Style.TabCloseButtonPosition == ImGuiDir_Right);
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
@@ -14733,30 +14756,17 @@ static void ImGui::DockNodeCalcTabBarLayout(const ImGuiDockNode* node, ImRect* o
     ImRect r = ImRect(node->Pos.x, node->Pos.y, node->Pos.x + node->Size.x, node->Pos.y + g.FontSize + g.Style.FramePadding.y * 2.0f);
     if (out_title_rect) { *out_title_rect = r; }
 
-    r.Min.x += style.WindowBorderSize;
-    r.Max.x -= style.WindowBorderSize;
+    ImVec2 window_menu_button_pos;
+    ImVec2 window_close_button_pos;
+    float pad_l = style.FramePadding.x + style.WindowBorderSize;
+    float pad_r = pad_l;
+    WindowLayoutCloseAndMenuButton(node->HasCloseButton, node->HasWindowMenuButton, r, window_close_button_pos, window_menu_button_pos, &pad_l, &pad_r);
+    r.Min.x += pad_l;
+    r.Max.x -= pad_r;
 
-    float button_sz = g.FontSize;
-
-    ImVec2 window_menu_button_pos = r.Min;
-    r.Min.x += style.FramePadding.x;
-    r.Max.x -= style.FramePadding.x;
-    if (node->HasCloseButton)
-    {
-        r.Max.x -= button_sz;
-        if (out_close_button_pos) *out_close_button_pos = ImVec2(r.Max.x - style.FramePadding.x, r.Min.y);
-    }
-    if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Left)
-    {
-        r.Min.x += button_sz + style.ItemInnerSpacing.x;
-    }
-    else if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Right)
-    {
-        r.Max.x -= button_sz + style.FramePadding.x;
-        window_menu_button_pos = ImVec2(r.Max.x, r.Min.y);
-    }
     if (out_tab_bar_rect) { *out_tab_bar_rect = r; }
     if (out_window_menu_button_pos) { *out_window_menu_button_pos = window_menu_button_pos; }
+    if (out_close_button_pos) { *out_close_button_pos = window_close_button_pos; }
 }
 
 void ImGui::DockNodeCalcSplitRects(ImVec2& pos_old, ImVec2& size_old, ImVec2& pos_new, ImVec2& size_new, ImGuiDir dir, ImVec2 size_new_desired)
