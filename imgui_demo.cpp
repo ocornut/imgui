@@ -8060,6 +8060,8 @@ namespace ImGuiDemoMarkerCodeViewer
     void ShowCodeViewer();
     void NavigateTo(int line_number);
 }
+#define IMGUI_DEMO_GITHUB_URL "https://github.com/pthom/imgui/blob/DemoCode/imgui_demo.cpp#L"
+void BrowseToUrl(const char *url);
 
 // [sub section] ImGuiDemoMarker_GuiToggle()
 // Display a "Code Lookup" checkbox that toggles interactive code browsing
@@ -8422,6 +8424,15 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
             {
                 GuiSearch();
 
+                if (ImGui::Button("Open Github"))
+                {
+                    char url[1024];
+                    snprintf(url, 1024, "%s%i", IMGUI_DEMO_GITHUB_URL, EditorLine_LastSelected);
+                    BrowseToUrl(url);
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("(view imgui_demo.cpp on github at line %i)", EditorLine_LastSelected);
+
                 ImGui::BeginChild("Code Child");
                 if (EditorLine_NavigateTo >= 0)
                 {
@@ -8569,6 +8580,40 @@ namespace ImGuiDemoMarkerCodeViewer
     {
         ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow.NavigateTo(line_number);
     }
+}
+
+// [sub section]  BrowseToUrl()
+// A platform specific utility to open an url in a browser
+// (especially useful with emscripten version)
+// Specific per platform includes for BrowseToUrl
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#include <Shellapi.h>
+#elif defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+void BrowseToUrl(const char *url)
+{
+    IM_ASSERT(strncmp(url, "http", strlen("http")) == 0);
+#if defined(__EMSCRIPTEN__)
+    char js_command[1024];
+        snprintf(js_command, 1024, "window.open(\"%s\");", url);
+        emscripten_run_script(js_command);
+#elif defined(_WIN32)
+    ShellExecuteA( NULL, "open", url, NULL, NULL, SW_SHOWNORMAL );
+#elif TARGET_OS_IPHONE
+    // Nothing on iOS
+#elif TARGET_OS_OSX
+    char cmd[1024];
+    snprintf(cmd, 1024, "open %s", url);
+    system(cmd);
+#elif defined(__linux__)
+    char cmd[1024];
+        snprintf(cmd, 1024, "xdg-open %s", url);
+        system(cmd);
+#endif
 }
 
 // End of Demo code
