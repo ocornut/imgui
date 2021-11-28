@@ -8055,6 +8055,11 @@ void ShowExampleAppDocuments(bool* p_open)
 
 // Forward declarations
 bool ImGuiDemoMarkerHighlightZone(int line_number);
+namespace ImGuiDemoMarkerCodeViewer
+{
+    void ShowCodeViewer();
+    void NavigateTo(int line_number);
+}
 
 // [sub section] ImGuiDemoMarker_GuiToggle()
 // Display a "Code Lookup" checkbox that toggles interactive code browsing
@@ -8080,6 +8085,7 @@ void ImGuiDemoMarker_GuiToggle()
 // but this can be overriden via GImGuiDemoMarkerCallback
 void ImGuiDemoMarkerCallback_Default(const char* /*file*/, int line, const char* section, void* /*user_data*/)
 {
+    static ImGuiOnceUponAFrame oaf; if (oaf) ImGuiDemoMarkerCodeViewer::ShowCodeViewer();
     if (!GImGuiDemoMarker_IsActive)
         return;
     if (ImGuiDemoMarkerHighlightZone(line))
@@ -8089,6 +8095,7 @@ void ImGuiDemoMarkerCallback_Default(const char* /*file*/, int line, const char*
             "IMGUI_DEMO_MARKER(\"%s\") at imgui_demo.cpp:%d\n\n"
             "Press \"Esc\" to exit this mode",
             section, line);
+        ImGuiDemoMarkerCodeViewer::NavigateTo(line);
     }
 }
 
@@ -8251,6 +8258,317 @@ namespace ImGuiDemoMarkerHighlight_Impl
 bool ImGuiDemoMarkerHighlightZone(int line_number)
 {
     return ImGuiDemoMarkerHighlight_Impl::GDemoMarkersRegistry.Highlight(line_number);
+}
+
+// [sub section] ImGuiDemoMarkerCodeViewer
+// ImGuiDemoMarkerCodeViewer is the external API which enables to display a basic code viewer
+// when hovering demos that are marked with IMGUI_DEMO_MARKER.
+// This is a basic code viewer, with is also able to parse the IMGUI_DEMO_MARKERS calls inside imgui_demo.cpp `
+// in order to also provide a searchable index.
+// The code is presented as a read-only multiline text (and it is not selectable).
+#ifdef __EMSCRIPTEN__
+#define IMGUI_DEMO_SOURCE_FILE "code/imgui/imgui_demo.cpp"
+#else
+#define IMGUI_DEMO_SOURCE_FILE __FILE__
+#endif
+
+namespace ImGuiDemoMarkerCodeViewer
+{
+    void ShowCodeViewer();
+    void NavigateTo(int line_number);
+}
+
+namespace ImGuiDemoMarkerCodeViewer_Impl
+{
+    // Simple CString utilities (only used for DemoMarkers titles parsing)
+    namespace ImCStringUtils
+    {
+        int CountCharOccurences(const char *str, char needle)
+        {
+            int nb = 0;
+            for (const char *c = str; *c; ++c)
+            {
+                if (*c == needle)
+                    ++nb;
+            }
+            return nb;
+        }
+
+        bool CodeLineStartsWith(const char *haystack, const char *needle_prefix)
+        {
+            const char* first_non_space_char = haystack;
+            while ((*first_non_space_char) && isspace(*first_non_space_char))
+                ++first_non_space_char;
+            return strncmp(first_non_space_char, needle_prefix, strlen(needle_prefix)) == 0;
+        }
+
+        void CopyTextRange(const char *begin, const char *end, char *dst, size_t dst_len)
+        {
+            IM_ASSERT(end >= begin);
+            size_t src_len = (size_t) (end - begin);
+            size_t len = IM_MIN(src_len, dst_len - 1);
+            strncpy(dst, begin, len);
+            dst[len] = '\0';
+        }
+    } // namespace ImCStringUtils
+
+    namespace DemoMarkerTagsParser
+    {
+#define IMGUI_DEMO_MARKER_MAX_TAG_LENGTH 256
+
+        struct DemoMarkerTag
+        {
+            DemoMarkerTag(const char *tag, int lineNumber, int level)
+                : LineNumber(lineNumber), Level(level)
+            {
+                strncpy(Tag, tag, IMGUI_DEMO_MARKER_MAX_TAG_LENGTH);
+                Tag[IMGUI_DEMO_MARKER_MAX_TAG_LENGTH - 1] = '\0';
+            }
+
+            char Tag[IMGUI_DEMO_MARKER_MAX_TAG_LENGTH];     // tag can be an Id or a title
+            int LineNumber;
+            int Level; // title level
+        };
+
+        // Given a line like
+        //     IMGUI_DEMO_MARKER ("Widget/Basic/Button");
+        // ExtractDemoMarkerTag will fill dst_tag with "Widget/Basic/Button"
+        void ExtractDemoMarkerTag(const char *code_line, char *dst_tag, size_t dst_tag_len)
+        {
+            const char *marker_position = strstr(code_line, "IMGUI_DEMO_MARKER");
+            IM_ASSERT(marker_position != NULL);
+            const char *opening_quote = strchr(marker_position, '"');
+            IM_ASSERT(opening_quote != NULL);
+            const char *closing_quote = strrchr(marker_position, '"');
+            IM_ASSERT(closing_quote != NULL);
+            ++opening_quote;
+
+            IM_ASSERT((closing_quote - opening_quote) > 0);
+            size_t len = IM_MIN((size_t) (closing_quote - opening_quote), dst_tag_len);
+            strncpy(dst_tag, opening_quote, (size_t) len);
+            dst_tag[len] = '\0';
+        }
+
+        ImVector<DemoMarkerTag> ParseDemoMarkerTags(const char *source_code)
+        {
+            ImGuiTextFilter::ImGuiTextRange text_range(source_code, source_code + strlen(source_code));
+            ImVector<ImGuiTextFilter::ImGuiTextRange> lines;
+            text_range.split('\n', &lines);
+
+            ImVector<DemoMarkerTag> r;
+            {
+                char line_buffer[2048];
+                char tag_buffer[IMGUI_DEMO_MARKER_MAX_TAG_LENGTH];
+                for (int line_number = 0; line_number < lines.size(); ++line_number)
+                {
+                    ImCStringUtils::CopyTextRange(lines[line_number].b, lines[line_number].e, line_buffer, 2048);
+                    if (ImCStringUtils::CodeLineStartsWith(line_buffer, "IMGUI_DEMO_MARKER("))
+                    {
+                        ExtractDemoMarkerTag(line_buffer, tag_buffer, IMGUI_DEMO_MARKER_MAX_TAG_LENGTH);
+                        int level = ImCStringUtils::CountCharOccurences(line_buffer, '/') + 1;
+                        DemoMarkerTag v(tag_buffer, line_number, level);
+                        r.push_back(v);
+                    }
+                }
+            }
+            return r;
+        }
+    } // namespace DemoMarkerTagsParser
+
+
+    // DemoCodeWindow: simple code viewer for imgui_demo.cpp (reads imgui_demo.cpp from its compile time location)
+    class DemoCodeWindow
+    {
+    public:
+        DemoCodeWindow() :
+            SourceCode(NULL),
+            SourceLineNumbersStr(NULL),
+            EditorLine_NavigateTo(0),
+            EditorLine_LastSelected(0),
+            IsWindowOpened(false),
+            ShowFilterResults(false)
+        {
+            ReadSource(IMGUI_DEMO_SOURCE_FILE);
+        }
+
+        ~DemoCodeWindow()
+        {
+            if (SourceCode)
+                IM_DELETE(SourceCode);
+            if (SourceLineNumbersStr)
+                IM_DELETE(SourceLineNumbersStr);
+        }
+
+        void NavigateTo(int line_number)
+        {
+            IsWindowOpened = true;
+            EditorLine_NavigateTo = line_number;
+        }
+
+        void Gui()
+        {
+            if (SourceCode == NULL)
+                return;
+            if (!IsWindowOpened)
+                return;
+
+            // Default position/size of the code window case there's no data in the .ini file.
+            // By default, it appears to the left of the demo window.
+            ImGuiViewport *main_viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 100, main_viewport->WorkPos.y + 20),
+                                    ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(520.f, 680), ImGuiCond_FirstUseEver);
+            if (ImGui::Begin("imgui_demo.cpp - code", &IsWindowOpened))
+            {
+                GuiSearch();
+
+                ImGui::BeginChild("Code Child");
+                if (EditorLine_NavigateTo >= 0)
+                {
+                    ImGui::SetScrollY(EditorLine_NavigateTo * ImGui::GetFontSize() - ImGui::GetFontSize());
+                    ImGui::SetScrollX(0.f);
+                    EditorLine_LastSelected = EditorLine_NavigateTo;
+                    EditorLine_NavigateTo = -1;
+                }
+                ImGui::TextUnformatted(SourceLineNumbersStr);
+                ImGui::SameLine();
+                ImGui::TextUnformatted(SourceCode);
+
+                ImGui::EndChild();
+            }
+            ImGui::End();
+        }
+
+    private:
+        void ReadSource(const char* source_file)
+        {
+            ReadSourceCodeContent(source_file);
+            if (SourceCode != NULL)
+            {
+                Tags = DemoMarkerTagsParser::ParseDemoMarkerTags(SourceCode);
+                MakeSourceLineNumbersStr();
+            }
+        }
+
+        void GuiSearch()
+        {
+            const char *tooltip_text =
+                "Filter usage:[-excl],incl\n"
+                "For example:\n"
+                "   \"button\" will search for \"button\"\n"
+                "   \"-widget,button\" will search for \"button\" without \"widget\"";
+            const char *filter_label =
+                "Filter usage:[-excl],incl";
+
+            bool show_tooltip = false;
+
+            ImGui::Text("Search for demos:");
+            ImGui::SameLine();
+            if (ImGui::IsItemHovered())
+                show_tooltip = true;
+            ImGui::TextDisabled("?");
+            ImGui::SameLine();
+            if (ImGui::IsItemHovered())
+                show_tooltip = true;
+
+            ImGui::SetNextItemWidth(200.f);
+            Filter.Draw(filter_label);
+
+            if (show_tooltip)
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted(tooltip_text);
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+
+            if (Filter.IsActive() && ImGui::IsItemFocused())
+                ShowFilterResults = true;
+            if (ShowFilterResults)
+            {
+                for (int i = 0; i < Tags.size(); ++i)
+                {
+                    const DemoMarkerTagsParser::DemoMarkerTag &tag = Tags[i];
+                    if (Filter.PassFilter(tag.Tag))
+                    {
+                        if (ImGui::Button(tag.Tag))
+                        {
+                            printf("Clicked tag %s\n", tag.Tag);
+                            EditorLine_NavigateTo = tag.LineNumber;
+                            ShowFilterResults = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        void ReadSourceCodeContent(const char* source_file)
+        {
+            FILE *f = fopen(source_file, "r");
+            if (!f)
+            {
+                SourceCode = NULL;
+                return;
+            }
+            fseek(f, 0, SEEK_END);
+            size_t file_size = (size_t) ftell(f);
+            SourceCode = (char *) IM_ALLOC(file_size * sizeof(char));
+            rewind(f);
+            fread(SourceCode, sizeof(char), file_size, f);
+            fclose(f);
+        }
+
+        void MakeSourceLineNumbersStr()
+        {
+            size_t nb_source_lines = 0;
+            {
+                char *c = SourceCode;
+                while (*c != '\0')
+                {
+                    if (*c == '\n')
+                        ++nb_source_lines;
+                    ++c;
+                }
+            }
+
+            size_t line_length = 6;
+            SourceLineNumbersStr = (char *) IM_ALLOC((nb_source_lines * line_length + 1) * sizeof(char));
+            SourceLineNumbersStr[0] = '\0';
+            for (size_t i = 0; i < nb_source_lines; ++i)
+            {
+                char line_content[100];
+                snprintf(line_content, line_length + 1, "%5i\n", (int) (i + 1));
+                strcat(SourceLineNumbersStr, line_content);
+            }
+        }
+
+    private:
+        char *SourceCode;                // Full source code of imgui_demo.cpp, read from its compile time location
+        char *SourceLineNumbersStr;      // A String that contains line numbers, displayed to the left of the source code
+        int EditorLine_NavigateTo;       // Will be >= 0 when navigating via callback (this value is transient)
+        int EditorLine_LastSelected;     // Last line to which we navigated
+        bool IsWindowOpened;             // Is the code window opened?
+
+        ImVector<DemoMarkerTagsParser::DemoMarkerTag> Tags;
+        ImGuiTextFilter Filter;
+        bool ShowFilterResults;
+    };
+
+    DemoCodeWindow GDemoCodeWindow;
+
+} // namespace ImGuiDemoMarkerCodeViewer_Impl
+
+namespace ImGuiDemoMarkerCodeViewer
+{
+    void ShowCodeViewer()
+    {
+        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow.Gui();
+    }
+    void NavigateTo(int line_number)
+    {
+        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow.NavigateTo(line_number);
+    }
 }
 
 // End of Demo code
