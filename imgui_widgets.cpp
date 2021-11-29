@@ -3966,7 +3966,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (is_resizable)
         IM_ASSERT(callback != NULL); // Must provide a callback if you set the ImGuiInputTextFlags_CallbackResize flag!
 
-    if (is_multiline) // Open group before calling GetID() because groups tracks id created within their scope,
+    if (is_multiline) // Open group before calling GetID() because groups tracks id created within their scope (including the scrollbar)
         BeginGroup();
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
@@ -4770,9 +4770,22 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     if (is_multiline)
     {
+        // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
         Dummy(ImVec2(text_size.x, text_size.y + style.FramePadding.y));
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
+        g.CurrentItemFlags |= ImGuiItemFlags_Inputable;
         EndChild();
+        g.CurrentItemFlags = backup_item_flags;
+
+        // ...and then we need to undo the group overriding last item data, which gets a bit messy as EndGroup() tries to forward scrollbar being active...
+        ImGuiLastItemData item_data = g.LastItemData;
         EndGroup();
+        if (g.LastItemData.ID == 0)
+        {
+            g.LastItemData.ID = id;
+            g.LastItemData.InFlags = item_data.InFlags;
+            g.LastItemData.StatusFlags = item_data.StatusFlags;
+        }
     }
 
     // Log as text

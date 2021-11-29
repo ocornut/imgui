@@ -56,6 +56,7 @@ Other Changes:
   Home/End leads to scrolling. Fixed not setting mouse position when a failed move request (e.g. when
   already at edge) reactivates the navigation highlight.
 - InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
+- Inputtext, Nav: fixed using SetKeyboardFocusHere() on InputTextMultiline(). (#4761)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
 - InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
