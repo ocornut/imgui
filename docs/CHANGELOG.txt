@@ -70,13 +70,16 @@ Other Changes:
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
-- Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
-  likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
-  vkCmdSetScissor() explicitly every frame. (#4644)
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
 - CI: Add MinGW DLL build to test suite. [@rokups]
+- Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
+  likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
+  vkCmdSetScissor() explicitly every frame. (#4644)
+- Backends: WebGPU: Passing explicit buffer sizes to wgpuRenderPassEncoderSetVertexBuffer() and
+  wgpuRenderPassEncoderSetIndexBuffer() functions as validation layers appears to not do what the
+  in-flux specs says. (#4766) [@meshula]
 
 
 -----------------------------------------------------------------------
