@@ -79,6 +79,7 @@ Other Changes:
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
   likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
   vkCmdSetScissor() explicitly every frame. (#4644)
+- Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
 - Backends: WebGPU: Passing explicit buffer sizes to wgpuRenderPassEncoderSetVertexBuffer() and
   wgpuRenderPassEncoderSetIndexBuffer() functions as validation layers appears to not do what the
   in-flux specs says. (#4766) [@meshula]
