@@ -71,6 +71,7 @@ Other Changes:
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
+- Metrics: Added a node showing windows in submission order and showing the Begin() stack.
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]

@@ -1946,7 +1946,7 @@ void ImGuiStorage::BuildSortByKey()
 {
     struct StaticFunc
     {
-        static int IMGUI_CDECL PairCompareByID(const void* lhs, const void* rhs)
+        static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
         {
             // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
             if (((const ImGuiStoragePair*)lhs)->key > ((const ImGuiStoragePair*)rhs)->key) return +1;
@@ -1954,7 +1954,7 @@ void ImGuiStorage::BuildSortByKey()
             return 0;
         }
     };
-    ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairCompareByID);
+    ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairComparerByID);
 }
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
@@ -5872,7 +5872,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Update ->RootWindow and others pointers (before any possible call to FocusWindow)
     if (first_begin_of_the_frame)
+    {
         UpdateWindowParentAndRootLinks(window, flags, parent_window);
+        window->ParentWindowInBeginStack = parent_window_in_stack;
+    }
 
     // Process SetNextWindow***() calls
     // (FIXME: Consider splitting the HasXXX flags into X/Y components
@@ -11314,6 +11317,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 // - DebugNodeWindow() [Internal]
 // - DebugNodeWindowSettings() [Internal]
 // - DebugNodeWindowsList() [Internal]
+// - DebugNodeWindowsListByBeginStackParent() [Internal]
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
@@ -11536,8 +11540,27 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Windows
-    DebugNodeWindowsList(&g.Windows, "Windows");
-    //DebugNodeWindowsList(&g.WindowsFocusOrder, "WindowsFocusOrder");
+    if (TreeNode("Windows", "Windows (%d)", g.Windows.Size))
+    {
+        //SetNextItemOpen(true, ImGuiCond_Once);
+        DebugNodeWindowsList(&g.Windows, "By display order");
+        DebugNodeWindowsList(&g.WindowsFocusOrder, "By focus order (root windows)");
+        if (TreeNode("By submission order (begin stack)"))
+        {
+            // Here we display windows in their submitted order/hierarchy, however note that the Begin stack doesn't constitute a Parent<>Child relationship!
+            ImVector<ImGuiWindow*>& temp_buffer = g.WindowsTempSortBuffer;
+            temp_buffer.resize(0);
+            for (int i = 0; i < g.Windows.Size; i++)
+                if (g.Windows[i]->LastFrameActive + 1 >= g.FrameCount)
+                    temp_buffer.push_back(g.Windows[i]);
+            struct Func { static int IMGUI_CDECL WindowComparerByBeginOrder(const void* lhs, const void* rhs) { return ((int)(*(const ImGuiWindow* const *)lhs)->BeginOrderWithinContext - (*(const ImGuiWindow* const*)rhs)->BeginOrderWithinContext); } };
+            ImQsort(temp_buffer.Data, (size_t)temp_buffer.Size, sizeof(ImGuiWindow*), Func::WindowComparerByBeginOrder);
+            DebugNodeWindowsListByBeginStackParent(temp_buffer.Data, temp_buffer.Size, NULL);
+            TreePop();
+        }
+
+        TreePop();
+    }
 
     // DrawLists
     int drawlist_count = 0;
@@ -12161,7 +12184,6 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
 {
     if (!TreeNode(label, "%s (%d)", label, windows->Size))
         return;
-    Text("(In front-to-back order:)");
     for (int i = windows->Size - 1; i >= 0; i--) // Iterate front to back
     {
         PushID((*windows)[i]);
@@ -12169,6 +12191,24 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
         PopID();
     }
     TreePop();
+}
+
+// FIXME-OPT: This is technically suboptimal, but it is simpler this way.
+void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int windows_size, ImGuiWindow* parent_in_begin_stack)
+{
+    for (int i = 0; i < windows_size; i++)
+    {
+        ImGuiWindow* window = windows[i];
+        if (window->ParentWindowInBeginStack != parent_in_begin_stack)
+            continue;
+        char buf[20];
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "[%04d] Window", window->BeginOrderWithinContext);
+        //BulletText("[%04d] Window '%s'", window->BeginOrderWithinContext, window->Name);
+        DebugNodeWindow(window, buf);
+        Indent();
+        DebugNodeWindowsListByBeginStackParent(windows + i + 1, windows_size - i - 1, window);
+        Unindent();
+    }
 }
 
 //-----------------------------------------------------------------------------
