@@ -3979,6 +3979,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     ImGuiWindow* draw_window = window;
     ImVec2 inner_size = frame_size;
     ImGuiItemStatusFlags item_status_flags = 0;
+    ImGuiLastItemData item_data_backup;
     if (is_multiline)
     {
         ImVec2 backup_pos = window->DC.CursorPos;
@@ -3989,6 +3990,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             return false;
         }
         item_status_flags = g.LastItemData.StatusFlags;
+        item_data_backup = g.LastItemData;
         window->DC.CursorPos = backup_pos;
 
         // We reproduce the contents of BeginChildFrame() in order to provide 'label' so our window internal data are easier to read/debug.
@@ -4773,18 +4775,19 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
         Dummy(ImVec2(text_size.x, text_size.y + style.FramePadding.y));
         ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
-        g.CurrentItemFlags |= ImGuiItemFlags_Inputable;
+        g.CurrentItemFlags |= ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;
         EndChild();
+        item_data_backup.StatusFlags |= (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredWindow);
         g.CurrentItemFlags = backup_item_flags;
 
         // ...and then we need to undo the group overriding last item data, which gets a bit messy as EndGroup() tries to forward scrollbar being active...
-        ImGuiLastItemData item_data = g.LastItemData;
+        // FIXME: This quite messy/tricky, should attempt to get rid of the child window.
         EndGroup();
         if (g.LastItemData.ID == 0)
         {
             g.LastItemData.ID = id;
-            g.LastItemData.InFlags = item_data.InFlags;
-            g.LastItemData.StatusFlags = item_data.StatusFlags;
+            g.LastItemData.InFlags = item_data_backup.InFlags;
+            g.LastItemData.StatusFlags = item_data_backup.StatusFlags;
         }
     }
 
