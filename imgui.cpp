@@ -946,6 +946,7 @@ static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVe
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
+static void             EndFrameDrawDimmedBackgrounds();
 
 // Viewports
 static void             UpdateViewportsNewFrame();
@@ -4430,6 +4431,11 @@ void ImGui::PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
+static void ImGui::EndFrameDrawDimmedBackgrounds()
+{
+    // (This is currently empty, left here to facilitate sync/merge with docking branch)
+}
+
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
 void ImGui::EndFrame()
 {
@@ -4484,6 +4490,9 @@ void ImGui::EndFrame()
 
     // Initiate moving window + handle left-click and right-click focus
     UpdateMouseMovingWindowEndFrame();
+
+    // Draw modal/window whitening backgrounds
+    EndFrameDrawDimmedBackgrounds();
 
     // Sort the window list so that all child windows are after their parent
     // We cannot do that on FocusWindow() because children may not exist yet
