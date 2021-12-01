@@ -158,6 +158,7 @@ Docking+Viewports Branch:
 - Docking: Revert removal of io.ConfigDockingWithShift config option (removed in 1.83). (#4643)
 - Docking: Fixed a bug undocking windows docked into a non-visible or _KeepAliveOnly dockspace
   when unrelated windows submitted before the dockspace have dynamic visibility. (#4757)
+- Docking: Fixed incorrectly rounded tab bars for dock node that are not at the top of their dock tree.
 - Viewports: Made it possible to explicitly assign ImGuiWindowClass::ParentViewportId to 0 in order
   to ensure a window is not parented. Previously this would use the global default (which might be 0,
   but not always as it would depend on io.ConfigViewportsNoDefaultParent). (#3152, #2871)

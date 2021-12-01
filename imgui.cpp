@@ -4646,7 +4646,7 @@ static void ImGui::EndFrameDrawDimmedBackgrounds()
             draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
         }
 
-    // Draw modal whitening background between CTRL-TAB list
+    // Draw modal whitening background behind CTRL-TAB list
     if (dim_bg_for_window_list && g.NavWindowingTargetAnim->Active)
     {
         // Choose a draw list that will be front-most across all our children
@@ -14488,7 +14488,11 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (is_focused)
         node->LastFrameFocused = g.FrameCount;
     ImU32 title_bar_col = GetColorU32(host_window->Collapsed ? ImGuiCol_TitleBgCollapsed : is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
-    host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, ImDrawFlags_RoundCornersTop);
+    bool rounding_t = node->Pos.y <= host_window->Pos.y + DOCKING_SPLITTER_SIZE;
+    bool rounding_tl = rounding_t && (node->Pos.x <= host_window->Pos.x + DOCKING_SPLITTER_SIZE);
+    bool rounding_tr = rounding_t && (node->Pos.x + node->Size.x >= host_window->Pos.x + host_window->Size.x - DOCKING_SPLITTER_SIZE);
+    ImDrawFlags rounding_flags = ImDrawFlags_RoundCornersNone | (rounding_tl ? ImDrawFlags_RoundCornersTopLeft : 0) | (rounding_tr ? ImDrawFlags_RoundCornersTopRight : 0);
+    host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, rounding_flags);
 
     // Docking/Collapse button
     if (has_window_menu_button)
