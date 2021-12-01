@@ -151,6 +151,7 @@ Docking+Viewports Branch:
   to ensure a window is not parented. Previously this would use the global default (which might be 0,
   but not always as it would depend on io.ConfigViewportsNoDefaultParent). (#3152, #2871)
 - Viewports: Fixed tooltip in own viewport over modal from being incorrectly dimmed. (#4729)
+- Viewports: Fixed CTRL+TAB highlight outline on docked windows not always fitting in host viewport.
 - Backends: Made it possible to shutdown default Platform Backends before the Renderer backends. (#4656)
 - Disabled: Fixed nested BeginDisabled()/EndDisabled() bug in Docking branch due to bad merge. (#4655, #4452, #4453, #4462)
 
