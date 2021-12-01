@@ -13426,7 +13426,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                     IM_ASSERT(last_focused_node != NULL);
                     ImGuiDockNode* last_focused_root_node = DockNodeGetRootNode(last_focused_node);
                     IM_ASSERT(last_focused_root_node == DockNodeGetRootNode(payload_node));
-                    last_focused_node->SetLocalFlags(last_focused_node->LocalFlags |= ImGuiDockNodeFlags_CentralNode);
+                    last_focused_node->SetLocalFlags(last_focused_node->LocalFlags | ImGuiDockNodeFlags_CentralNode);
                     node->SetLocalFlags(node->LocalFlags & ~ImGuiDockNodeFlags_CentralNode);
                     last_focused_root_node->CentralNode = last_focused_node;
                 }
