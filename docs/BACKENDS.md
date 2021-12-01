@@ -128,7 +128,10 @@ Once it works, if you really need it you can replace parts of backends with your
 and you have high-level systems everywhere.<BR>
 Suggestion: try using a non-portable backend first (e.g. win32 + underlying graphics API) to get
 your desktop builds working first. This will get you running faster and get your acquainted with
-how Dear ImGui works and is setup. You can then rewrite a custom backend using your own engine API.
+how Dear ImGui works and is setup. You can then rewrite a custom backend using your own engine API...
+
+Generally:
+It is unlikely you will add value to your project by creating your own backend.
 
 Also:
 The [multi-viewports feature](https://github.com/ocornut/imgui/issues/1542) of the 'docking' branch allows

@@ -1,14 +1,17 @@
 // dear imgui: Renderer Backend for SDL_Renderer
 // (Requires: SDL 2.0.17+)
 
-// Important to understand: SDL_Renderer is an _optional_ component of SDL. We do not recommend you use SDL_Renderer
-// because it provide a rather limited API to the end-user. We provide this backend for the sake of completeness.
+// Important to understand: SDL_Renderer is an _optional_ component of SDL.
 // For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
+// If your application will want to render any non trivial amount of graphics other than UI,
+// please be aware that SDL_Renderer offers a limited graphic API to the end-user and it might
+// be difficult to step out of those boundaries.
+// However, we understand it is a convenient choice to get an app started easily.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
 // Missing features:
-//  [ ] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
+//  [ ] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices (SDL_RenderGeometryRaw() is missing a vertex offset).
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
@@ -162,7 +165,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
                 if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
                 if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
-                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
                 SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
