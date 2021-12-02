@@ -14486,10 +14486,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (is_focused)
         node->LastFrameFocused = g.FrameCount;
     ImU32 title_bar_col = GetColorU32(host_window->Collapsed ? ImGuiCol_TitleBgCollapsed : is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
-    bool rounding_t = node->Pos.y <= host_window->Pos.y + DOCKING_SPLITTER_SIZE;
-    bool rounding_tl = rounding_t && (node->Pos.x <= host_window->Pos.x + DOCKING_SPLITTER_SIZE);
-    bool rounding_tr = rounding_t && (node->Pos.x + node->Size.x >= host_window->Pos.x + host_window->Size.x - DOCKING_SPLITTER_SIZE);
-    ImDrawFlags rounding_flags = ImDrawFlags_RoundCornersNone | (rounding_tl ? ImDrawFlags_RoundCornersTopLeft : 0) | (rounding_tr ? ImDrawFlags_RoundCornersTopRight : 0);
+    ImDrawFlags rounding_flags = CalcRoundingFlagsForRectInRect(title_bar_rect, host_window->Rect(), DOCKING_SPLITTER_SIZE);
     host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, rounding_flags);
 
     // Docking/Collapse button
@@ -14958,7 +14955,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
             overlay_rect.Min.y += GetFrameHeight();
         if (data->SplitDir != ImGuiDir_None || data->IsCenterAvailable)
             for (int overlay_n = 0; overlay_n < overlay_draw_lists_count; overlay_n++)
-                overlay_draw_lists[overlay_n]->AddRectFilled(overlay_rect.Min, overlay_rect.Max, overlay_col_main, host_window->WindowRounding);
+                overlay_draw_lists[overlay_n]->AddRectFilled(overlay_rect.Min, overlay_rect.Max, overlay_col_main, host_window->WindowRounding, CalcRoundingFlagsForRectInRect(overlay_rect, host_window->Rect(), DOCKING_SPLITTER_SIZE));
     }
 
     // Display tab shape/label preview unless we are splitting node (it generally makes the situation harder to read)
