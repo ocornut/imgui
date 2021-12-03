@@ -959,7 +959,8 @@ static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVe
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
-static void             EndFrameDrawDimmedBackgrounds();
+static void             RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col);
+static void             RenderDimmedBackgrounds();
 
 // Viewports
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHashStr("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
@@ -4623,58 +4624,86 @@ static ImGuiWindow* FindFrontMostVisibleChildWindow(ImGuiWindow* window)
     return window;
 }
 
-static void ImGui::EndFrameDrawDimmedBackgrounds()
+static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    ImGuiViewportP* viewport = window->Viewport;
+    ImRect viewport_rect = viewport->GetMainRect();
+
+    // Draw behind window by moving the draw command at the FRONT of the draw list
+    {
+        ImDrawList* draw_list = window->RootWindowDockTree->DrawList;
+        draw_list->AddDrawCmd();
+        draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // Ensure ImDrawCmd are not merged
+        draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
+        ImDrawCmd cmd = draw_list->CmdBuffer.back();
+        IM_ASSERT(cmd.ElemCount == 6);
+        draw_list->CmdBuffer.pop_back();
+        draw_list->CmdBuffer.push_front(cmd);
+    }
+
+    // Draw over sibling docking nodes in a same docking tree
+    if (window->RootWindow->DockIsActive)
+    {
+        ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindowDockTree)->DrawList;
+        draw_list->PushClipRect(viewport_rect.Min, viewport_rect.Max, false);
+        //if (window->RootWindowDockTree != window->RootWindow)
+        RenderRectFilledWithHole(draw_list, window->RootWindowDockTree->Rect(), window->RootWindow->Rect(), col, 0.0f);// window->RootWindowDockTree->WindowRounding);
+        draw_list->PopClipRect();
+    }
+}
+
+static void ImGui::RenderDimmedBackgrounds()
 {
     ImGuiContext& g = *GImGui;
-
-    // Draw modal whitening background on _other_ viewports than the one the modal is one
-    ImGuiWindow* modal_window = GetTopMostPopupModal();
+    ImGuiWindow* modal_window = GetTopMostAndVisiblePopupModal();
     const bool dim_bg_for_modal = (modal_window != NULL);
-    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL);
-    if (dim_bg_for_modal || dim_bg_for_window_list)
-        for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
-        {
-            ImGuiViewportP* viewport = g.Viewports[viewport_n];
-            if (modal_window && viewport == modal_window->Viewport)
-                continue;
-            if (g.NavWindowingListWindow && viewport == g.NavWindowingListWindow->Viewport)
-                continue;
-            if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
-                continue;
-            if (viewport->Window && modal_window && IsWindowAbove(viewport->Window, modal_window))
-                continue;
-            ImDrawList* draw_list = GetForegroundDrawList(viewport);
-            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
-            draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
-        }
+    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL && g.NavWindowingTargetAnim->Active);
+    if (!dim_bg_for_modal && !dim_bg_for_window_list)
+        return;
 
-    // Draw modal whitening background behind CTRL-TAB list
-    if (dim_bg_for_window_list && g.NavWindowingTargetAnim->Active)
+    ImGuiViewport* viewports_already_dimmed[2] = { NULL, NULL };
+    if (dim_bg_for_modal)
     {
-        // Choose a draw list that will be front-most across all our children
-        // In the unlikely case that the window wasn't made active we can't rely on its drawlist and skip rendering all-together.
+        // Draw dimming behind modal
+        RenderDimmedBackgroundBehindWindow(modal_window, GetColorU32(ImGuiCol_ModalWindowDimBg, g.DimBgRatio));
+        viewports_already_dimmed[0] = modal_window->Viewport;
+    }
+    else if (dim_bg_for_window_list)
+    {
+        // Draw dimming behind CTRL+Tab target window and behind CTRL+Tab UI window
+        RenderDimmedBackgroundBehindWindow(g.NavWindowingTargetAnim, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
+        if (g.NavWindowingListWindow != NULL && g.NavWindowingListWindow->Viewport != g.NavWindowingTargetAnim->Viewport)
+            RenderDimmedBackgroundBehindWindow(g.NavWindowingListWindow, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
+        viewports_already_dimmed[0] = g.NavWindowingTargetAnim->Viewport;
+        viewports_already_dimmed[1] = g.NavWindowingListWindow ? g.NavWindowingListWindow->Viewport : NULL;
+
+        // Draw border around CTRL+Tab target window
         ImGuiWindow* window = g.NavWindowingTargetAnim;
-        ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindowDockTree)->DrawList;
-        draw_list->PushClipRectFullScreen();
-
-        // Docking: draw modal whitening background on other nodes of a same dock tree
-        // For CTRL+TAB within a docking node we need to render the dimming background in 8 steps
-        // (Because the root node renders the background in one shot, in order to avoid flickering when a child dock node is not submitted)
-        if (window->RootWindow->DockIsActive)
-            if (window->RootWindowDockTree != window->RootWindow)
-                RenderRectFilledWithHole(draw_list, window->RootWindowDockTree->Rect(), window->RootWindow->Rect(), GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio), g.Style.WindowRounding);
-
-        // Draw navigation selection/windowing rectangle border
-        float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
+        ImGuiViewport* viewport = window->Viewport;
+        float distance = g.FontSize;
         ImRect bb = window->Rect();
-        bb.Expand(g.FontSize);
-        if (!window->Viewport->GetMainRect().Contains(bb)) // If a window fits the entire viewport, adjust its highlight inward
-        {
-            bb.Expand(-g.FontSize - 1.0f);
-            rounding = window->WindowRounding;
-        }
-        draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, 0, 3.0f);
-        draw_list->PopClipRect();
+        bb.Expand(distance);
+        if (bb.GetWidth() >= viewport->Size.x && bb.GetHeight() >= viewport->Size.y)
+            bb.Expand(-distance - 1.0f); // If a window fits the entire viewport, adjust its highlight inward
+        window->DrawList->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size);
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), window->WindowRounding, 0, 3.0f);
+        window->DrawList->PopClipRect();
+    }
+
+    // Draw dimming background on _other_ viewports than the ones our windows are in
+    for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
+    {
+        ImGuiViewportP* viewport = g.Viewports[viewport_n];
+        if (viewport == viewports_already_dimmed[0] || viewport == viewports_already_dimmed[1])
+            continue;
+        if (modal_window && viewport->Window && IsWindowAbove(viewport->Window, modal_window))
+            continue;
+        ImDrawList* draw_list = GetForegroundDrawList(viewport);
+        const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
+        draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
     }
 }
 
@@ -4740,9 +4769,6 @@ void ImGui::EndFrame()
     // Initiate moving window + handle left-click and right-click focus
     UpdateMouseMovingWindowEndFrame();
 
-    // Draw modal/window whitening backgrounds
-    EndFrameDrawDimmedBackgrounds();
-
     // Update user-facing viewport list (g.Viewports -> g.PlatformIO.Viewports after filtering out some)
     UpdateViewportsEndFrame();
 
@@ -4785,6 +4811,7 @@ void ImGui::Render()
 
     if (g.FrameCountEnded != g.FrameCount)
         EndFrame();
+    const bool first_render_of_frame = (g.FrameCountRendered != g.FrameCount);
     g.FrameCountRendered = g.FrameCount;
     g.IO.MetricsRenderWindows = 0;
 
@@ -4814,6 +4841,10 @@ void ImGui::Render()
         if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
             AddRootWindowToDrawData(windows_to_render_top_most[n]);
 
+    // Draw modal/window whitening backgrounds
+    if (first_render_of_frame)
+        RenderDimmedBackgrounds();
+
     ImVec2 mouse_cursor_offset, mouse_cursor_size, mouse_cursor_uv[4];
     if (g.IO.MouseDrawCursor && g.MouseCursor != ImGuiMouseCursor_None)
         g.IO.Fonts->GetMouseCursorTexData(g.MouseCursor, &mouse_cursor_offset, &mouse_cursor_size, &mouse_cursor_uv[0], &mouse_cursor_uv[2]);
@@ -4827,7 +4858,7 @@ void ImGui::Render()
 
         // Draw software mouse cursor if requested by io.MouseDrawCursor flag
         // (note we scale cursor by current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor)
-        if (mouse_cursor_size.x > 0.0f && mouse_cursor_size.y > 0.0f)
+        if (mouse_cursor_size.x > 0.0f && mouse_cursor_size.y > 0.0f && first_render_of_frame)
         {
             float scale = g.Style.MouseCursorScale * viewport->DpiScale;
             if (viewport->GetMainRect().Overlaps(ImRect(g.IO.MousePos, g.IO.MousePos + ImVec2(mouse_cursor_size.x + 2, mouse_cursor_size.y + 2) * scale)))
@@ -6722,20 +6753,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
-
-        // Draw modal or window list full viewport dimming background (for other viewports we'll render them in EndFrame)
-        ImGuiWindow* window_window_list = g.NavWindowingListWindow;
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
-        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && ((window == g.NavWindowingTargetAnim->RootWindowDockTree) || (window == window_window_list && window_window_list->Viewport != g.NavWindowingTargetAnim->Viewport));
-        if (dim_bg_for_modal || dim_bg_for_window_list)
-        {
-            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
-            if (window->DockIsActive || (flags & ImGuiWindowFlags_DockNodeHost))
-                window->DrawList->ChannelsSetCurrent(0);
-            window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, dim_bg_col);
-            if (window->DockIsActive || (flags & ImGuiWindowFlags_DockNodeHost))
-                window->DrawList->ChannelsSetCurrent(1);
-        }
 
         // Child windows can render their decoration (bg color, border, scrollbars, etc.) within their parent to save a draw call (since 1.71)
         // When using overlapping child windows, this will break the assumption that child z-order is mapped to submission order.
@@ -8981,6 +8998,16 @@ ImGuiWindow* ImGui::GetTopMostPopupModal()
     for (int n = g.OpenPopupStack.Size - 1; n >= 0; n--)
         if (ImGuiWindow* popup = g.OpenPopupStack.Data[n].Window)
             if (popup->Flags & ImGuiWindowFlags_Modal)
+                return popup;
+    return NULL;
+}
+
+ImGuiWindow* ImGui::GetTopMostAndVisiblePopupModal()
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = g.OpenPopupStack.Size - 1; n >= 0; n--)
+        if (ImGuiWindow* popup = g.OpenPopupStack.Data[n].Window)
+            if ((popup->Flags & ImGuiWindowFlags_Modal) && IsWindowActiveAndVisible(popup))
                 return popup;
     return NULL;
 }
