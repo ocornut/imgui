@@ -110,7 +110,9 @@ Breaking Changes:
 
 Other Changes:
 
-- Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
+  (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
+  but it allows testing for triple clicks and more).
 - Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
 - Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
@@ -132,7 +134,7 @@ Other Changes:
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
-- Cliooer: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
+- Clipper: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
   during a clipping operation. (#3841) [@@GamingMinds-DanielC]
 - Clipper: rework so gamepad/keyboard navigation doesn't create spikes in number of items requested
   by the clipper to display. (#3841)
@@ -143,12 +145,15 @@ Other Changes:
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
+- Misc: Fixed software mouse cursor being rendered multiple times if Render() is called more than once.
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
 - CI: Add MinGW DLL build to test suite. [@rokups]
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
   likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
   vkCmdSetScissor() explicitly every frame. (#4644)
 - Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
+- Backends: SDL_Renderer: Added support for large meshes (64k+ vertices) with 16-bit indices,
+  enabling 'ImGuiBackendFlags_RendererHasVtxOffset' in the backend. (#3926) [@rokups]
 - Backends: WebGPU: Passing explicit buffer sizes to wgpuRenderPassEncoderSetVertexBuffer() and
   wgpuRenderPassEncoderSetIndexBuffer() functions as validation layers appears to not do what the
   in-flux specs says. (#4766) [@meshula]
