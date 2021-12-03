@@ -76,6 +76,7 @@ Other Changes:
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
+- Misc: Fixed software mouse cursor being rendered multiple times if Render() is called more than once.
 - Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
 - CI: Add MinGW DLL build to test suite. [@rokups]
 - Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
