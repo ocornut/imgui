@@ -41,7 +41,9 @@ Breaking Changes:
 
 Other Changes:
 
-- Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
+  (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
+  but it allows testing for triple clicks and more).
 - Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
 - Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
 - Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
@@ -63,7 +65,7 @@ Other Changes:
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
-- Cliooer: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
+- Clipper: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
   during a clipping operation. (#3841) [@@GamingMinds-DanielC]
 - Clipper: rework so gamepad/keyboard navigation doesn't create spikes in number of items requested
   by the clipper to display. (#3841)
