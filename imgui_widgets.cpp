@@ -4510,7 +4510,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == callback_buf);  // Invalid to modify those fields
+                    callback_buf = is_readonly ? buf : state->TextA.Data; // Pointer may have been invalidated by a resize callback
+                    IM_ASSERT(callback_data.Buf == callback_buf);         // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == state->BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     const bool buf_dirty = callback_data.BufDirty;
