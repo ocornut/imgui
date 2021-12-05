@@ -1391,11 +1391,20 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         if (g.GroupStack.Size > 0 && g.GroupStack.back().WindowID == window->ID)
             x1 += window->DC.Indent.x;
 
+        // FIXME-WORKRECT: In theory we should simply be using WorkRect.Min.x/Max.x everywhere but it isn't aesthetically what we want,
+        // need to introduce a variant of WorkRect for that purpose. (#4787)
+        if (ImGuiTable* table = g.CurrentTable)
+        {
+            x1 = table->Columns[table->CurrentColumn].MinX;
+            x2 = table->Columns[table->CurrentColumn].MaxX;
+        }
+
         ImGuiOldColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
         if (columns)
             PushColumnsBackground();
 
         // We don't provide our width to the layout so that it doesn't get feed back into AutoFit
+        // FIXME: This prevents ->CursorMaxPos based bounding box evaluation from working (e.g. TableEndCell)
         const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y + thickness_draw));
         ItemSize(ImVec2(0.0f, thickness_layout));
         const bool item_visible = ItemAdd(bb, 0);
@@ -1424,7 +1433,7 @@ void ImGui::Separator()
 
     // Those flags should eventually be overridable by the user
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
-    flags |= ImGuiSeparatorFlags_SpanAllColumns;
+    flags |= ImGuiSeparatorFlags_SpanAllColumns; // NB: this only applies to legacy Columns() api as they relied on Separator() a lot.
     SeparatorEx(flags);
 }
 
