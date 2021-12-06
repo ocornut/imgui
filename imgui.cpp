@@ -2472,20 +2472,11 @@ bool ImGuiListClipper::Step()
     if (ItemsHeight <= 0.0f)
     {
         IM_ASSERT(data->StepNo == 1);
-        bool affected_by_floating_point_precision = false;
         if (table)
-        {
-            const float pos_y1 = table->RowPosY1;   // Using RowPosY1 instead of StartPosY to handle clipper straddling the frozen row
-            const float pos_y2 = table->RowPosY2;   // Using RowPosY2 instead of CursorPos.y to take account of tallest cell.
-            ItemsHeight = pos_y2 - pos_y1;
-            window->DC.CursorPos.y = pos_y2;
-            affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(pos_y1) || ImIsFloatAboveGuaranteedIntegerPrecision(pos_y2);
-        }
-        else
-        {
-            ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
-            affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
-        }
+            IM_ASSERT(table->RowPosY1 == StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
+
+        ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
+        float affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
         if (affected_by_floating_point_precision)
             ItemsHeight = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y; // FIXME: Technically wouldn't allow multi-line entries.
 
