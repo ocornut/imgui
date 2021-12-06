@@ -2383,8 +2383,9 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_
 static void ImGuiListClipper_SeekCursorForItem(ImGuiListClipper* clipper, int item_n)
 {
     // StartPosY starts from ItemsFrozen hence the subtraction
+    // Perform the add and multiply with double to allow seeking through larger ranges
     ImGuiListClipperData* data = (ImGuiListClipperData*)clipper->TempData;
-    float pos_y = clipper->StartPosY + (item_n - data->ItemsFrozen) * clipper->ItemsHeight;
+    float pos_y = (float)((double)clipper->StartPosY + data->LossynessOffset + (double)(item_n - data->ItemsFrozen) * clipper->ItemsHeight);
     ImGuiListClipper_SeekCursorAndSetupPrevLine(pos_y, clipper->ItemsHeight);
 }
 
@@ -2422,6 +2423,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
         g.ClipperTempData.resize(g.ClipperTempDataStacked, ImGuiListClipperData());
     ImGuiListClipperData* data = &g.ClipperTempData[g.ClipperTempDataStacked - 1];
     data->Reset(this);
+    data->LossynessOffset = window->DC.CursorStartPosLossyness.y;
     TempData = data;
 }
 
@@ -2468,10 +2470,7 @@ bool ImGuiListClipper::Step()
 
     // No items
     if (ItemsCount == 0 || GetSkipItemForListClipping())
-    {
-        End();
-        return false;
-    }
+        return (void)End(), false;
 
     // While we are in frozen row state, keep displaying items one by one, unclipped
     // FIXME: Could be stored as a table-agnostic state.
@@ -2479,6 +2478,8 @@ bool ImGuiListClipper::Step()
     {
         DisplayStart = data->ItemsFrozen;
         DisplayEnd = data->ItemsFrozen + 1;
+        if (DisplayStart >= ItemsCount)
+            return (void)End(), false;
         data->ItemsFrozen++;
         return true;
     }
@@ -2494,6 +2495,8 @@ bool ImGuiListClipper::Step()
             data->Ranges.push_front(ImGuiListClipperRange::FromIndices(data->ItemsFrozen, data->ItemsFrozen + 1));
             DisplayStart = ImMax(data->Ranges[0].Min, data->ItemsFrozen);
             DisplayEnd = ImMin(data->Ranges[0].Max, ItemsCount);
+            if (DisplayStart == DisplayEnd)
+                return (void)End(), false;
             data->StepNo = 1;
             return true;
         }
@@ -2505,16 +2508,13 @@ bool ImGuiListClipper::Step()
     {
         IM_ASSERT(data->StepNo == 1);
         if (table)
-        {
-            const float pos_y1 = table->RowPosY1;   // Using RowPosY1 instead of StartPosY to handle clipper straddling the frozen row
-            const float pos_y2 = table->RowPosY2;   // Using RowPosY2 instead of CursorPos.y to take account of tallest cell.
-            ItemsHeight = pos_y2 - pos_y1;
-            window->DC.CursorPos.y = pos_y2;
-        }
-        else
-        {
-            ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
-        }
+            IM_ASSERT(table->RowPosY1 == StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
+
+        ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
+        bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
+        if (affected_by_floating_point_precision)
+            ItemsHeight = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y; // FIXME: Technically wouldn't allow multi-line entries.
+
         IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
         calc_clipping = true;   // If item height had to be calculated, calculate clipping afterwards.
     }
@@ -2555,8 +2555,10 @@ bool ImGuiListClipper::Step()
         for (int i = 0; i < data->Ranges.Size; i++)
             if (data->Ranges[i].PosToIndexConvert)
             {
-                data->Ranges[i].Min = ImClamp(already_submitted + (int)ImFloor((data->Ranges[i].Min - window->DC.CursorPos.y) / ItemsHeight) + data->Ranges[i].PosToIndexOffsetMin, already_submitted, ItemsCount - 1);
-                data->Ranges[i].Max = ImClamp(already_submitted + (int)ImCeil((data->Ranges[i].Max - window->DC.CursorPos.y) / ItemsHeight) + 0 + data->Ranges[i].PosToIndexOffsetMax, data->Ranges[i].Min + 1, ItemsCount);
+                int m1 = (int)(((double)data->Ranges[i].Min - window->DC.CursorPos.y - data->LossynessOffset) / ItemsHeight);
+                int m2 = (int)((((double)data->Ranges[i].Max - window->DC.CursorPos.y - data->LossynessOffset) / ItemsHeight) + 0.999999f);
+                data->Ranges[i].Min = ImClamp(already_submitted + m1 + data->Ranges[i].PosToIndexOffsetMin, already_submitted, ItemsCount - 1);
+                data->Ranges[i].Max = ImClamp(already_submitted + m2 + data->Ranges[i].PosToIndexOffsetMax, data->Ranges[i].Min + 1, ItemsCount);
                 data->Ranges[i].PosToIndexConvert = false;
             }
         ImGuiListClipper_SortAndFuseRanges(data->Ranges, data->StepNo);
@@ -4635,13 +4637,13 @@ static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32
     // Draw behind window by moving the draw command at the FRONT of the draw list
     {
         ImDrawList* draw_list = window->RootWindowDockTree->DrawList;
-        draw_list->AddDrawCmd();
         draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // Ensure ImDrawCmd are not merged
         draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
         ImDrawCmd cmd = draw_list->CmdBuffer.back();
         IM_ASSERT(cmd.ElemCount == 6);
         draw_list->CmdBuffer.pop_back();
         draw_list->CmdBuffer.push_front(cmd);
+        draw_list->PopClipRect();
     }
 
     // Draw over sibling docking nodes in a same docking tree
@@ -4826,6 +4828,10 @@ void ImGui::Render()
             AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
+    // Draw modal/window whitening backgrounds
+    if (first_render_of_frame)
+        RenderDimmedBackgrounds();
+
     // Add ImDrawList to render
     ImGuiWindow* windows_to_render_top_most[2];
     windows_to_render_top_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindowDockTree : NULL;
@@ -4840,10 +4846,6 @@ void ImGui::Render()
     for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_top_most); n++)
         if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
             AddRootWindowToDrawData(windows_to_render_top_most[n]);
-
-    // Draw modal/window whitening backgrounds
-    if (first_render_of_frame)
-        RenderDimmedBackgrounds();
 
     ImVec2 mouse_cursor_offset, mouse_cursor_size, mouse_cursor_uv[4];
     if (g.IO.MouseDrawCursor && g.MouseCursor != ImGuiMouseCursor_None)
@@ -6814,7 +6816,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.Indent.x = 0.0f + window->WindowPadding.x - window->Scroll.x;
         window->DC.GroupOffset.x = 0.0f;
         window->DC.ColumnsOffset.x = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.Indent.x + window->DC.ColumnsOffset.x, decoration_up_height + window->WindowPadding.y - window->Scroll.y);
+
+        // Record the loss of precision of CursorStartPos which can happen due to really large scrolling amount.
+        // This is used by clipper to compensate and fix the most common use case of large scroll area. Easy and cheap, next best thing compared to switching everything to double or ImU64.
+        double start_pos_highp_x = (double)window->Pos.x + window->WindowPadding.x - (double)window->Scroll.x + window->DC.ColumnsOffset.x;
+        double start_pos_highp_y = (double)window->Pos.y + window->WindowPadding.y - (double)window->Scroll.y + decoration_up_height;
+        window->DC.CursorStartPos  = ImVec2((float)start_pos_highp_x, (float)start_pos_highp_y);
+        window->DC.CursorStartPosLossyness = ImVec2((float)(start_pos_highp_x - window->DC.CursorStartPos.x), (float)(start_pos_highp_y - window->DC.CursorStartPos.y));
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;

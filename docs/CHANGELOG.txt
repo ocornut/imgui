@@ -131,6 +131,7 @@ Other Changes:
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
 - InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
+- Separator: fixed cover all columns while called inside a table. (#4787)
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
@@ -140,6 +141,9 @@ Other Changes:
   by the clipper to display. (#3841)
 - Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
+- Clipper: various and incomplete changes to tame down scrolling and precision issues on very large ranges.
+  Passing an explicit height to the clipper now allows larger ranges. (#3609, #3962).
+- Clipper: fixed invalid state when number of frozen table row is smaller than ItemCount.
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.
