@@ -2435,10 +2435,7 @@ bool ImGuiListClipper::Step()
 
     // No items
     if (ItemsCount == 0 || GetSkipItemForListClipping())
-    {
-        End();
-        return false;
-    }
+        return (void)End(), false;
 
     // While we are in frozen row state, keep displaying items one by one, unclipped
     // FIXME: Could be stored as a table-agnostic state.
@@ -2446,6 +2443,8 @@ bool ImGuiListClipper::Step()
     {
         DisplayStart = data->ItemsFrozen;
         DisplayEnd = data->ItemsFrozen + 1;
+        if (DisplayStart >= ItemsCount)
+            return (void)End(), false;
         data->ItemsFrozen++;
         return true;
     }
@@ -2461,6 +2460,8 @@ bool ImGuiListClipper::Step()
             data->Ranges.push_front(ImGuiListClipperRange::FromIndices(data->ItemsFrozen, data->ItemsFrozen + 1));
             DisplayStart = ImMax(data->Ranges[0].Min, data->ItemsFrozen);
             DisplayEnd = ImMin(data->Ranges[0].Max, ItemsCount);
+            if (DisplayStart == DisplayEnd)
+                return (void)End(), false;
             data->StepNo = 1;
             return true;
         }
