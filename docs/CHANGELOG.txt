@@ -72,7 +72,8 @@ Other Changes:
   by the clipper to display. (#3841)
 - Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
   (an additional ItemSpacing.y was declared, affecting scrollbar range).
-- Clipper: minor and incomplete changes to tame down precision issues on very large ranges (#3609, #3962).
+- Clipper: various and incomplete changes to tame down scrolling and precision issues on very large ranges.
+  Passing an explicit height to the clipper now allows larger ranges. (#3609, #3962).
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.

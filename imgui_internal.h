@@ -1190,6 +1190,7 @@ struct ImGuiListClipperRange
 struct ImGuiListClipperData
 {
     ImGuiListClipper*               ListClipper;
+    float                           LossynessOffset;
     int                             StepNo;
     int                             ItemsFrozen;
     ImVector<ImGuiListClipperRange> Ranges;
@@ -1915,6 +1916,7 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec1                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     ImVec1                  ColumnsOffset;          // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     ImVec1                  GroupOffset;
+    ImVec2                  CursorStartPosLossyness;// Record the loss of precision of CursorStartPos due to really large scrolling amount. This is used by clipper to compensentate and fix the most common use case of large scroll area.
 
     // Keyboard/Gamepad navigation
     ImGuiNavLayer           NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
