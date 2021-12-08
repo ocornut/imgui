@@ -39,6 +39,11 @@ Breaking Changes:
 
 Other changes:
 
+- InputText: Fixed a tricky edge case, ensuring value is always written back on the
+  frame where IsItemDeactivated() returns true, in order to allow usage without user
+  retaining underlying data. While we don't really want to encourage user not retaining
+  underlying data, in the absence of a "late commit" behavior/flag we understand it may
+  be desirable to take advantage of this trick. (#4714)
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,

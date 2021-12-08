@@ -3587,6 +3587,7 @@ void ImGui::Shutdown()
     g.ClipboardHandlerData.clear();
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
+    g.InputTextDeactivatedState.ClearFreeMemory();
 
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
@@ -3759,13 +3760,23 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
 
-    // While most behaved code would make an effort to not steal active id during window move/drag operations,
-    // we at least need to be resilient to it. Cancelling the move is rather aggressive and users of 'master' branch
-    // may prefer the weird ill-defined half working situation ('docking' did assert), so may need to rework that.
-    if (g.MovingWindow != NULL && g.ActiveId == g.MovingWindow->MoveId)
+    // Clear previous active id
+    if (g.ActiveId != 0)
     {
-        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() cancel MovingWindow\n");
-        g.MovingWindow = NULL;
+        // While most behaved code would make an effort to not steal active id during window move/drag operations,
+        // we at least need to be resilient to it. Canceling the move is rather aggressive and users of 'master' branch
+        // may prefer the weird ill-defined half working situation ('docking' did assert), so may need to rework that.
+        if (g.MovingWindow != NULL && g.ActiveId == g.MovingWindow->MoveId)
+        {
+            IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() cancel MovingWindow\n");
+            g.MovingWindow = NULL;
+        }
+
+        // This could be written in a more general way (e.g associate a hook to ActiveId),
+        // but since this is currently quite an exception we'll leave it as is.
+        // One common scenario leading to this is: pressing Key ->NavMoveRequestApplyResult() -> ClearActiveId()
+        if (g.InputTextState.ID == g.ActiveId)
+            InputTextDeactivateHook(g.ActiveId);
     }
 
     // Set active id
@@ -3840,11 +3851,17 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // This marking is solely to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
-    IM_UNUSED(id); // Avoid unused variable warnings when asserts are compiled out.
+    if (g.ActiveId == id || g.ActiveId == 0)
+    {
+        g.ActiveIdHasBeenEditedThisFrame = true;
+        g.ActiveIdHasBeenEditedBefore = true;
+    }
+
+    // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
+    // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id);
+
     //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
-    g.ActiveIdHasBeenEditedThisFrame = true;
-    g.ActiveIdHasBeenEditedBefore = true;
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 }
 
@@ -9293,7 +9310,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     //    return false;
     const bool is_rect_visible = bb.Overlaps(window->ClipRect);
     if (!is_rect_visible)
-        if (id == 0 || (id != g.ActiveId && id != g.NavId))
+        if (id == 0 || (id != g.ActiveId && id != g.ActiveIdPreviousFrame && id != g.NavId))
             if (!g.LogEnabled)
                 return false;
 
