@@ -66,7 +66,8 @@ Other Changes:
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
 - InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
-- InputText: fixed incorrect padding when FrameBorder > 0. (#4794, #3781)
+- InputTextMultiline: fixed incorrect padding when FrameBorder > 0. (#3781, #4794)
+- InputTextMultiline: fixed vertical tracking with large values of FramePadding.y. (#3781, #4794)
 - Separator: fixed cover all columns while called inside a table. (#4787)
 - Clipper: currently focused item is automatically included in clipper range.
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is

@@ -4693,7 +4693,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 // Test if cursor is vertically visible
                 if (cursor_offset.y - g.FontSize < scroll_y)
                     scroll_y = ImMax(0.0f, cursor_offset.y - g.FontSize);
-                else if (cursor_offset.y - inner_size.y >= scroll_y)
+                else if (cursor_offset.y - (inner_size.y - style.FramePadding.y * 2.0f) >= scroll_y)
                     scroll_y = cursor_offset.y - inner_size.y + style.FramePadding.y * 2.0f;
                 const float scroll_max_y = ImMax((text_size.y + style.FramePadding.y * 2.0f) - inner_size.y, 0.0f);
                 scroll_y = ImClamp(scroll_y, 0.0f, scroll_max_y);
