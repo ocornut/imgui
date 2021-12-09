@@ -41,6 +41,10 @@ Breaking Changes:
 
 Other Changes:
 
+- Added an assertion for the common user mistake of using "" as an identifier at the root level of a window
+  instead of using "##something". Empty identifiers are valid and useful in a very small amount of cases,
+  but 99.9% of the time if you need an empty label you should use "##something". (#1414, #2562, #2807, #4008,
+  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.org/faq
 - Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
   (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
   but it allows testing for triple clicks and more).
