@@ -184,6 +184,7 @@ Docking+Viewports Branch:
 - Docking, Style: Docked windows honor display their border properly. (#2522)
 - Docking: Fixed incorrectly rounded tab bars for dock node that are not at the top of their dock tree.
 - Docking: Fixed single-frame node pos/size inconsistencies when window stop or start being submitted.
+- Docking: Prevent docking any window created above a popup/modal. (#4317)
 - Viewports: Made it possible to explicitly assign ImGuiWindowClass::ParentViewportId to 0 in order
   to ensure a window is not parented. Previously this would use the global default (which might be 0,
   but not always as it would depend on io.ConfigViewportsNoDefaultParent). (#3152, #2871)
