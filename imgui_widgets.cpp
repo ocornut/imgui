@@ -4009,8 +4009,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
         PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
+        PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // Ensure no clip rect so mouse hover can reach FramePadding edges
         bool child_visible = BeginChildEx(label, id, frame_bb.GetSize(), true, ImGuiWindowFlags_NoMove);
-        PopStyleVar(2);
+        PopStyleVar(3);
         PopStyleColor();
         if (!child_visible)
         {
