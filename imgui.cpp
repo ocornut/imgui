@@ -4482,7 +4482,7 @@ ImGuiWindow* ImGui::FindBottomMostVisibleWindowWithinBeginStack(ImGuiWindow* par
             continue;
         if (!IsWindowWithinBeginStackOf(window, parent_window))
             break;
-        if (IsWindowActiveAndVisible(window))
+        if (IsWindowActiveAndVisible(window) && GetWindowDisplayLayer(window) <= GetWindowDisplayLayer(parent_window))
             bottom_most_visible_window = window;
     }
     return bottom_most_visible_window;
