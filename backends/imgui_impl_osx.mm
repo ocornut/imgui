@@ -227,8 +227,12 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
     }
     else
     {
-        // Show OS mouse cursor
-        [g_MouseCursors[g_MouseCursors[imgui_cursor] ? imgui_cursor : ImGuiMouseCursor_Arrow] set];
+        NSCursor *desired = g_MouseCursors[imgui_cursor] ?: g_MouseCursors[ImGuiMouseCursor_Arrow];
+        // -[NSCursor set] generates measureable overhead if called unconditionally.
+        if (desired != NSCursor.currentCursor)
+        {
+            [desired set];
+        }
         if (g_MouseCursorHidden)
         {
             g_MouseCursorHidden = false;
