@@ -350,6 +350,26 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     if (event.type == NSEventTypeScrollWheel)
     {
+        // Ignore canceled events.
+        //
+        // From macOS 12.1, scrolling with two fingers and then decelerating
+        // by tapping two fingers results in two events appearing:
+        //
+        // 1. A scroll wheel NSEvent, with a phase == NSEventPhaseMayBegin,
+        // when the user taps two fingers to decelerate or stop the scroll
+        // events.
+        //
+        // 2. A scroll wheel NSEvent, with a phase == NSEventPhaseCancelled,
+        // when the user releases the two-finger tap. It is this event that
+        // sometimes contains large values for scrollingDeltaX and
+        // scrollingDeltaY. When these are added to the current x and y positions
+        // of the scrolling view, it appears to jump up or down.
+        // It can be observed in Preview, various JetBrains IDEs and here.
+        if (event.phase == NSEventPhaseCancelled)
+        {
+            return false;
+        }
+
         double wheel_dx = 0.0;
         double wheel_dy = 0.0;
 
