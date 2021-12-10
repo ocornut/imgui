@@ -58,7 +58,7 @@
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_Init(self);
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
@@ -149,9 +149,6 @@
 -(void)reshape                              { [[self openGLContext] update]; [self updateAndDrawDemoView]; }
 -(void)drawRect:(NSRect)bounds              { [self updateAndDrawDemoView]; }
 -(void)animationTimerFired:(NSTimer*)timer  { [self setNeedsDisplay:YES]; }
--(BOOL)acceptsFirstResponder                { return (YES); }
--(BOOL)becomeFirstResponder                 { return (YES); }
--(BOOL)resignFirstResponder                 { return (YES); }
 -(void)dealloc                              { animationTimer = nil; }
 
 //-----------------------------------------------------------------------------------

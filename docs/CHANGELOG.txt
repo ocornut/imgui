@@ -38,6 +38,9 @@ Breaking Changes:
 
 - Removed CalcListClipping() function. Prefer using ImGuiListClipper which can return non-contiguous ranges.
   Please open an issue if you think you really need this function. (#3841)
+- Backends: OSX: Added NSView* parameter to ImGui_ImplOSX_Init(). (#4759) [@stuartcarnie]
+  Updated Apple+Metal and Apple+GL example applications accordingly.
+
 
 Other Changes:
 
@@ -105,6 +108,9 @@ Other Changes:
 - Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
 - Backends: SDL_Renderer: Added support for large meshes (64k+ vertices) with 16-bit indices,
   enabling 'ImGuiBackendFlags_RendererHasVtxOffset' in the backend. (#3926) [@rokups]
+- Backends: OSX: Generally fix keyboard support. Keyboard arrays indexed using kVK_* codes, e.g.
+  ImGui::IsKeyPressed(kVK_Space). Don't set mouse cursor shape unconditionally. Handle two fingers scroll
+  cancel event. (#4759, #4253, #1873) [@stuartcarnie]
 - Backends: OSX: Add Game Controller support (need linking GameController framework) (#4759) [@stuartcarnie]
 - Backends: WebGPU: Passing explicit buffer sizes to wgpuRenderPassEncoderSetVertexBuffer() and
   wgpuRenderPassEncoderSetIndexBuffer() functions as validation layers appears to not do what the
