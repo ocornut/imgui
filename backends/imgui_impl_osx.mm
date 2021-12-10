@@ -5,6 +5,7 @@
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
+//  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
@@ -17,9 +18,11 @@
 #include "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 #include <mach/mach_time.h>
+#import <GameController/GameController.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-12-10: Add game controller support.
 //  2021-09-21: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards.
 //  2021-08-17: Calling io.AddFocusEvent() on NSApplicationDidBecomeActiveNotification/NSApplicationDidResignActiveNotification events.
 //  2021-06-23: Inputs: Added a fix for shortcuts using CTRL key instead of CMD key.
@@ -234,6 +237,51 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
     }
 }
 
+void ImGui_ImplOSX_UpdateGamepads()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    memset(io.NavInputs, 0, sizeof(io.NavInputs));
+    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
+        return;
+
+    GCController *controller;
+    if (@available(macOS 11.0, *)) {
+        controller = GCController.current;
+    } else {
+        controller = GCController.controllers.firstObject;
+    }
+
+    if (controller == nil || controller.extendedGamepad == nil)
+    {
+        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        return;
+    }
+
+    GCExtendedGamepad *gp = controller.extendedGamepad;
+
+#define MAP_BUTTON(NAV_NO, NAME) { io.NavInputs[NAV_NO] = gp.NAME.isPressed ? 1.0 : 0.0; }
+    MAP_BUTTON(ImGuiNavInput_Activate, buttonA);
+    MAP_BUTTON(ImGuiNavInput_Cancel, buttonB);
+    MAP_BUTTON(ImGuiNavInput_Menu, buttonX);
+    MAP_BUTTON(ImGuiNavInput_Input, buttonY);
+    MAP_BUTTON(ImGuiNavInput_DpadLeft, dpad.left);
+    MAP_BUTTON(ImGuiNavInput_DpadRight, dpad.right);
+    MAP_BUTTON(ImGuiNavInput_DpadUp, dpad.up);
+    MAP_BUTTON(ImGuiNavInput_DpadDown, dpad.down);
+    MAP_BUTTON(ImGuiNavInput_FocusPrev, leftShoulder);
+    MAP_BUTTON(ImGuiNavInput_FocusNext, rightShoulder);
+    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftTrigger);
+    MAP_BUTTON(ImGuiNavInput_TweakFast, rightTrigger);
+#undef MAP_BUTTON
+
+    io.NavInputs[ImGuiNavInput_LStickLeft] = gp.leftThumbstick.left.value;
+    io.NavInputs[ImGuiNavInput_LStickRight] = gp.leftThumbstick.right.value;
+    io.NavInputs[ImGuiNavInput_LStickUp] = gp.leftThumbstick.up.value;
+    io.NavInputs[ImGuiNavInput_LStickDown] = gp.leftThumbstick.down.value;
+
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+}
+
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
@@ -256,6 +304,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     g_Time = current_time;
 
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
+    ImGui_ImplOSX_UpdateGamepads();
 }
 
 static int mapCharacterToKey(int c)
