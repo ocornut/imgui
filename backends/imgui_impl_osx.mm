@@ -6,22 +6,23 @@
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-// Issues:
-//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
+//  [X] Platform: Keyboard arrays indexed using kVK_* codes, e.g. ImGui::IsKeyPressed(kVK_Space).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-#include "imgui.h"
-#include "imgui_impl_osx.h"
+#import "imgui.h"
+#import "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
-#include <mach/mach_time.h>
+#import <mach/mach_time.h>
+#import <Carbon/Carbon.h>
 #import <GameController/GameController.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-12-10: Fix keyboard support.
 //  2021-12-10: Add game controller support.
 //  2021-09-21: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards.
 //  2021-08-17: Calling io.AddFocusEvent() on NSApplicationDidBecomeActiveNotification/NSApplicationDidResignActiveNotification events.
@@ -40,6 +41,7 @@
 //  2018-07-07: Initial version.
 
 @class ImFocusObserver;
+@class KeyEventResponder;
 
 // Data
 static double         g_HostClockPeriod = 0.0;
@@ -49,6 +51,7 @@ static bool           g_MouseCursorHidden = false;
 static bool           g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
 static bool           g_MouseDown[ImGuiMouseButton_COUNT] = {};
 static ImFocusObserver* g_FocusObserver = NULL;
+static KeyEventResponder* g_KeyEventResponder = nil;
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -76,6 +79,113 @@ static void resetKeys()
     memset(io.KeysDown, 0, sizeof(io.KeysDown));
     io.KeyCtrl = io.KeyShift = io.KeyAlt = io.KeySuper = false;
 }
+
+/**
+ @c KeyEventResponder implements the @c NSTextInputClient protocol
+ as is required by the macOS text input manager.
+ 
+ The macOS text input manager is invoked by calling the @c interpretKeyEvents
+ method from the @c keyDown method. Keyboard events are then evaluated by the macOS
+ input manager and valid text input is passed back via the @c insertText:replacementRange
+ method.
+ 
+ This is the same approach employed by other cross-platform libraries such as SDL2:
+ 
+ https://github.com/spurious/SDL-mirror/blob/e17aacbd09e65a4fd1e166621e011e581fb017a8/src/video/cocoa/SDL_cocoakeyboard.m#L53
+ 
+ and GLFW:
+ 
+ https://github.com/glfw/glfw/blob/b55a517ae0c7b5127dffa79a64f5406021bf9076/src/cocoa_window.m#L722-L723
+ */
+@interface KeyEventResponder: NSView<NSTextInputClient>
+@end
+
+@implementation KeyEventResponder
+
+- (void)viewDidMoveToWindow
+{
+    // Ensure self is a first responder to
+    // receive the input events.
+    [self.window makeFirstResponder:self];
+}
+
+- (void)keyDown:(NSEvent *)event
+{
+    // Call to the macOS input manager system.
+    [self interpretKeyEvents:@[event]];
+}
+
+- (void)insertText:(id)aString replacementRange:(NSRange)replacementRange
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    NSString *characters;
+    if ([aString isKindOfClass:[NSAttributedString class]])
+        characters = [aString string];
+    else
+        characters = (NSString *)aString;
+
+    io.AddInputCharactersUTF8(characters.UTF8String);
+}
+
+- (BOOL)acceptsFirstResponder
+{
+    return YES;
+}
+
+- (void)doCommandBySelector:(SEL)myselector
+{
+}
+
+- (nullable NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange
+{
+    return nil;
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)point
+{
+    return 0;
+}
+
+
+- (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange
+{
+    return NSZeroRect;
+}
+
+
+- (BOOL)hasMarkedText
+{
+    return NO;
+}
+
+
+- (NSRange)markedRange
+{
+    return NSMakeRange(NSNotFound, 0);
+}
+
+
+- (NSRange)selectedRange
+{
+    return NSMakeRange(NSNotFound, 0);
+}
+
+
+- (void)setMarkedText:(nonnull id)string selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange
+{
+}
+
+- (void)unmarkText
+{
+}
+
+- (nonnull NSArray<NSAttributedStringKey> *)validAttributesForMarkedText
+{
+    return @[];
+}
+
+@end
 
 @interface ImFocusObserver : NSObject
 
@@ -106,7 +216,7 @@ static void resetKeys()
 @end
 
 // Functions
-bool ImGui_ImplOSX_Init()
+bool ImGui_ImplOSX_Init(NSView *view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -118,29 +228,28 @@ bool ImGui_ImplOSX_Init()
     io.BackendPlatformName = "imgui_impl_osx";
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeyDown[] array.
-    const int offset_for_function_keys = 256 - 0xF700;
-    io.KeyMap[ImGuiKey_Tab]             = '\t';
-    io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_RightArrow]      = NSRightArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_UpArrow]         = NSUpArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_DownArrow]       = NSDownArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageUp]          = NSPageUpFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageDown]        = NSPageDownFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Home]            = NSHomeFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_End]             = NSEndFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Insert]          = NSInsertFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Delete]          = NSDeleteFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Backspace]       = 127;
-    io.KeyMap[ImGuiKey_Space]           = 32;
-    io.KeyMap[ImGuiKey_Enter]           = 13;
-    io.KeyMap[ImGuiKey_Escape]          = 27;
-    io.KeyMap[ImGuiKey_KeyPadEnter]     = 3;
-    io.KeyMap[ImGuiKey_A]               = 'A';
-    io.KeyMap[ImGuiKey_C]               = 'C';
-    io.KeyMap[ImGuiKey_V]               = 'V';
-    io.KeyMap[ImGuiKey_X]               = 'X';
-    io.KeyMap[ImGuiKey_Y]               = 'Y';
-    io.KeyMap[ImGuiKey_Z]               = 'Z';
+    io.KeyMap[ImGuiKey_Tab]             = kVK_Tab;
+    io.KeyMap[ImGuiKey_LeftArrow]       = kVK_LeftArrow;
+    io.KeyMap[ImGuiKey_RightArrow]      = kVK_RightArrow;
+    io.KeyMap[ImGuiKey_UpArrow]         = kVK_UpArrow;
+    io.KeyMap[ImGuiKey_DownArrow]       = kVK_DownArrow;
+    io.KeyMap[ImGuiKey_PageUp]          = kVK_PageUp;
+    io.KeyMap[ImGuiKey_PageDown]        = kVK_PageDown;
+    io.KeyMap[ImGuiKey_Home]            = kVK_Home;
+    io.KeyMap[ImGuiKey_End]             = kVK_End;
+    io.KeyMap[ImGuiKey_Insert]          = kVK_F13;
+    io.KeyMap[ImGuiKey_Delete]          = kVK_ForwardDelete;
+    io.KeyMap[ImGuiKey_Backspace]       = kVK_Delete;
+    io.KeyMap[ImGuiKey_Space]           = kVK_Space;
+    io.KeyMap[ImGuiKey_Enter]           = kVK_Return;
+    io.KeyMap[ImGuiKey_Escape]          = kVK_Escape;
+    io.KeyMap[ImGuiKey_KeyPadEnter]     = kVK_ANSI_KeypadEnter;
+    io.KeyMap[ImGuiKey_A]               = kVK_ANSI_A;
+    io.KeyMap[ImGuiKey_C]               = kVK_ANSI_C;
+    io.KeyMap[ImGuiKey_V]               = kVK_ANSI_V;
+    io.KeyMap[ImGuiKey_X]               = kVK_ANSI_X;
+    io.KeyMap[ImGuiKey_Y]               = kVK_ANSI_Y;
+    io.KeyMap[ImGuiKey_Z]               = kVK_ANSI_Z;
 
     // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;
@@ -192,6 +301,11 @@ bool ImGui_ImplOSX_Init()
                                              selector:@selector(onApplicationBecomeInactive:)
                                                  name:NSApplicationDidResignActiveNotification
                                                object:nil];
+
+    // Add the NSTextInputClient to the view hierarchy,
+    // to receive keyboard events and translate them to input text.
+    g_KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
+    [view addSubview:g_KeyEventResponder];
 
     return true;
 }
@@ -311,17 +425,21 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGui_ImplOSX_UpdateGamepads();
 }
 
-static int mapCharacterToKey(int c)
+NSString *NSStringFromPhase(NSEventPhase phase)
 {
-    if (c >= 'a' && c <= 'z')
-        return c - 'a' + 'A';
-    if (c == 25) // SHIFT+TAB -> TAB
-        return 9;
-    if (c >= 0 && c < 256)
-        return c;
-    if (c >= 0xF700 && c < 0xF700 + 256)
-        return c - 0xF700 + 256;
-    return -1;
+    static NSString * strings[] = {
+        @"none",
+        @"began",
+        @"stationary",
+        @"changed",
+        @"ended",
+        @"cancelled",
+        @"mayBegin",
+    };
+
+    int pos = phase == NSEventPhaseNone ? 0 : __builtin_ctzl((NSUInteger)phase) + 1;
+
+    return strings[pos];
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
@@ -395,6 +513,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dy = [event deltaY];
         }
 
+        NSLog(@"dx=%0.3ff, dy=%0.3f, phase=%@", wheel_dx, wheel_dy, NSStringFromPhase(event.phase));
+
         if (fabs(wheel_dx) > 0.0)
             io.MouseWheelH += (float)wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
@@ -402,57 +522,37 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         return io.WantCaptureMouse;
     }
 
-    // FIXME: All the key handling is wrong and broken. Refer to GLFW's cocoa_init.mm and cocoa_window.mm.
-    if (event.type == NSEventTypeKeyDown)
+    if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
     {
-        NSString* str = [event characters];
-        NSUInteger len = [str length];
-        for (NSUInteger i = 0; i < len; i++)
-        {
-            int c = [str characterAtIndex:i];
-            if (!io.KeySuper && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
-                io.AddInputCharacter((unsigned int)c);
-
-            // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
-            int key = mapCharacterToKey(c);
-            if (key != -1 && key < 256 && !io.KeySuper)
-                resetKeys();
-            if (key != -1)
-                io.KeysDown[key] = true;
-        }
-        return io.WantCaptureKeyboard;
-    }
-
-    if (event.type == NSEventTypeKeyUp)
-    {
-        NSString* str = [event characters];
-        NSUInteger len = [str length];
-        for (NSUInteger i = 0; i < len; i++)
-        {
-            int c = [str characterAtIndex:i];
-            int key = mapCharacterToKey(c);
-            if (key != -1)
-                io.KeysDown[key] = false;
-        }
+        unsigned short code = event.keyCode;
+        IM_ASSERT(code >= 0 && code < IM_ARRAYSIZE(io.KeysDown));
+        io.KeysDown[code] = event.type == NSEventTypeKeyDown;
+        NSEventModifierFlags flags = event.modifierFlags;
+        io.KeyCtrl  = (flags & NSEventModifierFlagControl) != 0;
+        io.KeyShift = (flags & NSEventModifierFlagShift) != 0;
+        io.KeyAlt   = (flags & NSEventModifierFlagOption) != 0;
+        io.KeySuper = (flags & NSEventModifierFlagCommand) != 0;
         return io.WantCaptureKeyboard;
     }
 
     if (event.type == NSEventTypeFlagsChanged)
     {
-        unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
-
-        bool oldKeyCtrl = io.KeyCtrl;
-        bool oldKeyShift = io.KeyShift;
-        bool oldKeyAlt = io.KeyAlt;
-        bool oldKeySuper = io.KeySuper;
-        io.KeyCtrl      = flags & NSEventModifierFlagControl;
-        io.KeyShift     = flags & NSEventModifierFlagShift;
-        io.KeyAlt       = flags & NSEventModifierFlagOption;
-        io.KeySuper     = flags & NSEventModifierFlagCommand;
-
-        // We must reset them as we will not receive any keyUp event if they where pressed with a modifier
-        if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl) || (oldKeyAlt && !io.KeyAlt) || (oldKeySuper && !io.KeySuper))
-            resetKeys();
+        NSEventModifierFlags flags = event.modifierFlags;
+        switch (event.keyCode)
+        {
+        case kVK_Control:
+            io.KeyCtrl = (flags & NSEventModifierFlagControl) != 0;
+            break;
+        case kVK_Shift:
+            io.KeyShift = (flags & NSEventModifierFlagShift) != 0;
+            break;
+        case kVK_Option:
+            io.KeyAlt = (flags & NSEventModifierFlagOption) != 0;
+            break;
+        case kVK_Command:
+            io.KeySuper = (flags & NSEventModifierFlagCommand) != 0;
+            break;
+        }
         return io.WantCaptureKeyboard;
     }
 
