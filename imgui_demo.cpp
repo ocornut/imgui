@@ -454,7 +454,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     ImGui::SameLine();
                     ImGui::Text("<<PRESS SPACE TO DISABLE>>");
                 }
-                if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space)))
+                if (ImGui::IsKeyPressed(ImGuiKey_Space))
                     io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
             }
             ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", &io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
@@ -5695,9 +5695,9 @@ static void ShowDemoWindowMisc()
         IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Keyboard & Navigation State");
         if (ImGui::TreeNode("Keyboard & Navigation State"))
         {
-            ImGui::Text("Keys down:");          for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyDown(i))        { ImGui::SameLine(); ImGui::Text("%d (0x%X) (%.02f secs)", i, i, io.KeysDownDuration[i]); }
-            ImGui::Text("Keys pressed:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyPressed(i))     { ImGui::SameLine(); ImGui::Text("%d (0x%X)", i, i); }
-            ImGui::Text("Keys release:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyReleased(i))    { ImGui::SameLine(); ImGui::Text("%d (0x%X)", i, i); }
+            ImGui::Text("Keys down:");          for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyDown(key))    { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X) (%.02f secs)", ImGui::GetKeyName(key), i, i, io.KeysData[i].DownDuration); } }
+            ImGui::Text("Keys pressed:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), i, i); } }
+            ImGui::Text("Keys release:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyReleased(key)){ ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), i, i); } }
             ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
             ImGui::Text("Chars queue:");        for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
 
@@ -5867,6 +5867,9 @@ void ImGui::ShowAboutWindow(bool* p_open)
         ImGui::Text("define: __cplusplus=%d", (int)__cplusplus);
 #ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         ImGui::Text("define: IMGUI_DISABLE_OBSOLETE_FUNCTIONS");
+#endif
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+        ImGui::Text("define: IMGUI_DISABLE_OBSOLETE_KEYIO");
 #endif
 #ifdef IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS
         ImGui::Text("define: IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS");

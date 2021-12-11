@@ -543,6 +543,7 @@ inline void     ImBitArraySetBitRange(ImU32* arr, int n, int n2) // Works on ran
 template<int BITCOUNT>
 struct IMGUI_API ImBitArray
 {
+    static const int Size = BITCOUNT;
     ImU32           Storage[(BITCOUNT + 31) >> 5];
     ImBitArray()                                { ClearAllBits(); }
     void            ClearAllBits()              { memset(Storage, 0, sizeof(Storage)); }
@@ -552,6 +553,8 @@ struct IMGUI_API ImBitArray
     void            ClearBit(int n)             { IM_ASSERT(n < BITCOUNT); ImBitArrayClearBit(Storage, n); }
     void            SetBitRange(int n, int n2)  { ImBitArraySetBitRange(Storage, n, n2); } // Works on range [n..n2)
 };
+template<int BITCOUNT>
+const int ImBitArray<BITCOUNT>::Size;
 
 // Helper: ImBitVector
 // Store 1-bit per value.
@@ -1553,7 +1556,7 @@ struct ImGuiContext
     bool                    ActiveIdUsingMouseWheel;            // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
     ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
     ImU32                   ActiveIdUsingNavInputMask;          // Active widget will want to read those nav inputs.
-    ImU64                   ActiveIdUsingKeyInputMask;          // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
+    ImBitArray<ImGuiKey_NamedKey_COUNT> ActiveIdUsingKeyInputMask; // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
@@ -1789,7 +1792,7 @@ struct ImGuiContext
         ActiveIdUsingMouseWheel = false;
         ActiveIdUsingNavDirMask = 0x00;
         ActiveIdUsingNavInputMask = 0x00;
-        ActiveIdUsingKeyInputMask = 0x00;
+        ActiveIdUsingKeyInputMask.ClearAllBits();
         ActiveIdClickOffset = ImVec2(-1, -1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
@@ -2594,9 +2597,9 @@ namespace ImGui
     IMGUI_API void          SetActiveIdUsingNavAndKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingNavInput(ImGuiNavInput input)                { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavInputMask & (1 << input)) != 0; }
-    inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; IM_ASSERT(key < 64); return (g.ActiveIdUsingKeyInputMask & ((ImU64)1 << key)) != 0; }
+    inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END); ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask.TestBit(key - ImGuiKey_NamedKey_BEGIN); }
+    inline void             SetActiveIdUsingKey(ImGuiKey key)                           { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END); ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key - ImGuiKey_NamedKey_BEGIN); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
-    inline bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true)           { ImGuiContext& g = *GImGui; const int key_index = g.IO.KeyMap[key]; return (key_index >= 0) ? IsKeyPressed(key_index, repeat) : false; }
     inline bool             IsNavInputDown(ImGuiNavInput n)                             { ImGuiContext& g = *GImGui; return g.IO.NavInputs[n] > 0.0f; }
     inline bool             IsNavInputTest(ImGuiNavInput n, ImGuiInputReadMode rm)      { return (GetNavInputAmount(n, rm) > 0.0f); }
     IMGUI_API ImGuiKeyModFlags GetMergedKeyModFlags();

@@ -884,13 +884,20 @@ namespace ImGui
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
 
     // Inputs Utilities: Keyboard
-    // - For 'int user_key_index' you can use your own indices/enums according to how your backend/engine stored them in io.KeysDown[].
-    // - We don't know the meaning of those value. You can use GetKeyIndex() to map a ImGuiKey_ value into the user index.
-    IMGUI_API int           GetKeyIndex(ImGuiKey imgui_key);                                    // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
-    IMGUI_API bool          IsKeyDown(int user_key_index);                                      // is key being held. == io.KeysDown[user_key_index].
-    IMGUI_API bool          IsKeyPressed(int user_key_index, bool repeat = true);               // was key pressed (went from !Down to Down)? if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
-    IMGUI_API bool          IsKeyReleased(int user_key_index);                                  // was key released (went from Down to !Down)?
-    IMGUI_API int           GetKeyPressedAmount(int key_index, float repeat_delay, float rate); // uses provided repeat rate/delay. return a count, most often 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
+    // Without IMGUI_DISABLE_OBSOLETE_KEYIO:
+    //   - For 'ImGuiKey key' you can use your own indices/enums according to how your backend/engine stored them in io.KeysDown[].
+    //   - We don't know the meaning of those value. You can use GetKeyIndex() to map a ImGuiKey_ value into the user index.
+    // With: IMGUI_DISABLE_OBSOLETE_KEYIO:
+    //   - `ImGuiKey key` will assert when key < 512 will be passed, previously reserved as user keys indices
+    //   - GetKeyIndex() is pass-through and therefore deprecated (gone if IMGUI_DISABLE_OBSOLETE_KEYIO is defined)
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IMGUI_API int           GetKeyIndex(ImGuiKey key);                                          // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
+#endif
+    IMGUI_API const char*   GetKeyName(ImGuiKey key);                                           // returns English name of the key
+    IMGUI_API bool          IsKeyDown(ImGuiKey key);                                            // is key being held. == io.KeysData[key - ImGuiKey_FirstKey].Down.
+    IMGUI_API bool          IsKeyPressed(ImGuiKey key, bool repeat = true);                     // was key pressed (went from !Down to Down)? if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
+    IMGUI_API bool          IsKeyReleased(ImGuiKey key);                                        // was key released (went from Down to !Down)?
+    IMGUI_API int           GetKeyPressedAmount(int key, float repeat_delay, float rate);       // uses provided repeat rate/delay. return a count, most often 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
     IMGUI_API void          CaptureKeyboardFromApp(bool want_capture_keyboard_value = true);    // attention: misleading name! manually override io.WantCaptureKeyboard flag next frame (said flag is entirely left for your application to handle). e.g. force capture keyboard when your widget is being hovered. This is equivalent to setting "io.WantCaptureKeyboard = want_capture_keyboard_value"; after the next NewFrame() call.
 
     // Inputs Utilities: Mouse
@@ -1349,10 +1356,17 @@ enum ImGuiSortDirection_
     ImGuiSortDirection_Descending   = 2     // Descending = 9->0, Z->A etc.
 };
 
-// User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
 enum ImGuiKey_
 {
-    ImGuiKey_Tab,
+    ImGuiKey_None = 0,
+
+    // Reserve range used by legacy io.KeyMap[]. Prior to 1.86 we required user to fill io.KeysDown[512] using their own native index.
+    // We are ditching this method but keeping a legacy path for user code doing e.g. IsKeyPressed(MY_NATIVE_KEY_CODE)
+    ImGuiKey_LegacyNativeKey_BEGIN  = 0,
+    ImGuiKey_LegacyNativeKey_END    = 512,  // First index after valid range
+    ImGuiKey_NamedKey_BEGIN         = 512,
+
+    ImGuiKey_Tab                    = 512,
     ImGuiKey_LeftArrow,
     ImGuiKey_RightArrow,
     ImGuiKey_UpArrow,
@@ -1367,14 +1381,110 @@ enum ImGuiKey_
     ImGuiKey_Space,
     ImGuiKey_Enter,
     ImGuiKey_Escape,
+    ImGuiKey_Apostrophe,    // '
+    ImGuiKey_Comma,         // ,
+    ImGuiKey_Minus,         // -
+    ImGuiKey_Period,        // .
+    ImGuiKey_Slash,         // /
+    ImGuiKey_Semicolon,     // ;
+    ImGuiKey_Equal,         // =
+    ImGuiKey_LeftBracket,   // [
+    ImGuiKey_Backslash,     // \ (this text inhibit multiline comment caused by backlash)
+    ImGuiKey_RightBracket,  // ]
+    ImGuiKey_GraveAccent,   // `
+    ImGuiKey_CapsLock,
+    ImGuiKey_ScrollLock,
+    ImGuiKey_NumLock,
+    ImGuiKey_PrintScreen,
+    ImGuiKey_Pause,
+    ImGuiKey_Keypad0,
+    ImGuiKey_Keypad1,
+    ImGuiKey_Keypad2,
+    ImGuiKey_Keypad3,
+    ImGuiKey_Keypad4,
+    ImGuiKey_Keypad5,
+    ImGuiKey_Keypad6,
+    ImGuiKey_Keypad7,
+    ImGuiKey_Keypad8,
+    ImGuiKey_Keypad9,
+    ImGuiKey_KeypadDecimal,
+    ImGuiKey_KeypadDivide,
+    ImGuiKey_KeypadMultiply,
+    ImGuiKey_KeypadSubtract,
+    ImGuiKey_KeypadAdd,
     ImGuiKey_KeypadEnter,
-    ImGuiKey_A,                 // for text edit CTRL+A: select all
-    ImGuiKey_C,                 // for text edit CTRL+C: copy
-    ImGuiKey_V,                 // for text edit CTRL+V: paste
-    ImGuiKey_X,                 // for text edit CTRL+X: cut
-    ImGuiKey_Y,                 // for text edit CTRL+Y: redo
-    ImGuiKey_Z,                 // for text edit CTRL+Z: undo
-    ImGuiKey_COUNT
+    ImGuiKey_KeypadEqual,
+    ImGuiKey_LeftShift,
+    ImGuiKey_LeftControl,
+    ImGuiKey_LeftAlt,
+    ImGuiKey_LeftSuper,
+    ImGuiKey_RightShift,
+    ImGuiKey_RightControl,
+    ImGuiKey_RightAlt,
+    ImGuiKey_RightSuper,
+    ImGuiKey_Menu,
+    ImGuiKey_0,
+    ImGuiKey_1,
+    ImGuiKey_2,
+    ImGuiKey_3,
+    ImGuiKey_4,
+    ImGuiKey_5,
+    ImGuiKey_6,
+    ImGuiKey_7,
+    ImGuiKey_8,
+    ImGuiKey_9,
+    ImGuiKey_A,
+    ImGuiKey_B,
+    ImGuiKey_C,
+    ImGuiKey_D,
+    ImGuiKey_E,
+    ImGuiKey_F,
+    ImGuiKey_G,
+    ImGuiKey_H,
+    ImGuiKey_I,
+    ImGuiKey_J,
+    ImGuiKey_K,
+    ImGuiKey_L,
+    ImGuiKey_M,
+    ImGuiKey_N,
+    ImGuiKey_O,
+    ImGuiKey_P,
+    ImGuiKey_Q,
+    ImGuiKey_R,
+    ImGuiKey_S,
+    ImGuiKey_T,
+    ImGuiKey_U,
+    ImGuiKey_V,
+    ImGuiKey_W,
+    ImGuiKey_X,
+    ImGuiKey_Y,
+    ImGuiKey_Z,
+    ImGuiKey_F1,
+    ImGuiKey_F2,
+    ImGuiKey_F3,
+    ImGuiKey_F4,
+    ImGuiKey_F5,
+    ImGuiKey_F6,
+    ImGuiKey_F7,
+    ImGuiKey_F8,
+    ImGuiKey_F9,
+    ImGuiKey_F10,
+    ImGuiKey_F11,
+    ImGuiKey_F12,
+    ImGuiKey_COUNT,         // No valid ImGuiKey is ever greater than this value
+
+    ImGuiKey_NamedKey_END = ImGuiKey_COUNT,
+    ImGuiKey_NamedKey_COUNT = ImGuiKey_NamedKey_END - ImGuiKey_NamedKey_BEGIN,
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    ImGuiKey_KeyIndex_BEGIN = ImGuiKey_LegacyNativeKey_BEGIN,
+    ImGuiKey_KeyIndex_END   = ImGuiKey_LegacyNativeKey_END,
+#else
+    ImGuiKey_KeyIndex_BEGIN = ImGuiKey_NamedKey_BEGIN,
+    ImGuiKey_KeyIndex_END   = ImGuiKey_NamedKey_END,
+#endif
+    ImGuiKey_KeyIndex_COUNT = ImGuiKey_KeyIndex_END - ImGuiKey_KeyIndex_BEGIN
+
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     , ImGuiKey_KeyPadEnter = ImGuiKey_KeypadEnter   // Renamed in 1.87
 #endif
@@ -1817,6 +1927,13 @@ struct ImGuiStyle
 // Access via ImGui::GetIO(). Read 'Programmer guide' section in .cpp file for general usage.
 //-----------------------------------------------------------------------------
 
+struct ImGuiKeyData
+{
+    bool  Down;             // True for if key is down
+    float DownDuration;     // Duration the keyboard key has been down (0.0f == just pressed)
+    float DownDurationPrev; // Previous duration the key has been down
+};
+
 struct ImGuiIO
 {
     //------------------------------------------------------------------
@@ -1833,7 +1950,6 @@ struct ImGuiIO
     float       MouseDoubleClickTime;           // = 0.30f          // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;        // = 6.0f           // Distance threshold to stay in to validate a double-click, in pixels.
     float       MouseDragThreshold;             // = 6.0f           // Distance threshold before considering we are dragging.
-    int         KeyMap[ImGuiKey_COUNT];         // <unset>          // Map of indices into the KeysDown[512] entries array which represent your "native" keyboard state.
     float       KeyRepeatDelay;                 // = 0.250f         // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float       KeyRepeatRate;                  // = 0.050f         // When holding a key/button, rate at which it repeats, in seconds.
     void*       UserData;                       // = NULL           // Store your own data for retrieval by callbacks.
@@ -1892,16 +2008,26 @@ struct ImGuiIO
     bool        KeyShift;                       // Keyboard modifier down: Shift
     bool        KeyAlt;                         // Keyboard modifier down: Alt
     bool        KeySuper;                       // Keyboard modifier down: Cmd/Super/Windows
-    bool        KeysDown[512];                  // Keyboard keys that are pressed (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
     float       NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
 
     // Input Functions
+    IMGUI_API void  AddKeyEvent(ImGuiKey key, bool down, int native_keycode = -1, int native_scancode = -1); // Notify Dear ImGui of key down/up event
     IMGUI_API void  AddFocusEvent(bool focused);                // Queue an hosting application/platform windows gain or loss of focus
     IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue new character input
     IMGUI_API void  AddInputCharacterUTF16(ImWchar16 c);        // Queue new character input from an UTF-16 character, it can be a surrogate
     IMGUI_API void  AddInputCharactersUTF8(const char* str);    // Queue new characters input from an UTF-8 string
     IMGUI_API void  ClearInputCharacters();                     // [Internal] Clear the text input buffer manually
     IMGUI_API void  ClearInputKeys();                           // [Internal] Release all keys
+
+    //------------------------------------------------------------------
+    // Legacy: before 1.86, we required backend to fill io.KeyMap[] (imgui->native map) during Init and io.KeysDown[] (native indices) every frame.
+    // This is still temporarily supported as a legacy feature. However the new preferred scheme is for backend to call io.AddKeyEvent().
+    //------------------------------------------------------------------
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    int         KeyMap[ImGuiKey_COUNT];         // [LEGACY] Input: map of indices into the KeysDown[512] entries array which represent your "native" keyboard state. The first 512 are now unused and should be kept zero. Legacy backend will write into KeyMap[] using ImGuiKey_ indices which are always >512.
+    bool        KeysDown[512];                  // [LEGACY] Input: Keyboard keys that are pressed (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
+#endif
 
     //------------------------------------------------------------------
     // Output - Updated by NewFrame() or EndFrame()/Render()
@@ -1930,8 +2056,7 @@ struct ImGuiIO
 
     ImGuiKeyModFlags KeyMods;                       // Key mods flags (same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags), updated by NewFrame()
     ImGuiKeyModFlags KeyModsPrev;                   // Key mods flags (from previous frame)
-    float       KeysDownDuration[512];              // Duration the key has been down (<0.0f: not pressed, 0.0f: just pressed, >0.0f: time held)
-    float       KeysDownDurationPrev[512];          // Duration the key has been down (from previous frame)
+    ImGuiKeyData KeysData[ImGuiKey_KeyIndex_COUNT]; // Key state for all known keys.
 
     bool        WantCaptureMouseUnlessPopupClose;   // Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
     ImVec2      MousePosPrev;                       // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
@@ -2851,6 +2976,10 @@ struct ImGuiPlatformImeData
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
+    // OBSOLETED in 1.XX (from YYYY)
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    static inline int   GetKeyIndex(ImGuiKey key) { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "ImGuiKey and user_key_index was merged together and user_key_index is disabled by IMGUI_DISABLE_OBSOLETE_KEYIO. Please switch to ImGuiKey."); return key; }
+#endif
     // OBSOLETED in 1.86 (from November 2021)
     IMGUI_API void      CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end); // Calculate coarse clipping for large list of evenly sized items. Prefer using ImGuiListClipper.
     // OBSOLETED in 1.85 (from August 2021)
