@@ -88,6 +88,8 @@ Other Changes:
 - Clipper: fixed invalid state when number of frozen table row is smaller than ItemCount.
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
+- Fonts: fixed infinite loop in ImFontGlyphRangesBuilder::AddRanges() when passing UINT16_MAX without
+  the IMGUI_USE_WCHAR32 compile-time option. (#4802) [@SlavicPotato]
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
