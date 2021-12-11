@@ -916,6 +916,9 @@ static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
 static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
+// ImGuiKey <-> user key index mapping functions
+static int              GetKeyDataIndexInternal(int imgui_key_or_user_key_index);
+
 namespace ImGui
 {
 // Navigation
@@ -948,6 +951,7 @@ static void             UpdateDebugToolStackQueries();
 
 // Misc
 static void             UpdateSettings();
+static void             UpdateKeyboardInputs();
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
@@ -1101,8 +1105,10 @@ ImGuiIO::ImGuiIO()
     LogFilename = "imgui_log.txt";
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
+#endif
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
@@ -1139,7 +1145,7 @@ ImGuiIO::ImGuiIO()
     MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
     MouseDragThreshold = 6.0f;
     for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++) KeysDownDuration[i]  = KeysDownDurationPrev[i] = -1.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(KeysData); i++) KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(NavInputsDownDuration); i++) NavInputsDownDuration[i] = -1.0f;
 }
 
@@ -1206,13 +1212,36 @@ void ImGuiIO::ClearInputCharacters()
 
 void ImGuiIO::ClearInputKeys()
 {
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     memset(KeysDown, 0, sizeof(KeysDown));
-    for (int n = 0; n < IM_ARRAYSIZE(KeysDownDuration); n++)
-        KeysDownDuration[n] = KeysDownDurationPrev[n] = -1.0f;
+#endif
+    for (int n = 0; n < IM_ARRAYSIZE(KeysData); n++)
+    {
+        KeysData[n].Down             = false;
+        KeysData[n].DownDuration     = -1.0f;
+        KeysData[n].DownDurationPrev = -1.0f;
+    }
     KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
     KeyMods = KeyModsPrev = ImGuiKeyModFlags_None;
     for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
         NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
+}
+
+// FIXME: In the current version this is setting key data immediately. This will evolve into a trickling queue.
+void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int native_scancode)
+{
+    IM_UNUSED(native_keycode);
+    IM_UNUSED(native_scancode);
+
+    int key_index = GetKeyDataIndexInternal(key);
+    if (key_index < 0)
+        return;
+
+    KeysData[key_index].Down = down;
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    KeysDown[key_index] = KeysData[key_index].Down;
+#endif
 }
 
 void ImGuiIO::AddFocusEvent(bool focused)
@@ -3214,7 +3243,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdUsingMouseWheel = false;
     g.ActiveIdUsingNavDirMask = 0x00;
     g.ActiveIdUsingNavInputMask = 0x00;
-    g.ActiveIdUsingKeyInputMask = 0x00;
+    g.ActiveIdUsingKeyInputMask.ClearAllBits();
 }
 
 void ImGui::ClearActiveID()
@@ -3745,6 +3774,26 @@ static bool IsWindowActiveAndVisible(ImGuiWindow* window)
     return (window->Active) && (!window->Hidden);
 }
 
+static void ImGui::UpdateKeyboardInputs()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
+    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
+    io.KeyMods = GetMergedKeyModFlags();
+
+    // Update keys
+    for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++)
+    {
+        ImGuiKeyData& key_data = io.KeysData[i];
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+        key_data.Down = io.KeysDown[i];
+#endif
+        key_data.DownDurationPrev = key_data.DownDuration;
+        key_data.DownDuration = key_data.Down ? (key_data.DownDuration < 0.0f ? 0.0f : key_data.DownDuration + io.DeltaTime) : -1.0f;
+    }
+}
+
 static void ImGui::UpdateMouseInputs()
 {
     ImGuiContext& g = *GImGui;
@@ -4092,7 +4141,7 @@ void ImGui::NewFrame()
     {
         g.ActiveIdUsingNavDirMask = 0x00;
         g.ActiveIdUsingNavInputMask = 0x00;
-        g.ActiveIdUsingKeyInputMask = 0x00;
+        g.ActiveIdUsingKeyInputMask.ClearAllBits();
     }
 
     // Drag and drop
@@ -4116,11 +4165,7 @@ void ImGui::NewFrame()
     }
 
     // Update keyboard input state
-    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
-    g.IO.KeyMods = GetMergedKeyModFlags();
-    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
-        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+    UpdateKeyboardInputs();
 
     // Update gamepad/keyboard navigation
     NavUpdate();
@@ -4787,22 +4832,92 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return true;
 }
 
-int ImGui::GetKeyIndex(ImGuiKey imgui_key)
+static int GetKeyDataIndexInternal(int imgui_key_or_user_key_index)
 {
-    IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
+    if (imgui_key_or_user_key_index < 0)
+        return -1;
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    if (imgui_key_or_user_key_index >= ImGuiKey_LegacyNativeKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_LegacyNativeKey_END)
+        return imgui_key_or_user_key_index;
+
     ImGuiContext& g = *GImGui;
-    return g.IO.KeyMap[imgui_key];
+    if (imgui_key_or_user_key_index >= ImGuiKey_NamedKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_NamedKey_END)
+        return g.IO.KeyMap[imgui_key_or_user_key_index];
+#else
+    if (imgui_key_or_user_key_index >= ImGuiKey_NamedKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_NamedKey_END)
+        return imgui_key_or_user_key_index - ImGuiKey_NamedKey_BEGIN;
+#endif
+
+    return -1;
+}
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+static ImGuiKey GetImGuiKeyFromLegacyKey(int user_key_index)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < ImGuiKey_LegacyNativeKey_END);
+    for (int imgui_key = ImGuiKey_NamedKey_BEGIN; imgui_key < ImGuiKey_NamedKey_END; ++imgui_key)
+        if (g.IO.KeyMap[imgui_key] == user_key_index)
+            return imgui_key;
+    return ImGuiKey_None;
+}
+#endif
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+int ImGui::GetKeyIndex(ImGuiKey key)
+{
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END);
+    return GetKeyDataIndexInternal(key);
+}
+#endif
+
+// Those names a provided for debugging purpose and are not meant to be saved persistently not compared.
+static const char* const GKeyNames[] =
+{
+    "Tab", "Left Arrow", "Right Arrow", "Up Arrow", "Down Arrow", "Page Up", "Page Down",
+    "Home", "End", "Insert", "Delete", "Backspace", "Space", "Enter", "Escape",
+    "Apostrophe", "Comma", "Minus", "Period", "Slash", "Semicolon", "Equal", "Left Bracket",
+    "Backslash", "Right Bracket", "Grave Accent", "Caps Lock", "Scroll Lock", "Num Lock", "Print Screen",
+    "Pause", "Keypad 0", "Keypad 1", "Keypad 2", "Keypad 3", "Keypad 4", "Keypad 5", "Keypad 6",
+    "Keypad 7", "Keypad 8", "Keypad 9", "Keypad Decimal", "Keypad Divide", "Keypad Multiply",
+    "Keypad Subtract", "Keypad Add", "Keypad Enter", "Keypad Equal", "Left Shift", "Left Control",
+    "Left Alt", "Left Super", "Right Shift", "Right Control", "Right Alt", "Right Super", "Menu",
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "I",
+    "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+    "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
+};
+IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
+
+const char* ImGui::GetKeyName(ImGuiKey key)
+{
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
+#else
+    if (key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END)
+        if ((key = GetImGuiKeyFromLegacyKey(key)) == ImGuiKey_None)
+            return "N/A";
+#endif
+    if (key == ImGuiKey_None)
+        return "None";
+
+    return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
 
 // Note that dear imgui doesn't know the semantic of each entry of io.KeysDown[]!
 // Use your own indices/enums according to how your backend/engine stored them into io.KeysDown[]!
-bool ImGui::IsKeyDown(int user_key_index)
+bool ImGui::IsKeyDown(ImGuiKey key)
 {
-    if (user_key_index < 0)
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
+#endif
+
+    int key_index = GetKeyDataIndexInternal(key);
+    if (key_index < 0)
         return false;
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    return g.IO.KeysDown[user_key_index];
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
+    return g.IO.KeysData[key_index].Down;
 }
 
 // t0 = previous time (e.g.: g.Time - g.IO.DeltaTime)
@@ -4823,36 +4938,52 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
     return count;
 }
 
-int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate)
+int ImGui::GetKeyPressedAmount(int key, float repeat_delay, float repeat_rate)
 {
-    ImGuiContext& g = *GImGui;
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
+#endif
+
+    int key_index = GetKeyDataIndexInternal(key);
     if (key_index < 0)
         return 0;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    const float t = g.IO.KeysDownDuration[key_index];
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
+    const float t = g.IO.KeysData[key_index].DownDuration;
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
 
-bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
+bool ImGui::IsKeyPressed(int key, bool repeat)
 {
-    ImGuiContext& g = *GImGui;
-    if (user_key_index < 0)
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
+#endif
+
+    int key_index = GetKeyDataIndexInternal(key);
+    if (key_index < 0)
         return false;
-    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    const float t = g.IO.KeysDownDuration[user_key_index];
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
+    const float t = g.IO.KeysData[key_index].DownDuration;
     if (t == 0.0f)
         return true;
     if (repeat && t > g.IO.KeyRepeatDelay)
-        return GetKeyPressedAmount(user_key_index, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
+        return GetKeyPressedAmount(key, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
     return false;
 }
 
-bool ImGui::IsKeyReleased(int user_key_index)
+bool ImGui::IsKeyReleased(int key)
 {
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
+#endif
+
+    int key_index = GetKeyDataIndexInternal(key);
+    if (key_index < 0)
+        return false;
     ImGuiContext& g = *GImGui;
-    if (user_key_index < 0) return false;
-    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    return g.IO.KeysDownDurationPrev[user_key_index] >= 0.0f && !g.IO.KeysDown[user_key_index];
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
+    return g.IO.KeysData[key_index].DownDurationPrev >= 0.0f && !g.IO.KeysData[key_index].Down;
 }
 
 bool ImGui::IsMouseDown(ImGuiMouseButton button)
@@ -5117,7 +5248,7 @@ void ImGui::SetActiveIdUsingNavAndKeys()
     IM_ASSERT(g.ActiveId != 0);
     g.ActiveIdUsingNavDirMask = ~(ImU32)0;
     g.ActiveIdUsingNavInputMask = ~(ImU32)0;
-    g.ActiveIdUsingKeyInputMask = ~(ImU64)0;
+    g.ActiveIdUsingKeyInputMask.SetAllBits();
     NavMoveRequestCancel();
 }
 
@@ -7507,12 +7638,14 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
     // Check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only added in 1.60 WIP)
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
+#endif
 
     // Check: the io.ConfigWindowsResizeFromEdges option requires backend to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
     if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
@@ -9561,7 +9694,7 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
 {
     ImVec2 delta(0.0f, 0.0f);
     if (dir_sources & ImGuiNavDirSourceFlags_RawKeyboard)
-        delta += ImVec2((float)IsKeyDown(GetKeyIndex(ImGuiKey_RightArrow)) - (float)IsKeyDown(GetKeyIndex(ImGuiKey_LeftArrow)), (float)IsKeyDown(GetKeyIndex(ImGuiKey_DownArrow)) - (float)IsKeyDown(GetKeyIndex(ImGuiKey_UpArrow)));
+        delta += ImVec2((float)IsKeyDown(ImGuiKey_RightArrow) - (float)IsKeyDown(ImGuiKey_LeftArrow), (float)IsKeyDown(ImGuiKey_DownArrow) - (float)IsKeyDown(ImGuiKey_UpArrow));
     if (dir_sources & ImGuiNavDirSourceFlags_Keyboard)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight_, mode)   - GetNavInputAmount(ImGuiNavInput_KeyLeft_,   mode), GetNavInputAmount(ImGuiNavInput_KeyDown_,   mode) - GetNavInputAmount(ImGuiNavInput_KeyUp_,   mode));
     if (dir_sources & ImGuiNavDirSourceFlags_PadDPad)
@@ -9597,7 +9730,7 @@ static void ImGui::NavUpdate()
     // Update Keyboard->Nav inputs mapping
     if (nav_keyboard_active)
     {
-        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(io.KeyMap[_KEY])) { io.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_Keyboard; } } while (0)
+        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(_KEY)) { io.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_Keyboard; } } while (0)
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
         NAV_MAP_KEY(ImGuiKey_Enter,     ImGuiNavInput_Input    );
         NAV_MAP_KEY(ImGuiKey_Escape,    ImGuiNavInput_Cancel   );
@@ -9815,7 +9948,7 @@ void ImGui::NavUpdateCreateMoveRequest()
 
     // [DEBUG] Always send a request
 #if IMGUI_DEBUG_NAV_SCORING
-    if (io.KeyCtrl && IsKeyPressedMap(ImGuiKey_C))
+    if (io.KeyCtrl && IsKeyPressed(ImGuiKey_C))
         g.NavMoveDirForDebug = (ImGuiDir)((g.NavMoveDirForDebug + 1) & 3);
     if (io.KeyCtrl && g.NavMoveDir == ImGuiDir_None)
     {
@@ -9879,7 +10012,7 @@ void ImGui::NavUpdateCreateTabbingRequest()
     if (window == NULL || g.NavWindowingTarget != NULL || (window->Flags & ImGuiWindowFlags_NoNavInputs))
         return;
 
-    const bool tab_pressed = IsKeyPressedMap(ImGuiKey_Tab, true) && !IsActiveIdUsingKey(ImGuiKey_Tab) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
+    const bool tab_pressed = IsKeyPressed(ImGuiKey_Tab, true) && !IsActiveIdUsingKey(ImGuiKey_Tab) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
     if (!tab_pressed)
         return;
 
@@ -10040,16 +10173,14 @@ static void ImGui::NavUpdateCancelRequest()
 static float ImGui::NavUpdatePageUpPageDown()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiIO& io = g.IO;
-
     ImGuiWindow* window = g.NavWindow;
     if ((window->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL)
         return 0.0f;
 
-    const bool page_up_held = IsKeyDown(io.KeyMap[ImGuiKey_PageUp]) && !IsActiveIdUsingKey(ImGuiKey_PageUp);
-    const bool page_down_held = IsKeyDown(io.KeyMap[ImGuiKey_PageDown]) && !IsActiveIdUsingKey(ImGuiKey_PageDown);
-    const bool home_pressed = IsKeyPressed(io.KeyMap[ImGuiKey_Home]) && !IsActiveIdUsingKey(ImGuiKey_Home);
-    const bool end_pressed = IsKeyPressed(io.KeyMap[ImGuiKey_End]) && !IsActiveIdUsingKey(ImGuiKey_End);
+    const bool page_up_held = IsKeyDown(ImGuiKey_PageUp) && !IsActiveIdUsingKey(ImGuiKey_PageUp);
+    const bool page_down_held = IsKeyDown(ImGuiKey_PageDown) && !IsActiveIdUsingKey(ImGuiKey_PageDown);
+    const bool home_pressed = IsKeyPressed(ImGuiKey_Home) && !IsActiveIdUsingKey(ImGuiKey_Home);
+    const bool end_pressed = IsKeyPressed(ImGuiKey_End) && !IsActiveIdUsingKey(ImGuiKey_End);
     if (page_up_held == page_down_held && home_pressed == end_pressed) // Proceed if either (not both) are pressed, otherwise early out
         return 0.0f;
 
@@ -10059,9 +10190,9 @@ static float ImGui::NavUpdatePageUpPageDown()
     if (window->DC.NavLayersActiveMask == 0x00 && window->DC.NavHasScroll)
     {
         // Fallback manual-scroll when window has no navigable item
-        if (IsKeyPressed(io.KeyMap[ImGuiKey_PageUp], true))
+        if (IsKeyPressed(ImGuiKey_PageUp, true))
             SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-        else if (IsKeyPressed(io.KeyMap[ImGuiKey_PageDown], true))
+        else if (IsKeyPressed(ImGuiKey_PageDown, true))
             SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
         else if (home_pressed)
             SetScrollY(window, 0.0f);
@@ -10073,14 +10204,14 @@ static float ImGui::NavUpdatePageUpPageDown()
         ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
         const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
         float nav_scoring_rect_offset_y = 0.0f;
-        if (IsKeyPressed(io.KeyMap[ImGuiKey_PageUp], true))
+        if (IsKeyPressed(ImGuiKey_PageUp, true))
         {
             nav_scoring_rect_offset_y = -page_offset_y;
             g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset up, we request the down direction (so we can always land on the last item)
             g.NavMoveClipDir = ImGuiDir_Up;
             g.NavMoveFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
         }
-        else if (IsKeyPressed(io.KeyMap[ImGuiKey_PageDown], true))
+        else if (IsKeyPressed(ImGuiKey_PageDown, true))
         {
             nav_scoring_rect_offset_y = +page_offset_y;
             g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset down, we request the up direction (so we can always land on the last item)
@@ -10245,7 +10376,7 @@ static void ImGui::NavUpdateWindowing()
 
     // Start CTRL+Tab or Square+L/R window selection
     const bool start_windowing_with_gamepad = allow_windowing && !g.NavWindowingTarget && IsNavInputTest(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
-    const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && io.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab);
+    const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && io.KeyCtrl && IsKeyPressed(ImGuiKey_Tab);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
@@ -10287,7 +10418,7 @@ static void ImGui::NavUpdateWindowing()
     {
         // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
-        if (IsKeyPressedMap(ImGuiKey_Tab, true))
+        if (IsKeyPressed(ImGuiKey_Tab, true))
             NavUpdateWindowingHighlightWindow(io.KeyShift ? +1 : -1);
         if (!io.KeyCtrl)
             apply_focus_window = g.NavWindowingTarget;
@@ -11914,7 +12045,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Indent();
         Text("ActiveId: 0x%08X/0x%08X (%.2f sec), AllowOverlap: %d, Source: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, g.ActiveIdAllowOverlap, input_source_names[g.ActiveIdSource]);
         Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
-        Text("ActiveIdUsing: Wheel: %d, NavDirMask: %X, NavInputMask: %X, KeyInputMask: %llX", g.ActiveIdUsingMouseWheel, g.ActiveIdUsingNavDirMask, g.ActiveIdUsingNavInputMask, g.ActiveIdUsingKeyInputMask);
+
+        int active_id_using_key_input_count = 0;
+        for (int n = 0; n < g.ActiveIdUsingKeyInputMask.Size; n++)
+            active_id_using_key_input_count += g.ActiveIdUsingKeyInputMask.TestBit(n) ? 1 : 0;
+        Text("ActiveIdUsing: Wheel: %d, NavDirMask: %X, NavInputMask: %X, KeyInputMask: %d key(s)", g.ActiveIdUsingMouseWheel, g.ActiveIdUsingNavDirMask, g.ActiveIdUsingNavInputMask, active_id_using_key_input_count);
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
         Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
         Unindent();
@@ -12432,7 +12567,7 @@ void ImGui::UpdateDebugToolItemPicker()
 
     const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
     SetMouseCursor(ImGuiMouseCursor_Hand);
-    if (IsKeyPressedMap(ImGuiKey_Escape))
+    if (IsKeyPressed(ImGuiKey_Escape))
         g.DebugItemPickerActive = false;
     if (IsMouseClicked(0) && hovered_id)
     {
