@@ -4,9 +4,9 @@
 
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy kVK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [X] Platform: Keyboard arrays indexed using kVK_* codes, e.g. ImGui::IsKeyPressed(kVK_Space).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-13: *BREAKING CHANGE* Add NSView parameter to ImGui_ImplOSX_Init(). Generally fix keyboard support. Using kVK_* codes for keyboard keys.
 //  2021-12-13: Add game controller support.
 //  2021-09-21: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards.
@@ -50,6 +51,7 @@ static NSCursor*            g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool                 g_MouseCursorHidden = false;
 static bool                 g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
 static bool                 g_MouseDown[ImGuiMouseButton_COUNT] = {};
+static ImGuiKeyModFlags     g_KeyModifiers = ImGuiKeyModFlags_None;
 static ImFocusObserver*     g_FocusObserver = nil;
 static KeyEventResponder*   g_KeyEventResponder = nil;
 
@@ -71,13 +73,6 @@ static void InitHostClockPeriod()
 static double GetMachAbsoluteTimeInSeconds()
 {
     return (double)mach_absolute_time() * g_HostClockPeriod;
-}
-
-static void resetKeys()
-{
-    ImGuiIO& io = ImGui::GetIO();
-    memset(io.KeysDown, 0, sizeof(io.KeysDown));
-    io.KeyCtrl = io.KeyShift = io.KeyAlt = io.KeySuper = false;
 }
 
 /**
@@ -105,8 +100,15 @@ static void resetKeys()
 
 - (void)keyDown:(NSEvent*)event
 {
+    ImGui_ImplOSX_HandleEvent(event, self);
+
     // Call to the macOS input manager system.
     [self interpretKeyEvents:@[event]];
+}
+
+- (void)keyUp:(NSEvent*)event
+{
+    ImGui_ImplOSX_HandleEvent(event, self);
 }
 
 - (void)insertText:(id)aString replacementRange:(NSRange)replacementRange
@@ -195,16 +197,134 @@ static void resetKeys()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddFocusEvent(false);
-
-    // Unfocused applications do not receive input events, therefore we must manually
-    // release any pressed keys when application loses focus, otherwise they would remain
-    // stuck in a pressed state. https://github.com/ocornut/imgui/issues/3832
-    resetKeys();
 }
 
 @end
 
 // Functions
+static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
+{
+    switch (key_code)
+    {
+        case kVK_ANSI_A: return ImGuiKey_A;
+        case kVK_ANSI_S: return ImGuiKey_S;
+        case kVK_ANSI_D: return ImGuiKey_D;
+        case kVK_ANSI_F: return ImGuiKey_F;
+        case kVK_ANSI_H: return ImGuiKey_H;
+        case kVK_ANSI_G: return ImGuiKey_G;
+        case kVK_ANSI_Z: return ImGuiKey_Z;
+        case kVK_ANSI_X: return ImGuiKey_X;
+        case kVK_ANSI_C: return ImGuiKey_C;
+        case kVK_ANSI_V: return ImGuiKey_V;
+        case kVK_ANSI_B: return ImGuiKey_B;
+        case kVK_ANSI_Q: return ImGuiKey_Q;
+        case kVK_ANSI_W: return ImGuiKey_W;
+        case kVK_ANSI_E: return ImGuiKey_E;
+        case kVK_ANSI_R: return ImGuiKey_R;
+        case kVK_ANSI_Y: return ImGuiKey_Y;
+        case kVK_ANSI_T: return ImGuiKey_T;
+        case kVK_ANSI_1: return ImGuiKey_1;
+        case kVK_ANSI_2: return ImGuiKey_2;
+        case kVK_ANSI_3: return ImGuiKey_3;
+        case kVK_ANSI_4: return ImGuiKey_4;
+        case kVK_ANSI_6: return ImGuiKey_6;
+        case kVK_ANSI_5: return ImGuiKey_5;
+        case kVK_ANSI_Equal: return ImGuiKey_Equal;
+        case kVK_ANSI_9: return ImGuiKey_9;
+        case kVK_ANSI_7: return ImGuiKey_7;
+        case kVK_ANSI_Minus: return ImGuiKey_Minus;
+        case kVK_ANSI_8: return ImGuiKey_8;
+        case kVK_ANSI_0: return ImGuiKey_0;
+        case kVK_ANSI_RightBracket: return ImGuiKey_RightBracket;
+        case kVK_ANSI_O: return ImGuiKey_O;
+        case kVK_ANSI_U: return ImGuiKey_U;
+        case kVK_ANSI_LeftBracket: return ImGuiKey_LeftBracket;
+        case kVK_ANSI_I: return ImGuiKey_I;
+        case kVK_ANSI_P: return ImGuiKey_P;
+        case kVK_ANSI_L: return ImGuiKey_L;
+        case kVK_ANSI_J: return ImGuiKey_J;
+        case kVK_ANSI_Quote: return ImGuiKey_Apostrophe;
+        case kVK_ANSI_K: return ImGuiKey_K;
+        case kVK_ANSI_Semicolon: return ImGuiKey_Semicolon;
+        case kVK_ANSI_Backslash: return ImGuiKey_Backslash;
+        case kVK_ANSI_Comma: return ImGuiKey_Comma;
+        case kVK_ANSI_Slash: return ImGuiKey_Slash;
+        case kVK_ANSI_N: return ImGuiKey_N;
+        case kVK_ANSI_M: return ImGuiKey_M;
+        case kVK_ANSI_Period: return ImGuiKey_Period;
+        case kVK_ANSI_Grave: return ImGuiKey_GraveAccent;
+        case kVK_ANSI_KeypadDecimal: return ImGuiKey_KeypadDecimal;
+        case kVK_ANSI_KeypadMultiply: return ImGuiKey_KeypadMultiply;
+        case kVK_ANSI_KeypadPlus: return ImGuiKey_KeypadAdd;
+        case kVK_ANSI_KeypadClear: return ImGuiKey_NumLock;
+        case kVK_ANSI_KeypadDivide: return ImGuiKey_KeypadDivide;
+        case kVK_ANSI_KeypadEnter: return ImGuiKey_KeypadEnter;
+        case kVK_ANSI_KeypadMinus: return ImGuiKey_KeypadSubtract;
+        case kVK_ANSI_KeypadEquals: return ImGuiKey_KeypadEqual;
+        case kVK_ANSI_Keypad0: return ImGuiKey_Keypad0;
+        case kVK_ANSI_Keypad1: return ImGuiKey_Keypad1;
+        case kVK_ANSI_Keypad2: return ImGuiKey_Keypad2;
+        case kVK_ANSI_Keypad3: return ImGuiKey_Keypad3;
+        case kVK_ANSI_Keypad4: return ImGuiKey_Keypad4;
+        case kVK_ANSI_Keypad5: return ImGuiKey_Keypad5;
+        case kVK_ANSI_Keypad6: return ImGuiKey_Keypad6;
+        case kVK_ANSI_Keypad7: return ImGuiKey_Keypad7;
+        case kVK_ANSI_Keypad8: return ImGuiKey_Keypad8;
+        case kVK_ANSI_Keypad9: return ImGuiKey_Keypad9;
+        case kVK_Return: return ImGuiKey_Enter;
+        case kVK_Tab: return ImGuiKey_Tab;
+        case kVK_Space: return ImGuiKey_Space;
+        case kVK_Delete: return ImGuiKey_Backspace;
+        case kVK_Escape: return ImGuiKey_Escape;
+        case kVK_Command: return ImGuiKey_LeftSuper;
+        case kVK_Shift: return ImGuiKey_LeftShift;
+        case kVK_CapsLock: return ImGuiKey_CapsLock;
+        case kVK_Option: return ImGuiKey_LeftAlt;
+        case kVK_Control: return ImGuiKey_LeftControl;
+        case kVK_RightCommand: return ImGuiKey_RightSuper;
+        case kVK_RightShift: return ImGuiKey_RightShift;
+        case kVK_RightOption: return ImGuiKey_RightAlt;
+        case kVK_RightControl: return ImGuiKey_RightControl;
+//      case kVK_Function: return ImGuiKey_;
+//      case kVK_F17: return ImGuiKey_;
+//      case kVK_VolumeUp: return ImGuiKey_;
+//      case kVK_VolumeDown: return ImGuiKey_;
+//      case kVK_Mute: return ImGuiKey_;
+//      case kVK_F18: return ImGuiKey_;
+//      case kVK_F19: return ImGuiKey_;
+//      case kVK_F20: return ImGuiKey_;
+        case kVK_F5: return ImGuiKey_F5;
+        case kVK_F6: return ImGuiKey_F6;
+        case kVK_F7: return ImGuiKey_F7;
+        case kVK_F3: return ImGuiKey_F3;
+        case kVK_F8: return ImGuiKey_F8;
+        case kVK_F9: return ImGuiKey_F9;
+        case kVK_F11: return ImGuiKey_F11;
+        case kVK_F13: return ImGuiKey_PrintScreen;
+//      case kVK_F16: return ImGuiKey_;
+//      case kVK_F14: return ImGuiKey_;
+        case kVK_F10: return ImGuiKey_F10;
+        case 0x6E: return ImGuiKey_Menu;
+        case kVK_F12: return ImGuiKey_F12;
+//      case kVK_F15: return ImGuiKey_;
+        case kVK_Help: return ImGuiKey_Insert;
+        case kVK_Home: return ImGuiKey_Home;
+        case kVK_PageUp: return ImGuiKey_PageUp;
+        case kVK_ForwardDelete: return ImGuiKey_Delete;
+        case kVK_F4: return ImGuiKey_F4;
+        case kVK_End: return ImGuiKey_End;
+        case kVK_F2: return ImGuiKey_F2;
+        case kVK_PageDown: return ImGuiKey_PageDown;
+        case kVK_F1: return ImGuiKey_F1;
+        case kVK_LeftArrow: return ImGuiKey_LeftArrow;
+        case kVK_RightArrow: return ImGuiKey_RightArrow;
+        case kVK_DownArrow: return ImGuiKey_DownArrow;
+        case kVK_UpArrow: return ImGuiKey_UpArrow;
+        default: return ImGuiKey_None;
+    }
+}
+
+
 bool ImGui_ImplOSX_Init(NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -215,30 +335,6 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
-
-    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_Tab]             = kVK_Tab;
-    io.KeyMap[ImGuiKey_LeftArrow]       = kVK_LeftArrow;
-    io.KeyMap[ImGuiKey_RightArrow]      = kVK_RightArrow;
-    io.KeyMap[ImGuiKey_UpArrow]         = kVK_UpArrow;
-    io.KeyMap[ImGuiKey_DownArrow]       = kVK_DownArrow;
-    io.KeyMap[ImGuiKey_PageUp]          = kVK_PageUp;
-    io.KeyMap[ImGuiKey_PageDown]        = kVK_PageDown;
-    io.KeyMap[ImGuiKey_Home]            = kVK_Home;
-    io.KeyMap[ImGuiKey_End]             = kVK_End;
-    io.KeyMap[ImGuiKey_Insert]          = kVK_F13;
-    io.KeyMap[ImGuiKey_Delete]          = kVK_ForwardDelete;
-    io.KeyMap[ImGuiKey_Backspace]       = kVK_Delete;
-    io.KeyMap[ImGuiKey_Space]           = kVK_Space;
-    io.KeyMap[ImGuiKey_Enter]           = kVK_Return;
-    io.KeyMap[ImGuiKey_Escape]          = kVK_Escape;
-    io.KeyMap[ImGuiKey_KeypadEnter]     = kVK_ANSI_KeypadEnter;
-    io.KeyMap[ImGuiKey_A]               = kVK_ANSI_A;
-    io.KeyMap[ImGuiKey_C]               = kVK_ANSI_C;
-    io.KeyMap[ImGuiKey_V]               = kVK_ANSI_V;
-    io.KeyMap[ImGuiKey_X]               = kVK_ANSI_X;
-    io.KeyMap[ImGuiKey_Y]               = kVK_ANSI_Y;
-    io.KeyMap[ImGuiKey_Z]               = kVK_ANSI_Z;
 
     // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;
@@ -296,6 +392,15 @@ bool ImGui_ImplOSX_Init(NSView* view)
     g_KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
     [view addSubview:g_KeyEventResponder];
 
+    // Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
+    // This monitor taps into global event stream and captures these events.
+    NSEventMask eventMask = NSEventMaskFlagsChanged;
+    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
+    {
+        ImGui_ImplOSX_HandleEvent(event, g_KeyEventResponder);
+        return event;
+    }];
+
     return true;
 }
 
@@ -344,7 +449,7 @@ static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
     }
 }
 
-void ImGui_ImplOSX_UpdateGamepads()
+static void ImGui_ImplOSX_UpdateGamepads()
 {
     ImGuiIO& io = ImGui::GetIO();
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
@@ -388,6 +493,15 @@ void ImGui_ImplOSX_UpdateGamepads()
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 }
 
+static void ImGui_ImplOSX_UpdateKeyModifiers()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.KeyCtrl  = (g_KeyModifiers & ImGuiKeyModFlags_Ctrl)  != 0;
+    io.KeyShift = (g_KeyModifiers & ImGuiKeyModFlags_Shift) != 0;
+    io.KeyAlt   = (g_KeyModifiers & ImGuiKeyModFlags_Alt)   != 0;
+    io.KeySuper = (g_KeyModifiers & ImGuiKeyModFlags_Super) != 0;
+}
+
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
@@ -409,26 +523,9 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
+    ImGui_ImplOSX_UpdateKeyModifiers();
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
     ImGui_ImplOSX_UpdateGamepads();
-}
-
-NSString* NSStringFromPhase(NSEventPhase phase)
-{
-    static NSString* strings[] =
-    {
-        @"none",
-        @"began",
-        @"stationary",
-        @"changed",
-        @"ended",
-        @"cancelled",
-        @"mayBegin",
-    };
-
-    int pos = phase == NSEventPhaseNone ? 0 : __builtin_ctzl((NSUInteger)phase) + 1;
-
-    return strings[pos];
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
@@ -497,8 +594,6 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dy = [event deltaY];
         }
 
-        //NSLog(@"dx=%0.3ff, dy=%0.3f, phase=%@", wheel_dx, wheel_dy, NSStringFromPhase(event.phase));
-
         if (fabs(wheel_dx) > 0.0)
             io.MouseWheelH += (float)wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
@@ -508,35 +603,65 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
     {
-        unsigned short code = event.keyCode;
-        IM_ASSERT(code >= 0 && code < IM_ARRAYSIZE(io.KeysDown));
-        io.KeysDown[code] = event.type == NSEventTypeKeyDown;
-        NSEventModifierFlags flags = event.modifierFlags;
-        io.KeyCtrl  = (flags & NSEventModifierFlagControl) != 0;
-        io.KeyShift = (flags & NSEventModifierFlagShift) != 0;
-        io.KeyAlt   = (flags & NSEventModifierFlagOption) != 0;
-        io.KeySuper = (flags & NSEventModifierFlagCommand) != 0;
+        if ([event isARepeat])
+            return io.WantCaptureKeyboard;
+
+        ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
+        io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
+        io.SetKeyEventNativeData(key, (int)[event keyCode], -1); // To support legacy indexing (<1.87 user code)
+
         return io.WantCaptureKeyboard;
     }
 
     if (event.type == NSEventTypeFlagsChanged)
     {
-        NSEventModifierFlags flags = event.modifierFlags;
-        switch (event.keyCode)
+        unsigned short key_code = [event keyCode];
+        unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
+
+        ImGuiKeyModFlags imgui_flags = ImGuiKeyModFlags_None;
+        if (flags & NSEventModifierFlagShift)
+            imgui_flags |= ImGuiKeyModFlags_Shift;
+        if (flags & NSEventModifierFlagControl)
+            imgui_flags |= ImGuiKeyModFlags_Ctrl;
+        if (flags & NSEventModifierFlagOption)
+            imgui_flags |= ImGuiKeyModFlags_Alt;
+        if (flags & NSEventModifierFlagCommand)
+            imgui_flags |= ImGuiKeyModFlags_Super;
+
+        g_KeyModifiers = imgui_flags;
+
+        ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
+        if (key != ImGuiKey_None)
         {
-        case kVK_Control:
-            io.KeyCtrl = (flags & NSEventModifierFlagControl) != 0;
-            break;
-        case kVK_Shift:
-            io.KeyShift = (flags & NSEventModifierFlagShift) != 0;
-            break;
-        case kVK_Option:
-            io.KeyAlt = (flags & NSEventModifierFlagOption) != 0;
-            break;
-        case kVK_Command:
-            io.KeySuper = (flags & NSEventModifierFlagCommand) != 0;
-            break;
+            // macOS does not generate down/up event for modifiers. We're trying
+            // to use hardware dependent masks to extract that information.
+            // 'imgui_mask' is left as a fallback.
+            NSEventModifierFlags mask = 0;
+            ImGuiKeyModFlags imgui_mask = ImGuiKeyModFlags_None;
+            switch (key_code)
+            {
+                case kVK_Control:      mask = 0x0001; imgui_mask = ImGuiKeyModFlags_Ctrl; break;
+                case kVK_RightControl: mask = 0x2000; imgui_mask = ImGuiKeyModFlags_Ctrl; break;
+                case kVK_Shift:        mask = 0x0002; imgui_mask = ImGuiKeyModFlags_Shift; break;
+                case kVK_RightShift:   mask = 0x0004; imgui_mask = ImGuiKeyModFlags_Shift; break;
+                case kVK_Command:      mask = 0x0008; imgui_mask = ImGuiKeyModFlags_Super; break;
+                case kVK_RightCommand: mask = 0x0010; imgui_mask = ImGuiKeyModFlags_Super; break;
+                case kVK_Option:       mask = 0x0020; imgui_mask = ImGuiKeyModFlags_Alt; break;
+                case kVK_RightOption:  mask = 0x0040; imgui_mask = ImGuiKeyModFlags_Alt; break;
+            }
+
+            if (mask)
+            {
+                NSEventModifierFlags modifier_flags = [event modifierFlags];
+                io.AddKeyEvent(key, (modifier_flags & mask) != 0);
+            }
+            else if (imgui_mask)
+            {
+                io.AddKeyEvent(key, (imgui_flags & imgui_mask) != 0);
+            }
+            io.SetKeyEventNativeData(key, keycode, -1); // To support legacy indexing (<1.87 user code)
         }
+
         return io.WantCaptureKeyboard;
     }
 
