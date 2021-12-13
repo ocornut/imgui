@@ -68,7 +68,10 @@ Other Changes:
 - Nav: with ImGuiConfigFlags_NavEnableSetMousePos enabled: Fixed absolute mouse position when using
   Home/End leads to scrolling. Fixed not setting mouse position when a failed move request (e.g. when
   already at edge) reactivates the navigation highlight.
+- Menus: fixed closing a menu inside a popup/modal by clicking on the popup/modal. (#3496, #4797)
 - Menus: fixed closing a menu by clicking on its menu-bar item when inside a popup. (#3496, #4797) [@xndcn]
+- Menus: fixed menu inside a popup/modal not inhibiting hovering of items in the popup/modal. (#3496, #4797)
+- Menus: fixed sub-menu items inside a popups from closing the popup.
 - InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
 - Inputtext, Nav: fixed using SetKeyboardFocusHere() on InputTextMultiline(). (#4761)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
