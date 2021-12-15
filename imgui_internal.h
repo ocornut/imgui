@@ -1758,6 +1758,7 @@ struct ImGuiContext
     ImVector<ImGuiGroupData>GroupStack;                         // Stack for BeginGroup()/EndGroup() - not inherited by Begin()
     ImVector<ImGuiPopupData>OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupData>BeginPopupStack;                    // Which level of BeginPopup() we are in (reset every frame)
+    int                     BeginMenuCount;
 
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData.
@@ -1993,6 +1994,7 @@ struct ImGuiContext
         LastActiveIdTimer = 0.0f;
 
         CurrentItemFlags = ImGuiItemFlags_None;
+        BeginMenuCount = 0;
 
         CurrentDpiScale = 0.0f;
         CurrentViewport = NULL;
