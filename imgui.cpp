@@ -5289,15 +5289,16 @@ static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settin
 static void UpdateWindowInFocusOrderList(ImGuiWindow* window, bool just_created, ImGuiWindowFlags new_flags)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiWindowFlags old_flags = window->Flags;
-    const bool child_flag_changed = (new_flags & ImGuiWindowFlags_ChildWindow) != (old_flags & ImGuiWindowFlags_ChildWindow);
 
-    if ((just_created || child_flag_changed) && !(new_flags & ImGuiWindowFlags_ChildWindow))
+    const bool new_is_explicit_child = (new_flags & ImGuiWindowFlags_ChildWindow) != 0;
+    const bool child_flag_changed = new_is_explicit_child != window->IsExplicitChild;
+    if ((just_created || child_flag_changed) && !new_is_explicit_child)
     {
+        IM_ASSERT(!g.WindowsFocusOrder.contains(window));
         g.WindowsFocusOrder.push_back(window);
         window->FocusOrder = (short)(g.WindowsFocusOrder.Size - 1);
     }
-    else if (child_flag_changed && (new_flags & ImGuiWindowFlags_ChildWindow))
+    else if (!just_created && child_flag_changed && new_is_explicit_child)
     {
         IM_ASSERT(g.WindowsFocusOrder[window->FocusOrder] == window);
         for (int n = window->FocusOrder + 1; n < g.WindowsFocusOrder.Size; n++)
@@ -5305,6 +5306,7 @@ static void UpdateWindowInFocusOrderList(ImGuiWindow* window, bool just_created,
         g.WindowsFocusOrder.erase(g.WindowsFocusOrder.Data + window->FocusOrder);
         window->FocusOrder = -1;
     }
+    window->IsExplicitChild = new_is_explicit_child;
 }
 
 static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
