@@ -6,13 +6,14 @@
 // Missing features:
 //  [ ] Renderer: Clipping rectangles are not honored.
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-05-19: Renderer: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
@@ -91,9 +92,8 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
                 pCurrentMaterial->SetAlphaTestMode(CIwMaterial::ALPHATEST_DISABLED);
                 pCurrentMaterial->SetTexture((CIwTexture*)pcmd->GetTexID());
                 IwGxSetMaterial(pCurrentMaterial);
-                IwGxDrawPrims(IW_GX_TRI_LIST, (uint16*)idx_buffer, pcmd->ElemCount);
+                IwGxDrawPrims(IW_GX_TRI_LIST, (uint16*)(idx_buffer + pcmd->IdxOffset), pcmd->ElemCount);
             }
-            idx_buffer += pcmd->ElemCount;
         }
         IwGxFlush();
     }

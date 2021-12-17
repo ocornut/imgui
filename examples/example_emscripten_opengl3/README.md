@@ -1,8 +1,11 @@
 ## How to Build
 
 - You need to install Emscripten from https://emscripten.org/docs/getting_started/downloads.html, and have the environment variables set, as described in https://emscripten.org/docs/getting_started/downloads.html#installation-instructions
-- You may also refer to our [Continuous Integration setup](https://github.com/ocornut/imgui/tree/master/.github/workflows) for Emscripten setup.
+
 - Depending on your configuration, in Windows you may need to run `emsdk/emsdk_env.bat` in your console to access the Emscripten command-line tools.
+
+- You may also refer to our [Continuous Integration setup](https://github.com/ocornut/imgui/tree/master/.github/workflows) for Emscripten setup.
+
 - Then build using `make` while in the `example_emscripten_opengl3/` directory.
 
 ## How to Run
@@ -15,6 +18,7 @@ _"Unfortunately several browsers (including Chrome, Safari, and Internet Explore
   - Emscripten SDK has a handy `emrun` command: `emrun web/example_emscripten_opengl3.html --browser firefox` which will spawn a temporary local webserver (in Firefox). See https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html for details.
   - You may use Python 3 builtin webserver: `python -m http.server -d web` (this is what `make serve` uses).
   - You may use Python 2 builtin webserver: `cd web && python -m SimpleHTTPServer`.
+  - If you are accessing the files over a network, certain browsers, such as Firefox, will restrict Gamepad API access to secure contexts only (e.g. https only).
 
 ## Obsolete features:
 

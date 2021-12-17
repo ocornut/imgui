@@ -14,29 +14,17 @@
 #CXX = g++
 #CXX = clang++
 
-EXE = example_sdl_opengl3
+EXE = example_sdl_sdlrenderer
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_sdlrenderer.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
-LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
-
-##---------------------------------------------------------------------
-## OPENGL ES
-##---------------------------------------------------------------------
-
-## This assumes a GL ES library available in the system, e.g. libGLESv2.so
-# CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
-# LINUX_GL_LIBS = -lGLESv2
-## If you're on a Raspberry Pi and want to use the legacy drivers,
-## use the following instead:
-# LINUX_GL_LIBS = -L/opt/vc/lib -lbrcmGLESv2
 
 ##---------------------------------------------------------------------
 ## BUILD FLAGS PER PLATFORM
@@ -44,7 +32,7 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += $(LINUX_GL_LIBS) -ldl `sdl2-config --libs`
+	LIBS += -lGL -ldl `sdl2-config --libs`
 
 	CXXFLAGS += `sdl2-config --cflags`
 	CFLAGS = $(CXXFLAGS)
@@ -61,11 +49,11 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 endif
 
 ifeq ($(OS), Windows_NT)
-    ECHO_MESSAGE = "MinGW"
-    LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+	ECHO_MESSAGE = "MinGW"
+	LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-    CXXFLAGS += `pkg-config --cflags sdl2`
-    CFLAGS = $(CXXFLAGS)
+	CXXFLAGS += `pkg-config --cflags sdl2`
+	CFLAGS = $(CXXFLAGS)
 endif
 
 ##---------------------------------------------------------------------
