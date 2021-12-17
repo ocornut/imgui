@@ -2740,10 +2740,11 @@ struct ImFontAtlas
     int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
     int                         PackIdLines;        // Custom texture rectangle ID for baked anti-aliased lines
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    typedef ImFontAtlasCustomRect    CustomRect;         // OBSOLETED in 1.72+
-    //typedef ImFontGlyphRangesBuilder GlyphRangesBuilder; // OBSOLETED in 1.67+
-#endif
+//#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+//   typedef ImFontAtlasCustomRect    CustomRect;         // OBSOLETED in 1.72+
+//    typedef ImFontGlyphRangesBuilder GlyphRangesBuilder; // OBSOLETED in 1.67+
+//#endif
+
 };
 
 // Font runtime data and rendering
