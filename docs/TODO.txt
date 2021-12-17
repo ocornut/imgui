@@ -142,7 +142,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - plot: option/feature: draw unit
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
 
- - clipper: ability to force display 1 item in the list would be convenient (for patterns where we need to set active id etc.)
  - clipper: ability to disable the clipping through a simple flag/bool.
  - clipper: ability to run without knowing full count in advance.
  - clipper: horizontal clipping support. (#2580)
@@ -326,6 +325,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line?)
  - nav: configuration flag to disable global shortcuts (currently only CTRL-Tab) ?
  ! nav: never clear NavId on some setup (e.g. gamepad centric)
+ - nav: scroll up/down if possible when move request fails
  - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
  - nav: code to focus child-window on restoring NavId appears to have issue: e.g. when focus change is implicit because of window closure.
  - nav: Home/End behavior when navigable item is not fully visible at the edge of scrolling? should be backtrack to keep item into view?
@@ -334,12 +334,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
+ - nav: NavFlattened: init requests don't work properly on flattened siblings.
+ - nav: NavFlattened: pageup/pagedown/home/end don't work properly on flattened siblings.
  - nav: NavFlattened: ESC on a flattened child should select something.
  - nav: NavFlattened: broken: in typical usage scenario, the items of a fully clipped child are currently not considered to enter into a NavFlattened child.
- - nav: NavFlattened: init request doesn't select items that are part of a NavFlattened child
  - nav: NavFlattened: cannot access menu-bar of a flattened child window with Alt/menu key (not a very common use case..).
  - nav: simulate right-click or context activation? (SHIFT+F10)
- - nav/tabbing: refactor old tabbing system and turn into navigation, should pass through all widgets (in submission order?).
  - nav/popup: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys, default validation button, etc.
  - nav/treenode: left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
  - nav/menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
@@ -352,8 +352,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
- - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787, #343)
 
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
@@ -391,7 +389,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
- - backends: opengl: consider gl_lite loader https://github.com/ApoorvaJ/Papaya/blob/3808e39b0f45d4ca4972621c847586e4060c042a/src/libs/gl_lite.h
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)

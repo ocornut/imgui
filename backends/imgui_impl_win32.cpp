@@ -33,8 +33,12 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
+//  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
+//  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host window doesn't have focus.
+//  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using TrackMouseEvent() to receive WM_MOUSELEAVE events).
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
-//  2021-06-08: Fix ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
+//  2021-06-08: Fixed ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
 //  2021-03-23: Inputs: Clearing keyboard down array when losing focus (WM_KILLFOCUS).
 //  2021-02-18: Added ImGui_ImplWin32_EnableAlphaCompositing(). Non Visual Studio users will need to link with dwmapi.lib (MinGW/gcc: use -ldwmapi).
 //  2021-02-17: Fixed ImGui_ImplWin32_EnableDpiAwareness() attempting to get SetProcessDpiAwareness from shcore.dll on Windows 8 whereas it is only supported on Windows 8.1.
@@ -67,6 +71,8 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 struct ImGui_ImplWin32_Data
 {
     HWND                        hWnd;
+    HWND                        MouseHwnd;
+    bool                        MouseTracked;
     INT64                       Time;
     INT64                       TicksPerSecond;
     ImGuiMouseCursor            LastMouseCursor;
@@ -167,8 +173,9 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
 
 void    ImGui_ImplWin32_Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    IM_ASSERT(bd != NULL && "No platform backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
 
     // Unload XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -216,25 +223,36 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
 
 static void ImGui_ImplWin32_UpdateMousePos()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
-    // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    const ImVec2 mouse_pos_prev = io.MousePos;
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+
+    // Obtain focused and hovered window. We forward mouse input when focused or when hovered (and no other window is capturing)
+    HWND focused_window = ::GetForegroundWindow();
+    HWND hovered_window = bd->MouseHwnd;
+    HWND mouse_window = NULL;
+    if (hovered_window && (hovered_window == bd->hWnd || ::IsChild(hovered_window, bd->hWnd)))
+        mouse_window = hovered_window;
+    else if (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd)))
+        mouse_window = focused_window;
+    if (mouse_window == NULL)
+        return;
+
+    // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     if (io.WantSetMousePos)
     {
-        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+        POINT pos = { (int)mouse_pos_prev.x, (int)mouse_pos_prev.y };
         if (::ClientToScreen(bd->hWnd, &pos))
             ::SetCursorPos(pos.x, pos.y);
     }
 
-    // Set mouse position
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    // Set Dear ImGui mouse position from OS position
     POINT pos;
-    if (HWND active_window = ::GetForegroundWindow())
-        if (active_window == bd->hWnd || ::IsChild(active_window, bd->hWnd))
-            if (::GetCursorPos(&pos) && ::ScreenToClient(bd->hWnd, &pos))
-                io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+    if (::GetCursorPos(&pos) && ::ScreenToClient(mouse_window, &pos))
+        io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
 
 // Gamepad navigation mapping
@@ -305,13 +323,6 @@ void    ImGui_ImplWin32_NewFrame()
     io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
     bd->Time = current_time;
 
-    // Read keyboard modifiers inputs
-    io.KeyCtrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
-    io.KeyShift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
-    io.KeyAlt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
-    io.KeySuper = false;
-    // io.KeysDown[], io.MousePos, io.MouseDown[], io.MouseWheel: filled by the WndProc handler below.
-
     // Update OS mouse position
     ImGui_ImplWin32_UpdateMousePos();
 
@@ -357,6 +368,21 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 
     switch (msg)
     {
+    case WM_MOUSEMOVE:
+        // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
+        bd->MouseHwnd = hwnd;
+        if (!bd->MouseTracked)
+        {
+            TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
+            ::TrackMouseEvent(&tme);
+            bd->MouseTracked = true;
+        }
+        break;
+    case WM_MOUSELEAVE:
+        if (bd->MouseHwnd == hwnd)
+            bd->MouseHwnd = NULL;
+        bd->MouseTracked = false;
+        break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
@@ -394,17 +420,36 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         io.MouseWheelH += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
         return 0;
     case WM_KEYDOWN:
-    case WM_SYSKEYDOWN:
-        if (wParam < 256)
-            io.KeysDown[wParam] = 1;
-        return 0;
     case WM_KEYUP:
+    case WM_SYSKEYDOWN:
     case WM_SYSKEYUP:
+    {
+        bool down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
         if (wParam < 256)
-            io.KeysDown[wParam] = 0;
+            io.KeysDown[wParam] = down;
+        if (wParam == VK_CONTROL)
+        {
+            io.KeysDown[VK_LCONTROL] = ((::GetKeyState(VK_LCONTROL) & 0x8000) != 0);
+            io.KeysDown[VK_RCONTROL] = ((::GetKeyState(VK_RCONTROL) & 0x8000) != 0);
+            io.KeyCtrl = io.KeysDown[VK_LCONTROL] || io.KeysDown[VK_RCONTROL];
+        }
+        if (wParam == VK_SHIFT)
+        {
+            io.KeysDown[VK_LSHIFT] = ((::GetKeyState(VK_LSHIFT) & 0x8000) != 0);
+            io.KeysDown[VK_RSHIFT] = ((::GetKeyState(VK_RSHIFT) & 0x8000) != 0);
+            io.KeyShift            = io.KeysDown[VK_LSHIFT] || io.KeysDown[VK_RSHIFT];
+        }
+        if (wParam == VK_MENU)
+        {
+            io.KeysDown[VK_LMENU] = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
+            io.KeysDown[VK_RMENU] = ((::GetKeyState(VK_RMENU) & 0x8000) != 0);
+            io.KeyAlt             = io.KeysDown[VK_LMENU] || io.KeysDown[VK_RMENU];
+        }
         return 0;
+    }
+    case WM_SETFOCUS:
     case WM_KILLFOCUS:
-        memset(io.KeysDown, 0, sizeof(io.KeysDown));
+        io.AddFocusEvent(msg == WM_SETFOCUS);
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.

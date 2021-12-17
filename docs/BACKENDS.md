@@ -75,6 +75,7 @@ List of Renderer Backends:
     imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL 2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
     imgui_impl_opengl3.cpp    ; OpenGL 3/4, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
+    imgui_impl_sdlrenderer.cpp; SDL_Renderer (optional component of SDL2 available from SDL 2.0.18+)
     imgui_impl_vulkan.cpp     ; Vulkan
     imgui_impl_wgpu.cpp       ; WebGPU
 
@@ -127,7 +128,10 @@ Once it works, if you really need it you can replace parts of backends with your
 and you have high-level systems everywhere.<BR>
 Suggestion: try using a non-portable backend first (e.g. win32 + underlying graphics API) to get
 your desktop builds working first. This will get you running faster and get your acquainted with
-how Dear ImGui works and is setup. You can then rewrite a custom backend using your own engine API.
+how Dear ImGui works and is setup. You can then rewrite a custom backend using your own engine API...
+
+Generally:
+It is unlikely you will add value to your project by creating your own backend.
 
 Also:
 The [multi-viewports feature](https://github.com/ocornut/imgui/issues/1542) of the 'docking' branch allows
