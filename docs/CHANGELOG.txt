@@ -40,6 +40,8 @@ Breaking Changes:
   Please open an issue if you think you really need this function. (#3841)
 - Backends: OSX: Added NSView* parameter to ImGui_ImplOSX_Init(). (#4759) [@stuartcarnie]
   Updated Apple+Metal and Apple+GL example applications accordingly.
+- Backends: Marmalade: Removed obsolete Marmalade backend (imgui_impl_marmalade.cpp) + example. (#368, #375)
+  Find last supported version at https://github.com/ocornut/imgui/wiki/Bindings
 
 
 Other Changes:

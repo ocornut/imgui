@@ -141,10 +141,6 @@ GLUT (e.g., FreeGLUT on Linux/Windows, GLUT framework on OSX) + OpenGL2 example.
 = main.cpp + imgui_impl_glut.cpp + imgui_impl_opengl2.cpp <BR>
 Note that GLUT/FreeGLUT is largely obsolete software, prefer using GLFW or SDL.
 
-[example_marmalade/](https://github.com/ocornut/imgui/blob/master/examples/example_marmalade/) <BR>
-Marmalade example using IwGx. <BR>
-= main.cpp + imgui_impl_marmalade.cpp
-
 [example_null/](https://github.com/ocornut/imgui/blob/master/examples/example_null/) <BR>
 Null example, compile and link imgui, create context, run headless with no inputs and no graphics output. <BR>
 = main.cpp <BR>
