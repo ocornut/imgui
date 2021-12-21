@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: Clipboard support (from Allegro 5.1.12)
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 // Issues:
@@ -16,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-XX: Inputs: calling new io.AddKeyEvent() API (1.87+), support for full keys range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -411,16 +413,6 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
         { 0, 0, 0 }
     };
     bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
-
-    // Legacy keyboard mapping (not needed since 1.86: io.AddKeyEvent() is enough)
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    for (int key_code = 0; key_code < 512; key_code++)
-    {
-        ImGuiKey imgui_key = ImGui_ImplAllegro5_KeyCodeToImGuiKey(key_code);
-        if (imgui_key != ImGuiKey_None)
-            io.KeyMap[imgui_key] = key_code;
-    }
-#endif
 
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 

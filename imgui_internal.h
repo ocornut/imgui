@@ -2592,16 +2592,22 @@ namespace ImGui
 
     // Inputs
     // FIXME: Eventually we should aim to move e.g. IsActiveIdUsingKey() into IsKeyXXX functions.
+    inline bool             IsNamedKey(ImGuiKey key)                                    { return key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END; }
+    inline bool             IsLegacyKey(ImGuiKey key)                                   { return key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END; }
+    IMGUI_API const ImGuiKeyData* GetKeyData(ImGuiKey key);
     IMGUI_API void          SetItemUsingMouseWheel();
     IMGUI_API void          SetActiveIdUsingNavAndKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingNavInput(ImGuiNavInput input)                { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavInputMask & (1 << input)) != 0; }
-    inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END); ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask.TestBit(key - ImGuiKey_NamedKey_BEGIN); }
-    inline void             SetActiveIdUsingKey(ImGuiKey key)                           { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END); ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key - ImGuiKey_NamedKey_BEGIN); }
+    inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { IM_ASSERT(IsNamedKey(key)); ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask.TestBit(key - ImGuiKey_NamedKey_BEGIN); }
+    inline void             SetActiveIdUsingKey(ImGuiKey key)                           { IM_ASSERT(IsNamedKey(key)); ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key - ImGuiKey_NamedKey_BEGIN); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
     inline bool             IsNavInputDown(ImGuiNavInput n)                             { ImGuiContext& g = *GImGui; return g.IO.NavInputs[n] > 0.0f; }
     inline bool             IsNavInputTest(ImGuiNavInput n, ImGuiInputReadMode rm)      { return (GetNavInputAmount(n, rm) > 0.0f); }
     IMGUI_API ImGuiKeyModFlags GetMergedKeyModFlags();
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    inline bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true)           { IM_ASSERT(IsNamedKey(key)); return IsKeyPressed(key, repeat); }
+#endif
 
     // Drag and Drop
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);

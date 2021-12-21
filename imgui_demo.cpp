@@ -5639,6 +5639,8 @@ static void ShowDemoWindowColumns()
     ImGui::TreePop();
 }
 
+namespace ImGui { extern const ImGuiKeyData* GetKeyData(ImGuiKey key); }
+
 static void ShowDemoWindowMisc()
 {
     IMGUI_DEMO_MARKER("Filtering");
@@ -5695,9 +5697,16 @@ static void ShowDemoWindowMisc()
         IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Keyboard & Navigation State");
         if (ImGui::TreeNode("Keyboard & Navigation State"))
         {
-            ImGui::Text("Keys down:");          for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyDown(key))    { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X) (%.02f secs)", ImGui::GetKeyName(key), i, i, io.KeysData[i].DownDuration); } }
-            ImGui::Text("Keys pressed:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), i, i); } }
-            ImGui::Text("Keys release:");       for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++) { ImGuiKey key = i + ImGuiKey_KeyIndex_BEGIN; if (ImGui::IsKeyReleased(key)){ ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), i, i); } }
+            // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allow displaying the data for old/new backends.
+            // User code should never have to go through such hoops: old code may use native keycodes, new code may use ImGuiKey codes.
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+            struct funcs { static bool IsNativeDupe(ImGuiKey) { return false; } };
+#else
+            struct funcs { static bool IsNativeDupe(ImGuiKey key) { return key < ImGuiKey_LegacyNativeKey_END && ImGui::GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+#endif
+            ImGui::Text("Keys down:");          for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X) (%.02f secs)", ImGui::GetKeyName(key), key, key, ImGui::GetKeyData(key)->DownDuration); } }
+            ImGui::Text("Keys pressed:");       for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
+            ImGui::Text("Keys released:");      for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyReleased(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
             ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
             ImGui::Text("Chars queue:");        for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
 

@@ -5,6 +5,8 @@
 // !!! If someone or something is teaching you GLUT today, you are being abused. Please show some resistance. !!!
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
+// Implemented features:
+//  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
 //  [ ] Platform: Missing mouse cursor shape/visibility support.
@@ -18,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-XX: Inputs: calling new io.AddKeyEvent() API (1.87+), support for full keys range.
 //  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
 //  2019-03-25: Misc: Made io.DeltaTime always above zero.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
@@ -38,7 +41,7 @@
 static int g_Time = 0;          // Current time, in milliseconds
 
 // Glut has 1 function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.
-ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
+static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
 {
     switch (key)
     {
@@ -160,18 +163,7 @@ bool ImGui_ImplGLUT_Init()
 #else
     io.BackendPlatformName = "imgui_impl_glut";
 #endif
-
     g_Time = 0;
-
-    // Legacy keyboard mapping (not needed since 1.86: io.AddKeyEvent() is enough)
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    for (int key = 0; key < 512; key++)
-    {
-        ImGuiKey imgui_key = ImGui_ImplGLUT_KeyToImGuiKey(key);
-        if (imgui_key != ImGuiKey_None)
-            io.KeyMap[imgui_key] = key;
-    }
-#endif
 
     return true;
 }

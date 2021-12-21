@@ -342,7 +342,7 @@ CODE
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Keyboard:
     - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable.
-      NewFrame() will automatically fill io.NavInputs[] based on your io.KeysDown[] + io.KeyMap[] arrays.
+      NewFrame() will automatically fill io.NavInputs[] based on your io.AddKeyEvent() calls.
     - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag
       will be set. For more advanced uses, you may want to read from:
        - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
@@ -916,9 +916,6 @@ static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
 static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
-// ImGuiKey <-> user key index mapping functions
-static int              GetKeyDataIndexInternal(int imgui_key_or_user_key_index);
-
 namespace ImGui
 {
 // Navigation
@@ -1145,8 +1142,9 @@ ImGuiIO::ImGuiIO()
     MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
     MouseDragThreshold = 6.0f;
     for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(KeysData); i++) KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(KeysData); i++) { KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f; }
     for (int i = 0; i < IM_ARRAYSIZE(NavInputsDownDuration); i++) NavInputsDownDuration[i] = -1.0f;
+    BackendUsingLegacyKeyArrays = (ImS8)-1;
 }
 
 // Pass in translated ASCII characters for text input.
@@ -1232,15 +1230,25 @@ void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int nativ
 {
     IM_UNUSED(native_keycode);
     IM_UNUSED(native_scancode);
+    IM_ASSERT(ImGui::IsNamedKey(key)); // Backend needs to pass a valid ImGuiKey_ constant. 0..511 values are legacy native key codes which are not accepted by this API.
 
-    int key_index = GetKeyDataIndexInternal(key);
-    if (key_index < 0)
-        return;
-
-    KeysData[key_index].Down = down;
-
+    // Verify that backend isn't mixing up using new io.AddKeyEvent() api and old io.KeysDown[] + io.KeyMap[] data.
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    KeysDown[key_index] = KeysData[key_index].Down;
+    IM_ASSERT((BackendUsingLegacyKeyArrays == -1 || BackendUsingLegacyKeyArrays == 0) && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+    if (BackendUsingLegacyKeyArrays == -1)
+        for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
+            IM_ASSERT(KeyMap[n] == -1 && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+#endif
+    BackendUsingLegacyKeyArrays = 0;
+
+    // Write key
+    int keydata_index = (key - ImGuiKey_KeysData_OFFSET);
+    KeysData[keydata_index].Down = down;
+
+    // Build native->imgui map so old user code can still call key functions with native 0..511 values.
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    if (native_keycode >= 0 && native_keycode < ImGuiKey_LegacyNativeKey_END)
+        KeyMap[native_keycode] = key;
 #endif
 }
 
@@ -3782,13 +3790,44 @@ static void ImGui::UpdateKeyboardInputs()
     // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
     io.KeyMods = GetMergedKeyModFlags();
 
+    // Import legacy keys or verify they are not used
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    if (io.BackendUsingLegacyKeyArrays == 0)
+    {
+        // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written too.
+        for (int n = 0; n < IM_ARRAYSIZE(io.KeysDown); n++)
+            IM_ASSERT(io.KeysDown[n] == false && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+    }
+    else
+    {
+        if (g.FrameCount == 0)
+            for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+                IM_ASSERT(g.IO.KeyMap[n] == -1 && "Backend is not allowed to write to io.KeyMap[0..511]!");
+
+        // Build reverse KeyMap (Named -> Legacy)
+        for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
+            if (io.KeyMap[n] != -1)
+            {
+                IM_ASSERT(IsLegacyKey((ImGuiKey)io.KeyMap[n]));
+                io.KeyMap[io.KeyMap[n]] = n;
+            }
+
+        // Import legacy keys into new ones
+        for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+            if (io.KeysDown[n] || io.BackendUsingLegacyKeyArrays == 1)
+            {
+                const ImGuiKey key = (ImGuiKey)(io.KeyMap[n] != -1 ? io.KeyMap[n] : n);
+                IM_ASSERT(io.KeyMap[n] == -1 || IsNamedKey(key));
+                io.KeysData[key].Down = io.KeysDown[n];
+                io.BackendUsingLegacyKeyArrays = 1;
+            }
+    }
+#endif
+
     // Update keys
     for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++)
     {
         ImGuiKeyData& key_data = io.KeysData[i];
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-        key_data.Down = io.KeysDown[i];
-#endif
         key_data.DownDurationPrev = key_data.DownDuration;
         key_data.DownDuration = key_data.Down ? (key_data.DownDuration < 0.0f ? 0.0f : key_data.DownDuration + io.DeltaTime) : -1.0f;
     }
@@ -4832,43 +4871,30 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return true;
 }
 
-static int GetKeyDataIndexInternal(int imgui_key_or_user_key_index)
+const ImGuiKeyData* ImGui::GetKeyData(ImGuiKey key)
 {
-    if (imgui_key_or_user_key_index < 0)
-        return -1;
-
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    if (imgui_key_or_user_key_index >= ImGuiKey_LegacyNativeKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_LegacyNativeKey_END)
-        return imgui_key_or_user_key_index;
-
     ImGuiContext& g = *GImGui;
-    if (imgui_key_or_user_key_index >= ImGuiKey_NamedKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_NamedKey_END)
-        return g.IO.KeyMap[imgui_key_or_user_key_index];
+    int index = -1;
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    IM_ASSERT(key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_NamedKey_END);
+    if (IsLegacyKey(key))
+        index = (g.IO.KeyMap[key] != -1) ? g.IO.KeyMap[key] : key; // Remap native->imgui or imgui->native
+    else
+        index = key;
 #else
-    if (imgui_key_or_user_key_index >= ImGuiKey_NamedKey_BEGIN && imgui_key_or_user_key_index < ImGuiKey_NamedKey_END)
-        return imgui_key_or_user_key_index - ImGuiKey_NamedKey_BEGIN;
+    IM_ASSERT(IsNamedKey(key) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
+    index = key - ImGuiKey_NamedKey_BEGIN;
 #endif
-
-    return -1;
+    return index != -1 ? &g.IO.KeysData[index] : NULL;
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-static ImGuiKey GetImGuiKeyFromLegacyKey(int user_key_index)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(user_key_index >= 0 && user_key_index < ImGuiKey_LegacyNativeKey_END);
-    for (int imgui_key = ImGuiKey_NamedKey_BEGIN; imgui_key < ImGuiKey_NamedKey_END; ++imgui_key)
-        if (g.IO.KeyMap[imgui_key] == user_key_index)
-            return imgui_key;
-    return ImGuiKey_None;
-}
-#endif
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
 int ImGui::GetKeyIndex(ImGuiKey key)
 {
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END);
-    return GetKeyDataIndexInternal(key);
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(IsNamedKey(key));
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    return key_data ? (int)(key_data - g.IO.KeysData) : -1;
 }
 #endif
 
@@ -4892,11 +4918,16 @@ IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
 const char* ImGui::GetKeyName(ImGuiKey key)
 {
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
+    IM_ASSERT(IsNamedKey(key) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
 #else
-    if (key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END)
-        if ((key = GetImGuiKeyFromLegacyKey(key)) == ImGuiKey_None)
+    if (IsLegacyKey(key))
+    {
+        ImGuiIO& io = GetIO();
+        if (io.KeyMap[key] == -1)
             return "N/A";
+        IM_ASSERT(IsNamedKey((ImGuiKey)io.KeyMap[key]));
+        key = (ImGuiKey)io.KeyMap[key];
+    }
 #endif
     if (key == ImGuiKey_None)
         return "None";
@@ -4904,20 +4935,14 @@ const char* ImGui::GetKeyName(ImGuiKey key)
     return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
 
-// Note that dear imgui doesn't know the semantic of each entry of io.KeysDown[]!
-// Use your own indices/enums according to how your backend/engine stored them into io.KeysDown[]!
+// Note that Dear ImGui doesn't know the meaning/semantic of ImGuiKey from 0..511: they are legacy native keycodes.
+// Consider transitioning from 'IsKeyDown(MY_ENGINE_KEY_A)' (<1.87) to IsKeyDown(ImGuiKey_A) (>= 1.87)
 bool ImGui::IsKeyDown(ImGuiKey key)
 {
-#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
-#endif
-
-    int key_index = GetKeyDataIndexInternal(key);
-    if (key_index < 0)
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    if (key_data == NULL)
         return false;
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
-    return g.IO.KeysData[key_index].Down;
+    return key_data->Down;
 }
 
 // t0 = previous time (e.g.: g.Time - g.IO.DeltaTime)
@@ -4938,33 +4963,23 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
     return count;
 }
 
-int ImGui::GetKeyPressedAmount(int key, float repeat_delay, float repeat_rate)
+int ImGui::GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float repeat_rate)
 {
-#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
-#endif
-
-    int key_index = GetKeyDataIndexInternal(key);
-    if (key_index < 0)
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    if (key_data == NULL)
         return 0;
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
-    const float t = g.IO.KeysData[key_index].DownDuration;
+    const float t = key_data->DownDuration;
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
 
-bool ImGui::IsKeyPressed(int key, bool repeat)
+bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
 {
-#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
-#endif
-
-    int key_index = GetKeyDataIndexInternal(key);
-    if (key_index < 0)
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    if (key_data == NULL)
         return false;
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
-    const float t = g.IO.KeysData[key_index].DownDuration;
+    const float t = key_data->DownDuration;
     if (t == 0.0f)
         return true;
     if (repeat && t > g.IO.KeyRepeatDelay)
@@ -4972,18 +4987,12 @@ bool ImGui::IsKeyPressed(int key, bool repeat)
     return false;
 }
 
-bool ImGui::IsKeyReleased(int key)
+bool ImGui::IsKeyReleased(ImGuiKey key)
 {
-#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
-#endif
-
-    int key_index = GetKeyDataIndexInternal(key);
-    if (key_index < 0)
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    if (key_data == NULL)
         return false;
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysData));
-    return g.IO.KeysData[key_index].DownDurationPrev >= 0.0f && !g.IO.KeysData[key_index].Down;
+    return key_data->DownDurationPrev >= 0.0f && !key_data->Down;
 }
 
 bool ImGui::IsMouseDown(ImGuiMouseButton button)
@@ -7639,8 +7648,8 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    for (int n = 0; n < ImGuiKey_COUNT; n++)
-        IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
+    for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_COUNT; n++)
+        IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..511, or -1 for unmapped key)");
 
     // Check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only added in 1.60 WIP)
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)

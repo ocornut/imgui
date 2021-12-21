@@ -4,9 +4,9 @@
 
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy kVK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [X] Platform: Keyboard arrays indexed using kVK_* codes, e.g. ImGui::IsKeyPressed(kVK_Space).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-XX: Inputs: calling new io.AddKeyEvent() API (1.87+), support for full keys range.
 //  2021-12-13: *BREAKING CHANGE* Add NSView parameter to ImGui_ImplOSX_Init(). Generally fix keyboard support. Using kVK_* codes for keyboard keys.
 //  2021-12-13: Add game controller support.
 //  2021-09-21: Use mach_absolute_time as CFAbsoluteTimeGetCurrent can jump backwards.
@@ -334,16 +335,6 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
-
-    // Legacy keyboard mapping (not needed since 1.86: io.AddKeyEvent() is enough)
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    for (int key_code = 0; key_code < 512; key_code++)
-    {
-        ImGuiKey imgui_key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
-        if (imgui_key != ImGuiKey_None)
-            io.KeyMap[imgui_key] = key_code;
-    }
-#endif
 
     // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;

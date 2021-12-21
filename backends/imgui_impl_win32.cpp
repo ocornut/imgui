@@ -3,9 +3,9 @@
 
 // Implemented features:
 //  [X] Platform: Clipboard support (for Win32 this is actually part of core dear imgui)
-//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
-//  [X] Platform: Keyboard support. Since 1.86 we are using the io.AddKeyEvent() function. Pass ImGuiKey_ values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space).
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy VK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
+//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -33,7 +33,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2021-12-XX: Inputs: calling new io.AddKeyEvent() API (1.86+), support for full keys range including left/right keyboard modifier variants.
+//  2022-01-XX: Inputs: calling new io.AddKeyEvent() API (1.87+), support for full keys range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
 //  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host window doesn't have focus.
@@ -89,8 +89,6 @@ struct ImGui_ImplWin32_Data
     ImGui_ImplWin32_Data()      { memset(this, 0, sizeof(*this)); }
 };
 
-static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam);
-
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
@@ -126,16 +124,6 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 
     io.ImeWindowHandle = hwnd;
-
-    // Legacy keyboard mapping (not needed since 1.86: io.AddKeyEvent() is enough)
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    for (int virtual_key = 0; virtual_key < 512; virtual_key++)
-    {
-        ImGuiKey imgui_key = ImGui_ImplWin32_VirtualKeyToImGuiKey(virtual_key);
-        if (imgui_key != ImGuiKey_None)
-            io.KeyMap[imgui_key] = virtual_key;
-    }
-#endif
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
