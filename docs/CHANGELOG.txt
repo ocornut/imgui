@@ -74,6 +74,7 @@ Other Changes:
 - Menus: fixed closing a menu by clicking on its menu-bar item when inside a popup. (#3496, #4797) [@xndcn]
 - Menus: fixed menu inside a popup/modal not inhibiting hovering of items in the popup/modal. (#3496, #4797)
 - Menus: fixed sub-menu items inside a popups from closing the popup.
+- Menus: fixed top-level menu from not consistently using style.PopupRounding. (#4788)
 - InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
 - Inputtext, Nav: fixed using SetKeyboardFocusHere() on InputTextMultiline(). (#4761)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
