@@ -232,7 +232,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     io.KeyMap[ImGuiKey_Space]           = kVK_Space;
     io.KeyMap[ImGuiKey_Enter]           = kVK_Return;
     io.KeyMap[ImGuiKey_Escape]          = kVK_Escape;
-    io.KeyMap[ImGuiKey_KeyPadEnter]     = kVK_ANSI_KeypadEnter;
+    io.KeyMap[ImGuiKey_KeypadEnter]     = kVK_ANSI_KeypadEnter;
     io.KeyMap[ImGuiKey_A]               = kVK_ANSI_A;
     io.KeyMap[ImGuiKey_C]               = kVK_ANSI_C;
     io.KeyMap[ImGuiKey_V]               = kVK_ANSI_V;
