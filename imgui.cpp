@@ -380,6 +380,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/01/xx (1.87) - inputs: renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum.
  - 2022/03/01 (1.87) - commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
                         - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
                         - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x

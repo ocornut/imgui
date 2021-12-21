@@ -11,7 +11,7 @@
 //  - FIXME: On-screen keyboard currently needs to be enabled by the application (see examples/ and issue #3446)
 //  - FIXME: Unicode character inputs needs to be passed by Dear ImGui by the application (see examples/ and issue #3446)
 
-// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this. 
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
@@ -139,7 +139,7 @@ bool ImGui_ImplAndroid_Init(ANativeWindow* window)
     io.KeyMap[ImGuiKey_Space] = AKEYCODE_SPACE;
     io.KeyMap[ImGuiKey_Enter] = AKEYCODE_ENTER;
     io.KeyMap[ImGuiKey_Escape] = AKEYCODE_ESCAPE;
-    io.KeyMap[ImGuiKey_KeyPadEnter] = AKEYCODE_NUMPAD_ENTER;
+    io.KeyMap[ImGuiKey_KeypadEnter] = AKEYCODE_NUMPAD_ENTER;
     io.KeyMap[ImGuiKey_A] = AKEYCODE_A;
     io.KeyMap[ImGuiKey_C] = AKEYCODE_C;
     io.KeyMap[ImGuiKey_V] = AKEYCODE_V;

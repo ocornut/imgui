@@ -1366,7 +1366,7 @@ enum ImGuiKey_
     ImGuiKey_Space,
     ImGuiKey_Enter,
     ImGuiKey_Escape,
-    ImGuiKey_KeyPadEnter,
+    ImGuiKey_KeypadEnter,
     ImGuiKey_A,                 // for text edit CTRL+A: select all
     ImGuiKey_C,                 // for text edit CTRL+C: copy
     ImGuiKey_V,                 // for text edit CTRL+V: paste
@@ -1374,6 +1374,9 @@ enum ImGuiKey_
     ImGuiKey_Y,                 // for text edit CTRL+Y: redo
     ImGuiKey_Z,                 // for text edit CTRL+Z: undo
     ImGuiKey_COUNT
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    , ImGuiKey_KeyPadEnter = ImGuiKey_KeypadEnter   // Renamed in 1.87
+#endif
 };
 
 // To test io.KeyMods (which is a combination of individual fields io.KeyCtrl, io.KeyShift, io.KeyAlt set by user/backend)

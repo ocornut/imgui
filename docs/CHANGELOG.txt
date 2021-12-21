@@ -37,6 +37,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
 - Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
   - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
   - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
