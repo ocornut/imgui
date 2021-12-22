@@ -6951,8 +6951,8 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.Font = font;
     g.FontBaseScale = ImMax(0.01f, g.IO.FontGlobalScale * g.Font->Scale);
     const float font_scale = g.FontBaseScale * (g.CurrentWindow ? g.CurrentWindow->CalcFontScale() : 1.0f);
-    g.FontSize = g.Font->FontSize * font_scale;
-    g.FontLineHeight = (g.Font->FontSize + g.Font->ExtraLineHeight) * font_scale;
+    g.FontSize = IM_ROUND(g.Font->FontSize * font_scale);
+    g.FontLineHeight = IM_ROUND((g.Font->FontSize + g.Font->ExtraLineHeight) * font_scale);
     g.FontBaselineOffset = g.Font->BaselineOffset * font_scale;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
