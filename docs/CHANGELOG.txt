@@ -100,7 +100,7 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.86 WIP (In Progress)
+ VERSION 1.86 (Released 2021-12-22)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -108,8 +108,8 @@ Breaking Changes:
 - Removed CalcListClipping() function. Prefer using ImGuiListClipper which can return non-contiguous ranges.
   Please open an issue if you think you really need this function. (#3841)
 - Backends: OSX: Added NSView* parameter to ImGui_ImplOSX_Init(). (#4759) [@stuartcarnie]
-  Updated Apple+Metal and Apple+GL example applications accordingly.
-
+- Backends: Marmalade: Removed obsolete Marmalade backend (imgui_impl_marmalade.cpp) + example app. (#368, #375)
+  Find last supported version at https://github.com/ocornut/imgui/wiki/Bindings
 
 Other Changes:
 
@@ -120,12 +120,12 @@ Other Changes:
 - Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
   (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
   but it allows testing for triple clicks and more).
-- Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
+- Modals: fixed issue hovering popups inside a child windows inside a modal. (#4676, #4527)
 - Modals, Popups, Windows: changes how appearing windows are interrupting popups and modals. (#4317) [@rokups]
   - appearing windows created from within the begin stack of a popup/modal will no longer close it.
   - appearing windows created not within the begin stack of a modal will no longer close the modal,
     and automatically appear behind it.
-- Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
+- Fixed IsWindowFocused()/IsWindowHovered() issues with child windows inside popups. (#4676)
 - Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
   configuration flag. This is part of an effort to generalize the use of keyboard inputs. (#4023, #787).
   Note that while this is active you can also moving windows (with arrow) and resize (shift+arrows).
@@ -141,11 +141,13 @@ Other Changes:
 - Menus: fixed closing a menu by clicking on its menu-bar item when inside a popup. (#3496, #4797) [@xndcn]
 - Menus: fixed menu inside a popup/modal not inhibiting hovering of items in the popup/modal. (#3496, #4797)
 - Menus: fixed sub-menu items inside a popups from closing the popup.
+- Menus: fixed top-level menu from not consistently using style.PopupRounding. (#4788)
 - InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
 - Inputtext, Nav: fixed using SetKeyboardFocusHere() on InputTextMultiline(). (#4761)
 - InputText: made double-click select word, triple-line select line. Word delimitation logic differs
   slightly from the one used by CTRL+arrows. (#2244)
 - InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
+- InputText: fixed Shift+Delete from not cutting into clipboard. (#4818, #1541) [@corporateshark]
 - InputTextMultiline: fixed incorrect padding when FrameBorder > 0. (#3781, #4794)
 - InputTextMultiline: fixed vertical tracking with large values of FramePadding.y. (#3781, #4794)
 - Separator: fixed cover all columns while called inside a table. (#4787)
@@ -163,8 +165,8 @@ Other Changes:
 - Clipper: fixed invalid state when number of frozen table row is smaller than ItemCount.
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
   tooltip when scrolling. (#143)
-- Fonts: fixed infinite loop in ImFontGlyphRangesBuilder::AddRanges() when passing UINT16_MAX without
-  the IMGUI_USE_WCHAR32 compile-time option. (#4802) [@SlavicPotato]
+- Fonts: fixed infinite loop in ImFontGlyphRangesBuilder::AddRanges() when passing UINT16_MAX or UINT32_MAX
+  without the IMGUI_USE_WCHAR32 compile-time option. (#4802) [@SlavicPotato]
 - Metrics: Added a node showing windows in submission order and showing the Begin() stack.
 - Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
   io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
@@ -179,9 +181,11 @@ Other Changes:
 - Backends: OpenGL2, Allegro5, Marmalade: Fixed mishandling of the ImDrawCmd::IdxOffset field.
   This is an old bug, but due to the way we created drawlists, it never had any visible side-effect before.
   The new code for handling Modal and CTRL+Tab dimming/whitening recently made the bug surface. (#4790)
+- Backends: Win32: Store left/right variants of Ctrl/Shift/Alt mods in KeysDown[] array. (#2625) [@thedmd]
 - Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
 - Backends: SDL_Renderer: Added support for large meshes (64k+ vertices) with 16-bit indices,
   enabling 'ImGuiBackendFlags_RendererHasVtxOffset' in the backend. (#3926) [@rokups]
+- Backends: SDL_Renderer: Fix for SDL 2.0.19+ RenderGeometryRaw() API signature change. (#4819) [@sridenour]
 - Backends: OSX: Generally fix keyboard support. Keyboard arrays indexed using kVK_* codes, e.g.
   ImGui::IsKeyPressed(kVK_Space). Don't set mouse cursor shape unconditionally. Handle two fingers scroll
   cancel event. (#4759, #4253, #1873) [@stuartcarnie]
