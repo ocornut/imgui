@@ -82,28 +82,28 @@ static MetalContext *g_sharedMetalContext = nil;
 #pragma mark - ImGui Metal C++ Bindings
 
 bool ImGui_ImplMetal_Init(MTL::Device* device) {
-    return ImGui_ImplMetal_Init(static_cast<id<MTLDevice>>(device));
+    return ImGui_ImplMetal_Init((id<MTLDevice>)(device));
 }
 
 void ImGui_ImplMetal_NewFrame(MTL::RenderPassDescriptor* renderPassDescriptor) {
-    ImGui_ImplMetal_NewFrame(static_cast<MTLRenderPassDescriptor*>(renderPassDescriptor));
+    ImGui_ImplMetal_NewFrame((MTLRenderPassDescriptor*)(renderPassDescriptor));
 }
 
 void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data,
                                     MTL::CommandBuffer* commandBuffer,
                                     MTL::RenderCommandEncoder* commandEncoder) {
     ImGui_ImplMetal_RenderDrawData(draw_data,
-                                   static_cast<id<MTLCommandBuffer>>(commandBuffer),
-                                   static_cast<id<MTLRenderCommandEncoder>>(commandEncoder));
+                                   (id<MTLCommandBuffer>)(commandBuffer),
+                                   (id<MTLRenderCommandEncoder>)(commandEncoder));
 
 }
 
 bool ImGui_ImplMetal_CreateFontsTexture(MTL::Device* device) {
-    return ImGui_ImplMetal_CreateFontsTexture(static_cast<id<MTLDevice>>(device));
+    return ImGui_ImplMetal_CreateFontsTexture((id<MTLDevice>)(device));
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device) {
-    return ImGui_ImplMetal_CreateDeviceObjects(static_cast<id<MTLDevice>>(device));
+    return ImGui_ImplMetal_CreateDeviceObjects((id<MTLDevice>)(device));
 }
 
 #endif

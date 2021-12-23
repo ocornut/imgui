@@ -32,9 +32,9 @@ IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 
 #endif
 
-// Enable Metal C++ bindings support with
-// #define IMGUI_IMPL_METAL_CPP     // imconfig.h
-// More info about this bindings:
+// Enable Metal C++ binding support with
+//#define IMGUI_IMPL_METAL_CPP     // imconfig.h
+// More info about this binding:
 // https://developer.apple.com/metal/cpp/
 
 #ifdef IMGUI_IMPL_METAL_CPP
