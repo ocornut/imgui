@@ -30,6 +30,15 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+
+-----------------------------------------------------------------------
+ VERSION 1.87 WIP (In Progress)
+-----------------------------------------------------------------------
+
+- Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init, added in 1.86 (#4468, #4830) [@dymk]
+  It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
+
+
 -----------------------------------------------------------------------
  VERSION 1.86 (Released 2021-12-22)
 -----------------------------------------------------------------------
