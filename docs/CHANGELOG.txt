@@ -108,6 +108,11 @@ Other changes:
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 
+Docking+Viewports Branch:
+
+- Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in
+  its own viewport (regression from 1.86). (#4023, #787)
+
 
 -----------------------------------------------------------------------
  VERSION 1.86 (Released 2021-12-22)
