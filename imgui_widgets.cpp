@@ -1,4 +1,4 @@
-// dear imgui, v1.86
+// dear imgui, v1.87 WIP
 // (widgets code)
 
 /*

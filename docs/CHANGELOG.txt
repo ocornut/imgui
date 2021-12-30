@@ -100,6 +100,16 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.87 WIP (In Progress)
+-----------------------------------------------------------------------
+
+- Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
+  It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
+- Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
+  Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
+
+
+-----------------------------------------------------------------------
  VERSION 1.86 (Released 2021-12-22)
 -----------------------------------------------------------------------
 

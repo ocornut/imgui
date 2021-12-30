@@ -49,6 +49,16 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 
+// Clang warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"     // warning: use of old-style cast
+#pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
+#if __has_warning("-Wzero-as-null-pointer-constant")
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
+#endif
+
 // GLFW
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
@@ -68,7 +78,7 @@
 #ifdef GLFW_RESIZE_NESW_CURSOR        // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2019-11-29 (cursors defines) // FIXME: Remove when GLFW 3.4 is released?
 #define GLFW_HAS_NEW_CURSORS          (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3400) // 3.4+ GLFW_RESIZE_ALL_CURSOR, GLFW_RESIZE_NESW_CURSOR, GLFW_RESIZE_NWSE_CURSOR, GLFW_NOT_ALLOWED_CURSOR
 #else
-#define GLFW_HAS_NEW_CURSORS          (0)
+#define GLFW_HAS_NEW_CURSORS    (0)
 #endif
 #ifdef GLFW_MOUSE_PASSTHROUGH         // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2020-07-17 (passthrough)
 #define GLFW_HAS_MOUSE_PASSTHROUGH    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3400) // 3.4+ GLFW_MOUSE_PASSTHROUGH
@@ -490,8 +500,8 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         return;
 
     // Update gamepad inputs
-    #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }
-    #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; }
+    #define MAP_BUTTON(NAV_NO, BUTTON_NO)       do { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; } while (0)
+    #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) do { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; } while (0)
     int axes_count = 0, buttons_count = 0;
     const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
     const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
@@ -567,7 +577,7 @@ void ImGui_ImplGlfw_NewFrame()
     glfwGetFramebufferSize(bd->Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+        io.DisplayFramebufferScale = ImVec2((float)display_w / (float)w, (float)display_h / (float)h);
     if (bd->WantUpdateMonitors)
         ImGui_ImplGlfw_UpdateMonitors();
 
@@ -964,3 +974,7 @@ static void ImGui_ImplGlfw_ShutdownPlatformInterface()
 {
     ImGui::DestroyPlatformWindows();
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

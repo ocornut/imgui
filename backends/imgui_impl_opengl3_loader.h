@@ -437,7 +437,7 @@ GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
 union GL3WProcs {
-    GL3WglProc ptr[53];
+    GL3WglProc ptr[54];
     struct {
         PFNGLACTIVETEXTUREPROC           ActiveTexture;
         PFNGLATTACHSHADERPROC            AttachShader;

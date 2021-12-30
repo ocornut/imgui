@@ -1,4 +1,4 @@
-// dear imgui, v1.86
+// dear imgui, v1.87 WIP
 // (main code and documentation)
 
 // Help:
@@ -11264,6 +11264,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     }
     payload.DataFrameCount = g.FrameCount;
 
+    // Return whether the payload has been accepted
     return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
 }
 
