@@ -122,6 +122,11 @@ int main(int, char**)
 
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
+            ImGui::Text("IsKeyDown(GLFW_KEY_SPACE) = %d", ImGui::IsKeyDown(GLFW_KEY_SPACE));
+            ImGui::Text("IsKeyDown(GLFW_KEY_P) = %d", ImGui::IsKeyDown(GLFW_KEY_P));
+            ImGui::Text("IsKeyDown(ImGuiKey_Space) = %d", ImGui::IsKeyDown(ImGuiKey_Space));
+            ImGui::Text("IsKeyDown(ImGuiKey_P) = %d", ImGui::IsKeyDown(ImGuiKey_P));
+
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);

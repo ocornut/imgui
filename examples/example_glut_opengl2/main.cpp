@@ -45,6 +45,12 @@ void my_display_code()
 
         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
+        ImGui::Text("IsKeyDown(' ') = %d", ImGui::IsKeyDown(' '));
+        ImGui::Text("IsKeyDown('p') = %d", ImGui::IsKeyDown('p'));
+        ImGui::Text("IsKeyDown('P') = %d", ImGui::IsKeyDown('P'));
+        ImGui::Text("IsKeyDown(ImGuiKey_Space) = %d", ImGui::IsKeyDown(ImGuiKey_Space));
+        ImGui::Text("IsKeyDown(ImGuiKey_P) = %d", ImGui::IsKeyDown(ImGuiKey_P));
+
         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &show_another_window);
