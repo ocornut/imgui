@@ -35,6 +35,17 @@ HOW TO UPDATE?
  VERSION 1.87 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
+  - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
+  - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
+  - ImGui::TreeAdvanceToLabelPos()      -> use ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
+  - ImFontAtlas::CustomRect             -> use ImFontAtlasCustomRect
+  - ImGuiColorEditFlags_RGB/HSV/HEX     -> use ImGuiColorEditFlags_DisplayRGB/HSV/Hex
+
+Other Changes:
+
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
   last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
