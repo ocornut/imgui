@@ -64,6 +64,9 @@ Other Changes:
 - Platform IME: add ImGuiPlatformImeData::WantVisible, hide IME composition window when not used. (#2589) [@actboy168]
 - Platform IME: add ImGuiPlatformImeData::InputLineHeight. (#3113) [@liuliu]
 - Platform IME: [windows] call ImmSetCandidateWindow() to position candidate window.
+- Backends: GLFW: fix CTRL+A, CTRL+Z, CTRL+Y shortcuts to match user keyboard layout. We are now converting GLFW
+  untranslated keycodes back to translated keycodes in order to match the behavior of every other backend, and
+  facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
