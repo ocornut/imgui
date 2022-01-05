@@ -62,6 +62,7 @@ Other Changes:
   now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
 - Platform IME: moved io.ImeWindowHandle to GetMainViewport()->PlatformHandleRaw.
 - Platform IME: add ImGuiPlatformImeData::WantVisible, hide IME composition window when not used. (#2589) [@actboy168]
+- Platform IME: add ImGuiPlatformImeData::InputLineHeight. (#3113) [@liuliu]
 - Platform IME: [windows] call ImmSetCandidateWindow() to position candidate window.
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.

@@ -2834,6 +2834,7 @@ struct ImGuiPlatformImeData
 {
     bool    WantVisible;        // A widget wants the IME to be visible
     ImVec2  InputPos;           // Position of the input cursor
+    float   InputLineHeight;    // Line height
 
     ImGuiPlatformImeData() { memset(this, 0, sizeof(*this)); }
 };
