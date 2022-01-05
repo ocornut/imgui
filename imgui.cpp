@@ -11512,11 +11512,16 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport, ImGuiPlatf
 
     if (HIMC himc = ::ImmGetContext(hwnd))
     {
-        COMPOSITIONFORM cf;
-        cf.ptCurrentPos.x = (LONG)data->InputPos.x;
-        cf.ptCurrentPos.y = (LONG)data->InputPos.y;
-        cf.dwStyle = CFS_FORCE_POSITION;
-        ::ImmSetCompositionWindow(himc, &cf);
+        COMPOSITIONFORM composition_form = {};
+        composition_form.ptCurrentPos.x = (LONG)data->InputPos.x;
+        composition_form.ptCurrentPos.y = (LONG)data->InputPos.y;
+        composition_form.dwStyle = CFS_FORCE_POSITION;
+        ::ImmSetCompositionWindow(himc, &composition_form);
+        CANDIDATEFORM candidate_form = {};
+        candidate_form.dwStyle = CFS_CANDIDATEPOS;
+        candidate_form.ptCurrentPos.x = (LONG)data->InputPos.x;
+        candidate_form.ptCurrentPos.y = (LONG)data->InputPos.y;
+        ::ImmSetCandidateWindow(himc, &candidate_form);
         ::ImmReleaseContext(hwnd, himc);
     }
 }
