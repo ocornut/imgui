@@ -4146,7 +4146,9 @@ void ImGui::NewFrame()
 
     g.MouseCursor = ImGuiMouseCursor_Arrow;
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
-    g.PlatformImePos = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
+
+    // Platform IME data: reset for the frame
+    g.PlatformImeDataPrev = g.PlatformImeData;
 
     // Mouse wheel scrolling, scale
     UpdateMouseWheel();
@@ -4552,14 +4554,9 @@ void ImGui::EndFrame()
 
     ErrorCheckEndFrameSanityChecks();
 
-    // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
-    if (g.IO.SetPlatformImeDataFn && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f))
-    {
-        ImGuiPlatformImeData data;
-        data.InputPos = g.PlatformImePos;
-        g.IO.SetPlatformImeDataFn(GetMainViewport(), &data);
-        g.PlatformImeLastPos = g.PlatformImePos;
-    }
+    // Notify Platform/OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
+    if (g.IO.SetPlatformImeDataFn && memcmp(&g.PlatformImeData, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
+        g.IO.SetPlatformImeDataFn(GetMainViewport(), &g.PlatformImeData);
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
     g.WithinFrameScopeWithImplicitWindow = false;
