@@ -122,7 +122,8 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 
-    io.ImeWindowHandle = hwnd;
+    // Set platform dependent data in viewport
+    ImGui::GetMainViewport()->PlatformHandleRaw = (void*)hwnd;
 
     // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
