@@ -67,7 +67,6 @@ Breaking Changes:
    - Likewise io.MousePos and GetMousePos() will use OS coordinates.
      If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
      e.g. subtract GetWindowViewport()->Pos.
-- IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 - IO: Removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (they were marked obsoleted, used to clip within the (0,0)..(DisplaySize) range).
 
 Other changes:
@@ -111,6 +110,13 @@ Breaking Changes:
   - ImGui::TreeAdvanceToLabelPos()      -> use ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
   - ImFontAtlas::CustomRect             -> use ImFontAtlasCustomRect
   - ImGuiColorEditFlags_RGB/HSV/HEX     -> use ImGuiColorEditFlags_DisplayRGB/HSV/Hex
+- Removed io.ImeSetInputScreenPosFn() in favor of more flexible io.SetPlatformImeDataFn() for IME support.
+  Because this field was mostly only ever used by Dear ImGui internally, not by backends nor the vast majority
+  of user code, this should only affect a very small fraction for users who are already very IME-aware.
+- Obsoleted 'void* io.ImeWindowHandle' in favor of writing to 'void* ImGuiViewport::PlatformHandleRaw'.
+  This removes an incompatibility between 'master' and 'multi-viewports' backends and toward enabling
+  better support for IME. Updated backends accordingly. Because the old field is set by existing backends,
+  we are keeping it (marked as obsolete).
 
 Other Changes:
 
@@ -118,15 +124,25 @@ Other Changes:
   which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
   last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
+- Platform IME: changed io.ImeSetInputScreenPosFn() to io.SetPlatformImeDataFn() API,
+  now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
+- Platform IME: moved io.ImeWindowHandle to GetMainViewport()->PlatformHandleRaw.
+- Platform IME: add ImGuiPlatformImeData::WantVisible, hide IME composition window when not used. (#2589) [@actboy168]
+- Platform IME: add ImGuiPlatformImeData::InputLineHeight. (#3113) [@liuliu]
+- Platform IME: [windows] call ImmSetCandidateWindow() to position candidate window.
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
+- Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
+  can theorically be created by user code manipulating a ImDrawList. (#4857)
 
 Docking+Viewports Branch:
 
 - Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in
   its own viewport (regression from 1.86). (#4023, #787)
+- (Breaking) Removed ImGuiPlatformIO::Platform_SetImeInputPos() in favor of newly standardized
+  io.SetPlatformImeDataFn() function. Should not affect more than default backends.
 
 
 -----------------------------------------------------------------------

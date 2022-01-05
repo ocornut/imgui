@@ -1890,9 +1890,9 @@ struct ImGuiContext
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
 
     // Platform support
-    ImVec2                  PlatformImePos;                     // Cursor position request & last passed to the OS Input Method Editor
-    ImVec2                  PlatformImeLastPos;
-    ImGuiViewportP*         PlatformImePosViewport;
+    ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame
+    ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data (when changing we will call io.SetPlatformImeDataFn
+    ImGuiID                 PlatformImeViewport;
     char                    PlatformLocaleDecimalPoint;         // '.' or *localeconv()->decimal_point
 
     // Extensions
@@ -2068,8 +2068,9 @@ struct ImGuiContext
         TooltipOverrideCount = 0;
         TooltipSlowDelay = 0.50f;
 
-        PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
-        PlatformImePosViewport = 0;
+        PlatformImeData.InputPos = ImVec2(0.0f, 0.0f);
+        PlatformImeDataPrev.InputPos = ImVec2(-1.0f, -1.0f); // Different to ensure initial submission
+        PlatformImeViewport = 0;
         PlatformLocaleDecimalPoint = '.';
 
         SettingsLoaded = false;

@@ -878,31 +878,6 @@ static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
 }
 
 //--------------------------------------------------------------------------------------------------------
-// IME (Input Method Editor) basic support for e.g. Asian language users
-//--------------------------------------------------------------------------------------------------------
-
-// We provide a Win32 implementation because this is such a common issue for IME users
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
-#define HAS_WIN32_IME   1
-#include <imm.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "imm32")
-#endif
-static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
-{
-    COMPOSITIONFORM cf = { CFS_FORCE_POSITION, { (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) }, { 0, 0, 0, 0 } };
-    if (HWND hwnd = (HWND)viewport->PlatformHandleRaw)
-        if (HIMC himc = ::ImmGetContext(hwnd))
-        {
-            ::ImmSetCompositionWindow(himc, &cf);
-            ::ImmReleaseContext(hwnd, himc);
-        }
-}
-#else
-#define HAS_WIN32_IME   0
-#endif
-
-//--------------------------------------------------------------------------------------------------------
 // Vulkan support (the Vulkan renderer needs to call a platform-side support function to create the surface)
 //--------------------------------------------------------------------------------------------------------
 
@@ -955,9 +930,6 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #endif
 #if GLFW_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
-#endif
-#if HAS_WIN32_IME
-    platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
 
     // Register main window handle (which is owned by the main application, not by us)

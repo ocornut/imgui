@@ -670,35 +670,6 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
 
-
-//--------------------------------------------------------------------------------------------------------
-// IME (Input Method Editor) basic support for e.g. Asian language users
-//--------------------------------------------------------------------------------------------------------
-
-#if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP) // UWP doesn't have Win32 functions
-#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
-#endif
-
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
-#define HAS_WIN32_IME   1
-#include <imm.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "imm32")
-#endif
-static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
-{
-    COMPOSITIONFORM cf = { CFS_FORCE_POSITION,{ (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) },{ 0, 0, 0, 0 } };
-    if (HWND hwnd = (HWND)viewport->PlatformHandle)
-        if (HIMC himc = ::ImmGetContext(hwnd))
-        {
-            ::ImmSetCompositionWindow(himc, &cf);
-            ::ImmReleaseContext(hwnd, himc);
-        }
-}
-#else
-#define HAS_WIN32_IME   0
-#endif
-
 //--------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
@@ -1001,9 +972,6 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_UpdateWindow = ImGui_ImplWin32_UpdateWindow;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale; // FIXME-DPI
     platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
-#if HAS_WIN32_IME
-    platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
-#endif
 
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
