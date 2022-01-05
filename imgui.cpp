@@ -4149,6 +4149,7 @@ void ImGui::NewFrame()
 
     // Platform IME data: reset for the frame
     g.PlatformImeDataPrev = g.PlatformImeData;
+    g.PlatformImeData.WantVisible = false;
 
     // Mouse wheel scrolling, scale
     UpdateMouseWheel();
@@ -11509,6 +11510,8 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport, ImGuiPlatf
 #endif
     if (hwnd == 0)
         return;
+
+    ::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
 
     if (HIMC himc = ::ImmGetContext(hwnd))
     {

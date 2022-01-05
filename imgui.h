@@ -2832,7 +2832,10 @@ struct ImGuiViewport
 // (Optional) Support for IME (Input Method Editor) via the io.SetPlatformImeDataFn() function.
 struct ImGuiPlatformImeData
 {
+    bool    WantVisible;        // A widget wants the IME to be visible
     ImVec2  InputPos;           // Position of the input cursor
+
+    ImGuiPlatformImeData() { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
