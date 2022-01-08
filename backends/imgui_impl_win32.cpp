@@ -19,6 +19,12 @@
 #endif
 #include <windows.h>
 #include <tchar.h>
+#ifdef _UNICODE
+#define UNICODE
+#endif
+#ifdef UNICODE
+#define _UNICODE
+#endif
 #include <dwmapi.h>
 
 // Configuration flags to add in your imconfig.h file:
