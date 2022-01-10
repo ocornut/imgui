@@ -656,7 +656,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             {
                 io.AddKeyEvent(key, (imgui_flags & imgui_mask) != 0);
             }
-            io.SetKeyEventNativeData(key, keycode, -1); // To support legacy indexing (<1.87 user code)
+            io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
 
         return io.WantCaptureKeyboard;
