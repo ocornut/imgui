@@ -20,7 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
 //  2019-03-25: Misc: Made io.DeltaTime always above zero.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
@@ -205,11 +205,12 @@ void ImGui_ImplGLUT_NewFrame()
 static void ImGui_ImplGLUT_UpdateKeyboardMods()
 {
     ImGuiIO& io = ImGui::GetIO();
-    int mods = glutGetModifiers();
-    io.KeyCtrl = (mods & GLUT_ACTIVE_CTRL) != 0;
-    io.KeyShift = (mods & GLUT_ACTIVE_SHIFT) != 0;
-    io.KeyAlt = (mods & GLUT_ACTIVE_ALT) != 0;
-    io.KeySuper = false;
+    int glut_key_mods = glutGetModifiers();
+    ImGuiKeyModFlags key_mods =
+        ((glut_key_mods & GLUT_ACTIVE_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((glut_key_mods & GLUT_ACTIVE_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
+        ((glut_key_mods & GLUT_ACTIVE_ALT) ? ImGuiKeyModFlags_Alt : 0);
+    io.AddKeyModEvent(key_mods);
 }
 
 static void ImGui_ImplGLUT_AddKeyEvent(ImGuiKey key, bool down, int native_keycode)

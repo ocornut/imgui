@@ -17,7 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -565,10 +565,12 @@ void ImGui_ImplAllegro5_NewFrame()
     // Setup inputs
     ALLEGRO_KEYBOARD_STATE keys;
     al_get_keyboard_state(&keys);
-    io.KeyCtrl = al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL);
-    io.KeyShift = al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT);
-    io.KeyAlt = al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR);
-    io.KeySuper = al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN);
+    ImGuiKeyModFlags key_mods =
+        ((al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModEvent(key_mods);
 
     ImGui_ImplAllegro5_UpdateMouseCursor();
 }

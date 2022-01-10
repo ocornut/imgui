@@ -16,7 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2022-01-05: Inputs: Converting GLFW untranslated keycodes back to translated keycodes (in the ImGui_ImplGlfw_KeyCallback() function) in order to match the behavior of every other backend, and facilitate the use of GLFW with lettered-shortcuts API.
 //  2021-08-17: *BREAKING CHANGE*: Now using glfwSetWindowFocusCallback() to calling io.AddFocusEvent(). If you called ImGui_ImplGlfw_InitXXX() with install_callbacks = false, you MUST install glfwSetWindowFocusCallback() and forward it to the backend via ImGui_ImplGlfw_WindowFocusCallback().
 //  2021-07-29: *BREAKING CHANGE*: Now using glfwSetCursorEnterCallback(). MousePos is correctly reported when the host platform window is hovered but not focused. If you called ImGui_ImplGlfw_InitXXX() with install_callbacks = false, you MUST install glfwSetWindowFocusCallback() callback and forward it to the backend via ImGui_ImplGlfw_CursorEnterCallback().
@@ -544,10 +544,12 @@ static void ImGui_ImplGlfw_UpdateKeyModifiers()
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyShift = ((glfwGetKey(bd->Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS));
-    io.KeyCtrl  = ((glfwGetKey(bd->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
-    io.KeyAlt   = ((glfwGetKey(bd->Window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS));
-    io.KeySuper = ((glfwGetKey(bd->Window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS));
+    ImGuiKeyModFlags key_mods =
+        (((glfwGetKey(bd->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        (((glfwGetKey(bd->Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)) ? ImGuiKeyModFlags_Shift : 0) |
+        (((glfwGetKey(bd->Window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)) ? ImGuiKeyModFlags_Alt : 0) |
+        (((glfwGetKey(bd->Window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModEvent(key_mods);
 }
 
 void ImGui_ImplGlfw_NewFrame()

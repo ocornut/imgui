@@ -33,7 +33,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
 //  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host window doesn't have focus.
@@ -230,10 +230,12 @@ static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
 static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyShift = IsVkDown(VK_LSHIFT) || IsVkDown(VK_RSHIFT);
-    io.KeyCtrl  = IsVkDown(VK_LCONTROL) || IsVkDown(VK_RCONTROL);
-    io.KeyAlt   = IsVkDown(VK_LMENU) || IsVkDown(VK_RMENU);
-    io.KeySuper = IsVkDown(VK_LWIN) || IsVkDown(VK_RWIN);
+    ImGuiKeyModFlags key_mods =
+        ((IsVkDown(VK_LCONTROL) || IsVkDown(VK_RCONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((IsVkDown(VK_LSHIFT) || IsVkDown(VK_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
+        ((IsVkDown(VK_LMENU) || IsVkDown(VK_RMENU)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((IsVkDown(VK_LWIN) || IsVkDown(VK_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModEvent(key_mods);
 }
 
 static void ImGui_ImplWin32_UpdateMousePos()

@@ -2007,6 +2007,7 @@ struct ImGuiIO
 
     // Input Functions
     IMGUI_API void  AddKeyEvent(ImGuiKey key, bool down);       // Queue a new key down/up event. Key should be "translated" (as in, generally ImGuiKey_A matches the key end-user would use to emit an 'A' character)
+    IMGUI_API void  AddKeyModEvent(ImGuiKeyModFlags modifiers); // Queue a change of Ctrl/Shift/Alt/Super modifiers
     IMGUI_API void  AddFocusEvent(bool focused);                // Queue an hosting application/platform windows gain or loss of focus
     IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue new character input
     IMGUI_API void  AddInputCharacterUTF16(ImWchar16 c);        // Queue new character input from an UTF-16 character, it can be a surrogate

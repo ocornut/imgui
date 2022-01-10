@@ -18,7 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-08-17: Calling io.AddFocusEvent() on SDL_WINDOWEVENT_FOCUS_GAINED/SDL_WINDOWEVENT_FOCUS_LOST.
 //  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using SDL_GetMouseFocus() + SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, requires SDL 2.0.5+)
 //  2021-06-29: *BREAKING CHANGE* Removed 'SDL_Window* window' parameter to ImGui_ImplSDL2_NewFrame() which was unnecessary.
@@ -503,13 +503,15 @@ static void ImGui_ImplSDL2_UpdateGamepads()
 
 static void ImGui_ImplSDL2_UpdateKeyModifiers()
 {
-    SDL_Keymod keymod = SDL_GetModState();
-
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyShift = (keymod & KMOD_SHIFT) != 0;
-    io.KeyCtrl  = (keymod & KMOD_CTRL) != 0;
-    io.KeyAlt   = (keymod & KMOD_ALT) != 0;
-    io.KeySuper = (keymod & KMOD_GUI) != 0;
+    SDL_Keymod sdl_key_mods = SDL_GetModState();
+    ImGuiKeyModFlags key_mods =
+        ((sdl_key_mods & KMOD_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((sdl_key_mods & KMOD_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
+        ((sdl_key_mods & KMOD_ALT) ? ImGuiKeyModFlags_Alt : 0) |
+        ((sdl_key_mods & KMOD_GUI) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModEvent(key_mods);
+
 }
 
 void ImGui_ImplSDL2_NewFrame()
