@@ -19,7 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-03-04: Initial version.
 
 #include "imgui.h"
@@ -292,7 +292,7 @@ void ImGui_ImplAndroid_NewFrame()
         io.SetKeyEventNativeData(key_event.Key, key_event.NativeKeycode, key_event.NativeScancode); // To support legacy indexing (<1.87 user code)
         key_queue.second.pop();
     }
-    io.AddKeyModEvent(g_KeyModFlags);
+    io.AddKeyModsEvent(g_KeyModFlags);
 
     // Setup display size (every frame to accommodate for window resizing)
     int32_t window_width = ANativeWindow_getWidth(g_Window);
