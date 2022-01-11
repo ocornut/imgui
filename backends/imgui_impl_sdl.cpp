@@ -231,7 +231,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 
     switch (event->type)
     {
-    case SDL_MOUSEWHEEL:
+        case SDL_MOUSEWHEEL:
         {
             if (event->wheel.x > 0) io.MouseWheelH += 1;
             if (event->wheel.x < 0) io.MouseWheelH -= 1;
@@ -239,27 +239,27 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             if (event->wheel.y < 0) io.MouseWheel -= 1;
             return true;
         }
-    case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONDOWN:
         {
             if (event->button.button == SDL_BUTTON_LEFT) { bd->MousePressed[0] = true; }
             if (event->button.button == SDL_BUTTON_RIGHT) { bd->MousePressed[1] = true; }
             if (event->button.button == SDL_BUTTON_MIDDLE) { bd->MousePressed[2] = true; }
             return true;
         }
-    case SDL_TEXTINPUT:
+        case SDL_TEXTINPUT:
         {
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
-    case SDL_KEYDOWN:
-    case SDL_KEYUP:
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
         {
             ImGuiKey key = ImGui_ImplSDL2_KeycodeToImGuiKey(event->key.keysym.sym);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
-    case SDL_WINDOWEVENT:
+        case SDL_WINDOWEVENT:
         {
             if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
