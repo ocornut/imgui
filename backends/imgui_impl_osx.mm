@@ -54,6 +54,7 @@ static bool                 g_MouseDown[ImGuiMouseButton_COUNT] = {};
 static ImGuiKeyModFlags     g_KeyModifiers = ImGuiKeyModFlags_None;
 static ImFocusObserver*     g_FocusObserver = nil;
 static KeyEventResponder*   g_KeyEventResponder = nil;
+static NSTextInputContext*  g_InputContext = nil;
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -90,7 +91,30 @@ static double GetMachAbsoluteTimeInSeconds()
 @interface KeyEventResponder: NSView<NSTextInputClient>
 @end
 
-@implementation KeyEventResponder
+@implementation KeyEventResponder {
+  float _posX;
+  float _posY;
+  NSRect _imeRect;
+}
+
+#pragma mark - Public
+
+- (void)setImePosX:(float)posX imePosY:(float)posY
+{
+  _posX = posX;
+  _posY = posY;
+}
+
+- (void)updateImePosWithView:(NSView *)view
+{
+  NSWindow *window = view.window;
+  if (!window) {
+      return;
+  }
+  NSRect contentRect = [window contentRectForFrameRect:window.frame];
+  NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
+  _imeRect = [window convertRectToScreen:rect];
+}
 
 - (void)viewDidMoveToWindow
 {
@@ -145,7 +169,7 @@ static double GetMachAbsoluteTimeInSeconds()
 
 - (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange
 {
-    return NSZeroRect;
+    return _imeRect;
 }
 
 - (BOOL)hasMarkedText
@@ -390,6 +414,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     // Add the NSTextInputClient to the view hierarchy,
     // to receive keyboard events and translate them to input text.
     g_KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
+    g_InputContext = [[NSTextInputContext alloc] initWithClient:g_KeyEventResponder];
     [view addSubview:g_KeyEventResponder];
 
     // Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
@@ -400,6 +425,19 @@ bool ImGui_ImplOSX_Init(NSView* view)
         ImGui_ImplOSX_HandleEvent(event, g_KeyEventResponder);
         return event;
     }];
+
+    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    {
+        if (data->WantVisible)
+        {
+          [g_InputContext activate];
+        } else {
+          [g_InputContext discardMarkedText];
+          [g_InputContext invalidateCharacterCoordinates];
+          [g_InputContext deactivate];
+        }
+        [g_KeyEventResponder setImePosX:data->InputPos.x imePosY:data->InputPos.y + data->InputLineHeight];
+    };
 
     return true;
 }
@@ -499,6 +537,15 @@ static void ImGui_ImplOSX_UpdateKeyModifiers()
     io.AddKeyModsEvent(g_KeyModifiers);
 }
 
+static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantTextInput)
+    {
+        [g_KeyEventResponder updateImePosWithView:view];
+    }
+}
+
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
@@ -523,6 +570,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGui_ImplOSX_UpdateKeyModifiers();
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
     ImGui_ImplOSX_UpdateGamepads();
+    ImGui_ImplOSX_UpdateImePosWithView(view);
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
@@ -603,6 +651,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if ([event isARepeat])
             return io.WantCaptureKeyboard;
 
+        unsigned short key_code = [event keyCode];
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, (int)[event keyCode], -1); // To support legacy indexing (<1.87 user code)
