@@ -7435,6 +7435,8 @@ const char* ImGui::GetKeyName(ImGuiKey key)
 #endif
     if (key == ImGuiKey_None)
         return "None";
+    if (!IsNamedKey(key))
+        return "Unknown";
 
     return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
@@ -9715,6 +9717,18 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
         ImGuiViewport* viewport = GetMainViewport();
         return ImFloor(ImClamp(pos, viewport->Pos, viewport->Pos + viewport->Size)); // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
     }
+}
+
+const char* ImGui::GetNavInputName(ImGuiNavInput n)
+{
+    static const char* names[] =
+    {
+        "Activate", "Cancel", "Input", "Menu", "DpadLeft", "DpadRight", "DpadUp", "DpadDown", "LStickLeft", "LStickRight", "LStickUp", "LStickDown",
+        "FocusPrev", "FocusNext", "TweakSlow", "TweakFast", "KeyLeft", "KeyRight", "KeyUp", "KeyDown"
+    };
+    IM_ASSERT(IM_ARRAYSIZE(names) == ImGuiNavInput_COUNT);
+    IM_ASSERT(n >= 0 && n < ImGuiNavInput_COUNT);
+    return names[n];
 }
 
 float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)

@@ -603,9 +603,10 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if ([event isARepeat])
             return io.WantCaptureKeyboard;
 
+        int key_code = (int)[event keyCode];
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
-        io.SetKeyEventNativeData(key, (int)[event keyCode], -1); // To support legacy indexing (<1.87 user code)
+        io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
 
         return io.WantCaptureKeyboard;
     }
