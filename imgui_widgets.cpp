@@ -4975,12 +4975,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             // FIXME: When ImGuiColorEditFlags_HDR flag is passed HS values snap in weird ways when SV values go below 0.
             if (flags & ImGuiColorEditFlags_Float)
             {
-                value_changed |= DragFloat(ids[n], &f[n], 1.0f / 255.0f, 0.0f, hdr ? 0.0f : 1.0f, fmt_table_float[fmt_idx][n]);
+                value_changed |= DragFloat(ids[n], &f[n], 1.0f / 255.0f, 0.0f, hdr ? 0.0f : 1.0f, fmt_table_float[fmt_idx][n], hdr ? ImGuiSliderFlags_None : ImGuiSliderFlags_AlwaysClamp);
                 value_changed_as_float |= value_changed;
             }
             else
             {
-                value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, hdr ? 0 : 255, fmt_table_int[fmt_idx][n]);
+                value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, hdr ? 0 : 255, fmt_table_int[fmt_idx][n], hdr ? ImGuiSliderFlags_None : ImGuiSliderFlags_AlwaysClamp);
             }
             if (!(flags & ImGuiColorEditFlags_NoOptions))
                 OpenPopupOnItemClick("context");
@@ -5097,6 +5097,16 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             memcpy((float*)col, payload->Data, sizeof(float) * components);
             value_changed = accepted_drag_drop = true;
+        }
+        
+        // Clamp if HDR is disabled
+        if (!hdr)
+        {
+            col[0] = ImClamp(col[0], 0.0f, 1.0f);
+            col[1] = ImClamp(col[1], 0.0f, 1.0f);
+            col[2] = ImClamp(col[2], 0.0f, 1.0f);
+            if (alpha)
+                col[3] = ImClamp(col[3], 0.0f, 1.0f);
         }
 
         // Drag-drop payloads are always RGB
