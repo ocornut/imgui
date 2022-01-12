@@ -97,6 +97,7 @@ Other Changes:
   We are now converting GLFW untranslated keycodes back to translated keycodes in order to match the behavior of every
   other backend, and facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
 - Backends: SDL: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
+- Backends: Win32, SDL: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: Allegro5, GLFW, GLUT, SDL, OSX, Win32, Android: Updated to use io.AddKeyEvent() with full key range. (#2625) [@thedmd]
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
