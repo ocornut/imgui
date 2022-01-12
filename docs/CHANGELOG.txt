@@ -104,6 +104,7 @@ Other Changes:
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
+- Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
 - Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
   wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
 
