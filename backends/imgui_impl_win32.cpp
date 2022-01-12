@@ -18,6 +18,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
 #include <tchar.h>
 #include <dwmapi.h>
 
@@ -33,6 +34,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-12: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
 //  2022-01-12: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
@@ -240,38 +242,31 @@ static void ImGui_ImplWin32_UpdateKeyModifiers()
     io.AddKeyModsEvent(key_mods);
 }
 
-static void ImGui_ImplWin32_UpdateMousePos()
+static void ImGui_ImplWin32_UpdateMouseData()
 {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
-    const ImVec2 mouse_pos_prev = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-
-    // Obtain focused and hovered window. We forward mouse input when focused or when hovered (and no other window is capturing)
-    HWND focused_window = ::GetForegroundWindow();
-    HWND hovered_window = bd->MouseHwnd;
-    HWND mouse_window = NULL;
-    if (hovered_window && (hovered_window == bd->hWnd || ::IsChild(hovered_window, bd->hWnd)))
-        mouse_window = hovered_window;
-    else if (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd)))
-        mouse_window = focused_window;
-    if (mouse_window == NULL)
-        return;
-
-    // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
+    const bool is_app_focused = (::GetForegroundWindow() == bd->hWnd);
+    if (is_app_focused)
     {
-        POINT pos = { (int)mouse_pos_prev.x, (int)mouse_pos_prev.y };
-        if (::ClientToScreen(bd->hWnd, &pos))
-            ::SetCursorPos(pos.x, pos.y);
-    }
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        if (io.WantSetMousePos)
+        {
+            POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+            if (::ClientToScreen(bd->hWnd, &pos))
+                ::SetCursorPos(pos.x, pos.y);
+        }
 
-    // Set Dear ImGui mouse position from OS position
-    POINT pos;
-    if (::GetCursorPos(&pos) && ::ScreenToClient(mouse_window, &pos))
-        io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+        // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered or captured)
+        if (!io.WantSetMousePos && !bd->MouseTracked)
+        {
+            POINT pos;
+            if (::GetCursorPos(&pos) && ::ScreenToClient(bd->hWnd, &pos))
+                io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+        }
+    }
 }
 
 // Gamepad navigation mapping
@@ -341,14 +336,14 @@ void    ImGui_ImplWin32_NewFrame()
     io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
     bd->Time = current_time;
 
+    // Update OS mouse position
+    ImGui_ImplWin32_UpdateMouseData();
+
     // Process workarounds for known Windows key handling issues
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
 
     // Update key modifiers
     ImGui_ImplWin32_UpdateKeyModifiers();
-
-    // Update OS mouse position
-    ImGui_ImplWin32_UpdateMousePos();
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
@@ -517,11 +512,13 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             ::TrackMouseEvent(&tme);
             bd->MouseTracked = true;
         }
+        io.MousePos = ImVec2((float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam));
         break;
     case WM_MOUSELEAVE:
         if (bd->MouseHwnd == hwnd)
             bd->MouseHwnd = NULL;
         bd->MouseTracked = false;
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
         break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
@@ -535,8 +532,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         if (bd->MouseButtonsDown == 0 && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
-        io.MouseDown[button] = true;
         bd->MouseButtonsDown |= 1 << button;
+        io.MouseDown[button] = true;
         return 0;
     }
     case WM_LBUTTONUP:
@@ -549,10 +546,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_RBUTTONUP) { button = 1; }
         if (msg == WM_MBUTTONUP) { button = 2; }
         if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        io.MouseDown[button] = false;
         bd->MouseButtonsDown &= ~(1 << button);
         if (bd->MouseButtonsDown == 0 && ::GetCapture() == hwnd)
             ::ReleaseCapture();
+        io.MouseDown[button] = false;
         return 0;
     }
     case WM_MOUSEWHEEL:
