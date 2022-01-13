@@ -414,8 +414,6 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     };
     bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
 
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-
 #if ALLEGRO_HAS_CLIPBOARD
     io.SetClipboardTextFn = ImGui_ImplAllegro5_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplAllegro5_GetClipboardText;

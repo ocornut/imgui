@@ -133,6 +133,10 @@ Breaking Changes:
      - io.AddKeyEvent() will later be turned into a trickling IO queue (for all inputs) to handle very low framerate better. (#2525, #2787, #3383)
      - io.SetKeyEventNativeData() include native keycode/scancode which will later be exposed. (#3141, #2959)
 - Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
+- Backends: GLFW: backend now uses glfwSetCursorPosCallback().
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: nothing to do. is already done for you.
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
+    using glfwSetCursorPosCallback() and forward it to the backend function ImGui_ImplGlfw_CursorPosCallback().
 - Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
   - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
   - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
@@ -162,7 +166,12 @@ Other Changes:
 - Backends: GLFW: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
   We are now converting GLFW untranslated keycodes back to translated keycodes in order to match the behavior of every
   other backend, and facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
+- Backends: GLFW: Update mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
+- Backends: Win32: Update mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
+- Backends: Win32: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: SDL: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
+- Backends: SDL: Update mouse position using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback when focused but not hovered/captured.
+- Backends: SDL: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: Allegro5, GLFW, GLUT, SDL, OSX, Win32, Android: Updated to use io.AddKeyEvent() with full key range. (#2625) [@thedmd]
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
@@ -170,6 +179,9 @@ Other Changes:
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
+- Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
+- Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
+  wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
 
 Docking+Viewports Branch:
 

@@ -19,6 +19,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
 #include <tchar.h>
 #include <dwmapi.h>
 
@@ -34,7 +35,9 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2021-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-01-12: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
+//  2022-01-12: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
@@ -81,6 +84,7 @@ struct ImGui_ImplWin32_Data
     HWND                        hWnd;
     HWND                        MouseHwnd;
     bool                        MouseTracked;
+    int                         MouseButtonsDown;
     INT64                       Time;
     INT64                       TicksPerSecond;
     ImGuiMouseCursor            LastMouseCursor;
@@ -256,54 +260,41 @@ static void ImGui_ImplWin32_UpdateKeyModifiers()
 
 // This code supports multi-viewports (multiple OS Windows mapped into different Dear ImGui viewports)
 // Because of that, it is a little more complicated than your typical single-viewport binding code!
-static void ImGui_ImplWin32_UpdateMousePos()
+static void ImGui_ImplWin32_UpdateMouseData()
 {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
-    const ImVec2 mouse_pos_prev = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    io.MouseHoveredViewport = 0;
-
-    // Obtain focused and hovered window. We forward mouse input when focused or when hovered (and no other window is capturing)
-    HWND focused_window = ::GetForegroundWindow();
-    HWND hovered_window = bd->MouseHwnd;
-    HWND mouse_window = NULL;
-    if (hovered_window && (hovered_window == bd->hWnd || ::IsChild(hovered_window, bd->hWnd) || ImGui::FindViewportByPlatformHandle((void*)hovered_window)))
-        mouse_window = hovered_window;
-    else if (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd) || ImGui::FindViewportByPlatformHandle((void*)focused_window)))
-        mouse_window = focused_window;
-    if (mouse_window == NULL)
-        return;
-
-    // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    // (When multi-viewports are enabled, all Dear ImGui positions are same as OS positions)
-    if (io.WantSetMousePos)
-    {
-        POINT pos = { (int)mouse_pos_prev.x, (int)mouse_pos_prev.y };
-        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-            ::ClientToScreen(mouse_window, &pos);
-        ::SetCursorPos(pos.x, pos.y);
-    }
-
-    // Set Dear ImGui mouse position from OS position
     POINT mouse_screen_pos;
-    if (!::GetCursorPos(&mouse_screen_pos))
-        return;
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    bool has_mouse_screen_pos = ::GetCursorPos(&mouse_screen_pos) != 0;
+
+    HWND focused_window = ::GetForegroundWindow();
+    const bool is_app_focused = (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd) || ImGui::FindViewportByPlatformHandle((void*)focused_window)));
+    if (is_app_focused)
     {
-        // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
-        // This is the position you can get with ::GetCursorPos() or WM_MOUSEMOVE + ::ClientToScreen(). In theory adding viewport->Pos to a client position would also be the same.
-        io.MousePos = ImVec2((float)mouse_screen_pos.x, (float)mouse_screen_pos.y);
-    }
-    else
-    {
-        // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-        // This is the position you can get with ::GetCursorPos() + ::ScreenToClient() or WM_MOUSEMOVE.
-        POINT mouse_client_pos = mouse_screen_pos;
-        ::ScreenToClient(bd->hWnd, &mouse_client_pos);
-        io.MousePos = ImVec2((float)mouse_client_pos.x, (float)mouse_client_pos.y);
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        // When multi-viewports are enabled, all Dear ImGui positions are same as OS positions.
+        if (io.WantSetMousePos)
+        {
+            POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+            if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+                ::ClientToScreen(focused_window, &pos);
+            ::SetCursorPos(pos.x, pos.y);
+        }
+
+        // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered or captured)
+        if (!io.WantSetMousePos && !bd->MouseTracked && has_mouse_screen_pos)
+        {
+            // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+            // (This is the position you can get with ::GetCursorPos() + ::ScreenToClient() or WM_MOUSEMOVE.)
+            // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+            // (This is the position you can get with ::GetCursorPos() or WM_MOUSEMOVE + ::ClientToScreen(). In theory adding viewport->Pos to a client position would also be the same.)
+            POINT mouse_pos = mouse_screen_pos;
+            if (!(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+                ::ScreenToClient(bd->hWnd, &mouse_pos);
+            io.MousePos = ImVec2((float)mouse_pos.x, (float)mouse_pos.y);
+        }
     }
 
     // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
@@ -312,10 +303,12 @@ static void ImGui_ImplWin32_UpdateMousePos()
     // - This is _regardless_ of whether another viewport is focused or being dragged from.
     // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the backend, imgui will ignore this field and infer the information by relying on the
     // rectangles and last focused time of every viewports it knows about. It will be unaware of foreign windows that may be sitting between or over your windows.
-    if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
-        if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
-            if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
-                io.MouseHoveredViewport = viewport->ID;
+    io.MouseHoveredViewport = 0;
+    if (has_mouse_screen_pos)
+        if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
+            if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
+                if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
+                    io.MouseHoveredViewport = viewport->ID;
 }
 
 // Gamepad navigation mapping
@@ -415,14 +408,14 @@ void    ImGui_ImplWin32_NewFrame()
     io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
     bd->Time = current_time;
 
+    // Update OS mouse position
+    ImGui_ImplWin32_UpdateMouseData();
+
     // Process workarounds for known Windows key handling issues
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
 
     // Update key modifiers
     ImGui_ImplWin32_UpdateKeyModifiers();
-
-    // Update OS mouse position
-    ImGui_ImplWin32_UpdateMousePos();
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
@@ -583,6 +576,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     switch (msg)
     {
     case WM_MOUSEMOVE:
+    {
         // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
         bd->MouseHwnd = hwnd;
         if (!bd->MouseTracked)
@@ -591,11 +585,17 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             ::TrackMouseEvent(&tme);
             bd->MouseTracked = true;
         }
+        POINT mouse_pos = { (LONG)GET_X_LPARAM(lParam), (LONG)GET_Y_LPARAM(lParam) };
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            ::ClientToScreen(hwnd, &mouse_pos);
+        io.MousePos = ImVec2((float)mouse_pos.x, (float)mouse_pos.y);
         break;
+    }
     case WM_MOUSELEAVE:
         if (bd->MouseHwnd == hwnd)
             bd->MouseHwnd = NULL;
         bd->MouseTracked = false;
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
         break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
@@ -607,8 +607,9 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
         if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
+        if (bd->MouseButtonsDown == 0 && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
+        bd->MouseButtonsDown |= 1 << button;
         io.MouseDown[button] = true;
         return 0;
     }
@@ -622,9 +623,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_RBUTTONUP) { button = 1; }
         if (msg == WM_MBUTTONUP) { button = 2; }
         if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        io.MouseDown[button] = false;
-        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
+        bd->MouseButtonsDown &= ~(1 << button);
+        if (bd->MouseButtonsDown == 0 && ::GetCapture() == hwnd)
             ::ReleaseCapture();
+        io.MouseDown[button] = false;
         return 0;
     }
     case WM_MOUSEWHEEL:
