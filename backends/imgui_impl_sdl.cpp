@@ -463,8 +463,9 @@ static void ImGui_ImplSDL2_UpdateMouseData()
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
     SDL_CaptureMouse(bd->MouseButtonsDown != 0 ? SDL_TRUE : SDL_FALSE);
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
-    const bool is_app_focused = (bd->Window == focused_window);
+    const bool is_app_focused = (focused_window && (bd->Window == focused_window || ImGui::FindViewportByPlatformHandle((void*)focused_window)));
 #else
+    SDL_Window* focused_window = bd->Window;
     const bool is_app_focused = (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
 #endif
 
