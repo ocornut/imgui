@@ -1302,6 +1302,8 @@ void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down)
 // If you are writing a backend in 2022 or don't use IsKeyXXX() with native values that are not ImGuiKey values, you can avoid calling this.
 void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native_scancode, int native_legacy_index)
 {
+    if (key == ImGuiKey_None)
+        return;
     IM_ASSERT(ImGui::IsNamedKey(key)); // >= 512
     IM_ASSERT(native_legacy_index == -1 || ImGui::IsLegacyKey(native_legacy_index)); // >= 0 && <= 511
     IM_UNUSED(native_keycode);  // Yet unused
