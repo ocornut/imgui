@@ -7,7 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		050450AB2768052600AB6805 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822D257677DB0038A28D /* imgui_tables.cpp */; };
+		050450AD276863B000AB6805 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 050450AC276863B000AB6805 /* QuartzCore.framework */; };
 		05318E0F274C397200A8DE2E /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05318E0E274C397200A8DE2E /* GameController.framework */; };
+		05A275442773BEA20084EF39 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05A275432773BEA20084EF39 /* QuartzCore.framework */; };
 		07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
 		07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
 		5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822D257677DB0038A28D /* imgui_tables.cpp */; };
@@ -33,7 +36,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		050450AC276863B000AB6805 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		05318E0E274C397200A8DE2E /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		05A2754027728F5B0084EF39 /* imgui_impl_metal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_metal.h; path = ../../backends/imgui_impl_metal.h; sourceTree = "<group>"; };
+		05A2754127728F5B0084EF39 /* imgui_impl_osx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_osx.h; path = ../../backends/imgui_impl_osx.h; sourceTree = "<group>"; };
+		05A275432773BEA20084EF39 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS15.2.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
 		07A82ED62139413C0078D120 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
 		07A82ED72139413C0078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
 		5079822D257677DB0038A28D /* imgui_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = ../../imgui_tables.cpp; sourceTree = "<group>"; };
@@ -66,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05A275442773BEA20084EF39 /* QuartzCore.framework in Frameworks */,
 				8309BD8F253CCAAA0045E2A1 /* UIKit.framework in Frameworks */,
 				83BBE9E720EB46BD00295997 /* MetalKit.framework in Frameworks */,
 				83BBE9E520EB46B900295997 /* Metal.framework in Frameworks */,
@@ -76,6 +84,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				050450AD276863B000AB6805 /* QuartzCore.framework in Frameworks */,
 				8309BDC6253CCCFE0045E2A1 /* AppKit.framework in Frameworks */,
 				83BBE9EC20EB471700295997 /* MetalKit.framework in Frameworks */,
 				05318E0F274C397200A8DE2E /* GameController.framework in Frameworks */,
@@ -136,6 +145,8 @@
 		83BBE9E320EB46B800295997 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				050450AC276863B000AB6805 /* QuartzCore.framework */,
+				05A275432773BEA20084EF39 /* QuartzCore.framework */,
 				05318E0E274C397200A8DE2E /* GameController.framework */,
 				8309BDC5253CCCFE0045E2A1 /* AppKit.framework */,
 				8309BD8E253CCAAA0045E2A1 /* UIKit.framework */,
@@ -153,7 +164,9 @@
 			isa = PBXGroup;
 			children = (
 				5079822D257677DB0038A28D /* imgui_tables.cpp */,
+				05A2754027728F5B0084EF39 /* imgui_impl_metal.h */,
 				8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal.mm */,
+				05A2754127728F5B0084EF39 /* imgui_impl_osx.h */,
 				8309BDB6253CCC9D0045E2A1 /* imgui_impl_osx.mm */,
 				83BBEA0420EB54E700295997 /* imconfig.h */,
 				83BBEA0320EB54E700295997 /* imgui.cpp */,
@@ -268,9 +281,9 @@
 				8309BDBB253CCCAD0045E2A1 /* imgui_impl_metal.mm in Sources */,
 				83BBEA0920EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */,
-                83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
+				83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
 				5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
-                07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
+				07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA5253CCC070045E2A1 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -281,10 +294,10 @@
 			files = (
 				8309BDBE253CCCB60045E2A1 /* imgui_impl_metal.mm in Sources */,
 				8309BDBF253CCCB60045E2A1 /* imgui_impl_osx.mm in Sources */,
-                83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
-                83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
-                83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
-                5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
+				83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
+				83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
+				83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+				050450AB2768052600AB6805 /* imgui_tables.cpp in Sources */,
 				07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA8253CCC080045E2A1 /* main.mm in Sources */,
 			);

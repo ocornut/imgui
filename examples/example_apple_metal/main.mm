@@ -17,7 +17,7 @@
 #include "imgui_impl_metal.h"
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
-@interface AppViewController : NSViewController
+@interface AppViewController : NSViewController<NSWindowDelegate>
 @end
 #else
 @interface AppViewController : UIViewController
@@ -56,10 +56,20 @@
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
 
     // Setup Renderer backend
     ImGui_ImplMetal_Init(_device);
@@ -100,14 +110,10 @@
     self.mtkView.delegate = self;
 
 #if TARGET_OS_OSX
-    // Add a tracking area in order to receive mouse events whenever the mouse is within the bounds of our view
-    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
-                                                                options:NSTrackingMouseMoved | NSTrackingInVisibleRect | NSTrackingActiveAlways
-                                                                  owner:self
-                                                               userInfo:nil];
-    [self.view addTrackingArea:trackingArea];
-
     ImGui_ImplOSX_Init(self.view);
+
+    [NSApp activateIgnoringOtherApps:YES];
+
 
 #endif
 }
@@ -125,80 +131,87 @@
 #endif
     io.DisplayFramebufferScale = ImVec2(framebufferScale, framebufferScale);
 
-    io.DeltaTime = 1 / float(view.preferredFramesPerSecond ?: 60);
-
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-
-    MTLRenderPassDescriptor* renderPassDescriptor = view.currentRenderPassDescriptor;
-    if (renderPassDescriptor == nil)
-    {
-        [commandBuffer commit];
-		return;
-    }
-
-    // Start the Dear ImGui frame
-    ImGui_ImplMetal_NewFrame(renderPassDescriptor);
-#if TARGET_OS_OSX
-    ImGui_ImplOSX_NewFrame(view);
-#endif
-    ImGui::NewFrame();
 
     // Our state (make them static = more or less global) as a convenience to keep the example terse.
     static bool show_demo_window = true;
     static bool show_another_window = false;
-    static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    static float clear_color[4] = { 0.28f, 0.36f, 0.5f, 1.0f };
 
-    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-    if (show_demo_window)
-        ImGui::ShowDemoWindow(&show_demo_window);
-
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    MTLRenderPassDescriptor* renderPassDescriptor = view.currentRenderPassDescriptor;
+    if (renderPassDescriptor != nil)
     {
-        static float f = 0.0f;
-        static int counter = 0;
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color[0] * clear_color[3], clear_color[1] * clear_color[3], clear_color[2] * clear_color[3], clear_color[3]);
 
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+        // Here, you could do additional rendering work, including other passes as necessary.
 
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-        ImGui::Checkbox("Another Window", &show_another_window);
+        id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        [renderEncoder pushDebugGroup:@"ImGui demo"];
 
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+        // Start the Dear ImGui frame
+        ImGui_ImplMetal_NewFrame(renderPassDescriptor);
+#if TARGET_OS_OSX
+        ImGui_ImplOSX_NewFrame(view);
+#endif
+        ImGui::NewFrame();
 
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
 
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        draw_data->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
+        ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
+
+        [renderEncoder popDebugGroup];
+        [renderEncoder endEncoding];
+
+        [commandBuffer presentDrawable:view.currentDrawable];
     }
 
-    // 3. Show another simple window.
-    if (show_another_window)
-    {
-        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
-            show_another_window = false;
-        ImGui::End();
-    }
-
-    // Rendering
-    ImGui::Render();
-    ImDrawData* draw_data = ImGui::GetDrawData();
-
-    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-    id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
-    ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
-    [renderEncoder popDebugGroup];
-    [renderEncoder endEncoding];
-
-	// Present
-    [commandBuffer presentDrawable:view.currentDrawable];
     [commandBuffer commit];
+
+    // Update and Render additional Platform Windows
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 -(void)mtkView:(MTKView*)view drawableSizeWillChange:(CGSize)size
@@ -211,20 +224,18 @@
 
 #if TARGET_OS_OSX
 
-// Forward Mouse events to Dear ImGui OSX backend.
--(void)mouseDown:(NSEvent *)event           { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)rightMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)otherMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)mouseUp:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)rightMouseUp:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)otherMouseUp:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)mouseMoved:(NSEvent *)event          { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)mouseDragged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)rightMouseMoved:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)rightMouseDragged:(NSEvent *)event   { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)otherMouseMoved:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)otherMouseDragged:(NSEvent *)event   { ImGui_ImplOSX_HandleEvent(event, self.view); }
--(void)scrollWheel:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self.view); }
+- (void)viewWillAppear
+{
+    [super viewWillAppear];
+    self.view.window.delegate = self;
+}
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+    ImGui_ImplMetal_Shutdown();
+    ImGui_ImplOSX_Shutdown();
+    ImGui::DestroyContext();
+}
 
 #else
 
@@ -288,9 +299,8 @@
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
         self.window.contentViewController = rootViewController;
-        [self.window orderFront:self];
         [self.window center];
-        [self.window becomeKeyWindow];
+        [self.window makeKeyAndOrderFront:self];
     }
     return self;
 }
