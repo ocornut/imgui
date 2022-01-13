@@ -48,11 +48,13 @@ Breaking Changes:
     - IsKeyDown(), IsKeyPressed(), IsKeyReleased(), GetKeyPressedAmount().
   - All backends were updated to use io.AddKeyEvent().
   - Backward compatibility:
-    - Old backends populating those arrays will still work! (for a while)
+    - Old backends populating those arrays should still work! (for a while)
     - Calling e.g. IsKeyPressed(MY_NATIVE_KEY_XXX) will still work! (for a while)
     - Those legacy arrays will only be disabled if '#define IMGUI_DISABLE_OBSOLETE_KEYIO' is set in your imconfig.
       In a few versions, IMGUI_DISABLE_OBSOLETE_FUNCTIONS will automatically enable IMGUI_DISABLE_OBSOLETE_KEYIO,
       so this will be moved into the regular obsolescence path.
+    - BREAKING: If your custom backend used ImGuiKey as mock native indices (e.g. "io.KeyMap[ImGuiKey_A] = ImGuiKey_A")
+      this is a use case that will now assert and be breaking for your old backend.
   - Transition guide:
      - IsKeyPressed(MY_NATIVE_KEY_XXX)           -> use IsKeyPressed(ImGuiKey_XXX)
      - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))   -> use IsKeyPressed(ImGuiKey_XXX)
