@@ -424,7 +424,7 @@ static void ImGui_ImplSDL2_UpdateMouseData()
         {
             int window_x, window_y, mouse_x_global, mouse_y_global;
             SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
-            SDL_GetWindowPosition(focused_window, &window_x, &window_y);
+            SDL_GetWindowPosition(bd->Window, &window_x, &window_y);
             io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
         }
     }
