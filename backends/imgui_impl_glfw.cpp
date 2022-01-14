@@ -261,6 +261,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
 
 static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
 {
+#ifndef __EMSCRIPTEN__
 #if GLFW_HAS_GET_KEY_NAME
     // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
     // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
@@ -278,6 +279,7 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
         else if (const char* p = strchr(char_names, key_name[0]))   { key = char_keys[p - char_names]; }
     }
     // if (action == GLFW_PRESS) printf("key %d scancode %d name '%s'\n", key, scancode, key_name);
+#endif
 #endif
     return key;
 }
