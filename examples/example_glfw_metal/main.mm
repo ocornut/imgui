@@ -60,7 +60,7 @@ int main(int, char**)
     if (window == NULL)
         return 1;
 
-    id <MTLDevice> device = MTLCreateSystemDefaultDevice();;
+    id <MTLDevice> device = MTLCreateSystemDefaultDevice();
     id <MTLCommandQueue> commandQueue = [device newCommandQueue];
 
     // Setup Platform/Renderer backends

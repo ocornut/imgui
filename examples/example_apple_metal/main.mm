@@ -107,19 +107,7 @@
                                                                userInfo:nil];
     [self.view addTrackingArea:trackingArea];
 
-    // If we want to receive key events, we either need to be in the responder chain of the key view,
-    // or else we can install a local monitor. The consequence of this heavy-handed approach is that
-    // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
-    // window, we'd want to be much more careful than just ingesting the complete event stream.
-    // To match the behavior of other backends, we pass every event down to the OS.
-    NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged;
-    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
-    {
-        ImGui_ImplOSX_HandleEvent(event, self.view);
-        return event;
-    }];
-
-    ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_Init(self.view);
 
 #endif
 }
@@ -223,8 +211,7 @@
 
 #if TARGET_OS_OSX
 
-// Forward Mouse/Keyboard events to Dear ImGui OSX backend.
-// Other events are registered via addLocalMonitorForEventsMatchingMask()
+// Forward Mouse events to Dear ImGui OSX backend.
 -(void)mouseDown:(NSEvent *)event           { ImGui_ImplOSX_HandleEvent(event, self.view); }
 -(void)rightMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self.view); }
 -(void)otherMouseDown:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self.view); }

@@ -37,19 +37,29 @@ jobs:
       - name: Fix Projects
         shell: powershell
         run: |
-          # WARNING: This will need updating if toolset/sdk change in project files!
+          # CI workers do not supporter older Visual Studio versions. Fix projects to target newer available version.
           gci -recurse -filter "*.vcxproj" | ForEach-Object {
-            # Fix SDK and toolset for most samples.
-            (Get-Content $_.FullName) -Replace "<PlatformToolset>v110</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
-            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
-            # Fix SDK and toolset for samples that require newer SDK/toolset. At the moment it is only dx12.
-            (Get-Content $_.FullName) -Replace "<PlatformToolset>v140</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
-            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v\d{3}</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>[\d\.]+</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
           }
 
       # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.
       - name: Build example_null (extra warnings, mingw 64-bit)
         run: mingw32-make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+      - name: Build example_null (mingw 64-bit, as DLL)
+        shell: bash
+        run: |
+          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
+          echo '#else'                                           >> example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
+          echo '#endif'                                          >> example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -D_EXPORT -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
+          g++ -I. -Wall -Wformat -o example_null.exe examples/example_null/main.cpp -L. -limgui
+          rm -f example_null.exe libimgui.* example_single_file.*
 
       - name: Build example_null (extra warnings, msvc 64-bit)
         shell: cmd
@@ -226,6 +236,18 @@ jobs:
         make -C examples/example_null clean
         CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
+    - name: Build example_null (extra warnings, empty IM_ASSERT)
+      run: |
+          cat > example_single_file.cpp <<'EOF'
+
+          #define IM_ASSERT(x)
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+
+          EOF
+          g++ -I. -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
+
     - name: Build example_null (freetype)
       run: |
         make -C examples/example_null clean
@@ -272,6 +294,18 @@ jobs:
         cat > example_single_file.cpp <<'EOF'
 
         #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_KEYIO)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_DISABLE_OBSOLETE_KEYIO
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
@@ -471,34 +505,3 @@ jobs:
       run: |
         cd examples/example_android_opengl3/android
         gradle assembleDebug
-
-  Discord-CI:
-    runs-on: ubuntu-18.04
-    if: always()
-    needs: [Windows, Linux, MacOS, iOS, Emscripten, Android]
-    steps:
-    - uses: dearimgui/github_discord_notifier@latest
-      with:
-        discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        github-token: ${{ github.token }}
-        action-task: discord-jobs
-        discord-filter: "'{{ github.branch }}'.match(/master|docking/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
-        discord-username: GitHub Actions
-        discord-job-new-failure-message: ''
-        discord-job-fixed-failure-message: ''
-        discord-job-new-failure-embed: |
-          {
-            "title": "`{{ job.name }}` job is failing on `{{ github.branch }}`!",
-            "description": "Commit [{{ github.context.payload.head_commit.title }}]({{ github.context.payload.head_commit.url }}) pushed to [{{ github.branch }}]({{ github.branch_url }}) broke [{{ job.name }}]({{ job.url }}) build job.\nFailing steps: {{ failing_steps }}",
-            "url": "{{ job.url }}",
-            "color": "0xFF0000",
-            "timestamp": "{{ run.updated_at }}"
-          }
-        discord-job-fixed-failure-embed: |
-          {
-            "title": "`{{ github.branch }}` branch is no longer failing!",
-            "description": "Build failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
-            "color": "0x00FF00",
-            "url": "{{ github.context.payload.head_commit.url }}",
-            "timestamp": "{{ run.completed_at }}"
-          }
