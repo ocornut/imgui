@@ -41,6 +41,7 @@ Breaking Changes:
 - Reworked IO mouse input API: (#4858) [@thedmd, @ocornut]
   - Added io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions,
     obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
+  - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
 - Reworked IO keyboard input API: (#2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
   - Added io.AddKeyModsEvent() function, obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
@@ -94,6 +95,9 @@ Breaking Changes:
 
 Other Changes:
 
+- IO: Added event based input queue API, which now trickles events to support low framerates. [@thedmd, @ocornut]
+  Previously the most common issue case (button presses in low framerates) was handled by backend. This is now
+  handled by core automatically for all kind of inputs. (#4858, #2787, #1992, #3383, #2525, #1320)
 - Fixed a situation where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with zero triangles,
   which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in

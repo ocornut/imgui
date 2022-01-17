@@ -1136,6 +1136,7 @@ ImGuiIO::ImGuiIO()
 #else
     ConfigMacOSXBehaviors = false;
 #endif
+    ConfigInputEventQueue = true;
     ConfigInputTextCursorBlink = true;
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
@@ -1162,10 +1163,19 @@ ImGuiIO::ImGuiIO()
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
+// FIXME: Should in theory be called "AddCharacterEvent()" to be consistent with new API
 void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    if (c != 0)
-        InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    if (c == 0)
+        return;
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_Char;
+    e.Source = ImGuiInputSource_Keyboard;
+    e.Text.Char = c;
+    g.InputEventsQueue.push_back(e);
 }
 
 // UTF16 strings use surrogate pairs to encode codepoints >= 0x10000, so
@@ -1178,7 +1188,7 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
     if ((c & 0xFC00) == 0xD800) // High surrogate, must save
     {
         if (InputQueueSurrogate != 0)
-            InputQueueCharacters.push_back(IM_UNICODE_CODEPOINT_INVALID);
+            AddInputCharacter(IM_UNICODE_CODEPOINT_INVALID);
         InputQueueSurrogate = c;
         return;
     }
@@ -1188,7 +1198,7 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
     {
         if ((c & 0xFC00) != 0xDC00) // Invalid low surrogate
         {
-            InputQueueCharacters.push_back(IM_UNICODE_CODEPOINT_INVALID);
+            AddInputCharacter(IM_UNICODE_CODEPOINT_INVALID);
         }
         else
         {
@@ -1201,7 +1211,7 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
 
         InputQueueSurrogate = 0;
     }
-    InputQueueCharacters.push_back(cp);
+    AddInputCharacter((unsigned)cp);
 }
 
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
@@ -1211,7 +1221,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
         unsigned int c = 0;
         utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
         if (c != 0)
-            InputQueueCharacters.push_back((ImWchar)c);
+            AddInputCharacter(c);
     }
 }
 
@@ -1240,12 +1250,13 @@ void ImGuiIO::ClearInputKeys()
 // Queue a new key down/up event.
 // - ImGuiKey key: Translated key (as in, generally ImGuiKey_A matches the key end-user would use to emit an 'A' character)
 // - bool down:    Is the key down? use false to signify a key release.
-// FIXME: In the current version this is setting key data immediately. This will evolve into a trickling queue.
 void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down)
 {
     //if (e->Down) { IMGUI_DEBUG_LOG("AddKeyEvent() Key='%s' %d, NativeKeycode = %d, NativeScancode = %d\n", ImGui::GetKeyName(e->Key), e->Down, e->NativeKeycode, e->NativeScancode); }
     if (key == ImGuiKey_None)
         return;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     IM_ASSERT(ImGui::IsNamedKey(key)); // Backend needs to pass a valid ImGuiKey_ constant. 0..511 values are legacy native key codes which are not accepted by this API.
 
     // Verify that backend isn't mixing up using new io.AddKeyEvent() api and old io.KeysDown[] + io.KeyMap[] data.
@@ -1254,12 +1265,15 @@ void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down)
     if (BackendUsingLegacyKeyArrays == -1)
         for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
             IM_ASSERT(KeyMap[n] == -1 && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
-#endif
     BackendUsingLegacyKeyArrays = 0;
+#endif
 
-    // Write key
-    const int keydata_index = (key - ImGuiKey_KeysData_OFFSET);
-    KeysData[keydata_index].Down = down;
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_Key;
+    e.Source = ImGuiInputSource_Keyboard;
+    e.Key.Key = key;
+    e.Key.Down = down;
+    g.InputEventsQueue.push_back(e);
 }
 
 // [Optional] Call after AddKeyEvent().
@@ -1287,11 +1301,14 @@ void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native
 
 void ImGuiIO::AddKeyModsEvent(ImGuiKeyModFlags modifiers)
 {
-    KeyMods = modifiers;
-    KeyCtrl = (modifiers & ImGuiKeyModFlags_Ctrl) != 0;
-    KeyShift = (modifiers & ImGuiKeyModFlags_Shift) != 0;
-    KeyAlt = (modifiers & ImGuiKeyModFlags_Alt) != 0;
-    KeySuper = (modifiers & ImGuiKeyModFlags_Super) != 0;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_KeyMods;
+    e.Source = ImGuiInputSource_Keyboard;
+    e.KeyMods.Mods = modifiers;
+    g.InputEventsQueue.push_back(e);
 }
 
 // Queue a mouse move event
@@ -1299,7 +1316,13 @@ void ImGuiIO::AddMousePosEvent(float x, float y)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
-    g.IO.MousePos = ImVec2(x, y);
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MousePos;
+    e.Source = ImGuiInputSource_Mouse;
+    e.MousePos.PosX = x;
+    e.MousePos.PosY = y;
+    g.InputEventsQueue.push_back(e);
 }
 
 void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
@@ -1308,8 +1331,13 @@ void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     if (wheel_x == 0.0f && wheel_y == 0.0f)
         return;
-    g.IO.MouseWheelH += wheel_x;
-    g.IO.MouseWheel += wheel_y;
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MouseWheel;
+    e.Source = ImGuiInputSource_Mouse;
+    e.MouseWheel.WheelX = wheel_x;
+    e.MouseWheel.WheelY = wheel_y;
+    g.InputEventsQueue.push_back(e);
 }
 
 void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
@@ -1317,14 +1345,24 @@ void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
-    g.IO.MouseDown[mouse_button] = down;
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MouseButton;
+    e.Source = ImGuiInputSource_Mouse;
+    e.MouseButton.Button = mouse_button;
+    e.MouseButton.Down = down;
+    g.InputEventsQueue.push_back(e);
 }
 
 void ImGuiIO::AddFocusEvent(bool focused)
 {
-    // We intentionally overwrite this and process in NewFrame(), in order to give a chance
-    // to multi-viewports backends to queue AddFocusEvent(false),AddFocusEvent(true) in same frame.
-    AppFocusLost = !focused;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_Focus;
+    e.AppFocused.Focused = focused;
+    g.InputEventsQueue.push_back(e);
 }
 
 //-----------------------------------------------------------------------------
@@ -4261,13 +4299,9 @@ void ImGui::NewFrame()
     //if (g.IO.AppFocusLost)
     //    ClosePopupsExceptModals();
 
-    // Clear buttons state when focus is lost
-    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
-    if (g.IO.AppFocusLost)
-    {
-        g.IO.ClearInputKeys();
-        g.IO.AppFocusLost = false;
-    }
+    // Process input queue (trickle as many events as possible)
+    g.InputEventsTrail.resize(0);
+    UpdateInputEvents(g.IO.ConfigInputEventQueue);
 
     // Update keyboard input state
     UpdateKeyboardInputs();
@@ -7677,6 +7711,131 @@ static const char* GetInputSourceName(ImGuiInputSource source)
     const char* input_source_names[] = { "None", "Mouse", "Keyboard", "Gamepad", "Nav", "Clipboard" };
     IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT && source >= 0 && source < ImGuiInputSource_COUNT);
     return input_source_names[source];
+}
+
+
+// Process input queue
+// - trickle_fast_inputs = false : process all events, turn into flattened input state (e.g. successive down/up/down/up will be lost)
+// - trickle_fast_inputs = true  : process as many events as possible (successive down/up/down/up will be trickled over several frames so nothing is lost) (new feature in 1.87)
+void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
+    bool mouse_moved = false, mouse_wheeled = false, key_changed = false, text_inputed = false;
+    int  mouse_button_changed = 0x00, key_mods_changed = 0x00;
+    ImBitArray<ImGuiKey_KeysData_SIZE> key_changed_mask;
+
+    int event_n = 0;
+    for (; event_n < g.InputEventsQueue.Size; event_n++)
+    {
+        const ImGuiInputEvent* e = &g.InputEventsQueue[event_n];
+        if (e->Type == ImGuiInputEventType_MousePos)
+        {
+            if (io.MousePos.x != e->MousePos.PosX || io.MousePos.y != e->MousePos.PosY)
+            {
+                // Trickling Rule: Stop processing queued events if we already handled a mouse button change
+                if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_wheeled || key_changed || key_mods_changed || text_inputed))
+                    break;
+                io.MousePos = ImVec2(e->MousePos.PosX, e->MousePos.PosY);
+                mouse_moved = true;
+            }
+        }
+        else if (e->Type == ImGuiInputEventType_MouseButton)
+        {
+            const ImGuiMouseButton button = e->MouseButton.Button;
+            IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT);
+            if (io.MouseDown[button] != e->MouseButton.Down)
+            {
+                // Trickling Rule: Stop processing queued events if we got multiple action on the same button
+                if (trickle_fast_inputs && ((mouse_button_changed & (1 << button)) || mouse_wheeled))
+                    break;
+                io.MouseDown[button] = e->MouseButton.Down;
+                mouse_button_changed |= (1 << button);
+            }
+        }
+        else if (e->Type == ImGuiInputEventType_MouseWheel)
+        {
+            if (e->MouseWheel.WheelX != 0.0f || e->MouseWheel.WheelY != 0.0f)
+            {
+                // Trickling Rule: Stop processing queued events if we got multiple action on the event
+                if (trickle_fast_inputs && (mouse_wheeled || mouse_button_changed != 0))
+                    break;
+                io.MouseWheelH += e->MouseWheel.WheelX;
+                io.MouseWheel += e->MouseWheel.WheelY;
+                mouse_wheeled = true;
+            }
+        }
+        else if (e->Type == ImGuiInputEventType_Key)
+        {
+            IM_ASSERT(e->Key.Key != ImGuiKey_None);
+            const int keydata_index = (e->Key.Key - ImGuiKey_KeysData_OFFSET);
+            ImGuiKeyData* keydata = &io.KeysData[keydata_index];
+            if (keydata->Down != e->Key.Down)
+            {
+                // Trickling Rule: Stop processing queued events if we got multiple action on the same button
+                if (trickle_fast_inputs && (key_changed_mask.TestBit(keydata_index) || text_inputed || mouse_button_changed != 0))
+                    break;
+                keydata->Down = e->Key.Down;
+                key_changed = true;
+                key_changed_mask.SetBit(keydata_index);
+            }
+        }
+        else if (e->Type == ImGuiInputEventType_KeyMods)
+        {
+            const ImGuiKeyModFlags modifiers = e->KeyMods.Mods;
+            if (io.KeyMods != modifiers)
+            {
+                // Trickling Rule: Stop processing queued events if we got multiple action on the same button
+                ImGuiKeyModFlags modifiers_that_are_changing = (io.KeyMods ^ modifiers);
+                if (trickle_fast_inputs && (key_mods_changed & modifiers_that_are_changing) != 0)
+                    break;
+                io.KeyMods = modifiers;
+                io.KeyCtrl = (modifiers & ImGuiKeyModFlags_Ctrl) != 0;
+                io.KeyShift = (modifiers & ImGuiKeyModFlags_Shift) != 0;
+                io.KeyAlt = (modifiers & ImGuiKeyModFlags_Alt) != 0;
+                io.KeySuper = (modifiers & ImGuiKeyModFlags_Super) != 0;
+                key_mods_changed |= modifiers_that_are_changing;
+            }
+        }
+        else if (e->Type == ImGuiInputEventType_Char)
+        {
+            // Trickling Rule: Stop processing queued events if keys/mouse have been interacted with
+            if (trickle_fast_inputs && (key_changed || mouse_button_changed != 0 || mouse_moved || mouse_wheeled))
+                break;
+            unsigned int c = e->Text.Char;
+            io.InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
+            text_inputed = true;
+        }
+        else if (e->Type == ImGuiInputEventType_Focus)
+        {
+            // We intentionally overwrite this and process lower, in order to give a chance
+            // to multi-viewports backends to queue AddFocusEvent(false) + AddFocusEvent(true) in same frame.
+            io.AppFocusLost = !e->AppFocused.Focused;
+        }
+        else
+        {
+            IM_ASSERT(0 && "Unknown event!");
+        }
+    }
+
+    // Record trail (for domain-specific applications wanting to access a precise trail)
+    for (int n = 0; n < event_n; n++)
+        g.InputEventsTrail.push_back(g.InputEventsQueue[n]);
+
+    // Remaining events will be processed on the next frame
+    if (event_n == g.InputEventsQueue.Size)
+        g.InputEventsQueue.resize(0);
+    else
+        g.InputEventsQueue.erase(g.InputEventsQueue.Data, g.InputEventsQueue.Data + event_n);
+
+    // Clear buttons state when focus is lost
+    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
+    if (g.IO.AppFocusLost)
+    {
+        g.IO.ClearInputKeys();
+        g.IO.AppFocusLost = false;
+    }
 }
 
 
