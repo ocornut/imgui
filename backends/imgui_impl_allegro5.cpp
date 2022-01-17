@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
@@ -440,6 +441,20 @@ void ImGui_ImplAllegro5_Shutdown()
     IM_DELETE(bd);
 }
 
+// ev->keyboard.modifiers seems always zero so using that...
+static void ImGui_ImplAllegro5_UpdateKeyModifiers()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ALLEGRO_KEYBOARD_STATE keys;
+    al_get_keyboard_state(&keys);
+    ImGuiKeyModFlags key_mods =
+        ((al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModsEvent(key_mods);
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -487,6 +502,7 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_KEY_UP:
         if (ev->keyboard.display == bd->Display)
         {
+            ImGui_ImplAllegro5_UpdateKeyModifiers();
             ImGuiKey key = ImGui_ImplAllegro5_KeyCodeToImGuiKey(ev->keyboard.keycode);
             io.AddKeyEvent(key, (ev->type == ALLEGRO_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, ev->keyboard.keycode, -1); // To support legacy indexing (<1.87 user code)
@@ -560,15 +576,6 @@ void ImGui_ImplAllegro5_NewFrame()
     io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    // Setup inputs
-    ALLEGRO_KEYBOARD_STATE keys;
-    al_get_keyboard_state(&keys);
-    ImGuiKeyModFlags key_mods =
-        ((al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN)) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
-
+    // Setup mouse cursor shape
     ImGui_ImplAllegro5_UpdateMouseCursor();
 }

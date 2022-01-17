@@ -34,8 +34,9 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-01-12: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
-//  2022-01-12: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before a key event (not in NewFrame) to fix input queue with very low framerates.
+//  2022-01-12: Inputs: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
+//  2022-01-12: Inputs: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
@@ -235,10 +236,10 @@ static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiKeyModFlags key_mods =
-        ((IsVkDown(VK_LCONTROL) || IsVkDown(VK_RCONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((IsVkDown(VK_LSHIFT) || IsVkDown(VK_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
-        ((IsVkDown(VK_LMENU) || IsVkDown(VK_RMENU)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((IsVkDown(VK_LWIN) || IsVkDown(VK_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+        ((IsVkDown(VK_CONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((IsVkDown(VK_SHIFT) ) ? ImGuiKeyModFlags_Shift : 0) |
+        ((IsVkDown(VK_MENU)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((IsVkDown(VK_APPS)) ? ImGuiKeyModFlags_Super : 0);
     io.AddKeyModsEvent(key_mods);
 }
 
@@ -341,9 +342,6 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Process workarounds for known Windows key handling issues
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
-
-    // Update key modifiers
-    ImGui_ImplWin32_UpdateKeyModifiers();
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
@@ -564,9 +562,11 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_SYSKEYUP:
     {
         const bool is_key_down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-
         if (wParam < 256)
         {
+            // Submit modifiers
+            ImGui_ImplWin32_UpdateKeyModifiers();
+
             // Obtain virtual key code
             // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
             int vk = (int)wParam;

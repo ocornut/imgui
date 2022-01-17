@@ -202,7 +202,7 @@ void ImGui_ImplGLUT_NewFrame()
     ImGui::NewFrame();
 }
 
-static void ImGui_ImplGLUT_UpdateKeyboardMods()
+static void ImGui_ImplGLUT_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
     int glut_key_mods = glutGetModifiers();
@@ -230,7 +230,7 @@ void ImGui_ImplGLUT_KeyboardFunc(unsigned char c, int x, int y)
 
     ImGuiKey key = ImGui_ImplGLUT_KeyToImGuiKey(c);
     ImGui_ImplGLUT_AddKeyEvent(key, true, c);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -239,7 +239,7 @@ void ImGui_ImplGLUT_KeyboardUpFunc(unsigned char c, int x, int y)
     //printf("char_up_func %d '%c'\n", c, c);
     ImGuiKey key = ImGui_ImplGLUT_KeyToImGuiKey(c);
     ImGui_ImplGLUT_AddKeyEvent(key, false, c);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -248,7 +248,7 @@ void ImGui_ImplGLUT_SpecialFunc(int key, int x, int y)
     //printf("key_down_func %d\n", key);
     ImGuiKey imgui_key = ImGui_ImplGLUT_KeyToImGuiKey(key + 256);
     ImGui_ImplGLUT_AddKeyEvent(imgui_key, true, key + 256);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -257,7 +257,7 @@ void ImGui_ImplGLUT_SpecialUpFunc(int key, int x, int y)
     //printf("key_up_func %d\n", key);
     ImGuiKey imgui_key = ImGui_ImplGLUT_KeyToImGuiKey(key + 256);
     ImGui_ImplGLUT_AddKeyEvent(imgui_key, false, key + 256);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 

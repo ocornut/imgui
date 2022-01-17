@@ -53,7 +53,6 @@ static NSCursor*            g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool                 g_MouseCursorHidden = false;
 static bool                 g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
 static bool                 g_MouseDown[ImGuiMouseButton_COUNT] = {};
-static ImGuiKeyModFlags     g_KeyModifiers = ImGuiKeyModFlags_None;
 static ImFocusObserver*     g_FocusObserver = nil;
 static KeyEventResponder*   g_KeyEventResponder = nil;
 static NSTextInputContext*  g_InputContext = nil;
@@ -535,12 +534,6 @@ static void ImGui_ImplOSX_UpdateGamepads()
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 }
 
-static void ImGui_ImplOSX_UpdateKeyModifiers()
-{
-    ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyModsEvent(g_KeyModifiers);
-}
-
 static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -569,7 +562,6 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
-    ImGui_ImplOSX_UpdateKeyModifiers();
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
     ImGui_ImplOSX_UpdateGamepads();
     ImGui_ImplOSX_UpdateImePosWithView(view);
@@ -666,17 +658,16 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         unsigned short key_code = [event keyCode];
         unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 
-        ImGuiKeyModFlags imgui_flags = ImGuiKeyModFlags_None;
+        ImGuiKeyModFlags imgui_key_mods = ImGuiKeyModFlags_None;
         if (flags & NSEventModifierFlagShift)
-            imgui_flags |= ImGuiKeyModFlags_Shift;
+            imgui_key_mods |= ImGuiKeyModFlags_Shift;
         if (flags & NSEventModifierFlagControl)
-            imgui_flags |= ImGuiKeyModFlags_Ctrl;
+            imgui_key_mods |= ImGuiKeyModFlags_Ctrl;
         if (flags & NSEventModifierFlagOption)
-            imgui_flags |= ImGuiKeyModFlags_Alt;
+            imgui_key_mods |= ImGuiKeyModFlags_Alt;
         if (flags & NSEventModifierFlagCommand)
-            imgui_flags |= ImGuiKeyModFlags_Super;
-
-        g_KeyModifiers = imgui_flags;
+            imgui_key_mods |= ImGuiKeyModFlags_Super;
+        io.AddKeyModsEvent(imgui_key_mods);
 
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         if (key != ImGuiKey_None)
@@ -705,7 +696,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
             else if (imgui_mask)
             {
-                io.AddKeyEvent(key, (imgui_flags & imgui_mask) != 0);
+                io.AddKeyEvent(key, (imgui_key_mods & imgui_mask) != 0);
             }
             io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
