@@ -17,6 +17,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
@@ -328,12 +330,12 @@ static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
         case ALLEGRO_KEY_PAD_PLUS: return ImGuiKey_KeypadAdd;
         case ALLEGRO_KEY_PAD_ENTER: return ImGuiKey_KeypadEnter;
         case ALLEGRO_KEY_PAD_EQUALS: return ImGuiKey_KeypadEqual;
+        case ALLEGRO_KEY_LCTRL: return ImGuiKey_LeftCtrl;
         case ALLEGRO_KEY_LSHIFT: return ImGuiKey_LeftShift;
-        case ALLEGRO_KEY_LCTRL: return ImGuiKey_LeftControl;
         case ALLEGRO_KEY_ALT: return ImGuiKey_LeftAlt;
         case ALLEGRO_KEY_LWIN: return ImGuiKey_LeftSuper;
+        case ALLEGRO_KEY_RCTRL: return ImGuiKey_RightCtrl;
         case ALLEGRO_KEY_RSHIFT: return ImGuiKey_RightShift;
-        case ALLEGRO_KEY_RCTRL: return ImGuiKey_RightControl;
         case ALLEGRO_KEY_ALTGR: return ImGuiKey_RightAlt;
         case ALLEGRO_KEY_RWIN: return ImGuiKey_RightSuper;
         case ALLEGRO_KEY_MENU: return ImGuiKey_Menu;
@@ -440,6 +442,20 @@ void ImGui_ImplAllegro5_Shutdown()
     IM_DELETE(bd);
 }
 
+// ev->keyboard.modifiers seems always zero so using that...
+static void ImGui_ImplAllegro5_UpdateKeyModifiers()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ALLEGRO_KEYBOARD_STATE keys;
+    al_get_keyboard_state(&keys);
+    ImGuiKeyModFlags key_mods =
+        ((al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModsEvent(key_mods);
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -454,29 +470,28 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_MOUSE_AXES:
         if (ev->mouse.display == bd->Display)
         {
-            io.MouseWheel += ev->mouse.dz;
-            io.MouseWheelH -= ev->mouse.dw;
-            io.MousePos = ImVec2(ev->mouse.x, ev->mouse.y);
+            io.AddMousePosEvent(ev->mouse.x, ev->mouse.y);
+            io.AddMouseWheelEvent(-ev->mouse.dw, ev->mouse.dz);
         }
         return true;
     case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
-        if (ev->mouse.display == bd->Display && ev->mouse.button <= 5)
-            io.MouseDown[ev->mouse.button - 1] = (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
+        if (ev->mouse.display == bd->Display && ev->mouse.button > 0 && ev->mouse.button <= 5)
+            io.AddMouseButtonEvent(ev->mouse.button - 1, ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
         return true;
     case ALLEGRO_EVENT_TOUCH_MOVE:
         if (ev->touch.display == bd->Display)
-            io.MousePos = ImVec2(ev->touch.x, ev->touch.y);
+            io.AddMousePosEvent(ev->touch.x, ev->touch.y);
         return true;
     case ALLEGRO_EVENT_TOUCH_BEGIN:
     case ALLEGRO_EVENT_TOUCH_END:
     case ALLEGRO_EVENT_TOUCH_CANCEL:
         if (ev->touch.display == bd->Display && ev->touch.primary)
-            io.MouseDown[0] = (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
+            io.AddMouseButtonEvent(0, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
         return true;
     case ALLEGRO_EVENT_MOUSE_LEAVE_DISPLAY:
         if (ev->mouse.display == bd->Display)
-            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == bd->Display)
@@ -487,6 +502,7 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_KEY_UP:
         if (ev->keyboard.display == bd->Display)
         {
+            ImGui_ImplAllegro5_UpdateKeyModifiers();
             ImGuiKey key = ImGui_ImplAllegro5_KeyCodeToImGuiKey(ev->keyboard.keycode);
             io.AddKeyEvent(key, (ev->type == ALLEGRO_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, ev->keyboard.keycode, -1); // To support legacy indexing (<1.87 user code)
@@ -560,15 +576,6 @@ void ImGui_ImplAllegro5_NewFrame()
     io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    // Setup inputs
-    ALLEGRO_KEYBOARD_STATE keys;
-    al_get_keyboard_state(&keys);
-    ImGuiKeyModFlags key_mods =
-        ((al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN)) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
-
+    // Setup mouse cursor shape
     ImGui_ImplAllegro5_UpdateMouseCursor();
 }

@@ -104,7 +104,12 @@ Other changes:
 
 Breaking Changes:
 
-- Reworked IO keyboard input system. (#2625, #3724) [@thedmd, @ocornut]
+- Removed support for pre-C++11 compilers. We'll stop supporting VS2010. (#4537)
+- Reworked IO mouse input API: (#4858) [@thedmd, @ocornut]
+  - Added io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions,
+    obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
+  - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
+- Reworked IO keyboard input API: (#2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
   - Added io.AddKeyModsEvent() function, obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
   - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
@@ -113,13 +118,16 @@ Breaking Changes:
   - Obsoleted GetKeyIndex(): it is now unnecessary and will now return the same value.
   - All keyboard related functions taking 'int user_key_index' now take 'ImGuiKey key':
     - IsKeyDown(), IsKeyPressed(), IsKeyReleased(), GetKeyPressedAmount().
-  - All backends were updated to use io.AddKeyEvent().
+  - Added io.ConfigInputEventQueue (defaulting to true) to disable input queue trickling.
   - Backward compatibility:
-    - Old backends populating those arrays will still work! (for a while)
+    - All backends updated to use new functions.
+    - Old backends populating those arrays should still work!
     - Calling e.g. IsKeyPressed(MY_NATIVE_KEY_XXX) will still work! (for a while)
     - Those legacy arrays will only be disabled if '#define IMGUI_DISABLE_OBSOLETE_KEYIO' is set in your imconfig.
       In a few versions, IMGUI_DISABLE_OBSOLETE_FUNCTIONS will automatically enable IMGUI_DISABLE_OBSOLETE_KEYIO,
       so this will be moved into the regular obsolescence path.
+    - BREAKING: If your custom backend used ImGuiKey as mock native indices (e.g. "io.KeyMap[ImGuiKey_A] = ImGuiKey_A")
+      this is a use case that will now assert and be breaking for your old backend.
   - Transition guide:
      - IsKeyPressed(MY_NATIVE_KEY_XXX)           -> use IsKeyPressed(ImGuiKey_XXX)
      - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))   -> use IsKeyPressed(ImGuiKey_XXX)
@@ -153,6 +161,9 @@ Breaking Changes:
 
 Other Changes:
 
+- IO: Added event based input queue API, which now trickles events to support low framerates. [@thedmd, @ocornut]
+  Previously the most common issue case (button presses in low framerates) was handled by backend. This is now
+  handled by core automatically for all kind of inputs. (#4858, #2787, #1992, #3383, #2525, #1320)
 - Fixed a situation where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with zero triangles,
   which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
@@ -166,13 +177,22 @@ Other Changes:
 - Backends: GLFW: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
   We are now converting GLFW untranslated keycodes back to translated keycodes in order to match the behavior of every
   other backend, and facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
+- Backends: GLFW: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: GLFW: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: GLFW: Update mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
+- Backends: Win32: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: Win32: Update mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
+- Backends: Win32: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: Win32: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: SDL: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
+- Backends: SDL: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: SDL: Update mouse position using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback when focused but not hovered/captured.
+- Backends: SDL: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: SDL: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
-- Backends: Allegro5, GLFW, GLUT, SDL, OSX, Win32, Android: Updated to use io.AddKeyEvent() with full key range. (#2625) [@thedmd]
+- Backends: Allegro5: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: Allegro5: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
+- Backends: Android, GLUT, OSX: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: Android, GLUT, OSX: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
@@ -180,6 +200,7 @@ Other Changes:
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
 - Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
+- Backends: OSX: Fix Game Controller nav mapping to use shoulder for both focusing and tweak speed. (#4759)
 - Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
   wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
 

@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-03-04: Initial version.
 
@@ -101,12 +102,12 @@ static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
         case AKEYCODE_NUMPAD_ADD:           return ImGuiKey_KeypadAdd;
         case AKEYCODE_NUMPAD_ENTER:         return ImGuiKey_KeypadEnter;
         case AKEYCODE_NUMPAD_EQUALS:        return ImGuiKey_KeypadEqual;
+        case AKEYCODE_CTRL_LEFT:            return ImGuiKey_LeftCtrl;
         case AKEYCODE_SHIFT_LEFT:           return ImGuiKey_LeftShift;
-        case AKEYCODE_CTRL_LEFT:            return ImGuiKey_LeftControl;
         case AKEYCODE_ALT_LEFT:             return ImGuiKey_LeftAlt;
         case AKEYCODE_META_LEFT:            return ImGuiKey_LeftSuper;
+        case AKEYCODE_CTRL_RIGHT:           return ImGuiKey_RightCtrl;
         case AKEYCODE_SHIFT_RIGHT:          return ImGuiKey_RightShift;
-        case AKEYCODE_CTRL_RIGHT:           return ImGuiKey_RightControl;
         case AKEYCODE_ALT_RIGHT:            return ImGuiKey_RightAlt;
         case AKEYCODE_META_RIGHT:           return ImGuiKey_RightSuper;
         case AKEYCODE_MENU:                 return ImGuiKey_Menu;
@@ -227,26 +228,25 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
             if((AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER)
             || (AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_UNKNOWN))
             {
-                io.MouseDown[0] = (event_action == AMOTION_EVENT_ACTION_DOWN);
-                io.MousePos = ImVec2(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
+                io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
+                io.AddMouseButtonEvent(0, event_action == AMOTION_EVENT_ACTION_DOWN);
             }
             break;
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
             {
                 int32_t button_state = AMotionEvent_getButtonState(input_event);
-                io.MouseDown[0] = ((button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
-                io.MouseDown[1] = ((button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
-                io.MouseDown[2] = ((button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
+                io.AddMouseButtonEvent(0, (button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
+                io.AddMouseButtonEvent(1, (button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
+                io.AddMouseButtonEvent(2, (button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
             }
             break;
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
         case AMOTION_EVENT_ACTION_MOVE:       // Touch pointer moves while DOWN
-            io.MousePos = ImVec2(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
+            io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
             break;
         case AMOTION_EVENT_ACTION_SCROLL:
-            io.MouseWheel = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index);
-            io.MouseWheelH = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index);
+            io.AddMouseWheelEvent(AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index), AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index));
             break;
         default:
             break;

@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
 //  2019-03-25: Misc: Made io.DeltaTime always above zero.
@@ -93,12 +94,12 @@ static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
         case 43:                        return ImGuiKey_KeypadAdd;
         //case 13:                        return ImGuiKey_KeypadEnter;
         //case 0:                         return ImGuiKey_KeypadEqual;
+        case 256 + 0x0072:              return ImGuiKey_LeftCtrl;
         case 256 + 0x0070:              return ImGuiKey_LeftShift;
-        case 256 + 0x0072:              return ImGuiKey_LeftControl;
         case 256 + 0x0074:              return ImGuiKey_LeftAlt;
         //case 0:                         return ImGuiKey_LeftSuper;
+        case 256 + 0x0073:              return ImGuiKey_RightCtrl;
         case 256 + 0x0071:              return ImGuiKey_RightShift;
-        case 256 + 0x0073:              return ImGuiKey_RightControl;
         case 256 + 0x0075:              return ImGuiKey_RightAlt;
         //case 0:                         return ImGuiKey_RightSuper;
         //case 0:                         return ImGuiKey_Menu;
@@ -202,7 +203,7 @@ void ImGui_ImplGLUT_NewFrame()
     ImGui::NewFrame();
 }
 
-static void ImGui_ImplGLUT_UpdateKeyboardMods()
+static void ImGui_ImplGLUT_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
     int glut_key_mods = glutGetModifiers();
@@ -230,7 +231,7 @@ void ImGui_ImplGLUT_KeyboardFunc(unsigned char c, int x, int y)
 
     ImGuiKey key = ImGui_ImplGLUT_KeyToImGuiKey(c);
     ImGui_ImplGLUT_AddKeyEvent(key, true, c);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -239,7 +240,7 @@ void ImGui_ImplGLUT_KeyboardUpFunc(unsigned char c, int x, int y)
     //printf("char_up_func %d '%c'\n", c, c);
     ImGuiKey key = ImGui_ImplGLUT_KeyToImGuiKey(c);
     ImGui_ImplGLUT_AddKeyEvent(key, false, c);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -248,7 +249,7 @@ void ImGui_ImplGLUT_SpecialFunc(int key, int x, int y)
     //printf("key_down_func %d\n", key);
     ImGuiKey imgui_key = ImGui_ImplGLUT_KeyToImGuiKey(key + 256);
     ImGui_ImplGLUT_AddKeyEvent(imgui_key, true, key + 256);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
@@ -257,33 +258,29 @@ void ImGui_ImplGLUT_SpecialUpFunc(int key, int x, int y)
     //printf("key_up_func %d\n", key);
     ImGuiKey imgui_key = ImGui_ImplGLUT_KeyToImGuiKey(key + 256);
     ImGui_ImplGLUT_AddKeyEvent(imgui_key, false, key + 256);
-    ImGui_ImplGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyModifiers();
     (void)x; (void)y; // Unused
 }
 
 void ImGui_ImplGLUT_MouseFunc(int glut_button, int state, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
+    io.AddMousePosEvent((float)x, (float)y);
     int button = -1;
     if (glut_button == GLUT_LEFT_BUTTON) button = 0;
     if (glut_button == GLUT_RIGHT_BUTTON) button = 1;
     if (glut_button == GLUT_MIDDLE_BUTTON) button = 2;
-    if (button != -1 && state == GLUT_DOWN)
-        io.MouseDown[button] = true;
-    if (button != -1 && state == GLUT_UP)
-        io.MouseDown[button] = false;
+    if (button != -1 && state == GLUT_DOWN || state == GLUT_UP)
+        io.AddMouseButtonEvent(button, state == GLUT_DOWN);
 }
 
 #ifdef __FREEGLUT_EXT_H__
 void ImGui_ImplGLUT_MouseWheelFunc(int button, int dir, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
-    if (dir > 0)
-        io.MouseWheel += 1.0;
-    else if (dir < 0)
-        io.MouseWheel -= 1.0;
+    io.AddMousePosEvent((float)x, (float)y);
+    if (dir != 0)
+        io.AddMouseWheelEvent(0.0f, dir > 0 ? 1.0f : -1.0f);
     (void)button; // Unused
 }
 #endif
@@ -297,5 +294,5 @@ void ImGui_ImplGLUT_ReshapeFunc(int w, int h)
 void ImGui_ImplGLUT_MotionFunc(int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
+    io.AddMousePosEvent((float)x, (float)y);
 }
