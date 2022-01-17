@@ -522,8 +522,8 @@ static void ImGui_ImplOSX_UpdateGamepads()
     MAP_BUTTON(ImGuiNavInput_DpadDown, dpad.down);
     MAP_BUTTON(ImGuiNavInput_FocusPrev, leftShoulder);
     MAP_BUTTON(ImGuiNavInput_FocusNext, rightShoulder);
-    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftTrigger);
-    MAP_BUTTON(ImGuiNavInput_TweakFast, rightTrigger);
+    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftShoulder);
+    MAP_BUTTON(ImGuiNavInput_TweakFast, rightShoulder);
 #undef MAP_BUTTON
 
     io.NavInputs[ImGuiNavInput_LStickLeft] = gp.leftThumbstick.left.value;
