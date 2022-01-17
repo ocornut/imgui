@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-12: Inputs: Added basic Platform IME support, hooking the io.SetPlatformImeDataFn() function.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-13: *BREAKING CHANGE* Add NSView parameter to ImGui_ImplOSX_Init(). Generally fix keyboard support. Using kVK_* codes for keyboard keys.
@@ -51,8 +52,6 @@ static double               g_HostClockPeriod = 0.0;
 static double               g_Time = 0.0;
 static NSCursor*            g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool                 g_MouseCursorHidden = false;
-static bool                 g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
-static bool                 g_MouseDown[ImGuiMouseButton_COUNT] = {};
 static ImFocusObserver*     g_FocusObserver = nil;
 static KeyEventResponder*   g_KeyEventResponder = nil;
 static NSTextInputContext*  g_InputContext = nil;
@@ -450,17 +449,9 @@ void ImGui_ImplOSX_Shutdown()
     g_FocusObserver = NULL;
 }
 
-static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
+static void ImGui_ImplOSX_UpdateMouseCursor()
 {
-    // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-    {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || g_MouseDown[i];
-        g_MouseJustPressed[i] = false;
-    }
-
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
 
@@ -562,7 +553,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
-    ImGui_ImplOSX_UpdateMouseCursorAndButtons();
+    ImGui_ImplOSX_UpdateMouseCursor();
     ImGui_ImplOSX_UpdateGamepads();
     ImGui_ImplOSX_UpdateImePosWithView(view);
 }
@@ -574,16 +565,16 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
-        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseDown))
-            g_MouseDown[button] = g_MouseJustPressed[button] = true;
+        if (button >= 0 && button < ImGuiMouseButton_COUNT)
+            io.AddMouseButtonEvent(button, true);
         return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
     {
         int button = (int)[event buttonNumber];
-        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseDown))
-            g_MouseDown[button] = false;
+        if (button >= 0 && button < ImGuiMouseButton_COUNT)
+            io.AddMouseButtonEvent(button, false);
         return io.WantCaptureMouse;
     }
 
@@ -592,7 +583,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         NSPoint mousePoint = event.locationInWindow;
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
-        io.MousePos = ImVec2((float)mousePoint.x, (float)mousePoint.y);
+        io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
     }
 
     if (event.type == NSEventTypeScrollWheel)
@@ -632,11 +623,9 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
         }
+        if (wheel_dx != 0.0 || wheel_dx != 0.0)
+            io.AddMouseWheelEvent((float)wheel_dx * 0.1f, (float)wheel_dy * 0.1f);
 
-        if (fabs(wheel_dx) > 0.0)
-            io.MouseWheelH += (float)wheel_dx * 0.1f;
-        if (fabs(wheel_dy) > 0.0)
-            io.MouseWheel += (float)wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
 

@@ -1262,7 +1262,7 @@ void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down)
     KeysData[keydata_index].Down = down;
 }
 
-// [Optional] Call add AddKeyEvent().
+// [Optional] Call after AddKeyEvent().
 // Specify native keycode, scancode + Specify index for legacy <1.87 IsKeyXXX() functions with native indices.
 // If you are writing a backend in 2022 or don't use IsKeyXXX() with native values that are not ImGuiKey values, you can avoid calling this.
 void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native_scancode, int native_legacy_index)
@@ -1292,6 +1292,32 @@ void ImGuiIO::AddKeyModsEvent(ImGuiKeyModFlags modifiers)
     KeyShift = (modifiers & ImGuiKeyModFlags_Shift) != 0;
     KeyAlt = (modifiers & ImGuiKeyModFlags_Alt) != 0;
     KeySuper = (modifiers & ImGuiKeyModFlags_Super) != 0;
+}
+
+// Queue a mouse move event
+void ImGuiIO::AddMousePosEvent(float x, float y)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    g.IO.MousePos = ImVec2(x, y);
+}
+
+void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    if (wheel_x == 0.0f && wheel_y == 0.0f)
+        return;
+    g.IO.MouseWheelH += wheel_x;
+    g.IO.MouseWheel += wheel_y;
+}
+
+void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
+    g.IO.MouseDown[mouse_button] = down;
 }
 
 void ImGuiIO::AddFocusEvent(bool focused)

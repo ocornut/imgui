@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
@@ -469,29 +470,28 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_MOUSE_AXES:
         if (ev->mouse.display == bd->Display)
         {
-            io.MouseWheel += ev->mouse.dz;
-            io.MouseWheelH -= ev->mouse.dw;
-            io.MousePos = ImVec2(ev->mouse.x, ev->mouse.y);
+            io.AddMousePosEvent(ev->mouse.x, ev->mouse.y);
+            io.AddMouseWheelEvent(-ev->mouse.dw, ev->mouse.dz);
         }
         return true;
     case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
-        if (ev->mouse.display == bd->Display && ev->mouse.button <= 5)
-            io.MouseDown[ev->mouse.button - 1] = (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
+        if (ev->mouse.display == bd->Display && ev->mouse.button > 0 && ev->mouse.button <= 5)
+            io.AddMouseButtonEvent(ev->mouse.button - 1, ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
         return true;
     case ALLEGRO_EVENT_TOUCH_MOVE:
         if (ev->touch.display == bd->Display)
-            io.MousePos = ImVec2(ev->touch.x, ev->touch.y);
+            io.AddMousePosEvent(ev->touch.x, ev->touch.y);
         return true;
     case ALLEGRO_EVENT_TOUCH_BEGIN:
     case ALLEGRO_EVENT_TOUCH_END:
     case ALLEGRO_EVENT_TOUCH_CANCEL:
         if (ev->touch.display == bd->Display && ev->touch.primary)
-            io.MouseDown[0] = (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
+            io.AddMouseButtonEvent(0, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
         return true;
     case ALLEGRO_EVENT_MOUSE_LEAVE_DISPLAY:
         if (ev->mouse.display == bd->Display)
-            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == bd->Display)

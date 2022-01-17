@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
 //  2022-01-12: Update mouse inputs using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
 //  2022-01-12: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
@@ -78,7 +79,6 @@ struct ImGui_ImplSDL2_Data
     SDL_Window* Window;
     Uint64      Time;
     int         MouseButtonsDown;
-    bool        MousePressed[3];
     SDL_Cursor* MouseCursors[ImGuiMouseCursor_COUNT];
     char*       ClipboardTextData;
     bool        MouseCanUseGlobalState;
@@ -248,15 +248,14 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     {
         case SDL_MOUSEMOTION:
         {
-            io.MousePos = ImVec2((float)event->motion.x, (float)event->motion.y);
+            io.AddMousePosEvent((float)event->motion.x, (float)event->motion.y);
             return true;
         }
         case SDL_MOUSEWHEEL:
         {
-            if (event->wheel.x > 0) io.MouseWheelH += 1;
-            if (event->wheel.x < 0) io.MouseWheelH -= 1;
-            if (event->wheel.y > 0) io.MouseWheel += 1;
-            if (event->wheel.y < 0) io.MouseWheel -= 1;
+            float wheel_x = (event->wheel.x > 0) ? 1.0f : (event->wheel.x < 0) ? -1.0f : 0.0f;
+            float wheel_y = (event->wheel.y > 0) ? 1.0f : (event->wheel.y < 0) ? -1.0f : 0.0f;
+            io.AddMouseWheelEvent(wheel_x, wheel_y);
             return true;
         }
         case SDL_MOUSEBUTTONDOWN:
@@ -268,8 +267,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             if (event->button.button == SDL_BUTTON_MIDDLE) { mouse_button = 2; }
             if (mouse_button == -1)
                 break;
-            if (event->type == SDL_MOUSEBUTTONDOWN)
-                bd->MousePressed[mouse_button] = true;
+            io.AddMouseButtonEvent(mouse_button, (event->type == SDL_MOUSEBUTTONDOWN));
             bd->MouseButtonsDown = (event->type == SDL_MOUSEBUTTONDOWN) ? (bd->MouseButtonsDown | (1 << mouse_button)) : (bd->MouseButtonsDown & ~(1 << mouse_button));
             return true;
         }
@@ -290,7 +288,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_WINDOWEVENT:
         {
             if (event->window.event == SDL_WINDOWEVENT_LEAVE)
-                io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
             else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
@@ -438,16 +436,9 @@ static void ImGui_ImplSDL2_UpdateMouseData()
             int window_x, window_y, mouse_x_global, mouse_y_global;
             SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
             SDL_GetWindowPosition(bd->Window, &window_x, &window_y);
-            io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
+            io.AddMousePosEvent((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
         }
     }
-
-    // Update buttons
-    Uint32 mouse_buttons = SDL_GetMouseState(NULL, NULL);
-    io.MouseDown[0] = bd->MousePressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = bd->MousePressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = bd->MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
-    bd->MousePressed[0] = bd->MousePressed[1] = bd->MousePressed[2] = false;
 }
 
 static void ImGui_ImplSDL2_UpdateMouseCursor()

@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
 //  2019-03-25: Misc: Made io.DeltaTime always above zero.
@@ -264,26 +265,22 @@ void ImGui_ImplGLUT_SpecialUpFunc(int key, int x, int y)
 void ImGui_ImplGLUT_MouseFunc(int glut_button, int state, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
+    io.AddMousePosEvent((float)x, (float)y);
     int button = -1;
     if (glut_button == GLUT_LEFT_BUTTON) button = 0;
     if (glut_button == GLUT_RIGHT_BUTTON) button = 1;
     if (glut_button == GLUT_MIDDLE_BUTTON) button = 2;
-    if (button != -1 && state == GLUT_DOWN)
-        io.MouseDown[button] = true;
-    if (button != -1 && state == GLUT_UP)
-        io.MouseDown[button] = false;
+    if (button != -1 && state == GLUT_DOWN || state == GLUT_UP)
+        io.AddMouseButtonEvent(button, state == GLUT_DOWN);
 }
 
 #ifdef __FREEGLUT_EXT_H__
 void ImGui_ImplGLUT_MouseWheelFunc(int button, int dir, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
-    if (dir > 0)
-        io.MouseWheel += 1.0;
-    else if (dir < 0)
-        io.MouseWheel -= 1.0;
+    io.AddMousePosEvent((float)x, (float)y);
+    if (dir != 0)
+        io.AddMouseWheelEvent(0.0f, dir > 0 ? 1.0f : -1.0f);
     (void)button; // Unused
 }
 #endif
@@ -297,5 +294,5 @@ void ImGui_ImplGLUT_ReshapeFunc(int w, int h)
 void ImGui_ImplGLUT_MotionFunc(int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2((float)x, (float)y);
+    io.AddMousePosEvent((float)x, (float)y);
 }
