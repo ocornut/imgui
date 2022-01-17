@@ -65,7 +65,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.87 WIP"
-#define IMGUI_VERSION_NUM           18605
+#define IMGUI_VERSION_NUM           18606
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 
@@ -1391,12 +1391,12 @@ enum ImGuiKey_
     ImGuiKey_KeypadAdd,
     ImGuiKey_KeypadEnter,
     ImGuiKey_KeypadEqual,
+    ImGuiKey_LeftCtrl,
     ImGuiKey_LeftShift,
-    ImGuiKey_LeftControl,
     ImGuiKey_LeftAlt,
     ImGuiKey_LeftSuper,
+    ImGuiKey_RightCtrl,
     ImGuiKey_RightShift,
-    ImGuiKey_RightControl,
     ImGuiKey_RightAlt,
     ImGuiKey_RightSuper,
     ImGuiKey_Menu,

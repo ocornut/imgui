@@ -329,12 +329,12 @@ static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
         case ALLEGRO_KEY_PAD_PLUS: return ImGuiKey_KeypadAdd;
         case ALLEGRO_KEY_PAD_ENTER: return ImGuiKey_KeypadEnter;
         case ALLEGRO_KEY_PAD_EQUALS: return ImGuiKey_KeypadEqual;
+        case ALLEGRO_KEY_LCTRL: return ImGuiKey_LeftCtrl;
         case ALLEGRO_KEY_LSHIFT: return ImGuiKey_LeftShift;
-        case ALLEGRO_KEY_LCTRL: return ImGuiKey_LeftControl;
         case ALLEGRO_KEY_ALT: return ImGuiKey_LeftAlt;
         case ALLEGRO_KEY_LWIN: return ImGuiKey_LeftSuper;
+        case ALLEGRO_KEY_RCTRL: return ImGuiKey_RightCtrl;
         case ALLEGRO_KEY_RSHIFT: return ImGuiKey_RightShift;
-        case ALLEGRO_KEY_RCTRL: return ImGuiKey_RightControl;
         case ALLEGRO_KEY_ALTGR: return ImGuiKey_RightAlt;
         case ALLEGRO_KEY_RWIN: return ImGuiKey_RightSuper;
         case ALLEGRO_KEY_MENU: return ImGuiKey_Menu;

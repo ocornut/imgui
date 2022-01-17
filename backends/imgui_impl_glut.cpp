@@ -93,12 +93,12 @@ static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
         case 43:                        return ImGuiKey_KeypadAdd;
         //case 13:                        return ImGuiKey_KeypadEnter;
         //case 0:                         return ImGuiKey_KeypadEqual;
+        case 256 + 0x0072:              return ImGuiKey_LeftCtrl;
         case 256 + 0x0070:              return ImGuiKey_LeftShift;
-        case 256 + 0x0072:              return ImGuiKey_LeftControl;
         case 256 + 0x0074:              return ImGuiKey_LeftAlt;
         //case 0:                         return ImGuiKey_LeftSuper;
+        case 256 + 0x0073:              return ImGuiKey_RightCtrl;
         case 256 + 0x0071:              return ImGuiKey_RightShift;
-        case 256 + 0x0073:              return ImGuiKey_RightControl;
         case 256 + 0x0075:              return ImGuiKey_RightAlt;
         //case 0:                         return ImGuiKey_RightSuper;
         //case 0:                         return ImGuiKey_Menu;

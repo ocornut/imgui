@@ -101,12 +101,12 @@ static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
         case AKEYCODE_NUMPAD_ADD:           return ImGuiKey_KeypadAdd;
         case AKEYCODE_NUMPAD_ENTER:         return ImGuiKey_KeypadEnter;
         case AKEYCODE_NUMPAD_EQUALS:        return ImGuiKey_KeypadEqual;
+        case AKEYCODE_CTRL_LEFT:            return ImGuiKey_LeftCtrl;
         case AKEYCODE_SHIFT_LEFT:           return ImGuiKey_LeftShift;
-        case AKEYCODE_CTRL_LEFT:            return ImGuiKey_LeftControl;
         case AKEYCODE_ALT_LEFT:             return ImGuiKey_LeftAlt;
         case AKEYCODE_META_LEFT:            return ImGuiKey_LeftSuper;
+        case AKEYCODE_CTRL_RIGHT:           return ImGuiKey_RightCtrl;
         case AKEYCODE_SHIFT_RIGHT:          return ImGuiKey_RightShift;
-        case AKEYCODE_CTRL_RIGHT:           return ImGuiKey_RightControl;
         case AKEYCODE_ALT_RIGHT:            return ImGuiKey_RightAlt;
         case AKEYCODE_META_RIGHT:           return ImGuiKey_RightSuper;
         case AKEYCODE_MENU:                 return ImGuiKey_Menu;

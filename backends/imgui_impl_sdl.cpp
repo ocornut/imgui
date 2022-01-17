@@ -162,12 +162,12 @@ static ImGuiKey ImGui_ImplSDL2_KeycodeToImGuiKey(int keycode)
         case SDLK_KP_PLUS: return ImGuiKey_KeypadAdd;
         case SDLK_KP_ENTER: return ImGuiKey_KeypadEnter;
         case SDLK_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        case SDLK_LCTRL: return ImGuiKey_LeftCtrl;
         case SDLK_LSHIFT: return ImGuiKey_LeftShift;
-        case SDLK_LCTRL: return ImGuiKey_LeftControl;
         case SDLK_LALT: return ImGuiKey_LeftAlt;
         case SDLK_LGUI: return ImGuiKey_LeftSuper;
+        case SDLK_RCTRL: return ImGuiKey_RightCtrl;
         case SDLK_RSHIFT: return ImGuiKey_RightShift;
-        case SDLK_RCTRL: return ImGuiKey_RightControl;
         case SDLK_RALT: return ImGuiKey_RightAlt;
         case SDLK_RGUI: return ImGuiKey_RightSuper;
         case SDLK_MENU: return ImGuiKey_Menu;

@@ -179,11 +179,11 @@ static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
         case GLFW_KEY_KP_ENTER: return ImGuiKey_KeypadEnter;
         case GLFW_KEY_KP_EQUAL: return ImGuiKey_KeypadEqual;
         case GLFW_KEY_LEFT_SHIFT: return ImGuiKey_LeftShift;
-        case GLFW_KEY_LEFT_CONTROL: return ImGuiKey_LeftControl;
+        case GLFW_KEY_LEFT_CONTROL: return ImGuiKey_LeftCtrl;
         case GLFW_KEY_LEFT_ALT: return ImGuiKey_LeftAlt;
         case GLFW_KEY_LEFT_SUPER: return ImGuiKey_LeftSuper;
         case GLFW_KEY_RIGHT_SHIFT: return ImGuiKey_RightShift;
-        case GLFW_KEY_RIGHT_CONTROL: return ImGuiKey_RightControl;
+        case GLFW_KEY_RIGHT_CONTROL: return ImGuiKey_RightCtrl;
         case GLFW_KEY_RIGHT_ALT: return ImGuiKey_RightAlt;
         case GLFW_KEY_RIGHT_SUPER: return ImGuiKey_RightSuper;
         case GLFW_KEY_MENU: return ImGuiKey_Menu;
