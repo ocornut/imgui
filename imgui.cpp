@@ -3946,7 +3946,7 @@ static void ImGui::UpdateMouseInputs()
 
     // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
     if (IsMousePosValid(&io.MousePos))
-        io.MousePos = g.MouseLastValidPos = ImFloor(io.MousePos);
+        io.MousePos = g.MouseLastValidPos = ImFloorSigned(io.MousePos);
 
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
     if (IsMousePosValid(&io.MousePos) && IsMousePosValid(&io.MousePosPrev))
@@ -7732,12 +7732,15 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
         const ImGuiInputEvent* e = &g.InputEventsQueue[event_n];
         if (e->Type == ImGuiInputEventType_MousePos)
         {
-            if (io.MousePos.x != e->MousePos.PosX || io.MousePos.y != e->MousePos.PosY)
+            ImVec2 event_pos(e->MousePos.PosX, e->MousePos.PosY);
+            if (IsMousePosValid(&event_pos))
+                event_pos = ImVec2(ImFloorSigned(event_pos.x), ImFloorSigned(event_pos.y)); // Apply same flooring as UpdateMouseInputs()
+            if (io.MousePos.x != event_pos.x || io.MousePos.y != event_pos.y)
             {
                 // Trickling Rule: Stop processing queued events if we already handled a mouse button change
                 if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_wheeled || key_changed || key_mods_changed || text_inputed))
                     break;
-                io.MousePos = ImVec2(e->MousePos.PosX, e->MousePos.PosY);
+                io.MousePos = event_pos;
                 mouse_moved = true;
             }
         }
