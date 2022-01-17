@@ -37,6 +37,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Removed support for pre-C++11 compilers. We'll stop supporting VS2010. (#4537)
 - Reworked IO keyboard input system. (#2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
   - Added io.AddKeyModsEvent() function, obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
