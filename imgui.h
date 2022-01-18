@@ -1979,18 +1979,8 @@ struct ImGuiIO
 #endif
 
     //------------------------------------------------------------------
-    // Input - Fill before calling NewFrame()
+    // Input - Call before calling NewFrame()
     //------------------------------------------------------------------
-
-    ImVec2      MousePos;                       // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
-    bool        MouseDown[5];                   // Mouse buttons: 0=left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
-    float       MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
-    float       MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all backends.
-    bool        KeyCtrl;                        // Keyboard modifier down: Control
-    bool        KeyShift;                       // Keyboard modifier down: Shift
-    bool        KeyAlt;                         // Keyboard modifier down: Alt
-    bool        KeySuper;                       // Keyboard modifier down: Cmd/Super/Windows
-    float       NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
 
     // Input Functions
     IMGUI_API void  AddKeyEvent(ImGuiKey key, bool down);       // Queue a new key down/up event. Key should be "translated" (as in, generally ImGuiKey_A matches the key end-user would use to emit an 'A' character)
@@ -1998,10 +1988,10 @@ struct ImGuiIO
     IMGUI_API void  AddMousePosEvent(float x, float y);         // Queue a mouse position update. Use -FLT_MAX,-FLT_MAX to signify no mouse (e.g. app not focused and not hovered)
     IMGUI_API void  AddMouseButtonEvent(int button, bool down); // Queue a mouse button change
     IMGUI_API void  AddMouseWheelEvent(float wh_x, float wh_y); // Queue a mouse wheel update
-    IMGUI_API void  AddFocusEvent(bool focused);                // Queue an hosting application/platform windows gain or loss of focus
-    IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue new character input
-    IMGUI_API void  AddInputCharacterUTF16(ImWchar16 c);        // Queue new character input from an UTF-16 character, it can be a surrogate
-    IMGUI_API void  AddInputCharactersUTF8(const char* str);    // Queue new characters input from an UTF-8 string
+    IMGUI_API void  AddFocusEvent(bool focused);                // Queue a gain/loss of focus for the application (generally based on OS/platform focus of your window)
+    IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue a new character input
+    IMGUI_API void  AddInputCharacterUTF16(ImWchar16 c);        // Queue a new character input from an UTF-16 character, it can be a surrogate
+    IMGUI_API void  AddInputCharactersUTF8(const char* str);    // Queue a new characters input from an UTF-8 string
 
     IMGUI_API void  ClearInputCharacters();                     // [Internal] Clear the text input buffer manually
     IMGUI_API void  ClearInputKeys();                           // [Internal] Release all keys
@@ -2039,10 +2029,23 @@ struct ImGuiIO
     // [Internal] Dear ImGui will maintain those fields. Forward compatibility not guaranteed!
     //------------------------------------------------------------------
 
+    // Main Input State
+    // (this block used to be written by backend, since 1.87 it is best to NOT write to those directly, call the AddXXX functions above instead)
+    // (reading from those variables is fair game, as they are extremely unlikely to be moving anywhere)
+    ImVec2      MousePos;                           // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
+    bool        MouseDown[5];                       // Mouse buttons: 0=left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
+    float       MouseWheel;                         // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
+    float       MouseWheelH;                        // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all backends.
+    bool        KeyCtrl;                            // Keyboard modifier down: Control
+    bool        KeyShift;                           // Keyboard modifier down: Shift
+    bool        KeyAlt;                             // Keyboard modifier down: Alt
+    bool        KeySuper;                           // Keyboard modifier down: Cmd/Super/Windows
+    float       NavInputs[ImGuiNavInput_COUNT];     // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
+
+    // Other state maintained from data above + IO function calls
     ImGuiKeyModFlags KeyMods;                       // Key mods flags (same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags), updated by NewFrame()
     ImGuiKeyModFlags KeyModsPrev;                   // Key mods flags (from previous frame)
     ImGuiKeyData KeysData[ImGuiKey_KeysData_SIZE];  // Key state for all known keys. Use IsKeyXXX() functions to access this.
-
     bool        WantCaptureMouseUnlessPopupClose;   // Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
     ImVec2      MousePosPrev;                       // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
     ImVec2      MouseClickedPos[5];                 // Position at time of clicking

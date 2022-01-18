@@ -255,9 +255,9 @@ CODE
         io.DeltaTime = 1.0f/60.0f;              // set the time elapsed since the previous frame (in seconds)
         io.DisplaySize.x = 1920.0f;             // set the current display width
         io.DisplaySize.y = 1280.0f;             // set the current display height here
-        io.MousePos = my_mouse_pos;             // set the mouse position
-        io.MouseDown[0] = my_mouse_buttons[0];  // set the mouse button states
-        io.MouseDown[1] = my_mouse_buttons[1];
+        io.AddMousePosEvent(mouse_x, mouse_y);  // update mouse position
+        io.AddMouseButtonEvent(0, mouse_b[0]);  // update mouse button states
+        io.AddMouseButtonEvent(1, mouse_b[1]);  // update mouse button states
 
         // Call NewFrame(), after this point you can use ImGui::* functions anytime
         // (So you want to try calling NewFrame() as early as you can in your main loop to be able to use Dear ImGui everywhere)
@@ -386,6 +386,11 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/01/17 (1.87) - inputs: reworked mouse IO.
+                        - Backend writing to io.MousePos               -> backend should call io.AddMousePosEvent()
+                        - Backend writing to io.MouseDown[]            -> backend should call io.AddMouseButtonEvent()
+                        - Backend writing to io.MouseWheel             -> backend should call io.AddMouseWheelEvent()
+                        - Backend writing to io.MouseHoveredViewpot    -> backend should call io.AddMouseViewportEvent() [Docking branch only]
  - 2022/01/10 (1.87) - inputs: reworked keyboard IO. Removed io.KeyMap[], io.KeysDown[] in favor of calling io.AddKeyEvent(). Removed GetKeyIndex(), now unecessary. All IsKeyXXX() functions now take ImGuiKey values. All features are still functional until IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Read Changelog and Release Notes for details.
                         - IsKeyPressed(MY_NATIVE_KEY_XXX)              -> use IsKeyPressed(ImGuiKey_XXX)
                         - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))      -> use IsKeyPressed(ImGuiKey_XXX)
@@ -1325,6 +1330,21 @@ void ImGuiIO::AddMousePosEvent(float x, float y)
     g.InputEventsQueue.push_back(e);
 }
 
+void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MouseButton;
+    e.Source = ImGuiInputSource_Mouse;
+    e.MouseButton.Button = mouse_button;
+    e.MouseButton.Down = down;
+    g.InputEventsQueue.push_back(e);
+}
+
+// Queue a mouse wheel event (most mouse/API will only have a Y component)
 void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
 {
     ImGuiContext& g = *GImGui;
@@ -1337,20 +1357,6 @@ void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
     e.Source = ImGuiInputSource_Mouse;
     e.MouseWheel.WheelX = wheel_x;
     e.MouseWheel.WheelY = wheel_y;
-    g.InputEventsQueue.push_back(e);
-}
-
-void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
-    IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
-
-    ImGuiInputEvent e;
-    e.Type = ImGuiInputEventType_MouseButton;
-    e.Source = ImGuiInputSource_Mouse;
-    e.MouseButton.Button = mouse_button;
-    e.MouseButton.Down = down;
     g.InputEventsQueue.push_back(e);
 }
 

@@ -114,7 +114,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
 {
     // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
     ImGuiIO& io = ImGui::GetIO();
-    io.MouseDown[button] = down;
+    io.AddMouseButtonEvent(button, down);
 
     // (2) ONLY forward mouse data to your underlying app/game.
     if (!io.WantCaptureMouse)
