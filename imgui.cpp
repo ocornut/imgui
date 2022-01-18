@@ -1390,6 +1390,19 @@ void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
     g.InputEventsQueue.push_back(e);
 }
 
+void ImGuiIO::AddMouseViewportEvent(ImGuiID viewport_id)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+    IM_ASSERT(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport);
+
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MouseViewport;
+    e.Source = ImGuiInputSource_Mouse;
+    e.MouseViewport.HoveredViewportID = viewport_id;
+    g.InputEventsQueue.push_back(e);
+}
+
 void ImGuiIO::AddFocusEvent(bool focused)
 {
     ImGuiContext& g = *GImGui;
@@ -8353,6 +8366,10 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
                 io.MouseWheel += e->MouseWheel.WheelY;
                 mouse_wheeled = true;
             }
+        }
+        else if (e->Type == ImGuiInputEventType_MouseViewport)
+        {
+            io.MouseHoveredViewport = e->MouseViewport.HoveredViewportID;
         }
         else if (e->Type == ImGuiInputEventType_Key)
         {

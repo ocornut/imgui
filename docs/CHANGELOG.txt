@@ -90,7 +90,7 @@ Other changes:
 - Added io.ConfigViewportsNoDecoration option.
 - Added io.ConfigViewportsNoDefaultParent option.
 - Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
-- Added io.MouseHoveredViewport (optional _even_ for multi-viewport support, tied to ImGuiBackendFlags_HasMouseHoveredViewport flag).
+- Added io.AddMouseViewportEvent() (optional _even_ for multi-viewport support, tied to ImGuiBackendFlags_HasMouseHoveredViewport flag).
 - Expanded ImGuiViewport structure, ImGuiViewportFlags flags.
 - Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX9, DirectX10, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
@@ -206,12 +206,13 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Viewports, IO: Added io.AddMouseViewportEvent() function to queue hovered viewport change (when known by backend).
 - Viewports: Relaxed specs for backend supporting ImGuiBackendFlags_HasMouseHoveredViewport: it is now _optional_
-  for the backend to have to ignore viewports with the _NoInputs flag when setting io.MouseHoveredViewport. It is
+  for the backend to have to ignore viewports with the _NoInputs flag when call io.AddMouseViewportEvent(). It is
   much better if they can (Win32 and GLFW 3.3+ backends can, SDL and GLFW 3.2 backends cannot, they are lacking data).
   A concrete example is: when dragging a viewport for docking, the viewport is marked with _NoInputs to allow us
-  to pick the target viewports for docking. If the backend reports a viewport with _NoInputs in io.MouseHoveredViewport,
-  then Dear ImGui will revert to its flawed heuristic to find the viewport under.
+  to pick the target viewports for docking. If the backend reports a viewport with _NoInputs when calling the
+  io.AddMouseViewportEvent() function, then Dear ImGui will revert to its flawed heuristic to find the viewport under.
   By lowering those specs, we allow the SDL and more backend to support this, only relying on the heuristic in a few
   drag and drop situations rather that relying on it everywhere.
 - Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in

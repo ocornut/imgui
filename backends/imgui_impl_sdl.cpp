@@ -369,7 +369,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     if (mouse_can_use_global_state)
     {
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
-        io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;//We can set io.MouseHoveredViewport correctly (optional)
+        io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;// We can call io.AddMouseViewportEvent() with correct data (optional)
     }
 
     bd->Window = window;
@@ -521,17 +521,18 @@ static void ImGui_ImplSDL2_UpdateMouseData()
         }
     }
 
-    // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
+    // (Optional) When using multiple viewports: call io.AddMouseViewportEvent() with the viewport the OS mouse cursor is hovering.
     // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the backend, Dear imGui will ignore this field and infer the information using its flawed heuristic.
     // - [!] SDL backend does NOT correctly ignore viewports with the _NoInputs flag.
     //       Some backend are not able to handle that correctly. If a backend report an hovered viewport that has the _NoInputs flag (e.g. when dragging a window
     //       for docking, the viewport has the _NoInputs flag in order to allow us to find the viewport under), then Dear ImGui is forced to ignore the value reported
     //       by the backend, and use its flawed heuristic to guess the viewport behind.
     // - [X] SDL backend correctly reports this regardless of another viewport behind focused and dragged from (we need this to find a useful drag and drop target).
-    io.MouseHoveredViewport = 0;
+    ImGuiID mouse_viewport_id = 0;
     if (SDL_Window* sdl_mouse_window = SDL_GetWindowFromID(bd->MouseWindowID))
         if (ImGuiViewport* mouse_viewport = ImGui::FindViewportByPlatformHandle((void*)sdl_mouse_window))
-            io.MouseHoveredViewport = mouse_viewport->ID;
+            mouse_viewport_id = mouse_viewport->ID;
+    io.AddMouseViewportEvent(mouse_viewport_id);
 }
 
 static void ImGui_ImplSDL2_UpdateMouseCursor()

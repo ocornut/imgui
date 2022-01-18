@@ -917,6 +917,7 @@ enum ImGuiInputEventType
     ImGuiInputEventType_MousePos,
     ImGuiInputEventType_MouseWheel,
     ImGuiInputEventType_MouseButton,
+    ImGuiInputEventType_MouseViewport,
     ImGuiInputEventType_Key,
     ImGuiInputEventType_KeyMods,
     ImGuiInputEventType_Char,
@@ -940,6 +941,7 @@ enum ImGuiInputSource
 struct ImGuiInputEventMousePos      { float PosX, PosY; };
 struct ImGuiInputEventMouseWheel    { float WheelX, WheelY; };
 struct ImGuiInputEventMouseButton   { int Button; bool Down; };
+struct ImGuiInputEventMouseViewport { ImGuiID HoveredViewportID; };
 struct ImGuiInputEventKey           { ImGuiKey Key; bool Down; };
 struct ImGuiInputEventKeyMods       { ImGuiKeyModFlags Mods; };
 struct ImGuiInputEventText          { unsigned int Char; };
@@ -955,6 +957,7 @@ struct ImGuiInputEvent
         ImGuiInputEventMousePos     MousePos;       // if Type == ImGuiInputEventType_MousePos
         ImGuiInputEventMouseWheel   MouseWheel;     // if Type == ImGuiInputEventType_MouseWheel
         ImGuiInputEventMouseButton  MouseButton;    // if Type == ImGuiInputEventType_MouseButton
+        ImGuiInputEventMouseViewport MouseViewport; // if Type == ImGuiInputEventType_MouseViewport
         ImGuiInputEventKey          Key;            // if Type == ImGuiInputEventType_Key
         ImGuiInputEventKeyMods      KeyMods;        // if Type == ImGuiInputEventType_Modifiers
         ImGuiInputEventText         Text;           // if Type == ImGuiInputEventType_Text
