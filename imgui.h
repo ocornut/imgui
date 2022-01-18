@@ -1611,7 +1611,7 @@ enum ImGuiBackendFlags_
 
     // [BETA] Viewports
     ImGuiBackendFlags_PlatformHasViewports  = 1 << 10,  // Backend Platform supports multiple viewports.
-    ImGuiBackendFlags_HasMouseHoveredViewport=1 << 11,  // Backend Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines! Don't set this without studying _carefully_ how the backends handle ImGuiViewportFlags_NoInputs!
+    ImGuiBackendFlags_HasMouseHoveredViewport=1 << 11,  // Backend Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse. IF POSSIBLE, ignore viewports with the ImGuiViewportFlags_NoInputs flag (Win32 backend, GLFW 3.30+ backend can do this, SDL backend cannot). If this cannot be done, Dear ImGui needs to use a flawed heuristic to find the viewport under.
     ImGuiBackendFlags_RendererHasViewports  = 1 << 12   // Backend Renderer supports multiple viewports.
 };
 
@@ -2076,7 +2076,7 @@ struct ImGuiIO
     bool        MouseDown[5];                   // Mouse buttons: 0=left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
     float       MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
     float       MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all backends.
-    ImGuiID     MouseHoveredViewport;           // (Optional) When using multiple viewports: viewport the OS mouse cursor is hovering _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag, and _REGARDLESS_ of whether another viewport is focused. Set io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport if you can provide this info. If you don't imgui will infer the value using the rectangles and last focused time of the viewports it knows about (ignoring other OS windows).
+    ImGuiID     MouseHoveredViewport;           // (Optional) With multi-viewports: viewport the OS mouse is hovering. If possible _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag is much better (few backends can handle that). Set io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport if you can provide this info. If you don't imgui will infer the value using the rectangles and last focused time of the viewports it knows about (ignoring other OS windows).
     bool        KeyCtrl;                        // Keyboard modifier down: Control
     bool        KeyShift;                       // Keyboard modifier down: Shift
     bool        KeyAlt;                         // Keyboard modifier down: Alt

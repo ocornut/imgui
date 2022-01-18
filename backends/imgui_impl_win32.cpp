@@ -131,7 +131,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional)
 
     bd->hWnd = (HWND)hwnd;
     bd->WantUpdateHasGamepad = true;
@@ -300,17 +300,17 @@ static void ImGui_ImplWin32_UpdateMouseData()
     }
 
     // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
-    // Important: this information is not easy to provide and many high-level windowing library won't be able to provide it correctly, because
-    // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
-    // - This is _regardless_ of whether another viewport is focused or being dragged from.
-    // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the backend, imgui will ignore this field and infer the information by relying on the
-    // rectangles and last focused time of every viewports it knows about. It will be unaware of foreign windows that may be sitting between or over your windows.
+    // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the backend, Dear imGui will ignore this field and infer the information using its flawed heuristic.
+    // - [X] Win32 backend correctly ignore viewports with the _NoInputs flag (here using ::WindowFromPoint with WM_NCHITTEST + HTTRANSPARENT in WndProc does that)
+    //       Some backend are not able to handle that correctly. If a backend report an hovered viewport that has the _NoInputs flag (e.g. when dragging a window
+    //       for docking, the viewport has the _NoInputs flag in order to allow us to find the viewport under), then Dear ImGui is forced to ignore the value reported
+    //       by the backend, and use its flawed heuristic to guess the viewport behind.
+    // - [X] Win32 backend correctly reports this regardless of another viewport behind focused and dragged from (we need this to find a useful drag and drop target).
     io.MouseHoveredViewport = 0;
     if (has_mouse_screen_pos)
         if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
             if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
-                if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
-                    io.MouseHoveredViewport = viewport->ID;
+                io.MouseHoveredViewport = viewport->ID;
 }
 
 // Gamepad navigation mapping

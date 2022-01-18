@@ -206,9 +206,18 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Viewports: Relaxed specs for backend supporting ImGuiBackendFlags_HasMouseHoveredViewport: it is now _optional_
+  for the backend to have to ignore viewports with the _NoInputs flag when setting io.MouseHoveredViewport. It is
+  much better if they can (Win32 and GLFW 3.3+ backends can, SDL and GLFW 3.2 backends cannot, they are lacking data).
+  A concrete example is: when dragging a viewport for docking, the viewport is marked with _NoInputs to allow us
+  to pick the target viewports for docking. If the backend reports a viewport with _NoInputs in io.MouseHoveredViewport,
+  then Dear ImGui will revert to its flawed heuristic to find the viewport under.
+  By lowering those specs, we allow the SDL and more backend to support this, only relying on the heuristic in a few
+  drag and drop situations rather that relying on it everywhere.
 - Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in
   its own viewport (regression from 1.86). (#4023, #787)
 - Viewports: Fixed active InputText() from preventing viewports to merge. (#4212)
+- Backends: SDL: Added support for ImGuiBackendFlags_HasMouseHoveredViewport now that its specs have been lowered.
 - (Breaking) Removed ImGuiPlatformIO::Platform_SetImeInputPos() in favor of newly standardized
   io.SetPlatformImeDataFn() function. Should not affect more than default backends.
 
