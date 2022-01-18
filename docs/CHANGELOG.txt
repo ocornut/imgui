@@ -208,6 +208,7 @@ Docking+Viewports Branch:
 
 - Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in
   its own viewport (regression from 1.86). (#4023, #787)
+- Viewports: Fixed active InputText() from preventing viewports to merge. (#4212)
 - (Breaking) Removed ImGuiPlatformIO::Platform_SetImeInputPos() in favor of newly standardized
   io.SetPlatformImeDataFn() function. Should not affect more than default backends.
 
