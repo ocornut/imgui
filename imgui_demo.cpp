@@ -483,6 +483,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "Here we expose them as read-only fields to avoid breaking interactions with your backend.");
 
             // Make a local copy to avoid modifying actual backend flags.
+            // FIXME: We don't use BeginDisabled() to keep label bright, maybe we need a BeginReadonly() equivalent..
             ImGuiBackendFlags backend_flags = io.BackendFlags;
             ImGui::CheckboxFlags("io.BackendFlags: HasGamepad",           &backend_flags, ImGuiBackendFlags_HasGamepad);
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors",      &backend_flags, ImGuiBackendFlags_HasMouseCursors);
@@ -5637,7 +5638,7 @@ static void ShowDemoWindowColumns()
     ImGui::TreePop();
 }
 
-namespace ImGui { extern const ImGuiKeyData* GetKeyData(ImGuiKey key); }
+namespace ImGui { extern ImGuiKeyData* GetKeyData(ImGuiKey key); }
 
 static void ShowDemoWindowMisc()
 {
@@ -5702,9 +5703,9 @@ static void ShowDemoWindowMisc()
 #else
             struct funcs { static bool IsNativeDupe(ImGuiKey key) { return key < ImGuiKey_LegacyNativeKey_END && ImGui::GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
 #endif
-            ImGui::Text("Keys down:");          for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X) (%.02f secs)", ImGui::GetKeyName(key), key, key, ImGui::GetKeyData(key)->DownDuration); } }
-            ImGui::Text("Keys pressed:");       for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
-            ImGui::Text("Keys released:");      for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyReleased(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
+            ImGui::Text("Keys down:");          for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (%.02f secs)", ImGui::GetKeyName(key), key, ImGui::GetKeyData(key)->DownDuration); } }
+            ImGui::Text("Keys pressed:");       for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
+            ImGui::Text("Keys released:");      for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyReleased(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
             ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
             ImGui::Text("Chars queue:");        for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
 

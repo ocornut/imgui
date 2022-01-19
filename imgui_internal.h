@@ -937,7 +937,6 @@ struct ImGuiInputEvent
 {
     ImGuiInputEventType             Type;
     ImGuiInputSource                Source;
-    bool                            SubmittedByTestEngine;
     union
     {
         ImGuiInputEventMousePos     MousePos;       // if Type == ImGuiInputEventType_MousePos
@@ -948,6 +947,7 @@ struct ImGuiInputEvent
         ImGuiInputEventText         Text;           // if Type == ImGuiInputEventType_Text
         ImGuiInputEventAppFocused   AppFocused;     // if Type == ImGuiInputEventType_Focus
     };
+    bool                            AddedByTestEngine;
 
     ImGuiInputEvent() { memset(this, 0, sizeof(*this)); }
 };
@@ -2640,7 +2640,7 @@ namespace ImGui
     // FIXME: Eventually we should aim to move e.g. IsActiveIdUsingKey() into IsKeyXXX functions.
     inline bool             IsNamedKey(ImGuiKey key)                                    { return key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END; }
     inline bool             IsLegacyKey(ImGuiKey key)                                   { return key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END; }
-    IMGUI_API const ImGuiKeyData* GetKeyData(ImGuiKey key);
+    IMGUI_API ImGuiKeyData* GetKeyData(ImGuiKey key);
     IMGUI_API void          SetItemUsingMouseWheel();
     IMGUI_API void          SetActiveIdUsingNavAndKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
