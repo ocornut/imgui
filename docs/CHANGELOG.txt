@@ -54,7 +54,7 @@ Breaking Changes:
   - Obsoleted GetKeyIndex(): it is now unnecessary and will now return the same value.
   - All keyboard related functions taking 'int user_key_index' now take 'ImGuiKey key':
     - IsKeyDown(), IsKeyPressed(), IsKeyReleased(), GetKeyPressedAmount().
-  - Added io.ConfigInputEventQueue (defaulting to true) to disable input queue trickling.
+  - Added io.ConfigInputTrickleEventQueue (defaulting to true) to disable input queue trickling.
   - Backward compatibility:
     - All backends updated to use new functions.
     - Old backends populating those arrays should still work!
