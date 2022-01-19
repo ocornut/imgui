@@ -21,7 +21,7 @@
 #include "webby_xbox.h"
 #elif defined(_WIN32)
 #include "webby_win32.h"
-#elif defined(ORBIS)
+#elif defined(ORBIS) || defined(__PROSPERO__)
 #include "webby_orbis.h"
 #else
 #include "webby_unix.h"
