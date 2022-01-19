@@ -113,7 +113,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
- - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
  - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
  - layout, font: horizontal tab support, A) text mode: forward only tabs (e.g. every 4 characters/N pixels from pos x1), B) manual mode: explicit tab stops acting as mini columns, no clipping (for menu items, many kind of uses, also vaguely relate to #267, #395)

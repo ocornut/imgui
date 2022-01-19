@@ -128,7 +128,6 @@ CODE
    - CTRL+X,CTRL+C,CTRL+V to use OS clipboard/
    - CTRL+Z,CTRL+Y to undo/redo.
    - ESCAPE to revert text to its original value.
-   - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
  - General Keyboard controls: enable with ImGuiConfigFlags_NavEnableKeyboard.
  - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. See suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at http://dearimgui.org/controls_sheets
@@ -386,6 +385,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/01/19 (1.87) - sliders, drags: removed support for legacy arithmetic operators (+,+-,*,/) when inputing text. This doesn't break any api/code but a feature that used to be accessible by end-users (which seemingly no one used).
  - 2022/01/17 (1.87) - inputs: reworked mouse IO.
                         - Backend writing to io.MousePos               -> backend should call io.AddMousePosEvent()
                         - Backend writing to io.MouseDown[]            -> backend should call io.AddMouseButtonEvent()

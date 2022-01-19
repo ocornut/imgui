@@ -38,6 +38,9 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Removed support for pre-C++11 compilers. We'll stop supporting VS2010. (#4537)
+- Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
+  This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
+  (Instead you may implement custom expression evaluators to provide a better version of this).
 - Reworked IO mouse input API: (#4858) [@thedmd, @ocornut]
   - Added io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions,
     obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
@@ -102,6 +105,7 @@ Other Changes:
   which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
   last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
+- Sliders, Drags: Fixed text input of values with a leading sign, common when using a format enforcing sign. (#4917)
 - Platform IME: changed io.ImeSetInputScreenPosFn() to io.SetPlatformImeDataFn() API,
   now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
 - Platform IME: moved io.ImeWindowHandle to GetMainViewport()->PlatformHandleRaw.

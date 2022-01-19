@@ -229,7 +229,6 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("CTRL+X/C/V to use clipboard cut/copy/paste.");
     ImGui::BulletText("CTRL+Z,CTRL+Y to undo/redo.");
     ImGui::BulletText("ESCAPE to revert.");
-    ImGui::BulletText("You can apply arithmetic operators +,*,/ on numerical values.\nUse +- to subtract.");
     ImGui::Unindent();
     ImGui::BulletText("With keyboard navigation enabled:");
     ImGui::Indent();
@@ -676,10 +675,6 @@ static void ShowDemoWindowWidgets()
             IMGUI_DEMO_MARKER("Widgets/Basic/InputInt, InputFloat");
             static int i0 = 123;
             ImGui::InputInt("input int", &i0);
-            ImGui::SameLine(); HelpMarker(
-                "You can apply arithmetic operators +,*,/ on numerical values.\n"
-                "  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\n"
-                "Use +- to subtract.");
 
             static float f0 = 0.001f;
             ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
