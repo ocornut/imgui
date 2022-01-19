@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-12: Inputs: Added basic Platform IME support, hooking the io.SetPlatformImeDataFn() function.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
@@ -502,25 +503,43 @@ static void ImGui_ImplOSX_UpdateGamepads()
 
     GCExtendedGamepad* gp = controller.extendedGamepad;
 
-#define MAP_BUTTON(NAV_NO, NAME) { io.NavInputs[NAV_NO] = gp.NAME.isPressed ? 1.0 : 0.0; }
-    MAP_BUTTON(ImGuiNavInput_Activate, buttonA);
-    MAP_BUTTON(ImGuiNavInput_Cancel, buttonB);
-    MAP_BUTTON(ImGuiNavInput_Menu, buttonX);
-    MAP_BUTTON(ImGuiNavInput_Input, buttonY);
-    MAP_BUTTON(ImGuiNavInput_DpadLeft, dpad.left);
-    MAP_BUTTON(ImGuiNavInput_DpadRight, dpad.right);
-    MAP_BUTTON(ImGuiNavInput_DpadUp, dpad.up);
-    MAP_BUTTON(ImGuiNavInput_DpadDown, dpad.down);
-    MAP_BUTTON(ImGuiNavInput_FocusPrev, leftShoulder);
-    MAP_BUTTON(ImGuiNavInput_FocusNext, rightShoulder);
-    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftShoulder);
-    MAP_BUTTON(ImGuiNavInput_TweakFast, rightShoulder);
-#undef MAP_BUTTON
-
-    io.NavInputs[ImGuiNavInput_LStickLeft] = gp.leftThumbstick.left.value;
-    io.NavInputs[ImGuiNavInput_LStickRight] = gp.leftThumbstick.right.value;
-    io.NavInputs[ImGuiNavInput_LStickUp] = gp.leftThumbstick.up.value;
-    io.NavInputs[ImGuiNavInput_LStickDown] = gp.leftThumbstick.down.value;
+    // Update gamepad inputs
+    #define IM_SATURATE(V)                        (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
+    #define MAP_BUTTON(KEY_NO, BUTTON_NAME)       { io.AddKeyEvent(KEY_NO, gp.BUTTON_NAME.isPressed, ImGuiInputSource_Gamepad); }
+    #define MAP_ANALOG(KEY_NO, AXIS_NAME, V0, V1) { float vn = (float)(gp.AXIS_NAME.value - V0) / (float)(V1 - V0); vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn, ImGuiInputSource_Gamepad); }
+    const float thumb_dead_zone = 0.0f;
+    if (@available(macOS 10.15, *))
+    {
+        MAP_BUTTON(ImGuiKey_GamepadStart,           buttonMenu);
+        MAP_BUTTON(ImGuiKey_GamepadBack,            buttonOptions);
+    }
+    MAP_BUTTON(ImGuiKey_GamepadFaceDown,        buttonA);              // Xbox A, PS Cross
+    MAP_BUTTON(ImGuiKey_GamepadFaceRight,       buttonB);              // Xbox B, PS Circle
+    MAP_BUTTON(ImGuiKey_GamepadFaceLeft,        buttonX);              // Xbox X, PS Square
+    MAP_BUTTON(ImGuiKey_GamepadFaceUp,          buttonY);              // Xbox Y, PS Triangle
+    MAP_BUTTON(ImGuiKey_GamepadDpadLeft,        dpad.left);
+    MAP_BUTTON(ImGuiKey_GamepadDpadRight,       dpad.right);
+    MAP_BUTTON(ImGuiKey_GamepadDpadUp,          dpad.up);
+    MAP_BUTTON(ImGuiKey_GamepadDpadDown,        dpad.down);
+    MAP_ANALOG(ImGuiKey_GamepadL1,              leftShoulder, 0.0f, 1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadR1,              rightShoulder, 0.0f, 1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadL2,              leftTrigger,  0.0f, 1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadR2,              rightTrigger, 0.0f, 1.0f);
+    if (@available(macOS 10.14.1, *))
+    {
+        MAP_BUTTON(ImGuiKey_GamepadL3,              leftThumbstickButton);
+        MAP_BUTTON(ImGuiKey_GamepadR3,              rightThumbstickButton);
+    }
+    MAP_ANALOG(ImGuiKey_GamepadLStickLeft,      leftThumbstick.xAxis,  -thumb_dead_zone, -1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadLStickRight,     leftThumbstick.xAxis,  +thumb_dead_zone, +1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadLStickUp,        leftThumbstick.yAxis,  +thumb_dead_zone, +1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadLStickDown,      leftThumbstick.yAxis,  -thumb_dead_zone, -1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadRStickLeft,      rightThumbstick.xAxis, -thumb_dead_zone, -1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadRStickRight,     rightThumbstick.xAxis, +thumb_dead_zone, +1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadRStickUp,        rightThumbstick.yAxis, +thumb_dead_zone, +1.0f);
+    MAP_ANALOG(ImGuiKey_GamepadRStickDown,      rightThumbstick.yAxis, -thumb_dead_zone, -1.0f);
+    #undef MAP_BUTTON
+    #undef MAP_ANALOG
 
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 }
