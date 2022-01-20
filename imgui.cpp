@@ -1258,7 +1258,7 @@ void ImGuiIO::ClearInputKeys()
 // - ImGuiKey key:       Translated key (as in, generally ImGuiKey_A matches the key end-user would use to emit an 'A' character)
 // - bool down:          Is the key down? use false to signify a key release.
 // - float analog_value: 0.0f..1.0f
-void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value, ImGuiInputSource input_source)
+void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
 {
     //if (e->Down) { IMGUI_DEBUG_LOG("AddKeyEvent() Key='%s' %d, NativeKeycode = %d, NativeScancode = %d\n", ImGui::GetKeyName(e->Key), e->Down, e->NativeKeycode, e->NativeScancode); }
     if (key == ImGuiKey_None)
@@ -1266,7 +1266,6 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value, ImG
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     IM_ASSERT(ImGui::IsNamedKey(key)); // Backend needs to pass a valid ImGuiKey_ constant. 0..511 values are legacy native key codes which are not accepted by this API.
-    IM_ASSERT(input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad);
 
     // Verify that backend isn't mixing up using new io.AddKeyEvent() api and old io.KeysDown[] + io.KeyMap[] data.
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -1281,16 +1280,16 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value, ImG
 
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_Key;
-    e.Source = input_source;
+    e.Source = ImGui::IsGamepadKey(key) ? ImGuiInputSource_Gamepad : ImGuiInputSource_Keyboard;
     e.Key.Key = key;
     e.Key.Down = down;
     e.Key.AnalogValue = analog_value;
     g.InputEventsQueue.push_back(e);
 }
 
-void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down, ImGuiInputSource input_source)
+void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down)
 {
-    AddKeyAnalogEvent(key, down, down ? 1.0f : 0.0f, input_source);
+    AddKeyAnalogEvent(key, down, down ? 1.0f : 0.0f);
 }
 
 // [Optional] Call after AddKeyEvent().

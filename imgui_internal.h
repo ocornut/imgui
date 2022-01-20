@@ -912,10 +912,13 @@ enum ImGuiInputEventType
     ImGuiInputEventType_COUNT
 };
 
-// Extend ImGuiInputSource
-enum ImGuiInputSourcePrivate_
+enum ImGuiInputSource
 {
-    ImGuiInputSource_Clipboard = ImGuiInputSource_Gamepad + 1,     // Currently only used by InputText()
+    ImGuiInputSource_None = 0,
+    ImGuiInputSource_Mouse,
+    ImGuiInputSource_Keyboard,
+    ImGuiInputSource_Gamepad,
+    ImGuiInputSource_Clipboard,     // Currently only used by InputText()
     ImGuiInputSource_Nav,           // Stored in g.ActiveIdSource only
     ImGuiInputSource_COUNT
 };
