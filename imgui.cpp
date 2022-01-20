@@ -5890,7 +5890,9 @@ static ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
     for (int i = g.OpenPopupStack.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* popup_window = g.OpenPopupStack.Data[i].Window;
-        if (popup_window == NULL || !popup_window->WasActive || !(popup_window->Flags & ImGuiWindowFlags_Modal)) // Check WasActive, because this code may run before popup renders on current frame.
+        if (popup_window == NULL || !(popup_window->Flags & ImGuiWindowFlags_Modal))
+            continue;
+        if (!popup_window->Active && !popup_window->WasActive)      // Check WasActive, because this code may run before popup renders on current frame, also check Active to handle newly created windows.
             continue;
         if (IsWindowWithinBeginStackOf(window, popup_window))       // Window is rendered over last modal, no render order change needed.
             break;

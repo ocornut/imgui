@@ -103,6 +103,7 @@ Other Changes:
   handled by core automatically for all kind of inputs. (#4858, #2787, #1992, #3383, #2525, #1320)
 - Fixed a situation where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with zero triangles,
   which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
+- Popups: Fixed a regression crash when a new window is created after a modal on the same frame. (#4920) [@rokups]
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
   last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
 - Tables: Fixed positioning of Sort icon on right-most column with some settings (not resizable + no borders). (#4918).
