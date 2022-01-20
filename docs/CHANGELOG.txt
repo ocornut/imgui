@@ -126,6 +126,7 @@ Other Changes:
 - Backends: GLFW: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: GLFW: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: GLFW: Update mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
+- Backends: GLFW: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
 - Backends: Win32: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: Win32: Update mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
 - Backends: Win32: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
