@@ -18,6 +18,7 @@ Index of this file:
 // [SECTION] Generic helpers
 // [SECTION] ImDrawList support
 // [SECTION] Widgets support: flags, enums, data structures
+// [SECTION] Inputs support
 // [SECTION] Clipper support
 // [SECTION] Navigation support
 // [SECTION] Columns support
@@ -899,69 +900,6 @@ enum ImGuiPlotType
     ImGuiPlotType_Histogram
 };
 
-enum ImGuiInputEventType
-{
-    ImGuiInputEventType_None = 0,
-    ImGuiInputEventType_MousePos,
-    ImGuiInputEventType_MouseWheel,
-    ImGuiInputEventType_MouseButton,
-    ImGuiInputEventType_Key,
-    ImGuiInputEventType_KeyMods,
-    ImGuiInputEventType_Char,
-    ImGuiInputEventType_Focus,
-    ImGuiInputEventType_COUNT
-};
-
-enum ImGuiInputSource
-{
-    ImGuiInputSource_None = 0,
-    ImGuiInputSource_Mouse,
-    ImGuiInputSource_Keyboard,
-    ImGuiInputSource_Gamepad,
-    ImGuiInputSource_Clipboard,     // Currently only used by InputText()
-    ImGuiInputSource_Nav,           // Stored in g.ActiveIdSource only
-    ImGuiInputSource_COUNT
-};
-
-// FIXME: Structures in the union below need to be declared as anonymous unions appears to be an extension?
-// Using ImVec2() would fail on Clang 'union member 'MousePos' has a non-trivial default constructor'
-struct ImGuiInputEventMousePos      { float PosX, PosY; };
-struct ImGuiInputEventMouseWheel    { float WheelX, WheelY; };
-struct ImGuiInputEventMouseButton   { int Button; bool Down; };
-struct ImGuiInputEventKey           { ImGuiKey Key; bool Down; float AnalogValue; };
-struct ImGuiInputEventKeyMods       { ImGuiKeyModFlags Mods; };
-struct ImGuiInputEventText          { unsigned int Char; };
-struct ImGuiInputEventAppFocused    { bool Focused; };
-
-struct ImGuiInputEvent
-{
-    ImGuiInputEventType             Type;
-    ImGuiInputSource                Source;
-    union
-    {
-        ImGuiInputEventMousePos     MousePos;       // if Type == ImGuiInputEventType_MousePos
-        ImGuiInputEventMouseWheel   MouseWheel;     // if Type == ImGuiInputEventType_MouseWheel
-        ImGuiInputEventMouseButton  MouseButton;    // if Type == ImGuiInputEventType_MouseButton
-        ImGuiInputEventKey          Key;            // if Type == ImGuiInputEventType_Key
-        ImGuiInputEventKeyMods      KeyMods;        // if Type == ImGuiInputEventType_Modifiers
-        ImGuiInputEventText         Text;           // if Type == ImGuiInputEventType_Text
-        ImGuiInputEventAppFocused   AppFocused;     // if Type == ImGuiInputEventType_Focus
-    };
-    bool                            AddedByTestEngine;
-
-    ImGuiInputEvent() { memset(this, 0, sizeof(*this)); }
-};
-
-// FIXME-NAV: Clarify/expose various repeat delay/rate
-enum ImGuiInputReadMode
-{
-    ImGuiInputReadMode_Down,
-    ImGuiInputReadMode_Pressed,
-    ImGuiInputReadMode_Released,
-    ImGuiInputReadMode_Repeat,
-    ImGuiInputReadMode_RepeatSlow,
-    ImGuiInputReadMode_RepeatFast
-};
 
 enum ImGuiPopupPositionPolicy
 {
@@ -1213,6 +1151,74 @@ struct ImGuiPtrOrIndex
 
     ImGuiPtrOrIndex(void* ptr)  { Ptr = ptr; Index = -1; }
     ImGuiPtrOrIndex(int index)  { Ptr = NULL; Index = index; }
+};
+
+//-----------------------------------------------------------------------------
+// [SECTION] Inputs support
+//-----------------------------------------------------------------------------
+
+enum ImGuiInputEventType
+{
+    ImGuiInputEventType_None = 0,
+    ImGuiInputEventType_MousePos,
+    ImGuiInputEventType_MouseWheel,
+    ImGuiInputEventType_MouseButton,
+    ImGuiInputEventType_Key,
+    ImGuiInputEventType_KeyMods,
+    ImGuiInputEventType_Char,
+    ImGuiInputEventType_Focus,
+    ImGuiInputEventType_COUNT
+};
+
+enum ImGuiInputSource
+{
+    ImGuiInputSource_None = 0,
+    ImGuiInputSource_Mouse,
+    ImGuiInputSource_Keyboard,
+    ImGuiInputSource_Gamepad,
+    ImGuiInputSource_Clipboard,     // Currently only used by InputText()
+    ImGuiInputSource_Nav,           // Stored in g.ActiveIdSource only
+    ImGuiInputSource_COUNT
+};
+
+// FIXME: Structures in the union below need to be declared as anonymous unions appears to be an extension?
+// Using ImVec2() would fail on Clang 'union member 'MousePos' has a non-trivial default constructor'
+struct ImGuiInputEventMousePos      { float PosX, PosY; };
+struct ImGuiInputEventMouseWheel    { float WheelX, WheelY; };
+struct ImGuiInputEventMouseButton   { int Button; bool Down; };
+struct ImGuiInputEventKey           { ImGuiKey Key; bool Down; float AnalogValue; };
+struct ImGuiInputEventKeyMods       { ImGuiKeyModFlags Mods; };
+struct ImGuiInputEventText          { unsigned int Char; };
+struct ImGuiInputEventAppFocused    { bool Focused; };
+
+struct ImGuiInputEvent
+{
+    ImGuiInputEventType             Type;
+    ImGuiInputSource                Source;
+    union
+    {
+        ImGuiInputEventMousePos     MousePos;       // if Type == ImGuiInputEventType_MousePos
+        ImGuiInputEventMouseWheel   MouseWheel;     // if Type == ImGuiInputEventType_MouseWheel
+        ImGuiInputEventMouseButton  MouseButton;    // if Type == ImGuiInputEventType_MouseButton
+        ImGuiInputEventKey          Key;            // if Type == ImGuiInputEventType_Key
+        ImGuiInputEventKeyMods      KeyMods;        // if Type == ImGuiInputEventType_Modifiers
+        ImGuiInputEventText         Text;           // if Type == ImGuiInputEventType_Text
+        ImGuiInputEventAppFocused   AppFocused;     // if Type == ImGuiInputEventType_Focus
+    };
+    bool                            AddedByTestEngine;
+
+    ImGuiInputEvent() { memset(this, 0, sizeof(*this)); }
+};
+
+// FIXME-NAV: Clarify/expose various repeat delay/rate
+enum ImGuiInputReadMode
+{
+    ImGuiInputReadMode_Down,
+    ImGuiInputReadMode_Pressed,
+    ImGuiInputReadMode_Released,
+    ImGuiInputReadMode_Repeat,
+    ImGuiInputReadMode_RepeatSlow,
+    ImGuiInputReadMode_RepeatFast
 };
 
 //-----------------------------------------------------------------------------
