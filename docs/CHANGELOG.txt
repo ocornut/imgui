@@ -115,6 +115,7 @@ Other Changes:
 - Tables: Fixed positioning of Sort icon on right-most column with some settings (not resizable + no borders). (#4918).
 - Nav: Fixed gamepad navigation in wrapping popups not wrapping all the way. (#4365)
 - Sliders, Drags: Fixed text input of values with a leading sign, common when using a format enforcing sign. (#4917)
+- Demo: draw a section of keyboard in "Inputs > Keyboard, Gamepad & Navigation state" to visualize keys. [@thedmd]
 - Platform IME: changed io.ImeSetInputScreenPosFn() to io.SetPlatformImeDataFn() API,
   now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
 - Platform IME: moved io.ImeWindowHandle to GetMainViewport()->PlatformHandleRaw.
