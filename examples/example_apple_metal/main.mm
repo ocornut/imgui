@@ -238,7 +238,7 @@
     UITouch *anyTouch = event.allTouches.anyObject;
     CGPoint touchLocation = [anyTouch locationInView:self.view];
     ImGuiIO &io = ImGui::GetIO();
-    io.MousePos = ImVec2(touchLocation.x, touchLocation.y);
+    io.AddMousePosEvent(touchLocation.x, touchLocation.y);
 
     BOOL hasActiveTouch = NO;
     for (UITouch *touch in event.allTouches)
@@ -249,7 +249,7 @@
             break;
         }
     }
-    io.MouseDown[0] = hasActiveTouch;
+    io.AddMouseButtonEvent(0, hasActiveTouch);
 }
 
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event      { [self updateIOWithTouchEvent:event]; }

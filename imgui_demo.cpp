@@ -241,7 +241,6 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("CTRL+X/C/V to use clipboard cut/copy/paste.");
     ImGui::BulletText("CTRL+Z,CTRL+Y to undo/redo.");
     ImGui::BulletText("ESCAPE to revert.");
-    ImGui::BulletText("You can apply arithmetic operators +,*,/ on numerical values.\nUse +- to subtract.");
     ImGui::Unindent();
     ImGui::BulletText("With keyboard navigation enabled:");
     ImGui::Indent();
@@ -514,7 +513,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::Unindent();
             }
 
-            ImGui::Checkbox("io.ConfigInputEventQueue", &io.ConfigInputEventQueue);
+            ImGui::Checkbox("io.ConfigInputTrickleEventQueue", &io.ConfigInputTrickleEventQueue);
             ImGui::SameLine(); HelpMarker("Enable input queue trickling: some types of events submitted during the same frame (e.g. button down + up) will be spread over multiple frames, improving interactions with low framerates.");
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
             ImGui::SameLine(); HelpMarker("Enable blinking cursor (optional as some users consider it to be distracting).");
@@ -538,6 +537,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "Here we expose them as read-only fields to avoid breaking interactions with your backend.");
 
             // Make a local copy to avoid modifying actual backend flags.
+            // FIXME: We don't use BeginDisabled() to keep label bright, maybe we need a BeginReadonly() equivalent..
             ImGuiBackendFlags backend_flags = io.BackendFlags;
             ImGui::CheckboxFlags("io.BackendFlags: HasGamepad",             &backend_flags, ImGuiBackendFlags_HasGamepad);
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors",        &backend_flags, ImGuiBackendFlags_HasMouseCursors);
@@ -734,10 +734,6 @@ static void ShowDemoWindowWidgets()
             IMGUI_DEMO_MARKER("Widgets/Basic/InputInt, InputFloat");
             static int i0 = 123;
             ImGui::InputInt("input int", &i0);
-            ImGui::SameLine(); HelpMarker(
-                "You can apply arithmetic operators +,*,/ on numerical values.\n"
-                "  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\n"
-                "Use +- to subtract.");
 
             static float f0 = 0.001f;
             ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
@@ -5715,7 +5711,7 @@ static void ShowDemoWindowColumns()
     ImGui::TreePop();
 }
 
-namespace ImGui { extern const ImGuiKeyData* GetKeyData(ImGuiKey key); }
+namespace ImGui { extern ImGuiKeyData* GetKeyData(ImGuiKey key); }
 
 static void ShowDemoWindowMisc()
 {
@@ -5770,22 +5766,23 @@ static void ShowDemoWindowMisc()
         }
 
         // Display Keyboard/Mouse state
-        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Keyboard & Navigation State");
-        if (ImGui::TreeNode("Keyboard & Navigation State"))
+        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Keyboard, Gamepad & Navigation State");
+        if (ImGui::TreeNode("Keyboard, Gamepad & Navigation State"))
         {
             // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allow displaying the data for old/new backends.
             // User code should never have to go through such hoops: old code may use native keycodes, new code may use ImGuiKey codes.
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
             struct funcs { static bool IsNativeDupe(ImGuiKey) { return false; } };
+            const ImGuiKey key_first = ImGuiKey_NamedKey_BEGIN;
 #else
             struct funcs { static bool IsNativeDupe(ImGuiKey key) { return key < ImGuiKey_LegacyNativeKey_END && ImGui::GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+            const ImGuiKey key_first = 0;
 #endif
-            ImGui::Text("Keys down:");          for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X) (%.02f secs)", ImGui::GetKeyName(key), key, key, ImGui::GetKeyData(key)->DownDuration); } }
-            ImGui::Text("Keys pressed:");       for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
-            ImGui::Text("Keys released:");      for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++) { ImGuiKey key = (ImGuiKey)(i + ImGuiKey_KeysData_OFFSET); if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyReleased(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (0x%X)", ImGui::GetKeyName(key), key, key); } }
+            ImGui::Text("Keys down:");          for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (%.02f secs)", ImGui::GetKeyName(key), key, ImGui::GetKeyData(key)->DownDuration); } }
+            ImGui::Text("Keys pressed:");       for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
+            ImGui::Text("Keys released:");      for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (funcs::IsNativeDupe(key)) continue; if (ImGui::IsKeyReleased(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
             ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
             ImGui::Text("Chars queue:");        for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
-
             ImGui::Text("NavInputs down:");     for (int i = 0; i < IM_ARRAYSIZE(io.NavInputs); i++) if (io.NavInputs[i] > 0.0f)              { ImGui::SameLine(); ImGui::Text("[%d] %.2f (%.02f secs)", i, io.NavInputs[i], io.NavInputsDownDuration[i]); }
             ImGui::Text("NavInputs pressed:");  for (int i = 0; i < IM_ARRAYSIZE(io.NavInputs); i++) if (io.NavInputsDownDuration[i] == 0.0f) { ImGui::SameLine(); ImGui::Text("[%d]", i); }
             ImGui::TreePop();

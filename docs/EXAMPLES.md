@@ -222,7 +222,7 @@ If you are interested in using Cmake to build and links examples, see:
 **About mouse cursor latency**
 
 Dear ImGui has no particular extra lag for most behaviors,
-e.g. the value of 'io.MousePos' provided at the time of NewFrame() will result in windows being moved
+e.g. the last value passed to 'io.AddMousePosEvent()' before NewFrame() will result in windows being moved
 to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience should be pleasant.
 
 However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
