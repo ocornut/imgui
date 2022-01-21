@@ -384,6 +384,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/01/26 (1.87) - inputs: moved ImGuiKeyModsFlags definition from imgui.h to imgui_internal.h. Was never advertised and used in a place marked "private" in comments. Will still be used internally.
  - 2022/01/20 (1.87) - inputs: reworded gamepad IO.
                         - Backend writing to io.NavInputs[]            -> backend should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values.
  - 2022/01/19 (1.87) - sliders, drags: removed support for legacy arithmetic operators (+,+-,*,/) when inputing text. This doesn't break any api/code but a feature that used to be accessible by end-users (which seemingly no one used).
@@ -396,8 +397,9 @@ CODE
                         - IsKeyPressed(MY_NATIVE_KEY_XXX)              -> use IsKeyPressed(ImGuiKey_XXX)
                         - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))      -> use IsKeyPressed(ImGuiKey_XXX)
                         - Backend writing to io.KeyMap[],io.KeysDown[] -> backend should call io.AddKeyEvent()
+                        - Backend writing to io.KeyCtrl, io.KeyShift.. -> backend should call io.AddKeyEvent() with ImGuiKey_ModXXX values. *IF YOU PULLED CODE BETWEEN 2021/01/10 and 2021/01/27: We used to have a io.AddKeyModsEvent() function which was now replaced by io.AddKeyEvent() with ImGuiKey_ModXXX values.*
                      - one case won't work with backward compatibility: if your custom backend used ImGuiKey as mock native indices (e.g. "io.KeyMap[ImGuiKey_A] = ImGuiKey_A") because those values are now larger than the legacy KeyDown[] array. Will assert.
-                     - inputs: added io.AddKeyModsEvent() instead of writing directly to io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper.
+                     - inputs: added ImGuiKey_ModCtrl/ImGuiKey_ModShift/ImGuiKey_ModAlt/ImGuiKey_ModSuper values to submit keyboard modifiers using io.AddKeyEvent(), instead of writing directly to io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper.
  - 2022/01/05 (1.87) - inputs: renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum.
  - 2022/01/05 (1.87) - removed io.ImeSetInputScreenPosFn() in favor of more flexible io.SetPlatformImeDataFn(). Removed 'void* io.ImeWindowHandle' in favor of writing to 'void* ImGuiViewport::PlatformHandleRaw'.
  - 2022/01/01 (1.87) - commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
@@ -1313,18 +1315,6 @@ void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native
     IM_UNUSED(key);
     IM_UNUSED(native_legacy_index);
 #endif
-}
-
-void ImGuiIO::AddKeyModsEvent(ImGuiKeyModFlags modifiers)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(&g.IO == this && "Can only add events to current context.");
-
-    ImGuiInputEvent e;
-    e.Type = ImGuiInputEventType_KeyMods;
-    e.Source = ImGuiInputSource_Keyboard;
-    e.KeyMods.Mods = modifiers;
-    g.InputEventsQueue.push_back(e);
 }
 
 // Queue a mouse move event
@@ -3944,6 +3934,13 @@ static void ImGui::UpdateKeyboardInputs()
                 io.KeysData[key].Down = io.KeysDown[n];
                 io.BackendUsingLegacyKeyArrays = 1;
             }
+        if (io.BackendUsingLegacyKeyArrays == 1)
+        {
+            io.KeysData[ImGuiKey_ModCtrl].Down = io.KeyCtrl;
+            io.KeysData[ImGuiKey_ModShift].Down = io.KeyShift;
+            io.KeysData[ImGuiKey_ModAlt].Down = io.KeyAlt;
+            io.KeysData[ImGuiKey_ModSuper].Down = io.KeySuper;
+        }
     }
 #endif
 
@@ -4330,6 +4327,11 @@ void ImGui::NewFrame()
 
     // Update keyboard input state
     UpdateKeyboardInputs();
+
+    //IM_ASSERT(g.IO.KeyCtrl == IsKeyDown(ImGuiKey_LeftCtrl) || IsKeyDown(ImGuiKey_RightCtrl));
+    //IM_ASSERT(g.IO.KeyShift == IsKeyDown(ImGuiKey_LeftShift) || IsKeyDown(ImGuiKey_RightShift));
+    //IM_ASSERT(g.IO.KeyAlt == IsKeyDown(ImGuiKey_LeftAlt) || IsKeyDown(ImGuiKey_RightAlt));
+    //IM_ASSERT(g.IO.KeySuper == IsKeyDown(ImGuiKey_LeftSuper) || IsKeyDown(ImGuiKey_RightSuper));
 
     // Update gamepad/keyboard navigation
     NavUpdate();
@@ -7513,7 +7515,8 @@ static const char* const GKeyNames[] =
     "GamepadDpadUp", "GamepadDpadDown", "GamepadDpadLeft", "GamepadDpadRight",
     "GamepadL1", "GamepadR1", "GamepadL2", "GamepadR2", "GamepadL3", "GamepadR3",
     "GamepadLStickUp", "GamepadLStickDown", "GamepadLStickLeft", "GamepadLStickRight",
-    "GamepadRStickUp", "GamepadRStickDown", "GamepadRStickLeft", "GamepadRStickRight"
+    "GamepadRStickUp", "GamepadRStickDown", "GamepadRStickLeft", "GamepadRStickRight",
+    "ModCtrl", "ModShift", "ModAlt", "ModSuper"
 };
 IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
 
@@ -7758,7 +7761,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
     ImGuiIO& io = g.IO;
 
     bool mouse_moved = false, mouse_wheeled = false, key_changed = false, text_inputed = false;
-    int  mouse_button_changed = 0x00, key_mods_changed = 0x00;
+    int  mouse_button_changed = 0x00;
     ImBitArray<ImGuiKey_KeysData_SIZE> key_changed_mask;
 
     int event_n = 0;
@@ -7773,7 +7776,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             if (io.MousePos.x != event_pos.x || io.MousePos.y != event_pos.y)
             {
                 // Trickling Rule: Stop processing queued events if we already handled a mouse button change
-                if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_wheeled || key_changed || key_mods_changed || text_inputed))
+                if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_wheeled || key_changed || text_inputed))
                     break;
                 io.MousePos = event_pos;
                 mouse_moved = true;
@@ -7806,8 +7809,9 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
         }
         else if (e->Type == ImGuiInputEventType_Key)
         {
-            IM_ASSERT(e->Key.Key != ImGuiKey_None);
-            const int keydata_index = (e->Key.Key - ImGuiKey_KeysData_OFFSET);
+            ImGuiKey key = e->Key.Key;
+            IM_ASSERT(key != ImGuiKey_None);
+            const int keydata_index = (key - ImGuiKey_KeysData_OFFSET);
             ImGuiKeyData* keydata = &io.KeysData[keydata_index];
             if (keydata->Down != e->Key.Down || keydata->AnalogValue != e->Key.AnalogValue)
             {
@@ -7818,23 +7822,15 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
                 keydata->AnalogValue = e->Key.AnalogValue;
                 key_changed = true;
                 key_changed_mask.SetBit(keydata_index);
-            }
-        }
-        else if (e->Type == ImGuiInputEventType_KeyMods)
-        {
-            const ImGuiKeyModFlags modifiers = e->KeyMods.Mods;
-            if (io.KeyMods != modifiers)
-            {
-                // Trickling Rule: Stop processing queued events if we got multiple action on the same button
-                ImGuiKeyModFlags modifiers_that_are_changing = (io.KeyMods ^ modifiers);
-                if (trickle_fast_inputs && (key_mods_changed & modifiers_that_are_changing) != 0)
-                    break;
-                io.KeyMods = modifiers;
-                io.KeyCtrl = (modifiers & ImGuiKeyModFlags_Ctrl) != 0;
-                io.KeyShift = (modifiers & ImGuiKeyModFlags_Shift) != 0;
-                io.KeyAlt = (modifiers & ImGuiKeyModFlags_Alt) != 0;
-                io.KeySuper = (modifiers & ImGuiKeyModFlags_Super) != 0;
-                key_mods_changed |= modifiers_that_are_changing;
+
+                if (key == ImGuiKey_ModCtrl || key == ImGuiKey_ModShift || key == ImGuiKey_ModAlt || key == ImGuiKey_ModSuper)
+                {
+                    if (key == ImGuiKey_ModCtrl) { io.KeyCtrl = keydata->Down; }
+                    if (key == ImGuiKey_ModShift) { io.KeyShift = keydata->Down; }
+                    if (key == ImGuiKey_ModAlt) { io.KeyAlt = keydata->Down; }
+                    if (key == ImGuiKey_ModSuper) { io.KeySuper = keydata->Down; }
+                    io.KeyMods = GetMergedKeyModFlags();
+                }
             }
         }
         else if (e->Type == ImGuiInputEventType_Char)

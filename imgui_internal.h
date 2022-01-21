@@ -898,7 +898,6 @@ enum ImGuiPlotType
     ImGuiPlotType_Histogram
 };
 
-
 enum ImGuiPopupPositionPolicy
 {
     ImGuiPopupPositionPolicy_Default,
@@ -1165,6 +1164,16 @@ enum ImGuiKeyPrivate_
     ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickRight + 1
 };
 
+// Helper to store all mods easily. Stored in e.g. io.KeyMods.
+enum ImGuiKeyModFlags_
+{
+    ImGuiKeyModFlags_None           = 0,
+    ImGuiKeyModFlags_Ctrl           = 1 << 0,
+    ImGuiKeyModFlags_Shift          = 1 << 1,
+    ImGuiKeyModFlags_Alt            = 1 << 2,
+    ImGuiKeyModFlags_Super          = 1 << 3    // Cmd/Super/Windows key
+};
+
 enum ImGuiInputEventType
 {
     ImGuiInputEventType_None = 0,
@@ -1172,7 +1181,6 @@ enum ImGuiInputEventType
     ImGuiInputEventType_MouseWheel,
     ImGuiInputEventType_MouseButton,
     ImGuiInputEventType_Key,
-    ImGuiInputEventType_KeyMods,
     ImGuiInputEventType_Char,
     ImGuiInputEventType_Focus,
     ImGuiInputEventType_COUNT
@@ -1195,7 +1203,6 @@ struct ImGuiInputEventMousePos      { float PosX, PosY; };
 struct ImGuiInputEventMouseWheel    { float WheelX, WheelY; };
 struct ImGuiInputEventMouseButton   { int Button; bool Down; };
 struct ImGuiInputEventKey           { ImGuiKey Key; bool Down; float AnalogValue; };
-struct ImGuiInputEventKeyMods       { ImGuiKeyModFlags Mods; };
 struct ImGuiInputEventText          { unsigned int Char; };
 struct ImGuiInputEventAppFocused    { bool Focused; };
 
@@ -1209,7 +1216,6 @@ struct ImGuiInputEvent
         ImGuiInputEventMouseWheel   MouseWheel;     // if Type == ImGuiInputEventType_MouseWheel
         ImGuiInputEventMouseButton  MouseButton;    // if Type == ImGuiInputEventType_MouseButton
         ImGuiInputEventKey          Key;            // if Type == ImGuiInputEventType_Key
-        ImGuiInputEventKeyMods      KeyMods;        // if Type == ImGuiInputEventType_Modifiers
         ImGuiInputEventText         Text;           // if Type == ImGuiInputEventType_Text
         ImGuiInputEventAppFocused   AppFocused;     // if Type == ImGuiInputEventType_Focus
     };

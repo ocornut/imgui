@@ -34,9 +34,10 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
-//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before a key event (not in NewFrame) to fix input queue with very low framerates.
+//  2022-01-17: Inputs: always update key mods next and before a key event (not in NewFrame) to fix input queue with very low framerates.
 //  2022-01-12: Inputs: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
 //  2022-01-12: Inputs: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
@@ -237,12 +238,10 @@ static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
 static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiKeyModFlags key_mods =
-        ((IsVkDown(VK_CONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((IsVkDown(VK_SHIFT) ) ? ImGuiKeyModFlags_Shift : 0) |
-        ((IsVkDown(VK_MENU)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((IsVkDown(VK_APPS)) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
+    io.AddKeyEvent(ImGuiKey_ModCtrl, IsVkDown(VK_CONTROL));
+    io.AddKeyEvent(ImGuiKey_ModShift, IsVkDown(VK_SHIFT));
+    io.AddKeyEvent(ImGuiKey_ModAlt, IsVkDown(VK_MENU));
+    io.AddKeyEvent(ImGuiKey_ModSuper, IsVkDown(VK_APPS));
 }
 
 static void ImGui_ImplWin32_UpdateMouseData()

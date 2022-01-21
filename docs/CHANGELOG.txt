@@ -44,7 +44,8 @@ Breaking Changes:
   - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
 - Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
-  - Added io.AddKeyModsEvent() function, obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
+  - For keyboard modifiers, you can call io.AddKeyEvent() with ImGuiKey_ModXXX values,
+    obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
   - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
   - Added full range of key enums in ImGuiKey (e.g. ImGuiKey_F1).
   - Added GetKeyName() helper function.
@@ -78,6 +79,8 @@ Breaking Changes:
     io.AddKeyEvent(), io.AddKeyAnalogEvent().
   - Added io.AddKeyAnalogEvent() function, obsoleting writing directly to io.NavInputs[] arrays.
 - Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
+- Moved ImGuiKeyModsFlags definition from imgui.h to imgui_internal.h. Was never advertised and used in a place
+  marked "private" in comments. Will still be used internally.
 - Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
   This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
   (Instead you may implement custom expression evaluators to provide a better version of this).
@@ -105,7 +108,7 @@ Other Changes:
 - IO: Added event based input queue API, which now trickles events to support low framerates. [@thedmd, @ocornut]
   Previously the most common issue case (button presses in low framerates) was handled by backend. This is now
   handled by core automatically for all kind of inputs. (#4858, #2787, #1992, #3383, #2525, #1320)
-  - New IO functions for keyboard/gamepad: AddKeyEvent(), AddKeyAnalogEvent(), AddKeyModsEvent().
+  - New IO functions for keyboard/gamepad: AddKeyEvent(), AddKeyAnalogEvent().
   - New IO functions for mouse: AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent().
 - Fixed CTRL+Tab into an empty window causing artefacts on the highlight rectangle due to bad reordering on ImDrawCmd.
 - Fixed a situation where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with zero triangles,
