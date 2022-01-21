@@ -113,6 +113,7 @@ Other Changes:
 - Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
   last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
 - Tables: Fixed positioning of Sort icon on right-most column with some settings (not resizable + no borders). (#4918).
+- Nav: Fixed gamepad navigation in wrapping popups not wrapping all the way. (#4365)
 - Sliders, Drags: Fixed text input of values with a leading sign, common when using a format enforcing sign. (#4917)
 - Platform IME: changed io.ImeSetInputScreenPosFn() to io.SetPlatformImeDataFn() API,
   now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
