@@ -38,14 +38,11 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Removed support for pre-C++11 compilers. We'll stop supporting VS2010. (#4537)
-- Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
-  This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
-  (Instead you may implement custom expression evaluators to provide a better version of this).
-- Reworked IO mouse input API: (#4858) [@thedmd, @ocornut]
+- Reworked IO mouse input API: (#4921, #4858) [@thedmd, @ocornut]
   - Added io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions,
     obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
   - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
-- Reworked IO keyboard input API: (#2625, #3724) [@thedmd, @ocornut]
+- Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
   - Added io.AddKeyModsEvent() function, obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
   - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
@@ -71,16 +68,19 @@ Breaking Changes:
      - Basically the trick we took advantage of is that we previously only supported native keycode from 0 to 511,
        so ImGuiKey values can still express a legacy native keycode, and new named keys are all >= 512.
   - This will enable a few things in the future:
-     - Access to portable keys allows for backed-agnostic keyboard input code. Until now it was difficult to
-       share code using keyboard accross project because of this gap. (#2625, #3724)
+     - Access to portable keys allows for backend-agnostic keyboard input code. Until now it was difficult
+       to share code using keyboard accross project because of this gap. (#2625, #3724)
      - Access to full key ranges will allow us to develop a proper keyboard shortcut system. (#456)
      - io.AddKeyEvent() will later be turned into a trickling IO queue (for all inputs) to handle very low framerate better. (#2525, #2787, #3383)
      - io.SetKeyEventNativeData() include native keycode/scancode which will later be exposed. (#3141, #2959)
-- Reworked IO nav/gamepad input API and unifying inputs sources: (#4858, #787)
+- Reworked IO nav/gamepad input API and unifying inputs sources: (#4921, #4858, #787)
   - Added full range of ImGuiKey_GamepadXXXX enums (e.g. ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadR2) to use with
     io.AddKeyEvent(), io.AddKeyAnalogEvent().
   - Added io.AddKeyAnalogEvent() function, obsoleting writing directly to io.NavInputs[] arrays.
 - Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
+- Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
+  This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
+  (Instead you may implement custom expression evaluators to provide a better version of this).
 - Backends: GLFW: backend now uses glfwSetCursorPosCallback().
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: nothing to do. is already done for you.
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
@@ -126,32 +126,34 @@ Other Changes:
   other backend, and facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
 - Backends: GLFW: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: GLFW: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
-- Backends: GLFW: Update mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
+- Backends: GLFW: Retrieve mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
 - Backends: GLFW: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
 - Backends: Win32: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
-- Backends: Win32: Update mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
+- Backends: Win32: Retrieve mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
 - Backends: Win32: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: Win32: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: Win32: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
 - Backends: SDL: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
-- Backends: SDL: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
-- Backends: SDL: Update mouse position using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback when focused but not hovered/captured.
+- Backends: SDL: Submit key data using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: SDL: Retrieve mouse position using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback when focused but not hovered/captured.
 - Backends: SDL: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: SDL: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 - Backends: SDL: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
 - Backends: Allegro5: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: Allegro5: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
+- Backends: OSX: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: OSX: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: OSX: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
-- Backends: Android, GLUT, OSX: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
-- Backends: Android, GLUT, OSX: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
+- Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
+- Backends: OSX: Fix Game Controller nav mapping to use shoulder for both focusing and tweak speed. (#4759)
+- Backends: Android, GLUT: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: Android, GLUT: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
-- Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
-- Backends: OSX: Fix Game Controller nav mapping to use shoulder for both focusing and tweak speed. (#4759)
 - Backends: Vulkan: Added support for ImTextureID as VkDescriptorSet, add ImGui_ImplVulkan_AddTexture(). (#914) [@martty]
 - Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
   wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
