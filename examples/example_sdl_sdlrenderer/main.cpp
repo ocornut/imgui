@@ -56,7 +56,7 @@ int main(int, char**)
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForSDLRenderer(window);
+    ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer_Init(renderer);
 
     // Load Fonts
