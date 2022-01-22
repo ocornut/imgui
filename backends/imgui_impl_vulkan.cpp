@@ -543,12 +543,6 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
                 // Bind DescriptorSet with font or user texture
                 VkDescriptorSet desc_set[1] = { (VkDescriptorSet)pcmd->TextureId };
-                if (sizeof(ImTextureID) < sizeof(ImU64))
-                {
-                    // We don't support texture switches if ImTextureID hasn't been redefined to be 64-bit. Do a flaky check that other textures haven't been used.
-                    IM_ASSERT(pcmd->TextureId == (ImTextureID)bd->FontDescriptorSet);
-                    desc_set[0] = bd->FontDescriptorSet;
-                }
                 vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, desc_set, 0, NULL);
 
                 // Draw
@@ -706,6 +700,10 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
     }
 
     // Store our identifier
+    //
+    // This backend uses ImTextureID to store a VkDescriptorSet.
+    // On a 32-bit machine ImTextureID must be redefined to be 64-bit (for example ImU64, or even VkDescriptorSet) instead of void*.
+    IM_ASSERT(sizeof(ImTextureID) == sizeof(VkDescriptorSet));
     io.Fonts->SetTexID((ImTextureID)bd->FontDescriptorSet);
 
     return true;
