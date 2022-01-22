@@ -1676,6 +1676,30 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 }
 #endif // #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 
+//      32/64 bit test msvc and intel       32/64 bit test clang,gcc,intel(linux)                    
+#if (defined(_M_IX86)||defined(_M_X64) || defined(__i386__)||defined(__x86_64__)) && (defined(__SSE4_2__) || defined(__AVX__) ) //msvc doesn't define __SSE4_2__, so use next available __AVX__, which implies sse4.2 support
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
+{
+    unsigned char* data = (unsigned char*)data_p, * data_end = (unsigned char*)data_p + data_size;
+
+    ImU32 crc = ~seed;
+
+#if defined(_M_X64) || defined(__x86_64__) // 32bit mode doesn't have 64bit crc32
+    uint64_t crc64 = crc;
+    for (; data + 8 <= data_end; data += 8)
+        crc64 = _mm_crc32_u64(crc64, *(uint64_t*)data);
+    crc = (ImU32)crc64;
+#elif defined(_M_IX86) || defined(__i386__)
+    for (; data + 4 <= data_end; data += 4)
+        crc = _mm_crc32_u32(crc, *(ImU32*)data);
+#endif
+    for (; data != data_end; ++data)
+        crc = _mm_crc32_u8(crc, *data);
+
+    return ~crc;
+}
+
+#else
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
 // - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
@@ -1711,6 +1735,7 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
         crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
     return ~crc;
 }
+#endif
 
 // Zero-terminated string hash, with support for ### to reset back to seed value
 // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
@@ -1720,30 +1745,30 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
 ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
 {
-    seed = ~seed;
-    ImU32 crc = seed;
-    const unsigned char* data = (const unsigned char*)data_p;
-    const ImU32* crc32_lut = GCrc32LookupTable;
-    if (data_size != 0)
+    if (!data_size) 
+        data_size = strlen(data_p);
+
+    // skip anything prior '###' which effectively resets the hash
+    if (data_size >= 3)
     {
-        while (data_size-- != 0)
+        size_t n = data_size - 2;
+        for (const char* p = data_p, *c = (const char*)memchr(data_p, '#', n); c; c = (const char*)memchr(c, '#', n))
         {
-            unsigned char c = *data++;
-            if (c == '#' && data_size >= 2 && data[0] == '#' && data[1] == '#')
-                crc = seed;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+            n -= c - p; p = c;
+            int skip1 = (c[1] == '#') /* skip one extra char if it's '##' only*/, skip2 = (skip1 == 0) | (c[2] != '#');
+            if (skip2)
+            {
+               c += 1 + skip1;
+               continue;
+            }
+
+            data_size = data_p + data_size - (c + 3);
+            data_p = c + 3;
+            break;
         }
     }
-    else
-    {
-        while (unsigned char c = *data++)
-        {
-            if (c == '#' && data[0] == '#' && data[1] == '#')
-                crc = seed;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
-        }
-    }
-    return ~crc;
+
+    return ImHashData(data_p, data_size, seed);
 }
 
 //-----------------------------------------------------------------------------
