@@ -86,6 +86,8 @@ Breaking Changes:
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: nothing to do. is already done for you.
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
     using glfwSetCursorPosCallback() and forward it to the backend function ImGui_ImplGlfw_CursorPosCallback().
+- Backends: SDL: Added SDL_Renderer* parameter to ImGui_ImplSDL2_InitForSDLRenderer(), so backend can call
+  SDL_GetRendererOutputSize() to obtain framebuffer size valid for hi-dpi. (#4927) [@Clownacy]
 - Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
   - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
   - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
