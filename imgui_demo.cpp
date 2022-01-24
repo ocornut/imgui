@@ -6046,7 +6046,7 @@ namespace ImGui { IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas); }
 void ImGui::ShowFontSelector(const char* label)
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImFont* font_current = ImGui::GetFont();
+    const ImFont* font_current = ImGui::GetFont();
     if (ImGui::BeginCombo(label, font_current->GetDebugName()))
     {
         for (int n = 0; n < io.Fonts->Fonts.Size; n++)

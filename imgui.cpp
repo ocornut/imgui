@@ -4907,7 +4907,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     else
         text_display_end = text_end;
 
-    ImFont* font = g.Font;
+    const ImFont* font = g.Font;
     const float font_size = g.FontSize;
     if (text == text_display_end)
         return ImVec2(0.0f, font_size);
@@ -6771,7 +6771,7 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 }
 
 // Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
-void ImGui::SetCurrentFont(ImFont* font)
+void ImGui::SetCurrentFont(const ImFont* font)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
@@ -6787,7 +6787,7 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.DrawListSharedData.FontSize = g.FontSize;
 }
 
-void ImGui::PushFont(ImFont* font)
+void ImGui::PushFont(const ImFont* font)
 {
     ImGuiContext& g = *GImGui;
     if (!font)
@@ -7251,7 +7251,7 @@ ImDrawList* ImGui::GetWindowDrawList()
     return window->DrawList;
 }
 
-ImFont* ImGui::GetFont()
+const ImFont* ImGui::GetFont()
 {
     return GImGui->Font;
 }

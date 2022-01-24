@@ -389,7 +389,7 @@ namespace ImGui
     IMGUI_API void          SetScrollFromPosY(float local_y, float center_y_ratio = 0.5f);  // adjust scrolling amount to make given position visible. Generally GetCursorStartPos() + offset to compute a valid position.
 
     // Parameters stacks (shared)
-    IMGUI_API void          PushFont(ImFont* font);                                         // use NULL as a shortcut to push default font
+    IMGUI_API void          PushFont(const ImFont* font);                                   // use NULL as a shortcut to push default font
     IMGUI_API void          PopFont();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);                        // modify a style color. always use this if you modify the style after NewFrame().
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
@@ -412,7 +412,7 @@ namespace ImGui
 
     // Style read access
     // - Use the style editor (ShowStyleEditor() function) to interactively see what the colors are)
-    IMGUI_API ImFont*       GetFont();                                                      // get current font
+    IMGUI_API const ImFont* GetFont();                                                      // get current font
     IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) of current font with current scale applied
     IMGUI_API ImVec2        GetFontTexUvWhitePixel();                                       // get UV coordinate for a while pixel, useful to draw custom shapes via the ImDrawList API
     IMGUI_API ImU32         GetColorU32(ImGuiCol idx, float alpha_mul = 1.0f);              // retrieve given style color with style alpha applied and optional extra alpha multiplier, packed as a 32-bit value suitable for ImDrawList
