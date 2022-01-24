@@ -171,7 +171,7 @@ static ImGuiKey ImGui_ImplSDL2_KeycodeToImGuiKey(int keycode)
         case SDLK_RSHIFT: return ImGuiKey_RightShift;
         case SDLK_RALT: return ImGuiKey_RightAlt;
         case SDLK_RGUI: return ImGuiKey_RightSuper;
-        case SDLK_MENU: return ImGuiKey_Menu;
+        case SDLK_APPLICATION: return ImGuiKey_Menu;
         case SDLK_0: return ImGuiKey_0;
         case SDLK_1: return ImGuiKey_1;
         case SDLK_2: return ImGuiKey_2;
