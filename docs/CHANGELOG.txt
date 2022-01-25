@@ -232,6 +232,7 @@ Docking+Viewports Branch:
   io.AddMouseViewportEvent() function, then Dear ImGui will revert to its flawed heuristic to find the viewport under.
   By lowering those specs, we allow the SDL and more backend to support this, only relying on the heuristic in a few
   drag and drop situations rather that relying on it everywhere.
+- Docking: Fixed a CTRL+TAB crash when aiming at an empty docked window. (#4792)
 - Viewports: Fixed a CTRL+TAB crash with viewports enabled when the window list needs to appears in
   its own viewport (regression from 1.86). (#4023, #787)
 - Viewports: Fixed active InputText() from preventing viewports to merge. (#4212)
