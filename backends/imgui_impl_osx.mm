@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-12: Inputs: Added basic Platform IME support, hooking the io.SetPlatformImeDataFn() function.
@@ -664,18 +665,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeFlagsChanged)
     {
         unsigned short key_code = [event keyCode];
-        unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
+        NSEventModifierFlags modifier_flags = [event modifierFlags];
 
-        ImGuiKeyModFlags imgui_key_mods = ImGuiKeyModFlags_None;
-        if (flags & NSEventModifierFlagShift)
-            imgui_key_mods |= ImGuiKeyModFlags_Shift;
-        if (flags & NSEventModifierFlagControl)
-            imgui_key_mods |= ImGuiKeyModFlags_Ctrl;
-        if (flags & NSEventModifierFlagOption)
-            imgui_key_mods |= ImGuiKeyModFlags_Alt;
-        if (flags & NSEventModifierFlagCommand)
-            imgui_key_mods |= ImGuiKeyModFlags_Super;
-        io.AddKeyModsEvent(imgui_key_mods);
+        io.AddKeyEvent(ImGuiKey_ModShift, (modifier_flags & NSEventModifierFlagShift)   != 0);
+        io.AddKeyEvent(ImGuiKey_ModCtrl,  (modifier_flags & NSEventModifierFlagControl) != 0);
+        io.AddKeyEvent(ImGuiKey_ModAlt,   (modifier_flags & NSEventModifierFlagOption)  != 0);
+        io.AddKeyEvent(ImGuiKey_ModSuper, (modifier_flags & NSEventModifierFlagCommand) != 0);
 
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         if (key != ImGuiKey_None)
@@ -684,28 +679,22 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             // to use hardware dependent masks to extract that information.
             // 'imgui_mask' is left as a fallback.
             NSEventModifierFlags mask = 0;
-            ImGuiKeyModFlags imgui_mask = ImGuiKeyModFlags_None;
-            switch (key_code)
+            switch (key)
             {
-                case kVK_Control:      mask = 0x0001; imgui_mask = ImGuiKeyModFlags_Ctrl; break;
-                case kVK_RightControl: mask = 0x2000; imgui_mask = ImGuiKeyModFlags_Ctrl; break;
-                case kVK_Shift:        mask = 0x0002; imgui_mask = ImGuiKeyModFlags_Shift; break;
-                case kVK_RightShift:   mask = 0x0004; imgui_mask = ImGuiKeyModFlags_Shift; break;
-                case kVK_Command:      mask = 0x0008; imgui_mask = ImGuiKeyModFlags_Super; break;
-                case kVK_RightCommand: mask = 0x0010; imgui_mask = ImGuiKeyModFlags_Super; break;
-                case kVK_Option:       mask = 0x0020; imgui_mask = ImGuiKeyModFlags_Alt; break;
-                case kVK_RightOption:  mask = 0x0040; imgui_mask = ImGuiKeyModFlags_Alt; break;
+                case ImGuiKey_LeftCtrl:   mask = 0x0001; break;
+                case ImGuiKey_RightCtrl:  mask = 0x2000; break;
+                case ImGuiKey_LeftShift:  mask = 0x0002; break;
+                case ImGuiKey_RightShift: mask = 0x0004; break;
+                case ImGuiKey_LeftSuper:  mask = 0x0008; break;
+                case ImGuiKey_RightSuper: mask = 0x0010; break;
+                case ImGuiKey_LeftAlt:    mask = 0x0020; break;
+                case ImGuiKey_RightAlt:   mask = 0x0040; break;
+                default:
+                    return io.WantCaptureKeyboard;
             }
 
-            if (mask)
-            {
-                NSEventModifierFlags modifier_flags = [event modifierFlags];
-                io.AddKeyEvent(key, (modifier_flags & mask) != 0);
-            }
-            else if (imgui_mask)
-            {
-                io.AddKeyEvent(key, (imgui_key_mods & imgui_mask) != 0);
-            }
+            NSEventModifierFlags modifier_flags = [event modifierFlags];
+            io.AddKeyEvent(key, (modifier_flags & mask) != 0);
             io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
 
