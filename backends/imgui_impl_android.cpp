@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-03-04: Initial version.
@@ -26,29 +27,15 @@
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include <time.h>
-#include <map>
-#include <queue>
 #include <android/native_window.h>
 #include <android/input.h>
 #include <android/keycodes.h>
 #include <android/log.h>
 
-struct KeyEvent
-{
-    ImGuiKey Key;
-    bool     Down;
-    int      NativeKeycode;
-    int      NativeScancode;
-
-    KeyEvent(): Key(ImGuiKey_None), Down(false), NativeKeycode(-1), NativeScancode(-1) {}
-};
-
 // Android data
 static double                                   g_Time = 0.0;
 static ANativeWindow*                           g_Window;
 static char                                     g_LogTag[] = "ImGuiExample";
-static std::map<ImGuiKey, std::queue<KeyEvent>> g_KeyEventQueues; // FIXME: Remove dependency on map and queue once we use upcoming input queue.
-static ImGuiKeyModFlags                         g_KeyModFlags = ImGuiKeyModFlags_None;
 
 static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
 {
@@ -176,15 +163,10 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         int32_t event_action = AKeyEvent_getAction(input_event);
         int32_t event_meta_state = AKeyEvent_getMetaState(input_event);
 
-        g_KeyModFlags = ImGuiKeyModFlags_None;
-        if ((event_meta_state & AMETA_CTRL_ON) != 0)
-            g_KeyModFlags |= ImGuiKeyModFlags_Ctrl;
-        if ((event_meta_state & AMETA_SHIFT_ON) != 0)
-            g_KeyModFlags |= ImGuiKeyModFlags_Shift;
-        if ((event_meta_state & AMETA_ALT_ON) != 0)
-            g_KeyModFlags |= ImGuiKeyModFlags_Alt;
-        if ((event_meta_state & AMETA_META_ON) != 0)
-            g_KeyModFlags |= ImGuiKeyModFlags_Super;
+        io.AddKeyEvent(ImGuiKey_ModCtrl,  (event_meta_state & AMETA_CTRL_ON)  != 0);
+        io.AddKeyEvent(ImGuiKey_ModShift, (event_meta_state & AMETA_SHIFT_ON) != 0);
+        io.AddKeyEvent(ImGuiKey_ModAlt,   (event_meta_state & AMETA_ALT_ON)   != 0);
+        io.AddKeyEvent(ImGuiKey_ModSuper, (event_meta_state & AMETA_META_ON)  != 0);
 
         switch (event_action)
         {
@@ -197,13 +179,8 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
             ImGuiKey key = ImGui_ImplAndroid_KeyCodeToImGuiKey(event_key_code);
             if (key != ImGuiKey_None && (event_action == AKEY_EVENT_ACTION_DOWN || event_action == AKEY_EVENT_ACTION_UP))
             {
-                KeyEvent io_event;
-                io_event.Key = key;
-                io_event.Down = event_action == AKEY_EVENT_ACTION_DOWN;
-                io_event.NativeKeycode = event_key_code;
-                io_event.NativeScancode = event_scan_code;
-
-                g_KeyEventQueues[key].push(io_event);
+                io.AddKeyEvent(key, event_action == AKEY_EVENT_ACTION_DOWN);
+                io.SetKeyEventNativeData(key, event_key_code, event_scan_code);
             }
 
             break;
@@ -279,20 +256,6 @@ void ImGui_ImplAndroid_Shutdown()
 void ImGui_ImplAndroid_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
-
-    // Process queued key events
-    // FIXME: This is a workaround for multiple key event actions occurring at once (see above) and can be removed once we use upcoming input queue.
-    for (auto& key_queue : g_KeyEventQueues)
-    {
-        if (key_queue.second.empty())
-            continue;
-
-        auto& key_event = key_queue.second.front();
-        io.AddKeyEvent(key_event.Key, key_event.Down);
-        io.SetKeyEventNativeData(key_event.Key, key_event.NativeKeycode, key_event.NativeScancode); // To support legacy indexing (<1.87 user code)
-        key_queue.second.pop();
-    }
-    io.AddKeyModsEvent(g_KeyModFlags);
 
     // Setup display size (every frame to accommodate for window resizing)
     int32_t window_width = ANativeWindow_getWidth(g_Window);
