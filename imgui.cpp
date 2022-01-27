@@ -1280,6 +1280,19 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
     if (ImGui::IsGamepadKey(key))
         BackendUsingLegacyNavInputArray = false;
 
+    // Partial filter of duplicates (not strictly needed, but makes data neater in particular for key mods and gamepad values which are most commonly spmamed)
+    ImGuiKeyData* key_data = ImGui::GetKeyData(key);
+    if (key_data->Down == down && key_data->AnalogValue == analog_value)
+    {
+        bool found = false;
+        for (int n = g.InputEventsQueue.Size - 1; n >= 0 && !found; n--)
+            if (g.InputEventsQueue[n].Type == ImGuiInputEventType_Key && g.InputEventsQueue[n].Key.Key == key)
+                found = true;
+        if (!found)
+            return;
+    }
+
+    // Add event
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_Key;
     e.Source = ImGui::IsGamepadKey(key) ? ImGuiInputSource_Gamepad : ImGuiInputSource_Keyboard;
