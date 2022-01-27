@@ -309,7 +309,7 @@ ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_ba
 
 ## About filenames
 
-**Please note that many new C/C++ users have issues their files _because the filename they provide is wrong_.**
+**Please note that many new C/C++ users have issues loading their files _because the filename they provide is wrong_.**
 
 Two things to watch for:
 - Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it oftens start from the folder where object or executable files are stored.
