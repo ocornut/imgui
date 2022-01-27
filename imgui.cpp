@@ -4551,10 +4551,9 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
-    // Remove trailing command if unused.
-    // Technically we could return directly instead of popping, but this make things looks neat in Metrics/Debugger window as well.
-    draw_list->_PopUnusedDrawCmd();
     if (draw_list->CmdBuffer.Size == 0)
+        return;
+    if (draw_list->CmdBuffer.Size == 1 && draw_list->CmdBuffer[0].ElemCount == 0 && draw_list->CmdBuffer[0].UserCallback == NULL)
         return;
 
     // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
@@ -4641,8 +4640,10 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*
     draw_data->FramebufferScale = io.DisplayFramebufferScale;
     for (int n = 0; n < draw_lists->Size; n++)
     {
-        draw_data->TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;
-        draw_data->TotalIdxCount += draw_lists->Data[n]->IdxBuffer.Size;
+        ImDrawList* draw_list = draw_lists->Data[n];
+        draw_list->_PopUnusedDrawCmd();
+        draw_data->TotalVtxCount += draw_list->VtxBuffer.Size;
+        draw_data->TotalIdxCount += draw_list->IdxBuffer.Size;
     }
 }
 
@@ -4745,7 +4746,6 @@ static void ImGui::RenderDimmedBackgrounds()
         window->DrawList->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size);
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), window->WindowRounding, 0, 3.0f);
         window->DrawList->PopClipRect();
-        window->DrawList->_PopUnusedDrawCmd(); // Since are past the calls to AddDrawListToDrawData() we don't have a _PopUnusedDrawCmd() running on commands.
     }
 }
 
