@@ -72,7 +72,7 @@ Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui
 Please read the comments and instruction at the top of each file.
 Please read FAQ at http://www.dearimgui.org/faq
 
-If you are using of the backend provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
+If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
 Changelog, so if you want to update them later it will be easier to catch up with what changed.
 
