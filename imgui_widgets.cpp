@@ -3887,6 +3887,48 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     return true;
 }
 
+static inline void InputTextUpdateUndoStateAfterUserCallback(ImGuiInputTextState *state, const char *new_buf) {
+    // Find the shortest single replacement we can make to get the new text
+    // from the old text.
+    ImWchar *old_buf = state->TextW.Data;
+    int old_length = state->CurLenW;
+    int new_length = ImTextCountCharsFromUtf8(new_buf, NULL);
+    int shorter_length = ImMin(old_length, new_length);
+
+    int where = 0;
+    while (where < shorter_length) {
+        unsigned int b;
+        ImTextCharFromUtf8(&b, new_buf + where, NULL);
+        if (old_buf[where] != b)
+            break;
+
+        where += 1;
+    }
+
+    int old_last_diff = old_length - 1;
+    int new_last_diff = new_length - 1;
+    while (old_last_diff >= where && new_last_diff >= 0) {
+        unsigned int b;
+        ImTextCharFromUtf8(&b, new_buf + new_last_diff, NULL);
+        if (old_buf[old_last_diff] != b)
+            break;
+
+        old_last_diff -= 1;
+        new_last_diff -= 1;
+    }
+
+    int insert_len = new_last_diff - where + 1;
+    int delete_len = old_last_diff - where + 1;
+
+    if (insert_len > 0 || delete_len > 0) {
+        STB_TEXTEDIT_CHARTYPE *p = stb_text_createundo(&state->Stb.undostate, where, delete_len, insert_len);
+        if (p) {
+            for (int i=0; i < delete_len; ++i)
+                p[i] = ImStb::STB_TEXTEDIT_GETCHAR(state, where + i);
+        }
+    }
+}
+
 // Edit a string of text
 // - buf_size account for the zero-terminator, so a buf_size of 6 can hold "Hello" but not "Hello!".
 //   This is so we can easily call InputText() on static arrays using ARRAYSIZE() and to match
@@ -4471,6 +4513,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     if (buf_dirty)
                     {
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
+                        InputTextUpdateUndoStateAfterUserCallback(state, callback_data.Buf);
                         if (callback_data.BufTextLen > backup_current_text_length && is_resizable)
                             state->TextW.resize(state->TextW.Size + (callback_data.BufTextLen - backup_current_text_length));
                         state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, callback_data.Buf, NULL);
