@@ -79,8 +79,6 @@ Breaking Changes:
     io.AddKeyEvent(), io.AddKeyAnalogEvent().
   - Added io.AddKeyAnalogEvent() function, obsoleting writing directly to io.NavInputs[] arrays.
 - Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
-- Moved ImGuiKeyModsFlags definition from imgui.h to imgui_internal.h. Was never advertised and used in a place
-  marked "private" in comments. Will still be used internally.
 - Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
   This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
   (Instead you may implement custom expression evaluators to provide a better version of this).

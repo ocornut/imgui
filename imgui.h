@@ -65,7 +65,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.87 WIP"
-#define IMGUI_VERSION_NUM           18614
+#define IMGUI_VERSION_NUM           18615
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 
@@ -1452,6 +1452,16 @@ enum ImGuiKey_
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     , ImGuiKey_KeyPadEnter = ImGuiKey_KeypadEnter   // Renamed in 1.87
 #endif
+};
+
+// Helper "flags" version of key-mods to store and compare multiple key-mods easily. Sometimes used for storage (e.g. io.KeyMods) but otherwise not much used in public API.
+enum ImGuiKeyModFlags_
+{
+    ImGuiKeyModFlags_None           = 0,
+    ImGuiKeyModFlags_Ctrl           = 1 << 0,
+    ImGuiKeyModFlags_Shift          = 1 << 1,
+    ImGuiKeyModFlags_Alt            = 1 << 2,
+    ImGuiKeyModFlags_Super          = 1 << 3    // Cmd/Super/Windows key
 };
 
 // Gamepad/Keyboard navigation

@@ -384,7 +384,6 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2022/01/26 (1.87) - inputs: moved ImGuiKeyModsFlags definition from imgui.h to imgui_internal.h. Was never advertised and used in a place marked "private" in comments. Will still be used internally.
  - 2022/01/20 (1.87) - inputs: reworded gamepad IO.
                         - Backend writing to io.NavInputs[]            -> backend should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values.
  - 2022/01/19 (1.87) - sliders, drags: removed support for legacy arithmetic operators (+,+-,*,/) when inputing text. This doesn't break any api/code but a feature that used to be accessible by end-users (which seemingly no one used).
