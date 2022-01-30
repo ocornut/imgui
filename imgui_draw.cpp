@@ -2386,13 +2386,15 @@ bool    ImFontAtlas::Build()
 
 void    ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_brighten_factor)
 {
+    // This lookup table converts each pixel from an alpha coverage percentage to a brightness level
+    // (the former is linear while the latter is non-linear). Without this, fonts will render incorrectly.
+
     /*
     Generated with...
     for (unsigned int i = 0; i < 0x100; ++i)
         lookup[i] = ImPow(i / 255.0, 1.0 / 1.8) * 255.0;
     */
-
-    const unsigned char lookup[0x100] = {
+    static const unsigned char alpha_coverage_to_brightness_lookup[0x100] = {
         0x00, 0x0B, 0x11, 0x15, 0x19, 0x1C, 0x1F, 0x22, 0x25, 0x27, 0x2A, 0x2C, 0x2E, 0x30, 0x32, 0x34,
         0x36, 0x38, 0x3A, 0x3C, 0x3D, 0x3F, 0x41, 0x43, 0x44, 0x46, 0x47, 0x49, 0x4A, 0x4C, 0x4D, 0x4F,
         0x50, 0x51, 0x53, 0x54, 0x55, 0x57, 0x58, 0x59, 0x5B, 0x5C, 0x5D, 0x5E, 0x60, 0x61, 0x62, 0x63,
@@ -2413,7 +2415,7 @@ void    ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], fl
 
     for (unsigned int i = 0; i < 256; i++)
     {
-        unsigned int value = (unsigned int)(lookup[i] * in_brighten_factor);
+        unsigned int value = (unsigned int)(alpha_coverage_to_brightness_lookup[i] * in_brighten_factor);
         out_table[i] = value > 255 ? 255 : (value & 0xFF);
     }
 }
