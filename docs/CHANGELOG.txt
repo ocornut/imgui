@@ -160,6 +160,7 @@ Other Changes:
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
 - Backends: Vulkan: Added support for ImTextureID as VkDescriptorSet, add ImGui_ImplVulkan_AddTexture(). (#914) [@martty]
+- Backends: SDL_Renderer: Fix texture atlas format on big-endian hardware (#4927) [@Clownacy]
 - Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
   wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
 
