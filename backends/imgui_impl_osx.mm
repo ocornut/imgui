@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-31: Fix building with old Xcode versions that are missing gamepad features.
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
@@ -45,6 +46,10 @@
 //  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-07-07: Initial version.
+
+#define APPLE_HAS_BUTTON_OPTIONS (__IPHONE_OS_VERSION_MIN_REQUIRED >= 130000 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500 || __TV_OS_VERSION_MIN_REQUIRED >= 130000)
+#define APPLE_HAS_CONTROLLER     (__IPHONE_OS_VERSION_MIN_REQUIRED >= 140000 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000 || __TV_OS_VERSION_MIN_REQUIRED >= 140000)
+#define APPLE_HAS_THUMBSTICKS    (__IPHONE_OS_VERSION_MIN_REQUIRED >= 120100 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101401 || __TV_OS_VERSION_MIN_REQUIRED >= 120100)
 
 @class ImFocusObserver;
 @class KeyEventResponder;
@@ -490,12 +495,11 @@ static void ImGui_ImplOSX_UpdateGamepads()
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
 
-    GCController* controller;
-    if (@available(macOS 11.0, *))
-        controller = GCController.current;
-    else
-        controller = GCController.controllers.firstObject;
-
+#if APPLE_HAS_CONTROLLER
+    GCController* controller = GCController.current;
+#else
+    GCController* controller = GCController.controllers.firstObject;
+#endif
     if (controller == nil || controller.extendedGamepad == nil)
     {
         io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
@@ -509,11 +513,10 @@ static void ImGui_ImplOSX_UpdateGamepads()
     #define MAP_BUTTON(KEY_NO, BUTTON_NAME)       { io.AddKeyEvent(KEY_NO, gp.BUTTON_NAME.isPressed); }
     #define MAP_ANALOG(KEY_NO, AXIS_NAME, V0, V1) { float vn = (float)(gp.AXIS_NAME.value - V0) / (float)(V1 - V0); vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn); }
     const float thumb_dead_zone = 0.0f;
-    if (@available(macOS 10.15, *))
-    {
-        MAP_BUTTON(ImGuiKey_GamepadStart,           buttonMenu);
-        MAP_BUTTON(ImGuiKey_GamepadBack,            buttonOptions);
-    }
+
+#if APPLE_HAS_BUTTON_OPTIONS
+    MAP_BUTTON(ImGuiKey_GamepadBack,            buttonOptions);
+#endif
     MAP_BUTTON(ImGuiKey_GamepadFaceDown,        buttonA);              // Xbox A, PS Cross
     MAP_BUTTON(ImGuiKey_GamepadFaceRight,       buttonB);              // Xbox B, PS Circle
     MAP_BUTTON(ImGuiKey_GamepadFaceLeft,        buttonX);              // Xbox X, PS Square
@@ -526,11 +529,10 @@ static void ImGui_ImplOSX_UpdateGamepads()
     MAP_ANALOG(ImGuiKey_GamepadR1,              rightShoulder, 0.0f, 1.0f);
     MAP_ANALOG(ImGuiKey_GamepadL2,              leftTrigger,  0.0f, 1.0f);
     MAP_ANALOG(ImGuiKey_GamepadR2,              rightTrigger, 0.0f, 1.0f);
-    if (@available(macOS 10.14.1, *))
-    {
-        MAP_BUTTON(ImGuiKey_GamepadL3,              leftThumbstickButton);
-        MAP_BUTTON(ImGuiKey_GamepadR3,              rightThumbstickButton);
-    }
+#if APPLE_HAS_THUMBSTICKS
+    MAP_BUTTON(ImGuiKey_GamepadL3,              leftThumbstickButton);
+    MAP_BUTTON(ImGuiKey_GamepadR3,              rightThumbstickButton);
+#endif
     MAP_ANALOG(ImGuiKey_GamepadLStickLeft,      leftThumbstick.xAxis,  -thumb_dead_zone, -1.0f);
     MAP_ANALOG(ImGuiKey_GamepadLStickRight,     leftThumbstick.xAxis,  +thumb_dead_zone, +1.0f);
     MAP_ANALOG(ImGuiKey_GamepadLStickUp,        leftThumbstick.yAxis,  +thumb_dead_zone, +1.0f);
