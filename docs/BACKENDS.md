@@ -38,7 +38,7 @@ Dear ImGui is highly portable and only requires a few things to run and render, 
  - Optional: multi-viewports support.
  etc.
 
-This is essentially what each backends are doing + obligatory portability cruft. Using default backends ensure you can get all those features including the ones that would be harder to implement on your side (e.g. multi-viewports support).
+This is essentially what each backend is doing + obligatory portability cruft. Using default backends ensure you can get all those features including the ones that would be harder to implement on your side (e.g. multi-viewports support).
 
 It is important to understand the difference between the core Dear ImGui library (files in the root folder)
 and backends which we are describing here (backends/ folder).
