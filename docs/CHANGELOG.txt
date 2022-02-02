@@ -158,6 +158,7 @@ Other Changes:
 - Backends: Android, GLUT: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
+- Backends: OpenGL3: Fix OpenGL ES2 includes on Apple systems. [@rokups]
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
