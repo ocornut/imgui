@@ -232,6 +232,8 @@ Other Changes:
 Docking+Viewports Branch:
 
 - Docking: Fixed a CTRL+TAB crash when aiming at an empty docked window. (#4792)
+- Docking: Tabs use their own identifier instead of the Window identifier.
+  (This will invalidate some stored .ini data such as last selected tab, sorry!)
 - Docking: Fixed size constraints not working on single window holding on a dock id (still doesn't work on docked windows).
 - Viewports, IO: Added io.AddMouseViewportEvent() function to queue hovered viewport change (when known by backend).
 - Viewports: Relaxed specs for backend supporting ImGuiBackendFlags_HasMouseHoveredViewport: it is now _optional_
