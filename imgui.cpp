@@ -6383,11 +6383,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             BeginDocked(window, p_open);
             flags = window->Flags;
             if (window->DockIsActive)
+            {
                 IM_ASSERT(window->DockNode != NULL);
-
-            // Docking currently override constraints
-            if (window->DockIsActive)
-                g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
+                g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint; // Docking currently override constraints
+            }
 
             // Amend the Appearing flag
             if (window->DockTabIsVisible && !dock_tab_was_visible && dock_node_was_visible && !window->Appearing && !window_was_appearing)

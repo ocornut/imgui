@@ -370,7 +370,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
 
     // SDL on Linux/OSX doesn't report events for unfocused windows (see https://github.com/ocornut/imgui/issues/4960)
-#ifdef _WIN32
+#ifndef __APPLE__
     if (mouse_can_use_global_state)
         io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;// We can call io.AddMouseViewportEvent() with correct data (optional)
 #endif
