@@ -153,6 +153,8 @@ Breaking Changes:
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: nothing to do. is already done for you.
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
     using glfwSetCursorPosCallback() and forward it to the backend function ImGui_ImplGlfw_CursorPosCallback().
+- Backends: SDL: Added SDL_Renderer* parameter to ImGui_ImplSDL2_InitForSDLRenderer(), so backend can call
+  SDL_GetRendererOutputSize() to obtain framebuffer size valid for hi-dpi. (#4927) [@Clownacy]
 - Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
   - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
   - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
@@ -198,6 +200,8 @@ Other Changes:
 - Backends: GLFW: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: GLFW: Retrieve mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
 - Backends: GLFW: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4858)
+- Backends: GLFW: Added ImGui_ImplGlfw_InstallCallbacks()/ImGui_ImplGlfw_RestoreCallbacks() helpers to facilitate user installing
+  callbacks after iniitializing backend. (#4981)
 - Backends: Win32: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: Win32: Retrieve mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
 - Backends: Win32: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
@@ -217,15 +221,18 @@ Other Changes:
 - Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
 - Backends: OSX: Fix Game Controller nav mapping to use shoulder for both focusing and tweak speed. (#4759)
 - Backends: OSX: Fix building with old Xcode versions that are missing gamepad features. [@rokups]
+- Backends: OSX: Forward keyDown/keyUp events to OS when unused by Dear ImGui.
 - Backends: Android, GLUT: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
 - Backends: Android, GLUT: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
+- Backends: OpenGL3: Fix OpenGL ES2 includes on Apple systems. [@rokups]
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
   can theorically be created by user code manipulating a ImDrawList. (#4857)
 - Backends: Vulkan: Added support for ImTextureID as VkDescriptorSet, add ImGui_ImplVulkan_AddTexture(). (#914) [@martty]
+- Backends: SDL_Renderer: Fix texture atlas format on big-endian hardware (#4927) [@Clownacy]
 - Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
   wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
 
