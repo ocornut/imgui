@@ -39,6 +39,8 @@ Breaking changes:
 
 Other Changes:
 
+- Stack Tool: Added option to copy item path to clipboard. (#4631)
+
 
 -----------------------------------------------------------------------
  VERSION 1.87 (Released 2022-02-07)
