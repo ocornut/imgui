@@ -32,6 +32,15 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.88 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other Changes:
+
+
+-----------------------------------------------------------------------
  VERSION 1.87 (Released 2022-02-07)
 -----------------------------------------------------------------------
 
@@ -102,7 +111,6 @@ Breaking Changes:
   This removes an incompatibility between 'master' and 'multi-viewports' backends and toward enabling
   better support for IME. Updated backends accordingly. Because the old field is set by existing backends,
   we are keeping it (marked as obsolete).
-
 
 Other Changes:
 

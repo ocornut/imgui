@@ -1,4 +1,4 @@
-// dear imgui, v1.87
+// dear imgui, 1.88 WIP
 // (main code and documentation)
 
 // Help:
