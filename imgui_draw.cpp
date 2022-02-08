@@ -1206,8 +1206,8 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
 
         const float a_min_segment_angle = a_min_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
         const float a_max_segment_angle = a_max_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
-        const bool a_emit_start = (a_min_segment_angle - a_min) != 0.0f;
-        const bool a_emit_end = (a_max - a_max_segment_angle) != 0.0f;
+        const bool a_emit_start = ImAbs(a_min_segment_angle - a_min) >= 1e-5f;
+        const bool a_emit_end = ImAbs(a_max - a_max_segment_angle) >= 1e-5f;
 
         _Path.reserve(_Path.Size + (a_mid_samples + 1 + (a_emit_start ? 1 : 0) + (a_emit_end ? 1 : 0)));
         if (a_emit_start)
