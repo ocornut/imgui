@@ -418,7 +418,7 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
         GLFWwindow* mouse_window = (bd->MouseWindow == window || focused) ? window : NULL;
 
         // Update mouse buttons
-        if (mouse_window)
+        if (focused)
             for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
                 io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;
 
