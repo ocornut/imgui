@@ -301,6 +301,18 @@ jobs:
         EOF
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_KEYIO)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_DISABLE_OBSOLETE_KEYIO
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
     - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_METRICS_WINDOW)
       run: |
         cat > example_single_file.cpp <<'EOF'

@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: Clipboard support (from Allegro 5.1.12)
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 // Issues:
@@ -16,6 +17,10 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
+//  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-08: Renderer: Fixed mishandling of the the ImDrawCmd::IdxOffset field! This is an old bug but it never had an effect until some internal rendering changes in 1.86.
 //  2021-08-17: Calling io.AddFocusEvent() on ALLEGRO_EVENT_DISPLAY_SWITCH_OUT/ALLEGRO_EVENT_DISPLAY_SWITCH_IN events.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -274,6 +279,119 @@ static void ImGui_ImplAllegro5_SetClipboardText(void*, const char* text)
 }
 #endif
 
+static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
+{
+    switch (key_code)
+    {
+        case ALLEGRO_KEY_TAB: return ImGuiKey_Tab;
+        case ALLEGRO_KEY_LEFT: return ImGuiKey_LeftArrow;
+        case ALLEGRO_KEY_RIGHT: return ImGuiKey_RightArrow;
+        case ALLEGRO_KEY_UP: return ImGuiKey_UpArrow;
+        case ALLEGRO_KEY_DOWN: return ImGuiKey_DownArrow;
+        case ALLEGRO_KEY_PGUP: return ImGuiKey_PageUp;
+        case ALLEGRO_KEY_PGDN: return ImGuiKey_PageDown;
+        case ALLEGRO_KEY_HOME: return ImGuiKey_Home;
+        case ALLEGRO_KEY_END: return ImGuiKey_End;
+        case ALLEGRO_KEY_INSERT: return ImGuiKey_Insert;
+        case ALLEGRO_KEY_DELETE: return ImGuiKey_Delete;
+        case ALLEGRO_KEY_BACKSPACE: return ImGuiKey_Backspace;
+        case ALLEGRO_KEY_SPACE: return ImGuiKey_Space;
+        case ALLEGRO_KEY_ENTER: return ImGuiKey_Enter;
+        case ALLEGRO_KEY_ESCAPE: return ImGuiKey_Escape;
+        case ALLEGRO_KEY_QUOTE: return ImGuiKey_Apostrophe;
+        case ALLEGRO_KEY_COMMA: return ImGuiKey_Comma;
+        case ALLEGRO_KEY_MINUS: return ImGuiKey_Minus;
+        case ALLEGRO_KEY_FULLSTOP: return ImGuiKey_Period;
+        case ALLEGRO_KEY_SLASH: return ImGuiKey_Slash;
+        case ALLEGRO_KEY_SEMICOLON: return ImGuiKey_Semicolon;
+        case ALLEGRO_KEY_EQUALS: return ImGuiKey_Equal;
+        case ALLEGRO_KEY_OPENBRACE: return ImGuiKey_LeftBracket;
+        case ALLEGRO_KEY_BACKSLASH: return ImGuiKey_Backslash;
+        case ALLEGRO_KEY_CLOSEBRACE: return ImGuiKey_RightBracket;
+        case ALLEGRO_KEY_TILDE: return ImGuiKey_GraveAccent;
+        case ALLEGRO_KEY_CAPSLOCK: return ImGuiKey_CapsLock;
+        case ALLEGRO_KEY_SCROLLLOCK: return ImGuiKey_ScrollLock;
+        case ALLEGRO_KEY_NUMLOCK: return ImGuiKey_NumLock;
+        case ALLEGRO_KEY_PRINTSCREEN: return ImGuiKey_PrintScreen;
+        case ALLEGRO_KEY_PAUSE: return ImGuiKey_Pause;
+        case ALLEGRO_KEY_PAD_0: return ImGuiKey_Keypad0;
+        case ALLEGRO_KEY_PAD_1: return ImGuiKey_Keypad1;
+        case ALLEGRO_KEY_PAD_2: return ImGuiKey_Keypad2;
+        case ALLEGRO_KEY_PAD_3: return ImGuiKey_Keypad3;
+        case ALLEGRO_KEY_PAD_4: return ImGuiKey_Keypad4;
+        case ALLEGRO_KEY_PAD_5: return ImGuiKey_Keypad5;
+        case ALLEGRO_KEY_PAD_6: return ImGuiKey_Keypad6;
+        case ALLEGRO_KEY_PAD_7: return ImGuiKey_Keypad7;
+        case ALLEGRO_KEY_PAD_8: return ImGuiKey_Keypad8;
+        case ALLEGRO_KEY_PAD_9: return ImGuiKey_Keypad9;
+        case ALLEGRO_KEY_PAD_DELETE: return ImGuiKey_KeypadDecimal;
+        case ALLEGRO_KEY_PAD_SLASH: return ImGuiKey_KeypadDivide;
+        case ALLEGRO_KEY_PAD_ASTERISK: return ImGuiKey_KeypadMultiply;
+        case ALLEGRO_KEY_PAD_MINUS: return ImGuiKey_KeypadSubtract;
+        case ALLEGRO_KEY_PAD_PLUS: return ImGuiKey_KeypadAdd;
+        case ALLEGRO_KEY_PAD_ENTER: return ImGuiKey_KeypadEnter;
+        case ALLEGRO_KEY_PAD_EQUALS: return ImGuiKey_KeypadEqual;
+        case ALLEGRO_KEY_LCTRL: return ImGuiKey_LeftCtrl;
+        case ALLEGRO_KEY_LSHIFT: return ImGuiKey_LeftShift;
+        case ALLEGRO_KEY_ALT: return ImGuiKey_LeftAlt;
+        case ALLEGRO_KEY_LWIN: return ImGuiKey_LeftSuper;
+        case ALLEGRO_KEY_RCTRL: return ImGuiKey_RightCtrl;
+        case ALLEGRO_KEY_RSHIFT: return ImGuiKey_RightShift;
+        case ALLEGRO_KEY_ALTGR: return ImGuiKey_RightAlt;
+        case ALLEGRO_KEY_RWIN: return ImGuiKey_RightSuper;
+        case ALLEGRO_KEY_MENU: return ImGuiKey_Menu;
+        case ALLEGRO_KEY_0: return ImGuiKey_0;
+        case ALLEGRO_KEY_1: return ImGuiKey_1;
+        case ALLEGRO_KEY_2: return ImGuiKey_2;
+        case ALLEGRO_KEY_3: return ImGuiKey_3;
+        case ALLEGRO_KEY_4: return ImGuiKey_4;
+        case ALLEGRO_KEY_5: return ImGuiKey_5;
+        case ALLEGRO_KEY_6: return ImGuiKey_6;
+        case ALLEGRO_KEY_7: return ImGuiKey_7;
+        case ALLEGRO_KEY_8: return ImGuiKey_8;
+        case ALLEGRO_KEY_9: return ImGuiKey_9;
+        case ALLEGRO_KEY_A: return ImGuiKey_A;
+        case ALLEGRO_KEY_B: return ImGuiKey_B;
+        case ALLEGRO_KEY_C: return ImGuiKey_C;
+        case ALLEGRO_KEY_D: return ImGuiKey_D;
+        case ALLEGRO_KEY_E: return ImGuiKey_E;
+        case ALLEGRO_KEY_F: return ImGuiKey_F;
+        case ALLEGRO_KEY_G: return ImGuiKey_G;
+        case ALLEGRO_KEY_H: return ImGuiKey_H;
+        case ALLEGRO_KEY_I: return ImGuiKey_I;
+        case ALLEGRO_KEY_J: return ImGuiKey_J;
+        case ALLEGRO_KEY_K: return ImGuiKey_K;
+        case ALLEGRO_KEY_L: return ImGuiKey_L;
+        case ALLEGRO_KEY_M: return ImGuiKey_M;
+        case ALLEGRO_KEY_N: return ImGuiKey_N;
+        case ALLEGRO_KEY_O: return ImGuiKey_O;
+        case ALLEGRO_KEY_P: return ImGuiKey_P;
+        case ALLEGRO_KEY_Q: return ImGuiKey_Q;
+        case ALLEGRO_KEY_R: return ImGuiKey_R;
+        case ALLEGRO_KEY_S: return ImGuiKey_S;
+        case ALLEGRO_KEY_T: return ImGuiKey_T;
+        case ALLEGRO_KEY_U: return ImGuiKey_U;
+        case ALLEGRO_KEY_V: return ImGuiKey_V;
+        case ALLEGRO_KEY_W: return ImGuiKey_W;
+        case ALLEGRO_KEY_X: return ImGuiKey_X;
+        case ALLEGRO_KEY_Y: return ImGuiKey_Y;
+        case ALLEGRO_KEY_Z: return ImGuiKey_Z;
+        case ALLEGRO_KEY_F1: return ImGuiKey_F1;
+        case ALLEGRO_KEY_F2: return ImGuiKey_F2;
+        case ALLEGRO_KEY_F3: return ImGuiKey_F3;
+        case ALLEGRO_KEY_F4: return ImGuiKey_F4;
+        case ALLEGRO_KEY_F5: return ImGuiKey_F5;
+        case ALLEGRO_KEY_F6: return ImGuiKey_F6;
+        case ALLEGRO_KEY_F7: return ImGuiKey_F7;
+        case ALLEGRO_KEY_F8: return ImGuiKey_F8;
+        case ALLEGRO_KEY_F9: return ImGuiKey_F9;
+        case ALLEGRO_KEY_F10: return ImGuiKey_F10;
+        case ALLEGRO_KEY_F11: return ImGuiKey_F11;
+        case ALLEGRO_KEY_F12: return ImGuiKey_F12;
+        default: return ImGuiKey_None;
+    }
+}
+
 bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -298,30 +416,6 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
         { 0, 0, 0 }
     };
     bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
-
-    io.KeyMap[ImGuiKey_Tab] = ALLEGRO_KEY_TAB;
-    io.KeyMap[ImGuiKey_LeftArrow] = ALLEGRO_KEY_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow] = ALLEGRO_KEY_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow] = ALLEGRO_KEY_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = ALLEGRO_KEY_DOWN;
-    io.KeyMap[ImGuiKey_PageUp] = ALLEGRO_KEY_PGUP;
-    io.KeyMap[ImGuiKey_PageDown] = ALLEGRO_KEY_PGDN;
-    io.KeyMap[ImGuiKey_Home] = ALLEGRO_KEY_HOME;
-    io.KeyMap[ImGuiKey_End] = ALLEGRO_KEY_END;
-    io.KeyMap[ImGuiKey_Insert] = ALLEGRO_KEY_INSERT;
-    io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
-    io.KeyMap[ImGuiKey_Space] = ALLEGRO_KEY_SPACE;
-    io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
-    io.KeyMap[ImGuiKey_Escape] = ALLEGRO_KEY_ESCAPE;
-    io.KeyMap[ImGuiKey_KeyPadEnter] = ALLEGRO_KEY_PAD_ENTER;
-    io.KeyMap[ImGuiKey_A] = ALLEGRO_KEY_A;
-    io.KeyMap[ImGuiKey_C] = ALLEGRO_KEY_C;
-    io.KeyMap[ImGuiKey_V] = ALLEGRO_KEY_V;
-    io.KeyMap[ImGuiKey_X] = ALLEGRO_KEY_X;
-    io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
-    io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 
 #if ALLEGRO_HAS_CLIPBOARD
     io.SetClipboardTextFn = ImGui_ImplAllegro5_SetClipboardText;
@@ -349,6 +443,18 @@ void ImGui_ImplAllegro5_Shutdown()
     IM_DELETE(bd);
 }
 
+// ev->keyboard.modifiers seems always zero so using that...
+static void ImGui_ImplAllegro5_UpdateKeyModifiers()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ALLEGRO_KEYBOARD_STATE keys;
+    al_get_keyboard_state(&keys);
+    io.AddKeyEvent(ImGuiKey_ModCtrl, al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL));
+    io.AddKeyEvent(ImGuiKey_ModShift, al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT));
+    io.AddKeyEvent(ImGuiKey_ModAlt, al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR));
+    io.AddKeyEvent(ImGuiKey_ModSuper, al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN));
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -363,29 +469,28 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_MOUSE_AXES:
         if (ev->mouse.display == bd->Display)
         {
-            io.MouseWheel += ev->mouse.dz;
-            io.MouseWheelH -= ev->mouse.dw;
-            io.MousePos = ImVec2(ev->mouse.x, ev->mouse.y);
+            io.AddMousePosEvent(ev->mouse.x, ev->mouse.y);
+            io.AddMouseWheelEvent(-ev->mouse.dw, ev->mouse.dz);
         }
         return true;
     case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
-        if (ev->mouse.display == bd->Display && ev->mouse.button <= 5)
-            io.MouseDown[ev->mouse.button - 1] = (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
+        if (ev->mouse.display == bd->Display && ev->mouse.button > 0 && ev->mouse.button <= 5)
+            io.AddMouseButtonEvent(ev->mouse.button - 1, ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
         return true;
     case ALLEGRO_EVENT_TOUCH_MOVE:
         if (ev->touch.display == bd->Display)
-            io.MousePos = ImVec2(ev->touch.x, ev->touch.y);
+            io.AddMousePosEvent(ev->touch.x, ev->touch.y);
         return true;
     case ALLEGRO_EVENT_TOUCH_BEGIN:
     case ALLEGRO_EVENT_TOUCH_END:
     case ALLEGRO_EVENT_TOUCH_CANCEL:
         if (ev->touch.display == bd->Display && ev->touch.primary)
-            io.MouseDown[0] = (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
+            io.AddMouseButtonEvent(0, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
         return true;
     case ALLEGRO_EVENT_MOUSE_LEAVE_DISPLAY:
         if (ev->mouse.display == bd->Display)
-            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == bd->Display)
@@ -395,7 +500,12 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
     case ALLEGRO_EVENT_KEY_DOWN:
     case ALLEGRO_EVENT_KEY_UP:
         if (ev->keyboard.display == bd->Display)
-            io.KeysDown[ev->keyboard.keycode] = (ev->type == ALLEGRO_EVENT_KEY_DOWN);
+        {
+            ImGui_ImplAllegro5_UpdateKeyModifiers();
+            ImGuiKey key = ImGui_ImplAllegro5_KeyCodeToImGuiKey(ev->keyboard.keycode);
+            io.AddKeyEvent(key, (ev->type == ALLEGRO_EVENT_KEY_DOWN));
+            io.SetKeyEventNativeData(key, ev->keyboard.keycode, -1); // To support legacy indexing (<1.87 user code)
+        }
         return true;
     case ALLEGRO_EVENT_DISPLAY_SWITCH_OUT:
         if (ev->display.source == bd->Display)
@@ -465,13 +575,6 @@ void ImGui_ImplAllegro5_NewFrame()
     io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    // Setup inputs
-    ALLEGRO_KEYBOARD_STATE keys;
-    al_get_keyboard_state(&keys);
-    io.KeyCtrl = al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL);
-    io.KeyShift = al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT);
-    io.KeyAlt = al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR);
-    io.KeySuper = al_key_down(&keys, ALLEGRO_KEY_LWIN) || al_key_down(&keys, ALLEGRO_KEY_RWIN);
-
+    // Setup mouse cursor shape
     ImGui_ImplAllegro5_UpdateMouseCursor();
 }
