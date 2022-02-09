@@ -74,6 +74,10 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window
 #endif
+#if defined __linux__
+#define GLFW_EXPOSE_NATIVE_X11
+#include <GLFW/glfw3native.h>   // for glfwGetX11Window
+#endif
 #define GLFW_HAS_WINDOW_TOPMOST       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
 #define GLFW_HAS_WINDOW_HOVERED       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ GLFW_HOVERED
 #define GLFW_HAS_WINDOW_ALPHA         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
@@ -988,6 +992,23 @@ static void ImGui_ImplGlfw_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
             GetWindowRect(par, &par_rect);
             pos.x -= par_rect.left;
             pos.y -= par_rect.top;
+        }
+    }
+#elif defined __linux__
+    Display *xdisp = glfwGetX11Display();
+    Window xwin = glfwGetX11Window(vd->Window);
+    if (xdisp && xwin)
+    {
+        Window xroot = 0, xpar = 0, *xchildren = NULL;
+        unsigned int num_xchildren = 0;
+        if (XQueryTree(xdisp, xwin, &xroot, &xpar, &xchildren, &num_xchildren) != 0 &&
+            xroot != 0 && xpar != 0 && xpar != xroot)
+        {
+            Window xchild = 0;
+            int xx = 0, xy = 0;
+            XTranslateCoordinates(xdisp, xroot, xpar, pos.x, pos.y, &xx, &xy, &xchild);
+            pos.x = xx;
+            pos.y = xy;
         }
     }
 #endif
