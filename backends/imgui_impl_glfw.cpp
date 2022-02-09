@@ -977,14 +977,18 @@ static void ImGui_ImplGlfw_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
     ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData;
     vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
 
-#ifdef _WIN32
-    HWND hwnd = glfwGetWin32Window(vd->Window), par;
-    if (hwnd && (GetWindowLong(hwnd, GWL_STYLE) & WS_CHILDWINDOW) != 0 && (par = GetParent(hwnd)))
+#if defined _WIN32
+    HWND hwnd = glfwGetWin32Window(vd->Window);
+    if (hwnd && (GetWindowLong(hwnd, GWL_STYLE) & WS_CHILDWINDOW) != 0)
     {
-      RECT par_rect;
-      GetWindowRect(par, &par_rect);
-      pos.x -= par_rect.left;
-      pos.y -= par_rect.top;
+        HWND par = GetParent(hwnd);
+        if (par)
+        {
+            RECT par_rect;
+            GetWindowRect(par, &par_rect);
+            pos.x -= par_rect.left;
+            pos.y -= par_rect.top;
+        }
     }
 #endif
 
