@@ -99,6 +99,16 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.88 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Docking+Viewports Branch:
+
+- Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
+  when multi-viewports are disabled. (#4900)
+
+
+-----------------------------------------------------------------------
  VERSION 1.87 (Released 2022-02-07)
 -----------------------------------------------------------------------
 
