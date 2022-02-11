@@ -469,17 +469,17 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImVec1
 {
     float   x;
-    ImVec1()         { x = 0.0f; }
-    ImVec1(float _x) { x = _x; }
+    constexpr ImVec1()         : x(0.0f) { }
+    constexpr ImVec1(float _x) : x(_x) { }
 };
 
 // Helper: ImVec2ih (2D vector, half-size integer, for long-term packed storage)
 struct ImVec2ih
 {
     short   x, y;
-    ImVec2ih()                           { x = y = 0; }
-    ImVec2ih(short _x, short _y)         { x = _x; y = _y; }
-    explicit ImVec2ih(const ImVec2& rhs) { x = (short)rhs.x; y = (short)rhs.y; }
+    constexpr ImVec2ih()                           : x(0), y(0) {}
+    constexpr ImVec2ih(short _x, short _y)         : x(_x), y(_y) {}
+    constexpr explicit ImVec2ih(const ImVec2& rhs) : x((short)rhs.x), y((short)rhs.y) {}
 };
 
 // Helper: ImRect (2D axis aligned bounding-box)
@@ -489,10 +489,10 @@ struct IMGUI_API ImRect
     ImVec2      Min;    // Upper-left
     ImVec2      Max;    // Lower-right
 
-    ImRect()                                        : Min(0.0f, 0.0f), Max(0.0f, 0.0f)  {}
-    ImRect(const ImVec2& min, const ImVec2& max)    : Min(min), Max(max)                {}
-    ImRect(const ImVec4& v)                         : Min(v.x, v.y), Max(v.z, v.w)      {}
-    ImRect(float x1, float y1, float x2, float y2)  : Min(x1, y1), Max(x2, y2)          {}
+    constexpr ImRect()                                        : Min(0.0f, 0.0f), Max(0.0f, 0.0f)  {}
+    constexpr ImRect(const ImVec2& min, const ImVec2& max)    : Min(min), Max(max)                {}
+    constexpr ImRect(const ImVec4& v)                         : Min(v.x, v.y), Max(v.z, v.w)      {}
+    constexpr ImRect(float x1, float y1, float x2, float y2)  : Min(x1, y1), Max(x2, y2)          {}
 
     ImVec2      GetCenter() const                   { return ImVec2((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f); }
     ImVec2      GetSize() const                     { return ImVec2(Max.x - Min.x, Max.y - Min.y); }
@@ -1171,7 +1171,7 @@ enum ImGuiInputEventType
     ImGuiInputEventType_MouseWheel,
     ImGuiInputEventType_MouseButton,
     ImGuiInputEventType_Key,
-    ImGuiInputEventType_Char,
+    ImGuiInputEventType_Text,
     ImGuiInputEventType_Focus,
     ImGuiInputEventType_COUNT
 };

@@ -1180,7 +1180,7 @@ void ImGuiIO::AddInputCharacter(unsigned int c)
         return;
 
     ImGuiInputEvent e;
-    e.Type = ImGuiInputEventType_Char;
+    e.Type = ImGuiInputEventType_Text;
     e.Source = ImGuiInputSource_Keyboard;
     e.Text.Char = c;
     g.InputEventsQueue.push_back(e);
@@ -7882,7 +7882,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
                 }
             }
         }
-        else if (e->Type == ImGuiInputEventType_Char)
+        else if (e->Type == ImGuiInputEventType_Text)
         {
             // Trickling Rule: Stop processing queued events if keys/mouse have been interacted with
             if (trickle_fast_inputs && (key_changed || mouse_button_changed != 0 || mouse_moved || mouse_wheeled))
