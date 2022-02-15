@@ -17,7 +17,7 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
-CXXFLAGS += -I$(IMGUI_DIR)
+CXXFLAGS += -std=c++11 -I$(IMGUI_DIR)
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
@@ -52,7 +52,7 @@ endif
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	ifeq ($(WITH_EXTRA_WARNINGS), 1)
-		CXXFLAGS += -Weverything -Wno-reserved-id-macro -Wno-c++98-compat-pedantic -Wno-padded -Wno-c++11-long-long -Wno-poison-system-directories
+		CXXFLAGS += -Weverything -Wno-reserved-id-macro -Wno-c++98-compat-pedantic -Wno-padded -Wno-poison-system-directories
 	endif
 	CFLAGS = $(CXXFLAGS)
 endif
