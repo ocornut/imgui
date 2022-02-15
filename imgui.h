@@ -242,6 +242,8 @@ typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    
 typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);              // Callback function for ImGui::SetNextWindowSizeConstraints()
 typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);               // Function signature for ImGui::SetAllocatorFunctions()
 typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                // Function signature for ImGui::SetAllocatorFunctions()
+typedef void    (*ImRunner)(unsigned int i, void* arg);
+typedef void    (*ImDispatch)(ImRunner runner, unsigned int count, void* arg);
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
@@ -1520,7 +1522,12 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Backend Platform supports gamepad and currently has one connected.
     ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Backend Platform supports honoring GetMouseCursor() value to change the OS cursor shape.
     ImGuiBackendFlags_HasSetMousePos        = 1 << 2,   // Backend Platform supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
-    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3    // Backend Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
+    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3,   // Backend Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
+    ImGuiBackendFlags_SignedDistanceFonts   = 1 << 5,  // Enable/disabled signed distance font rendering (scaling).
+    ImGuiBackendFlags_SignedDistanceShapes  = 1 << 6,  // Enable/disabled signed distance rendering of (rounded) rectangles.
+    ImGuiBackendFlags_ProvocingVertexFirst  = 1 << 7,  // Needed for DirectX if the signed distance fields operations are enabled.
+    ImGuiBackendFlags_DefaultFast          = ImGuiBackendFlags_None, // Minimal shader, minimal effects
+    ImGuiBackendFlags_DefaultDesktop       = (1 << 8) - 1 // Full desktop backend: SignedDistanceFonts, SignedDistanceShapes
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -1529,6 +1536,8 @@ enum ImGuiCol_
     ImGuiCol_Text,
     ImGuiCol_TextDisabled,
     ImGuiCol_WindowBg,              // Background of normal windows
+    ImGuiCol_WindowShadowStart,     // Start color of shadows of normal windows
+    ImGuiCol_WindowShadowEnd,       // End color of shadows of normal windows
     ImGuiCol_ChildBg,               // Background of child windows
     ImGuiCol_PopupBg,               // Background of popups, menus, tooltips windows
     ImGuiCol_Border,
@@ -1536,6 +1545,8 @@ enum ImGuiCol_
     ImGuiCol_FrameBg,               // Background of checkbox, radio button, plot, slider, text input
     ImGuiCol_FrameBgHovered,
     ImGuiCol_FrameBgActive,
+    ImGuiCol_FrameShadowStart,      // Start color of shadows of frames
+    ImGuiCol_FrameShadowEnd,        // End color of shadows of frames
     ImGuiCol_TitleBg,
     ImGuiCol_TitleBgActive,
     ImGuiCol_TitleBgCollapsed,
@@ -1579,6 +1590,8 @@ enum ImGuiCol_
     ImGuiCol_NavWindowingHighlight, // Highlight window when using CTRL+TAB
     ImGuiCol_NavWindowingDimBg,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
     ImGuiCol_ModalWindowDimBg,      // Darken/colorize entire screen behind a modal window, when one is active
+    ImGuiCol_FontShadowStart,       // Start color of shadows of fonts
+    ImGuiCol_FontShadowEnd,         // End color of shadows of fonts
     ImGuiCol_COUNT
 };
 
@@ -1597,6 +1610,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
     ImGuiStyleVar_WindowRounding,      // float     WindowRounding
     ImGuiStyleVar_WindowBorderSize,    // float     WindowBorderSize
+    ImGuiStyleVar_WindowShadowSize,    // float     WindowShadowSize
     ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
     ImGuiStyleVar_WindowTitleAlign,    // ImVec2    WindowTitleAlign
     ImGuiStyleVar_ChildRounding,       // float     ChildRounding
@@ -1606,6 +1620,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
     ImGuiStyleVar_FrameRounding,       // float     FrameRounding
     ImGuiStyleVar_FrameBorderSize,     // float     FrameBorderSize
+    ImGuiStyleVar_FrameShadowSize,     // float     FrameShadowSize
     ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2    ItemInnerSpacing
     ImGuiStyleVar_IndentSpacing,       // float     IndentSpacing
@@ -1617,6 +1632,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_TabRounding,         // float     TabRounding
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_SelectableTextAlign, // ImVec2    SelectableTextAlign
+    ImGuiStyleVar_FontShadowSize,      // float     FontShadowSize
     ImGuiStyleVar_COUNT
 };
 
@@ -1842,6 +1858,7 @@ struct ImGuiStyle
     ImVec2      WindowPadding;              // Padding within a window.
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows. Large values tend to lead to variety of artifacts and are not recommended.
     float       WindowBorderSize;           // Thickness of border around windows. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly).
+    float       WindowShadowSize;           // Shadow of windows in number of pixels. Only used with signed distance enabled backend.
     ImVec2      WindowMinSize;              // Minimum window size. This is a global setting. If you want to constraint individual windows, use SetNextWindowSizeConstraints().
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     ImGuiDir    WindowMenuButtonPosition;   // Side of the collapsing/docking button in the title bar (None/Left/Right). Defaults to ImGuiDir_Left.
@@ -1852,6 +1869,7 @@ struct ImGuiStyle
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets).
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
     float       FrameBorderSize;            // Thickness of border around frames. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly).
+    float       FrameShadowSize;            // Shadow of frames in number of pixels. Only used with signed distance enabled backend.
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines.
     ImVec2      ItemInnerSpacing;           // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label).
     ImVec2      CellPadding;                // Padding within a table cell
@@ -1877,6 +1895,7 @@ struct ImGuiStyle
     bool        AntiAliasedFill;            // Enable anti-aliased edges around filled shapes (rounded rectangles, circles, etc.). Disable if you are really tight on CPU/GPU. Latched at the beginning of the frame (copied to ImDrawList).
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     float       CircleTessellationMaxError; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
+    float       FontShadowSize;             // Shadow size of font (in SDF_WIDTH / SDF_DETAIL units, max is SDF_WIDTH-1)
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
@@ -2408,12 +2427,31 @@ struct ImDrawCmd
 };
 
 // Vertex layout
+#define IMGUI_SDF_DETAIL 40
+// so outlines are more or less the same size around the font
+#define IMGUI_SDF_PADDING (IMGUI_SDF_DETAIL/10)
+
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
 struct ImDrawVert
 {
     ImVec2  pos;
     ImVec2  uv;
     ImU32   col;
+#ifndef IMGUI_DISABLE_SDF
+    // signed distance support
+    ImU32   startOuterColor; // 4 bytes = 24
+    ImU32   endOuterColor;   // 4 bytes = 28
+    float   a;               // threshold [0-1] (using textures) or [2-3] (using circle aritifical signed distance) between outer and inner; 4 bytes = 32
+    float   b;               // threshold [0-1] between outer and discard; 4 bytes = 36
+    float   w;               // anti-aliasing width [0-1]; 4 bytes = 40
+    void simple() {
+      a = 0.0f;
+      b = 0.0f;
+      w = 0.0f;
+      startOuterColor = IM_COL32(0x0, 0x0, 0x0, 0x0);
+      endOuterColor = IM_COL32(0x0, 0x0, 0x0, 0x0);
+    }
+#endif
 };
 #else
 // You can override the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT in imconfig.h
@@ -2484,7 +2522,10 @@ enum ImDrawListFlags_
     ImDrawListFlags_AntiAliasedLines        = 1 << 0,  // Enable anti-aliased lines/borders (*2 the number of triangles for 1.0f wide line or lines thin enough to be drawn using textures, otherwise *3 the number of triangles)
     ImDrawListFlags_AntiAliasedLinesUseTex  = 1 << 1,  // Enable anti-aliased lines/borders using textures when possible. Require backend to render with bilinear filtering.
     ImDrawListFlags_AntiAliasedFill         = 1 << 2,  // Enable anti-aliased edge around filled shapes (rounded rectangles, circles).
-    ImDrawListFlags_AllowVtxOffset          = 1 << 3   // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
+    ImDrawListFlags_AllowVtxOffset          = 1 << 3,  // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
+    ImDrawListFlags_SignedDistanceFonts     = 1 << 4,  // Enable/disabled signed distance operations.
+    ImDrawListFlags_SignedDistanceShapes    = 1 << 5,  // Enable/disabled signed distance operations.
+    ImDrawListFlags_ProvocingVertexFirst    = 1 << 7,  // Needed for DirectX if the signed distance fields operations are enabled.
 };
 
 // Draw command list
@@ -2536,8 +2577,10 @@ struct ImDrawList
     //   In future versions we will use textures to provide cheaper and higher-quality circles.
     //   Use AddNgon() and AddNgonFilled() functions if you need to guaranteed a specific number of sides.
     IMGUI_API void  AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness = 1.0f);
+    IMGUI_API ImDrawIdx PushVtx(const ImVec2& pos, const ImVec2& uv, ImU32 inner_color, ImU32 start_outer_color = IM_COL32_BLACK_TRANS, ImU32 end_outer_color = IM_COL32_BLACK_TRANS, float a = 0.0, float b = 0.0, float w = 0.0);
+    IMGUI_API void  PushQuadIndex(ImDrawIdx a, ImDrawIdx b, ImDrawIdx c, ImDrawIdx d);
     IMGUI_API void  AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);   // a: upper-left, b: lower-right (== upper-left + size)
-    IMGUI_API void  AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0);                     // a: upper-left, b: lower-right (== upper-left + size)
+    IMGUI_API void  AddRectFilled(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float outer = 0.0f, ImU32 start_outer_color = IM_COL32_BLACK_TRANS, ImU32 end_outer_color = IM_COL32_BLACK_TRANS);
     IMGUI_API void  AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left);
     IMGUI_API void  AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col);
@@ -2547,8 +2590,8 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
     IMGUI_API void  AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness = 1.0f);
     IMGUI_API void  AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
-    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
-    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float shadow_size = 0.0f, ImU32 shadow_start = IM_COL32_BLACK_TRANS, ImU32 shadow_end = IM_COL32_BLACK_TRANS);
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL, float shadow_size = 0.0f, ImU32 shadow_start = IM_COL32_BLACK_TRANS, ImU32 shadow_end = IM_COL32_BLACK_TRANS);
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col); // Note: Anti-aliased filling requires points to be in clockwise order.
     IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
@@ -2594,10 +2637,14 @@ struct ImDrawList
     // - All primitives needs to be reserved via PrimReserve() beforehand.
     IMGUI_API void  PrimReserve(int idx_count, int vtx_count);
     IMGUI_API void  PrimUnreserve(int idx_count, int vtx_count);
-    IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);      // Axis aligned rectangle (composed of two triangles)
-    IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
-    IMGUI_API void  PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col);
+    IMGUI_API void  PrimRect(const ImVec2& tl, const ImVec2& br, ImU32 col);      // Axis aligned rectangle (composed of two triangles)
+    IMGUI_API void  PrimRectUV(const ImVec2& tl, const ImVec2& br, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 innerCol, ImU32 startOuterCol = IM_COL32_BLACK_TRANS, ImU32 endOuterCol = IM_COL32_BLACK_TRANS, float a = 0.0, float b = 0.0, float w = 0.0);
+    IMGUI_API void  PrimQuadUV(const ImVec2& tl, const ImVec2& br, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col, float w = 0.0);
+#ifndef IMGUI_DISABLE_SDF
+    inline    void  PrimWriteVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)    { _VtxWritePtr->pos = pos; _VtxWritePtr->uv = uv; _VtxWritePtr->col = col; _VtxWritePtr->simple(); _VtxWritePtr++; _VtxCurrentIdx++; }
+#else
     inline    void  PrimWriteVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)    { _VtxWritePtr->pos = pos; _VtxWritePtr->uv = uv; _VtxWritePtr->col = col; _VtxWritePtr++; _VtxCurrentIdx++; }
+#endif
     inline    void  PrimWriteIdx(ImDrawIdx idx)                                     { *_IdxWritePtr = idx; _IdxWritePtr++; }
     inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)         { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); } // Write vertex with unique index
 
@@ -2663,6 +2710,7 @@ struct ImFontConfig
     unsigned int    FontBuilderFlags;       // 0        // Settings for custom font builder. THIS IS BUILDER IMPLEMENTATION DEPENDENT. Leave as zero if unsure.
     float           RasterizerMultiply;     // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
     ImWchar         EllipsisChar;           // -1       // Explicitly specify unicode codepoint of ellipsis character. When fonts are being merged first specified ellipsis will be used.
+    bool            SignedDistanceFont;     // false    // Load the font as a signed distance font (if the SignedDistanceFonts backend flag is enabled, if so size is ignored)
 
     // [Internal]
     char            Name[40];               // Name (strictly to ease debugging)
@@ -2758,7 +2806,7 @@ struct ImFontAtlas
     // The pitch is always = Width * BytesPerPixels (1 or 4)
     // Building in RGBA32 format is provided for convenience and compatibility, but note that unless you manually manipulate or copy color data into
     // the texture (e.g. when using the AddCustomRect*** api), then the RGB pixels emitted will always be white (~75% of memory/bandwidth waste.
-    IMGUI_API bool              Build();                    // Build pixels data. This is called automatically for you by the GetTexData*** functions.
+    IMGUI_API bool              Build(ImDispatch dispatcher = NULL);                    // Build pixels data. This is called automatically for you by the GetTexData*** functions.
     IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
     bool                        IsBuilt() const             { return Fonts.Size > 0 && TexReady; } // Bit ambiguous: used to detect when user didn't built texture but effectively we should check TexID != 0 except that would be backend dependent...
@@ -2850,6 +2898,7 @@ struct ImFont
     ImVector<ImWchar>           IndexLookup;        // 12-16 // out //            // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
     const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
+    bool                        SignedDistanceFont; // 1     //                   // Font was loaded as a signed distance font
 
     // Members: Cold ~32/40 bytes
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out //            // What we has been loaded into
@@ -2877,14 +2926,14 @@ struct ImFont
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
     IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
     IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
-    IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c) const;
-    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+    IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c, bool sdf = false, float shadow_size = 0.0, ImU32 shadow_start = IM_COL32_BLACK_TRANS, ImU32 shadow_end = IM_COL32_BLACK_TRANS) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false, bool sdf = false, float shadow_size = 0.0, ImU32 shadow_start = IM_COL32_BLACK_TRANS, ImU32 shadow_end = IM_COL32_BLACK_TRANS) const;
 
     // [Internal] Don't use!
     IMGUI_API void              BuildLookupTable();
     IMGUI_API void              ClearOutputData();
     IMGUI_API void              GrowIndex(int new_size);
-    IMGUI_API void              AddGlyph(const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x);
+    IMGUI_API void              AddGlyph(const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x, float scale = 1.0f);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);

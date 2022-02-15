@@ -117,11 +117,14 @@ bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
 
 #pragma mark - Dear ImGui Metal Backend API
 
-bool ImGui_ImplMetal_Init(id<MTLDevice> device)
+bool ImGui_ImplMetal_Init(id<MTLDevice> device, ImGuiBackendFlags flags)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceFonts);
+    io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceShapes);
+    io.BackendFlags |= ImGuiBackendFlags_ProvocingVertexFirst;
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -354,7 +357,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     NSError *error = nil;
 
-    NSString *shaderSource = @""
+    NSString *shaderSourceDirect = @""
     "#include <metal_stdlib>\n"
     "using namespace metal;\n"
     "\n"
@@ -390,6 +393,91 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     "    return half4(in.color) * texColor;\n"
     "}\n";
 
+#ifndef IMGUI_DISABLE_SDF
+    NSString *shaderSourceSDF = @""
+    "#include <metal_stdlib>\n"
+    "using namespace metal;\n"
+    "\n"
+    "struct Uniforms {\n"
+    "    float4x4 projectionMatrix;\n"
+    "};\n"
+    "\n"
+    "struct VertexIn {\n"
+    "    float2 position        [[attribute(0)]];\n"
+    "    float2 texCoords       [[attribute(1)]];\n"
+    "    uchar4 innerColor      [[attribute(2)]];\n"
+    "    uchar4 startOuterColor [[attribute(3)]];\n"
+    "    uchar4 endOuterColor   [[attribute(4)]];\n"
+    "    float a                [[attribute(5)]];\n"
+    "    float b                [[attribute(6)]];\n"
+    "    float w                [[attribute(7)]];\n"
+    "};\n"
+    "\n"
+    "struct VertexOut {\n"
+    "    float4 position [[position]];\n"
+    "    float2 texCoords;\n"
+    "    float4 innerColor;\n"
+    "    float4 startOuterColor;\n"
+    "    float4 endOuterColor;\n"
+    "    float a                [[flat]];\n"
+    "    float b                [[flat]];\n"
+    "    float w                [[flat]];\n"
+    "};\n"
+    "\n"
+    "vertex VertexOut vertex_main(VertexIn in                 [[stage_in]],\n"
+    "                             constant Uniforms &uniforms [[buffer(1)]]) {\n"
+    "    VertexOut out;\n"
+    "    out.position = uniforms.projectionMatrix * float4(in.position, 0, 1);\n"
+    "    out.texCoords = in.texCoords;\n"
+    "    out.innerColor = float4(in.innerColor) / float4(255.0);\n"
+    "    out.startOuterColor = float4(in.startOuterColor) / float4(255.0);\n"
+    "    out.endOuterColor = float4(in.endOuterColor) / float4(255.0);\n"
+    "    out.a = in.a;\n"
+    "    out.b = in.b;\n"
+    "    out.w = in.w;\n"
+    "    return out;\n"
+    "}\n"
+    "\n"
+    "float stretch(float low, float high, float x) {\n"
+    "  return clamp((x-low)/(high-low), 0.0, 1.0);\n"
+    "}\n"
+    "[[early_fragment_tests]] fragment float4 fragment_main(VertexOut in [[stage_in]],\n"
+    "                             texture2d<half, access::sample> texture [[texture(0)]]) {\n"
+    "    constexpr sampler linearSampler(coord::normalized, min_filter::linear, mag_filter::linear, mip_filter::linear);\n"
+    "    if (in.a == 0) {\n"
+    "        half4 c = texture.sample(linearSampler, in.texCoords);\n"
+    "        return float4(c) * in.innerColor;\n"
+    "    }\n"
+    "    float distance;\n"
+    "    if (in.a >= 2.0) {\n"
+    "        in.a = in.a - 2.0;\n"
+    "        distance = 1.0 - clamp(length(in.texCoords), 0.0, 1.0);\n"
+    "    } else {\n"
+    "        distance = texture.sample(linearSampler, in.texCoords).a;\n"
+    "    }\n"
+    "    if (distance >= in.a + in.w) {\n"
+    "        return in.innerColor;\n"
+    "    }\n"
+    "  if (distance <= in.b - in.w) { discard_fragment(); return float4(0.0, 0.0, 0.0, 0.0); } \n"
+    "  float m = stretch(in.a - in.w, min(1.0, in.a + in.w), distance); \n"
+    "  if (in.a <= in.b) {\n"
+    "    return float4(in.innerColor.rgb, in.innerColor.a * m);\n"
+    "  }\n"
+    "  float outerMix = stretch(in.b, in.a, distance); \n"
+    "  float4 outer = mix(in.endOuterColor, in.startOuterColor, outerMix); \n"
+    "  outer.a *= stretch(in.b - in.w, in.b + in.w, distance); \n"
+    "  float ia = m * in.innerColor.a;\n"
+    "  float oa = (1 - m) * outer.a;\n"
+    "  float a = ia + oa;\n"
+    "  return float4((in.innerColor.rgb * ia + outer.rgb * oa) / a, a);\n"
+    "}\n";
+
+    bool sdf = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts) | (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceShapes);
+    NSString* shaderSource = sdf ? shaderSourceSDF : shaderSourceDirect;
+#else
+    NSString* shaderSource = shaderSourceDirect;
+#endif
+
     id<MTLLibrary> library = [device newLibraryWithSource:shaderSource options:nil error:&error];
     if (library == nil)
     {
@@ -416,6 +504,23 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     vertexDescriptor.attributes[2].offset = IM_OFFSETOF(ImDrawVert, col);
     vertexDescriptor.attributes[2].format = MTLVertexFormatUChar4; // color
     vertexDescriptor.attributes[2].bufferIndex = 0;
+#ifndef IMGUI_DISABLE_SDF
+    vertexDescriptor.attributes[3].offset = IM_OFFSETOF(ImDrawVert, startOuterColor);
+    vertexDescriptor.attributes[3].format = MTLVertexFormatUChar4; // color
+    vertexDescriptor.attributes[3].bufferIndex = 0;
+    vertexDescriptor.attributes[4].offset = IM_OFFSETOF(ImDrawVert, endOuterColor);
+    vertexDescriptor.attributes[4].format = MTLVertexFormatUChar4; // color
+    vertexDescriptor.attributes[4].bufferIndex = 0;
+    vertexDescriptor.attributes[5].offset = IM_OFFSETOF(ImDrawVert, a);
+    vertexDescriptor.attributes[5].format = MTLVertexFormatFloat;
+    vertexDescriptor.attributes[5].bufferIndex = 0;
+    vertexDescriptor.attributes[6].offset = IM_OFFSETOF(ImDrawVert, b);
+    vertexDescriptor.attributes[6].format = MTLVertexFormatFloat;
+    vertexDescriptor.attributes[6].bufferIndex = 0;
+    vertexDescriptor.attributes[7].offset = IM_OFFSETOF(ImDrawVert, w);
+    vertexDescriptor.attributes[7].format = MTLVertexFormatFloat;
+    vertexDescriptor.attributes[7].bufferIndex = 0;
+#endif
     vertexDescriptor.layouts[0].stepRate = 1;
     vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
     vertexDescriptor.layouts[0].stride = sizeof(ImDrawVert);

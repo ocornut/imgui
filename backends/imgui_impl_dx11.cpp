@@ -372,6 +372,10 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
     if (bd->pFontSampler)
         ImGui_ImplDX11_InvalidateDeviceObjects();
 
+#ifndef IMGUI_DISABLE_SDF
+    bool sdf = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceFonts) | (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_SignedDistanceShapes);
+#endif
+
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
     // If you would like to use this DX11 sample code but remove this dependency you can:
     //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
@@ -380,7 +384,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create the vertex shader
     {
-        static const char* vertexShader =
+        static const char* vertexShaderDirect =
             "cbuffer vertexBuffer : register(b0) \
             {\
               float4x4 ProjectionMatrix; \
@@ -408,9 +412,63 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
               return output;\
             }";
 
+#ifndef IMGUI_DISABLE_SDF
+        static const char* vertexShaderSDF =
+            "cbuffer vertexBuffer : register(b0) \
+            {\
+              float4x4 ProjectionMatrix; \
+            };\
+            struct VS_INPUT\
+            {\
+              float2 pos : POSITION;\
+              float2 uv  : TEXCOORD0;\
+              float4 innerColor : COLOR0;\
+              float4 startOuterColor : COLOR1;\
+              float4 endOuterColor : COLOR2;\
+              float a : COLOR3; \
+              float b : COLOR4; \
+              float w : COLOR5; \
+            };\
+            \
+            struct PS_INPUT\
+            {\
+              float4 pos : SV_POSITION;\
+              float2 uv  : TEXCOORD0;\
+              float4 innerColor : COLOR0;\
+              float4 startOuterColor : COLOR1;\
+              float4 endOuterColor : COLOR2;\
+              nointerpolation float a : COLOR3; \
+              nointerpolation float b : COLOR4; \
+              nointerpolation float w : COLOR5; \
+            };\
+            \
+            PS_INPUT main(VS_INPUT input)\
+            {\
+              PS_INPUT output;\
+              output.pos = mul(ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
+              output.uv  = input.uv;\
+              output.innerColor = input.innerColor;\
+              output.startOuterColor = input.startOuterColor;\
+              output.endOuterColor = input.endOuterColor;\
+              output.a = input.a;\
+              output.b = input.b;\
+              output.w = input.w;\
+              return output;\
+            }";
+
+        const char* vertexShader = sdf ? vertexShaderSDF : vertexShaderDirect;
+#else
+        const char* vertexShader = vertexShaderDirect;
+#endif
+
         ID3DBlob* vertexShaderBlob;
-        if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_4_0", 0, 0, &vertexShaderBlob, NULL)))
+        ID3DBlob* pError;
+        if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_4_0", 0, 0, &vertexShaderBlob, &pError))) {
+            if (pError) {
+                fprintf(stderr, "VertexShader: %s\n", (char*)pError->GetBufferPointer());
+            }
             return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
+        }
         if (bd->pd3dDevice->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), NULL, &bd->pVertexShader) != S_OK)
         {
             vertexShaderBlob->Release();
@@ -420,12 +478,24 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         // Create the input layout
         D3D11_INPUT_ELEMENT_DESC local_layout[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),   D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#ifndef IMGUI_DISABLE_SDF
+            { "COLOR",    1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, startOuterColor),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    2, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, endOuterColor),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    3, DXGI_FORMAT_R32_FLOAT,      0, (UINT)IM_OFFSETOF(ImDrawVert, a), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    4, DXGI_FORMAT_R32_FLOAT,      0, (UINT)IM_OFFSETOF(ImDrawVert, b), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    5, DXGI_FORMAT_R32_FLOAT,      0, (UINT)IM_OFFSETOF(ImDrawVert, w), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#endif
         };
+#ifndef IMGUI_DISABLE_SDF
+        if (bd->pd3dDevice->CreateInputLayout(local_layout, sdf ? 8 : 3, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &bd->pInputLayout) != S_OK)
+#else
         if (bd->pd3dDevice->CreateInputLayout(local_layout, 3, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &bd->pInputLayout) != S_OK)
+#endif
         {
+            assert(false);
             vertexShaderBlob->Release();
             return false;
         }
@@ -445,7 +515,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create the pixel shader
     {
-        static const char* pixelShader =
+        static const char* pixelShaderDirect =
             "struct PS_INPUT\
             {\
             float4 pos : SV_POSITION;\
@@ -461,9 +531,61 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
             return out_col; \
             }";
 
+#ifndef IMGUI_DISABLE_SDF
+        static const char* pixelShaderSDF =
+            "struct PS_INPUT\
+            {\
+            float4 pos : SV_POSITION;\
+            float2 uv  : TEXCOORD0;\
+            float4 innerColor : COLOR0;\
+            float4 startOuterColor : COLOR1;\
+            float4 endOuterColor : COLOR2;\
+            nointerpolation float a : COLOR3; \
+            nointerpolation float b : COLOR4; \
+            nointerpolation float w : COLOR5; \
+            }; \
+            sampler sampler0; \
+            Texture2D texture0; \
+            \
+            float stretch(float low, float high, float x) {\n"
+            "    return clamp((x-low)/(high-low), 0.0, 1.0);\
+            }\
+            [earlydepthstencil] float4 main(PS_INPUT input) : SV_Target {\
+                if (input.a == 0.0) \
+                    return input.innerColor * texture0.Sample(sampler0, input.uv); \
+                float distance;\
+                if (input.a >= 2.0) {\
+                    input.a = input.a - 2.0;\
+                    distance = 1.0 - clamp(length(input.uv), 0.0, 1.0);\
+                } else {\
+                    distance = texture0.Sample(sampler0, input.uv).a;\
+                }\
+                if (distance >= input.a + input.w) return input.innerColor;\
+                if (distance <= input.b - input.w) discard; \
+                float m = stretch(input.a - input.w, min(1.0, input.a + input.w), distance);\
+                if (input.a <= input.b) \
+                    return float4(input.innerColor.rgb, input.innerColor.a * m);\
+                float outerMix = stretch(input.b, input.a, distance);\
+                float4 outer = lerp(input.endOuterColor, input.startOuterColor, outerMix);\
+                outer.a *= stretch(input.b - input.w, input.b + input.w, distance);\
+                float ia = m * input.innerColor.a;\
+                float oa = (1 - m) * outer.a;\
+                float a = ia + oa;\
+                return float4((input.innerColor.rgb * ia + outer.rgb * oa) / a, a);\
+            }";
+        const char* pixelShader = sdf ? pixelShaderSDF : pixelShaderDirect;
+#else
+        const char* pixelShader = pixelShaderDirect;
+#endif
+
         ID3DBlob* pixelShaderBlob;
-        if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_4_0", 0, 0, &pixelShaderBlob, NULL)))
+        ID3DBlob* pError;
+        if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_4_0", 0, 0, &pixelShaderBlob, &pError))) {
+            if (pError) {
+                fprintf(stderr, "PixelShader: %s\n", (char*)pError->GetBufferPointer());
+            }
             return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
+        }
         if (bd->pd3dDevice->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), NULL, &bd->pPixelShader) != S_OK)
         {
             pixelShaderBlob->Release();
@@ -537,7 +659,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
     if (bd->pVertexShader)          { bd->pVertexShader->Release(); bd->pVertexShader = NULL; }
 }
 
-bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_context)
+bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_context, ImGuiBackendFlags flags)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -547,6 +669,9 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx11";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceFonts);
+    io.BackendFlags |= (flags & ImGuiBackendFlags_SignedDistanceShapes);
+    io.BackendFlags |= ImGuiBackendFlags_ProvocingVertexFirst;
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = NULL;
