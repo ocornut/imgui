@@ -41,6 +41,7 @@ Other Changes:
 
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
+- ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 
 
