@@ -39,6 +39,7 @@ Breaking changes:
 
 Other Changes:
 
+- Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
