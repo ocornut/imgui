@@ -292,8 +292,8 @@ for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
 ## Using Font Data Embedded In Source Code
 
 - Compile and use [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) to create a compressed C style array that you can embed in source code.
-- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instruction on how to use the tool.
-- You may find a precompiled version binary_to_compressed_c.exe for Windows instead of demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
+- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instructions on how to use the tool.
+- You may find a precompiled version binary_to_compressed_c.exe for Windows inside the demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
 - The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the actual binary will be about 20% bigger.
 
 Then load the font with:
@@ -309,7 +309,7 @@ ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_ba
 
 ## About filenames
 
-**Please note that many new C/C++ users have issues their files _because the filename they provide is wrong_.**
+**Please note that many new C/C++ users have issues loading their files _because the filename they provide is wrong_.**
 
 Two things to watch for:
 - Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it oftens start from the folder where object or executable files are stored.

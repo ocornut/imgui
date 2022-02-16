@@ -17,7 +17,7 @@ LIBS = -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -f
 LIBS += `sdl2-config --libs`
 LIBS += -L/usr/local/lib
 
-CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I/usr/local/include
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I/usr/local/include
 CXXFLAGS += `sdl2-config --cflags`
 CXXFLAGS += -Wall -Wformat
 CFLAGS = $(CXXFLAGS)

@@ -72,7 +72,7 @@ Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui
 Please read the comments and instruction at the top of each file.
 Please read FAQ at http://www.dearimgui.org/faq
 
-If you are using of the backend provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
+If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
 Changelog, so if you want to update them later it will be easier to catch up with what changed.
 
@@ -222,7 +222,7 @@ If you are interested in using Cmake to build and links examples, see:
 **About mouse cursor latency**
 
 Dear ImGui has no particular extra lag for most behaviors,
-e.g. the value of 'io.MousePos' provided at the time of NewFrame() will result in windows being moved
+e.g. the last value passed to 'io.AddMousePosEvent()' before NewFrame() will result in windows being moved
 to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience should be pleasant.
 
 However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
