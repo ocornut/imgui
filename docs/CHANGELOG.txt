@@ -41,8 +41,11 @@ Other Changes:
 
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
+- IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
+  return value is overriden by focus when gamepad/keyboard navigation is active.
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
+- Misc: Fixed IsAnyItemHovered() returning false when using navigation.
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
