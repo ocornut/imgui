@@ -39,6 +39,8 @@ Breaking changes:
 
 Other Changes:
 
+- Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
+  clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]

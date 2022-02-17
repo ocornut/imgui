@@ -2565,15 +2565,14 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
     ImGuiContext& g = *GImGui;
-    if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
-        ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
-    ItemsCount = -1;
-
-    // Restore temporary buffer and fix back pointers which may be invalidated when nesting
     if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
     {
+        // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
+        if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
+            ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
+
+        // Restore temporary buffer and fix back pointers which may be invalidated when nesting
         IM_ASSERT(data->ListClipper == this);
         data->StepNo = data->Ranges.Size;
         if (--g.ClipperTempDataStacked > 0)
@@ -2583,6 +2582,7 @@ void ImGuiListClipper::End()
         }
         TempData = NULL;
     }
+    ItemsCount = -1;
 }
 
 void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
@@ -2715,8 +2715,8 @@ bool ImGuiListClipper::Step()
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
     if (ItemsCount < INT_MAX)
         ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
-    ItemsCount = -1;
 
+    End();
     return false;
 }
 
