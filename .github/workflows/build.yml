@@ -246,7 +246,7 @@ jobs:
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
+          g++ -I. -std=c++11 -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
 
     - name: Build example_null (freetype)
       run: |
@@ -262,7 +262,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with ImWchar32)
       run: |
@@ -274,7 +274,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
       run: |
@@ -287,7 +287,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
       run: |
@@ -299,7 +299,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_KEYIO)
       run: |
@@ -311,7 +311,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_METRICS_WINDOW)
       run: |
@@ -324,7 +324,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
       run: |
@@ -336,7 +336,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
       run: |
@@ -348,7 +348,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
       run: |
@@ -368,7 +368,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (without c++ runtime, Clang)
       run: |
@@ -380,7 +380,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        clang++ -I. -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+        clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
     - name: Build example_glfw_opengl2
       run: make -C examples/example_glfw_opengl2
@@ -397,7 +397,7 @@ jobs:
       run: make -C examples/example_sdl_opengl3
 
     - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-      run: g++ -c -I. -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
+      run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
   MacOS:
     runs-on: macos-latest
@@ -420,7 +420,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        clang++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+        clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (without c++ runtime)
       run: |
@@ -431,7 +431,7 @@ jobs:
         #include "examples/example_null/main.cpp"
 
         EOF
-        clang++ -I. -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+        clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
     - name: Build example_glfw_opengl2
       run: make -C examples/example_glfw_opengl2

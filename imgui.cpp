@@ -1,4 +1,4 @@
-// dear imgui, v1.87
+// dear imgui, 1.88 WIP
 // (main code and documentation)
 
 // Help:
@@ -1216,7 +1216,7 @@ void ImGuiIO::AddInputCharacter(unsigned int c)
         return;
 
     ImGuiInputEvent e;
-    e.Type = ImGuiInputEventType_Char;
+    e.Type = ImGuiInputEventType_Text;
     e.Source = ImGuiInputSource_Keyboard;
     e.Text.Char = c;
     g.InputEventsQueue.push_back(e);
@@ -1286,7 +1286,7 @@ void ImGuiIO::ClearInputKeys()
         KeysData[n].DownDurationPrev = -1.0f;
     }
     KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
-    KeyMods = KeyModsPrev = ImGuiKeyModFlags_None;
+    KeyMods = ImGuiKeyModFlags_None;
     for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
         NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
 }
@@ -2614,15 +2614,14 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
     ImGuiContext& g = *GImGui;
-    if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
-        ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
-    ItemsCount = -1;
-
-    // Restore temporary buffer and fix back pointers which may be invalidated when nesting
     if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
     {
+        // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
+        if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
+            ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
+
+        // Restore temporary buffer and fix back pointers which may be invalidated when nesting
         IM_ASSERT(data->ListClipper == this);
         data->StepNo = data->Ranges.Size;
         if (--g.ClipperTempDataStacked > 0)
@@ -2632,6 +2631,7 @@ void ImGuiListClipper::End()
         }
         TempData = NULL;
     }
+    ItemsCount = -1;
 }
 
 void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
@@ -2764,8 +2764,8 @@ bool ImGuiListClipper::Step()
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
     if (ItemsCount < INT_MAX)
         ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
-    ItemsCount = -1;
 
+    End();
     return false;
 }
 
@@ -3544,7 +3544,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavDisableMouseHover && !g.NavDisableHighlight)
+    if (g.NavDisableMouseHover && !g.NavDisableHighlight && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
         if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
             return false;
@@ -3607,8 +3607,6 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
         return false;
-    if (g.NavDisableMouseHover)
-        return false;
     if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
     {
         g.HoveredIdDisabled = true;
@@ -3643,6 +3641,9 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         if (g.DebugItemPickerBreakId == id)
             IM_DEBUG_BREAK();
     }
+
+    if (g.NavDisableMouseHover)
+        return false;
 
     return true;
 }
@@ -4089,9 +4090,6 @@ static void ImGui::UpdateKeyboardInputs()
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
 
-    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
-    io.KeyMods = GetMergedKeyModFlags();
-
     // Import legacy keys or verify they are not used
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     if (io.BackendUsingLegacyKeyArrays == 0)
@@ -4132,6 +4130,9 @@ static void ImGui::UpdateKeyboardInputs()
         }
     }
 #endif
+
+    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
+    io.KeyMods = GetMergedKeyModFlags();
 
     // Clear gamepad data if disabled
     if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
@@ -5107,7 +5108,6 @@ void ImGui::EndFrame()
     // Clear Input data for next frame
     g.IO.MouseWheel = g.IO.MouseWheelH = 0.0f;
     g.IO.InputQueueCharacters.resize(0);
-    g.IO.KeyModsPrev = g.IO.KeyMods; // doing it here is better than in NewFrame() as we'll tolerate backend writing to KeyMods. If we want to firmly disallow it we should detect it.
     memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 
     CallContextHooks(&g, ImGuiContextHookType_EndFramePost);
@@ -8254,14 +8254,8 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
     const float t = g.IO.MouseDownDuration[button];
     if (t == 0.0f)
         return true;
-
     if (repeat && t > g.IO.KeyRepeatDelay)
-    {
-        // FIXME: 2019/05/03: Our old repeat code was wrong here and led to doubling the repeat rate, which made it an ok rate for repeat on mouse hold.
-        int amount = CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate * 0.50f);
-        if (amount > 0)
-            return true;
-    }
+        return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
     return false;
 }
 
@@ -8483,7 +8477,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
                 }
             }
         }
-        else if (e->Type == ImGuiInputEventType_Char)
+        else if (e->Type == ImGuiInputEventType_Text)
         {
             // Trickling Rule: Stop processing queued events if keys/mouse have been interacted with
             if (trickle_fast_inputs && (key_changed || mouse_button_changed != 0 || mouse_moved || mouse_wheeled))
@@ -11452,7 +11446,7 @@ static void ImGui::NavUpdateWindowing()
     // - Testing that only Alt is tested prevents Alt+Shift or AltGR from toggling menu layer.
     // - AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl). But even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
 	const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    if (nav_keyboard_active && io.KeyMods == ImGuiKeyModFlags_Alt && (io.KeyModsPrev & ImGuiKeyModFlags_Alt) == 0)
+    if (nav_keyboard_active && IsKeyPressed(ImGuiKey_ModAlt))
     {
         g.NavWindowingToggleLayer = true;
         g.NavInputSource = ImGuiInputSource_Keyboard;
@@ -11465,13 +11459,12 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingToggleLayer = false;
 
         // Apply layer toggle on release
-        // Important: we don't assume that Alt was previously held in order to handle loss of focus when backend calls io.AddFocusEvent(false)
         // Important: as before version <18314 we lacked an explicit IO event for focus gain/loss, we also compare mouse validity to detect old backends clearing mouse pos on focus loss.
-        if (!(io.KeyMods & ImGuiKeyModFlags_Alt) && (io.KeyModsPrev & ImGuiKeyModFlags_Alt) && g.NavWindowingToggleLayer)
+        if (IsKeyReleased(ImGuiKey_ModAlt) && g.NavWindowingToggleLayer)
             if (g.ActiveId == 0 || g.ActiveIdAllowOverlap)
                 if (IsMousePosValid(&io.MousePos) == IsMousePosValid(&io.MousePosPrev))
                     apply_toggle_layer = true;
-        if (!io.KeyAlt)
+        if (!IsKeyDown(ImGuiKey_ModAlt))
             g.NavWindowingToggleLayer = false;
     }
 
@@ -17956,7 +17949,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
 
         int active_id_using_key_input_count = 0;
-        for (int n = 0; n < ImGuiKey_NamedKey_COUNT; n++)
+        for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
             active_id_using_key_input_count += g.ActiveIdUsingKeyInputMask[n] ? 1 : 0;
         Text("ActiveIdUsing: Wheel: %d, NavDirMask: %X, NavInputMask: %X, KeyInputMask: %d key(s)", g.ActiveIdUsingMouseWheel, g.ActiveIdUsingNavDirMask, g.ActiveIdUsingNavInputMask, active_id_using_key_input_count);
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
@@ -18674,27 +18667,44 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     ImGuiStackLevelInfo* info = &tool->Results[tool->StackLevel];
     IM_ASSERT(info->ID == id && info->QueryFrameCount > 0);
 
-    int data_len;
     switch (data_type)
     {
     case ImGuiDataType_S32:
         ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%d", (int)(intptr_t)data_id);
         break;
     case ImGuiDataType_String:
-        data_len = data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)strlen((const char*)data_id);
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "\"%.*s\"", data_len, (const char*)data_id);
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)strlen((const char*)data_id), (const char*)data_id);
         break;
     case ImGuiDataType_Pointer:
         ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "(void*)0x%p", data_id);
         break;
     case ImGuiDataType_ID:
-        if (info->Desc[0] == 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
-            ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
+        if (info->Desc[0] != 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
+            return;
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
         break;
     default:
         IM_ASSERT(0);
     }
     info->QuerySuccess = true;
+    info->DataType = data_type;
+}
+
+static int StackToolFormatLevelInfo(ImGuiStackTool* tool, int n, bool format_for_ui, char* buf, size_t buf_size)
+{
+    ImGuiStackLevelInfo* info = &tool->Results[n];
+    ImGuiWindow* window = (info->Desc[0] == 0 && n == 0) ? ImGui::FindWindowByID(info->ID) : NULL;
+    if (window)                                                                 // Source: window name (because the root ID don't call GetID() and so doesn't get hooked)
+        return ImFormatString(buf, buf_size, format_for_ui ? "\"%s\" [window]" : "%s", window->Name);
+    if (info->QuerySuccess)                                                     // Source: GetID() hooks (prioritize over ItemInfo() because we frequently use patterns like: PushID(str), Button("") where they both have same id)
+        return ImFormatString(buf, buf_size, (format_for_ui && info->DataType == ImGuiDataType_String) ? "\"%s\"" : "%s", info->Desc);
+    if (tool->StackLevel < tool->Results.Size)                                  // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
+        return (*buf = 0);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    if (const char* label = ImGuiTestEngine_FindItemDebugLabel(GImGui, info->ID))   // Source: ImGuiTestEngine's ItemInfo()
+        return ImFormatString(buf, buf_size, format_for_ui ? "??? \"%s\"" : "%s", label);
+#endif
+    return ImFormatString(buf, buf_size, "???");
 }
 
 // Stack Tool: Display UI
@@ -18710,6 +18720,7 @@ void ImGui::ShowStackToolWindow(bool* p_open)
     }
 
     // Display hovered/active status
+    ImGuiStackTool* tool = &g.DebugStackTool;
     const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
     const ImGuiID active_id = g.ActiveId;
 #ifdef IMGUI_ENABLE_TEST_ENGINE
@@ -18720,8 +18731,33 @@ void ImGui::ShowStackToolWindow(bool* p_open)
     SameLine();
     MetricsHelpMarker("Hover an item with the mouse to display elements of the ID Stack leading to the item's final ID.\nEach level of the stack correspond to a PushID() call.\nAll levels of the stack are hashed together to make the final ID of a widget (ID displayed at the bottom level of the stack).\nRead FAQ entry about the ID stack for details.");
 
+    // CTRL+C to copy path
+    const float time_since_copy = (float)g.Time - tool->CopyToClipboardLastTime;
+    Checkbox("Ctrl+C: copy path to clipboard", &tool->CopyToClipboardOnCtrlC);
+    SameLine();
+    TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
+    if (tool->CopyToClipboardOnCtrlC && IsKeyDown(ImGuiKey_ModCtrl) && IsKeyPressed(ImGuiKey_C))
+    {
+        tool->CopyToClipboardLastTime = (float)g.Time;
+        char* p = g.TempBuffer;
+        char* p_end = p + IM_ARRAYSIZE(g.TempBuffer);
+        for (int stack_n = 0; stack_n < tool->Results.Size && p + 3 < p_end; stack_n++)
+        {
+            *p++ = '/';
+            char level_desc[256];
+            StackToolFormatLevelInfo(tool, stack_n, false, level_desc, IM_ARRAYSIZE(level_desc));
+            for (int n = 0; level_desc[n] && p + 2 < p_end; n++)
+            {
+                if (level_desc[n] == '/')
+                    *p++ = '\\';
+                *p++ = level_desc[n];
+            }
+        }
+        *p = '\0';
+        SetClipboardText(g.TempBuffer);
+    }
+
     // Display decorated stack
-    ImGuiStackTool* tool = &g.DebugStackTool;
     tool->LastActiveFrame = g.FrameCount;
     if (tool->Results.Size > 0 && BeginTable("##table", 3, ImGuiTableFlags_Borders))
     {
@@ -18735,23 +18771,9 @@ void ImGui::ShowStackToolWindow(bool* p_open)
             ImGuiStackLevelInfo* info = &tool->Results[n];
             TableNextColumn();
             Text("0x%08X", (n > 0) ? tool->Results[n - 1].ID : 0);
-
             TableNextColumn();
-            ImGuiWindow* window = (info->Desc[0] == 0 && n == 0) ? FindWindowByID(info->ID) : NULL;
-            if (window)                                         // Source: window name (because the root ID don't call GetID() and so doesn't get hooked)
-                Text("\"%s\" [window]", window->Name);
-            else if (info->QuerySuccess)                        // Source: GetID() hooks (prioritize over ItemInfo() because we frequently use patterns like: PushID(str), Button("") where they both have same id)
-                TextUnformatted(info->Desc);
-            else if (tool->StackLevel >= tool->Results.Size)    // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
-            {
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-                if (const char* label = ImGuiTestEngine_FindItemDebugLabel(&g, info->ID))    // Source: ImGuiTestEngine's ItemInfo()
-                    Text("??? \"%s\"", label);
-                else
-#endif
-                    TextUnformatted("???");
-            }
-
+            StackToolFormatLevelInfo(tool, n, true, g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer));
+            TextUnformatted(g.TempBuffer);
             TableNextColumn();
             Text("0x%08X", info->ID);
             if (n == tool->Results.Size - 1)

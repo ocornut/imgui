@@ -1,4 +1,4 @@
-// dear imgui, v1.87
+// dear imgui, v1.88 WIP
 // (widgets code)
 
 /*
@@ -82,6 +82,7 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"                // warning: format not a string literal, format string not checked
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"  // warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
 #endif
 
 //-------------------------------------------------------------------------
@@ -6937,7 +6938,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     if (!enabled)
         EndDisabled();
 
-    const bool hovered = (g.HoveredId == id) && enabled;
+    const bool hovered = (g.HoveredId == id) && enabled && !g.NavDisableMouseHover;
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
