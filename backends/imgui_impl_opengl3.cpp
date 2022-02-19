@@ -171,6 +171,16 @@
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
 #endif
 
+// Desktop GL 3.0+ can enable/disable each draw buffer separately
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && defined(GL_VERSION_3_0)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_INDEXED
+#endif
+
+// Desktop GL 4.0+ can specify independent blending parameters for each draw buffer
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && defined(GL_VERSION_4_0)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_BLEND
+#endif
+
 // Desktop GL use extension detection
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
@@ -310,9 +320,23 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_INDEXED
+    if (bd->GlVersion >= 300) glEnablei(GL_BLEND, 0); else glEnable(GL_BLEND);
+#else
     glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+#endif
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_BLEND
+    if (bd->GlVersion >= 400)
+    {
+        glBlendEquationi(0, GL_FUNC_ADD);
+        glBlendFuncSeparatei(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
+    else
+#endif
+    {
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -408,13 +432,37 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 #endif
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
-    GLenum last_blend_src_rgb; glGetIntegerv(GL_BLEND_SRC_RGB, (GLint*)&last_blend_src_rgb);
-    GLenum last_blend_dst_rgb; glGetIntegerv(GL_BLEND_DST_RGB, (GLint*)&last_blend_dst_rgb);
-    GLenum last_blend_src_alpha; glGetIntegerv(GL_BLEND_SRC_ALPHA, (GLint*)&last_blend_src_alpha);
-    GLenum last_blend_dst_alpha; glGetIntegerv(GL_BLEND_DST_ALPHA, (GLint*)&last_blend_dst_alpha);
-    GLenum last_blend_equation_rgb; glGetIntegerv(GL_BLEND_EQUATION_RGB, (GLint*)&last_blend_equation_rgb);
-    GLenum last_blend_equation_alpha; glGetIntegerv(GL_BLEND_EQUATION_ALPHA, (GLint*)&last_blend_equation_alpha);
+    GLenum last_blend_src_rgb;
+    GLenum last_blend_dst_rgb;
+    GLenum last_blend_src_alpha;
+    GLenum last_blend_dst_alpha;
+    GLenum last_blend_equation_rgb;
+    GLenum last_blend_equation_alpha;
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_BLEND
+    if (bd->GlVersion >= 400)
+    {
+        glGetIntegeri_v(GL_BLEND_SRC_RGB, 0, (GLint*)&last_blend_src_rgb);
+        glGetIntegeri_v(GL_BLEND_DST_RGB, 0, (GLint*)&last_blend_dst_rgb);
+        glGetIntegeri_v(GL_BLEND_SRC_ALPHA, 0, (GLint*)&last_blend_src_alpha);
+        glGetIntegeri_v(GL_BLEND_DST_ALPHA, 0, (GLint*)&last_blend_dst_alpha);
+        glGetIntegeri_v(GL_BLEND_EQUATION_RGB, 0, (GLint*)&last_blend_equation_rgb);
+        glGetIntegeri_v(GL_BLEND_EQUATION_ALPHA, 0, (GLint*)&last_blend_equation_alpha);
+    }
+    else
+#endif
+    {
+        glGetIntegerv(GL_BLEND_SRC_RGB, (GLint*)&last_blend_src_rgb);
+        glGetIntegerv(GL_BLEND_DST_RGB, (GLint*)&last_blend_dst_rgb);
+        glGetIntegerv(GL_BLEND_SRC_ALPHA, (GLint*)&last_blend_src_alpha);
+        glGetIntegerv(GL_BLEND_DST_ALPHA, (GLint*)&last_blend_dst_alpha);
+        glGetIntegerv(GL_BLEND_EQUATION_RGB, (GLint*)&last_blend_equation_rgb);
+        glGetIntegerv(GL_BLEND_EQUATION_ALPHA, (GLint*)&last_blend_equation_alpha);
+    }
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_INDEXED
+    GLboolean last_enable_blend = (bd->GlVersion >= 300) ? glIsEnabledi(GL_BLEND, 0) : glIsEnabled(GL_BLEND);
+#else
     GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
+#endif
     GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
     GLboolean last_enable_stencil_test = glIsEnabled(GL_STENCIL_TEST);
@@ -509,9 +557,28 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glBindVertexArray(last_vertex_array_object);
 #endif
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-    glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
-    glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
-    if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_BLEND
+    if (bd->GlVersion >= 400)
+    {
+        glBlendEquationSeparatei(0, last_blend_equation_rgb, last_blend_equation_alpha);
+        glBlendFuncSeparatei(0, last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
+    }
+    else
+#endif
+    {
+        glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
+        glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
+    }
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_BUFFERS_INDEXED
+    if (bd->GlVersion >= 300)
+    {
+        if (last_enable_blend) glEnablei(GL_BLEND, 0); else glDisablei(GL_BLEND, 0);
+    }
+    else
+#endif
+    {
+        if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+    }
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_stencil_test) glEnable(GL_STENCIL_TEST); else glDisable(GL_STENCIL_TEST);
