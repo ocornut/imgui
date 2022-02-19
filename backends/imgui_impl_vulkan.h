@@ -62,6 +62,8 @@ struct ImGui_ImplVulkan_InitInfo
     VkSampleCountFlagBits           MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT (0 -> default to VK_SAMPLE_COUNT_1_BIT)
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
+    bool                            UseDynamicRendering;
+    VkFormat                        ColorAttachmentFormat;
 };
 
 // Called by user code

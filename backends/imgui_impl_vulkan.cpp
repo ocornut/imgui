@@ -935,6 +935,19 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
     info.layout = bd->PipelineLayout;
     info.renderPass = renderPass;
     info.subpass = subpass;
+
+#if defined(VK_VERSION_1_3) || defined(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)
+    VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo = {};
+    pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    pipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    pipelineRenderingCreateInfo.pColorAttachmentFormats = &bd->VulkanInitInfo.ColorAttachmentFormat;
+
+    if (bd->VulkanInitInfo.UseDynamicRendering) {
+        info.pNext = &pipelineRenderingCreateInfo;
+        info.renderPass = nullptr; // Just make sure it's actually nullptr.
+    }
+#endif
+
     VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
     check_vk_result(err);
 }
@@ -1077,7 +1090,8 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
-    IM_ASSERT(render_pass != VK_NULL_HANDLE);
+    if (!info->UseDynamicRendering)
+        IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
     bd->RenderPass = render_pass;
