@@ -39,6 +39,10 @@ Breaking changes:
 
 Other Changes:
 
+- IO: Fixed backward-compatibility regression introduced in 1.87: (#4921, #4858)
+  - Direct accesses to io.KeysDown[] with legacy indices didn't work (with new backends).
+  - Direct accesses to io.KeysDown[GetKeyIndex(XXX)] would access invalid data (with old/new backends).
+  - Calling IsKeyDown() didn't have those problems, and is recommended as io.KeysDown[] is obsolete.
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
