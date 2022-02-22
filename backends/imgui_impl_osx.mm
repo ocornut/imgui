@@ -650,7 +650,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
         }
-        if (wheel_dx != 0.0 || wheel_dx != 0.0)
+        if (wheel_dx != 0.0 || wheel_dy != 0.0)
             io.AddMouseWheelEvent((float)wheel_dx * 0.1f, (float)wheel_dy * 0.1f);
 
         return io.WantCaptureMouse;

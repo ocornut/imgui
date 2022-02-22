@@ -106,6 +106,18 @@ Breaking changes:
 
 Other Changes:
 
+- IO: Fixed backward-compatibility regression introduced in 1.87: (#4921, #4858)
+  - Direct accesses to io.KeysDown[] with legacy indices didn't work (with new backends).
+  - Direct accesses to io.KeysDown[GetKeyIndex(XXX)] would access invalid data (with old/new backends).
+  - Calling IsKeyDown() didn't have those problems, and is recommended as io.KeysDown[] is obsolete.
+- IO: Fixed input queue trickling of interleaved keys/chars events (which are frequent especially
+  when holding down a key as OS submits chars repeat events) delaying key presses and mouse movements.
+  In particular, using the input system for fast game-like actions (e.g. WASD camera move) would
+  typically have been impacted, as well as holding a key while dragging mouse. Constraints have
+  been lifted and are now only happening when e.g. an InputText() widget is active. (#4921, #4858)
+  Not that even thought you shouldn't need to disable io.ConfigInputTrickleEventQueue, you can
+  technically dynamically change its setting based on the context (e.g. disable only when hovering
+  or interacting with a game/3D view).
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the

@@ -5739,12 +5739,18 @@ static void ShowDemoWindowMisc()
         ImGuiIO& io = ImGui::GetIO();
 
         // Display ImGuiIO output flags
-        ImGui::Text("WantCaptureMouse: %d", io.WantCaptureMouse);
-        ImGui::Text("WantCaptureMouseUnlessPopupClose: %d", io.WantCaptureMouseUnlessPopupClose);
-        ImGui::Text("WantCaptureKeyboard: %d", io.WantCaptureKeyboard);
-        ImGui::Text("WantTextInput: %d", io.WantTextInput);
-        ImGui::Text("WantSetMousePos: %d", io.WantSetMousePos);
-        ImGui::Text("NavActive: %d, NavVisible: %d", io.NavActive, io.NavVisible);
+        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Output");
+        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+        if (ImGui::TreeNode("Output"))
+        {
+            ImGui::Text("io.WantCaptureMouse: %d", io.WantCaptureMouse);
+            ImGui::Text("io.WantCaptureMouseUnlessPopupClose: %d", io.WantCaptureMouseUnlessPopupClose);
+            ImGui::Text("io.WantCaptureKeyboard: %d", io.WantCaptureKeyboard);
+            ImGui::Text("io.WantTextInput: %d", io.WantTextInput);
+            ImGui::Text("io.WantSetMousePos: %d", io.WantSetMousePos);
+            ImGui::Text("io.NavActive: %d, io.NavVisible: %d", io.NavActive, io.NavVisible);
+            ImGui::TreePop();
+        }
 
         // Display Mouse state
         IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Mouse State");
@@ -5777,6 +5783,7 @@ static void ShowDemoWindowMisc()
 #else
             struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { return key < 512 && ImGui::GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
             const ImGuiKey key_first = 0;
+            //ImGui::Text("Legacy raw:");       for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (io.KeysDown[key]) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
 #endif
             ImGui::Text("Keys down:");          for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (funcs::IsLegacyNativeDupe(key)) continue; if (ImGui::IsKeyDown(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d (%.02f secs)", ImGui::GetKeyName(key), key, ImGui::GetKeyData(key)->DownDuration); } }
             ImGui::Text("Keys pressed:");       for (ImGuiKey key = key_first; key < ImGuiKey_COUNT; key++) { if (funcs::IsLegacyNativeDupe(key)) continue; if (ImGui::IsKeyPressed(key)) { ImGui::SameLine(); ImGui::Text("\"%s\" %d", ImGui::GetKeyName(key), key); } }
