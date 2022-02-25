@@ -96,6 +96,7 @@ struct ImGui_ImplSDL2_Data
     Uint32          MouseWindowID;
     int             MouseButtonsDown;
     SDL_Cursor*     MouseCursors[ImGuiMouseCursor_COUNT];
+    int             PendingMouseLeaveFrame;
     char*           ClipboardTextData;
     bool            MouseCanUseGlobalState;
     bool            UseVulkan;
@@ -315,16 +316,19 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_WINDOWEVENT:
         {
-            // When capturing mouse, SDL will send a bunch of conflicting LEAVE/ENTER event on every mouse move, but the final ENTER tends to be right.
-            // However we won't get a correct LEAVE event for a captured window.
+            // - When capturing mouse, SDL will send a bunch of conflicting LEAVE/ENTER event on every mouse move, but the final ENTER tends to be right.
+            // - However we won't get a correct LEAVE event for a captured window.
+            // - In some cases, when detaching a window from main viewport SDL may send SDL_WINDOWEVENT_ENTER one frame too late,
+            //   causing SDL_WINDOWEVENT_LEAVE on previous frame to interrupt drag operation by clear mouse position. This is why
+            //   we delay process the SDL_WINDOWEVENT_LEAVE events by one frame. See issue #5012 for details.
             Uint8 window_event = event->window.event;
             if (window_event == SDL_WINDOWEVENT_ENTER)
-                bd->MouseWindowID = event->window.windowID;
-            if (window_event == SDL_WINDOWEVENT_LEAVE)
             {
-                bd->MouseWindowID = 0;
-                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+                bd->MouseWindowID = event->window.windowID;
+                bd->PendingMouseLeaveFrame = 0;
             }
+            if (window_event == SDL_WINDOWEVENT_LEAVE)
+                bd->PendingMouseLeaveFrame = ImGui::GetFrameCount() + 1;
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
             else if (window_event == SDL_WINDOWEVENT_FOCUS_LOST)
@@ -664,6 +668,12 @@ void ImGui_ImplSDL2_NewFrame()
     Uint64 current_time = SDL_GetPerformanceCounter();
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
+
+    if (bd->PendingMouseLeaveFrame && bd->PendingMouseLeaveFrame == ImGui::GetFrameCount())
+    {
+        bd->MouseWindowID = 0;
+        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+    }
 
     ImGui_ImplSDL2_UpdateMouseData();
     ImGui_ImplSDL2_UpdateMouseCursor();
