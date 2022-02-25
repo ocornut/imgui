@@ -4063,6 +4063,8 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     }
 }
 
+// This is called during NewFrame()->UpdateViewportsNewFrame() only.
+// Need to keep in sync with SetWindowPos()
 static void TranslateWindow(ImGuiWindow* window, const ImVec2& delta)
 {
     window->Pos += delta;
@@ -4072,6 +4074,7 @@ static void TranslateWindow(ImGuiWindow* window, const ImVec2& delta)
     window->DC.CursorPos += delta;
     window->DC.CursorStartPos += delta;
     window->DC.CursorMaxPos += delta;
+    window->DC.IdealMaxPos += delta;
 }
 
 static void ScaleWindow(ImGuiWindow* window, float scale)
@@ -7670,6 +7673,7 @@ void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     const ImVec2 old_pos = window->Pos;
     window->Pos = ImFloor(pos);
     ImVec2 offset = window->Pos - old_pos;
+    // FIXME: share code with TranslateWindow(), need to confirm whether the 3 rect modified by TranslateWindow() are desirable here.
     window->DC.CursorPos += offset;         // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
     window->DC.CursorMaxPos += offset;      // And more importantly we need to offset CursorMaxPos/CursorStartPos this so ContentSize calculation doesn't get affected.
     window->DC.IdealMaxPos += offset;
