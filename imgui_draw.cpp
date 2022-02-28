@@ -2576,6 +2576,17 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             float unused_x = 0.0f, unused_y = 0.0f;
             stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexWidth, atlas->TexHeight, glyph_i, &unused_x, &unused_y, &q, 0);
             dst_font->AddGlyph(&cfg, (ImWchar)codepoint, q.x0 + font_off_x, q.y0 + font_off_y, q.x1 + font_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
+
+            // TODO: TEMP: brute force all kerning information
+            int unitsPerEm = ttUSHORT(src_tmp.FontInfo.data + src_tmp.FontInfo.head + 18);
+            float scale = dst_font->FontSize / (float)unitsPerEm;
+            for (int glyph_j = 0; glyph_j < src_tmp.GlyphsCount; glyph_j++)
+            {
+                const int codepoint2 = src_tmp.GlyphsList[glyph_j];
+                int advance = stbtt_GetCodepointKernAdvance(&src_tmp.FontInfo, codepoint, codepoint2);
+                if (advance)
+                    dst_font->AddKerningPair((ImWchar)codepoint, (ImWchar)codepoint2, (float)advance * scale);
+            }
         }
     }
 
@@ -3106,10 +3117,11 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 // [SECTION] ImFont
 //-----------------------------------------------------------------------------
 
+static constexpr int ImFont_FrequentKerningPairs_MaxCodepoint = 128;
+
 ImFont::ImFont()
 {
     FontSize = 0.0f;
-    FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)-1;
     EllipsisChar = (ImWchar)-1;
     EllipsisWidth = EllipsisCharStep = 0.0f;
@@ -3123,6 +3135,7 @@ ImFont::ImFont()
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
+    FrequentKerningPairs.resize(ImFont_FrequentKerningPairs_MaxCodepoint * ImFont_FrequentKerningPairs_MaxCodepoint, 0.0f);
 }
 
 ImFont::~ImFont()
@@ -3133,9 +3146,8 @@ ImFont::~ImFont()
 void    ImFont::ClearOutputData()
 {
     FontSize = 0.0f;
-    FallbackAdvanceX = 0.0f;
     Glyphs.clear();
-    IndexAdvanceX.clear();
+    IndexedHotData.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
     ContainerAtlas = NULL;
@@ -3152,6 +3164,24 @@ static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_cha
     return (ImWchar)-1;
 }
 
+struct ImFont_BuildLookupTable_ImFontKerningPairWithOrder {
+    ImFontKerningPair Pair;
+    int Order;
+
+    static int Compare(const void* v1, const void* v2)
+    {
+        const ImFont_BuildLookupTable_ImFontKerningPairWithOrder* p1 = (const ImFont_BuildLookupTable_ImFontKerningPairWithOrder*)v1;
+        const ImFont_BuildLookupTable_ImFontKerningPairWithOrder* p2 = (const ImFont_BuildLookupTable_ImFontKerningPairWithOrder*)v2;
+        if (p1->Pair.Right != p2->Pair.Right)
+            return p1->Pair.Right > p2->Pair.Right ? 1 : -1;
+        if (p1->Pair.Left != p2->Pair.Left)
+            return p1->Pair.Left > p2->Pair.Left ? 1 : -1;
+        if (p1->Order != p2->Order)
+            return p1->Order > p2->Order ? 1 : -1;
+        return 0;
+    }
+};
+
 void ImFont::BuildLookupTable()
 {
     int max_codepoint = 0;
@@ -3160,7 +3190,7 @@ void ImFont::BuildLookupTable()
 
     // Build lookup table
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
-    IndexAdvanceX.clear();
+    IndexedHotData.clear();
     IndexLookup.clear();
     DirtyLookupTables = false;
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
@@ -3168,7 +3198,8 @@ void ImFont::BuildLookupTable()
     for (int i = 0; i < Glyphs.Size; i++)
     {
         int codepoint = (int)Glyphs[i].Codepoint;
-        IndexAdvanceX[codepoint] = Glyphs[i].AdvanceX;
+        IndexedHotData[codepoint].AdvanceX = Glyphs[i].AdvanceX;
+        IndexedHotData[codepoint].ExtraForMaxOccupyWidth = ImMax(Glyphs[i].AdvanceX, Glyphs[i].X1 - Glyphs[i].X0) - Glyphs[i].AdvanceX;
         IndexLookup[codepoint] = (ImWchar)i;
 
         // Mark 4K page as used
@@ -3186,7 +3217,8 @@ void ImFont::BuildLookupTable()
         tab_glyph = *FindGlyph((ImWchar)' ');
         tab_glyph.Codepoint = '\t';
         tab_glyph.AdvanceX *= IM_TABSIZE;
-        IndexAdvanceX[(int)tab_glyph.Codepoint] = (float)tab_glyph.AdvanceX;
+        IndexedHotData[(int)tab_glyph.Codepoint].AdvanceX = (float)tab_glyph.AdvanceX;
+        IndexedHotData[(int)tab_glyph.Codepoint].ExtraForMaxOccupyWidth = ImMax(tab_glyph.AdvanceX, tab_glyph.X1 - tab_glyph.X0) - tab_glyph.AdvanceX;
         IndexLookup[(int)tab_glyph.Codepoint] = (ImWchar)(Glyphs.Size - 1);
     }
 
@@ -3230,10 +3262,46 @@ void ImFont::BuildLookupTable()
         }
     }
 
-    FallbackAdvanceX = FallbackGlyph->AdvanceX;
-    for (int i = 0; i < max_codepoint + 1; i++)
-        if (IndexAdvanceX[i] < 0.0f)
-            IndexAdvanceX[i] = FallbackAdvanceX;
+    // Sort the items, preserving the order of insertion order when there are multiple pairs of same left and right characters.
+    ImVector<ImFont_BuildLookupTable_ImFontKerningPairWithOrder> sorted_pairs;
+    sorted_pairs.reserve(KerningPairs.Capacity);
+    for (int i = 0, i_ = KerningPairs.Size; i < i_; i++)
+        sorted_pairs.push_back(ImFont_BuildLookupTable_ImFontKerningPairWithOrder{ KerningPairs.Data[i], i });
+    ImQsort(&sorted_pairs.Data[0], sorted_pairs.Size, sizeof(ImFont_BuildLookupTable_ImFontKerningPairWithOrder), ImFont_BuildLookupTable_ImFontKerningPairWithOrder::Compare);
+
+    // We are going to drop multiple kerning pairs that are not continuous, so we make a new list, copying only what's necessary.
+    KerningPairs.clear();
+    for (int i = 0, i_ = sorted_pairs.Size; i < i_; i++)
+    {
+        const ImFontKerningPair* current = &sorted_pairs.Data[i].Pair;
+
+        // If there are duplicate entries, then discard the older entry
+        if (i != i_ - 1 && current->Left == sorted_pairs.Data[i + 1].Pair.Left && current->Right == sorted_pairs.Data[i + 1].Pair.Right)
+            continue;
+
+        // If distance adjustment is zero for the pair, then discard it
+        if (current->AdvanceXAdjustment == 0)
+            continue;
+
+        KerningPairs.push_back(*current);
+    }
+
+    IM_ASSERT(KerningPairs.Size < (1 << 20));
+
+    for (int i = 0, i_ = KerningPairs.Size; i < i_; i++)
+    {
+        ImWchar c = KerningPairs.Data[i].Right;
+        if (c > max_codepoint)
+            continue;
+
+        ImFontGlyphHotData* info = &IndexedHotData.Data[c];
+        if (info->KerningPairCount == 0)
+            info->KerningPairOffset = i;
+
+        IM_ASSERT(info->KerningPairCount + 1 < (1 << 12));
+
+        info->KerningPairCount++;
+    }
 }
 
 // API is designed this way to avoid exposing the 4K page size
@@ -3249,6 +3317,22 @@ bool ImFont::IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last)
     return true;
 }
 
+void ImFont::AddKerningPair(ImWchar left_c, ImWchar right_c, float distance_adjustment)
+{
+    IM_ASSERT(left_c != 0);
+    IM_ASSERT(right_c != 0);
+
+    DirtyLookupTables = true;
+
+    KerningPairs.push_back(ImFontKerningPair());
+    KerningPairs.back().Left = left_c;
+    KerningPairs.back().Right = right_c;
+    KerningPairs.back().AdvanceXAdjustment = distance_adjustment;
+
+    if (left_c < ImFont_FrequentKerningPairs_MaxCodepoint && right_c < ImFont_FrequentKerningPairs_MaxCodepoint)
+        FrequentKerningPairs.Data[left_c * ImFont_FrequentKerningPairs_MaxCodepoint + right_c] = distance_adjustment;
+}
+
 void ImFont::SetGlyphVisible(ImWchar c, bool visible)
 {
     if (ImFontGlyph* glyph = (ImFontGlyph*)(void*)FindGlyph((ImWchar)c))
@@ -3257,10 +3341,12 @@ void ImFont::SetGlyphVisible(ImWchar c, bool visible)
 
 void ImFont::GrowIndex(int new_size)
 {
-    IM_ASSERT(IndexAdvanceX.Size == IndexLookup.Size);
+    IM_ASSERT(IndexedHotData.Size == IndexLookup.Size);
     if (new_size <= IndexLookup.Size)
         return;
-    IndexAdvanceX.resize(new_size, -1.0f);
+
+    ImFontGlyphHotData default_hot_data{ -1.0f, 0, 0, 0 };
+    IndexedHotData.resize(new_size, default_hot_data);
     IndexLookup.resize(new_size, (ImWchar)-1);
 }
 
@@ -3323,7 +3409,7 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 
     GrowIndex(dst + 1);
     IndexLookup[dst] = (src < index_size) ? IndexLookup.Data[src] : (ImWchar)-1;
-    IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
+    IndexedHotData[dst].AdvanceX = (src < index_size) ? IndexedHotData[src].AdvanceX : 1.0f;
 }
 
 const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
@@ -3356,6 +3442,44 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
     return text;
 }
 
+static inline float ImFont_GetDistanceAdjustmentForPairBetween(const ImFont* font, ImWchar left_c, ImWchar right_c, int low, int high)
+{
+    IM_ASSERT(!font->DirtyLookupTables);
+
+    while (low <= high)
+    {
+        int mid = low + (high - low) / 2;
+        const ImFontKerningPair* mid_pair = &font->KerningPairs.Data[mid];
+
+        if (mid_pair->Right == right_c && mid_pair->Left == left_c)
+            return mid_pair->AdvanceXAdjustment;
+
+        if (mid_pair->Right < right_c || (mid_pair->Right == right_c && mid_pair->Left < left_c))
+            low = mid + 1;
+        else
+            high = mid - 1;
+    }
+    return 0.0f;
+}
+
+IMGUI_API float ImFont::GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c, int low, int high) const {
+    IM_ASSERT(!DirtyLookupTables);
+
+    if (left_c < ImFont_FrequentKerningPairs_MaxCodepoint && right_c < ImFont_FrequentKerningPairs_MaxCodepoint)
+        return FrequentKerningPairs.Data[left_c * ImFont_FrequentKerningPairs_MaxCodepoint + right_c];
+
+    if (IndexLookup.Size <= right_c || IndexLookup.Size <= left_c)
+        return 0.0f;
+
+    if (low < 0)
+        low = IndexedHotData.Data[right_c].KerningPairOffset;
+
+    if (high < 0)
+        high = low + IndexedHotData.Data[right_c].KerningPairCount - 1;
+
+    return ImFont_GetDistanceAdjustmentForPairBetween(this, left_c, right_c, low, high);
+}
+
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
@@ -3372,6 +3496,9 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
 
     // Cut words that cannot possibly fit within one line.
     // e.g.: "The tropical fish" with ~5 characters worth of width --> "The tr" "opical" "fish"
+
+    const bool use_kerning = !(GImGui->IO.ConfigFlags & ImGuiConfigFlags_NoKerning);
+
     float line_width = 0.0f;
     float word_width = 0.0f;
     float blank_width = 0.0f;
@@ -3381,8 +3508,9 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     const char* prev_word_end = NULL;
     bool inside_word = true;
 
-    const char* s = text;
     IM_ASSERT(text_end != NULL);
+    const char* s = text;
+    unsigned int prev_c = 0;
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -3399,8 +3527,11 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
                 line_width = word_width = blank_width = 0.0f;
                 inside_word = true;
                 s = next_s;
+                prev_c = 0;
                 continue;
             }
+
+            // We only care about \n; ignore \r.
             if (c == '\r')
             {
                 s = next_s;
@@ -3408,7 +3539,10 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX);
+        const int actual_c = (int)c >= IndexLookup.Size || IndexLookup.Data[c] == (ImWchar)-1 ? FallbackChar : c;
+        const ImFontGlyphHotData* c_info = &IndexedHotData.Data[actual_c];
+        const float char_width = c_info->AdvanceX;
+
         if (ImCharIsBlankW(c))
         {
             if (inside_word)
@@ -3447,6 +3581,14 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             break;
         }
 
+        if (use_kerning)
+        {
+            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
+                line_width += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c];
+            else if (c_info->KerningPairCount)
+                line_width += ImFont_GetDistanceAdjustmentForPairBetween(this, (ImWchar)prev_c, (ImWchar)c, c_info->KerningPairOffset, c_info->KerningPairOffset + c_info->KerningPairCount - 1);
+        }
+        prev_c = actual_c;
         s = next_s;
     }
 
@@ -3462,6 +3604,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
 
+    const bool use_kerning = !(GImGui->IO.ConfigFlags & ImGuiConfigFlags_NoKerning);
     const float line_height = size;
     const float scale = size / FontSize;
 
@@ -3472,6 +3615,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     const char* word_wrap_eol = NULL;
 
     const char* s = text_begin;
+    unsigned int prev_c = 0;
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -3482,6 +3626,11 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
             if (s >= word_wrap_eol)
             {
+                // End of line or text; fill the remaining width if last character's bounding width is wider than its advance width.
+                if (prev_c)
+                    line_width += IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+                prev_c = 0;
+
                 if (text_size.x < line_width)
                     text_size.x = line_width;
                 text_size.y += line_height;
@@ -3504,24 +3653,47 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         {
             if (c == '\n')
             {
+                // End of line; fill the remaining width if last character's bounding width is wider than its advance width.
+                if (prev_c)
+                    line_width += IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+                prev_c = 0;
+
                 text_size.x = ImMax(text_size.x, line_width);
                 text_size.y += line_height;
                 line_width = 0.0f;
                 continue;
             }
+
+            // We only care about \n; ignore \r.
             if (c == '\r')
                 continue;
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX) * scale;
+        const int actual_c = (int)c >= IndexLookup.Size || IndexLookup.Data[c] == (ImWchar)-1 ? FallbackChar : c;
+        const ImFontGlyphHotData* c_info = &IndexedHotData.Data[actual_c];
+        const float char_width = c_info->AdvanceX * scale;
+
+        // Adding this character (actual_c) will make it overflow past max_width, so don't do it.
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
             break;
         }
 
+        if (use_kerning)
+        {
+            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
+                line_width += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
+            else if (c_info->KerningPairCount)
+                line_width += ImFont_GetDistanceAdjustmentForPairBetween(this, (ImWchar)prev_c, (ImWchar)c, c_info->KerningPairOffset, c_info->KerningPairOffset + c_info->KerningPairCount - 1) * scale;
+        }
+        prev_c = actual_c;
         line_width += char_width;
     }
+
+    // End of text; fill the remaining width if last character's bounding width is wider than its advance width.
+    if (prev_c)
+        line_width += IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
 
     if (text_size.x < line_width)
         text_size.x = line_width;
@@ -3562,6 +3734,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     if (y > clip_rect.w)
         return;
 
+    const bool use_kerning = !(GImGui->IO.ConfigFlags & ImGuiConfigFlags_NoKerning);
     const float start_x = x;
     const float scale = size / FontSize;
     const float line_height = FontSize * scale;
@@ -3619,6 +3792,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
 
+    unsigned int prev_c = 0;
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -3629,6 +3803,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
             if (s >= word_wrap_eol)
             {
+                prev_c = 0;
+
                 x = start_x;
                 y += line_height;
                 word_wrap_eol = NULL;
@@ -3648,12 +3824,16 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             if (c == '\n')
             {
+                prev_c = 0;
+
                 x = start_x;
                 y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop
                 continue;
             }
+
+            // We only care about \n; ignore \r.
             if (c == '\r')
                 continue;
         }
@@ -3662,7 +3842,23 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         if (glyph == NULL)
             continue;
 
-        float char_width = glyph->AdvanceX * scale;
+        const float char_width = glyph->AdvanceX * scale;
+
+        if (use_kerning)
+        {
+            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
+            {
+                x += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
+            }
+            else
+            {
+                const ImFontGlyphHotData* c_info = &IndexedHotData.Data[glyph->Codepoint];
+                if (c_info->KerningPairCount)
+                    x += ImFont_GetDistanceAdjustmentForPairBetween(this, (ImWchar)prev_c, (ImWchar)glyph->Codepoint, c_info->KerningPairOffset, c_info->KerningPairOffset + c_info->KerningPairCount - 1) * scale;
+            }
+        }
+        prev_c = glyph->Codepoint;
+
         if (glyph->Visible)
         {
             // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
