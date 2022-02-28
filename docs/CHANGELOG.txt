@@ -56,6 +56,7 @@ Other Changes:
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
+- ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
