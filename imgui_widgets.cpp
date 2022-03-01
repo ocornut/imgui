@@ -3533,6 +3533,9 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 // - InputText()
 // - InputTextWithHint()
 // - InputTextMultiline()
+// - InputTextGetCharInfo() [Internal]
+// - InputTextReindexLines() [Internal]
+// - InputTextReindexLinesRange() [Internal]
 // - InputTextEx() [Internal]
 //-------------------------------------------------------------------------
 

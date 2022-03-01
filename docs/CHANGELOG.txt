@@ -55,6 +55,8 @@ Other Changes:
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
+- Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
+  instance of a same table ID, when instances have a different height. (#3955).
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
