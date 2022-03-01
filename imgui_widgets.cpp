@@ -3588,7 +3588,7 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
         if (c == '\n')
         {
             if (prev_c)
-                line_width += font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+                line_width += (int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
             prev_c = 0;
 
             text_size.x = ImMax(text_size.x, line_width);
@@ -3603,18 +3603,17 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
         if (c == '\r')
             continue;
 
-        int actual_c = (int)c >= font->IndexLookup.Size || font->IndexLookup.Data[c] == (ImWchar)-1 ? font->FallbackChar : c;
-        const ImFontGlyphHotData* c_info = &font->IndexedHotData.Data[actual_c];
+        const ImFontGlyphHotData* c_info = (int)c >= font->IndexedHotData.Size ? font->FallbackHotData : &font->IndexedHotData.Data[c];
         const float char_width = c_info->AdvanceX;
         if (use_kerning && c_info->KerningPairCount)
             line_width += font->GetDistanceAdjustmentForPair((ImWchar)prev_c, (ImWchar)c, c_info->KerningPairOffset, c_info->KerningPairOffset + c_info->KerningPairCount - 1) * scale;
-        prev_c = actual_c;
+        prev_c = c;
 
         line_width += char_width;
     }
 
     if (prev_c)
-        line_width += font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+        line_width += (int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
 
     if (text_size.x < line_width)
         text_size.x = line_width;
@@ -4175,7 +4174,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
     {
-        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
+        const char password_char = '*';
+        const ImFontGlyph* glyph = g.Font->FindGlyph(password_char);
         ImFont* password_font = &g.InputTextPasswordFont;
         password_font->FontSize = g.Font->FontSize;
         password_font->Scale = g.Font->Scale;
@@ -4183,6 +4183,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         password_font->Descent = g.Font->Descent;
         password_font->ContainerAtlas = g.Font->ContainerAtlas;
         password_font->FallbackGlyph = glyph;
+        password_font->FallbackHotData = password_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[password_char] : g.Font->FallbackHotData;
         IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexedHotData.empty() && password_font->IndexLookup.empty());
         PushFont(password_font);
     }

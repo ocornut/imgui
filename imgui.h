@@ -2861,17 +2861,16 @@ struct ImFontGlyphHotData
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Hot ~30/38 bytes (for CalcTextSize)
+    // Members: Hot ~28/36 bytes (for CalcTextSize)
     ImVector<ImFontGlyphHotData>IndexedHotData;     // 12-16 // out //            // Sparse. Various glyph information in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
     ImVector<float>             FrequentKerningPairs;//12-16 // out //            // Kerning pairs between characters in ASCII range.
     float                       FontSize;           // 4     // in  //            // Height of characters/line, set during loading (don't change after loading)
-    ImWchar                     FallbackChar;       // 2     // out // = FFFD/'?' // Character used if a glyph isn't found.
-    // 2 padding bytes will be generated
 
-    // Members: Hot ~28/40 bytes (for CalcTextSize + render loop)
+    // Members: Hot ~32/48 bytes (for CalcTextSize + render loop)
     ImVector<ImWchar>           IndexLookup;        // 12-16 // out //            // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
     const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
+    const ImFontGlyphHotData*   FallbackHotData;    // 4-8   // out // = &IndexedHotData[FontFallbackChar]
 
     // Members: Semi-hot 12/16 bytes (for CalcTextSize, RenderText, and GetDistanceAdjustmentForPair/Between)
     ImVector<ImFontKerningPair> KerningPairs;       // 12-16 // out //            // All kerning pairs, in order of ascending right first and left second.
@@ -2880,6 +2879,7 @@ struct ImFont
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out //            // What we has been loaded into
     const ImFontConfig*         ConfigData;         // 4-8   // in  //            // Pointer within ContainerAtlas->ConfigData
     short                       ConfigDataCount;    // 2     // in  // ~ 1        // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
+    ImWchar                     FallbackChar;       // 2     // out // = FFFD/'?' // Character used if a glyph isn't found.
     ImWchar                     EllipsisChar;       // 2     // out // = '...'/'.'// Character used for ellipsis rendering.
     short                       EllipsisCharCount;  // 1     // out // 1 or 3
     float                       EllipsisWidth;      // 4     // out               // Width
@@ -2896,7 +2896,7 @@ struct ImFont
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
     IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
     IMGUI_API float             GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c, int low = -1, int high = -1) const;
-    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexedHotData.Size) ? IndexedHotData[(int)c].AdvanceX : IndexedHotData[FallbackChar].AdvanceX; }
+    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexedHotData.Size) ? IndexedHotData[(int)c].AdvanceX : FallbackHotData->AdvanceX; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
     const char*                 GetDebugName() const                { return ConfigData ? ConfigData->Name : "<unknown>"; }
 
