@@ -3489,7 +3489,8 @@ static inline float ImFont_GetDistanceAdjustmentForPairBetween(const ImFont* fon
     return 0.0f;
 }
 
-IMGUI_API float ImFont::GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c, int low, int high) const {
+IMGUI_API float ImFont::GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c, int low, int high) const
+{
     IM_ASSERT(!DirtyLookupTables);
 
     if (left_c < ImFont_FrequentKerningPairs_MaxCodepoint && right_c < ImFont_FrequentKerningPairs_MaxCodepoint)
