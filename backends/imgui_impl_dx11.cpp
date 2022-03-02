@@ -313,6 +313,47 @@ static void ImGui_ImplDX11_CreateFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
+    auto& font = *io.Fonts->Fonts[0];
+    for (int i = 0; i < font.Glyphs.Size; i++)
+    {
+        auto& glyph = font.Glyphs[i];
+        int srcx0 = (int)(glyph.U0 * width);
+        int srcx1 = (int)(glyph.U1 * width);
+        int srcy0 = (int)(glyph.V0 * height);
+        int srcy1 = (int)(glyph.V1 * height);
+        int width_extra = io.Fonts->TexGlyphPadding - 4;
+
+        for (int y = 0; y < srcy1 - srcy0; y++) {
+            float xDelta = width_extra * (srcy1 - srcy0 - y) / font.FontSize;
+            int xDeltaInt = (int)xDelta;
+            float xness = xDelta - xDeltaInt;
+            xDeltaInt++;
+
+            for (int x = srcx1 - srcx0 - 1; x >= -1; x--) {
+                int sourceOffset = ((srcy0 + y) * width) + srcx0 + x;
+                int a1 = x == -1 ? 0 : pixels[4 * sourceOffset + 3];
+                int a2 = x == srcx1 - srcx0 - 1 ? 0 : pixels[4 * (sourceOffset + 1) + 3];
+                float n = a1 * xness + a2 * (1 - xness);
+
+                int targetOffset = ((srcy0 + y) * width) + srcx0 + x + xDeltaInt + 1;
+                pixels[4 * targetOffset] = 0xFF;
+                pixels[4 * targetOffset + 1] = 0xFF;
+                pixels[4 * targetOffset + 2] = 0xFF;
+                pixels[4 * targetOffset + 3] = (unsigned char)n;
+            }
+            for (int x = 0; x < xDeltaInt; x++) {
+                int targetOffset = ((srcy0 + y) * width) + srcx0 + x;
+                pixels[4 * targetOffset] = 0;
+                pixels[4 * targetOffset + 1] = 0;
+                pixels[4 * targetOffset + 2] = 0;
+                pixels[4 * targetOffset + 3] = 0;
+            }
+        }
+        glyph.U1 = glyph.U0 + (float)(srcx1 - srcx0 + width_extra) / width;
+        glyph.X1 += width_extra + 2;
+    }
+    font.BuildLookupTable();
+
     // Upload texture to graphics system
     {
         D3D11_TEXTURE2D_DESC desc;
