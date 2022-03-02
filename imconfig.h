@@ -69,7 +69,7 @@
 // Compatibility checks of arguments and formats done by clang and GCC will be disabled in order to support the extra formats provided by STB sprintf.
 //#define IMGUI_USE_STB_SPRINTF
 
-//---- Use ustom STB sprintf implementation path to avoid multiple STB sprintf implementations, or redefine path/filename to prioritize another version
+//---- Use custom STB sprintf path, to avoid multiple implementations, or redefine path/filename to prioritize another version
 // only used when IMGUI_USE_STB_SPRINTF is defined
 //#define IMGUI_STB_SPRINTF_FILENAME "my_folder/stb_sprintf.h"
 
