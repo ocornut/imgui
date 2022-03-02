@@ -3573,7 +3573,7 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
 {
     ImGuiContext& g = *ctx;
     ImFont* font = g.Font;
-    const bool use_kerning = !(GImGui->IO.ConfigFlags & ImGuiConfigFlags_NoKerning);
+    const bool use_kerning = !(g.IO.ConfigFlags & ImGuiConfigFlags_NoKerning) && font->KerningPairs.Size;
     const float line_height = g.FontSize;
     const float scale = line_height / font->FontSize;
 
@@ -3588,7 +3588,7 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
         if (c == '\n')
         {
             if (prev_c)
-                line_width += (int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+                line_width += ((int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
             prev_c = 0;
 
             text_size.x = ImMax(text_size.x, line_width);
@@ -3604,16 +3604,21 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
             continue;
 
         const ImFontGlyphHotData* c_info = (int)c >= font->IndexedHotData.Size ? font->FallbackHotData : &font->IndexedHotData.Data[c];
-        const float char_width = c_info->AdvanceX;
-        if (use_kerning && c_info->KerningPairCount)
-            line_width += font->GetDistanceAdjustmentForPair((ImWchar)prev_c, (ImWchar)c, c_info->KerningPairOffset, c_info->KerningPairOffset + c_info->KerningPairCount - 1) * scale;
+        const float char_width = c_info->AdvanceX * scale;
+        if (use_kerning)
+        {
+            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
+                line_width += font->FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
+            else if (c_info->KerningPairCount)
+                line_width += font->GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info) * scale;
+        }
         prev_c = c;
 
         line_width += char_width;
     }
 
     if (prev_c)
-        line_width += (int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth;
+        line_width += ((int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
 
     if (text_size.x < line_width)
         text_size.x = line_width;
@@ -4183,7 +4188,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         password_font->Descent = g.Font->Descent;
         password_font->ContainerAtlas = g.Font->ContainerAtlas;
         password_font->FallbackGlyph = glyph;
-        password_font->FallbackHotData = password_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[password_char] : g.Font->FallbackHotData;
+        password_font->FallbackHotData = password_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[(int)password_char] : g.Font->FallbackHotData;
         IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexedHotData.empty() && password_font->IndexLookup.empty());
         PushFont(password_font);
     }

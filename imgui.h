@@ -2853,9 +2853,12 @@ struct ImFontGlyphHotData
 {
     float AdvanceX;
     float ExtraForMaxOccupyWidth;
-    unsigned int KerningPairOffset : 20;
+    unsigned int KerningPairUseBisect : 1;
+    unsigned int KerningPairOffset : 19;
     unsigned int KerningPairCount : 12;
 };
+
+static constexpr int ImFont_FrequentKerningPairs_MaxCodepoint = 128;
 
 // Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
@@ -2895,7 +2898,7 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
     IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
-    IMGUI_API float             GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c, int low = -1, int high = -1) const;
+    IMGUI_API float             GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c) const;
     float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexedHotData.Size) ? IndexedHotData[(int)c].AdvanceX : FallbackHotData->AdvanceX; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
     const char*                 GetDebugName() const                { return ConfigData ? ConfigData->Name : "<unknown>"; }
@@ -2916,6 +2919,11 @@ struct ImFont
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
     IMGUI_API void              AddKerningPair(ImWchar left_c, ImWchar right_c, float distance_adjustment);
+
+    // When this function is called...
+    // * ...right_c_info->KerningPairCount must be a known non-zero value.
+    // * ...both left_c and (supposed) right_c must not be covered in FrequentKerningPairs.
+    IMGUI_API float             GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, const ImFontGlyphHotData* right_c_info) const;
 };
 
 //-----------------------------------------------------------------------------
