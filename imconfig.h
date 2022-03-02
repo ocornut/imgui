@@ -66,8 +66,12 @@
 //#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 
 //---- Use stb_printf's faster implementation of vsnprintf instead of the one from libc (unless IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS is defined)
-// Requires 'stb_sprintf.h' to be available in the include path. Compatibility checks of arguments and formats done by clang and GCC will be disabled in order to support the extra formats provided by STB sprintf.
-// #define IMGUI_USE_STB_SPRINTF
+// Compatibility checks of arguments and formats done by clang and GCC will be disabled in order to support the extra formats provided by STB sprintf.
+//#define IMGUI_USE_STB_SPRINTF
+
+//---- Use ustom STB sprintf implementation path to avoid multiple STB sprintf implementations, or redefine path/filename to prioritize another version
+// only used when IMGUI_USE_STB_SPRINTF is defined
+//#define IMGUI_STB_SPRINTF_FILENAME "my_folder/stb_sprintf.h"
 
 //---- Use FreeType to build and rasterize the font atlas (instead of stb_truetype which is embedded by default in Dear ImGui)
 // Requires FreeType headers to be available in the include path. Requires program to be compiled with 'misc/freetype/imgui_freetype.cpp' (in this repository) + the FreeType library (not provided).
