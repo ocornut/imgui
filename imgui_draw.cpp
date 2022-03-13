@@ -90,7 +90,7 @@ Index of this file:
 #endif
 
 //-------------------------------------------------------------------------
-// [SECTION] STB libraries implementation
+// [SECTION] STB libraries implementation (for stb_truetype and stb_rect_pack)
 //-------------------------------------------------------------------------
 
 // Compile time options:
