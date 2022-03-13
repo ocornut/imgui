@@ -63,6 +63,7 @@ Other Changes:
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
 - Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
+- Misc: Updated stb_truetype.h from 1.20 to 1.26 (many fixes). (#5075)
 - Misc: Updated stb_textedit.h from 1.13 to 1.14 (our changes so this effectively is a no-op). (#5075)
 - Misc: Updated stb_rect_pack.h from 1.00 to 1.01 (minor). (#5075)
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
