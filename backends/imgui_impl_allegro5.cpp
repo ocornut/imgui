@@ -71,7 +71,7 @@ struct ImGui_ImplAllegro5_Data
     ALLEGRO_VERTEX_DECL*        VertexDecl;
     char*                       ClipboardTextData;
 
-    ImGui_ImplAllegro5_Data()   { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplAllegro5_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts

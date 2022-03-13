@@ -3873,7 +3873,7 @@ static void ShowDemoWindowTables()
                     sprintf(buf, "Hello %d,%d", column, row);
                     if (contents_type == CT_Text)
                         ImGui::TextUnformatted(buf);
-                    else if (contents_type)
+                    else if (contents_type == CT_FillButton)
                         ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
                 }
             }

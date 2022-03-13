@@ -71,7 +71,7 @@ struct ImGui_ImplDX12_Data
     UINT                            numFramesInFlight;
     UINT                            frameIndex;
 
-    ImGui_ImplDX12_Data()           { memset(this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
+    ImGui_ImplDX12_Data()           { memset((void*)this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
 
 struct VERTEX_CONSTANT_BUFFER

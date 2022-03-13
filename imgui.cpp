@@ -8069,7 +8069,6 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
             IM_ASSERT(window->IsFallbackWindow);
             break;
         }
-        IM_ASSERT(window == g.CurrentWindow);
         if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'", window->Name);
