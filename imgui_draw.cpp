@@ -3208,7 +3208,7 @@ void ImFont::BuildLookupTable()
     {
         int codepoint = (int)Glyphs[i].Codepoint;
         IndexedHotData[codepoint].AdvanceX = Glyphs[i].AdvanceX;
-        IndexedHotData[codepoint].ExtraForMaxOccupyWidth = ImMax(Glyphs[i].AdvanceX, Glyphs[i].X1 - Glyphs[i].X0) - Glyphs[i].AdvanceX;
+        IndexedHotData[codepoint].OccupiedWidth = ImMax(Glyphs[i].AdvanceX, Glyphs[i].X1);
         IndexLookup[codepoint] = (ImWchar)i;
 
         // Mark 4K page as used
@@ -3227,7 +3227,7 @@ void ImFont::BuildLookupTable()
         tab_glyph.Codepoint = '\t';
         tab_glyph.AdvanceX *= IM_TABSIZE;
         IndexedHotData[(int)tab_glyph.Codepoint].AdvanceX = (float)tab_glyph.AdvanceX;
-        IndexedHotData[(int)tab_glyph.Codepoint].ExtraForMaxOccupyWidth = ImMax(tab_glyph.AdvanceX, tab_glyph.X1 - tab_glyph.X0) - tab_glyph.AdvanceX;
+        IndexedHotData[(int)tab_glyph.Codepoint].OccupiedWidth = ImMax(tab_glyph.AdvanceX, tab_glyph.X1);
         IndexLookup[(int)tab_glyph.Codepoint] = (ImWchar)(Glyphs.Size - 1);
     }
 
@@ -3589,8 +3589,11 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
 
         const ImFontGlyphHotData* c_info = (int)c >= IndexedHotData.Size ? FallbackHotData : &IndexedHotData.Data[c];
         const float char_width = c_info->AdvanceX;
+        const float occupy_width = c_info->OccupiedWidth * scale;
+        const bool c_is_blank = ImCharIsBlankW(c);
 
-        if (ImCharIsBlankW(c))
+        // Use occupy_width instead of char_width, since we're testing whether this character can be contained within word wrap limits.
+        if (c_is_blank)
         {
             if (inside_word)
             {
@@ -3598,12 +3601,12 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
                 blank_width = 0.0f;
                 word_end = s;
             }
-            blank_width += char_width;
+            blank_width += occupy_width;
             inside_word = false;
         }
         else
         {
-            word_width += char_width;
+            word_width += occupy_width;
             if (inside_word)
             {
                 word_end = next_s;
@@ -3626,6 +3629,19 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             if (word_width < wrap_width)
                 s = prev_word_end ? prev_word_end : word_end;
             break;
+        }
+
+        // Word wrap won't be done after this character; adjust width to use char_width instead of occupy_width.
+        if (c_is_blank)
+        {
+            blank_width += char_width - occupy_width;
+        }
+        else
+        {
+            if (inside_word)
+                word_width += char_width - occupy_width;
+            else
+                line_width += char_width - occupy_width;
         }
 
         if (use_kerning)
@@ -3674,12 +3690,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             if (s >= word_wrap_eol)
             {
                 // End of line or text; fill the remaining width if last character's bounding width is wider than its advance width.
-                if (prev_c)
-                    line_width += ((int)prev_c >= IndexedHotData.Size ? FallbackHotData->ExtraForMaxOccupyWidth : IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
                 prev_c = 0;
 
-                if (text_size.x < line_width)
-                    text_size.x = line_width;
                 text_size.y += line_height;
                 line_width = 0.0f;
                 word_wrap_eol = NULL;
@@ -3700,12 +3712,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         {
             if (c == '\n')
             {
-                // End of line; fill the remaining width if last character's bounding width is wider than its advance width.
-                if (prev_c)
-                    line_width += ((int)prev_c >= IndexedHotData.Size ? FallbackHotData->ExtraForMaxOccupyWidth : IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
                 prev_c = 0;
 
-                text_size.x = ImMax(text_size.x, line_width);
                 text_size.y += line_height;
                 line_width = 0.0f;
                 continue;
@@ -3718,6 +3726,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
         const ImFontGlyphHotData* c_info = (int)c >= IndexedHotData.Size ? FallbackHotData : &IndexedHotData.Data[c];
         const float char_width = c_info->AdvanceX * scale;
+        const float occupy_width = c_info->OccupiedWidth * scale;
 
         // Adding this character (c) will make it overflow past max_width, so don't do it.
         if (line_width + char_width >= max_width)
@@ -3734,15 +3743,9 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 line_width += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info) * scale;
         }
         prev_c = c;
+        text_size.x = ImMax(text_size.x, line_width + occupy_width);
         line_width += char_width;
     }
-
-    // End of text; fill the remaining width if last character's bounding width is wider than its advance width.
-    if (prev_c)
-        line_width += ((int)prev_c >= IndexedHotData.Size ? FallbackHotData->ExtraForMaxOccupyWidth : IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
-
-    if (text_size.x < line_width)
-        text_size.x = line_width;
 
     if (line_width > 0 || text_size.y == 0.0f)
         text_size.y += line_height;

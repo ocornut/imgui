@@ -2852,7 +2852,7 @@ struct ImFontKerningPair
 struct ImFontGlyphHotData
 {
     float AdvanceX;
-    float ExtraForMaxOccupyWidth;
+    float OccupiedWidth;
     unsigned int KerningPairUseBisect : 1;
     unsigned int KerningPairOffset : 19;
     unsigned int KerningPairCount : 12;

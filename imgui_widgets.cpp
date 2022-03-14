@@ -3587,8 +3587,6 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
         unsigned int c = (unsigned int)(*s++);
         if (c == '\n')
         {
-            if (prev_c)
-                line_width += ((int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
             prev_c = 0;
 
             text_size.x = ImMax(text_size.x, line_width);
@@ -3616,9 +3614,6 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
 
         line_width += char_width;
     }
-
-    if (prev_c)
-        line_width += ((int)prev_c >= font->IndexedHotData.Size ? font->FallbackHotData->ExtraForMaxOccupyWidth : font->IndexedHotData.Data[prev_c].ExtraForMaxOccupyWidth) * scale;
 
     if (text_size.x < line_width)
         text_size.x = line_width;
@@ -4710,11 +4705,22 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 select_start_offset.x = InputTextCalcTextSizeW(&g, ImStrbolW(searches_input_ptr[1], text_begin), searches_input_ptr[1]).x;
                 select_start_offset.y = searches_result_line_no[1] * g.FontSize;
+
+                if (searches_input_ptr[0] != text_begin)
+                {
+                    // It will snap the left border of the selection box to the left border of the first glyph selected when drawing selection.
+                    // Taking account of the above, snap the cursor too, if cursor is at the left border of the selection box.
+                    if (searches_result_line_no[0] == searches_result_line_no[1])
+                        cursor_offset.x += g.Font->GetDistanceAdjustmentForPair(*(searches_input_ptr[1] - 1), *searches_input_ptr[1]) * scale;
+                }
             }
 
-            // If not at beginning of the whole text, and cursor is at beginning of the selection, snap the cursor to the left border of the selection box.
-            if (searches_result_line_no[0] == searches_result_line_no[1] && text_begin != searches_input_ptr[0])
-                cursor_offset.x += g.Font->GetDistanceAdjustmentForPair(*(searches_input_ptr[0] - 1), *searches_input_ptr[0]) * scale;
+            // Set the cursor position between after advance width and after bounding width of the previous character.
+            if (const ImWchar prev_char = searches_input_ptr[0] != text_begin ? *(searches_input_ptr[0] - 1) : 0)
+            {
+                const ImFontGlyphHotData* glyph = (int)prev_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[prev_char] : g.Font->FallbackHotData;
+                cursor_offset.x += (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
+            }
 
             // Store text height (note that we haven't calculated text width at all, see GitHub issues #383, #1224)
             if (is_multiline)
@@ -4781,10 +4787,30 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 }
                 else
                 {
-                    float x_adjustment = text_begin == p ? 0 : g.Font->GetDistanceAdjustmentForPair(*(p - 1), *p) * scale;
+                    float left_adjustment = 0.0f;
+                    float right_adjustment = 0.0f;
+                    float kern_adjustment = 0.0f;
+
+                    if (const ImWchar prev_char = text_begin != p ? *(p - 1) : 0)
+                    {
+                        const ImFontGlyphHotData* glyph = (int)prev_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[prev_char] : g.Font->FallbackHotData;
+                        left_adjustment = (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
+                        kern_adjustment = g.Font->GetDistanceAdjustmentForPair(prev_char, *p);
+                    }
+
                     ImVec2 rect_size = InputTextCalcTextSizeW(&g, p, text_selected_end, &p, NULL, true);
                     if (rect_size.x <= 0.0f) rect_size.x = IM_FLOOR(g.Font->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
-                    ImRect rect(rect_pos + ImVec2(x_adjustment, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x + x_adjustment, bg_offy_dn));
+
+                    if (const ImWchar last_char = text_begin != p ? *(p - 1) : 0)
+                    {
+                        const ImFontGlyphHotData* glyph = (int)last_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[last_char] : g.Font->FallbackHotData;
+                        right_adjustment += (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
+                    }
+
+                    left_adjustment = (left_adjustment + kern_adjustment) * scale;
+                    right_adjustment = (right_adjustment + kern_adjustment) * scale;
+
+                    ImRect rect(rect_pos + ImVec2(left_adjustment, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x + right_adjustment, bg_offy_dn));
                     rect.ClipWith(clip_rect);
                     if (rect.Overlaps(clip_rect))
                         draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
