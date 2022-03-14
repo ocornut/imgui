@@ -3433,9 +3433,8 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
     }
 }
 
-void ImGui::TableSettingsInstallHandler(ImGuiContext* context)
+void ImGui::TableSettingsAddSettingsHandler()
 {
-    ImGuiContext& g = *context;
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Table";
     ini_handler.TypeHash = ImHashStr("Table");
@@ -3444,7 +3443,7 @@ void ImGui::TableSettingsInstallHandler(ImGuiContext* context)
     ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
     ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;
     ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
-    g.SettingsHandlers.push_back(ini_handler);
+    AddSettingsHandler(&ini_handler);
 }
 
 //-------------------------------------------------------------------------

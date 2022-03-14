@@ -2541,6 +2541,8 @@ namespace ImGui
     IMGUI_API ImGuiWindowSettings*  CreateNewWindowSettings(const char* name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
     IMGUI_API ImGuiWindowSettings*  FindOrCreateWindowSettings(const char* name);
+    IMGUI_API void                  AddSettingsHandler(const ImGuiSettingsHandler* handler);
+    IMGUI_API void                  RemoveSettingsHandler(const char* type_name);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
 
     // Scrolling
@@ -2744,7 +2746,7 @@ namespace ImGui
     IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
     IMGUI_API void                  TableResetSettings(ImGuiTable* table);
     IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
-    IMGUI_API void                  TableSettingsInstallHandler(ImGuiContext* context);
+    IMGUI_API void                  TableSettingsAddSettingsHandler();
     IMGUI_API ImGuiTableSettings*   TableSettingsCreate(ImGuiID id, int columns_count);
     IMGUI_API ImGuiTableSettings*   TableSettingsFindByID(ImGuiID id);
 

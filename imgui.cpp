@@ -4479,11 +4479,11 @@ void ImGui::Initialize(ImGuiContext* context)
         ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
         ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
-        g.SettingsHandlers.push_back(ini_handler);
+        AddSettingsHandler(&ini_handler);
     }
 
     // Add .ini handle for ImGuiTable type
-    TableSettingsInstallHandler(context);
+    TableSettingsAddSettingsHandler();
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -11616,6 +11616,20 @@ ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
     if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name)))
         return settings;
     return CreateNewWindowSettings(name);
+}
+
+void ImGui::AddSettingsHandler(const ImGuiSettingsHandler* handler)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(FindSettingsHandler(handler->TypeName) == NULL);
+    g.SettingsHandlers.push_back(*handler);
+}
+
+void ImGui::RemoveSettingsHandler(const char* type_name)
+{
+    ImGuiContext& g = *GImGui;
+    if (ImGuiSettingsHandler* handler = FindSettingsHandler(type_name))
+        g.SettingsHandlers.erase(handler);
 }
 
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
