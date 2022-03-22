@@ -71,6 +71,7 @@ Other Changes:
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
 - Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
 - Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
+- Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Examples: Emscripten: Fix building for latest Emscripten specs. (#3632)
 
 

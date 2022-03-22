@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-03-22: Inputs: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key
 //  2022-02-07: Inputs: Forward keyDown/keyUp events to OS when unused by dear imgui.
 //  2022-01-31: Fix building with old Xcode versions that are missing gamepad features.
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
@@ -429,7 +430,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
 
     // Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
     // This monitor taps into global event stream and captures these events.
-    NSEventMask eventMask = NSEventMaskFlagsChanged;
+    NSEventMask eventMask = NSEventMaskFromType(NSKeyUp) | NSEventMaskFlagsChanged;
     [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
     {
         ImGui_ImplOSX_HandleEvent(event, g_KeyEventResponder);
