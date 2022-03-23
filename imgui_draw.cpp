@@ -2738,13 +2738,13 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
         {
             unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
-                *(write_ptr + i) = IM_COL32_BLACK_TRANS;
+                *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
 
             for (unsigned int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
             for (unsigned int i = 0; i < pad_right; i++)
-                *(write_ptr + pad_left + line_width + i) = IM_COL32_BLACK_TRANS;
+                *(write_ptr + pad_left + line_width + i) = IM_COL32(255, 255, 255, 0);
         }
 
         // Calculate UVs for this line

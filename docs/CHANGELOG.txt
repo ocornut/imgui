@@ -61,6 +61,7 @@ Other Changes:
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
 - Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
