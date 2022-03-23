@@ -70,6 +70,8 @@ Other Changes:
 - Misc: Updated stb_rect_pack.h from 1.00 to 1.01 (minor). (#5075)
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
+- Backends: GLFW: Fixed a regression in 1.87 which resulted in keyboard modifiers events being
+  reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
 - Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
 - Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
