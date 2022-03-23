@@ -217,7 +217,7 @@ static void main_loop(void* window)
 
     WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
     ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
-    wgpuRenderPassEncoderEndPass(pass);
+    wgpuRenderPassEncoderEnd(pass);
 
     WGPUCommandBufferDescriptor cmd_buffer_desc = {};
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);

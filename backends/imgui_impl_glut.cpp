@@ -269,7 +269,7 @@ void ImGui_ImplGLUT_MouseFunc(int glut_button, int state, int x, int y)
     if (glut_button == GLUT_LEFT_BUTTON) button = 0;
     if (glut_button == GLUT_RIGHT_BUTTON) button = 1;
     if (glut_button == GLUT_MIDDLE_BUTTON) button = 2;
-    if (button != -1 && state == GLUT_DOWN || state == GLUT_UP)
+    if (button != -1 && (state == GLUT_DOWN || state == GLUT_UP))
         io.AddMouseButtonEvent(button, state == GLUT_DOWN);
 }
 

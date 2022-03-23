@@ -122,13 +122,27 @@ Other Changes:
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
+- Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
+  instance of a same table ID, when instances have a different height. (#3955).
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
+- ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
+- Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
+- Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
+- Misc: Updated stb_truetype.h from 1.20 to 1.26 (many fixes). (#5075)
+- Misc: Updated stb_textedit.h from 1.13 to 1.14 (our changes so this effectively is a no-op). (#5075)
+- Misc: Updated stb_rect_pack.h from 1.00 to 1.01 (minor). (#5075)
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
-- Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- Backends: GLFW: Fixed a regression in 1.87 which resulted in keyboard modifiers events being
+  reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
+- Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
+- Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
+- Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
+- Examples: Emscripten: Fix building for latest Emscripten specs. (#3632)
 
 Docking+Viewports Branch:
 
