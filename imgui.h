@@ -2335,6 +2335,7 @@ struct ImGuiListClipper
 #define IM_COL32_WHITE       IM_COL32(255,255,255,255)  // Opaque white = 0xFFFFFFFF
 #define IM_COL32_BLACK       IM_COL32(0,0,0,255)        // Opaque black
 #define IM_COL32_BLACK_TRANS IM_COL32(0,0,0,0)          // Transparent black = 0x00000000
+#define IM_COL32_WHITE_TRANS IM_COL32(255,255,255,0)    // Transparent white = 0x00FFFFFF
 
 // Helper: ImColor() implicitly converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
 // Prefer using IM_COL32() macros if you want a guaranteed compile-time ImU32 for usage with ImDrawList API.
