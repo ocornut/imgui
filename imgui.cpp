@@ -101,6 +101,7 @@ CODE
  - Easy to hack and improve.
  - Minimize setup and maintenance.
  - Minimize state storage on user side.
+ - Minimize state synchronization.
  - Portable, minimize dependencies, run on target (consoles, phones, etc.).
  - Efficient runtime and memory consumption.
 
