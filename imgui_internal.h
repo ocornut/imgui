@@ -2017,6 +2017,7 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;                               // Window name, owned by the window.
     ImGuiID                 ID;                                 // == ImHashStr(Name)
     ImGuiWindowFlags        Flags;                              // See enum ImGuiWindowFlags_
+    ImGuiViewportP*         Viewport;                           // Always set in Begin(). Inactive windows may have a NULL value here if their viewport was discarded.
     ImVec2                  Pos;                                // Position (always rounded-up to nearest pixel)
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
@@ -2533,6 +2534,9 @@ namespace ImGui
     IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
     IMGUI_API void          RemoveContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
+
+    // Viewports
+    IMGUI_API void          SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 
     // Settings
     IMGUI_API void                  MarkIniSettingsDirty();

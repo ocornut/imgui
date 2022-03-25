@@ -3709,7 +3709,7 @@ ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
 void ImGui::DestroyContext(ImGuiContext* ctx)
 {
     ImGuiContext* prev_ctx = GetCurrentContext();
-    if (ctx == NULL)
+    if (ctx == NULL) //-V1051
         ctx = prev_ctx;
     SetCurrentContext(ctx);
     Shutdown();
@@ -6179,6 +6179,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // SELECT VIEWPORT
         // FIXME-VIEWPORT: In the docking/viewport branch, this is the point where we select the current viewport (which may affect the style)
+
+        ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
+        SetWindowViewport(window, viewport);
         SetCurrentWindow(window);
 
         // LOCK BORDER SIZE AND PADDING FOR THE FRAME (so that altering them doesn't cause inconsistencies)
@@ -6292,7 +6295,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Calculate the range of allowed position for that window (to be movable and visible past safe area padding)
         // When clamping to stay visible, we will enforce that window->Pos stays inside of visibility_rect.
-        ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
         ImRect viewport_rect(viewport->GetMainRect());
         ImRect viewport_work_rect(viewport->GetWorkRect());
         ImVec2 visibility_padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
@@ -11846,6 +11848,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 // [SECTION] VIEWPORTS, PLATFORM WINDOWS
 //-----------------------------------------------------------------------------
 // - GetMainViewport()
+// - SetWindowViewport() [Internal]
 // - UpdateViewportsNewFrame() [Internal]
 // (this section is more complete in the 'docking' branch)
 //-----------------------------------------------------------------------------
@@ -11854,6 +11857,11 @@ ImGuiViewport* ImGui::GetMainViewport()
 {
     ImGuiContext& g = *GImGui;
     return g.Viewports[0];
+}
+
+void ImGui::SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
+{
+    window->Viewport = viewport;
 }
 
 // Update viewports and monitor infos
