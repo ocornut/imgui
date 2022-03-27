@@ -99,12 +99,20 @@ int main(int, char**)
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+
+        // wait and poll event
+        // timeout:
+        //  0 process event immediatly, not blocking
+        // -1 wait for ever untill an event comes
+        // positive number wait untill timedout or event comes
+        // call ImGui::RequestRedraw to awake waiting of this function. Return 0 to signel a quict event.
+        int timeout = 0;
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
+        ImGui::WaitAndPollEvents(timeout);
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();

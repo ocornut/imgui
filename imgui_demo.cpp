@@ -1701,6 +1701,8 @@ static void ShowDemoWindowWidgets()
             progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
             if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
             if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
+            // in power save mode when animate is enabled and, request redraw a new frame to show animation
+            ImGui::RequestRedraw(ImGuiRedrawFlags_Everything);
         }
 
         // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width,

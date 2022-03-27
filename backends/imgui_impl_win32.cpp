@@ -787,4 +787,61 @@ void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
     }
 }
 
+void ImGui::RequestRedraw(ImGuiRedrawFlags flags /*reserved*/)
+{
+    // flags logic in future
+    if (flags) {}
+    // Post WM_PAINT messag for windows32 platform system to awake WaitAndPollEvents()
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    HWND win32_window = bd->hWnd;
+    ::RedrawWindow(win32_window, NULL, NULL, RDW_INTERNALPAINT);
+}
+
+bool ImGui::WaitAndPollEvents(int timeout/* = 0*/)
+{
+    DWORD dw_timeout = 0;
+    if (timeout == -1)
+    {
+        dw_timeout = 4294967295; // MAX value of DWORD
+    }
+    else if (timeout > 0)
+    {
+        dw_timeout = (DWORD)(timeout * 1e3);
+    }
+
+    //// About mouse click on Windows system 
+    ////    Hex       Decimal     Symbolic
+    //// ------------------------------------------------------
+    //// left mouse click will trigger events of
+    ////    0201      513         WM_LBUTTONDOWN
+    ////    0202      514         WM_LBUTTONUP
+    ////    0200      512         WM_MOUSEFIRST / WM_MOUSEMOVE
+    //// right mouse click witll trigger events of
+    ////    0204      516         WM_RBUTTONDOWN
+    ////    0205      517         WM_RBUTTONUP
+    ////    0200      512         WM_MOUSEFIRST / WM_MOUSEMOVE
+    //// middle mouse click witll trigger events of
+    ////    0207      519         WM_MBUTTONDOWN
+    ////    0208      520         WM_MBUTTONUP
+    ////    0200      512         WM_MOUSEFIRST / WM_MOUSEMOVE
+    //// So any mouse click will result tree frames to be drawed, one on mouse down, two on mouse up
+
+
+    bool done = false;
+
+    MsgWaitForMultipleObjects(0, NULL, FALSE, dw_timeout, QS_ALLEVENTS);
+    // Poll and handle messages (inputs, window resize, etc.)
+    // See the WndProc() function below for our to dispatch events to the Win32 backend.
+    MSG msg;
+    while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+    {
+        ::TranslateMessage(&msg);
+        ::DispatchMessage(&msg);
+        if (msg.message == WM_QUIT)
+            done = true;
+    }
+
+    return !done;
+}
+
 //---------------------------------------------------------------------------------------------------------

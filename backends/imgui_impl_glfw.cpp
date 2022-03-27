@@ -638,6 +638,46 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateGamepads();
 }
 
+void ImGui::RequestRedraw(ImGuiRedrawFlags flags)
+{
+#ifdef _WIN32
+    // Only implement ImGuiRedrawFlags_Everything logic
+    IM_ASSERT(flags == ImGuiRedrawFlags_Everything && "Other redraw mode has not been implemented yet.");
+    if (flags == ImGuiRedrawFlags_Everything)
+    {
+        // Post WM_PAINT messag for windows32 platform system to awake the
+        // glfwWaitEventsTimeout function
+        ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+        HWND win32_window = glfwGetWin32Window(bd->Window);
+        ::RedrawWindow(win32_window, NULL, NULL, RDW_INTERNALPAINT);
+    }
+#endif
+    //DODO implementation for Linux and Mac OS
+}
+
+bool ImGui::WaitAndPollEvents(int timeout/* = 0*/)
+{
+    if (timeout > 0)
+    {
+        // This function puts the calling thread to sleep until at least one event is available in the event queue,
+        // or until the specified timeout is reached.If one or more events are available, it behaves exactly like
+        // glfwPollEvents, i.e.the events in the queue are processedand the function then returns immediately.
+        // Processing events will cause the windowand input callbacks associated with those events to be called.
+        glfwWaitEventsTimeout(timeout);
+    }
+    else if(timeout == 0)
+    {
+        glfwPollEvents();
+    }
+    else if (timeout == -1)
+    {
+        glfwWaitEvents();
+        glfwPollEvents();
+    }
+
+    return true;
+}
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif

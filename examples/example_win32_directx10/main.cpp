@@ -81,18 +81,17 @@ int main(int, char**)
     bool done = false;
     while (!done)
     {
-        // Poll and handle messages (inputs, window resize, etc.)
-        // See the WndProc() function below for our to dispatch events to the Win32 backend.
-        MSG msg;
-        while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+        // wait and poll event
+        // timeout:
+        //  0 process event immediatly, not blocking
+        // -1 wait for ever untill an event comes
+        // positive number wait untill timedout or event comes
+        // call ImGui::RequestRedraw to awake waiting of this function. Return 0 to signel a quict event.
+        int timeout = 0;
+        if (!ImGui::WaitAndPollEvents(timeout))
         {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
-                done = true;
+            done = true; break;
         }
-        if (done)
-            break;
 
         // Start the Dear ImGui frame
         ImGui_ImplDX10_NewFrame();

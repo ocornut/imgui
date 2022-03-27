@@ -201,6 +201,7 @@ typedef int ImGuiTableRowFlags;     // -> enum ImGuiTableRowFlags_   // Flags: F
 typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode(), TreeNodeEx(), CollapsingHeader()
 typedef int ImGuiViewportFlags;     // -> enum ImGuiViewportFlags_   // Flags: for ImGuiViewport
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
+typedef int ImGuiRedrawFlags;       // -> enum ImGuiRedrawFlags_     // Flags: for RequestRedraw()
 
 // ImTexture: user data for renderer backend to identify a texture [Compile-time configurable type]
 // - To use something else than an opaque void* pointer: override with e.g. '#define ImTextureID MyTextureType*' in your imconfig.h file.
@@ -348,6 +349,8 @@ namespace ImGui
     IMGUI_API ImVec2        GetWindowSize();                            // get current window size
     IMGUI_API float         GetWindowWidth();                           // get current window width (shortcut for GetWindowSize().x)
     IMGUI_API float         GetWindowHeight();                          // get current window height (shortcut for GetWindowSize().y)
+    IMGUI_API bool          WaitAndPollEvents(int timeout);             // block the frame drawing loop untill a event is detected. timeout: 0 process event immediatly, not blocking;  -1 wait for ever untill untill an event comes; positive number wait untill timedout or event comes. Call RequestRedraw to awake waiting of this function. Return 0 to signel a quict event.
+    IMGUI_API void          RequestRedraw(ImGuiRedrawFlags flags);      // request to redraw (currently redraw everything, may redraw specific region/window/widget only in the future)
 
     // Window manipulation
     // - Prefer using SetNextXXX functions (before Begin) rather that SetXXX functions (after Begin).
@@ -1732,6 +1735,14 @@ enum ImGuiCond_
     ImGuiCond_Appearing     = 1 << 3    // Set the variable if the object/window is appearing after being hidden/inactive (or the first time)
 };
 
+// Enumeration for ImGui::RequestRedraw()
+enum ImGuiRedrawFlags_
+{
+    ImGuiRedrawFlags_Everything = 0,          // Redraw everything visible
+    ImGuiRedrawFlags_SpcifiedWindow = 1 << 2, // Specific window
+    ImGuiRedrawFlags_RegionOfWindow = 1 << 3, // Region of a specific window
+};
+
 //-----------------------------------------------------------------------------
 // [SECTION] Helpers: Memory allocations macros, ImVector<>
 //-----------------------------------------------------------------------------
@@ -2939,6 +2950,7 @@ struct ImGuiPlatformImeData
 
     ImGuiPlatformImeData() { memset(this, 0, sizeof(*this)); }
 };
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] Obsolete functions and types

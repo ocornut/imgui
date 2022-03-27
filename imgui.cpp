@@ -12172,6 +12172,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
     Text("%d visible windows, %d active allocations", io.MetricsRenderWindows, io.MetricsActiveAllocations);
+    Text("Frame count %d, frame count ended %d, frame coung rendered %d", g.FrameCount, g.FrameCountEnded, g.FrameCountRendered);
     //SameLine(); if (SmallButton("GC")) { g.GcCompactAll = true; }
 
     Separator();
