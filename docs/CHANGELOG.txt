@@ -61,6 +61,9 @@ Other Changes:
   instance of a same table ID, when instances have a different height. (#3955).
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
+- Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
+  always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
+  level of a popup with a child menu opened.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
