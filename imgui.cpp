@@ -7962,9 +7962,12 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
 
 // Helper function to verify ABI compatibility between caller code and compiled version of Dear ImGui.
 // Verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
-// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
-// may see different structures than what imgui.cpp sees, which is problematic.
-// We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
+// If this triggers you have an issue:
+// - Most commonly: mismatched headers and compiled code version.
+// - Or: mismatched configuration #define, compilation settings, packing pragma etc.
+//   The configuration settings mentioned in imconfig.h must be set for all compilation units involved with Dear ImGui,
+//   which is way it is required you put them in your imconfig file (and not just before including imgui.h).
+//   Otherwise it is possible that different compilation units would see different structure layout
 bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
 {
     bool error = false;
@@ -7998,10 +8001,11 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
     IM_ASSERT(g.IO.Fonts->IsBuilt()                                     && "Font Atlas not built! Make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()");
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
-    IM_ASSERT(g.Style.CircleTessellationMaxError  > 0.0f                && "Invalid style setting!");
+    IM_ASSERT(g.Style.CircleTessellationMaxError > 0.0f                 && "Invalid style setting!");
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(g.Style.ColorButtonPosition == ImGuiDir_Left || g.Style.ColorButtonPosition == ImGuiDir_Right);
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < ImGuiKey_LegacyNativeKey_END && "io.KeyMap[] contains an out of bound value (need to be 0..511, or -1 for unmapped key)");
@@ -8030,7 +8034,7 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     IM_ASSERT((key_mod_flags == 0 || g.IO.KeyMods == key_mod_flags) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mod_flags);
 
-    // Recover from errors
+    // [EXPERIMENTAL] Recover from errors: You may call this yourself before EndFrame().
     //ErrorCheckEndFrameRecover();
 
     // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
@@ -8212,7 +8216,7 @@ void ImGuiStackSizes::CompareWithCurrentState()
 // - GetWindowContentRegionMin(), GetWindowContentRegionMax()
 // - BeginGroup()
 // - EndGroup()
-// Also see in imgui_widgets: tab bars, columns.
+// Also see in imgui_widgets: tab bars, and in imgui_tables: tables, columns.
 //-----------------------------------------------------------------------------
 
 // Advance cursor given item size for layout.
