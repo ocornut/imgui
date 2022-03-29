@@ -3200,8 +3200,11 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 
                // check if final y_crossing is blown up; no test case for this
                if (y_final > y_bottom) {
+                  int denom = (x2 - (x1+1));
                   y_final = y_bottom;
-                  dy = (y_final - y_crossing ) / (x2 - (x1+1)); // if denom=0, y_final = y_crossing, so y_final <= y_bottom
+                  if (denom != 0) { // [DEAR IMGUI] Avoid div by zero (https://github.com/nothings/stb/issues/1316)
+                     dy = (y_final - y_crossing ) / denom; // if denom=0, y_final = y_crossing, so y_final <= y_bottom
+                  }
                }
 
                // in second pixel, area covered by line segment found in first pixel
