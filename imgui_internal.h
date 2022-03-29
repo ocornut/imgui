@@ -1294,7 +1294,7 @@ enum ImGuiNavHighlightFlags_
 enum ImGuiNavDirSourceFlags_
 {
     ImGuiNavDirSourceFlags_None             = 0,
-    ImGuiNavDirSourceFlags_RawKeyboard      = 1 << 0,   // Raw keyboard (not pulled from nav), faciliate use of some functions before we can unify nav and keys
+    ImGuiNavDirSourceFlags_RawKeyboard      = 1 << 0,   // Raw keyboard (not pulled from nav), facilitate use of some functions before we can unify nav and keys
     ImGuiNavDirSourceFlags_Keyboard         = 1 << 1,
     ImGuiNavDirSourceFlags_PadDPad          = 1 << 2,
     ImGuiNavDirSourceFlags_PadLStick        = 1 << 3
