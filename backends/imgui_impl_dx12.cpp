@@ -436,6 +436,15 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     io.Fonts->SetTexID((ImTextureID)bd->hFontSrvGpuDescHandle.ptr);
 }
 
+#ifdef __MINGW32__
+// missing on MSYS2 gcc 10.3
+typedef HRESULT (WINAPI* PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)(
+                            _In_ const D3D12_ROOT_SIGNATURE_DESC* pRootSignature,
+                            _In_ D3D_ROOT_SIGNATURE_VERSION Version,
+                            _Out_ ID3DBlob** ppBlob,
+                            _Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob);
+#endif
+
 bool    ImGui_ImplDX12_CreateDeviceObjects()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();

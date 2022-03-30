@@ -14,8 +14,14 @@
 #include "imgui_impl_vulkan.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
+#ifdef __MINGW32__
+#define SDL_MAIN_HANDLED     // fix: undefined reference to `WinMain'
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
+#else
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#endif
 #include <vulkan/vulkan.h>
 
 //#define IMGUI_UNLIMITED_FRAME_RATE
