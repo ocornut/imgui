@@ -201,7 +201,7 @@ DirectX12 example, Windows only. <BR>
 This is quite long and tedious, because: DirectX12.
 
 
-### Miscallaneous
+### Miscellaneous
 
 **Building**
 
