@@ -1354,7 +1354,7 @@ static void ShowDemoWindowWidgets()
                     if (!my_tokens->empty())
                         return;
                     int token_begin = -1;
-                    const int text_length = strlen(buf);
+                    const int text_length = (int)strlen(buf);
                     for (int i = 0; i < text_length; ++i)
                     {
                         const char c = buf[i];
@@ -1410,7 +1410,7 @@ static void ShowDemoWindowWidgets()
                         return;
                     }
                     // If the current token matches the prefix, color it red
-                    if (Strnicmp(&data->TextBegin[user_data->tokens[data->TokenIdx].begin], colored_token_prefix, strlen(colored_token_prefix)) == 0)
+                    if (Strnicmp(&data->TextBegin[user_data->tokens[data->TokenIdx].begin], colored_token_prefix, (int)strlen(colored_token_prefix)) == 0)
                     {
                         data->Color = ImColor(user_data->color);
                         data->CharsForColor = user_data->tokens[data->TokenIdx].end - char_idx; // color from the current char to the token end
