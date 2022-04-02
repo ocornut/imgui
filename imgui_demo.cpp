@@ -1427,7 +1427,7 @@ static void ShowDemoWindowWidgets()
             ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
             ImGui::ColorEdit4("##InputPrefixColor", (float*)&textData.color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
             ImGui::SameLine(); ImGui::InputText("Color prefix", colored_token_prefix, 64); ImGui::SameLine(); HelpMarker("Color any words in the Multi-line Text Input that start with this prefix");
-            flags |= (colored_token_prefix[0] != '\0' ? ImGuiInputTextFlags_CallbackColor : 0);
+            if (colored_token_prefix[0] != '\0') { flags |= ImGuiInputTextFlags_CallbackColor; } else { flags &= ~ImGuiInputTextFlags_CallbackColor; }
             if (ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags, Funcs::MyInputTextCallback, &textData))
                 textData.tokens.clear();
             if (ImGui::IsItemDeactivated()) { textData.tokens.clear(); } // deactivated, trigger re-tokenization in case the edits were reverted
