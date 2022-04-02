@@ -1345,13 +1345,14 @@ static void ShowDemoWindowWidgets()
 
             struct Token { int begin; int end; };
 
-            struct ColorTextUserData { ImVector<Token> tokens; ImVec4 color = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f); };
-            static ColorTextUserData textData;
+            struct InputTextUserData { ImVector<Token> tokens; ImVec4 color = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f); };
+            static InputTextUserData textData;
 
-            struct Funcs {
-                static void TokenizeStr(ImVector<Token>* my_tokens, const char* buf)
+            struct Funcs
+            {
+                static void TokenizeStr(ImVector<Token>& my_tokens, const char* buf)
                 {
-                    if (!my_tokens->empty())
+                    if (!my_tokens.empty())
                         return;
                     int token_begin = -1;
                     const int text_length = (int)strlen(buf);
@@ -1365,7 +1366,7 @@ static void ShowDemoWindowWidgets()
                                 Token token;
                                 token.begin = token_begin;
                                 token.end = i;
-                                my_tokens->push_back(token);
+                                my_tokens.push_back(token);
                                 token_begin = -1;
                             }
                             continue;
@@ -1378,45 +1379,44 @@ static void ShowDemoWindowWidgets()
                         Token token;
                         token.begin = token_begin;
                         token.end = text_length;
-                        my_tokens->push_back(token);
+                        my_tokens.push_back(token);
                     }
                     return;
-
-                }
-                static int MyInputTextCallback(ImGuiInputTextCallbackData* data)
-                {
-                    ImVector<Token>* my_tokens = (ImVector<Token>*)data->UserData;
-                    if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
-                        my_tokens->clear();
-                    else
-                        TokenizeStr(my_tokens, data->Buf);
-                    return 0;
                 }
                 static int Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
-                static void MyTextColorCallback(ImGuiTextColorCallbackData* data)
+                static int MyInputTextCallback(ImGuiInputTextCallbackData* callback_data)
                 {
-                    ColorTextUserData* user_data = (ColorTextUserData*)data->UserData;
-                    const int char_idx = data->Char - data->TextBegin;
-                    while (data->TokenIdx < user_data->tokens.size() && char_idx >= user_data->tokens[data->TokenIdx].end) // jump to the first token that does not end before the current char index (could binary search here)
-                        ++data->TokenIdx;
-                    if (data->TokenIdx >= user_data->tokens.size()) // all tokens end before the current char index
+                    InputTextUserData* user_data = (InputTextUserData*)callback_data->UserData;
+                    if (callback_data->EventFlag == ImGuiInputTextFlags_CallbackColor)
                     {
-                        data->CharsUntilCallback = 0; // stop calling back
-                        return;
+                        ImGuiTextColorCallbackData* color_data = callback_data->ColorData;
+                        const int char_idx = color_data->Char - color_data->TextBegin;
+                        while (color_data->TokenIdx < user_data->tokens.size() && char_idx >= user_data->tokens[color_data->TokenIdx].end) // jump to the first token that does not end before the current char index (could binary search here)
+                            ++color_data->TokenIdx;
+                        if (color_data->TokenIdx >= user_data->tokens.size()) // all tokens end before the current char index
+                        {
+                            color_data->CharsUntilCallback = 0; // stop calling back
+                            return 0;
+                        }
+                        if (char_idx < user_data->tokens[color_data->TokenIdx].begin)
+                        {
+                            color_data->CharsUntilCallback = user_data->tokens[color_data->TokenIdx].begin - char_idx; // wait until we reach the first token
+                            return 0;
+                        }
+                        // If the current token matches the prefix, color it red
+                        if (Strnicmp(&color_data->TextBegin[user_data->tokens[color_data->TokenIdx].begin], colored_token_prefix, (int)strlen(colored_token_prefix)) == 0)
+                        {
+                            color_data->Color = ImColor(user_data->color);
+                            color_data->CharsForColor = user_data->tokens[color_data->TokenIdx].end - char_idx; // color from the current char to the token end
+                        }
+                        // If there is another token, callback once we hit the start of it. otherwise, stop calling back.
+                        color_data->CharsUntilCallback = (color_data->TokenIdx + 1 < user_data->tokens.size()) ? user_data->tokens[color_data->TokenIdx + 1].begin - char_idx : 0;
                     }
-                    if (char_idx < user_data->tokens[data->TokenIdx].begin)
-                    {
-                        data->CharsUntilCallback = user_data->tokens[data->TokenIdx].begin - char_idx; // wait until we reach the first token
-                        return;
-                    }
-                    // If the current token matches the prefix, color it red
-                    if (Strnicmp(&data->TextBegin[user_data->tokens[data->TokenIdx].begin], colored_token_prefix, (int)strlen(colored_token_prefix)) == 0)
-                    {
-                        data->Color = ImColor(user_data->color);
-                        data->CharsForColor = user_data->tokens[data->TokenIdx].end - char_idx; // color from the current char to the token end
-                    }
-                    // If there is another token, callback once we hit the start of it. otherwise, stop calling back.
-                    data->CharsUntilCallback = (data->TokenIdx + 1 < user_data->tokens.size()) ? user_data->tokens[data->TokenIdx + 1].begin - char_idx : 0;
+                    else if (callback_data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+                        user_data->tokens.clear();
+                    else
+                        TokenizeStr(user_data->tokens, callback_data->Buf);
+                    return 0;
                 }
             };
 
@@ -1427,10 +1427,11 @@ static void ShowDemoWindowWidgets()
             ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
             ImGui::ColorEdit4("##InputPrefixColor", (float*)&textData.color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
             ImGui::SameLine(); ImGui::InputText("Color prefix", colored_token_prefix, 64); ImGui::SameLine(); HelpMarker("Color any words in the Multi-line Text Input that start with this prefix");
-            if (ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags, Funcs::MyInputTextCallback, &textData.tokens, strlen(colored_token_prefix) ? Funcs::MyTextColorCallback : NULL, &textData))
+            flags |= (colored_token_prefix[0] != '\0' ? ImGuiInputTextFlags_CallbackColor : 0);
+            if (ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags, Funcs::MyInputTextCallback, &textData))
                 textData.tokens.clear();
             if (ImGui::IsItemDeactivated()) { textData.tokens.clear(); } // deactivated, trigger re-tokenization in case the edits were reverted
-            if (!ImGui::IsItemActive()) { Funcs::TokenizeStr(&textData.tokens, text); } // inactive, try to tokenize because it may have never been activated
+            if (!ImGui::IsItemActive()) { Funcs::TokenizeStr(textData.tokens, text); } // inactive, try to tokenize because it may have never been activated
             ImGui::TreePop();
         }
 
