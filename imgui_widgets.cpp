@@ -2104,19 +2104,6 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     return (decimal_precision < IM_ARRAYSIZE(min_steps)) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
-template<typename TYPE>
-static const char* ImAtoi(const char* src, TYPE* output)
-{
-    int negative = 0;
-    if (*src == '-') { negative = 1; src++; }
-    if (*src == '+') { src++; }
-    TYPE v = 0;
-    while (*src >= '0' && *src <= '9')
-        v = (v * 10) + (*src++ - '0');
-    *output = negative ? -v : v;
-    return src;
-}
-
 // Sanitize format
 // - Zero terminate so extra characters after format (e.g. "%f123") don't confuse atof/atoi
 // - stb_sprintf.h supports several new modifiers which format numbers in a way that also makes them incompatible atof/atoi.
@@ -2134,9 +2121,10 @@ static void SanitizeFormatString(const char* fmt, char* fmt_out, size_t fmt_out_
     *fmt_out = 0; // Zero-terminate
 }
 
-template<typename TYPE, typename SIGNEDTYPE>
+template<typename TYPE>
 TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, TYPE v)
 {
+    IM_ASSERT(data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
     const char* fmt_start = ImParseFormatFindStart(format);
     if (fmt_start[0] != '%' || fmt_start[1] == '%') // Don't apply if the value is not visible in the format string
         return v;
@@ -2152,10 +2140,8 @@ TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, 
     const char* p = v_str;
     while (*p == ' ')
         p++;
-    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-        v = (TYPE)ImAtof(p);
-    else
-        ImAtoi(p, (SIGNEDTYPE*)&v);
+    v = (TYPE)ImAtof(p);
+
     return v;
 }
 
@@ -2259,8 +2245,8 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     }
 
     // Round to user desired precision based on format string
-    if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
-        v_cur = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_cur);
+    if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+        v_cur = RoundScalarWithFormatT<TYPE>(format, data_type, v_cur);
 
     // Preserve remainder after rounding has been applied. This also allow slow tweaking of values.
     g.DragCurrentAccumDirty = false;
@@ -2856,8 +2842,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
                     // Calculate what our "new" clicked_t will be, and thus how far we actually moved the slider, and subtract this from the accumulator
                     TYPE v_new = ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
-                    if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
-                        v_new = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_new);
+                    if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+                        v_new = RoundScalarWithFormatT<TYPE>(format, data_type, v_new);
                     float new_clicked_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, v_new, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 
                     if (delta > 0)
@@ -2875,8 +2861,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             TYPE v_new = ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 
             // Round to user desired precision based on format string
-            if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
-                v_new = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_new);
+            if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+                v_new = RoundScalarWithFormatT<TYPE>(format, data_type, v_new);
 
             // Apply result
             if (*v != v_new)
@@ -3280,6 +3266,19 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_
         return fmt_start;
     ImStrncpy(buf, fmt_start, ImMin((size_t)(fmt_end - fmt_start) + 1, buf_size));
     return buf;
+}
+
+template<typename TYPE>
+static const char* ImAtoi(const char* src, TYPE* output)
+{
+    int negative = 0;
+    if (*src == '-') { negative = 1; src++; }
+    if (*src == '+') { src++; }
+    TYPE v = 0;
+    while (*src >= '0' && *src <= '9')
+        v = (v * 10) + (*src++ - '0');
+    *output = negative ? -v : v;
+    return src;
 }
 
 // Parse display precision back from the display format string

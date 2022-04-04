@@ -1921,6 +1921,7 @@ static void ShowDemoWindowWidgets()
         ImGui::DragFloat("DragFloat (-inf -> 1)", &drag_f, 0.005f, -FLT_MAX, 1.0f, "%.3f", flags);
         ImGui::DragFloat("DragFloat (-inf -> +inf)", &drag_f, 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", flags);
         ImGui::DragInt("DragInt (0 -> 100)", &drag_i, 0.5f, 0, 100, "%d", flags);
+        ImGui::DragInt("DragInt (gex)", &drag_i, 0.5f, 0, 100, "0x%04X", flags);
 
         // Sliders
         static float slider_f = 0.5f;
@@ -1928,6 +1929,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Underlying float value: %f", slider_f);
         ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags);
         ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags);
+        ImGui::SliderInt("SliderInt (hex)", &slider_i, 0, 100, "0x%04X", flags);
 
         ImGui::TreePop();
     }

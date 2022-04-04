@@ -53,6 +53,7 @@ Other Changes:
   or interacting with a game/3D view).
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
+- Sliders, Drags: Fixed using hexadecimal display format strings (it never worked). (#5165, #3133)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
