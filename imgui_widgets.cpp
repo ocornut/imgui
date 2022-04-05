@@ -3348,6 +3348,14 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     return value_changed;
 }
 
+static inline ImGuiInputTextFlags InputScalar_DefaultCharsFilter(ImGuiDataType data_type, const char* format)
+{
+    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+        return ImGuiInputTextFlags_CharsScientific;
+    const char format_last_char = format[0] ? format[strlen(format) - 1] : 0;
+    return (format_last_char == 'x' || format_last_char == 'X') ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal;
+}
+
 // Note that Drag/Slider functions are only forwarding the min/max values clamping values if the ImGuiSliderFlags_AlwaysClamp flag is set!
 // This is intended: this way we allow CTRL+Click manual input to set a value out of bounds, for maximum flexibility.
 // However this may not be ideal for all uses, as some user code may break on out of bound values.
@@ -3358,11 +3366,10 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, p_data, format);
     ImStrTrimBlanks(data_buf);
-    const bool is_floating_point = (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
-    const bool is_hexadecimal = !is_floating_point && format[0] && toupper(format[strlen(format) - 1]) == 'X';
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoMarkEdited;
-    flags |= is_floating_point ? ImGuiInputTextFlags_CharsScientific : is_hexadecimal ? ImGuiInputTextFlags_CharsHexadecimal : ImGuiInputTextFlags_CharsDecimal;
+    flags |= InputScalar_DefaultCharsFilter(data_type, format);
+
     bool value_changed = false;
     if (TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags))
     {
@@ -3405,12 +3412,12 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     char buf[64];
     DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, p_data, format);
 
-    bool value_changed = false;
-    if ((flags & (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
-        flags |= ImGuiInputTextFlags_CharsDecimal;
-    flags |= ImGuiInputTextFlags_AutoSelectAll;
-    flags |= ImGuiInputTextFlags_NoMarkEdited;  // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
+    // Testing ActiveId as a minor optimization as filtering is not needed until active
+    if (g.ActiveId == 0 && (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
+        flags |= InputScalar_DefaultCharsFilter(data_type, format);
+    flags |= ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoMarkEdited; // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
 
+    bool value_changed = false;
     if (p_step != NULL)
     {
         const float button_size = GetFrameHeight();
