@@ -37,6 +37,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
+  (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
+
 Other Changes:
 
 - IO: Fixed backward-compatibility regression introduced in 1.87: (#4921, #4858)
@@ -340,7 +343,7 @@ If you are stuck on ancient compiler you may need to stay at this version onward
 
 Breaking Changes:
 
-- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
+- Removed GetWindowContentRegionWidth() function. Keep inline redirection helper.
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
   Using 'GetContentRegionAvail().x' is generally a better choice.

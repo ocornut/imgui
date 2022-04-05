@@ -385,6 +385,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/04/05 (1.88) - inputs: renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete). This was never used in public API functions but technically present in imgui.h and ImGuiIO.
  - 2022/01/20 (1.87) - inputs: reworded gamepad IO.
                         - Backend writing to io.NavInputs[]            -> backend should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values.
  - 2022/01/19 (1.87) - sliders, drags: removed support for legacy arithmetic operators (+,+-,*,/) when inputing text. This doesn't break any api/code but a feature that used to be accessible by end-users (which seemingly no one used).
@@ -1251,7 +1252,7 @@ void ImGuiIO::ClearInputKeys()
         KeysData[n].DownDurationPrev = -1.0f;
     }
     KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
-    KeyMods = ImGuiKeyModFlags_None;
+    KeyMods = ImGuiModFlags_None;
     for (int n = 0; n < IM_ARRAYSIZE(NavInputsDownDuration); n++)
         NavInputsDownDuration[n] = NavInputsDownDurationPrev[n] = -1.0f;
 }
@@ -3994,7 +3995,7 @@ static void ImGui::UpdateKeyboardInputs()
 #endif
 
     // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
-    io.KeyMods = GetMergedKeyModFlags();
+    io.KeyMods = GetMergedModFlags();
 
     // Clear gamepad data if disabled
     if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
@@ -4246,15 +4247,16 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
-ImGuiKeyModFlags ImGui::GetMergedKeyModFlags()
+// [Internal] Do not use directly (can read io.KeyMods instead)
+ImGuiModFlags ImGui::GetMergedModFlags()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiKeyModFlags key_mod_flags = ImGuiKeyModFlags_None;
-    if (g.IO.KeyCtrl)   { key_mod_flags |= ImGuiKeyModFlags_Ctrl; }
-    if (g.IO.KeyShift)  { key_mod_flags |= ImGuiKeyModFlags_Shift; }
-    if (g.IO.KeyAlt)    { key_mod_flags |= ImGuiKeyModFlags_Alt; }
-    if (g.IO.KeySuper)  { key_mod_flags |= ImGuiKeyModFlags_Super; }
-    return key_mod_flags;
+    ImGuiModFlags key_mods = ImGuiModFlags_None;
+    if (g.IO.KeyCtrl)   { key_mods |= ImGuiModFlags_Ctrl; }
+    if (g.IO.KeyShift)  { key_mods |= ImGuiModFlags_Shift; }
+    if (g.IO.KeyAlt)    { key_mods |= ImGuiModFlags_Alt; }
+    if (g.IO.KeySuper)  { key_mods |= ImGuiModFlags_Super; }
+    return key_mods;
 }
 
 void ImGui::NewFrame()
@@ -7897,7 +7899,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
                     if (key == ImGuiKey_ModShift) { io.KeyShift = keydata->Down; }
                     if (key == ImGuiKey_ModAlt) { io.KeyAlt = keydata->Down; }
                     if (key == ImGuiKey_ModSuper) { io.KeySuper = keydata->Down; }
-                    io.KeyMods = GetMergedKeyModFlags();
+                    io.KeyMods = GetMergedModFlags();
                 }
 
                 // Allow legacy code using io.KeysDown[GetKeyIndex()] with new backends
@@ -8030,9 +8032,9 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     // send key release events mid-frame. This would normally trigger this assertion and lead to sheared inputs.
     // We silently accommodate for this case by ignoring/ the case where all io.KeyXXX modifiers were released (aka key_mod_flags == 0),
     // while still correctly asserting on mid-frame key press events.
-    const ImGuiKeyModFlags key_mod_flags = GetMergedKeyModFlags();
-    IM_ASSERT((key_mod_flags == 0 || g.IO.KeyMods == key_mod_flags) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
-    IM_UNUSED(key_mod_flags);
+    const ImGuiModFlags key_mods = GetMergedModFlags();
+    IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
+    IM_UNUSED(key_mods);
 
     // [EXPERIMENTAL] Recover from errors: You may call this yourself before EndFrame().
     //ErrorCheckEndFrameRecover();
