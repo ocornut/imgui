@@ -104,6 +104,9 @@ Other changes:
 
 Breaking changes:
 
+- Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
+  (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
+
 Other Changes:
 
 - IO: Fixed backward-compatibility regression introduced in 1.87: (#4921, #4858)
@@ -120,12 +123,22 @@ Other Changes:
   or interacting with a game/3D view).
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
+- Sliders, Drags: Fixed dragging when using hexadecimal display format string. (#5165, #3133)
+- Sliders, Drags: Fixed manual input when using hexadecimal display format string. (#5165, #3133)
+- InputScalar: Fixed manual input when using %03d style width in display format string. (#5165, #3133)
+- InputScalar: Automatically allow hexadecimal input when format is %X (without extra flag).
+- InputScalar: Automatically allow scientific input when format is float/double (without extra flag).
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
+- InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
+  trickled with the new input queue (happened on some backends only). (#2467, #1336)
 - Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
   instance of a same table ID, when instances have a different height. (#3955).
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
+- Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
+  always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
+  level of a popup with a child menu opened.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
@@ -447,7 +460,7 @@ If you are stuck on ancient compiler you may need to stay at this version onward
 
 Breaking Changes:
 
-- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
+- Removed GetWindowContentRegionWidth() function. Keep inline redirection helper.
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
   Using 'GetContentRegionAvail().x' is generally a better choice.

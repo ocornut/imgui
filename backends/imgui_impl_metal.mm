@@ -584,8 +584,11 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         vertexBufferOffset += (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
         indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
-
-    id weakSelf = self;
+#if __has_feature(objc_arc)
+    __weak id weakSelf = self;
+#else
+    __unsafe_unretained id weakSelf = self;
+#endif
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
