@@ -23,6 +23,14 @@
 #include <tchar.h>
 #include <dwmapi.h>
 
+// Stuff for loading WGL functions explicitly
+#include <cstdlib> // atexit()
+static HMODULE libgl;
+HGLRC (WINAPI* _wglCreateContext)(HDC);
+BOOL  (WINAPI* _wglDeleteContext)(HGLRC);
+BOOL  (WINAPI* _wglMakeCurrent)(HDC, HGLRC);
+BOOL  (WINAPI* _wglShareLists)(HGLRC, HGLRC);
+
 // Configuration flags to add in your imconfig.h file:
 //#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD              // Disable gamepad support. This was meaningful before <1.81 but we now load XInput dynamically so the option is now less relevant.
 
@@ -88,6 +96,8 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport);
 struct ImGui_ImplWin32_Data
 {
     HWND                        hWnd;
+    HDC                         Hdc;
+    HGLRC                       HgLrc;
     HWND                        MouseHwnd;
     bool                        MouseTracked;
     int                         MouseButtonsDown;
@@ -97,10 +107,6 @@ struct ImGui_ImplWin32_Data
     bool                        HasGamepad;
     bool                        WantUpdateHasGamepad;
     bool                        WantUpdateMonitors;
-
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-    HGLRC                       HgLrc;
-#endif //IMGUI_IMPL_WIN32_OPENGL3
 
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     HMODULE                     XInputDLL;
@@ -121,11 +127,7 @@ static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
 }
 
 // Functions
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
 bool    ImGui_ImplWin32_Init(void* hwnd, void* hglrc)
-#else
-bool    ImGui_ImplWin32_Init(void* hwnd)
-#endif
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == NULL && "Already initialized a platform backend!");
@@ -135,6 +137,25 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
         return false;
     if (!::QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
         return false;
+
+    // Load WGL symbols explicitly
+    // This is needed to allow compilation if and when non-OpenGL APIs are used with Win32.
+    // The function pointer names are preceded with an underscore ("_") to prevent duplicate
+    // symbols in projects where OpenGL32.dll is linked implicitly.
+    if (hglrc)
+    {
+        libgl = LoadLibraryA("opengl32.dll");
+        IM_ASSERT(libgl);
+        _wglCreateContext = (HGLRC(WINAPI*)(HDC))GetProcAddress(libgl, "wglCreateContext");
+        _wglDeleteContext = (BOOL(WINAPI*)(HGLRC))GetProcAddress(libgl, "wglDeleteContext");
+        _wglMakeCurrent = (BOOL(WINAPI*)(HDC, HGLRC))GetProcAddress(libgl, "wglMakeCurrent");
+        _wglShareLists = (BOOL(WINAPI*)(HGLRC, HGLRC))GetProcAddress(libgl, "wglShareLists");
+        IM_ASSERT(_wglCreateContext);
+        IM_ASSERT(_wglDeleteContext);
+        IM_ASSERT(_wglMakeCurrent);
+        IM_ASSERT(_wglShareLists);
+        atexit([](){ FreeLibrary(libgl); });
+    }
 
     // Setup backend capabilities flags
     ImGui_ImplWin32_Data* bd = IM_NEW(ImGui_ImplWin32_Data)();
@@ -146,15 +167,13 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
 
     bd->hWnd = (HWND)hwnd;
+    bd->Hdc = GetDC(bd->hWnd);
+    bd->HgLrc = (HGLRC)hglrc; // OpenGL
     bd->WantUpdateHasGamepad = true;
     bd->WantUpdateMonitors = true;
     bd->TicksPerSecond = perf_frequency;
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
-
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-    bd->HgLrc = (HGLRC)hglrc;
-#endif //IMGUI_IMPL_WIN32_OPENGL3
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -857,25 +876,19 @@ struct ImGui_ImplWin32_ViewportData
 {
     HWND    Hwnd;
     bool    HwndOwned;
-    DWORD   DwStyle;
-    DWORD   DwExStyle;
-
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
     HDC     Hdc;
     HGLRC   HgLrc;
-#endif //IMGUI_IMPL_WIN32_OPENGL3
+    DWORD   DwStyle;
+    DWORD   DwExStyle;
 
     ImGui_ImplWin32_ViewportData()
     {
         Hwnd = NULL;
         HwndOwned = false;
-        DwStyle = 0;
-        DwExStyle = 0;
-
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
         Hdc = NULL;
         HgLrc = NULL;
-#endif //IMGUI_IMPL_WIN32_OPENGL3
+        DwStyle = 0;
+        DwExStyle = 0;
     }
     ~ImGui_ImplWin32_ViewportData() { IM_ASSERT(Hwnd == NULL); }
 };
@@ -916,29 +929,28 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
         parent_window, NULL, ::GetModuleHandle(NULL), NULL);                    // Parent window, Menu, Instance, Param
     vd->HwndOwned = true;
+    vd->Hdc = GetDC(vd->Hwnd);
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
 
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-    vd->Hdc = GetDC(vd->Hwnd);
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    if (bd->HgLrc) // OpenGL
+    {
+        // Use the main window's pixel format
+        int pf = GetPixelFormat(bd->Hdc);
+        PIXELFORMATDESCRIPTOR pfd;
+        DescribePixelFormat(bd->Hdc, pf, sizeof(pfd), &pfd);
+        SetPixelFormat(vd->Hdc, pf, &pfd);
 
-    // Set pixel format to match base window
-    HDC Hdc = GetDC(bd->hWnd);
-    int pf = GetPixelFormat(Hdc);
-    PIXELFORMATDESCRIPTOR pfd;
-    DescribePixelFormat(Hdc, pf, sizeof(pfd), &pfd);
-    SetPixelFormat(vd->Hdc, pf, &pfd);
+        // Create OpenGL context and share main context's lists with it
+        vd->HgLrc = _wglCreateContext(vd->Hdc);
+        _wglMakeCurrent(vd->Hdc, vd->HgLrc);
+        _wglShareLists(bd->HgLrc, vd->HgLrc);
 
-    // Create OpenGL context for new window
-    vd->HgLrc = wglCreateContext(vd->Hdc);
-    wglMakeCurrent(vd->Hdc, vd->HgLrc);
-    wglShareLists(bd->HgLrc, vd->HgLrc);
-
-    // Present new window
-    ImGui_ImplWin32_SetWindowFocus(viewport);
-    ImGui_ImplWin32_ShowWindow(viewport);
-#endif //IMGUI_IMPL_WIN32_OPENGL3
+        // Present window
+        ImGui_ImplWin32_SetWindowFocus(viewport);
+        ImGui_ImplWin32_ShowWindow(viewport);
+    }
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
@@ -954,9 +966,8 @@ static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
         }
         if (vd->Hwnd && vd->HwndOwned)
         {
-            #ifdef IMGUI_IMPL_WIN32_OPENGL3
-            wglDeleteContext(vd->HgLrc);
-            #endif //IMGUI_IMPL_WIN32_OPENGL3
+            if (vd->HgLrc)
+                _wglDeleteContext(vd->HgLrc);
 
             ::DestroyWindow(vd->Hwnd);
         }
@@ -1119,20 +1130,20 @@ static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 #endif
 }
 
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-static void ImGui_ImplWin32_RenderWindow(ImGuiViewport* viewport, void*)
+static void ImGui_ImplWin32_OGL_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    wglMakeCurrent(vd->Hdc, vd->HgLrc);
+    IM_ASSERT(vd->HgLrc); // ImGui_ImplWin32_OGL_RenderWindow() is only registered if API is OpenGL
+    _wglMakeCurrent(vd->Hdc, vd->HgLrc);
 }
 
-static void ImGui_ImplWin32_SwapBuffers(ImGuiViewport* viewport, void*)
+static void ImGui_ImplWin32_OGL_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    wglMakeCurrent(vd->Hdc, vd->HgLrc);
+    IM_ASSERT(vd->HgLrc); // ImGui_ImplWin32_OGL_SwapBuffers() is only registered if API is OpenGL
+    _wglMakeCurrent(vd->Hdc, vd->HgLrc);
     SwapBuffers(vd->Hdc);
 }
-#endif //IMGUI_IMPL_WIN32_OPENGL3
 
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1143,10 +1154,9 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     {
         switch (msg)
         {
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
         case WM_ERASEBKGND:
-            return 0; // Prevent flickering on window invalidation
-#endif //IMGUI_IMPL_WIN32_OPENGL3
+            // Prevent flickering on window invalidation
+            return TRUE;
         case WM_CLOSE:
             viewport->PlatformRequestClose = true;
             return 0;
@@ -1211,18 +1221,21 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale; // FIXME-DPI
     platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
     
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-    platform_io.Platform_RenderWindow = ImGui_ImplWin32_RenderWindow;
-    platform_io.Platform_SwapBuffers = ImGui_ImplWin32_SwapBuffers;
-#endif //IMGUI_IMPL_WIN32_OPENGL3
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    if (bd->HgLrc) // OpenGL
+    {
+        platform_io.Platform_RenderWindow = ImGui_ImplWin32_OGL_RenderWindow;
+        platform_io.Platform_SwapBuffers = ImGui_ImplWin32_OGL_SwapBuffers;
+    }
 
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGui_ImplWin32_ViewportData* vd = IM_NEW(ImGui_ImplWin32_ViewportData)();
     vd->Hwnd = bd->hWnd;
     vd->HwndOwned = false;
+    vd->Hdc = bd->Hdc;
+    vd->HgLrc = bd->HgLrc; // OpenGL
     main_viewport->PlatformUserData = vd;
     main_viewport->PlatformHandle = (void*)bd->hWnd;
 }

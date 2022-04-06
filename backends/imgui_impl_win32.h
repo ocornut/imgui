@@ -16,11 +16,7 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 
-#ifdef IMGUI_IMPL_WIN32_OPENGL3
-IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd, void* hglrc);
-#else
-IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
-#endif
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd, void* hglrc = NULL);
 IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
