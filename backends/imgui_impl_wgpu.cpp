@@ -509,6 +509,7 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
     }
 
     // Create the associated sampler
+    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     {
         WGPUSamplerDescriptor sampler_desc = {};
         sampler_desc.minFilter = WGPUFilterMode_Linear;
