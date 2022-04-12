@@ -75,6 +75,8 @@ Other Changes:
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
+- Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
+  from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
 - Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
