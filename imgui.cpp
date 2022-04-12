@@ -2248,17 +2248,14 @@ void ImGuiStorage::SetAllInt(int v)
 //-----------------------------------------------------------------------------
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
+ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
+    InputBuf[0] = 0;
+    CountGrep = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_ARRAYSIZE(InputBuf));
         Build();
-    }
-    else
-    {
-        InputBuf[0] = 0;
-        CountGrep = 0;
     }
 }
 
