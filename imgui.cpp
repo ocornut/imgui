@@ -3294,36 +3294,6 @@ ImGuiID ImGuiWindow::GetID(int n)
     return id;
 }
 
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
-    ImGuiContext& g = *GImGui;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
-    return id;
-}
-
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
-    ImGuiContext& g = *GImGui;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
-    return id;
-}
-
-ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashData(&n, sizeof(n), seed);
-    ImGuiContext& g = *GImGui;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
-    return id;
-}
-
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
 ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 {
@@ -7420,7 +7390,7 @@ void ImGui::PushID(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetIDNoKeepAlive(str_id);
+    ImGuiID id = window->GetID(str_id);
     window->IDStack.push_back(id);
 }
 
@@ -7428,7 +7398,7 @@ void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetIDNoKeepAlive(str_id_begin, str_id_end);
+    ImGuiID id = window->GetID(str_id_begin, str_id_end);
     window->IDStack.push_back(id);
 }
 
@@ -7436,7 +7406,7 @@ void ImGui::PushID(const void* ptr_id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetIDNoKeepAlive(ptr_id);
+    ImGuiID id = window->GetID(ptr_id);
     window->IDStack.push_back(id);
 }
 
@@ -7444,7 +7414,7 @@ void ImGui::PushID(int int_id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetIDNoKeepAlive(int_id);
+    ImGuiID id = window->GetID(int_id);
     window->IDStack.push_back(id);
 }
 

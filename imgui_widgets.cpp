@@ -856,7 +856,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
 
 ImGuiID ImGui::GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
 {
-    return window->GetIDNoKeepAlive(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
+    return window->GetID(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
 }
 
 // Return scrollbar rectangle, must only be called for corresponding axis if window->ScrollbarX/Y is set.
