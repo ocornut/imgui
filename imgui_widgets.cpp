@@ -148,7 +148,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, ImGuiTextColorCallback color_callback, void* color_user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -213,7 +213,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
-                RenderText(pos, line, line_end, false);
+                RenderText(pos, line, line_end, false, color_callback, color_user_data);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
                 line_rect.Max.y += line_height;
@@ -251,7 +251,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
+        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width, color_callback, color_user_data);
     }
 }
 
@@ -296,6 +296,25 @@ void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
     else
         TextV(fmt, args);
     PopStyleColor();
+}
+
+void ImGui::TextColored(ImGuiTextColorCallback callback, void* user_data, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    TextColoredV(callback, user_data, fmt, args);
+    va_end(args);
+}
+
+void ImGui::TextColoredV(ImGuiTextColorCallback callback, void* user_data, const char* fmt, va_list args)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    TextEx(g.TempBuffer, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, callback, user_data);
 }
 
 void ImGui::TextDisabled(const char* fmt, ...)
@@ -4581,6 +4600,28 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         buf_display_end = hint + strlen(hint);
     }
 
+    struct ColorCallback
+    {
+        struct UserData { ImGuiInputTextCallback Callback = NULL; void* CallbackUserData = NULL; };
+        static void Func(ImGuiTextColorCallbackData* data)
+        {
+            UserData* color_user_data = (UserData*)data->UserData;
+            ImGuiInputTextCallbackData input_text_callback_data;
+            input_text_callback_data.EventFlag = ImGuiInputTextFlags_CallbackColor;
+            input_text_callback_data.UserData = color_user_data->CallbackUserData;
+            input_text_callback_data.ColorData = data;
+            color_user_data->Callback(&input_text_callback_data);
+        }
+    };
+    ImGuiTextColorCallback color_callback = NULL;
+    ColorCallback::UserData color_user_data;
+    if (callback && (flags & ImGuiInputTextFlags_CallbackColor))
+    {
+        color_callback = ColorCallback::Func;
+        color_user_data.Callback = callback;
+        color_user_data.CallbackUserData = callback_user_data;
+    }
+
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
     if (render_cursor || render_selection)
@@ -4725,7 +4766,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect, color_callback, &color_user_data);
         }
 
         // Draw blinking cursor
@@ -4760,7 +4801,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect, color_callback, &color_user_data);
         }
     }
 

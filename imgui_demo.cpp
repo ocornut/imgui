@@ -1341,13 +1341,97 @@ static void ShowDemoWindowWidgets()
                 "*/\n\n"
                 "label:\n"
                 "\tlock cmpxchg8b eax\n";
+            static char colored_token_prefix[64] = "";
 
-            static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
+            struct Token { int begin; int end; };
+
+            struct InputTextUserData { ImVector<Token> tokens; ImVec4 color = ImVec4(255.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 255.0f / 255.0f); };
+            static InputTextUserData textData;
+
+            struct Funcs
+            {
+                static void TokenizeStr(ImVector<Token>& my_tokens, const char* buf)
+                {
+                    if (!my_tokens.empty())
+                        return;
+                    int token_begin = -1;
+                    const int text_length = (int)strlen(buf);
+                    for (int i = 0; i < text_length; ++i)
+                    {
+                        const char c = buf[i];
+                        if (c == ' ' || c == '\t' || c == '\n')
+                        {
+                            if (token_begin != -1)
+                            {
+                                Token token;
+                                token.begin = token_begin;
+                                token.end = i;
+                                my_tokens.push_back(token);
+                                token_begin = -1;
+                            }
+                            continue;
+                        }
+                        if (token_begin == -1)
+                            token_begin = i;
+                    }
+                    if (token_begin != -1)
+                    {
+                        Token token;
+                        token.begin = token_begin;
+                        token.end = text_length;
+                        my_tokens.push_back(token);
+                    }
+                    return;
+                }
+                static int Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
+                static int MyInputTextCallback(ImGuiInputTextCallbackData* callback_data)
+                {
+                    InputTextUserData* user_data = (InputTextUserData*)callback_data->UserData;
+                    if (callback_data->EventFlag == ImGuiInputTextFlags_CallbackColor)
+                    {
+                        ImGuiTextColorCallbackData* color_data = callback_data->ColorData;
+                        const int char_idx = color_data->Char - color_data->TextBegin;
+                        while (color_data->TokenIdx < user_data->tokens.size() && char_idx >= user_data->tokens[color_data->TokenIdx].end) // jump to the first token that does not end before the current char index (could binary search here)
+                            ++color_data->TokenIdx;
+                        if (color_data->TokenIdx >= user_data->tokens.size()) // all tokens end before the current char index
+                        {
+                            color_data->CharsUntilCallback = 0; // stop calling back
+                            return 0;
+                        }
+                        if (char_idx < user_data->tokens[color_data->TokenIdx].begin)
+                        {
+                            color_data->CharsUntilCallback = user_data->tokens[color_data->TokenIdx].begin - char_idx; // wait until we reach the first token
+                            return 0;
+                        }
+                        // If the current token matches the prefix, color it red
+                        if (Strnicmp(&color_data->TextBegin[user_data->tokens[color_data->TokenIdx].begin], colored_token_prefix, (int)strlen(colored_token_prefix)) == 0)
+                        {
+                            color_data->Color = ImColor(user_data->color);
+                            color_data->CharsForColor = user_data->tokens[color_data->TokenIdx].end - char_idx; // color from the current char to the token end
+                        }
+                        // If there is another token, callback once we hit the start of it. otherwise, stop calling back.
+                        color_data->CharsUntilCallback = (color_data->TokenIdx + 1 < user_data->tokens.size()) ? user_data->tokens[color_data->TokenIdx + 1].begin - char_idx : 0;
+                    }
+                    else if (callback_data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+                        user_data->tokens.clear();
+                    else
+                        TokenizeStr(user_data->tokens, callback_data->Buf);
+                    return 0;
+                }
+            };
+
+            static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter;
             HelpMarker("You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputTextMultiline() to a dynamic string type. See misc/cpp/imgui_stdlib.h for an example. (This is not demonstrated in imgui_demo.cpp because we don't want to include <string> in here)");
             ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
             ImGui::CheckboxFlags("ImGuiInputTextFlags_AllowTabInput", &flags, ImGuiInputTextFlags_AllowTabInput);
             ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags);
+            ImGui::ColorEdit4("##InputPrefixColor", (float*)&textData.color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+            ImGui::SameLine(); ImGui::InputText("Color prefix", colored_token_prefix, 64); ImGui::SameLine(); HelpMarker("Color any words in the Multi-line Text Input that start with this prefix");
+            if (colored_token_prefix[0] != '\0') { flags |= ImGuiInputTextFlags_CallbackColor; } else { flags &= ~ImGuiInputTextFlags_CallbackColor; }
+            if (ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags, Funcs::MyInputTextCallback, &textData))
+                textData.tokens.clear();
+            if (ImGui::IsItemDeactivated()) { textData.tokens.clear(); } // deactivated, trigger re-tokenization in case the edits were reverted
+            if (!ImGui::IsItemActive()) { Funcs::TokenizeStr(textData.tokens, text); } // inactive, try to tokenize because it may have never been activated
             ImGui::TreePop();
         }
 
