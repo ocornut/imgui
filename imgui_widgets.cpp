@@ -6161,7 +6161,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
 // But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID or use ##unique_id.
 // With this scheme, ImGuiSelectableFlags_SpanAllColumns and ImGuiSelectableFlags_AllowItemOverlap are also frequently used flags.
 // FIXME: Selectable() with (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
-bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+bool ImGui::SelectableHover(const char* label, bool* p_hovered, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6248,6 +6248,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
 
+    *p_hovered = hovered ;
+
     // Auto-select when moved into
     // - This will be more fully fleshed in the range-select branch
     // - This is not exposed as it won't nicely work with some user side handling of shift/control
@@ -6306,14 +6308,26 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     return pressed; //-V1020
 }
 
-bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+bool ImGui::SelectableHover(const char* label, bool* p_hovered, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
-    if (Selectable(label, *p_selected, flags, size_arg))
+    if (SelectableHover(label, p_hovered, *p_selected, flags, size_arg))
     {
         *p_selected = !*p_selected;
         return true;
     }
     return false;
+}
+
+bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+{
+    bool hovered = false ;
+    return SelectableHover(label, &hovered, selected, flags, size_arg);
+}
+
+bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+{
+    bool hovered = false ;
+    return SelectableHover(label, &hovered, p_selected, flags, size_arg);
 }
 
 //-------------------------------------------------------------------------
@@ -6390,15 +6404,28 @@ void ImGui::EndListBox()
     EndGroup(); // This is only required to be able to do IsItemXXX query on the whole ListBox including label
 }
 
+
 bool ImGui::ListBox(const char* label, int* current_item, const char* const items[], int items_count, int height_items)
 {
-    const bool value_changed = ListBox(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_items);
+    int hovered ;
+    return ListBox(label, current_item, &hovered, items, items_count, height_items);
+}
+
+bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+{
+    int hovered ;
+    return ListBox(label, current_item, &hovered, items_getter, data, items_count, height_in_items);
+}
+
+bool ImGui::ListBox(const char* label, int* current_item, int* hovered_item, const char* const items[], int items_count, int height_items)
+{
+    const bool value_changed = ListBox(label, current_item, hovered_item, Items_ArrayGetter, (void*)items, items_count, height_items);
     return value_changed;
 }
 
 // This is merely a helper around BeginListBox(), EndListBox().
 // Considering using those directly to submit custom data or store selection differently.
-bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::ListBox(const char* label, int* current_item, int* hovered_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
 {
     ImGuiContext& g = *GImGui;
 
@@ -6425,11 +6452,15 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
 
             PushID(i);
             const bool item_selected = (i == *current_item);
-            if (Selectable(item_text, item_selected))
+            bool hover = false ;
+            if (SelectableHover(item_text, &hover, item_selected))
             {
                 *current_item = i;
                 value_changed = true;
             }
+            if( hover )
+                *hovered_item = i ;
+
             if (item_selected)
                 SetItemDefaultFocus();
             PopID();

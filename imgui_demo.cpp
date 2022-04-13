@@ -1132,8 +1132,12 @@ static void ShowDemoWindowWidgets()
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
                 const bool is_selected = (item_current_idx == n);
-                if (ImGui::Selectable(items[n], is_selected))
+                bool is_hovered = false ;
+                if (ImGui::SelectableHover(items[n], &is_hovered, is_selected))
                     item_current_idx = n;
+
+                if( is_hovered )
+                    item_current_idx = n ;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
