@@ -2316,6 +2316,8 @@ struct ImGuiListClipper
 };
 
 // Helpers macros to generate 32-bit encoded colors
+// User can declare their own format by #defining the 5 _SHIFT/_MASK macros in their imconfig file.
+#ifndef IM_COL32_R_SHIFT
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
 #define IM_COL32_R_SHIFT    16
 #define IM_COL32_G_SHIFT    8
@@ -2328,6 +2330,7 @@ struct ImGuiListClipper
 #define IM_COL32_B_SHIFT    16
 #define IM_COL32_A_SHIFT    24
 #define IM_COL32_A_MASK     0xFF000000
+#endif
 #endif
 #define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
 #define IM_COL32_WHITE       IM_COL32(255,255,255,255)  // Opaque white = 0xFFFFFFFF

@@ -79,6 +79,7 @@ Other Changes:
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
+- Misc: Allow redefining IM_COL32_XXX layout macros to facilitate use on big-endian systems. (#5190, #767, #844)
 - Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
 - Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
 - Misc: Updated stb_truetype.h from 1.20 to 1.26 (many fixes). (#5075)
@@ -90,6 +91,7 @@ Other Changes:
   reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
 - Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
 - Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
+- Backends: SDL, OpenGL3: Fixes to facilitate building on AmigaOS4. (#5190) [@afxgroup]
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Examples: Emscripten: Fix building for latest Emscripten specs. (#3632)
 
