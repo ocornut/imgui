@@ -61,6 +61,7 @@ Other Changes:
 - InputScalar: Fixed manual input when using %03d style width in display format string. (#5165, #3133)
 - InputScalar: Automatically allow hexadecimal input when format is %X (without extra flag).
 - InputScalar: Automatically allow scientific input when format is float/double (without extra flag).
+- Nav: Fixed nav movement in a scope with only one disabled item from focusing the disabled item. (#5189)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
