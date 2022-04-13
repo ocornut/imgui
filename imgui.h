@@ -3154,6 +3154,8 @@ struct ImGuiPlatformIO
     float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // N . . . .  // (Optional) [BETA] FIXME-DPI: DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI.
     void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // . F . . .  // (Optional) [BETA] FIXME-DPI: DPI handling: Called during Begin() every time the viewport we are outputting into changes, so backend has a chance to swap fonts to adjust style.
     int     (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface); // (Optional) For a Vulkan Renderer to call into Platform code (since the surface creation needs to tie them both).
+    void    (*Platform_PushOglContext)(ImGuiViewport* vp);                  // . . . R .  // (Optional) For an OpenGL Renderer to make a platform window's rendering context current for rendering
+    void    (*Platform_PopOglContext)(ImGuiViewport* vp);                   // . . . R .  // (Optional) For an OpenGL Renderer to revert to the previous rendering context after rendering a platform window
 
     // (Optional) Renderer functions (e.g. DirectX, OpenGL, Vulkan)
     void    (*Renderer_CreateWindow)(ImGuiViewport* vp);                    // . . U . .  // Create swap chain, frame buffers etc. (called after Platform_CreateWindow)
