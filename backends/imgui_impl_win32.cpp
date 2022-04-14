@@ -90,8 +90,6 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 static void ImGui_ImplWin32_InitPlatformInterface();
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
-static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport);
-static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport);
 
 struct ImGui_ImplWin32_Data
 {
