@@ -1349,7 +1349,7 @@ WebbyServerUpdate(struct WebbyServer *srv)
   }
 
   timeout.tv_sec = 0;
-  timeout.tv_usec = 5;
+  timeout.tv_usec = 0;
 
   err = select((int) (max_socket + 1), &read_fds, &write_fds, &except_fds, &timeout);
 
