@@ -99,6 +99,8 @@ Other Changes:
 - Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
 - Backends: SDL, OpenGL3: Fixes to facilitate building on AmigaOS4. (#5190) [@afxgroup]
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
+- Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
+  multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 
 

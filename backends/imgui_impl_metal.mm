@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-01-03: Metal: Ignore ImDrawCmd where ElemCount == 0 (very rare but can technically be manufactured by user code).
 //  2021-12-30: Metal: Added Metal C++ support. Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 //  2021-08-24: Metal: Fixed a crash when clipping rect larger than framebuffer is submitted. (#4464)
@@ -54,6 +55,7 @@
 // renderer backend. Stores the render pipeline state cache and the default
 // font texture, and manages the reusable buffer cache.
 @interface MetalContext : NSObject
+@property (nonatomic, strong) id<MTLDevice> device;
 @property (nonatomic, strong) id<MTLDepthStencilState> depthStencilState;
 @property (nonatomic, strong) FramebufferDescriptor *framebufferDescriptor; // framebuffer descriptor for current frame; transient
 @property (nonatomic, strong) NSMutableDictionary *renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
@@ -77,7 +79,16 @@
         commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder;
 @end
 
-static MetalContext *g_sharedMetalContext = nil;
+struct ImGui_ImplMetal_Data
+{
+    MetalContext*            SharedMetalContext;
+
+    ImGui_ImplMetal_Data()  { memset(this, 0, sizeof(*this)); }
+};
+
+static ImGui_ImplMetal_Data*     ImGui_ImplMetal_CreateBackendData()  { return IM_NEW(ImGui_ImplMetal_Data)(); }
+static ImGui_ImplMetal_Data*     ImGui_ImplMetal_GetBackendData()     { return ImGui::GetCurrentContext() ? (ImGui_ImplMetal_Data*)ImGui::GetIO().BackendRendererUserData : NULL; }
+static void                      ImGui_ImplMetal_DestroyBackendData() { IM_DELETE(ImGui_ImplMetal_GetBackendData()); }
 
 #ifdef IMGUI_IMPL_METAL_CPP
 
@@ -119,16 +130,14 @@ bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
 
 bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_CreateBackendData();
     ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        g_sharedMetalContext = [[MetalContext alloc] init];
-    });
-
-    ImGui_ImplMetal_CreateDeviceObjects(device);
+    bd->SharedMetalContext = [[MetalContext alloc] init];
+    bd->SharedMetalContext.device = device;
 
     return true;
 }
@@ -136,42 +145,48 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 void ImGui_ImplMetal_Shutdown()
 {
     ImGui_ImplMetal_DestroyDeviceObjects();
+    ImGui_ImplMetal_DestroyBackendData();
 }
 
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
 {
-    IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_ASSERT(bd->SharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
+    bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 
-    g_sharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+    if (bd->SharedMetalContext.depthStencilState == nil)
+        ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
 }
 
 // Metal Render function.
 void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
 {
-    [g_sharedMetalContext renderDrawData:draw_data commandBuffer:commandBuffer commandEncoder:commandEncoder];
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    [bd->SharedMetalContext renderDrawData:draw_data commandBuffer:commandBuffer commandEncoder:commandEncoder];
 }
 
 bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
 {
-    [g_sharedMetalContext makeFontTextureWithDevice:device];
-
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->SetTexID((__bridge void *)g_sharedMetalContext.fontTexture); // ImTextureID == void*
+    [bd->SharedMetalContext makeFontTextureWithDevice:device];
+    io.Fonts->SetTexID((__bridge void *)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
 
-    return (g_sharedMetalContext.fontTexture != nil);
+    return (bd->SharedMetalContext.fontTexture != nil);
 }
 
 void ImGui_ImplMetal_DestroyFontsTexture()
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    g_sharedMetalContext.fontTexture = nil;
+    bd->SharedMetalContext.fontTexture = nil;
     io.Fonts->SetTexID(nullptr);
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
-    [g_sharedMetalContext makeDeviceObjectsWithDevice:device];
-
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    [bd->SharedMetalContext makeDeviceObjectsWithDevice:device];
     ImGui_ImplMetal_CreateFontsTexture(device);
 
     return true;
@@ -179,8 +194,9 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 
 void ImGui_ImplMetal_DestroyDeviceObjects()
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGui_ImplMetal_DestroyFontsTexture();
-    [g_sharedMetalContext emptyRenderPipelineStateCache];
+    [bd->SharedMetalContext emptyRenderPipelineStateCache];
 }
 
 #pragma mark - MetalBuffer implementation
@@ -458,8 +474,9 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
             vertexBuffer:(MetalBuffer *)vertexBuffer
       vertexBufferOffset:(size_t)vertexBufferOffset
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     [commandEncoder setCullMode:MTLCullModeNone];
-    [commandEncoder setDepthStencilState:g_sharedMetalContext.depthStencilState];
+    [commandEncoder setDepthStencilState:bd->SharedMetalContext.depthStencilState];
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to
