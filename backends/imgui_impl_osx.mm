@@ -463,8 +463,9 @@ bool ImGui_ImplOSX_Init(NSView* view)
         return event;
     }];
     
-    io.SetPlatformImeDataFn = [bd](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
     {
+        ImGui_ImplOSX_Data *bd = ImGui_ImplOSX_CreateBackendData();
         if (data->WantVisible)
         {
             [bd->InputContext activate];
