@@ -56,6 +56,9 @@ Other Changes:
   or interacting with a game/3D view).
 - Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
   clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
+- Layout: Fixed mixing up SameLine() and SetCursorPos() together from creating situations where line
+  height would be emitted from the wrong location (e.g. 'ItemA+SameLine()+SetCursorPos()+ItemB' would
+  emit ItemA worth of height from the position of ItemB, which is not necessarily aligned with ItemA).
 - Sliders, Drags: Fixed dragging when using hexadecimal display format string. (#5165, #3133)
 - Sliders, Drags: Fixed manual input when using hexadecimal display format string. (#5165, #3133)
 - InputScalar: Fixed manual input when using %03d style width in display format string. (#5165, #3133)
@@ -109,6 +112,7 @@ Breaking Changes:
   - Added io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() functions,
     obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
   - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
+  - For all calls to IO new functions, the Dear ImGui context should be bound/current.
 - Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
   - For keyboard modifiers, you can call io.AddKeyEvent() with ImGuiKey_ModXXX values,
