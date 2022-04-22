@@ -2181,6 +2181,7 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec2                  PrevLineSize;
     float                   CurrLineTextBaseOffset; // Baseline offset (0.0f by default on a new line, generally == style.FramePadding.y when a framed item has been added).
     float                   PrevLineTextBaseOffset;
+    bool                    IsSameLine;
     ImVec1                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     ImVec1                  ColumnsOffset;          // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     ImVec1                  GroupOffset;
@@ -2342,9 +2343,6 @@ public:
     ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
     ImGuiID     GetID(int n);
-    ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
-    ImGuiID     GetIDNoKeepAlive(const void* ptr);
-    ImGuiID     GetIDNoKeepAlive(int n);
     ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
 
     // We don't use g.FontSize because the window may be != g.CurrentWidow.
@@ -2819,7 +2817,7 @@ namespace ImGui
 
     // Basic Helpers for widget code
     IMGUI_API void          ItemSize(const ImVec2& size, float text_baseline_y = -1.0f);
-    IMGUI_API void          ItemSize(const ImRect& bb, float text_baseline_y = -1.0f);
+    inline void             ItemSize(const ImRect& bb, float text_baseline_y = -1.0f) { ItemSize(bb.GetSize(), text_baseline_y); } // FIXME: This is a misleading API since we expect CursorPos to be bb.Min.
     IMGUI_API bool          ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb = NULL, ImGuiItemFlags extra_flags = 0);
     IMGUI_API bool          ItemHoverable(const ImRect& bb, ImGuiID id);
     IMGUI_API bool          IsClippedEx(const ImRect& bb, ImGuiID id);

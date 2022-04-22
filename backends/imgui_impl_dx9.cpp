@@ -92,7 +92,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     vp.MaxZ = 1.0f;
     bd->pd3dDevice->SetViewport(&vp);
 
-    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient), bilinear sampling.
     bd->pd3dDevice->SetPixelShader(NULL);
     bd->pd3dDevice->SetVertexShader(NULL);
     bd->pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);

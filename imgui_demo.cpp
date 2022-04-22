@@ -39,7 +39,7 @@
 //   Because we can't assume anything about your support of maths operators, we cannot use them in imgui_demo.cpp.
 
 // Navigating this file:
-// - In Visual Studio IDE: CTRL+comma ("Edit.NavigateTo") can follow symbols in comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
+// - In Visual Studio IDE: CTRL+comma ("Edit.GoToAll") can follow symbols in comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
 // - With Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols in comments.
 
 /*
@@ -1913,10 +1913,9 @@ static void ShowDemoWindowWidgets()
         ImGui::Combo("Display Mode", &display_mode, "Auto/Current\0None\0RGB Only\0HSV Only\0Hex Only\0");
         ImGui::SameLine(); HelpMarker(
             "ColorEdit defaults to displaying RGB inputs if you don't specify a display mode, "
-            "but the user can change it with a right-click.\n\nColorPicker defaults to displaying RGB+HSV+Hex "
+            "but the user can change it with a right-click on those inputs.\n\nColorPicker defaults to displaying RGB+HSV+Hex "
             "if you don't specify a display mode.\n\nYou can change the defaults using SetColorEditOptions().");
-        ImGui::Combo("Picker Mode", &picker_mode, "Auto/Current\0Hue bar + SV rect\0Hue wheel + SV triangle\0");
-        ImGui::SameLine(); HelpMarker("User can right-click the picker to change mode.");
+        ImGui::SameLine(); HelpMarker("When not specified explicitly (Auto/Current mode), user can right-click the picker to change mode.");
         ImGuiColorEditFlags flags = misc_flags;
         if (!alpha)            flags |= ImGuiColorEditFlags_NoAlpha;        // This is by default if you call ColorPicker3() instead of ColorPicker4()
         if (alpha_bar)         flags |= ImGuiColorEditFlags_AlphaBar;
@@ -1939,6 +1938,15 @@ static void ShowDemoWindowWidgets()
             ImGui::SetColorEditOptions(ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_PickerHueBar);
         if (ImGui::Button("Default: Float + HDR + Hue Wheel"))
             ImGui::SetColorEditOptions(ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel);
+
+        // Always both a small version of both types of pickers (to make it more visible in the demo to people who are skimming quickly through it)
+        ImGui::Text("Both types:");
+        float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.y) * 0.40f;
+        ImGui::SetNextItemWidth(w);
+        ImGui::ColorPicker3("##MyColor##5", (float*)&color, ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(w);
+        ImGui::ColorPicker3("##MyColor##6", (float*)&color, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
 
         // HSV encoded support (to avoid RGB<>HSV round trips and singularities when S==0 or V==0)
         static ImVec4 color_hsv(0.23f, 1.0f, 1.0f, 1.0f); // Stored as HSV!
@@ -3485,7 +3493,7 @@ static void ShowDemoWindowPopups()
         {
             HelpMarker("Text() elements don't have stable identifiers so we need to provide one.");
             static float value = 0.5f;
-            ImGui::Text("Value = %.3f <-- (1) right-click this value", value);
+            ImGui::Text("Value = %.3f <-- (1) right-click this text", value);
             if (ImGui::BeginPopupContextItem("my popup"))
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f;
@@ -4492,14 +4500,16 @@ static void ShowDemoWindowTables()
             {
                 ImGui::TableNextColumn();
                 ImGui::PushID(column);
-                ImGui::AlignTextToFramePadding(); // FIXME-TABLE: Workaround for wrong text baseline propagation
+                ImGui::AlignTextToFramePadding(); // FIXME-TABLE: Workaround for wrong text baseline propagation across columns
                 ImGui::Text("'%s'", column_names[column]);
                 ImGui::Spacing();
                 ImGui::Text("Input flags:");
                 EditTableColumnsFlags(&column_flags[column]);
                 ImGui::Spacing();
                 ImGui::Text("Output flags:");
+                ImGui::BeginDisabled();
                 ShowTableColumnsStatusFlags(column_flags_out[column]);
+                ImGui::EndDisabled();
                 ImGui::PopID();
             }
             PopStyleCompact();

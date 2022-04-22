@@ -352,6 +352,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     return renderPipelineState;
 }
 
+// Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
 - (id<MTLRenderPipelineState>)_renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor *)descriptor device:(id<MTLDevice>)device
 {
     NSError *error = nil;
