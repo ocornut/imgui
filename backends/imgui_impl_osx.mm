@@ -17,9 +17,9 @@
 #import "imgui.h"
 #import "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
-#import <mach/mach_time.h>
 #import <Carbon/Carbon.h>
 #import <GameController/GameController.h>
+#import <time.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -54,17 +54,16 @@
 #define APPLE_HAS_CONTROLLER     (__IPHONE_OS_VERSION_MIN_REQUIRED >= 140000 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000 || __TV_OS_VERSION_MIN_REQUIRED >= 140000)
 #define APPLE_HAS_THUMBSTICKS    (__IPHONE_OS_VERSION_MIN_REQUIRED >= 120100 || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101401 || __TV_OS_VERSION_MIN_REQUIRED >= 120100)
 
-@class ImFocusObserver;
+@class ImGuiObserver;
 @class KeyEventResponder;
 
 // Data
 struct ImGui_ImplOSX_Data
 {
-    double                  HostClockPeriod;
-    double                  Time;
+    CFTimeInterval          Time;
     NSCursor*               MouseCursors[ImGuiMouseCursor_COUNT];
     bool                    MouseCursorHidden;
-    ImFocusObserver*        FocusObserver;
+    ImGuiObserver*          Observer;
     KeyEventResponder*      KeyEventResponder;
     NSTextInputContext*     InputContext;
 
@@ -75,6 +74,8 @@ static ImGui_ImplOSX_Data*  ImGui_ImplOSX_CreateBackendData()  { return IM_NEW(I
 static ImGui_ImplOSX_Data*  ImGui_ImplOSX_GetBackendData()     { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
 static void                 ImGui_ImplOSX_DestroyBackendData() { IM_DELETE(ImGui_ImplOSX_GetBackendData()); }
 
+static inline CFTimeInterval GetMachAbsoluteTimeInSeconds()    { return static_cast<CFTimeInterval>(static_cast<double>(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e9); }
+
 // Undocumented methods for creating cursors.
 @interface NSCursor()
 + (id)_windowResizeNorthWestSouthEastCursor;
@@ -82,20 +83,6 @@ static void                 ImGui_ImplOSX_DestroyBackendData() { IM_DELETE(ImGui
 + (id)_windowResizeNorthSouthCursor;
 + (id)_windowResizeEastWestCursor;
 @end
-
-static void InitHostClockPeriod()
-{
-    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    struct mach_timebase_info info;
-    mach_timebase_info(&info);
-    bd->HostClockPeriod = 1e-9 * ((double)info.denom / (double)info.numer); // Period is the reciprocal of frequency.
-}
-
-static double GetMachAbsoluteTimeInSeconds()
-{
-    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    return (double)mach_absolute_time() * bd->HostClockPeriod;
-}
 
 /**
  KeyEventResponder implements the NSTextInputClient protocol as is required by the macOS text input manager.
@@ -225,14 +212,14 @@ static double GetMachAbsoluteTimeInSeconds()
 
 @end
 
-@interface ImFocusObserver : NSObject
+@interface ImGuiObserver : NSObject
 
 - (void)onApplicationBecomeActive:(NSNotification*)aNotification;
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification;
 
 @end
 
-@implementation ImFocusObserver
+@implementation ImGuiObserver
 
 - (void)onApplicationBecomeActive:(NSNotification*)aNotification
 {
@@ -385,6 +372,8 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
 
+    bd->Observer = [ImGuiObserver new];
+
     // Load cursors. Some of them are undocumented.
     bd->MouseCursorHidden = false;
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
@@ -426,12 +415,11 @@ bool ImGui_ImplOSX_Init(NSView* view)
         return s_clipboard.Data;
     };
 
-    bd->FocusObserver = [[ImFocusObserver alloc] init];
-    [[NSNotificationCenter defaultCenter] addObserver:bd->FocusObserver
+    [[NSNotificationCenter defaultCenter] addObserver:bd->Observer
                                              selector:@selector(onApplicationBecomeActive:)
                                                  name:NSApplicationDidBecomeActiveNotification
                                                object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:bd->FocusObserver
+    [[NSNotificationCenter defaultCenter] addObserver:bd->Observer
                                              selector:@selector(onApplicationBecomeInactive:)
                                                  name:NSApplicationDidResignActiveNotification
                                                object:nil];
@@ -473,7 +461,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
 void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    bd->FocusObserver = NULL;
+    bd->Observer = NULL;
     ImGui_ImplOSX_DestroyBackendData();
 }
 
@@ -592,10 +580,8 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 
     // Setup time step
     if (bd->Time == 0.0)
-    {
-        InitHostClockPeriod();
         bd->Time = GetMachAbsoluteTimeInSeconds();
-    }
+
     double current_time = GetMachAbsoluteTimeInSeconds();
     io.DeltaTime = (float)(current_time - bd->Time);
     bd->Time = current_time;

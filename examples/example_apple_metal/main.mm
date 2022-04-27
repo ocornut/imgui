@@ -125,8 +125,6 @@
 #endif
     io.DisplayFramebufferScale = ImVec2(framebufferScale, framebufferScale);
 
-    io.DeltaTime = 1 / float(view.preferredFramesPerSecond ?: 60);
-
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
 
     MTLRenderPassDescriptor* renderPassDescriptor = view.currentRenderPassDescriptor;

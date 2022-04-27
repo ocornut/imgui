@@ -27,17 +27,15 @@
 
 #include "imgui.h"
 #include "imgui_impl_metal.h"
-
+#import <time.h>
 #import <Metal/Metal.h>
-// #import <QuartzCore/CAMetalLayer.h> // Not supported in XCode 9.2. Maybe a macro to detect the SDK version can be used (something like #if MACOS_SDK >= 10.13 ...)
-#import <simd/simd.h>
 
 #pragma mark - Support classes
 
 // A wrapper around a MTLBuffer object that knows the last time it was reused
 @interface MetalBuffer : NSObject
 @property (nonatomic, strong) id<MTLBuffer> buffer;
-@property (nonatomic, assign) NSTimeInterval lastReuseTime;
+@property (nonatomic, assign) double lastReuseTime;
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer;
 @end
 
@@ -61,7 +59,7 @@
 @property (nonatomic, strong) NSMutableDictionary *renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
 @property (nonatomic, strong, nullable) id<MTLTexture> fontTexture;
 @property (nonatomic, strong) NSMutableArray<MetalBuffer *> *bufferCache;
-@property (nonatomic, assign) NSTimeInterval lastBufferCachePurge;
+@property (nonatomic, assign) double lastBufferCachePurge;
 - (void)makeDeviceObjectsWithDevice:(id<MTLDevice>)device;
 - (void)makeFontTextureWithDevice:(id<MTLDevice>)device;
 - (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
@@ -89,6 +87,8 @@ struct ImGui_ImplMetal_Data
 static ImGui_ImplMetal_Data*     ImGui_ImplMetal_CreateBackendData()  { return IM_NEW(ImGui_ImplMetal_Data)(); }
 static ImGui_ImplMetal_Data*     ImGui_ImplMetal_GetBackendData()     { return ImGui::GetCurrentContext() ? (ImGui_ImplMetal_Data*)ImGui::GetIO().BackendRendererUserData : NULL; }
 static void                      ImGui_ImplMetal_DestroyBackendData() { IM_DELETE(ImGui_ImplMetal_GetBackendData()); }
+
+static inline CFTimeInterval     GetMachAbsoluteTimeInSeconds()       { return static_cast<CFTimeInterval>(static_cast<double>(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e9); }
 
 #ifdef IMGUI_IMPL_METAL_CPP
 
@@ -207,7 +207,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     if ((self = [super init]))
     {
         _buffer = buffer;
-        _lastReuseTime = [NSDate date].timeIntervalSince1970;
+        _lastReuseTime = GetMachAbsoluteTimeInSeconds();
     }
     return self;
 }
@@ -269,7 +269,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     {
         _renderPipelineStateCache = [NSMutableDictionary dictionary];
         _bufferCache = [NSMutableArray array];
-        _lastBufferCachePurge = [NSDate date].timeIntervalSince1970;
+        _lastBufferCachePurge = GetMachAbsoluteTimeInSeconds();
     }
     return self;
 }
@@ -309,7 +309,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
 - (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
 {
-    NSTimeInterval now = [NSDate date].timeIntervalSince1970;
+    uint64_t now = GetMachAbsoluteTimeInSeconds();
 
     // Purge old buffers that haven't been useful for a while
     if (now - self.lastBufferCachePurge > 1.0)
