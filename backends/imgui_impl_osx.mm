@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-05-03: Inputs: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend automatically handling event capture.
 //  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-03-22: Inputs: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key
 //  2022-02-07: Inputs: Forward keyDown/keyUp events to OS when unused by dear imgui.
@@ -66,6 +67,7 @@ struct ImGui_ImplOSX_Data
     ImGuiObserver*          Observer;
     KeyEventResponder*      KeyEventResponder;
     NSTextInputContext*     InputContext;
+    id                      Monitor;
 
     ImGui_ImplOSX_Data()    { memset(this, 0, sizeof(*this)); }
 };
@@ -75,6 +77,10 @@ static ImGui_ImplOSX_Data*  ImGui_ImplOSX_GetBackendData()     { return (ImGui_I
 static void                 ImGui_ImplOSX_DestroyBackendData() { IM_DELETE(ImGui_ImplOSX_GetBackendData()); }
 
 static inline CFTimeInterval GetMachAbsoluteTimeInSeconds()    { return static_cast<CFTimeInterval>(static_cast<double>(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e9); }
+
+// Forward Declarations
+static void ImGui_ImplOSX_AddTrackingArea(NSView* _Nonnull view);
+static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -429,15 +435,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     bd->KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
     bd->InputContext = [[NSTextInputContext alloc] initWithClient:bd->KeyEventResponder];
     [view addSubview:bd->KeyEventResponder];
-
-    // Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
-    // This monitor taps into global event stream and captures these events.
-    NSEventMask eventMask = NSEventMaskFromType(NSKeyUp) | NSEventMaskFlagsChanged;
-    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event)
-    {
-        ImGui_ImplOSX_HandleEvent(event, bd->KeyEventResponder);
-        return event;
-    }];
+    ImGui_ImplOSX_AddTrackingArea(view);
 
     io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
     {
@@ -462,6 +460,11 @@ void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     bd->Observer = NULL;
+    if (bd->Monitor != NULL)
+    {
+        [NSEvent removeMonitor:bd->Monitor];
+        bd->Monitor = NULL;
+    }
     ImGui_ImplOSX_DestroyBackendData();
 }
 
@@ -591,7 +594,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGui_ImplOSX_UpdateImePosWithView(view);
 }
 
-bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
+static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -715,4 +718,28 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     }
 
     return false;
+}
+
+static void ImGui_ImplOSX_AddTrackingArea(NSView* _Nonnull view)
+{
+    // If we want to receive key events, we either need to be in the responder chain of the key view,
+    // or else we can install a local monitor. The consequence of this heavy-handed approach is that
+    // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
+    // window, we'd want to be much more careful than just ingesting the complete event stream.
+    // To match the behavior of other backends, we pass every event down to the OS.
+    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+    if (bd->Monitor)
+        return;
+    NSEventMask eventMask = 0;
+    eventMask |= NSEventMaskMouseMoved | NSEventMaskScrollWheel;
+    eventMask |= NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp | NSEventMaskLeftMouseDragged;
+    eventMask |= NSEventMaskRightMouseDown | NSEventMaskRightMouseUp | NSEventMaskRightMouseDragged;
+    eventMask |= NSEventMaskOtherMouseDown | NSEventMaskOtherMouseUp | NSEventMaskOtherMouseDragged;
+    eventMask |= NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged;
+    bd->Monitor = [NSEvent addLocalMonitorForEventsMatchingMask:eventMask
+                                                        handler:^NSEvent* _Nullable(NSEvent* event)
+    {
+        ImGui_ImplOSX_HandleEvent(event, view);
+        return event;
+    }];
 }

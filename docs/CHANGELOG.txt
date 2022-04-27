@@ -39,6 +39,10 @@ Breaking changes:
 
 - Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
   (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
+- Backends: OSX: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend
+  automatically handling event capture. Examples that are using the OSX backend have removed
+  all the now-unnecessary calls to ImGui_ImplOSX_HandleEvent(), applications can do as well.
+  [@stuartcarnie] (#4821)
 
 Other Changes:
 
@@ -105,6 +109,7 @@ Other Changes:
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
+- Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 
 
 -----------------------------------------------------------------------
