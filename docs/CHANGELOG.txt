@@ -95,6 +95,7 @@ Other Changes:
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
 - Backends: GLFW: Fixed a regression in 1.87 which resulted in keyboard modifiers events being
   reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
+- Backends: GLFW: Fixed untranslated keys when pressing lower case letters on OSX (#5260, #5261) [@cpichard]
 - Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
 - Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
 - Backends: SDL, OpenGL3: Fixes to facilitate building on AmigaOS4. (#5190) [@afxgroup]
