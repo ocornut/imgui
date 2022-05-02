@@ -74,6 +74,7 @@ Other Changes:
   trickled with the new input queue (happened on some backends only). (#2467, #1336)
 - Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
   instance of a same table ID, when instances have a different height. (#3955).
+- Tables: Fixed incorrect auto-fit of parent windows when using non-resizable weighted columns. (#5276)
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
