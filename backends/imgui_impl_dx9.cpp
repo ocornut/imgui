@@ -332,7 +332,11 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
         return false;
     D3DLOCKED_RECT tex_locked_rect;
     if (bd->FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
+    {
+        bd->FontTexture->Release();
+        bd->FontTexture = NULL;
         return false;
+    }
     for (int y = 0; y < height; y++)
         memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
     bd->FontTexture->UnlockRect(0);
