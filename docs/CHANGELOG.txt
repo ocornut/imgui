@@ -175,6 +175,7 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: OSX, Metal: Implemented support for viewports / platform windows. [@stuartcarnie]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 - Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 
