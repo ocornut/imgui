@@ -87,6 +87,9 @@ Other Changes:
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
+- Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
+  you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.

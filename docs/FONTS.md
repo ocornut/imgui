@@ -29,7 +29,11 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 
 - You can use the `Metrics/Debugger` window (available in `Demo>Tools`) to browse your fonts and understand what's going on if you have an issue. You can also reach it in `Demo->Tools->Style Editor->Fonts`. The same information are also available in the Style Editor under Fonts.
 
-![imgui_capture_0008](https://user-images.githubusercontent.com/8225057/135429892-0e41ef8d-33c5-4991-bcf6-f997a0bcfd6b.png)
+![Fonts debugging](https://user-images.githubusercontent.com/8225057/135429892-0e41ef8d-33c5-4991-bcf6-f997a0bcfd6b.png)
+
+- You can use the `UTF-8 Encoding viewer` in `Metrics/Debugger` to verify the content of your UTF-8 strings. From C/C++ code, you can call `ImGui::DebugTextEncoding("my string");` function to verify that your UTF-8 encoding is correct.
+
+![UTF-8 Encoding viewer](https://user-images.githubusercontent.com/8225057/166505963-8a0d7899-8ee8-4558-abb2-1ae523dc02f9.png)
 
 - All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas.
 

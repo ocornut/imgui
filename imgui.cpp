@@ -12060,11 +12060,15 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport*, ImGuiPlatformImeDat
 //-----------------------------------------------------------------------------
 // - RenderViewportThumbnail() [Internal]
 // - RenderViewportsThumbnails() [Internal]
+// - DebugTextEncoding()
 // - MetricsHelpMarker() [Internal]
+// - ShowFontAtlas() [Internal]
 // - ShowMetricsWindow()
 // - DebugNodeColumns() [Internal]
 // - DebugNodeDrawList() [Internal]
 // - DebugNodeDrawCmdShowMeshAndBoundingBox() [Internal]
+// - DebugNodeFont() [Internal]
+// - DebugNodeFontGlyph() [Internal]
 // - DebugNodeStorage() [Internal]
 // - DebugNodeTabBar() [Internal]
 // - DebugNodeViewport() [Internal]
@@ -12127,79 +12131,40 @@ static void RenderViewportsThumbnails()
     ImGui::Dummy(bb_full.GetSize() * SCALE);
 }
 
-static void ShowEncodingViewerChar(ImFont* font, ImWchar c, const char* c_utf8)
+// Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
+void ImGui::DebugTextEncoding(const char* str)
 {
-    ImGui::TableNextColumn();
-    if (font->FindGlyphNoFallback(c))
-        ImGui::TextUnformatted(c_utf8);
-    else
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "(not in font)");
-
-    ImGui::TableNextColumn();
-    char utf8_code[] = "0x.. 0x.. 0x.. 0x..";
-    for (int byte_index = 0; c_utf8[byte_index]; byte_index++)
+    Text("Text: \"%s\"", str);
+    if (!BeginTable("list", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+        return;
+    TableSetupColumn("Offset");
+    TableSetupColumn("UTF-8");
+    TableSetupColumn("Glyph");
+    TableSetupColumn("Codepoint");
+    TableHeadersRow();
+    for (const char* p = str; *p != 0; )
     {
-        if (byte_index > 0)
-            utf8_code[byte_index * 5 - 1] = ' ';
-        ImFormatString(utf8_code + (byte_index * 5) + 2, 3, "%02X", (int)(unsigned char)c_utf8[byte_index]);
-    }
-    ImGui::TextUnformatted(utf8_code);
-    ImGui::TableNextColumn();
-    ImGui::Text("U+%04X", (int)c);
-}
-
-static void ShowUTF8EncodingViewer()
-{
-    static char buf[256] = "";
-    static ImFontGlyphRangesBuilder range_builder;
-    static ImVector<ImWchar> ranges;
-    static bool unique_glyphs = false;
-
-    ImGui::SetNextItemWidth(-FLT_MIN);
-
-    bool rebuild = false;
-    rebuild |= ImGui::InputText("##Sample Text", buf, IM_ARRAYSIZE(buf));
-    rebuild |= ImGui::Checkbox("Sorted unique glyphs", &unique_glyphs);
-    if (rebuild && unique_glyphs)
-    {
-        range_builder.Clear();
-        range_builder.AddText(buf);
-        ranges.clear();
-        range_builder.BuildRanges(&ranges);
-    }
-    if (ImGui::BeginTable("list", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0.0f, ImGui::GetFontSize() * 15)))
-    {
-        ImGui::TableSetupColumn("Glyph");
-        ImGui::TableSetupColumn("UTF-8");
-        ImGui::TableSetupColumn("Codepoint");
-        ImGui::TableHeadersRow();
-
-        ImFont* font = ImGui::GetFont();
-        if (unique_glyphs)
+        unsigned int c;
+        const int c_utf8_len = ImTextCharFromUtf8(&c, p, NULL);
+        TableNextColumn();
+        Text("%d", (int)(p - str));
+        TableNextColumn();
+        for (int byte_index = 0; byte_index < c_utf8_len; byte_index++)
         {
-            for (int range_index = 0; range_index < ranges.Size && ranges[range_index] != 0; range_index += 2)
-                for (ImWchar c = ranges[range_index]; c <= ranges[range_index + 1]; c++)
-                {
-                    char c_utf8[4 + 1];
-                    ImTextStrToUtf8(c_utf8, IM_ARRAYSIZE(c_utf8), &c, &c + 1);
-                    ShowEncodingViewerChar(font, c, c_utf8);
-                }
+            if (byte_index > 0)
+                SameLine();
+            Text("0x%02X", (int)(unsigned char)p[byte_index]);
         }
+        TableNextColumn();
+        if (GetFont()->FindGlyphNoFallback((ImWchar)c))
+            TextUnformatted(p, p + c_utf8_len);
         else
-        {
-            for (const char* p = buf; p[0] != 0;)
-            {
-                unsigned int c;
-                int c_utf8_len = ImTextCharFromUtf8(&c, p, NULL);
-                char c_utf8[4 + 1];
-                memcpy(c_utf8, p, c_utf8_len);
-                c_utf8[c_utf8_len] = 0;
-                ShowEncodingViewerChar(font, (ImWchar)c, c_utf8);
-                p += c_utf8_len;
-            }
-        }
-        ImGui::EndTable();
+            TextUnformatted("[missing]");
+        TableNextColumn();
+        Text("U+%04X", (int)c);
+        p += c_utf8_len;
     }
+    EndTable();
 }
 
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
@@ -12216,9 +12181,24 @@ static void MetricsHelpMarker(const char* desc)
     }
 }
 
-#ifndef IMGUI_DISABLE_DEMO_WINDOWS
-namespace ImGui { void ShowFontAtlas(ImFontAtlas* atlas); }
-#endif
+// [DEBUG] List fonts in a font atlas and display its texture
+void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
+{
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+    {
+        ImFont* font = atlas->Fonts[i];
+        PushID(font);
+        DebugNodeFont(font);
+        PopID();
+    }
+    if (TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+    {
+        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
+        TreePop();
+    }
+}
 
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
@@ -12293,6 +12273,19 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Tools
     if (TreeNode("Tools"))
     {
+        bool show_encoding_viewer = TreeNode("UTF-8 Encoding viewer");
+        SameLine();
+        MetricsHelpMarker("You can also call ImGui::DebugTextEncoding() from your code with a given string to test that your UTF-8 encoding settings are correct.");
+        if (show_encoding_viewer)
+        {
+            static char buf[100] = "";
+            SetNextItemWidth(-FLT_MIN);
+            InputText("##Text", buf, IM_ARRAYSIZE(buf));
+            if (buf[0] != 0)
+                DebugTextEncoding(buf);
+            TreePop();
+        }
+
         // Stack Tool is your best friend!
         Checkbox("Show stack tool", &cfg->ShowStackTool);
         SameLine();
@@ -12358,12 +12351,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 }
                 Unindent();
             }
-        }
-
-        if (TreeNode("UTF-8 Encoding viewer"))
-        {
-            ShowUTF8EncodingViewer();
-            TreePop();
         }
 
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
@@ -12461,14 +12448,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Details for Fonts
-#ifndef IMGUI_DISABLE_DEMO_WINDOWS
     ImFontAtlas* atlas = g.IO.Fonts;
     if (TreeNode("Fonts", "Fonts (%d)", atlas->Fonts.Size))
     {
         ShowFontAtlas(atlas);
         TreePop();
     }
-#endif
 
     // Details for Docking
 #ifdef IMGUI_HAS_DOCK
@@ -12626,25 +12611,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #endif // #ifdef IMGUI_HAS_DOCK
 
     End();
-}
-
-// [DEBUG] List fonts in a font atlas and display its texture
-void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
-{
-    for (int i = 0; i < atlas->Fonts.Size; i++)
-    {
-        ImFont* font = atlas->Fonts[i];
-        PushID(font);
-        DebugNodeFont(font);
-        PopID();
-    }
-    if (TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
-    {
-        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
-        TreePop();
-    }
 }
 
 // [DEBUG] Display contents of Columns
@@ -12856,17 +12822,13 @@ void ImGui::DebugNodeFont(ImFont* font)
                 ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
                 const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n));
                 draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
-                if (glyph)
-                    font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
-                if (glyph && IsMouseHoveringRect(cell_p1, cell_p2))
+                if (!glyph)
+                    continue;
+                font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
+                if (IsMouseHoveringRect(cell_p1, cell_p2))
                 {
                     BeginTooltip();
-                    Text("Codepoint: U+%04X", base + n);
-                    Separator();
-                    Text("Visible: %d", glyph->Visible);
-                    Text("AdvanceX: %.1f", glyph->AdvanceX);
-                    Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
-                    Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
+                    DebugNodeFontGlyph(font, glyph);
                     EndTooltip();
                 }
             }
@@ -12876,6 +12838,16 @@ void ImGui::DebugNodeFont(ImFont* font)
         TreePop();
     }
     TreePop();
+}
+
+void ImGui::DebugNodeFontGlyph(ImFont*, const ImFontGlyph* glyph)
+{
+    Text("Codepoint: U+%04X", glyph->Codepoint);
+    Separator();
+    Text("Visible: %d", glyph->Visible);
+    Text("AdvanceX: %.1f", glyph->AdvanceX);
+    Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
+    Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
 }
 
 // [DEBUG] Display contents of ImGuiStorage
