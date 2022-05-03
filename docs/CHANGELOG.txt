@@ -94,6 +94,7 @@ Other Changes:
 - Misc: Updated stb_rect_pack.h from 1.00 to 1.01 (minor). (#5075)
 - Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
 - ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
+- Backends: Vulkan: Don't use VK_PRESENT_MODE_MAX_ENUM_KHR as specs state it isn't part of the API. (#5254)
 - Backends: GLFW: Fixed a regression in 1.87 which resulted in keyboard modifiers events being
   reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
 - Backends: GLFW: Fixed untranslated keys when pressing lower case letters on OSX (#5260, #5261) [@cpichard]
