@@ -24,7 +24,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-05-03: Misc: Implemented support for viewports / platform windows.
+//  2022-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2022-05-03: Inputs: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend automatically handling event capture.
 //  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-03-22: Inputs: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key
@@ -864,18 +864,6 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
     viewport->PlatformUserData = viewport->PlatformHandle = viewport->PlatformHandleRaw = NULL;
 }
 
-static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
-{
-    ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
-    IM_ASSERT(data->Window != nil);
-}
-
-static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
-{
-    ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
-    IM_ASSERT(data->Window != 0);
-}
-
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
 {
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
@@ -974,27 +962,11 @@ static float ImGui_ImplOSX_GetWindowDpiScale(ImGuiViewport* viewport)
     return data->Window.backingScaleFactor;
 }
 
-// FIXME-DPI: Testing DPI related ideas
-static void ImGui_ImplOSX_OnChangedViewport(ImGuiViewport* viewport)
-{
-    (void)viewport;
-#if 0
-    ImGuiStyle default_style;
-    //default_style.WindowPadding = ImVec2(0, 0);
-    //default_style.WindowBorderSize = 0.0f;
-    //default_style.ItemSpacing.y = 3.0f;
-    //default_style.FramePadding = ImVec2(0, 0);
-    default_style.ScaleAllSizes(viewport->DpiScale);
-    ImGuiStyle& style = ImGui::GetStyle();
-    style = default_style;
-#endif
-}
-
 static void ImGui_ImplOSX_UpdateMonitors()
 {
-    ImGui::GetPlatformIO().Monitors.resize(static_cast<int>(NSScreen.screens.count));
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Monitors.resize(0);
 
-    int i = 0;
     for (NSScreen* screen in NSScreen.screens)
     {
         NSRect frame = screen.frame;
@@ -1007,9 +979,7 @@ static void ImGui_ImplOSX_UpdateMonitors()
         imgui_monitor.WorkSize = ImVec2(visibleFrame.size.width, visibleFrame.size.height);
         imgui_monitor.DpiScale = screen.backingScaleFactor;
 
-        ImGuiPlatformIO& io = ImGui::GetPlatformIO();
-        io.Monitors[i] = imgui_monitor;
-        i += 1;
+        platform_io.Monitors.push_back(imgui_monitor);
     }
 }
 
@@ -1022,7 +992,6 @@ static void ImGui_ImplOSX_InitPlatformInterface()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_CreateWindow = ImGui_ImplOSX_CreateWindow;
     platform_io.Platform_DestroyWindow = ImGui_ImplOSX_DestroyWindow;
-    platform_io.Platform_ShowWindow = ImGui_ImplOSX_ShowWindow;
     platform_io.Platform_SetWindowPos = ImGui_ImplOSX_SetWindowPos;
     platform_io.Platform_GetWindowPos = ImGui_ImplOSX_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplOSX_SetWindowSize;
@@ -1032,9 +1001,7 @@ static void ImGui_ImplOSX_InitPlatformInterface()
     platform_io.Platform_GetWindowMinimized = ImGui_ImplOSX_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplOSX_SetWindowTitle;
     platform_io.Platform_SetWindowAlpha = ImGui_ImplOSX_SetWindowAlpha;
-    platform_io.Platform_UpdateWindow = ImGui_ImplOSX_UpdateWindow;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplOSX_GetWindowDpiScale; // FIXME-DPI
-    platform_io.Platform_OnChangedViewport = ImGui_ImplOSX_OnChangedViewport; // FIXME-DPI
 
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

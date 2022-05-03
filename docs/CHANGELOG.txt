@@ -175,7 +175,6 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
-- Backends: OSX, Metal: Implemented support for viewports / platform windows. [@stuartcarnie]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 - Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 
@@ -183,10 +182,12 @@ Docking+Viewports Branch:
 
 - Docking: Fixed floating docked nodes not being clamped into viewport workrect to stay reachable
   when g.ConfigWindowsMoveFromTitleBarOnly is set and multi-viewports are disabled. (#5044)
-- Backends: SDL: Fixed dragging out main viewport broken on some SDL setups. (#5012) [@rokups]
 - Viewports: Fixed translating a host viewport from briefly altering the size of AlwaysAutoResize windows. (#5057)
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)
+- Backends: SDL: Fixed dragging out main viewport broken on some SDL setups. (#5012) [@rokups]
+- Backends: OSX: Added suppot for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
+- Backends: Metal: Added suppot for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
 
 
 -----------------------------------------------------------------------
