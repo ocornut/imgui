@@ -620,6 +620,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
         io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeScrollWheel)
