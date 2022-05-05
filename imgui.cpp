@@ -4070,7 +4070,9 @@ void ImGui::UpdateMouseWheel()
         }
     }
 
-    if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
+    float wheel_x = g.IO.MouseWheelH;
+    float wheel_y = g.IO.MouseWheel;
+    if (wheel_x == 0.0f && wheel_y == 0.0f)
         return;
 
     if ((g.ActiveId != 0 && g.ActiveIdUsingMouseWheel) || (g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrameUsingMouseWheel))
@@ -4082,7 +4084,7 @@ void ImGui::UpdateMouseWheel()
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
-    if (g.IO.MouseWheel != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+    if (wheel_y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
         StartLockWheelingWindow(window);
         const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
@@ -4106,8 +4108,11 @@ void ImGui::UpdateMouseWheel()
     // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
     // (we avoid doing it on OSX as it the OS input layer handles this already)
     const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
-    const float wheel_y = swap_axis ? 0.0f : g.IO.MouseWheel;
-    const float wheel_x = swap_axis ? g.IO.MouseWheel : g.IO.MouseWheelH;
+    if (swap_axis)
+    {
+        wheel_x = wheel_y;
+        wheel_y = 0.0f;
+    }
 
     // Vertical Mouse Wheel scrolling
     if (wheel_y != 0.0f)
@@ -7574,14 +7579,6 @@ const char* ImGui::GetKeyName(ImGuiKey key)
     return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
 
-// Note that Dear ImGui doesn't know the meaning/semantic of ImGuiKey from 0..511: they are legacy native keycodes.
-// Consider transitioning from 'IsKeyDown(MY_ENGINE_KEY_A)' (<1.87) to IsKeyDown(ImGuiKey_A) (>= 1.87)
-bool ImGui::IsKeyDown(ImGuiKey key)
-{
-    const ImGuiKeyData* key_data = GetKeyData(key);
-    return key_data->Down;
-}
-
 // t0 = previous time (e.g.: g.Time - g.IO.DeltaTime)
 // t1 = current time (e.g.: g.Time)
 // An event is triggered at:
@@ -7608,22 +7605,35 @@ int ImGui::GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float repeat_ra
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
 
+// Note that Dear ImGui doesn't know the meaning/semantic of ImGuiKey from 0..511: they are legacy native keycodes.
+// Consider transitioning from 'IsKeyDown(MY_ENGINE_KEY_A)' (<1.87) to IsKeyDown(ImGuiKey_A) (>= 1.87)
+bool ImGui::IsKeyDown(ImGuiKey key)
+{
+    const ImGuiKeyData* key_data = GetKeyData(key);
+    if (!key_data->Down)
+        return false;
+    return true;
+}
+
 bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiKeyData* key_data = GetKeyData(key);
     const float t = key_data->DownDuration;
-    if (t == 0.0f)
-        return true;
-    if (repeat && t > g.IO.KeyRepeatDelay)
-        return GetKeyPressedAmount(key, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
-    return false;
+    if (t < 0.0f)
+        return false;
+    const bool pressed = (t == 0.0f) || (repeat && t > g.IO.KeyRepeatDelay && GetKeyPressedAmount(key, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0);
+    if (!pressed)
+        return false;
+    return true;
 }
 
 bool ImGui::IsKeyReleased(ImGuiKey key)
 {
     const ImGuiKeyData* key_data = GetKeyData(key);
-    return key_data->DownDurationPrev >= 0.0f && !key_data->Down;
+    if (key_data->DownDurationPrev < 0.0f || key_data->Down)
+        return false;
+    return true;
 }
 
 bool ImGui::IsMouseDown(ImGuiMouseButton button)
@@ -12159,7 +12169,7 @@ void ImGui::DebugTextEncoding(const char* str)
         if (GetFont()->FindGlyphNoFallback((ImWchar)c))
             TextUnformatted(p, p + c_utf8_len);
         else
-            TextUnformatted("[missing]");
+            TextUnformatted((c == IM_UNICODE_CODEPOINT_INVALID) ? "[invalid]" : "[missing]");
         TableNextColumn();
         Text("U+%04X", (int)c);
         p += c_utf8_len;
