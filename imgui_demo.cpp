@@ -1083,7 +1083,7 @@ static void ShowDemoWindowWidgets()
             };
 
             static _Config c;
-            int len = strlen(text);
+            int len = (int)strlen(text);
 
             {
                 ImGui::BeginGroup();

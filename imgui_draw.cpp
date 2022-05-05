@@ -3669,7 +3669,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float y;
 
         // Data to hold segment position and color
-        // One segment can covers more than one glyphes
+        // One segment can cover more than one glyphs
         struct SegmentPosCol
         {
             ImVec2 BeginPos;
@@ -3696,6 +3696,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
             void OnNewLine(const char* char_pos, float x_pos, float y_pos)
             {
+                // prevent unused error
+                (void*)char_pos;
+
                 // Remember the x, y position of the last glyph before we start a new line 
                 if (++new_line == 1)
                 {
