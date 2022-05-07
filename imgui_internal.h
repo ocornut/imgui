@@ -559,14 +559,37 @@ template<int BITCOUNT, int OFFSET = 0>
 struct ImBitArray
 {
     ImU32           Storage[(BITCOUNT + 31) >> 5];
-    ImBitArray()                                { ClearAllBits(); }
-    void            ClearAllBits()              { memset(Storage, 0, sizeof(Storage)); }
-    void            SetAllBits()                { memset(Storage, 255, sizeof(Storage)); }
-    bool            TestBit(int n) const        { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
-    void            SetBit(int n)               { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArraySetBit(Storage, n); }
-    void            ClearBit(int n)             { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArrayClearBit(Storage, n); }
-    void            SetBitRange(int n, int n2)  { n += OFFSET; n2 += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT && n2 > n && n2 <= BITCOUNT); ImBitArraySetBitRange(Storage, n, n2); } // Works on range [n..n2)
-    bool            operator[](int n) const     { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
+    ImBitArray()                                          { ClearAllBits(); }
+    void            ClearAllBits()                        { memset(Storage, 0, sizeof(Storage)); }
+    void            SetAllBits()                          { memset(Storage, 255, sizeof(Storage)); }
+    bool            TestBit(int n) const                  { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
+    void            SetBit(int n)                         { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArraySetBit(Storage, n); }
+    void            ClearBit(int n)                       { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArrayClearBit(Storage, n); }
+    void            SetBitRange(int n, int n2)            { n += OFFSET; n2 += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT && n2 > n && n2 <= BITCOUNT); ImBitArraySetBitRange(Storage, n, n2); } // Works on range [n..n2)
+    bool            operator[](int n) const               { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
+    ImBitArray&     operator|=(int n)                     { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArraySetBit(Storage, n); return *this; }
+    bool            operator&(int n) const                { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
+    bool            operator==(ImBitArray const &a) const
+    {
+        for (int i = 0; i < ((BITCOUNT + 31) >> 5); ++i)
+            if (Storage[i] != a.Storage[i])
+                return false;
+        return true;
+    }
+    bool            operator!=(ImBitArray const &a) const
+    {
+        for (int i = 0; i < ((BITCOUNT + 31) >> 5); ++i)
+            if (Storage[i] != a.Storage[i])
+                return true;
+        return false;
+    }
+    template<int DSTBITCOUNT> bool operator==(ImBitArray<DSTBITCOUNT> const &a) const
+    {
+        for (int i = 0; i < ImMin((DSTBITCOUNT + 31) >> 5, (BITCOUNT + 31) >> 5); ++i)
+            if (Storage[i] != a.Storage[i])
+                return false;
+        return true;
+    }
 };
 
 // Helper: ImBitVector
@@ -574,11 +597,33 @@ struct ImBitArray
 struct IMGUI_API ImBitVector
 {
     ImVector<ImU32> Storage;
-    void            Create(int sz)              { Storage.resize((sz + 31) >> 5); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
-    void            Clear()                     { Storage.clear(); }
-    bool            TestBit(int n) const        { IM_ASSERT(n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
-    void            SetBit(int n)               { IM_ASSERT(n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); }
-    void            ClearBit(int n)             { IM_ASSERT(n < (Storage.Size << 5)); ImBitArrayClearBit(Storage.Data, n); }
+    int             BitCount = 0;
+    ImBitVector(int sz = 0)                                { if (sz > 0) { Create(sz); } }
+    void            Create(int sz)                         { BitCount = sz; Storage.resize((sz + 31) >> 5); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    void            Clear()                                { Storage.clear(); }
+    void            ClearAllBits()                         { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    void            SetAllBits()                           { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 255, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    bool            TestBit(int n) const                   { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
+    void            SetBit(int n)                          { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); }
+    void            SetBitRange(int n, int n2)             { IM_ASSERT(n >= 0 && n < (Storage.Size << 5) && n2 > n && n2 <= (Storage.Size << 5)); ImBitArraySetBitRange(Storage.Data, n, n2); } // Works on range [n..n2)
+    void            ClearBit(int n)                        { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArrayClearBit(Storage.Data, n); }
+    bool            operator[](int n) const                { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
+    ImBitVector&    operator|=(int n)                      { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); return *this; }
+    bool            operator&(int n) const                 { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
+    bool            operator==(ImBitVector const &a) const
+    {
+        for (int i = 0; i < ImMin((a.Storage.Size + 31) >> 5, (Storage.Size + 31) >> 5); ++i)
+            if (Storage[i] != a.Storage[i])
+                return false;
+        return true;
+    }
+    bool            operator!=(ImBitVector const &a) const
+    {
+        for (int i = 0; i < ImMin((a.Storage.Size + 31) >> 5, (Storage.Size + 31) >> 5); ++i)
+            if (Storage[i] != a.Storage[i])
+                return true;
+        return false;
+    }
 };
 
 // Helper: ImSpan<>
@@ -2445,13 +2490,12 @@ struct IMGUI_API ImGuiTabBar
 // [SECTION] Table support
 //-----------------------------------------------------------------------------
 
-#define IM_COL32_DISABLE                IM_COL32(0,0,0,1)   // Special sentinel code which cannot be used as a regular color.
-#define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
-#define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableSetupDrawChannels()
+#define IM_COL32_DISABLE                IM_COL32(0,0,0,1)                       // Special sentinel code which cannot be used as a regular color.
+#define IMGUI_TABLE_DRAW_CHANNELS(c)    (4 + (c) * 2)                           // See TableSetupDrawChannels()
 
-// Our current column maximum is 64 but we may raise that in the future.
-typedef ImS8 ImGuiTableColumnIdx;
-typedef ImU8 ImGuiTableDrawChannelIdx;
+// Our current column maximum is IMGUI_TABLE_MAX_COLUMNS but we may raise that in the future.
+typedef ImS32 ImGuiTableColumnIdx;
+typedef ImU32 ImGuiTableDrawChannelIdx;
 
 // [Internal] sizeof() ~ 104
 // We use the terminology "Enabled" to refer to a column that is not Hidden by user/api.
@@ -2541,10 +2585,10 @@ struct IMGUI_API ImGuiTable
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImGuiTableColumnIdx> DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
-    ImU64                       EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
-    ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
-    ImU64                       VisibleMaskByIndex;         // Column Index -> IsVisibleX|IsVisibleY map (== not hidden by user/api && not hidden by scrolling/cliprect)
-    ImU64                       RequestOutputMaskByIndex;   // Column Index -> IsVisible || AutoFit (== expect user to submit items)
+    ImBitVector                 EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
+    ImBitVector                 EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
+    ImBitVector                 VisibleMaskByIndex;         // Column Index -> IsVisibleX|IsVisibleY map (== not hidden by user/api && not hidden by scrolling/cliprect)
+    ImBitVector                 RequestOutputMaskByIndex;   // Column Index -> IsVisible || AutoFit (== expect user to submit items)
     ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
