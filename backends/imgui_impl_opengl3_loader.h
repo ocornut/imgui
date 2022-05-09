@@ -318,6 +318,7 @@ GLAPI void APIENTRY glVertexAttribPointer (GLuint index, GLint size, GLenum type
 #endif
 #endif /* GL_VERSION_2_0 */
 #ifndef GL_VERSION_3_0
+#define GL_VERSION_3_0 1
 typedef khronos_uint16_t GLhalf;
 #define GL_MAJOR_VERSION                  0x821B
 #define GL_MINOR_VERSION                  0x821C
@@ -326,11 +327,18 @@ typedef khronos_uint16_t GLhalf;
 #define GL_VERTEX_ARRAY_BINDING           0x85B5
 typedef void (APIENTRYP PFNGLGETBOOLEANI_VPROC) (GLenum target, GLuint index, GLboolean *data);
 typedef void (APIENTRYP PFNGLGETINTEGERI_VPROC) (GLenum target, GLuint index, GLint *data);
+typedef void (APIENTRYP PFNGLENABLEIPROC) (GLenum target, GLuint index);
+typedef void (APIENTRYP PFNGLDISABLEIPROC) (GLenum target, GLuint index);
+typedef GLboolean (APIENTRYP PFNGLISENABLEDIPROC) (GLenum target, GLuint index);
 typedef const GLubyte *(APIENTRYP PFNGLGETSTRINGIPROC) (GLenum name, GLuint index);
 typedef void (APIENTRYP PFNGLBINDVERTEXARRAYPROC) (GLuint array);
 typedef void (APIENTRYP PFNGLDELETEVERTEXARRAYSPROC) (GLsizei n, const GLuint *arrays);
 typedef void (APIENTRYP PFNGLGENVERTEXARRAYSPROC) (GLsizei n, GLuint *arrays);
 #ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glGetIntegeri_v (GLenum target, GLuint index, GLint *data);
+GLAPI void APIENTRY glEnablei (GLenum target, GLuint index);
+GLAPI void APIENTRY glDisablei (GLenum target, GLuint index);
+GLAPI GLboolean APIENTRY glIsEnabledi (GLenum target, GLuint index);
 GLAPI const GLubyte *APIENTRY glGetStringi (GLenum name, GLuint index);
 GLAPI void APIENTRY glBindVertexArray (GLuint array);
 GLAPI void APIENTRY glDeleteVertexArrays (GLsizei n, const GLuint *arrays);
@@ -360,6 +368,17 @@ typedef void (APIENTRYP PFNGLBINDSAMPLERPROC) (GLuint unit, GLuint sampler);
 GLAPI void APIENTRY glBindSampler (GLuint unit, GLuint sampler);
 #endif
 #endif /* GL_VERSION_3_3 */
+#ifndef GL_VERSION_4_0
+#define GL_VERSION_4_0 1
+typedef void (APIENTRYP PFNGLBLENDEQUATIONIPROC) (GLuint buf, GLenum mode);
+typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEIPROC) (GLuint buf, GLenum modeRGB, GLenum modeAlpha);
+typedef void (APIENTRYP PFNGLBLENDFUNCSEPARATEIPROC) (GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glBlendEquationi (GLuint buf, GLenum mode);
+GLAPI void APIENTRY glBlendEquationSeparatei (GLuint buf, GLenum modeRGB, GLenum modeAlpha);
+GLAPI void APIENTRY glBlendFuncSeparatei (GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
+#endif
+#endif /* GL_VERSION_4_0 */
 #ifndef GL_VERSION_4_1
 typedef void (APIENTRYP PFNGLGETFLOATI_VPROC) (GLenum target, GLuint index, GLfloat *data);
 typedef void (APIENTRYP PFNGLGETDOUBLEI_VPROC) (GLenum target, GLuint index, GLdouble *data);
@@ -437,7 +456,7 @@ GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
 union GL3WProcs {
-    GL3WglProc ptr[54];
+    GL3WglProc ptr[61];
     struct {
         PFNGLACTIVETEXTUREPROC           ActiveTexture;
         PFNGLATTACHSHADERPROC            AttachShader;
@@ -447,7 +466,10 @@ union GL3WProcs {
         PFNGLBINDVERTEXARRAYPROC         BindVertexArray;
         PFNGLBLENDEQUATIONPROC           BlendEquation;
         PFNGLBLENDEQUATIONSEPARATEPROC   BlendEquationSeparate;
+        PFNGLBLENDEQUATIONSEPARATEIPROC  BlendEquationSeparatei;
+        PFNGLBLENDEQUATIONIPROC          BlendEquationi;
         PFNGLBLENDFUNCSEPARATEPROC       BlendFuncSeparate;
+        PFNGLBLENDFUNCSEPARATEIPROC      BlendFuncSeparatei;
         PFNGLBUFFERDATAPROC              BufferData;
         PFNGLBUFFERSUBDATAPROC           BufferSubData;
         PFNGLCLEARPROC                   Clear;
@@ -462,15 +484,18 @@ union GL3WProcs {
         PFNGLDELETEVERTEXARRAYSPROC      DeleteVertexArrays;
         PFNGLDETACHSHADERPROC            DetachShader;
         PFNGLDISABLEPROC                 Disable;
+        PFNGLDISABLEIPROC                Disablei;
         PFNGLDRAWELEMENTSPROC            DrawElements;
         PFNGLDRAWELEMENTSBASEVERTEXPROC  DrawElementsBaseVertex;
         PFNGLENABLEPROC                  Enable;
         PFNGLENABLEVERTEXATTRIBARRAYPROC EnableVertexAttribArray;
+        PFNGLENABLEIPROC                 Enablei;
         PFNGLGENBUFFERSPROC              GenBuffers;
         PFNGLGENTEXTURESPROC             GenTextures;
         PFNGLGENVERTEXARRAYSPROC         GenVertexArrays;
         PFNGLGETATTRIBLOCATIONPROC       GetAttribLocation;
         PFNGLGETERRORPROC                GetError;
+        PFNGLGETINTEGERI_VPROC           GetIntegeri_v;
         PFNGLGETINTEGERVPROC             GetIntegerv;
         PFNGLGETPROGRAMINFOLOGPROC       GetProgramInfoLog;
         PFNGLGETPROGRAMIVPROC            GetProgramiv;
@@ -480,6 +505,7 @@ union GL3WProcs {
         PFNGLGETSTRINGIPROC              GetStringi;
         PFNGLGETUNIFORMLOCATIONPROC      GetUniformLocation;
         PFNGLISENABLEDPROC               IsEnabled;
+        PFNGLISENABLEDIPROC              IsEnabledi;
         PFNGLLINKPROGRAMPROC             LinkProgram;
         PFNGLPIXELSTOREIPROC             PixelStorei;
         PFNGLPOLYGONMODEPROC             PolygonMode;
@@ -507,7 +533,10 @@ GL3W_API extern union GL3WProcs imgl3wProcs;
 #define glBindVertexArray                imgl3wProcs.gl.BindVertexArray
 #define glBlendEquation                  imgl3wProcs.gl.BlendEquation
 #define glBlendEquationSeparate          imgl3wProcs.gl.BlendEquationSeparate
+#define glBlendEquationSeparatei         imgl3wProcs.gl.BlendEquationSeparatei
+#define glBlendEquationi                 imgl3wProcs.gl.BlendEquationi
 #define glBlendFuncSeparate              imgl3wProcs.gl.BlendFuncSeparate
+#define glBlendFuncSeparatei             imgl3wProcs.gl.BlendFuncSeparatei
 #define glBufferData                     imgl3wProcs.gl.BufferData
 #define glBufferSubData                  imgl3wProcs.gl.BufferSubData
 #define glClear                          imgl3wProcs.gl.Clear
@@ -522,15 +551,18 @@ GL3W_API extern union GL3WProcs imgl3wProcs;
 #define glDeleteVertexArrays             imgl3wProcs.gl.DeleteVertexArrays
 #define glDetachShader                   imgl3wProcs.gl.DetachShader
 #define glDisable                        imgl3wProcs.gl.Disable
+#define glDisablei                       imgl3wProcs.gl.Disablei
 #define glDrawElements                   imgl3wProcs.gl.DrawElements
 #define glDrawElementsBaseVertex         imgl3wProcs.gl.DrawElementsBaseVertex
 #define glEnable                         imgl3wProcs.gl.Enable
 #define glEnableVertexAttribArray        imgl3wProcs.gl.EnableVertexAttribArray
+#define glEnablei                        imgl3wProcs.gl.Enablei
 #define glGenBuffers                     imgl3wProcs.gl.GenBuffers
 #define glGenTextures                    imgl3wProcs.gl.GenTextures
 #define glGenVertexArrays                imgl3wProcs.gl.GenVertexArrays
 #define glGetAttribLocation              imgl3wProcs.gl.GetAttribLocation
 #define glGetError                       imgl3wProcs.gl.GetError
+#define glGetIntegeri_v                  imgl3wProcs.gl.GetIntegeri_v
 #define glGetIntegerv                    imgl3wProcs.gl.GetIntegerv
 #define glGetProgramInfoLog              imgl3wProcs.gl.GetProgramInfoLog
 #define glGetProgramiv                   imgl3wProcs.gl.GetProgramiv
@@ -540,6 +572,7 @@ GL3W_API extern union GL3WProcs imgl3wProcs;
 #define glGetStringi                     imgl3wProcs.gl.GetStringi
 #define glGetUniformLocation             imgl3wProcs.gl.GetUniformLocation
 #define glIsEnabled                      imgl3wProcs.gl.IsEnabled
+#define glIsEnabledi                     imgl3wProcs.gl.IsEnabledi
 #define glLinkProgram                    imgl3wProcs.gl.LinkProgram
 #define glPixelStorei                    imgl3wProcs.gl.PixelStorei
 #define glPolygonMode                    imgl3wProcs.gl.PolygonMode
@@ -694,7 +727,10 @@ static const char *proc_names[] = {
     "glBindVertexArray",
     "glBlendEquation",
     "glBlendEquationSeparate",
+    "glBlendEquationSeparatei",
+    "glBlendEquationi",
     "glBlendFuncSeparate",
+    "glBlendFuncSeparatei",
     "glBufferData",
     "glBufferSubData",
     "glClear",
@@ -709,15 +745,18 @@ static const char *proc_names[] = {
     "glDeleteVertexArrays",
     "glDetachShader",
     "glDisable",
+    "glDisablei",
     "glDrawElements",
     "glDrawElementsBaseVertex",
     "glEnable",
     "glEnableVertexAttribArray",
+    "glEnablei",
     "glGenBuffers",
     "glGenTextures",
     "glGenVertexArrays",
     "glGetAttribLocation",
     "glGetError",
+    "glGetIntegeri_v",
     "glGetIntegerv",
     "glGetProgramInfoLog",
     "glGetProgramiv",
@@ -727,6 +766,7 @@ static const char *proc_names[] = {
     "glGetStringi",
     "glGetUniformLocation",
     "glIsEnabled",
+    "glIsEnabledi",
     "glLinkProgram",
     "glPixelStorei",
     "glPolygonMode",
