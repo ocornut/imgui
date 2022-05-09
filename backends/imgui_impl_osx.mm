@@ -825,12 +825,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
 
     window.title = @"Untitled";
     window.opaque = YES;
-    if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
-        [window orderFront:nil];
-    else
-        [window makeKeyAndOrderFront:nil];
-
-    [window setIsVisible:YES];
 
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
     if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
@@ -862,6 +856,19 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
         IM_DELETE(data);
     }
     viewport->PlatformUserData = viewport->PlatformHandle = viewport->PlatformHandleRaw = NULL;
+}
+
+static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
+    IM_ASSERT(data->Window != 0);
+
+    if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
+        [data->Window orderFront:nil];
+    else
+        [data->Window makeKeyAndOrderFront:nil];
+
+    [data->Window setIsVisible:YES];
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
@@ -992,6 +999,7 @@ static void ImGui_ImplOSX_InitPlatformInterface()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_CreateWindow = ImGui_ImplOSX_CreateWindow;
     platform_io.Platform_DestroyWindow = ImGui_ImplOSX_DestroyWindow;
+    platform_io.Platform_ShowWindow = ImGui_ImplOSX_ShowWindow;
     platform_io.Platform_SetWindowPos = ImGui_ImplOSX_SetWindowPos;
     platform_io.Platform_GetWindowPos = ImGui_ImplOSX_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplOSX_SetWindowSize;
