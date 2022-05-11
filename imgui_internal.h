@@ -579,14 +579,21 @@ struct ImBitArray
     bool            operator!=(ImBitArray const &a) const
     {
         for (int i = 0; i < ((BITCOUNT + 31) >> 5); ++i)
-            if (Storage[i] != a.Storage[i])
-                return true;
-        return false;
+            if (Storage[i] == a.Storage[i])
+                return false;
+        return true;
     }
     template<int DSTBITCOUNT> bool operator==(ImBitArray<DSTBITCOUNT> const &a) const
     {
         for (int i = 0; i < ImMin((DSTBITCOUNT + 31) >> 5, (BITCOUNT + 31) >> 5); ++i)
             if (Storage[i] != a.Storage[i])
+                return false;
+        return true;
+    }
+    template<int DSTBITCOUNT> bool operator!=(ImBitArray<DSTBITCOUNT> const &a) const
+    {
+        for (int i = 0; i < ImMin((DSTBITCOUNT + 31) >> 5, (BITCOUNT + 31) >> 5); ++i)
+            if (Storage[i] == a.Storage[i])
                 return false;
         return true;
     }
@@ -603,26 +610,26 @@ struct IMGUI_API ImBitVector
     void            Clear()                                { Storage.clear(); }
     void            ClearAllBits()                         { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
     void            SetAllBits()                           { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 255, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
-    bool            TestBit(int n) const                   { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
-    void            SetBit(int n)                          { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); }
-    void            SetBitRange(int n, int n2)             { IM_ASSERT(n >= 0 && n < (Storage.Size << 5) && n2 > n && n2 <= (Storage.Size << 5)); ImBitArraySetBitRange(Storage.Data, n, n2); } // Works on range [n..n2)
-    void            ClearBit(int n)                        { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArrayClearBit(Storage.Data, n); }
-    bool            operator[](int n) const                { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
-    ImBitVector&    operator|=(int n)                      { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); return *this; }
-    bool            operator&(int n) const                 { IM_ASSERT(n >= 0 && n < (Storage.Size << 5)); return ImBitArrayTestBit(Storage.Data, n); }
+    bool            TestBit(int n) const                   { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
+    void            SetBit(int n)                          { IM_ASSERT(n >= 0 && n < BitCount); ImBitArraySetBit(Storage.Data, n); }
+    void            SetBitRange(int n, int n2)             { IM_ASSERT(n >= 0 && n < BitCount && n2 > n && n2 <= BitCount); ImBitArraySetBitRange(Storage.Data, n, n2); } // Works on range [n..n2)
+    void            ClearBit(int n)                        { IM_ASSERT(n >= 0 && n < BitCount); ImBitArrayClearBit(Storage.Data, n); }
+    bool            operator[](int n) const                { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
+    ImBitVector&    operator|=(int n)                      { IM_ASSERT(n >= 0 && n < BitCount); ImBitArraySetBit(Storage.Data, n); return *this; }
+    bool            operator&(int n) const                 { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
     bool            operator==(ImBitVector const &a) const
     {
-        for (int i = 0; i < ImMin((a.Storage.Size + 31) >> 5, (Storage.Size + 31) >> 5); ++i)
+        for (int i = 0; i < ImMin((a.BitCount + 31) >> 5, (BitCount + 31) >> 5); ++i)
             if (Storage[i] != a.Storage[i])
                 return false;
         return true;
     }
     bool            operator!=(ImBitVector const &a) const
     {
-        for (int i = 0; i < ImMin((a.Storage.Size + 31) >> 5, (Storage.Size + 31) >> 5); ++i)
-            if (Storage[i] != a.Storage[i])
-                return true;
-        return false;
+        for (int i = 0; i < ImMin((a.BitCount + 31) >> 5, (BitCount + 31) >> 5); ++i)
+            if (Storage[i] == a.Storage[i])
+                return false;
+        return true;
     }
 };
 
