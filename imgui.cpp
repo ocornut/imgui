@@ -12185,7 +12185,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
         unsigned int c;
         const int c_utf8_len = ImTextCharFromUtf8(&c, p, str.End);
         TableNextColumn();
-        Text("%d", (int)(p - str));
+        Text("%d", (int)(p - str.Begin));
         TableNextColumn();
         for (int byte_index = 0; byte_index < c_utf8_len; byte_index++)
         {
@@ -12195,7 +12195,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
         }
         TableNextColumn();
         if (GetFont()->FindGlyphNoFallback((ImWchar)c))
-            TextUnformatted(p, p + c_utf8_len);
+            TextUnformatted(ImStrv(p, p + c_utf8_len));
         else
             TextUnformatted("[missing]");
         TableNextColumn();
