@@ -14,7 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-05-05: OpenGL: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING and vertex attribute states.
+//  2022-05-13: OpenGL: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING and vertex attribute states.
 //  2021-12-15: OpenGL: Using buffer orphaning + glBufferSubData(), seems to fix leaks with multi-viewports with some Intel HD drivers.
 //  2021-08-23: OpenGL: Fixed ES 3.0 shader ("#version 300 es") use normal precision floats to avoid wobbly rendering at HD resolutions.
 //  2021-08-19: OpenGL: Embed and use our own minimal GL loader (imgui_impl_opengl3_loader.h), removing requirement and support for third-party loader.
@@ -204,33 +204,28 @@ static ImGui_ImplOpenGL3_Data* ImGui_ImplOpenGL3_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL3_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
 }
 
-// OpenGL vertex attribute state
+// OpenGL vertex attribute state (for ES 1.0 and ES 2.0 only)
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
 struct ImGui_ImplOpenGL3_VtxAttribState
 {
-    GLint   Enabled;
-    GLint   Size;
-    GLint   Type;
-    GLint   Normalized;
-    GLint   Stride;
+    GLint   Enabled, Size, Type, Normalized, Stride;
     GLvoid* Ptr;
+
+    void GetState(GLint index)
+    {
+        glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &Enabled);
+        glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_SIZE, &Size);
+        glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_TYPE, &Type);
+        glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, &Normalized);
+        glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &Stride);
+        glGetVertexAttribPointerv(index, GL_VERTEX_ATTRIB_ARRAY_POINTER, &Ptr);
+    }
+    void SetState(GLint index)
+    {
+        glVertexAttribPointer(index, Size, Type, (GLboolean)Normalized, Stride, Ptr);
+        if (Enabled) glEnableVertexAttribArray(index); else glDisableVertexAttribArray(index);
+    }
 };
-
-static void ImGui_ImplOpenGL3_BackupVertexAttribState(GLint index, ImGui_ImplOpenGL3_VtxAttribState* state)
-{
-    glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &state->Enabled);
-    glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_SIZE, &state->Size);
-    glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_TYPE, &state->Type);
-    glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, &state->Normalized);
-    glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &state->Stride);
-    glGetVertexAttribPointerv(index, GL_VERTEX_ATTRIB_ARRAY_POINTER, &state->Ptr);
-}
-
-static void ImGui_ImplOpenGL3_RestoreVertexAttribState(GLint index, ImGui_ImplOpenGL3_VtxAttribState* state)
-{
-    glVertexAttribPointer(index, state->Size, state->Type, state->Normalized, state->Stride, state->Ptr);
-    if (state->Enabled) glEnableVertexAttribArray(index); else glDisableVertexAttribArray(index);
-}
 #endif
 
 // Functions
@@ -430,14 +425,12 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLuint last_sampler; if (bd->GlVersion >= 330) { glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&last_sampler); } else { last_sampler = 0; }
 #endif
     GLuint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, (GLint*)&last_array_buffer);
-
-    // This is part of VAO on OpenGL 3.0+ and OpenGL ES 3.0+.
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
+    // This is part of VAO on OpenGL 3.0+ and OpenGL ES 3.0+.
     GLint last_element_array_buffer; glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
-    ImGui_ImplOpenGL3_VtxAttribState last_vtx_attrib_state_pos, last_vtx_attrib_state_uv, last_vtx_attrib_state_color;
-    ImGui_ImplOpenGL3_BackupVertexAttribState(bd->AttribLocationVtxPos, &last_vtx_attrib_state_pos);
-    ImGui_ImplOpenGL3_BackupVertexAttribState(bd->AttribLocationVtxUV, &last_vtx_attrib_state_uv);
-    ImGui_ImplOpenGL3_BackupVertexAttribState(bd->AttribLocationVtxColor, &last_vtx_attrib_state_color);
+    ImGui_ImplOpenGL3_VtxAttribState last_vtx_attrib_state_pos; last_vtx_attrib_state_pos.GetState(bd->AttribLocationVtxPos);
+    ImGui_ImplOpenGL3_VtxAttribState last_vtx_attrib_state_uv; last_vtx_attrib_state_uv.GetState(bd->AttribLocationVtxUV);
+    ImGui_ImplOpenGL3_VtxAttribState last_vtx_attrib_state_color; last_vtx_attrib_state_color.GetState(bd->AttribLocationVtxColor);
 #endif
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GLuint last_vertex_array_object; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, (GLint*)&last_vertex_array_object);
@@ -550,9 +543,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-    ImGui_ImplOpenGL3_RestoreVertexAttribState(bd->AttribLocationVtxPos, &last_vtx_attrib_state_pos);
-    ImGui_ImplOpenGL3_RestoreVertexAttribState(bd->AttribLocationVtxUV, &last_vtx_attrib_state_uv);
-    ImGui_ImplOpenGL3_RestoreVertexAttribState(bd->AttribLocationVtxColor, &last_vtx_attrib_state_color);
+    last_vtx_attrib_state_pos.SetState(bd->AttribLocationVtxPos);
+    last_vtx_attrib_state_uv.SetState(bd->AttribLocationVtxUV);
+    last_vtx_attrib_state_color.SetState(bd->AttribLocationVtxColor);
 #endif
     glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
     glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);

@@ -113,6 +113,8 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
+  and vertex attribute states. [@rokups]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 - Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 
@@ -249,8 +251,6 @@ Other Changes:
 - Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
   It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
 - Backends: OpenGL3: Fix OpenGL ES2 includes on Apple systems. [@rokups]
-- Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving  GL_ELEMENT_ARRAY_BUFFER_BINDING and vertex
-  attribute states. [@rokups]
 - Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
   Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
 - Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
