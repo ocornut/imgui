@@ -1482,7 +1482,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
 
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
+    if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
     if (num_segments <= 0)
@@ -1506,7 +1506,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
+    if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
     if (num_segments <= 0)
