@@ -1259,25 +1259,41 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     ItemSize(size, style.FramePadding.y);
     if (!ItemAdd(bb, 0))
         return;
-
-    // Render
-    fraction = ImSaturate(fraction);
-    RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
-    bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
-    const ImVec2 fill_br = ImVec2(ImLerp(bb.Min.x, bb.Max.x, fraction), bb.Max.y);
-    RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), 0.0f, fraction, style.FrameRounding);
-
-    // Default displaying the fraction as percentage string, but user can override it
-    char overlay_buf[32];
-    if (!overlay)
+    
+    float bar_begin = 0.0f;
+    float bar_end = ImSaturate(fraction);
+    
+    const bool indeterminate = fraction < 0.0f;
+    if (indeterminate) 
     {
-        ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
-        overlay = overlay_buf;
+        const float bar_fraction = 0.2f;
+        bar_begin = ImFmod(-fraction, 1.0f) * (1.0f + bar_fraction) - bar_fraction;
+        bar_end = bar_begin + bar_fraction;
     }
 
-    ImVec2 overlay_size = CalcTextSize(overlay, NULL);
-    if (overlay_size.x > 0.0f)
-        RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
+    // Render
+    RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+    bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
+    RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), bar_begin, bar_end, style.FrameRounding);
+
+    // Don't display text for indeterminate bars by default
+    if (!indeterminate || overlay)
+    {
+        // Default displaying the fraction as percentage string, but user can override it
+        char overlay_buf[32];
+        if (!overlay)
+        {
+            ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
+            overlay = overlay_buf;
+        }
+        
+        const ImVec2 overlay_size = CalcTextSize(overlay, NULL);
+        if (overlay_size.x > 0.0f)
+        {
+            const ImVec2 fill_br = ImVec2(indeterminate ? (bb.Min.x + bb.Max.x - overlay_size.x) * 0.5f : ImLerp(bb.Min.x, bb.Max.x, bar_end), bb.Max.y);
+            RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
+        }
+    }
 }
 
 void ImGui::Bullet()
