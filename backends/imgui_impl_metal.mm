@@ -43,46 +43,33 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 // A wrapper around a MTLBuffer object that knows the last time it was reused
 @interface MetalBuffer : NSObject
 @property (nonatomic, strong) id<MTLBuffer> buffer;
-@property (nonatomic, assign) double lastReuseTime;
+@property (nonatomic, assign) double        lastReuseTime;
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer;
 @end
 
 // An object that encapsulates the data necessary to uniquely identify a
 // render pipeline state. These are used as cache keys.
 @interface FramebufferDescriptor : NSObject<NSCopying>
-@property (nonatomic, assign) unsigned long sampleCount;
+@property (nonatomic, assign) unsigned long  sampleCount;
 @property (nonatomic, assign) MTLPixelFormat colorPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat depthPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat stencilPixelFormat;
-- (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor *)renderPassDescriptor;
+- (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor*)renderPassDescriptor;
 @end
 
 // A singleton that stores long-lived objects that are needed by the Metal
 // renderer backend. Stores the render pipeline state cache and the default
 // font texture, and manages the reusable buffer cache.
 @interface MetalContext : NSObject
-@property (nonatomic, strong) id<MTLDevice> device;
-@property (nonatomic, strong) id<MTLDepthStencilState> depthStencilState;
-@property (nonatomic, strong) FramebufferDescriptor *framebufferDescriptor; // framebuffer descriptor for current frame; transient
-@property (nonatomic, strong) NSMutableDictionary *renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
-@property (nonatomic, strong, nullable) id<MTLTexture> fontTexture;
-@property (nonatomic, strong) NSMutableArray<MetalBuffer *> *bufferCache;
-@property (nonatomic, assign) double lastBufferCachePurge;
-- (void)makeDeviceObjectsWithDevice:(id<MTLDevice>)device;
-- (void)makeFontTextureWithDevice:(id<MTLDevice>)device;
-- (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
-- (void)enqueueReusableBuffer:(MetalBuffer *)buffer;
-- (id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device;
-- (void)emptyRenderPipelineStateCache;
-- (void)setupRenderState:(ImDrawData *)drawData
-           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
-     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
-            vertexBuffer:(MetalBuffer *)vertexBuffer
-      vertexBufferOffset:(size_t)vertexBufferOffset;
-- (void)renderDrawData:(ImDrawData *)drawData
-         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder;
+@property (nonatomic, strong) id<MTLDevice>                 device;
+@property (nonatomic, strong) id<MTLDepthStencilState>      depthStencilState;
+@property (nonatomic, strong) FramebufferDescriptor*        framebufferDescriptor; // framebuffer descriptor for current frame; transient
+@property (nonatomic, strong) NSMutableDictionary*          renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
+@property (nonatomic, strong, nullable) id<MTLTexture>      fontTexture;
+@property (nonatomic, strong) NSMutableArray<MetalBuffer*>* bufferCache;
+@property (nonatomic, assign) double                        lastBufferCachePurge;
+- (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
+- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
 @end
 
 struct ImGui_ImplMetal_Data
@@ -161,7 +148,7 @@ void ImGui_ImplMetal_Shutdown()
     ImGui_ImplMetal_DestroyBackendData();
 }
 
-void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
+void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd->SharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
@@ -171,19 +158,186 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
 }
 
+static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer,
+    id<MTLRenderCommandEncoder> commandEncoder, id<MTLRenderPipelineState> renderPipelineState,
+    MetalBuffer* vertexBuffer, size_t vertexBufferOffset)
+{
+    IM_UNUSED(commandBuffer);
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    [commandEncoder setCullMode:MTLCullModeNone];
+    [commandEncoder setDepthStencilState:bd->SharedMetalContext.depthStencilState];
+
+    // Setup viewport, orthographic projection matrix
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to
+    // draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
+    MTLViewport viewport =
+    {
+        .originX = 0.0,
+        .originY = 0.0,
+        .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
+        .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
+        .znear = 0.0,
+        .zfar = 1.0
+    };
+    [commandEncoder setViewport:viewport];
+
+    float L = drawData->DisplayPos.x;
+    float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+    float T = drawData->DisplayPos.y;
+    float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+    float N = (float)viewport.znear;
+    float F = (float)viewport.zfar;
+    const float ortho_projection[4][4] =
+    {
+        { 2.0f/(R-L),   0.0f,           0.0f,   0.0f },
+        { 0.0f,         2.0f/(T-B),     0.0f,   0.0f },
+        { 0.0f,         0.0f,        1/(F-N),   0.0f },
+        { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
+    };
+    [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
+
+    [commandEncoder setRenderPipelineState:renderPipelineState];
+
+    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
+    [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
+}
+
 // Metal Render function.
-void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
+void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    [bd->SharedMetalContext renderDrawData:draw_data commandBuffer:commandBuffer commandEncoder:commandEncoder];
+    MetalContext* ctx = bd->SharedMetalContext;
+
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
+        return;
+
+    // Try to retrieve a render pipeline state that is compatible with the framebuffer config for this frame
+    // The hit rate for this cache should be very near 100%.
+    id<MTLRenderPipelineState> renderPipelineState = ctx.renderPipelineStateCache[ctx.framebufferDescriptor];
+    if (renderPipelineState == nil)
+    {
+        // No luck; make a new render pipeline state
+        renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:ctx.framebufferDescriptor device:commandBuffer.device];
+
+        // Cache render pipeline state for later reuse
+        ctx.renderPipelineStateCache[ctx.framebufferDescriptor] = renderPipelineState;
+    }
+
+    size_t vertexBufferLength = (size_t)drawData->TotalVtxCount * sizeof(ImDrawVert);
+    size_t indexBufferLength = (size_t)drawData->TotalIdxCount * sizeof(ImDrawIdx);
+    MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
+    MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
+
+    ImGui_ImplMetal_SetupRenderState(drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
+
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+    // Render command lists
+    size_t vertexBufferOffset = 0;
+    size_t indexBufferOffset = 0;
+    for (int n = 0; n < drawData->CmdListsCount; n++)
+    {
+        const ImDrawList* cmd_list = drawData->CmdLists[n];
+
+        memcpy((char*)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy((char*)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback)
+            {
+                // User callback, registered via ImDrawList::AddCallback()
+                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                    ImGui_ImplMetal_SetupRenderState(drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, vertexBufferOffset);
+                else
+                    pcmd->UserCallback(cmd_list, pcmd);
+            }
+            else
+            {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+
+                // Clamp to viewport as setScissorRect() won't accept values that are off bounds
+                if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
+                if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
+                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                    continue;
+                if (pcmd->ElemCount == 0) // drawIndexedPrimitives() validation doesn't accept this
+                    continue;
+
+                // Apply scissor/clipping rectangle
+                MTLScissorRect scissorRect =
+                {
+                    .x = NSUInteger(clip_min.x),
+                    .y = NSUInteger(clip_min.y),
+                    .width = NSUInteger(clip_max.x - clip_min.x),
+                    .height = NSUInteger(clip_max.y - clip_min.y)
+                };
+                [commandEncoder setScissorRect:scissorRect];
+
+                // Bind texture, Draw
+                if (ImTextureID tex_id = pcmd->GetTexID())
+                    [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
+
+                [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
+                [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                                           indexCount:pcmd->ElemCount
+                                            indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
+                                          indexBuffer:indexBuffer.buffer
+                                    indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
+            }
+        }
+
+        vertexBufferOffset += (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
+        indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
+    }
+
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+            [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
+            [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+        });
+    }];
 }
 
 bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    [bd->SharedMetalContext makeFontTextureWithDevice:device];
-    io.Fonts->SetTexID((__bridge void *)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
+
+    // We are retrieving and uploading the font atlas as a 4-channels RGBA texture here.
+    // In theory we could call GetTexDataAsAlpha8() and upload a 1-channel texture to save on memory access bandwidth.
+    // However, using a shader designed for 1-channel texture would make it less obvious to use the ImTextureID facility to render users own textures.
+    // You can make that change in your implementation.
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                                                                 width:(NSUInteger)width
+                                                                                                height:(NSUInteger)height
+                                                                                             mipmapped:NO];
+    textureDescriptor.usage = MTLTextureUsageShaderRead;
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+    textureDescriptor.storageMode = MTLStorageModeManaged;
+#else
+    textureDescriptor.storageMode = MTLStorageModeShared;
+#endif
+    id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
+    [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
+    bd->SharedMetalContext.fontTexture = texture;
+    io.Fonts->SetTexID((__bridge void*)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
 
     return (bd->SharedMetalContext.fontTexture != nil);
 }
@@ -199,7 +353,10 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    [bd->SharedMetalContext makeDeviceObjectsWithDevice:device];
+    MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+    depthStencilDescriptor.depthWriteEnabled = NO;
+    depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
+    bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
     ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
     ImGui_ImplMetal_CreateFontsTexture(device);
 
@@ -211,7 +368,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGui_ImplMetal_DestroyFontsTexture();
     ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
-    [bd->SharedMetalContext emptyRenderPipelineStateCache];
+    [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
 }
 
 #pragma mark - Multi-viewport support
@@ -376,7 +533,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
 #pragma mark - FramebufferDescriptor implementation
 
 @implementation FramebufferDescriptor
-- (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor *)renderPassDescriptor
+- (instancetype)initWithRenderPassDescriptor:(MTLRenderPassDescriptor*)renderPassDescriptor
 {
     if ((self = [super init]))
     {
@@ -388,9 +545,9 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     return self;
 }
 
-- (nonnull id)copyWithZone:(nullable NSZone *)zone
+- (nonnull id)copyWithZone:(nullable NSZone*)zone
 {
-    FramebufferDescriptor *copy = [[FramebufferDescriptor allocWithZone:zone] init];
+    FramebufferDescriptor* copy = [[FramebufferDescriptor allocWithZone:zone] init];
     copy.sampleCount = self.sampleCount;
     copy.colorPixelFormat = self.colorPixelFormat;
     copy.depthPixelFormat = self.depthPixelFormat;
@@ -410,7 +567,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
 
 - (BOOL)isEqual:(id)object
 {
-    FramebufferDescriptor *other = object;
+    FramebufferDescriptor* other = object;
     if (![other isKindOfClass:[FramebufferDescriptor class]])
         return NO;
     return other.sampleCount == self.sampleCount      &&
@@ -424,7 +581,8 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
 #pragma mark - MetalContext implementation
 
 @implementation MetalContext
-- (instancetype)init {
+- (instancetype)init
+{
     if ((self = [super init]))
     {
         _renderPipelineStateCache = [NSMutableDictionary dictionary];
@@ -434,61 +592,24 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     return self;
 }
 
-- (void)makeDeviceObjectsWithDevice:(id<MTLDevice>)device
-{
-    MTLDepthStencilDescriptor *depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
-    depthStencilDescriptor.depthWriteEnabled = NO;
-    depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
-    self.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
-}
-
-// We are retrieving and uploading the font atlas as a 4-channels RGBA texture here.
-// In theory we could call GetTexDataAsAlpha8() and upload a 1-channel texture to save on memory access bandwidth.
-// However, using a shader designed for 1-channel texture would make it less obvious to use the ImTextureID facility to render users own textures.
-// You can make that change in your implementation.
-- (void)makeFontTextureWithDevice:(id<MTLDevice>)device
-{
-    ImGuiIO &io = ImGui::GetIO();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                                                                                 width:(NSUInteger)width
-                                                                                                height:(NSUInteger)height
-                                                                                             mipmapped:NO];
-    textureDescriptor.usage = MTLTextureUsageShaderRead;
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    textureDescriptor.storageMode = MTLStorageModeManaged;
-#else
-    textureDescriptor.storageMode = MTLStorageModeShared;
-#endif
-    id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
-    [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
-    self.fontTexture = texture;
-}
-
-- (MetalBuffer *)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
+- (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
 {
     uint64_t now = GetMachAbsoluteTimeInSeconds();
 
     // Purge old buffers that haven't been useful for a while
     if (now - self.lastBufferCachePurge > 1.0)
     {
-        NSMutableArray *survivors = [NSMutableArray array];
-        for (MetalBuffer *candidate in self.bufferCache)
-        {
+        NSMutableArray* survivors = [NSMutableArray array];
+        for (MetalBuffer* candidate in self.bufferCache)
             if (candidate.lastReuseTime > self.lastBufferCachePurge)
-            {
                 [survivors addObject:candidate];
-            }
-        }
         self.bufferCache = [survivors mutableCopy];
         self.lastBufferCachePurge = now;
     }
 
     // See if we have a buffer we can reuse
-    MetalBuffer *bestCandidate = nil;
-    for (MetalBuffer *candidate in self.bufferCache)
+    MetalBuffer* bestCandidate = nil;
+    for (MetalBuffer* candidate in self.bufferCache)
         if (candidate.buffer.length >= length && (bestCandidate == nil || bestCandidate.lastReuseTime > candidate.lastReuseTime))
             bestCandidate = candidate;
 
@@ -504,34 +625,12 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     return [[MetalBuffer alloc] initWithBuffer:backing];
 }
 
-- (void)enqueueReusableBuffer:(MetalBuffer *)buffer
-{
-    [self.bufferCache addObject:buffer];
-}
-
-- (_Nullable id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device
-{
-    // Try to retrieve a render pipeline state that is compatible with the framebuffer config for this frame
-    // The hit rate for this cache should be very near 100%.
-    id<MTLRenderPipelineState> renderPipelineState = self.renderPipelineStateCache[self.framebufferDescriptor];
-
-    if (renderPipelineState == nil)
-    {
-        // No luck; make a new render pipeline state
-        renderPipelineState = [self _renderPipelineStateForFramebufferDescriptor:self.framebufferDescriptor device:device];
-        // Cache render pipeline state for later reuse
-        self.renderPipelineStateCache[self.framebufferDescriptor] = renderPipelineState;
-    }
-
-    return renderPipelineState;
-}
-
 // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
-- (id<MTLRenderPipelineState>)_renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor *)descriptor device:(id<MTLDevice>)device
+- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device
 {
-    NSError *error = nil;
+    NSError* error = nil;
 
-    NSString *shaderSource = @""
+    NSString* shaderSource = @""
     "#include <metal_stdlib>\n"
     "using namespace metal;\n"
     "\n"
@@ -583,7 +682,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
         return nil;
     }
 
-    MTLVertexDescriptor *vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
+    MTLVertexDescriptor* vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
     vertexDescriptor.attributes[0].offset = IM_OFFSETOF(ImDrawVert, pos);
     vertexDescriptor.attributes[0].format = MTLVertexFormatFloat2; // position
     vertexDescriptor.attributes[0].bufferIndex = 0;
@@ -597,7 +696,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
     vertexDescriptor.layouts[0].stride = sizeof(ImDrawVert);
 
-    MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    MTLRenderPipelineDescriptor* pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
     pipelineDescriptor.vertexFunction = vertexFunction;
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
@@ -615,163 +714,9 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
 
     id<MTLRenderPipelineState> renderPipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
     if (error != nil)
-    {
         NSLog(@"Error: failed to create Metal pipeline state: %@", error);
-    }
 
     return renderPipelineState;
-}
-
-- (void)emptyRenderPipelineStateCache
-{
-    [self.renderPipelineStateCache removeAllObjects];
-}
-
-- (void)setupRenderState:(ImDrawData *)drawData
-           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
-     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
-            vertexBuffer:(MetalBuffer *)vertexBuffer
-      vertexBufferOffset:(size_t)vertexBufferOffset
-{
-    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    [commandEncoder setCullMode:MTLCullModeNone];
-    [commandEncoder setDepthStencilState:bd->SharedMetalContext.depthStencilState];
-
-    // Setup viewport, orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPos (top left) to
-    // draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
-    MTLViewport viewport =
-    {
-        .originX = 0.0,
-        .originY = 0.0,
-        .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
-        .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
-        .znear = 0.0,
-        .zfar = 1.0
-    };
-    [commandEncoder setViewport:viewport];
-
-    float L = drawData->DisplayPos.x;
-    float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
-    float T = drawData->DisplayPos.y;
-    float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
-    float N = (float)viewport.znear;
-    float F = (float)viewport.zfar;
-    const float ortho_projection[4][4] =
-    {
-        { 2.0f/(R-L),   0.0f,           0.0f,   0.0f },
-        { 0.0f,         2.0f/(T-B),     0.0f,   0.0f },
-        { 0.0f,         0.0f,        1/(F-N),   0.0f },
-        { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
-    };
-    [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
-
-    [commandEncoder setRenderPipelineState:renderPipelineState];
-
-    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
-    [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
-}
-
-- (void)renderDrawData:(ImDrawData *)drawData
-         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
-{
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
-        return;
-
-    id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
-
-    size_t vertexBufferLength = (size_t)drawData->TotalVtxCount * sizeof(ImDrawVert);
-    size_t indexBufferLength = (size_t)drawData->TotalIdxCount * sizeof(ImDrawIdx);
-    MetalBuffer* vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
-    MetalBuffer* indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
-
-    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:0];
-
-    // Will project scissor/clipping rectangles into framebuffer space
-    ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
-    ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
-
-    // Render command lists
-    size_t vertexBufferOffset = 0;
-    size_t indexBufferOffset = 0;
-    for (int n = 0; n < drawData->CmdListsCount; n++)
-    {
-        const ImDrawList* cmd_list = drawData->CmdLists[n];
-
-        memcpy((char *)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-        memcpy((char *)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
-            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback)
-            {
-                // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:vertexBufferOffset];
-                else
-                    pcmd->UserCallback(cmd_list, pcmd);
-            }
-            else
-            {
-                // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
-                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
-
-                // Clamp to viewport as setScissorRect() won't accept values that are off bounds
-                if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
-                if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
-                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
-                    continue;
-                if (pcmd->ElemCount == 0) // drawIndexedPrimitives() validation doesn't accept this
-                    continue;
-
-                // Apply scissor/clipping rectangle
-                MTLScissorRect scissorRect =
-                {
-                    .x = NSUInteger(clip_min.x),
-                    .y = NSUInteger(clip_min.y),
-                    .width = NSUInteger(clip_max.x - clip_min.x),
-                    .height = NSUInteger(clip_max.y - clip_min.y)
-                };
-                [commandEncoder setScissorRect:scissorRect];
-
-                // Bind texture, Draw
-                if (ImTextureID tex_id = pcmd->GetTexID())
-                    [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
-
-                [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
-                [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                                           indexCount:pcmd->ElemCount
-                                            indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
-                                          indexBuffer:indexBuffer.buffer
-                                    indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
-            }
-        }
-
-        vertexBufferOffset += (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
-        indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
-    }
-#if __has_feature(objc_arc)
-    __weak id weakSelf = self;
-#else
-    __unsafe_unretained id weakSelf = self;
-#endif
-    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [weakSelf enqueueReusableBuffer:vertexBuffer];
-            [weakSelf enqueueReusableBuffer:indexBuffer];
-        });
-    }];
 }
 
 @end

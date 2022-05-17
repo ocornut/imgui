@@ -706,7 +706,6 @@ struct ImChunkStream
 //
 // Rendering circles with an odd number of segments, while mathematically correct will produce
 // asymmetrical results on the raster grid. Therefore we're rounding N to next even number (7->8, 8->8, 9->10 etc.)
-//
 #define IM_ROUNDUP_TO_EVEN(_V)                                  ((((_V) + 1) / 2) * 2)
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     4
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
@@ -1793,10 +1792,6 @@ struct ImGuiContext
     bool                    ActiveIdHasBeenPressedBefore;       // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
     bool                    ActiveIdHasBeenEditedBefore;        // Was the value associated to the widget Edited over the course of the Active state.
     bool                    ActiveIdHasBeenEditedThisFrame;
-    bool                    ActiveIdUsingMouseWheel;            // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
-    ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
-    ImU32                   ActiveIdUsingNavInputMask;          // Active widget will want to read those nav inputs.
-    ImBitArrayForNamedKeys  ActiveIdUsingKeyInputMask;          // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
@@ -1807,6 +1802,12 @@ struct ImGuiContext
     ImGuiWindow*            ActiveIdPreviousFrameWindow;
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
+
+    // Input Ownership
+    bool                    ActiveIdUsingMouseWheel;            // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
+    ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
+    ImU32                   ActiveIdUsingNavInputMask;          // Active widget will want to read those nav inputs.
+    ImBitArrayForNamedKeys  ActiveIdUsingKeyInputMask;          // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
 
     // Next window/item data
     ImGuiItemFlags          CurrentItemFlags;                      // == g.ItemFlagsStack.back()
@@ -2043,10 +2044,6 @@ struct ImGuiContext
         ActiveIdHasBeenPressedBefore = false;
         ActiveIdHasBeenEditedBefore = false;
         ActiveIdHasBeenEditedThisFrame = false;
-        ActiveIdUsingMouseWheel = false;
-        ActiveIdUsingNavDirMask = 0x00;
-        ActiveIdUsingNavInputMask = 0x00;
-        ActiveIdUsingKeyInputMask.ClearAllBits();
         ActiveIdClickOffset = ImVec2(-1, -1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
@@ -2057,6 +2054,11 @@ struct ImGuiContext
         ActiveIdPreviousFrameWindow = NULL;
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
+
+        ActiveIdUsingMouseWheel = false;
+        ActiveIdUsingNavDirMask = 0x00;
+        ActiveIdUsingNavInputMask = 0x00;
+        ActiveIdUsingKeyInputMask.ClearAllBits();
 
         CurrentItemFlags = ImGuiItemFlags_None;
         BeginMenuCount = 0;
@@ -3162,6 +3164,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, const ImDrawList* draw_list, const char* label);
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
     IMGUI_API void          DebugNodeFont(ImFont* font);
+    IMGUI_API void          DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph);
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);

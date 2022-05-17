@@ -152,8 +152,13 @@ Other Changes:
   always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
   level of a popup with a child menu opened.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
-- Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
+- DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
+- DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
+- Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
+  you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
@@ -175,6 +180,8 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
+  and vertex attribute states. [@rokups]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 - Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 

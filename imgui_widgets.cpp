@@ -548,13 +548,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         {
             // Poll buttons
             int mouse_button_clicked = -1;
-            int mouse_button_released = -1;
             if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseClicked[0])         { mouse_button_clicked = 0; }
             else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseClicked[1])   { mouse_button_clicked = 1; }
             else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseClicked[2])  { mouse_button_clicked = 2; }
-            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseReleased[0])        { mouse_button_released = 0; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseReleased[1])  { mouse_button_released = 1; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseReleased[2]) { mouse_button_released = 2; }
 
             if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
@@ -579,15 +575,21 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                     FocusWindow(window);
                 }
             }
-            if ((flags & ImGuiButtonFlags_PressedOnRelease) && mouse_button_released != -1)
+            if (flags & ImGuiButtonFlags_PressedOnRelease)
             {
-                // Repeat mode trumps on release behavior
-                const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay;
-                if (!has_repeated_at_least_once)
-                    pressed = true;
-                if (!(flags & ImGuiButtonFlags_NoNavFocus))
-                    SetFocusID(id, window);
-                ClearActiveID();
+                int mouse_button_released = -1;
+                if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseReleased[0])        { mouse_button_released = 0; }
+                else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseReleased[1])  { mouse_button_released = 1; }
+                else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseReleased[2]) { mouse_button_released = 2; }
+                if (mouse_button_released != -1)
+                {
+                    const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay; // Repeat mode trumps on release behavior
+                    if (!has_repeated_at_least_once)
+                        pressed = true;
+                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                        SetFocusID(id, window);
+                    ClearActiveID();
+                }
             }
 
             // 'Repeat' mode acts when held regardless of _PressedOn flags (see table above).

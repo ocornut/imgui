@@ -399,7 +399,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
     for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : 0);
+        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
     }
     ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
@@ -1066,7 +1066,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
 void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
 {
-    if (radius <= 0.0f)
+    if (radius < 0.5f)
     {
         _Path.push_back(center);
         return;
@@ -1158,7 +1158,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
 void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
-    if (radius <= 0.0f)
+    if (radius < 0.5f)
     {
         _Path.push_back(center);
         return;
@@ -1177,7 +1177,7 @@ void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, fl
 // 0: East, 3: South, 6: West, 9: North, 12: East
 void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
 {
-    if (radius <= 0.0f)
+    if (radius < 0.5f)
     {
         _Path.push_back(center);
         return;
@@ -1187,7 +1187,7 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
 
 void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
-    if (radius <= 0.0f)
+    if (radius < 0.5f)
     {
         _Path.push_back(center);
         return;
@@ -1368,7 +1368,7 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((flags & ImDrawFlags_RoundCornersTop)  == ImDrawFlags_RoundCornersTop)  || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f ) - 1.0f);
     rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight)  == ImDrawFlags_RoundCornersRight)  ? 0.5f : 1.0f ) - 1.0f);
 
-    if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         PathLineTo(a);
         PathLineTo(ImVec2(b.x, a.y));
@@ -1414,7 +1414,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         PrimReserve(6, 4);
         PrimRect(p_min, p_max, col);
@@ -1490,7 +1490,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
 
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
+    if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
     if (num_segments <= 0)
@@ -1514,7 +1514,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || radius <= 0.0f)
+    if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
     if (num_segments <= 0)
@@ -1654,7 +1654,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
         return;
 
     flags = FixRectCornerFlags(flags);
-    if (rounding <= 0.0f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         AddImage(user_texture_id, p_min, p_max, uv_min, uv_max, col);
         return;
