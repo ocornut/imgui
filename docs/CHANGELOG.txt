@@ -58,6 +58,8 @@ Other Changes:
   Not that even thought you shouldn't need to disable io.ConfigInputTrickleEventQueue, you can
   technically dynamically change its setting based on the context (e.g. disable only when hovering
   or interacting with a game/3D view).
+- IO: Fixed input queue trickling of mouse wheel events: multiple wheel events are merged, while
+  a mouse pos followed by a mouse wheel are now trickled. (#4921, #4821)
 - Windows: Fixed first-time windows appearing in negative coordinates from being initialized
   with a wrong size. This would most often be noticeable in multi-viewport mode (docking branch)
   when spawning a window in a monitor with negative coordinates. (#5215, #3414) [@DimaKoltun]

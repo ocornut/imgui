@@ -7851,7 +7851,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             if (e->MouseWheel.WheelX != 0.0f || e->MouseWheel.WheelY != 0.0f)
             {
                 // Trickling Rule: Stop processing queued events if we got multiple action on the event
-                if (trickle_fast_inputs && (mouse_wheeled || mouse_button_changed != 0))
+                if (trickle_fast_inputs && (mouse_moved || mouse_button_changed != 0))
                     break;
                 io.MouseWheelH += e->MouseWheel.WheelX;
                 io.MouseWheel += e->MouseWheel.WheelY;
