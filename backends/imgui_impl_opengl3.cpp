@@ -107,6 +107,10 @@
 #endif
 #endif
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
