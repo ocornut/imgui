@@ -97,6 +97,9 @@
 #else
 #include <stdint.h>     // intptr_t
 #endif
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -122,9 +125,6 @@
 #include <GLES2/gl2ext.h>
 #endif
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
 #include <OpenGLES/ES3/gl.h>    // Use GL ES 3
 #else
