@@ -188,7 +188,9 @@ Other Changes:
 Docking+Viewports Branch:
 
 - Docking: Fixed floating docked nodes not being clamped into viewport workrect to stay reachable
-  when g.ConfigWindowsMoveFromTitleBarOnly is set and multi-viewports are disabled. (#5044)
+  when io.ConfigWindowsMoveFromTitleBarOnly is true and multi-viewports are disabled. (#5044)
+- Docking: Fixed a regression where moving window would be interrupted after undocking a tab
+  when io.ConfigDockingAlwaysTabBar is true. (#5324) [@rokups]
 - Viewports: Fixed translating a host viewport from briefly altering the size of AlwaysAutoResize windows. (#5057)
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)
