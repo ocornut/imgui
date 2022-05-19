@@ -2731,6 +2731,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
     const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
     const bool is_floating_point = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
+    const bool ChangeWithClicksInSlider = (flags & ImGuiSliderFlags_NoChangeInsideHandle) == 0;
 
     const float grab_padding = 2.0f;
     const float slider_sz = (bb.Max[axis] - bb.Min[axis]) - grab_padding * 2.0f;
@@ -2767,11 +2768,23 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             }
             else
             {
+                static float last_mouse_pos;
                 const float mouse_abs_pos = g.IO.MousePos[axis];
-                clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
-                if (axis == ImGuiAxis_Y)
-                    clicked_t = 1.0f - clicked_t;
-                set_new_value = true;
+
+                if (IsMouseClicked(0))
+                    last_mouse_pos = mouse_abs_pos;
+                const float mouse_slider_pos = mouse_abs_pos - slider_usable_pos_min;
+                const float slider_pos = ((float)*v - v_min)/(v_max - v_min) * slider_usable_sz;
+
+                //Only register the click if ImGuiSliderFlags_NoChangeInsideHandle wasn't passed or the click fell outside the slider handle or the slider is being dragged
+                if (ChangeWithClicksInSlider || last_mouse_pos != mouse_abs_pos || !(mouse_slider_pos > slider_pos - grab_sz && mouse_slider_pos < slider_pos + grab_sz))
+                {
+                    clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
+                    if (axis == ImGuiAxis_Y)
+                        clicked_t = 1.0f - clicked_t;
+                    set_new_value = true;
+                }
+                last_mouse_pos = mouse_abs_pos;
             }
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav)

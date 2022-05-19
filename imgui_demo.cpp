@@ -712,12 +712,12 @@ static void ShowDemoWindowWidgets()
         {
             IMGUI_DEMO_MARKER("Widgets/Basic/SliderInt, SliderFloat");
             static int i1 = 0;
-            ImGui::SliderInt("slider int", &i1, -1, 3);
+            ImGui::SliderInt("slider int", &i1, -1, 3, "%d", ImGuiSliderFlags_NoChangeInsideHandle);
             ImGui::SameLine(); HelpMarker("CTRL+click to input value.");
 
             static float f1 = 0.123f, f2 = 0.0f;
             ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
-            ImGui::SliderFloat("slider float (log)", &f2, -10.0f, 10.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
+            ImGui::SliderFloat("slider float (log, must click off handle)", &f2, -10.0f, 10.0f, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoChangeInsideHandle);
 
             IMGUI_DEMO_MARKER("Widgets/Basic/SliderAngle");
             static float angle = 0.0f;
@@ -1919,6 +1919,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", &flags, ImGuiSliderFlags_NoInput);
         ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_NoChangeInsideHandle", &flags, ImGuiSliderFlags_NoChangeInsideHandle);
+        ImGui::SameLine(); HelpMarker("Clicking inside the slider box only changes the value if the click was off the handle");
 
         // Drags
         static float drag_f = 0.5f;
@@ -1936,6 +1938,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Underlying float value: %f", slider_f);
         ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags);
         ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags);
+        ImGui::SliderInt("SliderInt (10 -> 100)", &slider_i, 10, 100, "%d", flags);
 
         ImGui::TreePop();
     }
