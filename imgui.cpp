@@ -12182,7 +12182,7 @@ static void RenderViewportsThumbnails()
 // Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
 void ImGui::DebugTextEncoding(ImStrv str)
 {
-    Text("Text: \"%.*s\"", str.length(), str.Begin);
+    Text("Text: \"%.*s\"", (int)str.length(), str.Begin);
     if (!BeginTable("list", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
         return;
     TableSetupColumn("Offset");
