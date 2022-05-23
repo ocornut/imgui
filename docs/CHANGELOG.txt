@@ -43,6 +43,8 @@ Breaking changes:
   automatically handling event capture. Examples that are using the OSX backend have removed
   all the now-unnecessary calls to ImGui_ImplOSX_HandleEvent(), applications can do as well.
   [@stuartcarnie] (#4821)
+- Internals: calling ButtonBehavior() without calling ItemAdd() now requires a KeepAliveID().
+  This is because the KeepAliveID() call was moved from GetID() to ItemAdd()). (#5181)
 
 Other Changes:
 
