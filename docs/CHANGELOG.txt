@@ -37,6 +37,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Renamed CaptureMouseFromApp() and CaptureKeyboardFromApp() to SetNextFrameWantCaptureMouse()
+  and SetNextFrameWantCaptureKeyboard() to clarify purpose, old name was too misleading.
+  Kept inline redirection functions (will obsolete).
 - Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
   (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
 - Backends: OSX: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend
@@ -95,6 +98,7 @@ Other Changes:
 - DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
 - Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
   you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
 - Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
