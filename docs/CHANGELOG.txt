@@ -121,6 +121,13 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: OpenGL3: Partially revert 1.86 change of using glBufferSubData(): now only done on Windows and
+  Intel GPU, based on querying glGetString(GL_VENDOR). Essentially we got report of accumulating leaks on Intel
+  with multi-viewports when using simple glBufferData() without orphaning, and report of corruptions on other
+  GPUs with multi-viewports when using orphaning and glBufferSubData(), so currently switching technique based
+  on GPU vendor, which unfortunately reinforce the cargo-cult nature of dealing with OpenGL drivers.
+  Navigating the space of mysterious OpenGL drivers is particularly difficult as they are known to rely on
+  application specific whitelisting. (#4468, #3381, #2981, #4825, #4832, #5127).
 - Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
   and vertex attribute states. [@rokups]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
