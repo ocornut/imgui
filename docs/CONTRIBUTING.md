@@ -1,5 +1,13 @@
 # Contributing Guidelines
 
+## Index
+
+- [Getting Started & General Advices](#getting-started--general-advices)
+- [Issues vs Discussions](#issues-vs-discussions)
+- [How to open an Issue](#how-to-open-an-issue)
+- [How to open a Pull Request](#how-to-open-a-pull-request)
+- [Copyright / Contributor License Agreement](#copyright--contributor-license-agreement)
+
 ## Getting Started & General Advices
 
 - Please browse the [Wiki](https://github.com/ocornut/imgui/wiki) to find code snippets, links and other resources (e.g. [Useful extensions](https://github.com/ocornut/imgui/wiki/Useful-Extensions)).
@@ -49,7 +57,7 @@ Steps:
 
 If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information are useful in a given context.
 
-## How to create a Pull Request
+## How to open a Pull Request
 
 - **Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance.** PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it. 
 - Many PR are useful to demonstrate a need and a possible solution but aren't adequate for merging (causing other issues, not seeing other aspects of the big picture, etc.). In doubt, don't hesitate to push a PR because that is always the first step toward finding the mergeable solution! Even if a PR stays unmerged for a long time, its presence can be useful for other users and helps toward finding a general solution.
