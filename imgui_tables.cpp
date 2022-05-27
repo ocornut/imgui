@@ -358,10 +358,10 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
-    if (table->EnabledMaskByDisplayOrder.BitCount != columns_count ||
-        table->EnabledMaskByIndex.BitCount != columns_count ||
-        table->VisibleMaskByIndex.BitCount != columns_count ||
-        table->RequestOutputMaskByIndex.BitCount != columns_count)
+    if (table->EnabledMaskByDisplayOrder.BitCount < columns_count ||
+        table->EnabledMaskByIndex.BitCount < columns_count ||
+        table->VisibleMaskByIndex.BitCount < columns_count ||
+        table->RequestOutputMaskByIndex.BitCount < columns_count)
     {
         table->EnabledMaskByDisplayOrder.Create(columns_count);
         table->EnabledMaskByIndex.Create(columns_count);
