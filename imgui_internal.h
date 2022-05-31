@@ -566,9 +566,8 @@ struct ImBitArray
     void            SetBit(int n)                         { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArraySetBit(Storage, n); }
     void            ClearBit(int n)                       { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArrayClearBit(Storage, n); }
     void            SetBitRange(int n, int n2)            { n += OFFSET; n2 += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT && n2 > n && n2 <= BITCOUNT); ImBitArraySetBitRange(Storage, n, n2); } // Works on range [n..n2)
-    bool            operator[](int n) const               { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
-    ImBitArray&     operator|=(int n)                     { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); ImBitArraySetBit(Storage, n); return *this; }
-    bool            operator&(int n) const                { n += OFFSET; IM_ASSERT(n >= 0 && n < BITCOUNT); return ImBitArrayTestBit(Storage, n); }
+    bool            operator[](int n) const               { return TestBit(n); }
+    bool            operator&(int n) const                { return TestBit(n); }
     bool            operator==(ImBitArray const &a) const
     {
         for (int i = 0; i < ((BITCOUNT + 31) >> 5); ++i)
@@ -614,23 +613,17 @@ struct IMGUI_API ImBitVector
     void            SetBit(int n)                          { IM_ASSERT(n >= 0 && n < BitCount); ImBitArraySetBit(Storage.Data, n); }
     void            SetBitRange(int n, int n2)             { IM_ASSERT(n >= 0 && n < BitCount && n2 > n && n2 <= BitCount); ImBitArraySetBitRange(Storage.Data, n, n2); } // Works on range [n..n2)
     void            ClearBit(int n)                        { IM_ASSERT(n >= 0 && n < BitCount); ImBitArrayClearBit(Storage.Data, n); }
-    bool            operator[](int n) const                { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
-    ImBitVector&    operator|=(int n)                      { IM_ASSERT(n >= 0 && n < BitCount); ImBitArraySetBit(Storage.Data, n); return *this; }
-    bool            operator&(int n) const                 { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
-    bool            operator==(ImBitVector const &a) const
+    bool            CheckEqual(ImBitVector const &a) const
     {
         for (int i = 0; i < ImMin((a.BitCount + 31) >> 5, (BitCount + 31) >> 5); ++i)
             if (Storage[i] != a.Storage[i])
                 return false;
         return true;
     }
-    bool            operator!=(ImBitVector const &a) const
-    {
-        for (int i = 0; i < ImMin((a.BitCount + 31) >> 5, (BitCount + 31) >> 5); ++i)
-            if (Storage[i] == a.Storage[i])
-                return false;
-        return true;
-    }
+    bool            operator[](int n) const                { return TestBit(n); }
+    bool            operator&(int n) const                 { return TestBit(n); }
+    bool            operator==(ImBitVector const &a) const { return CheckEqual(a); }
+    bool            operator!=(ImBitVector const &a) const { return !CheckEqual(a); }
 };
 
 // Helper: ImSpan<>
@@ -2503,8 +2496,8 @@ struct IMGUI_API ImGuiTabBar
 #define IMGUI_TABLE_DRAW_CHANNELS(c)    (4 + (c) * 2)                           // See TableSetupDrawChannels()
 
 // Our current column maximum is IMGUI_TABLE_MAX_COLUMNS but we may raise that in the future.
-typedef ImS32 ImGuiTableColumnIdx;
-typedef ImU32 ImGuiTableDrawChannelIdx;
+typedef ImS16 ImGuiTableColumnIdx;
+typedef ImU16 ImGuiTableDrawChannelIdx;
 
 // [Internal] sizeof() ~ 104
 // We use the terminology "Enabled" to refer to a column that is not Hidden by user/api.
@@ -2563,7 +2556,7 @@ struct ImGuiTableColumn
         PrevEnabledColumn = NextEnabledColumn = -1;
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU8)-1;
+        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU16)-1;
     }
 };
 
