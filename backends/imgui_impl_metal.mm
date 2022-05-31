@@ -293,8 +293,10 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
     {
         dispatch_async(dispatch_get_main_queue(), ^{
             ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-            [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-            [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+            if (bd != NULL) {
+                [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
+                [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+            }
         });
     }];
 }
