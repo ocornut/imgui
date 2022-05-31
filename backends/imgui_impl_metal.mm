@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-06-01: Metal: Fixed null dereference on exit inside command buffer completion handler.
 //  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-01-03: Metal: Ignore ImDrawCmd where ElemCount == 0 (very rare but can technically be manufactured by user code).
 //  2021-12-30: Metal: Added Metal C++ support. Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
@@ -293,8 +294,11 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
     {
         dispatch_async(dispatch_get_main_queue(), ^{
             ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-            [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-            [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+            if (bd != NULL)
+            {
+                [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
+                [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+            }
         });
     }];
 }
