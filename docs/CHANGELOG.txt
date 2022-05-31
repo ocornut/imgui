@@ -104,12 +104,17 @@ Other changes:
 
 Breaking changes:
 
+- Renamed CaptureMouseFromApp() and CaptureKeyboardFromApp() to SetNextFrameWantCaptureMouse()
+  and SetNextFrameWantCaptureKeyboard() to clarify purpose, old name was too misleading.
+  Kept inline redirection functions (will obsolete).
 - Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
   (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
 - Backends: OSX: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend
   automatically handling event capture. Examples that are using the OSX backend have removed
   all the now-unnecessary calls to ImGui_ImplOSX_HandleEvent(), applications can do as well.
   [@stuartcarnie] (#4821)
+- Internals: calling ButtonBehavior() without calling ItemAdd() now requires a KeepAliveID().
+  This is because the KeepAliveID() call was moved from GetID() to ItemAdd()). (#5181)
 
 Other Changes:
 
@@ -125,6 +130,8 @@ Other Changes:
   Not that even thought you shouldn't need to disable io.ConfigInputTrickleEventQueue, you can
   technically dynamically change its setting based on the context (e.g. disable only when hovering
   or interacting with a game/3D view).
+- IO: Fixed input queue trickling of mouse wheel events: multiple wheel events are merged, while
+  a mouse pos followed by a mouse wheel are now trickled. (#4921, #4821)
 - Windows: Fixed first-time windows appearing in negative coordinates from being initialized
   with a wrong size. This would most often be noticeable in multi-viewport mode (docking branch)
   when spawning a window in a monitor with negative coordinates. (#5215, #3414) [@DimaKoltun]
@@ -143,6 +150,8 @@ Other Changes:
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
   trickled with the new input queue (happened on some backends only). (#2467, #1336)
+- InputText: Fixed a one-frame display glitch where pressing Escape to revert after a deletion
+  would lead to small garbage being displayed for one frame. Curiously a rather old bug! (#3008)
 - Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
   instance of a same table ID, when instances have a different height. (#3955).
 - Tables: Fixed incorrect auto-fit of parent windows when using non-resizable weighted columns. (#5276)
@@ -152,8 +161,15 @@ Other Changes:
   always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
   level of a popup with a child menu opened.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
-- Drawlist: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
+- DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
+- DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
+- DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
+- Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
+  you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
+- Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
@@ -175,13 +191,24 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: OpenGL3: Partially revert 1.86 change of using glBufferSubData(): now only done on Windows and
+  Intel GPU, based on querying glGetString(GL_VENDOR). Essentially we got report of accumulating leaks on Intel
+  with multi-viewports when using simple glBufferData() without orphaning, and report of corruptions on other
+  GPUs with multi-viewports when using orphaning and glBufferSubData(), so currently switching technique based
+  on GPU vendor, which unfortunately reinforce the cargo-cult nature of dealing with OpenGL drivers.
+  Navigating the space of mysterious OpenGL drivers is particularly difficult as they are known to rely on
+  application specific whitelisting. (#4468, #3381, #2981, #4825, #4832, #5127).
+- Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
+  and vertex attribute states. [@rokups]
 - Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
 - Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
 
 Docking+Viewports Branch:
 
 - Docking: Fixed floating docked nodes not being clamped into viewport workrect to stay reachable
-  when g.ConfigWindowsMoveFromTitleBarOnly is set and multi-viewports are disabled. (#5044)
+  when io.ConfigWindowsMoveFromTitleBarOnly is true and multi-viewports are disabled. (#5044)
+- Docking: Fixed a regression where moving window would be interrupted after undocking a tab
+  when io.ConfigDockingAlwaysTabBar is true. (#5324) [@rokups]
 - Viewports: Fixed translating a host viewport from briefly altering the size of AlwaysAutoResize windows. (#5057)
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)

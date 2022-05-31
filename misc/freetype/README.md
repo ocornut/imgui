@@ -32,6 +32,6 @@ Small, thin anti-aliased fonts typically benefit a lot from FreeType's hinting:
 ### Colorful glyphs/emojis
 
 You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain colorful glyphs. See the
-["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/edit/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
+["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
 
 ![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)

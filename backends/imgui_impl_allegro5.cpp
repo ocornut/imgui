@@ -234,7 +234,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
         return false;
 
     // Store our identifier
-    io.Fonts->SetTexID((void*)cloned_img);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)cloned_img);
     bd->Texture = cloned_img;
 
     // Create an invisible mouse cursor
