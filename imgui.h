@@ -1878,6 +1878,7 @@ struct ImVector
     inline T&           back()                              { IM_ASSERT(Size > 0); return Data[Size - 1]; }
     inline const T&     back() const                        { IM_ASSERT(Size > 0); return Data[Size - 1]; }
     inline void         swap(ImVector<T>& rhs)              { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; T* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
+    inline void         fill(const T v)                     { for (int n = 0; n < Size; n++) Data[n] = v; }
 
     inline int          _grow_capacity(int sz) const        { int new_capacity = Capacity ? (Capacity + Capacity / 2) : 8; return new_capacity > sz ? new_capacity : sz; }
     inline void         resize(int new_size)                { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }

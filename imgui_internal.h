@@ -605,10 +605,10 @@ struct IMGUI_API ImBitVector
     ImVector<ImU32> Storage;
     int             BitCount = 0;
     ImBitVector(int sz = 0)                                { if (sz > 0) { Create(sz); } }
-    void            Create(int sz)                         { BitCount = sz; Storage.resize((sz + 31) >> 5); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    void            Create(int sz)                         { BitCount = sz; Storage.resize((sz + 31) >> 5); Storage.fill(0); }
     void            Clear()                                { Storage.clear(); }
-    void            ClearAllBits()                         { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
-    void            SetAllBits()                           { IM_ASSERT(Storage.Size > 0); memset(Storage.Data, 255, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    void            ClearAllBits()                         { Storage.fill(0); }
+    void            SetAllBits()                           { Storage.fill(~0); }
     bool            TestBit(int n) const                   { IM_ASSERT(n >= 0 && n < BitCount); return ImBitArrayTestBit(Storage.Data, n); }
     void            SetBit(int n)                          { IM_ASSERT(n >= 0 && n < BitCount); ImBitArraySetBit(Storage.Data, n); }
     void            SetBitRange(int n, int n2)             { IM_ASSERT(n >= 0 && n < BitCount && n2 > n && n2 <= BitCount); ImBitArraySetBitRange(Storage.Data, n, n2); } // Works on range [n..n2)
