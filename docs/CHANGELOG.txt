@@ -65,6 +65,9 @@ Other Changes:
   or interacting with a game/3D view).
 - IO: Fixed input queue trickling of mouse wheel events: multiple wheel events are merged, while
   a mouse pos followed by a mouse wheel are now trickled. (#4921, #4821)
+- IO: Added io.SetAppAcceptingEvents() to set a master flag for accepting key/mouse/characters
+  events (default to true). Useful if you have native dialog boxes that are interrupting your
+  application loop/refresh, and you want to disable events being queued while your app is frozen.
 - Windows: Fixed first-time windows appearing in negative coordinates from being initialized
   with a wrong size. This would most often be noticeable in multi-viewport mode (docking branch)
   when spawning a window in a monitor with negative coordinates. (#5215, #3414) [@DimaKoltun]
