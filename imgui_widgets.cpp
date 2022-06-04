@@ -2721,6 +2721,27 @@ TYPE ImGui::ScaleValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, T
     return result;
 }
 
+float CorrectedDelta(float delta, const bool slow, const bool fast, const int decimal_precision, const float v_range)
+{
+    float new_delta = delta;
+    if (decimal_precision > 0)
+    {
+        new_delta /= 100.0f;    // Gamepad/keyboard or mouse tweak speeds in % of slider bounds
+        if (slow)
+            new_delta /= 10.0f;
+    }
+    else
+    {
+        if ((v_range >= -100.0f && v_range <= 100.0f) || slow)
+            new_delta = ((new_delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range; // Gamepad/keyboard or mouse tweak speeds in integer steps
+        else
+            new_delta /= 100.0f;
+    }
+    if (fast)
+        new_delta *= 10.0f;
+    return new_delta;
+}
+
 // FIXME: Move more of the code into SliderBehavior()
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb)
@@ -2730,6 +2751,9 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
     const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
+    if ((flags & ImGuiSliderFlags_Scrollable) != 0)
+      SetItemUsingMouseWheel();
+    const bool is_scrollable_and_hovered = ((flags & ImGuiSliderFlags_Scrollable) != 0) && g.HoveredId == id;
     const bool is_floating_point = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
 
     const float grab_padding = 2.0f;
@@ -2755,11 +2779,11 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
     // Process interacting with the slider
     bool value_changed = false;
-    if (g.ActiveId == id)
+    if (g.ActiveId == id || is_scrollable_and_hovered)
     {
         bool set_new_value = false;
         float clicked_t = 0.0f;
-        if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+        if (g.ActiveId == id  && g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
             if (!g.IO.MouseDown[0])
             {
@@ -2774,7 +2798,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 set_new_value = true;
             }
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
+        else if (g.ActiveId == id  && g.ActiveIdSource == ImGuiInputSource_Nav)
         {
             if (g.ActiveIdIsJustActivated)
             {
@@ -2786,23 +2810,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             float input_delta = (axis == ImGuiAxis_X) ? input_delta2.x : -input_delta2.y;
             if (input_delta != 0.0f)
             {
-                const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
-                if (decimal_precision > 0)
-                {
-                    input_delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
-                    if (IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        input_delta /= 10.0f;
-                }
-                else
-                {
-                    if ((v_range >= -100.0f && v_range <= 100.0f) || IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        input_delta = ((input_delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range; // Gamepad/keyboard tweak speeds in integer steps
-                    else
-                        input_delta /= 100.0f;
-                }
-                if (IsNavInputDown(ImGuiNavInput_TweakFast))
-                    input_delta *= 10.0f;
-
+                input_delta = CorrectedDelta(input_delta, IsNavInputDown(ImGuiNavInput_TweakSlow), IsNavInputDown(ImGuiNavInput_TweakFast),
+                                             is_floating_point ? ImParseFormatPrecision(format, 3) : 0, (float)v_range);
                 g.SliderCurrentAccum += input_delta;
                 g.SliderCurrentAccumDirty = true;
             }
@@ -2840,6 +2849,26 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 }
 
                 g.SliderCurrentAccumDirty = false;
+            }
+        }
+        else if (is_scrollable_and_hovered)
+        {
+            float delta = g.IO.MouseWheel;
+            if (delta != 0.0f)
+            {
+                if (IsItemActive())
+                {
+                    ClearActiveID();
+                }
+                else
+                {
+                    delta = CorrectedDelta(delta, g.IO.KeyCtrl, g.IO.KeyShift,
+                                           is_floating_point ? ImParseFormatPrecision(format, 3) : 0, (float)v_range);
+                    clicked_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *v, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                    const float new_clicked_t = ImClamp(clicked_t + delta, 0.0f, 1.0f); // to stay coeherent with ScaleRatioFromValueT clamping
+                    set_new_value = clicked_t != new_clicked_t;
+                    clicked_t = new_clicked_t;
+                }
             }
         }
 
