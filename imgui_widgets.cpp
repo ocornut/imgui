@@ -3571,6 +3571,7 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 // - InputTextReindexLines() [Internal]
 // - InputTextReindexLinesRange() [Internal]
 // - InputTextEx() [Internal]
+// - DebugNodeInputTextState() [Internal]
 //-------------------------------------------------------------------------
 
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
@@ -4048,17 +4049,21 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
         memcpy(state->InitialTextA.Data, buf, buf_len + 1);
 
+        // Preserve cursor position and undo/redo stack if we come back to same widget
+        // FIXME: Since we reworked this on 2022/06, may want to differenciate recycle_cursor vs recycle_undostate?
+        bool recycle_state = (state->ID == id && !init_changed_specs);
+        if (recycle_state && (state->CurLenA != buf_len || (state->TextAIsValid && strncmp(state->TextA.Data, buf, buf_len) != 0)))
+            recycle_state = false;
+
         // Start edition
         const char* buf_end = NULL;
+        state->ID = id;
         state->TextW.resize(buf_size + 1);          // wchar count <= UTF-8 count. we use +1 to make sure that .Data is always pointing to at least an empty string.
         state->TextA.resize(0);
         state->TextAIsValid = false;                // TextA is not valid yet (we will display buf until then)
         state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, buf_size, buf, NULL, &buf_end);
         state->CurLenA = (int)(buf_end - buf);      // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
 
-        // Preserve cursor position and undo/redo stack if we come back to same widget
-        // FIXME: For non-readonly widgets we might be able to require that TextAIsValid && TextA == buf ? (untested) and discard undo stack if user buffer has changed.
-        const bool recycle_state = (state->ID == id && !init_changed_specs);
         if (recycle_state)
         {
             // Recycle existing cursor/selection/undo stack but clamp position
@@ -4067,7 +4072,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         else
         {
-            state->ID = id;
             state->ScrollX = 0.0f;
             stb_textedit_initialize_state(&state->Stb, !is_multiline);
         }
@@ -4814,6 +4818,40 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         return enter_pressed;
     else
         return value_changed;
+}
+
+void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
+{
+#ifndef IMGUI_DISABLE_METRICS_WINDOW
+    ImGuiContext& g = *GImGui;
+    ImStb::STB_TexteditState* stb_state = &state->Stb;
+    ImStb::StbUndoState* undo_state = &stb_state->undostate;
+    Text("ID: 0x%08X, ActiveID: 0x%08X", state->ID, g.ActiveId);
+    Text("CurLenW: %d, CurLenA: %d, Cursor: %d, Selection: %d..%d", state->CurLenA, state->CurLenW, stb_state->cursor, stb_state->select_start, stb_state->select_end);
+    Text("undo_point: %d, redo_point: %d, undo_char_point: %d, redo_char_point: %d", undo_state->undo_point, undo_state->redo_point, undo_state->undo_char_point, undo_state->redo_char_point);
+    if (BeginChild("undopoints", ImVec2(0.0f, GetTextLineHeight() * 15), true)) // Visualize undo state
+    {
+        PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+        for (int n = 0; n < STB_TEXTEDIT_UNDOSTATECOUNT; n++)
+        {
+            ImStb::StbUndoRecord* undo_rec = &undo_state->undo_rec[n];
+            const char undo_rec_type = (n < undo_state->undo_point) ? 'u' : (n >= undo_state->redo_point) ? 'r' : ' ';
+            if (undo_rec_type == ' ')
+                BeginDisabled();
+            char buf[64] = "";
+            if (undo_rec_type != ' ' && undo_rec->char_storage != -1)
+                ImTextStrToUtf8(buf, IM_ARRAYSIZE(buf), undo_state->undo_char + undo_rec->char_storage, undo_state->undo_char + undo_rec->char_storage + undo_rec->insert_length);
+            Text("%c [%02d] where %03d, insert %03d, delete %03d, char_storage %03d \"%s\"",
+                undo_rec_type, n, undo_rec->where, undo_rec->insert_length, undo_rec->delete_length, undo_rec->char_storage, buf);
+            if (undo_rec_type == ' ')
+                EndDisabled();
+        }
+        PopStyleVar();
+    }
+    EndChild();
+#else
+    IM_UNUSED(state);
+#endif
 }
 
 //-------------------------------------------------------------------------

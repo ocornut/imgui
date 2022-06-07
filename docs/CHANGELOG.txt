@@ -88,6 +88,7 @@ Other Changes:
   trickled with the new input queue (happened on some backends only). (#2467, #1336)
 - InputText: Fixed a one-frame display glitch where pressing Escape to revert after a deletion
   would lead to small garbage being displayed for one frame. Curiously a rather old bug! (#3008)
+- InputText: Fixed an undo-state corruption issue when editing buffer before reactivating item. (#4947)
 - Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
   instance of a same table ID, when instances have a different height. (#3955).
 - Tables: Fixed incorrect auto-fit of parent windows when using non-resizable weighted columns. (#5276)
@@ -108,6 +109,7 @@ Other Changes:
   you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
 - Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
 - Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
+- Metrics: Added "InputText" section to visualize internal state (#4947, #4949).
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
