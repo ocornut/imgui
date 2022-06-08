@@ -101,6 +101,8 @@ Other Changes:
 - Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
   always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
   level of a popup with a child menu opened.
+- Menus: Menus emitted from the main/scrolling layer are not part of the same menuset as menus emitted
+  from the menu-bar, avoiding  accidental hovering from one to the other. (#3496, #4797) [@rokups]
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
 - DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
