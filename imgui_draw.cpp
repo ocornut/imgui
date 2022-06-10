@@ -680,9 +680,19 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
     _IdxWritePtr += 6;
 }
 
-void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
+void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col, bool flip_uv_bd)
 {
-    ImVec2 b(c.x, a.y), d(a.x, c.y), uv_b(uv_c.x, uv_a.y), uv_d(uv_a.x, uv_c.y);
+    ImVec2 b(c.x, a.y), d(a.x, c.y), uv_b, uv_d;
+    if (flip_uv_bd) 
+    {
+        uv_b = ImVec2(uv_a.x, uv_c.y);
+        uv_d = ImVec2(uv_c.x, uv_a.y);
+    }
+    else
+    {
+        uv_b = ImVec2(uv_c.x, uv_a.y);
+        uv_d = ImVec2(uv_a.x, uv_c.y);
+    }
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
     _IdxWritePtr[0] = idx; _IdxWritePtr[1] = (ImDrawIdx)(idx+1); _IdxWritePtr[2] = (ImDrawIdx)(idx+2);
     _IdxWritePtr[3] = idx; _IdxWritePtr[4] = (ImDrawIdx)(idx+2); _IdxWritePtr[5] = (ImDrawIdx)(idx+3);
@@ -1608,7 +1618,7 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
     AddText(NULL, 0.0f, pos, col, text_begin, text_end);
 }
 
-void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, bool r90_270)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1618,7 +1628,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, cons
         PushTextureID(user_texture_id);
 
     PrimReserve(6, 4);
-    PrimRectUV(p_min, p_max, uv_min, uv_max, col);
+    PrimRectUV(p_min, p_max, uv_min, uv_max, col, r90_270);
 
     if (push_texture_id)
         PopTextureID();
