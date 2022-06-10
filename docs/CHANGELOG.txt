@@ -132,6 +132,9 @@ Other Changes:
   or interacting with a game/3D view).
 - IO: Fixed input queue trickling of mouse wheel events: multiple wheel events are merged, while
   a mouse pos followed by a mouse wheel are now trickled. (#4921, #4821)
+- IO: Added io.SetAppAcceptingEvents() to set a master flag for accepting key/mouse/characters
+  events (default to true). Useful if you have native dialog boxes that are interrupting your
+  application loop/refresh, and you want to disable events being queued while your app is frozen.
 - Windows: Fixed first-time windows appearing in negative coordinates from being initialized
   with a wrong size. This would most often be noticeable in multi-viewport mode (docking branch)
   when spawning a window in a monitor with negative coordinates. (#5215, #3414) [@DimaKoltun]
@@ -146,20 +149,29 @@ Other Changes:
 - InputScalar: Automatically allow hexadecimal input when format is %X (without extra flag).
 - InputScalar: Automatically allow scientific input when format is float/double (without extra flag).
 - Nav: Fixed nav movement in a scope with only one disabled item from focusing the disabled item. (#5189)
+- Nav: Fixed issues with nav request being transferred to another window when calling SetKeyboardFocusHere()
+  and simultaneous changing window focus. (#4449)
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
   trickled with the new input queue (happened on some backends only). (#2467, #1336)
 - InputText: Fixed a one-frame display glitch where pressing Escape to revert after a deletion
   would lead to small garbage being displayed for one frame. Curiously a rather old bug! (#3008)
+- InputText: Fixed an undo-state corruption issue when editing main buffer before reactivating item. (#4947)
+- InputText: Fixed an undo-state corruption issue when editing in-flight buffer in user callback.
+  (#4947, #4949] [@JoshuaWebb]
 - Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
   instance of a same table ID, when instances have a different height. (#3955).
 - Tables: Fixed incorrect auto-fit of parent windows when using non-resizable weighted columns. (#5276)
+- Tables: Fixed drawcall merging of last column. Depending on some unrelated settings (e.g. BorderH)
+  merging drawcall of the last column didn't always work (regression since 1.87). (#4843, #4844) [@rokups]
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
   always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
   level of a popup with a child menu opened.
+- Menus: Menus emitted from the main/scrolling layer are not part of the same menuset as menus emitted
+  from the menu-bar, avoiding  accidental hovering from one to the other. (#3496, #4797) [@rokups]
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
 - DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
@@ -170,6 +182,7 @@ Other Changes:
   you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
 - Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
 - Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
+- Metrics: Added "InputText" section to visualize internal state (#4947, #4949).
 - Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
   from causing an assertion when closing the group. (#5181).
 - Misc: Fixed IsAnyItemHovered() returning false when using navigation.
@@ -191,6 +204,7 @@ Other Changes:
 - Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
 - Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
   multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: Metal: Fixed null dereference on exit inside command buffer completion handler. (#5363, #5365) [@warrenm]
 - Backends: OpenGL3: Partially revert 1.86 change of using glBufferSubData(): now only done on Windows and
   Intel GPU, based on querying glGetString(GL_VENDOR). Essentially we got report of accumulating leaks on Intel
   with multi-viewports when using simple glBufferData() without orphaning, and report of corruptions on other
