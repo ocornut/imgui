@@ -39,7 +39,6 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx12.h"
-#include "imgui_impl_dxshared.h"
 
 // DirectX
 #include <d3d12.h>
@@ -75,6 +74,11 @@ struct ImGui_ImplDX12_Data
     ImGui_ImplDX12_Data()           { memset((void*)this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
 
+struct VERTEX_CONSTANT_BUFFER_DX12
+{
+    float   mvp[4][4];
+};
+
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
@@ -89,7 +93,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
 
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-    VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
+    VERTEX_CONSTANT_BUFFER_DX12 vertex_constant_buffer;
     {
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;

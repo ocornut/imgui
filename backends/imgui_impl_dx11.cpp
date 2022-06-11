@@ -31,7 +31,6 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
-#include "imgui_impl_dxshared.h"
 
 // DirectX
 #include <stdio.h>
@@ -62,6 +61,11 @@ struct ImGui_ImplDX11_Data
     int                         IndexBufferSize;
 
     ImGui_ImplDX11_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
+};
+
+struct VERTEX_CONSTANT_BUFFER_DX11
+{
+    float   mvp[4][4];
 };
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
@@ -173,7 +177,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
         D3D11_MAPPED_SUBRESOURCE mapped_resource;
         if (ctx->Map(bd->pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
-        VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource.pData;
+        VERTEX_CONSTANT_BUFFER_DX11* constant_buffer = (VERTEX_CONSTANT_BUFFER_DX11*)mapped_resource.pData;
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
         float T = draw_data->DisplayPos.y;
@@ -431,7 +435,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         // Create the constant buffer
         {
             D3D11_BUFFER_DESC desc;
-            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
+            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER_DX11);
             desc.Usage = D3D11_USAGE_DYNAMIC;
             desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
