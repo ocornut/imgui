@@ -31,6 +31,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
+#include "imgui_impl_dxshared.h"
 
 // DirectX
 #include <stdio.h>
@@ -61,11 +62,6 @@ struct ImGui_ImplDX11_Data
     int                         IndexBufferSize;
 
     ImGui_ImplDX11_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
-};
-
-struct VERTEX_CONSTANT_BUFFER
-{
-    float   mvp[4][4];
 };
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts

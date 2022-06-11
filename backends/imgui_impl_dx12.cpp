@@ -39,6 +39,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx12.h"
+#include "imgui_impl_dxshared.h"
 
 // DirectX
 #include <d3d12.h>
@@ -72,11 +73,6 @@ struct ImGui_ImplDX12_Data
     UINT                            frameIndex;
 
     ImGui_ImplDX12_Data()           { memset((void*)this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
-};
-
-struct VERTEX_CONSTANT_BUFFER
-{
-    float   mvp[4][4];
 };
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
