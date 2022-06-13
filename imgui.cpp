@@ -15259,7 +15259,11 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (g.NavWindowingTarget)
         is_focused = (g.NavWindowingTarget->DockNode == node);
     else if (g.NavWindow && g.NavWindow->RootWindowForTitleBarHighlight == host_window->RootWindowDockTree && root_node->LastFocusedNodeId == node->ID)
-        is_focused = true;
+    {
+        // FIXME-DOCKING: May want alternative to treat central node void differently? e.g. if (g.NavWindow == host_window)
+        if (g.NavWindow->DockNode && DockNodeIsInHierarchyOf(g.NavWindow->DockNode, root_node)) // Omit child windows injected in window hierarchy
+            is_focused = true;
+    }
 
     // Hidden tab bar will show a triangle on the upper-left (in Begin)
     if (node->IsHiddenTabBar() || node->IsNoTabBar())
@@ -18263,10 +18267,11 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
     const bool is_active = (g.FrameCount - node->LastFrameActive < 2);  // Submitted
     if (!is_alive) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
     bool open;
+    ImGuiTreeNodeFlags tree_node_flags = node->IsFocused ? ImGuiTreeNodeFlags_Selected : ImGuiTreeNodeFlags_None;
     if (node->Windows.Size > 0)
-        open = TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+        open = TreeNodeEx((void*)(intptr_t)node->ID, tree_node_flags, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
     else
-        open = TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+        open = TreeNodeEx((void*)(intptr_t)node->ID, tree_node_flags, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
     if (!is_alive) { PopStyleColor(); }
     if (is_active && IsItemHovered())
         if (ImGuiWindow* window = node->HostWindow ? node->HostWindow : node->VisibleWindow)
@@ -18280,10 +18285,10 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
         DebugNodeWindow(node->HostWindow, "HostWindow");
         DebugNodeWindow(node->VisibleWindow, "VisibleWindow");
         BulletText("SelectedTabID: 0x%08X, LastFocusedNodeID: 0x%08X", node->SelectedTabId, node->LastFocusedNodeId);
-        BulletText("Misc:%s%s%s%s%s%s",
+        BulletText("Misc:%s%s%s%s%s%s%s",
             node->IsDockSpace() ? " IsDockSpace" : "",
             node->IsCentralNode() ? " IsCentralNode" : "",
-            is_alive ? " IsAlive" : "", is_active ? " IsActive" : "",
+            is_alive ? " IsAlive" : "", is_active ? " IsActive" : "", node->IsFocused ? " IsFocused" : "",
             node->WantLockSizeOnce ? " WantLockSizeOnce" : "",
             node->HasCentralNodeChild ? " HasCentralNodeChild" : "");
         if (TreeNode("flags", "Flags Merged: 0x%04X, Local: 0x%04X, InWindows: 0x%04X, Shared: 0x%04X", node->MergedFlags, node->LocalFlags, node->LocalFlagsInWindows, node->SharedFlags))
