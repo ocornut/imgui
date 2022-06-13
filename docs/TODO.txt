@@ -113,6 +113,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: (R&D) local multi-pass layout mode.
  - layout: (R&D) bind authored layout data (created by an off-line tool), items fetch their pos/size at submission, self-optimize data structures to stable linear access.
 
+ - tables: see https://github.com/ocornut/imgui/issues/2957#issuecomment-569726095
+
  - group: BeginGroup() needs a border option. (~#1496)
  - group: IsHovered() after EndGroup() covers whole AABB rather than the intersection of individual items. Is that desirable?
  - group: merge deactivation/activation within same group (fwd WasEdited flag). (#2550)
