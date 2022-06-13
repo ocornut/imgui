@@ -302,13 +302,19 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     // Dear ImGui Apps (accessible from the "Tools" menu)
     static bool show_app_metrics = false;
+    static bool show_app_debug_log = false;
     static bool show_app_stack_tool = false;
-    static bool show_app_style_editor = false;
     static bool show_app_about = false;
+    static bool show_app_style_editor = false;
 
-    if (show_app_metrics)       { ImGui::ShowMetricsWindow(&show_app_metrics); }
-    if (show_app_stack_tool)    { ImGui::ShowStackToolWindow(&show_app_stack_tool); }
-    if (show_app_about)         { ImGui::ShowAboutWindow(&show_app_about); }
+    if (show_app_metrics)
+        ImGui::ShowMetricsWindow(&show_app_metrics);
+    if (show_app_debug_log)
+        ImGui::ShowDebugLogWindow(&show_app_debug_log);
+    if (show_app_stack_tool)
+        ImGui::ShowStackToolWindow(&show_app_stack_tool);
+    if (show_app_about)
+        ImGui::ShowAboutWindow(&show_app_about);
     if (show_app_style_editor)
     {
         ImGui::Begin("Dear ImGui Style Editor", &show_app_style_editor);
@@ -397,6 +403,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             IMGUI_DEMO_MARKER("Menu/Tools");
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
             ImGui::MenuItem("Metrics/Debugger", NULL, &show_app_metrics);
+            ImGui::MenuItem("Debug Log", NULL, &show_app_debug_log);
             ImGui::MenuItem("Stack Tool", NULL, &show_app_stack_tool);
 #endif
             ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);

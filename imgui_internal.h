@@ -147,6 +147,7 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
+typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
@@ -193,18 +194,17 @@ namespace ImStb
 // [SECTION] Macros
 //-----------------------------------------------------------------------------
 
-// Debug Logging
-#ifndef IMGUI_DEBUG_LOG
-#define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
+// Debug Printing Into TTY
+#ifndef IMGUI_DEBUG_PRINT
+#define IMGUI_DEBUG_PRINT(_FMT,...)     printf("[%05d] " _FMT, g.FrameCount, __VA_ARGS__)
 #endif
 
-// Debug Logging for selected systems. Remove the '((void)0) //' to enable.
-//#define IMGUI_DEBUG_LOG_POPUP         IMGUI_DEBUG_LOG // Enable log
-//#define IMGUI_DEBUG_LOG_NAV           IMGUI_DEBUG_LOG // Enable log
-//#define IMGUI_DEBUG_LOG_IO            IMGUI_DEBUG_LOG // Enable log
-#define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0)       // Disable log
-#define IMGUI_DEBUG_LOG_NAV(...)        ((void)0)       // Disable log
-#define IMGUI_DEBUG_LOG_IO(...)         ((void)0)       // Disable log
+// Debug Logging for ShowDebugLogWindow(). This is designed for relatively rare events so please don't spam.
+#define IMGUI_DEBUG_LOG(...)            ImGui::DebugLog(__VA_ARGS__);
+#define IMGUI_DEBUG_LOG_ACTIVEID(...)   do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventActiveId) IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_FOCUS(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventFocus)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_POPUP(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventPopup)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_NAV(...)        do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventNav)      IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 
 // Static Asserts
 #define IM_STATIC_ASSERT(_COND)         static_assert(_COND, "")
@@ -1486,8 +1486,20 @@ struct ImGuiSettingsHandler
 // [SECTION] Metrics, Debug Tools
 //-----------------------------------------------------------------------------
 
+enum ImGuiDebugLogFlags_
+{
+    // Event types
+    ImGuiDebugLogFlags_None             = 0,
+    ImGuiDebugLogFlags_EventActiveId    = 1 << 0,
+    ImGuiDebugLogFlags_EventFocus       = 1 << 1,
+    ImGuiDebugLogFlags_EventPopup       = 1 << 2,
+    ImGuiDebugLogFlags_EventNav         = 1 << 3,
+    ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav
+};
+
 struct ImGuiMetricsConfig
 {
+    bool        ShowDebugLog;
     bool        ShowStackTool;
     bool        ShowWindowsRects;
     bool        ShowWindowsBeginOrder;
@@ -1499,14 +1511,10 @@ struct ImGuiMetricsConfig
 
     ImGuiMetricsConfig()
     {
-        ShowStackTool = false;
-        ShowWindowsRects = false;
-        ShowWindowsBeginOrder = false;
-        ShowTablesRects = false;
+        ShowDebugLog = ShowStackTool = ShowWindowsRects = ShowWindowsBeginOrder = ShowTablesRects = false;
         ShowDrawCmdMesh = true;
         ShowDrawCmdBoundingBoxes = true;
-        ShowWindowsRectsType = -1;
-        ShowTablesRectsType = -1;
+        ShowWindowsRectsType = ShowTablesRectsType = -1;
     }
 };
 
@@ -1799,6 +1807,8 @@ struct ImGuiContext
     int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
 
     // Debug Tools
+    ImGuiDebugLogFlags      DebugLogFlags;
+    ImGuiTextBuffer         DebugLogBuf;
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
     ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
     ImGuiMetricsConfig      DebugMetricsConfig;
@@ -1954,6 +1964,7 @@ struct ImGuiContext
         LogDepthRef = 0;
         LogDepthToExpand = LogDepthToExpandDefault = 2;
 
+        DebugLogFlags = ImGuiDebugLogFlags_None;
         DebugItemPickerActive = false;
         DebugItemPickerBreakId = 0;
 
@@ -2863,12 +2874,15 @@ namespace ImGui
     IMGUI_API void          GcCompactTransientWindowBuffers(ImGuiWindow* window);
     IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
+    // Debug Log
+    IMGUI_API void          DebugLog(const char* fmt, ...) IM_FMTARGS(1);
+    IMGUI_API void          DebugLogV(const char* fmt, va_list args) IM_FMTLIST(1);
+    
     // Debug Tools
     IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
     IMGUI_API void          ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
     inline void             DebugDrawItemRect(ImU32 col = IM_COL32(255,0,0,255))    { ImGuiContext& g = *GImGui; ImGuiWindow* window = g.CurrentWindow; GetForegroundDrawList(window)->AddRect(g.LastItemData.Rect.Min, g.LastItemData.Rect.Max, col); }
     inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
-
     IMGUI_API void          ShowFontAtlas(ImFontAtlas* atlas);
     IMGUI_API void          DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end);
     IMGUI_API void          DebugNodeColumns(ImGuiOldColumns* columns);

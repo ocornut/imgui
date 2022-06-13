@@ -111,6 +111,8 @@ Other Changes:
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
 - DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
 - DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
+- Debug: Added ShowDebugLogWindow() showing an opt-in synthetic log of principal events (focus, popup,
+  active id changes) helping to diagnose issues.
 - Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
   you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
 - Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
