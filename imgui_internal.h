@@ -195,8 +195,13 @@ namespace ImStb
 //-----------------------------------------------------------------------------
 
 // Debug Printing Into TTY
-#ifndef IMGUI_DEBUG_PRINT
-#define IMGUI_DEBUG_PRINT(_FMT,...)     printf("[%05d] " _FMT, g.FrameCount, __VA_ARGS__)
+// (since IMGUI_VERSION_NUM >= 18729: IMGUI_DEBUG_LOG was reworked into IMGUI_DEBUG_PRINTF (and removed framecount from it). If you were using a #define IMGUI_DEBUG_LOG please rename)
+#ifndef IMGUI_DEBUG_PRINTF
+#ifndef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
+#define IMGUI_DEBUG_PRINTF(_FMT,...)    printf(_FMT, __VA_ARGS__)
+#else
+#define IMGUI_DEBUG_PRINTF(_FMT,...)
+#endif
 #endif
 
 // Debug Logging for ShowDebugLogWindow(). This is designed for relatively rare events so please don't spam.
@@ -205,6 +210,7 @@ namespace ImStb
 #define IMGUI_DEBUG_LOG_FOCUS(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventFocus)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_POPUP(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventPopup)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_NAV(...)        do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventNav)      IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_IO(...)         do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventIO)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 
 // Static Asserts
 #define IM_STATIC_ASSERT(_COND)         static_assert(_COND, "")
@@ -1494,7 +1500,9 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_EventFocus       = 1 << 1,
     ImGuiDebugLogFlags_EventPopup       = 1 << 2,
     ImGuiDebugLogFlags_EventNav         = 1 << 3,
-    ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav
+    ImGuiDebugLogFlags_EventIO          = 1 << 4,
+    ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventIO,
+    ImGuiDebugLogFlags_OutputToTTY      = 1 << 10   // Also send output to TTY
 };
 
 struct ImGuiMetricsConfig
@@ -1964,7 +1972,7 @@ struct ImGuiContext
         LogDepthRef = 0;
         LogDepthToExpand = LogDepthToExpandDefault = 2;
 
-        DebugLogFlags = ImGuiDebugLogFlags_None;
+        DebugLogFlags = ImGuiDebugLogFlags_OutputToTTY;
         DebugItemPickerActive = false;
         DebugItemPickerBreakId = 0;
 
@@ -2703,6 +2711,7 @@ namespace ImGui
 #endif
 
     // Drag and Drop
+    IMGUI_API bool          IsDragDropActive();
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
     IMGUI_API void          ClearDragDrop();
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
