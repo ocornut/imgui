@@ -657,6 +657,12 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateGamepads();
 }
 
+void ImGui_ImplGlfw_SetTime(double time)
+{
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    bd->Time += (time - glfwGetTime());
+    glfwSetTime(time);
+}
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
