@@ -3383,11 +3383,21 @@ void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
 void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
+
+    // While most behaved code would make an effort to not steal active id during window move/drag operations,
+    // we at least need to be resilient to it. Cancelling the move is rather aggressive and users of 'master' branch
+    // may prefer the weird ill-defined half working situation ('docking' did assert), so may need to rework that.
+    if (g.MovingWindow != NULL && g.ActiveId == g.MovingWindow->MoveId)
+    {
+        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() cancel MovingWindow\n");
+        g.MovingWindow = NULL;
+    }
+
+    // Set active id
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
     if (g.ActiveIdIsJustActivated)
     {
-        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() old:0x%08X (window \"%s\") -> new:0x%08X (window \"%s\")\n",
-            g.ActiveId, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "", id, window ? window->Name : "");
+        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() old:0x%08X (window \"%s\") -> new:0x%08X (window \"%s\")\n", g.ActiveId, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "", id, window ? window->Name : "");
         g.ActiveIdTimer = 0.0f;
         g.ActiveIdHasBeenPressedBefore = false;
         g.ActiveIdHasBeenEditedBefore = false;
@@ -7388,9 +7398,8 @@ void ImGui::SetKeyboardFocusHere(int offset)
 
     // It makes sense in the vast majority of cases to never interrupt a drag and drop.
     // When we refactor this function into ActivateItem() we may want to make this an option.
-    // Note that g.ActiveId being stolen while g.MovingWindow != NULL is currently ill-defined (subtle side-effects on master, assert in docking),
-    // so there's another layer we need to fix. Would make sense to automatically drop g.MovingWindow when g.ActiveId is changed.
-    // MovingWindow is protected from most user inputs using SetActiveIdUsingNavAndKeys() but we may need to enforce a better more encompassing scheme.
+    // MovingWindow is protected from most user inputs using SetActiveIdUsingNavAndKeys(), but
+    // is also automatically dropped in the event g.ActiveId is stolen.
     if (g.DragDropActive || g.MovingWindow != NULL)
     {
         IMGUI_DEBUG_LOG_ACTIVEID("SetKeyboardFocusHere() ignored while DragDropActive!\n");
