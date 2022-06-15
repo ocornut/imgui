@@ -3867,11 +3867,7 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
         if (g.IO.MouseDown[0] && IsMousePosValid(&g.IO.MousePos))
         {
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (moving_window->Pos.x != pos.x || moving_window->Pos.y != pos.y)
-            {
-                MarkIniSettingsDirty(moving_window);
-                SetWindowPos(moving_window, pos, ImGuiCond_Always);
-            }
+            SetWindowPos(moving_window, pos, ImGuiCond_Always);
             FocusWindow(g.MovingWindow);
         }
         else
@@ -7140,6 +7136,9 @@ void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     const ImVec2 old_pos = window->Pos;
     window->Pos = ImFloor(pos);
     ImVec2 offset = window->Pos - old_pos;
+    if (offset.x == 0.0f && offset.y == 0.0f)
+        return;
+    MarkIniSettingsDirty(window);
     window->DC.CursorPos += offset;         // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
     window->DC.CursorMaxPos += offset;      // And more importantly we need to offset CursorMaxPos/CursorStartPos this so ContentSize calculation doesn't get affected.
     window->DC.IdealMaxPos += offset;
@@ -7174,26 +7173,19 @@ void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     window->SetWindowSizeAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
 
     // Set
-    if (size.x > 0.0f)
-    {
-        window->AutoFitFramesX = 0;
+    ImVec2 old_size = window->SizeFull;
+    window->AutoFitFramesX = (size.x <= 0.0f) ? 2 : 0;
+    window->AutoFitFramesY = (size.y <= 0.0f) ? 2 : 0;
+    if (size.x <= 0.0f)
+        window->AutoFitOnlyGrows = false;
+    else
         window->SizeFull.x = IM_FLOOR(size.x);
-    }
-    else
-    {
-        window->AutoFitFramesX = 2;
+    if (size.y <= 0.0f)
         window->AutoFitOnlyGrows = false;
-    }
-    if (size.y > 0.0f)
-    {
-        window->AutoFitFramesY = 0;
+    else
         window->SizeFull.y = IM_FLOOR(size.y);
-    }
-    else
-    {
-        window->AutoFitFramesY = 2;
-        window->AutoFitOnlyGrows = false;
-    }
+    if (old_size.x != window->SizeFull.x || old_size.y != window->SizeFull.y)
+        MarkIniSettingsDirty(window);
 }
 
 void ImGui::SetWindowSize(const ImVec2& size, ImGuiCond cond)
@@ -10930,7 +10922,6 @@ static void ImGui::NavUpdateWindowing()
             const float move_speed = ImFloor(NAV_MOVE_SPEED * io.DeltaTime * ImMin(io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y)); // FIXME: Doesn't handle variable framerate very well
             ImGuiWindow* moving_window = g.NavWindowingTarget->RootWindow;
             SetWindowPos(moving_window, moving_window->Pos + move_delta * move_speed, ImGuiCond_Always);
-            MarkIniSettingsDirty(moving_window);
             g.NavDisableMouseHover = true;
         }
     }
