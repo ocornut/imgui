@@ -151,6 +151,7 @@ Other Changes:
 - Nav: Fixed nav movement in a scope with only one disabled item from focusing the disabled item. (#5189)
 - Nav: Fixed issues with nav request being transferred to another window when calling SetKeyboardFocusHere()
   and simultaneous changing window focus. (#4449)
+- Nav: Changed SetKeyboardFocusHere() to not behave if a drag or window moving is in progress.
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
@@ -174,10 +175,13 @@ Other Changes:
   from the menu-bar, avoiding  accidental hovering from one to the other. (#3496, #4797) [@rokups]
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
+- Settings: Fixed some SetNextWindowPos/SetNextWindowSize API calls not marking settings as dirty.
 - DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
 - DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
 - DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
+- Debug: Added ShowDebugLogWindow() showing an opt-in synthetic log of principal events (focus, popup,
+  active id changes) helping to diagnose issues.
 - Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
   you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
 - Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
