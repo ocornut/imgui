@@ -2332,26 +2332,20 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
-    // Tabbing or CTRL-clicking on Drag turns it into an InputText
     const bool hovered = ItemHoverable(frame_bb, id);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
+        // Tabbing or CTRL-clicking on Drag turns it into an InputText
         const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2);
-        if (input_requested_by_tabbing || clicked || double_clicked || g.NavActivateId == id || g.NavActivateInputId == id)
-        {
-            SetActiveID(id, window);
-            SetFocusID(id, window);
-            FocusWindow(window);
-            g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            if (temp_input_allowed)
-                if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavActivateInputId == id)
-                    temp_input_is_active = true;
-        }
+        const bool make_active = (input_requested_by_tabbing || clicked || double_clicked || g.NavActivateId == id || g.NavActivateInputId == id);
+        if (make_active && temp_input_allowed)
+            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavActivateInputId == id)
+                temp_input_is_active = true;
 
-        // Experimental: simple click (without moving) turns Drag into an InputText
+        // (Optional) simple click (without moving) turns Drag into an InputText
         if (g.IO.ConfigDragClickToInputText && temp_input_allowed && !temp_input_is_active)
             if (g.ActiveId == id && hovered && g.IO.MouseReleased[0] && !IsMouseDragPastThreshold(0, g.IO.MouseDragThreshold * DRAG_MOUSE_THRESHOLD_FACTOR))
             {
@@ -2359,6 +2353,14 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
                 g.NavActivateFlags = ImGuiActivateFlags_PreferInput;
                 temp_input_is_active = true;
             }
+
+        if (make_active && !temp_input_is_active)
+        {
+            SetActiveID(id, window);
+            SetFocusID(id, window);
+            FocusWindow(window);
+            g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+        }
     }
 
     if (temp_input_is_active)
@@ -2950,21 +2952,24 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
-    // Tabbing or CTRL-clicking on Slider turns it into an input box
     const bool hovered = ItemHoverable(frame_bb, id);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
+        // Tabbing or CTRL-clicking on Slider turns it into an input box
         const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
-        if (input_requested_by_tabbing || clicked || g.NavActivateId == id || g.NavActivateInputId == id)
+        const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id || g.NavActivateInputId == id);
+        if (make_active && temp_input_allowed)
+            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id)
+                temp_input_is_active = true;
+
+        if (make_active && !temp_input_is_active)
         {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            if (temp_input_allowed && (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
-                temp_input_is_active = true;
         }
     }
 
