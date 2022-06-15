@@ -880,9 +880,7 @@ void ImGui::Scrollbar(ImGuiAxis axis)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-
     const ImGuiID id = GetWindowScrollbarID(window, axis);
-    KeepAliveID(id);
 
     // Calculate scrollbar bounding box
     ImRect bb = GetWindowScrollbarRect(window, axis);
@@ -919,6 +917,8 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
     ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return false;
+
+    KeepAliveID(id);
 
     const float bb_frame_width = bb_frame.GetWidth();
     const float bb_frame_height = bb_frame.GetHeight();
