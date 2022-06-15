@@ -37,6 +37,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Renamed IMGUI_DISABLE_METRICS_WINDOW to IMGUI_DISABLE_DEBUG_TOOLS for correctness.
+  Kept support for old define (will obsolete).
 - Renamed CaptureMouseFromApp() and CaptureKeyboardFromApp() to SetNextFrameWantCaptureMouse()
   and SetNextFrameWantCaptureKeyboard() to clarify purpose, old name was too misleading.
   Kept inline redirection functions (will obsolete).

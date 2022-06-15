@@ -4863,7 +4863,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
 void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
 {
-#ifndef IMGUI_DISABLE_METRICS_WINDOW
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *GImGui;
     ImStb::STB_TexteditState* stb_state = &state->Stb;
     ImStb::StbUndoState* undo_state = &stb_state->undostate;

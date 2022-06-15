@@ -3520,7 +3520,7 @@ void ImGui::TableGcCompactSettings()
 // - DebugNodeTable() [Internal]
 //-------------------------------------------------------------------------
 
-#ifndef IMGUI_DISABLE_METRICS_WINDOW
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 
 static const char* DebugNodeTableGetSizingPolicyDesc(ImGuiTableFlags sizing_policy)
 {
@@ -3614,7 +3614,7 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
     TreePop();
 }
 
-#else // #ifndef IMGUI_DISABLE_METRICS_WINDOW
+#else // #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 
 void ImGui::DebugNodeTable(ImGuiTable*) {}
 void ImGui::DebugNodeTableSettings(ImGuiTableSettings*) {}
