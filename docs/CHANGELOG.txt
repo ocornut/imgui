@@ -229,6 +229,7 @@ Docking+Viewports Branch:
   when io.ConfigDockingAlwaysTabBar is true. (#5324) [@rokups]
 - Docking: Fixed incorrect focus highlight on docking node when focusing empty central node
   or a child window which was manually injected into a dockspace window.
+- Docking, Modal: Fixed a crash when opening popup from a parent which is being docked on the same frame. (#5401)
 - Viewports: Fixed translating a host viewport from briefly altering the size of AlwaysAutoResize windows. (#5057)
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)
