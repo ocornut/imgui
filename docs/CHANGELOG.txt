@@ -233,8 +233,9 @@ Docking+Viewports Branch:
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)
 - Backends: SDL: Fixed dragging out main viewport broken on some SDL setups. (#5012) [@rokups]
-- Backends: OSX: Added suppot for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
-- Backends: Metal: Added suppot for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
+- Backends: OSX: Added support for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
+- Backends: Metal: Added support for multi-viewports. [@stuartcarnie, @metarutaiga] (#4821, #2778)
+- Examples: OSX+Metal, SDL+Metal, GLFW+Metal: Added support for multi-viewports. [@rokups]
 
 
 -----------------------------------------------------------------------
