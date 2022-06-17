@@ -87,6 +87,7 @@ Other Changes:
 - Nav: Fixed issues with nav request being transferred to another window when calling SetKeyboardFocusHere()
   and simultaneous changing window focus. (#4449)
 - Nav: Changed SetKeyboardFocusHere() to not behave if a drag or window moving is in progress.
+- Nav: Fixed inability to cancel nav in modal popups. (#5400) [@rokups]
 - IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
   return value is overriden by focus when gamepad/keyboard navigation is active.
 - InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
