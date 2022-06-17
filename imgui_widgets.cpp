@@ -6477,7 +6477,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
         // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
         // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
         if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
-            button_flags |= ImGuiButtonFlags_PressedOnClick;
+            button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
         else
             button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
     }

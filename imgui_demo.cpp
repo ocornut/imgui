@@ -2817,8 +2817,8 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (Basic)");
-        if (ImGui::TreeNode("Multiple Selection (Basic)"))
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (Simplified)");
+        if (ImGui::TreeNode("Multiple Selection (Simplified)"))
         {
             HelpMarker("Hold CTRL and click to select multiple items.");
             static bool selection[5] = { false, false, false, false, false };
@@ -2837,6 +2837,7 @@ static void ShowDemoWindowMultiSelect()
         }
 
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (Full)");
+        //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
         if (ImGui::TreeNode("Multiple Selection (Full)"))
         {
             // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
@@ -2851,14 +2852,18 @@ static void ShowDemoWindowMultiSelect()
             // Test both Selectable() and TreeNode() widgets
             enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
             static bool use_columns = false;
+            static bool use_drag_drop = true;
             static WidgetType widget_type = WidgetType_TreeNode;
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
             ImGui::SameLine();
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
             ImGui::SameLine();
             ImGui::Checkbox("Use 2 columns", &use_columns);
+            ImGui::SameLine();
+            ImGui::Checkbox("Use drag & drop", &use_drag_drop);
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", &ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
             ImGui::SameLine(); HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
+            ImGui::Text("Selection size: %d", selection.GetSelectionSize());
 
             // Open a scrolling region
             const int ITEMS_COUNT = 1000;
@@ -2869,7 +2874,7 @@ static void ShowDemoWindowMultiSelect()
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
                 ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
-                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestClear) { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
 
                 if (use_columns)
@@ -2904,6 +2909,11 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::Selectable(label, item_is_selected);
                             if (ImGui::IsItemToggledSelection())
                                 selection.SetSelected(n, !item_is_selected);
+                            if (use_drag_drop && ImGui::BeginDragDropSource())
+                            {
+                                ImGui::Text("(Dragging %d items)", selection.GetSelectionSize());
+                                ImGui::EndDragDropSource();
+                            }
                         }
                         else if (widget_type == WidgetType_TreeNode)
                         {
@@ -2914,6 +2924,11 @@ static void ShowDemoWindowMultiSelect()
                             bool open = ImGui::TreeNodeEx(label, tree_node_flags);
                             if (ImGui::IsItemToggledSelection())
                                 selection.SetSelected(n, !item_is_selected);
+                            if (use_drag_drop && ImGui::BeginDragDropSource())
+                            {
+                                ImGui::Text("(Dragging %d items)", selection.GetSelectionSize());
+                                ImGui::EndDragDropSource();
+                            }
                             if (open)
                                 ImGui::TreePop();
                         }
@@ -2946,9 +2961,9 @@ static void ShowDemoWindowMultiSelect()
                 // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
                 selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestClear) { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
-                if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+                if (multi_select_data->RequestSetRange) { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
 
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PopStyleVar();
