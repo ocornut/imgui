@@ -90,6 +90,8 @@ Index of this file:
 #include <stdint.h>         // intptr_t
 #endif
 
+#include "imgui_internal.h"
+
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (disable: 4127)     // condition expression is constant
@@ -1929,6 +1931,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", &flags, ImGuiSliderFlags_NoInput);
         ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_Scrollable", &flags, ImGuiSliderFlags_Scrollable);
+        ImGui::SameLine(); HelpMarker("Enable mouse scroll to the widget value.");
 
         // Drags
         static float drag_f = 0.5f;
