@@ -7,11 +7,13 @@
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
 #include <tchar.h>
+#include <dxgi1_3.h> // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT and IDXGISwapChain2
 
 // Data
 static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
 static IDXGISwapChain*          g_pSwapChain = NULL;
+static HANDLE                   g_hSwapChainWaitableObject = NULL;
 static ID3D11RenderTargetView*  g_mainRenderTargetView = NULL;
 
 // Forward declarations of helper functions
@@ -81,6 +83,9 @@ int main(int, char**)
     bool done = false;
     while (!done)
     {
+        if (g_hSwapChainWaitableObject)
+            ::WaitForSingleObject(g_hSwapChainWaitableObject, INFINITE);
+
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
@@ -172,13 +177,13 @@ bool CreateDeviceD3D(HWND hWnd)
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = hWnd;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
     sd.Windowed = TRUE;
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
     UINT createDeviceFlags = 0;
     //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -187,6 +192,17 @@ bool CreateDeviceD3D(HWND hWnd)
     if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext) != S_OK)
         return false;
 
+    IDXGISwapChain2 *swapChain2 = NULL;
+    g_pSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain2));
+    if (swapChain2) {
+        // If your application is CPU or GPU heavy you may decide to increase maximum frame latency to 2. Then the CPU will start work
+        // on the next frame before the GPU finishes the previous frame, allowing CPU and GPU work to overlap more. This increases
+        // throughput at the expense of latency, allowing you more time to render but making your application feel less responsive.
+        swapChain2->SetMaximumFrameLatency(1);
+        g_hSwapChainWaitableObject = swapChain2->GetFrameLatencyWaitableObject();
+        swapChain2->Release();
+    }
+
     CreateRenderTarget();
     return true;
 }
@@ -194,6 +210,7 @@ bool CreateDeviceD3D(HWND hWnd)
 void CleanupDeviceD3D()
 {
     CleanupRenderTarget();
+    if (g_hSwapChainWaitableObject) { CloseHandle(g_hSwapChainWaitableObject); g_hSwapChainWaitableObject = NULL; }
     if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = NULL; }
     if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = NULL; }
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }

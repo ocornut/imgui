@@ -28,12 +28,14 @@ struct FrameContext
     UINT64                  FenceValue;
 };
 
-// Data
-static int const                    NUM_FRAMES_IN_FLIGHT = 3;
+// If your application is CPU or GPU heavy you may decide to increase NUM_FRAMES_IN_FLIGHT to 2. Then the CPU will start work
+// on the next frame before the GPU finishes the previous frame, allowing CPU and GPU work to overlap more. This increases
+// throughput at the expense of latency, allowing you more time to render but making your application feel less responsive.
+static int const                    NUM_FRAMES_IN_FLIGHT = 1;
 static FrameContext                 g_frameContext[NUM_FRAMES_IN_FLIGHT] = {};
 static UINT                         g_frameIndex = 0;
 
-static int const                    NUM_BACK_BUFFERS = 3;
+static int const                    NUM_BACK_BUFFERS = 2;
 static ID3D12Device*                g_pd3dDevice = NULL;
 static ID3D12DescriptorHeap*        g_pd3dRtvDescHeap = NULL;
 static ID3D12DescriptorHeap*        g_pd3dSrvDescHeap = NULL;
@@ -119,6 +121,8 @@ int main(int, char**)
     bool done = false;
     while (!done)
     {
+        FrameContext* frameCtx = WaitForNextFrameResources();
+
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
@@ -177,7 +181,6 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
 
-        FrameContext* frameCtx = WaitForNextFrameResources();
         UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
         frameCtx->CommandAllocator->Reset();
 
@@ -337,7 +340,7 @@ bool CreateDeviceD3D(HWND hWnd)
             return false;
         swapChain1->Release();
         dxgiFactory->Release();
-        g_pSwapChain->SetMaximumFrameLatency(NUM_BACK_BUFFERS);
+        g_pSwapChain->SetMaximumFrameLatency(NUM_FRAMES_IN_FLIGHT);
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
