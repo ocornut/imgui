@@ -78,6 +78,7 @@ Other Changes:
 - Layout: Fixed mixing up SameLine() and SetCursorPos() together from creating situations where line
   height would be emitted from the wrong location (e.g. 'ItemA+SameLine()+SetCursorPos()+ItemB' would
   emit ItemA worth of height from the position of ItemB, which is not necessarily aligned with ItemA).
+- Sliders: An initial click within the knob/grab doesn't shift its position. (#1946, #5328)
 - Sliders, Drags: Fixed dragging when using hexadecimal display format string. (#5165, #3133)
 - Sliders, Drags: Fixed manual input when using hexadecimal display format string. (#5165, #3133)
 - InputScalar: Fixed manual input when using %03d style width in display format string. (#5165, #3133)
@@ -109,6 +110,7 @@ Other Changes:
   level of a popup with a child menu opened.
 - Menus: Menus emitted from the main/scrolling layer are not part of the same menuset as menus emitted
   from the menu-bar, avoiding  accidental hovering from one to the other. (#3496, #4797) [@rokups]
+- Style: Adjust default value of GrabMinSize from 10.0f to 12.0f.
 - Stack Tool: Added option to copy item path to clipboard. (#4631)
 - Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
 - Settings: Fixed some SetNextWindowPos/SetNextWindowSize API calls not marking settings as dirty.
