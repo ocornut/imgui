@@ -313,12 +313,12 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_METRICS_WINDOW)
+    - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_DEBUG_TOOLS)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
         #define IMGUI_DISABLE_DEMO_WINDOWS
-        #define IMGUI_DISABLE_METRICS_WINDOW
+        #define IMGUI_DISABLE_DEBUG_TOOLS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"
