@@ -1540,7 +1540,7 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
         width_excess -= width_to_remove_per_item * count_same_width;
     }
 
-    // Round width and redistribute remainder left-to-right (could make it an option of the function?)
+    // Round width and redistribute remainder
     // Ensure that e.g. the right-most tab of a shrunk tab-bar always reaches exactly at the same distance from the right-most edge of the tab bar separator.
     width_excess = 0.0f;
     for (int n = 0; n < count; n++)
@@ -1549,10 +1549,13 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
         width_excess += items[n].Width - width_rounded;
         items[n].Width = width_rounded;
     }
-    if (width_excess > 0.0f)
+    while (width_excess > 0.0f)
         for (int n = 0; n < count; n++)
-            if (items[n].Index < (int)(width_excess + 0.01f))
+            if (items[n].Width + 1.0f <= items[n].InitialWidth)
+            {
                 items[n].Width += 1.0f;
+                width_excess -= 1.0f;
+            }
 }
 
 //-------------------------------------------------------------------------
@@ -7557,9 +7560,9 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
         // Store data so we can build an array sorted by width if we need to shrink tabs down
         IM_MSVC_WARNING_SUPPRESS(6385);
-        int shrink_buffer_index = shrink_buffer_indexes[section_n]++;
-        g.ShrinkWidthBuffer[shrink_buffer_index].Index = tab_n;
-        g.ShrinkWidthBuffer[shrink_buffer_index].Width = tab->ContentWidth;
+        ImGuiShrinkWidthItem* shrink_width_item = &g.ShrinkWidthBuffer[shrink_buffer_indexes[section_n]++];
+        shrink_width_item->Index = tab_n;
+        shrink_width_item->Width = shrink_width_item->InitialWidth = tab->ContentWidth;
 
         IM_ASSERT(tab->ContentWidth > 0.0f);
         tab->Width = tab->ContentWidth;

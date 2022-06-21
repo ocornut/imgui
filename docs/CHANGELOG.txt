@@ -106,6 +106,8 @@ Other Changes:
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
 - TabBar: TabItem() now reacts to SetNextItemWidth() and SetNextItemOpen(true). (#5262)
+- TabBar: Tweak shrinking policy so that while resizing tabs that don't need shrinking keep their
+  initial width more precisely (without the occasional +1 worth of width).
 - Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
   always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
   level of a popup with a child menu opened.

@@ -1150,6 +1150,7 @@ struct ImGuiShrinkWidthItem
 {
     int         Index;
     float       Width;
+    float       InitialWidth;
 };
 
 struct ImGuiPtrOrIndex
