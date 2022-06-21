@@ -7548,7 +7548,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         // and we cannot wait for the next BeginTabItem() call. We cannot compute this width within TabBarAddTab() because font size depends on the active window.
         const char* tab_name = tab_bar->GetTabName(tab);
         const bool has_close_button = (tab->Flags & ImGuiTabItemFlags_NoCloseButton) ? false : true;
-        tab->ContentWidth = TabItemCalcSize(tab_name, has_close_button).x;
+        tab->ContentWidth = (tab->RequestedWidth > 0.0f) ? tab->RequestedWidth : TabItemCalcSize(tab_name, has_close_button).x;
 
         int section_n = TabItemGetSectionIdx(tab);
         ImGuiTabBarSection* section = &sections[section_n];
@@ -8029,10 +8029,13 @@ bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
 bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags)
 {
     // Layout whole tab bar if not already done
-    if (tab_bar->WantLayout)
-        TabBarLayout(tab_bar);
-
     ImGuiContext& g = *GImGui;
+    if (tab_bar->WantLayout)
+    {
+        ImGuiNextItemData backup_next_item_data = g.NextItemData;
+        TabBarLayout(tab_bar);
+        g.NextItemData = backup_next_item_data;
+    }
     ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return false;
@@ -8058,9 +8061,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     else if (p_open == NULL)
         flags |= ImGuiTabItemFlags_NoCloseButton;
 
-    // Calculate tab contents size
-    ImVec2 size = TabItemCalcSize(label, p_open != NULL);
-
     // Acquire tab data
     ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, id);
     bool tab_is_new = false;
@@ -8069,11 +8069,17 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         tab_bar->Tabs.push_back(ImGuiTabItem());
         tab = &tab_bar->Tabs.back();
         tab->ID = id;
-        tab->Width = size.x;
-        tab_bar->TabsAddedNew = true;
-        tab_is_new = true;
+        tab_bar->TabsAddedNew = tab_is_new = true;
     }
     tab_bar->LastTabItemIdx = (ImS16)tab_bar->Tabs.index_from_ptr(tab);
+
+    // Calculate tab contents size
+    ImVec2 size = TabItemCalcSize(label, p_open != NULL);
+    tab->RequestedWidth = -1.0f;
+    if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
+        size.x = tab->RequestedWidth = g.NextItemData.Width;
+    if (tab_is_new)
+        tab->Width = size.x;
     tab->ContentWidth = size.x;
     tab->BeginOrder = tab_bar->TabsActiveCount++;
 
@@ -8089,13 +8095,19 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     tab_bar->TabsNames.append(label, label + strlen(label) + 1);
 
     // Update selected tab
-    if (tab_appearing && (tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs) && tab_bar->NextSelectedTabId == 0)
-        if (!tab_bar_appearing || tab_bar->SelectedTabId == 0)
-            if (!is_tab_button)
+    if (!is_tab_button)
+    {
+        if (tab_appearing && (tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs) && tab_bar->NextSelectedTabId == 0)
+            if (!tab_bar_appearing || tab_bar->SelectedTabId == 0)
                 tab_bar->NextSelectedTabId = id;  // New tabs gets activated
-    if ((flags & ImGuiTabItemFlags_SetSelected) && (tab_bar->SelectedTabId != id)) // SetSelected can only be passed on explicit tab bar
-        if (!is_tab_button)
+        if ((flags & ImGuiTabItemFlags_SetSelected) && (tab_bar->SelectedTabId != id)) // _SetSelected can only be passed on explicit tab bar
             tab_bar->NextSelectedTabId = id;
+        if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasOpen)
+        {
+            IM_ASSERT(g.NextItemData.OpenVal == true && g.NextItemData.OpenCond == ImGuiCond_Always); // SetNextItemOpen(true, ImGuiCond_Always) is supported but other combinations are not.
+            tab_bar->NextSelectedTabId = id;
+        }
+    }
 
     // Lock visibility
     // (Note: tab_contents_visible != tab_selected... because CTRL+TAB operations may preview some tabs without selecting them!)
