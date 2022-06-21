@@ -8105,11 +8105,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 tab_bar->NextSelectedTabId = id;  // New tabs gets activated
         if ((flags & ImGuiTabItemFlags_SetSelected) && (tab_bar->SelectedTabId != id)) // _SetSelected can only be passed on explicit tab bar
             tab_bar->NextSelectedTabId = id;
-        if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasOpen)
-        {
-            IM_ASSERT(g.NextItemData.OpenVal == true && g.NextItemData.OpenCond == ImGuiCond_Always); // SetNextItemOpen(true, ImGuiCond_Always) is supported but other combinations are not.
-            tab_bar->NextSelectedTabId = id;
-        }
     }
 
     // Lock visibility

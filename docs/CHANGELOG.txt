@@ -105,7 +105,7 @@ Other Changes:
   merging drawcall of the last column didn't always work (regression since 1.87). (#4843, #4844) [@rokups]
 - Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
 - ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
-- TabBar: TabItem() now reacts to SetNextItemWidth() and SetNextItemOpen(true). (#5262)
+- TabBar: TabItem() now reacts to SetNextItemWidth(). (#5262)
 - TabBar: Tweak shrinking policy so that while resizing tabs that don't need shrinking keep their
   initial width more precisely (without the occasional +1 worth of width).
 - Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
