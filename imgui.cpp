@@ -6866,13 +6866,13 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 }
 
 // Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
-void ImGui::SetCurrentFont(ImFont* font)
+void ImGui::SetCurrentFont(ImFont* font, float scale)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
-    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
+    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale * scale);
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
@@ -6882,22 +6882,27 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.DrawListSharedData.FontSize = g.FontSize;
 }
 
-void ImGui::PushFont(ImFont* font)
+void ImGui::PushFont(ImFont* font, float scale)
 {
     ImGuiContext& g = *GImGui;
     if (!font)
         font = GetDefaultFont();
-    SetCurrentFont(font);
-    g.FontStack.push_back(font);
+    SetCurrentFont(font, scale);
+    ImGuiFontStackData font_stack_data;
+    font_stack_data.Font = font;
+    font_stack_data.Scale = scale;
+    g.FontStack.push_back(font_stack_data);
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
 }
 
-void  ImGui::PopFont()
+void ImGui::PopFont()
 {
     ImGuiContext& g = *GImGui;
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
-    SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
+    ImFont* font = (g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back().Font);
+    float scale = (g.FontStack.empty() ? 1.0f : g.FontStack.back().Scale);
+    SetCurrentFont(font, scale);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
