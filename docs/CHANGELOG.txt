@@ -99,6 +99,20 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other Changes:
+
+Docking+Viewports Branch:
+
+- Backends: GLFW: Fixed leftover static variable preventing from changing or
+  reinitializing backend while application is running. (#4616, #5434) [@rtoumazet]
+
+
+-----------------------------------------------------------------------
  VERSION 1.88 (Released 2022-06-21)
 -----------------------------------------------------------------------
 

@@ -123,6 +123,9 @@ struct ImGui_ImplGlfw_Data
     GLFWwindow*             KeyOwnerWindows[GLFW_KEY_LAST];
     bool                    InstalledCallbacks;
     bool                    WantUpdateMonitors;
+#ifdef _WIN32
+    WNDPROC                 GlfwWndProc;
+#endif
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     GLFWwindowfocusfun      PrevUserCallbackWindowFocus;
@@ -937,9 +940,9 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
 // We have submitted https://github.com/glfw/glfw/pull/1568 to allow GLFW to support "transparent inputs".
 // In the meanwhile we implement custom per-platform workarounds here (FIXME-VIEWPORT: Implement same work-around for Linux/OSX!)
 #if !GLFW_HAS_MOUSE_PASSTHROUGH && GLFW_HAS_WINDOW_HOVERED && defined(_WIN32)
-static WNDPROC g_GlfwWndProc = NULL;
 static LRESULT CALLBACK WndProcNoInputs(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (msg == WM_NCHITTEST)
     {
         // Let mouse pass-through the window. This will allow the backend to call io.AddMouseViewportEvent() properly (which is OPTIONAL).
@@ -950,7 +953,7 @@ static LRESULT CALLBACK WndProcNoInputs(HWND hWnd, UINT msg, WPARAM wParam, LPAR
         if (viewport->Flags & ImGuiViewportFlags_NoInputs)
             return HTTRANSPARENT;
     }
-    return ::CallWindowProc(g_GlfwWndProc, hWnd, msg, wParam, lParam);
+    return ::CallWindowProc(bd->GlfwWndProc, hWnd, msg, wParam, lParam);
 }
 #endif
 
@@ -971,9 +974,10 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
 
     // GLFW hack: install hook for WM_NCHITTEST message handler
 #if !GLFW_HAS_MOUSE_PASSTHROUGH && GLFW_HAS_WINDOW_HOVERED && defined(_WIN32)
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     ::SetPropA(hwnd, "IMGUI_VIEWPORT", viewport);
-    if (g_GlfwWndProc == NULL)
-        g_GlfwWndProc = (WNDPROC)::GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+    if (bd->GlfwWndProc == NULL)
+        bd->GlfwWndProc = (WNDPROC)::GetWindowLongPtr(hwnd, GWLP_WNDPROC);
     ::SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)WndProcNoInputs);
 #endif
 
