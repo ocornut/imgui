@@ -35,6 +35,13 @@ HOW TO UPDATE?
  VERSION 1.89 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+Other Changes:
+
+- InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
+  Enter keep the input active and select all text.
+
 
 -----------------------------------------------------------------------
  VERSION 1.88 (Released 2022-06-21)
