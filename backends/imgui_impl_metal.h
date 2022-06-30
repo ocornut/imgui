@@ -44,9 +44,7 @@ IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 // More info about using Metal from C++: https://developer.apple.com/metal/cpp/
 
 #ifdef IMGUI_IMPL_METAL_CPP
-
 #include <Metal/Metal.hpp>
-
 #ifndef __OBJC__
 
 IMGUI_IMPL_API bool ImGui_ImplMetal_Init(MTL::Device* device);
@@ -63,5 +61,4 @@ IMGUI_IMPL_API bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device);
 IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 
 #endif
-
 #endif

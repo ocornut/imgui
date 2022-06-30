@@ -364,6 +364,18 @@ static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
     }
 }
 
+#ifdef IMGUI_IMPL_METAL_CPP_EXTENSIONS
+
+IMGUI_IMPL_API bool ImGui_ImplOSX_Init(void* _Nonnull view) {
+    return ImGui_ImplOSX_Init((__bridge NSView*)(view));
+}
+
+IMGUI_IMPL_API void ImGui_ImplOSX_NewFrame(void* _Nullable view) {
+    return ImGui_ImplOSX_NewFrame((__bridge NSView*)(view));
+}
+
+#endif
+
 
 bool ImGui_ImplOSX_Init(NSView* view)
 {

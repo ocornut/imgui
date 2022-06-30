@@ -41,6 +41,8 @@ Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
+- Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
+- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 
 -----------------------------------------------------------------------
