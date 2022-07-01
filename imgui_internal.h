@@ -1828,7 +1828,7 @@ struct ImGuiContext
     ImGuiStackTool          DebugStackTool;
 
     // Misc
-    float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
+    float                   FramerateSecPerFrame[60];           // Calculate estimate of framerate for user over the last 60 frames..
     int                     FramerateSecPerFrameIdx;
     int                     FramerateSecPerFrameCount;
     float                   FramerateSecPerFrameAccum;
