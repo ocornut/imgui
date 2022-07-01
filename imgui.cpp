@@ -5106,6 +5106,11 @@ bool ImGui::IsItemClicked(ImGuiMouseButton mouse_button)
     return IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_None);
 }
 
+bool ImGui::IsItemDoubleClicked(ImGuiMouseButton mouse_button)
+{
+    return IsMouseDoubleClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_None);
+}
+
 bool ImGui::IsItemToggledOpen()
 {
     ImGuiContext& g = *GImGui;
