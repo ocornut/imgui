@@ -12,6 +12,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-07-05: Metal: Add dispatch synchronization.
+//  2022-06-30: Metal: Use __bridge for ARC based systems.
 //  2022-06-01: Metal: Fixed null dereference on exit inside command buffer completion handler.
 //  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-01-03: Metal: Ignore ImDrawCmd where ElemCount == 0 (very rare but can technically be manufactured by user code).
@@ -296,8 +298,11 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
             ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
             if (bd != NULL)
             {
-                [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-                [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+                @synchronized(bd->SharedMetalContext.bufferCache)
+                {
+                    [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
+                    [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+                }
             }
         });
     }];
@@ -440,28 +445,31 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     uint64_t now = GetMachAbsoluteTimeInSeconds();
 
-    // Purge old buffers that haven't been useful for a while
-    if (now - self.lastBufferCachePurge > 1.0)
+    @synchronized(self.bufferCache)
     {
-        NSMutableArray* survivors = [NSMutableArray array];
+        // Purge old buffers that haven't been useful for a while
+        if (now - self.lastBufferCachePurge > 1.0)
+        {
+            NSMutableArray* survivors = [NSMutableArray array];
+            for (MetalBuffer* candidate in self.bufferCache)
+                if (candidate.lastReuseTime > self.lastBufferCachePurge)
+                    [survivors addObject:candidate];
+            self.bufferCache = [survivors mutableCopy];
+            self.lastBufferCachePurge = now;
+        }
+
+        // See if we have a buffer we can reuse
+        MetalBuffer* bestCandidate = nil;
         for (MetalBuffer* candidate in self.bufferCache)
-            if (candidate.lastReuseTime > self.lastBufferCachePurge)
-                [survivors addObject:candidate];
-        self.bufferCache = [survivors mutableCopy];
-        self.lastBufferCachePurge = now;
-    }
+            if (candidate.buffer.length >= length && (bestCandidate == nil || bestCandidate.lastReuseTime > candidate.lastReuseTime))
+                bestCandidate = candidate;
 
-    // See if we have a buffer we can reuse
-    MetalBuffer* bestCandidate = nil;
-    for (MetalBuffer* candidate in self.bufferCache)
-        if (candidate.buffer.length >= length && (bestCandidate == nil || bestCandidate.lastReuseTime > candidate.lastReuseTime))
-            bestCandidate = candidate;
-
-    if (bestCandidate != nil)
-    {
-        [self.bufferCache removeObject:bestCandidate];
-        bestCandidate.lastReuseTime = now;
-        return bestCandidate;
+        if (bestCandidate != nil)
+        {
+            [self.bufferCache removeObject:bestCandidate];
+            bestCandidate.lastReuseTime = now;
+            return bestCandidate;
+        }
     }
 
     // No luck; make a new buffer

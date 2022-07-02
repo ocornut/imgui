@@ -43,6 +43,7 @@ Other Changes:
   Enter keep the input active and select all text.
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
+- Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 
