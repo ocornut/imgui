@@ -59,6 +59,7 @@ int main(int, char**)
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
+    gladLoadGL();
     glfwSwapInterval(1); // Enable vsync
 
     // Setup Dear ImGui context
