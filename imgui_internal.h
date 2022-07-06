@@ -1171,6 +1171,7 @@ struct ImGuiPtrOrIndex
 
 typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitArrayForNamedKeys;
 
+// Extend ImGuiKey_
 enum ImGuiKeyPrivate_
 {
     ImGuiKey_LegacyNativeKey_BEGIN  = 0,
@@ -1308,10 +1309,9 @@ enum ImGuiNavHighlightFlags_
 enum ImGuiNavDirSourceFlags_
 {
     ImGuiNavDirSourceFlags_None             = 0,
-    ImGuiNavDirSourceFlags_RawKeyboard      = 1 << 0,   // Raw keyboard (not pulled from nav), facilitate use of some functions before we can unify nav and keys
-    ImGuiNavDirSourceFlags_Keyboard         = 1 << 1,
-    ImGuiNavDirSourceFlags_PadDPad          = 1 << 2,
-    ImGuiNavDirSourceFlags_PadLStick        = 1 << 3
+    ImGuiNavDirSourceFlags_Keyboard         = 1 << 0,
+    ImGuiNavDirSourceFlags_PadDPad          = 1 << 1,
+    ImGuiNavDirSourceFlags_PadLStick        = 1 << 2
 };
 
 enum ImGuiNavMoveFlags_
@@ -1724,6 +1724,8 @@ struct ImGuiContext
     float                   NavWindowingTimer;
     float                   NavWindowingHighlightAlpha;
     bool                    NavWindowingToggleLayer;
+    ImVec2                  NavWindowingAccumDeltaPos;
+    ImVec2                  NavWindowingAccumDeltaSize;
 
     // Render
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
@@ -2699,12 +2701,14 @@ namespace ImGui
     inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask[key]; }
     inline void             SetActiveIdUsingKey(ImGuiKey key)                           { ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
-    inline bool             IsNavInputDown(ImGuiNavInput n)                             { ImGuiContext& g = *GImGui; return g.IO.NavInputs[n] > 0.0f; }
-    inline bool             IsNavInputTest(ImGuiNavInput n, ImGuiNavReadMode rm)        { return (GetNavInputAmount(n, rm) > 0.0f); }
     IMGUI_API ImGuiModFlags GetMergedModFlags();
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     inline bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true)           { IM_ASSERT(IsNamedKey(key)); return IsKeyPressed(key, repeat); } // [removed in 1.87]
 #endif
+
+    // Inputs: Navigation
+    inline bool             IsNavInputDown(ImGuiNavInput n)                             { ImGuiContext& g = *GImGui; return g.IO.NavInputs[n] > 0.0f; }
+    inline bool             IsNavInputTest(ImGuiNavInput n, ImGuiNavReadMode read_mode) { return (GetNavInputAmount(n, read_mode) > 0.0f); }
 
     // Drag and Drop
     IMGUI_API bool          IsDragDropActive();
