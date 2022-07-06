@@ -10148,8 +10148,10 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
         return (float)CalcTypematicRepeatAmount(t - io.DeltaTime, t, io.KeyRepeatDelay * 1.25f, io.KeyRepeatRate * 2.00f);
     case ImGuiNavReadMode_RepeatFast:
         return (float)CalcTypematicRepeatAmount(t - io.DeltaTime, t, io.KeyRepeatDelay * 0.72f, io.KeyRepeatRate * 0.30f);
+    default:
+        IM_ASSERT(0);
+        return 0.0f;
     }
-    return 0.0f;
 }
 
 ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiNavReadMode mode, float slow_factor, float fast_factor)
