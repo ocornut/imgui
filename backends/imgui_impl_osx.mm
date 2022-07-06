@@ -542,10 +542,10 @@ static void ImGui_ImplOSX_UpdateGamepads()
 #if APPLE_HAS_BUTTON_OPTIONS
     MAP_BUTTON(ImGuiKey_GamepadBack,            buttonOptions);
 #endif
-    MAP_BUTTON(ImGuiKey_GamepadFaceDown,        buttonA);              // Xbox A, PS Cross
-    MAP_BUTTON(ImGuiKey_GamepadFaceRight,       buttonB);              // Xbox B, PS Circle
     MAP_BUTTON(ImGuiKey_GamepadFaceLeft,        buttonX);              // Xbox X, PS Square
+    MAP_BUTTON(ImGuiKey_GamepadFaceRight,       buttonB);              // Xbox B, PS Circle
     MAP_BUTTON(ImGuiKey_GamepadFaceUp,          buttonY);              // Xbox Y, PS Triangle
+    MAP_BUTTON(ImGuiKey_GamepadFaceDown,        buttonA);              // Xbox A, PS Cross
     MAP_BUTTON(ImGuiKey_GamepadDpadLeft,        dpad.left);
     MAP_BUTTON(ImGuiKey_GamepadDpadRight,       dpad.right);
     MAP_BUTTON(ImGuiKey_GamepadDpadUp,          dpad.up);

@@ -1177,7 +1177,7 @@ enum ImGuiKeyPrivate_
     ImGuiKey_LegacyNativeKey_BEGIN  = 0,
     ImGuiKey_LegacyNativeKey_END    = 512,
     ImGuiKey_Gamepad_BEGIN          = ImGuiKey_GamepadStart,
-    ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickRight + 1
+    ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickDown + 1
 };
 
 enum ImGuiInputEventType

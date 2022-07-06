@@ -7618,11 +7618,12 @@ static const char* const GKeyNames[] =
     "Pause", "Keypad0", "Keypad1", "Keypad2", "Keypad3", "Keypad4", "Keypad5", "Keypad6",
     "Keypad7", "Keypad8", "Keypad9", "KeypadDecimal", "KeypadDivide", "KeypadMultiply",
     "KeypadSubtract", "KeypadAdd", "KeypadEnter", "KeypadEqual",
-    "GamepadStart", "GamepadBack", "GamepadFaceUp", "GamepadFaceDown", "GamepadFaceLeft", "GamepadFaceRight",
-    "GamepadDpadUp", "GamepadDpadDown", "GamepadDpadLeft", "GamepadDpadRight",
+    "GamepadStart", "GamepadBack",
+    "GamepadFaceLeft", "GamepadFaceRight", "GamepadFaceUp", "GamepadFaceDown",
+    "GamepadDpadLeft", "GamepadDpadRight", "GamepadDpadUp", "GamepadDpadDown",
     "GamepadL1", "GamepadR1", "GamepadL2", "GamepadR2", "GamepadL3", "GamepadR3",
-    "GamepadLStickUp", "GamepadLStickDown", "GamepadLStickLeft", "GamepadLStickRight",
-    "GamepadRStickUp", "GamepadRStickDown", "GamepadRStickLeft", "GamepadRStickRight",
+    "GamepadLStickLeft", "GamepadLStickRight", "GamepadLStickUp", "GamepadLStickDown",
+    "GamepadRStickLeft", "GamepadRStickRight", "GamepadRStickUp", "GamepadRStickDown",
     "ModCtrl", "ModShift", "ModAlt", "ModSuper"
 };
 IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
@@ -10136,16 +10137,18 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
     ImGuiIO& io = g.IO;
     if (mode == ImGuiNavReadMode_Down) // Instant, read analog input (0.0f..1.0f, as provided by user)
         return io.NavInputs[n];
-
     const float t = io.NavInputsDownDuration[n];
     if (t < 0.0f)
         return 0.0f;
-    if (mode == ImGuiNavReadMode_Repeat)
+    switch (mode)
+    {
+    case ImGuiNavReadMode_Repeat:
         return (float)CalcTypematicRepeatAmount(t - io.DeltaTime, t, io.KeyRepeatDelay * 0.72f, io.KeyRepeatRate * 0.80f);
-    if (mode == ImGuiNavReadMode_RepeatSlow)
+    case ImGuiNavReadMode_RepeatSlow:
         return (float)CalcTypematicRepeatAmount(t - io.DeltaTime, t, io.KeyRepeatDelay * 1.25f, io.KeyRepeatRate * 2.00f);
-    if (mode == ImGuiNavReadMode_RepeatFast)
+    case ImGuiNavReadMode_RepeatFast:
         return (float)CalcTypematicRepeatAmount(t - io.DeltaTime, t, io.KeyRepeatDelay * 0.72f, io.KeyRepeatRate * 0.30f);
+    }
     return 0.0f;
 }
 
