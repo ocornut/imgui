@@ -5818,7 +5818,7 @@ static void ShowDemoWindowMisc()
                 ImGui::SetNextFrameWantCaptureMouse(capture_override_mouse == 1);
             if (ImGui::IsItemHovered() && capture_override_keyboard != -1)
                 ImGui::SetNextFrameWantCaptureKeyboard(capture_override_keyboard == 1);
-            
+
             ImGui::TreePop();
         }
 

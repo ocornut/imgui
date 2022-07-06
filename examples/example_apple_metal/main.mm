@@ -59,7 +59,7 @@
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsLight();
 
     // Setup Renderer backend
     ImGui_ImplMetal_Init(_device);
