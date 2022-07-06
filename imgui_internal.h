@@ -1234,8 +1234,6 @@ struct ImGuiInputEvent
 enum ImGuiNavReadMode
 {
     ImGuiNavReadMode_Down,
-    ImGuiNavReadMode_Pressed,
-    ImGuiNavReadMode_Released,
     ImGuiNavReadMode_Repeat,
     ImGuiNavReadMode_RepeatSlow,
     ImGuiNavReadMode_RepeatFast
@@ -2708,6 +2706,7 @@ namespace ImGui
 
     // Inputs: Navigation
     inline bool             IsNavInputDown(ImGuiNavInput n)                             { ImGuiContext& g = *GImGui; return g.IO.NavInputs[n] > 0.0f; }
+    inline bool             IsNavInputPressed(ImGuiNavInput n)                          { ImGuiContext& g = *GImGui; return g.IO.NavInputsDownDuration[n] == 0.0f; }
     inline bool             IsNavInputTest(ImGuiNavInput n, ImGuiNavReadMode read_mode) { return (GetNavInputAmount(n, read_mode) > 0.0f); }
 
     // Drag and Drop
