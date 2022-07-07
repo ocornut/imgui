@@ -43,6 +43,8 @@ Other Changes:
   Enter keep the input active and select all text.
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
+- Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
+  to use the Item Picker in e.g. menus. (#2673)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
