@@ -37,6 +37,21 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - Removed io.NavInputs[] and ImGuiNavInput enum that were used to feed gamepad inputs.
+   Basically 1.87 already obsoleted them from the backend's point of view, but internally
+   our navigation code still used this array and enum, so they were still present.
+   Not anymore! (#4921, #4858, #787, #1599, #323)
+   Transition guide:
+    - Official backends from 1.87+                  -> no issue.
+    - Official backends from 1.60 to 1.86           -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need updating!
+    - Custom backends not writing to io.NavInputs[] -> no issue.
+    - Custom backends writing to io.NavInputs[]     -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need fixing!
+    - TL;DR: Backends should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values instead of filling io.NavInput[].
+   That data was essentially 1.60's attempt to combine keyboard and gamepad inputs with named
+   semantic, but the additional indirection and copy added complexity and got in the way of other
+   incoming work. User's code (other than backends) should not be affected, unless you have custom
+   widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
+
 Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing

@@ -611,7 +611,15 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.NavActivateDownId == id)
     {
         bool nav_activated_by_code = (g.NavActivateId == id);
-        bool nav_activated_by_inputs = (flags & ImGuiButtonFlags_Repeat) ? IsNavInputTest(ImGuiNavInput_Activate, ImGuiNavReadMode_Repeat) : IsNavInputPressed(ImGuiNavInput_Activate);
+        bool nav_activated_by_inputs = (g.NavActivatePressedId == id);
+        if (!nav_activated_by_inputs && (flags & ImGuiButtonFlags_Repeat))
+        {
+            // Avoid pressing both keys from triggering double amount of repeat events
+            const ImGuiKeyData* key1 = GetKeyData(ImGuiKey_Space);
+            const ImGuiKeyData* key2 = GetKeyData(ImGuiKey_NavGamepadActivate);
+            const float t1 = ImMax(key1->DownDuration, key2->DownDuration);
+            nav_activated_by_inputs = CalcTypematicRepeatAmount(t1 - g.IO.DeltaTime, t1, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
+        }
         if (nav_activated_by_code || nav_activated_by_inputs)
         {
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
@@ -2182,7 +2190,10 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     else if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
         const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
-        adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiNavReadMode_RepeatFast, 1.0f / 10.0f, 10.0f)[axis];
+        const bool tweak_slow = IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakSlow : ImGuiKey_NavKeyboardTweakSlow);
+        const bool tweak_fast = IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakFast : ImGuiKey_NavKeyboardTweakFast);
+        const float tweak_factor = tweak_slow ? 1.0f / 1.0f : tweak_fast ? 10.0f : 1.0f;
+        adjust_delta = GetNavTweakPressedAmount(axis) * tweak_factor;
         v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
     }
     adjust_delta *= v_speed;
@@ -2789,12 +2800,11 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 g.SliderCurrentAccumDirty = false;
             }
 
-            const ImVec2 input_delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiNavReadMode_RepeatFast);
-            float input_delta = (axis == ImGuiAxis_X) ? input_delta2.x : -input_delta2.y;
+            float input_delta = (axis == ImGuiAxis_X) ? GetNavTweakPressedAmount(axis) : -GetNavTweakPressedAmount(axis);
             if (input_delta != 0.0f)
             {
-                const bool tweak_slow = IsNavInputDown(ImGuiNavInput_TweakSlow);
-                const bool tweak_fast = IsNavInputDown(ImGuiNavInput_TweakFast);
+                const bool tweak_slow = IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakSlow : ImGuiKey_NavKeyboardTweakSlow);
+                const bool tweak_fast = IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakFast : ImGuiKey_NavKeyboardTweakFast);
                 const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
                 if (decimal_precision > 0)
                 {
@@ -4143,11 +4153,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         FocusWindow(window);
 
         // Declare our inputs
-        IM_ASSERT(ImGuiNavInput_COUNT < 32);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
         if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-        g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);
+        SetActiveIdUsingKey(ImGuiKey_Escape);
+        SetActiveIdUsingKey(ImGuiKey_NavGamepadCancel);
         SetActiveIdUsingKey(ImGuiKey_Home);
         SetActiveIdUsingKey(ImGuiKey_End);
         if (is_multiline)
@@ -4341,9 +4351,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_select_all = is_shortcut_key && IsKeyPressed(ImGuiKey_A);
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
-        const bool is_enter_pressed = IsKeyPressed(ImGuiKey_Enter) || IsKeyPressed(ImGuiKey_KeypadEnter);
-        const bool is_validate_nav = (IsNavInputPressed(ImGuiNavInput_Activate) && !IsKeyPressed(ImGuiKey_Space)) || IsNavInputPressed(ImGuiNavInput_Input);
-        const bool is_cancel = IsKeyPressed(ImGuiKey_Escape) || IsNavInputPressed(ImGuiNavInput_Cancel);
+        const bool is_enter_pressed = IsKeyPressed(ImGuiKey_Enter, true) || IsKeyPressed(ImGuiKey_KeypadEnter, true);
+        const bool is_gamepad_validate = IsKeyPressed(ImGuiKey_NavGamepadActivate, false) || IsKeyPressed(ImGuiKey_NavGamepadInput, false);
+        const bool is_cancel = IsKeyPressed(ImGuiKey_Escape, false) || IsKeyPressed(ImGuiKey_NavGamepadCancel, false);
 
         if (IsKeyPressed(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
         else if (IsKeyPressed(ImGuiKey_RightArrow))                  { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
@@ -4365,11 +4375,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             state->OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
-        else if (is_enter_pressed)
+        else if (is_enter_pressed || is_gamepad_validate)
         {
             // Determine if we turn Enter into a \n character
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
-            if (!is_multiline || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
+            if (!is_multiline || is_gamepad_validate || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
             {
                 validated = true;
                 if (io.ConfigInputTextEnterKeepActive && !is_multiline)
@@ -4383,11 +4393,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                     state->OnKeyPressed((int)c);
             }
-        }
-        else if (is_validate_nav)
-        {
-            IM_ASSERT(!is_enter_pressed);
-            validated = clear_active_id = true;
         }
         else if (is_cancel)
         {
