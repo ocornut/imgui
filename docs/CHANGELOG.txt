@@ -104,11 +104,31 @@ Other changes:
 
 Breaking changes:
 
+ - Removed io.NavInputs[] and ImGuiNavInput enum that were used to feed gamepad inputs.
+   Basically 1.87 already obsoleted them from the backend's point of view, but internally
+   our navigation code still used this array and enum, so they were still present.
+   Not anymore! (#4921, #4858, #787, #1599, #323)
+   Transition guide:
+    - Official backends from 1.87+                  -> no issue.
+    - Official backends from 1.60 to 1.86           -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need updating!
+    - Custom backends not writing to io.NavInputs[] -> no issue.
+    - Custom backends writing to io.NavInputs[]     -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need fixing!
+    - TL;DR: Backends should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values instead of filling io.NavInput[].
+   That data was essentially 1.60's attempt to combine keyboard and gamepad inputs with named
+   semantic, but the additional indirection and copy added complexity and got in the way of other
+   incoming work. User's code (other than backends) should not be affected, unless you have custom
+   widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
+
 Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
+- Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
+- Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
+- Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
+  to use the Item Picker in e.g. menus. (#2673)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
+- Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 Docking+Viewports Branch:
