@@ -1459,8 +1459,9 @@ enum ImGuiModFlags_
     ImGuiModFlags_None              = 0,
     ImGuiModFlags_Ctrl              = 1 << 0,
     ImGuiModFlags_Shift             = 1 << 1,
-    ImGuiModFlags_Alt               = 1 << 2,   // Menu
+    ImGuiModFlags_Alt               = 1 << 2,   // Option/Menu key
     ImGuiModFlags_Super             = 1 << 3,   // Cmd/Super/Windows key
+    ImGuiModFlags_All               = 0x0F
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
