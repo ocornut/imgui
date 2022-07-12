@@ -133,6 +133,8 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Docking, Nav: Fixed using gamepad/keyboard navigation not being able enter menu layer when
+  it only contained the standard Collapse/Close buttons and no actual menu. (#5463, #4792)
 - Backends: GLFW: Fixed leftover static variable preventing from changing or
   reinitializing backend while application is running. (#4616, #5434) [@rtoumazet]
 

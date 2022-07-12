@@ -7061,6 +7061,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
         window->DC.NavLayersActiveMask = window->DC.NavLayersActiveMaskNext;
+        window->DC.NavLayersActiveMaskNext = 0x00;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
 
@@ -7221,9 +7222,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 skip_items = true;
         window->SkipItems = skip_items;
 
-        // Only clear NavLayersActiveMaskNext when marked as visible, so a CTRL+Tab back can use a safe value.
-        if (!window->SkipItems)
-            window->DC.NavLayersActiveMaskNext = 0x00;
+        // Restore NavLayersActiveMaskNext to previous value when not visible, so a CTRL+Tab back can use a safe value.
+        if (window->SkipItems)
+            window->DC.NavLayersActiveMaskNext = window->DC.NavLayersActiveMask;
 
         // Sanity check: there are two spots which can set Appearing = true
         // - when 'window_just_activated_by_user' is set -> HiddenFramesCannotSkipItems is set -> SkipItems always false
