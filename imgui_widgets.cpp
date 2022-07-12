@@ -7694,7 +7694,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
     // CTRL+TAB can override visible tab temporarily
     if (g.NavWindowingTarget != NULL && g.NavWindowingTarget->DockNode && g.NavWindowingTarget->DockNode->TabBar == tab_bar)
-        tab_bar->VisibleTabId = scroll_to_tab_id = g.NavWindowingTarget->ID;
+        tab_bar->VisibleTabId = scroll_to_tab_id = g.NavWindowingTarget->TabId;
 
     // Update scrolling
     if (scroll_to_tab_id != 0)
