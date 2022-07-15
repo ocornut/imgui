@@ -76,7 +76,7 @@ void init(struct android_app* app)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
     ImGui_ImplAndroid_Init(g_App->window);

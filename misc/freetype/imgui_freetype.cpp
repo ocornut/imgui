@@ -368,7 +368,7 @@ struct ImFontBuildSrcGlyphFT
     uint32_t            Codepoint;
     unsigned int*       BitmapData;         // Point within one of the dst_tmp_bitmap_buffers[] array
 
-    ImFontBuildSrcGlyphFT() { memset(this, 0, sizeof(*this)); }
+    ImFontBuildSrcGlyphFT() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 struct ImFontBuildSrcDataFT

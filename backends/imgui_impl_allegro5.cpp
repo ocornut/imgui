@@ -71,7 +71,7 @@ struct ImGui_ImplAllegro5_Data
     ALLEGRO_VERTEX_DECL*        VertexDecl;
     char*                       ClipboardTextData;
 
-    ImGui_ImplAllegro5_Data()   { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplAllegro5_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
@@ -207,6 +207,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
     // Create texture
+    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     int flags = al_get_new_bitmap_flags();
     int fmt = al_get_new_bitmap_format();
     al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
@@ -233,7 +234,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
         return false;
 
     // Store our identifier
-    io.Fonts->SetTexID((void*)cloned_img);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)cloned_img);
     bd->Texture = cloned_img;
 
     // Create an invisible mouse cursor
@@ -456,8 +457,8 @@ static void ImGui_ImplAllegro5_UpdateKeyModifiers()
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
-// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
 {

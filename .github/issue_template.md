@@ -4,7 +4,7 @@
 
 2. PLEASE CAREFULLY READ: [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
 
-3. PLEASE CAREFULLY READ: [Issue Submitting Guidelines](https://github.com/ocornut/imgui/issues/2261)
+3. PLEASE CAREFULLY READ: [Contributing Guidelines](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md)
 
 4. PLEASE MAKE SURE that you have: read the FAQ; explored the contents of `ShowDemoWindow()` including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the links above.
 

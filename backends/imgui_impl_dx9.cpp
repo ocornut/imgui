@@ -46,7 +46,7 @@ struct ImGui_ImplDX9_Data
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
-    ImGui_ImplDX9_Data()        { memset(this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
+    ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
 struct CUSTOMVERTEX
@@ -84,7 +84,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     vp.MaxZ = 1.0f;
     bd->pd3dDevice->SetViewport(&vp);
 
-    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient), bilinear sampling.
     bd->pd3dDevice->SetPixelShader(NULL);
     bd->pd3dDevice->SetVertexShader(NULL);
     bd->pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);

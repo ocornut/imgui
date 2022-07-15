@@ -59,10 +59,10 @@ struct ImGui_ImplDX10_Data
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
-    ImGui_ImplDX10_Data()       { memset(this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
+    ImGui_ImplDX10_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
-struct VERTEX_CONSTANT_BUFFER
+struct VERTEX_CONSTANT_BUFFER_DX10
 {
     float   mvp[4][4];
 };
@@ -171,7 +171,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         void* mapped_resource;
         if (bd->pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
-        VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource;
+        VERTEX_CONSTANT_BUFFER_DX10* constant_buffer = (VERTEX_CONSTANT_BUFFER_DX10*)mapped_resource;
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
         float T = draw_data->DisplayPos.y;
@@ -337,6 +337,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
     io.Fonts->SetTexID((ImTextureID)bd->pFontTextureView);
 
     // Create texture sampler
+    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     {
         D3D10_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
@@ -422,7 +423,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         // Create the constant buffer
         {
             D3D10_BUFFER_DESC desc;
-            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
+            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER_DX10);
             desc.Usage = D3D10_USAGE_DYNAMIC;
             desc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
             desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
