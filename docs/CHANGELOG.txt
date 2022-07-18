@@ -56,6 +56,8 @@ Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
+- Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
+  next row in such state where subsequent SameLine() would move back to previous row.
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
