@@ -634,6 +634,9 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
+    if (sizeof(ImDrawIdx) == 2)
+        IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
+
     _IdxWritePtr += 6;
 }
 
@@ -649,6 +652,8 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = col;
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
+    if (sizeof(ImDrawIdx) == 2)
+        IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
     _IdxWritePtr += 6;
 }
 
@@ -663,6 +668,8 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = col;
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
+    if (sizeof(ImDrawIdx) == 2)
+        IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
     _IdxWritePtr += 6;
 }
 
@@ -826,6 +833,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             }
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
+        if (sizeof(ImDrawIdx) == 2)
+            IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
     }
     else
     {
@@ -856,6 +865,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
             _IdxWritePtr += 6;
             _VtxCurrentIdx += 4;
+            if (sizeof(ImDrawIdx) == 2)
+                IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
         }
     }
 }
@@ -921,6 +932,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             _IdxWritePtr += 6;
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
+        if (sizeof(ImDrawIdx) == 2)
+            IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
     }
     else
     {
@@ -939,6 +952,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             _IdxWritePtr += 3;
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
+        if (sizeof(ImDrawIdx) == 2)
+            IM_ASSERT(_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
     }
 }
 
