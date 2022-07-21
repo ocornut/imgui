@@ -371,8 +371,10 @@ int main(int, char**)
 
     // Create Framebuffers
     int w, h;
-    SDL_GetWindowSize(window, &w, &h);
+
+    SDL_Vulkan_GetDrawableSize(window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
+
     SetupVulkanWindow(wd, surface, w, h);
 
     // Setup Dear ImGui context
@@ -471,13 +473,16 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+            if(event.type == SDL_WINDOWEVENT || event.window.event == SDL_WINDOWEVENT_RESIZED)
+                g_SwapChainRebuild = true;
         }
 
         // Resize swap chain?
         if (g_SwapChainRebuild)
         {
             int width, height;
-            SDL_GetWindowSize(window, &width, &height);
+            SDL_Vulkan_GetDrawableSize(window, &width, &height);
+
             if (width > 0 && height > 0)
             {
                 ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
