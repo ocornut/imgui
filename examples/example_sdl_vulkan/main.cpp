@@ -374,7 +374,6 @@ int main(int, char**)
 
     SDL_Vulkan_GetDrawableSize(window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
-
     SetupVulkanWindow(wd, surface, w, h);
 
     // Setup Dear ImGui context
