@@ -46,6 +46,12 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
+VkExtent2D GetSDLFramebufferSize(SDL_Window* window) {
+    VkExtent2D extent;
+    SDL_Vulkan_GetDrawableSize(window, (int*)&extent.width, (int*)&extent.height);
+    return extent;
+}
+
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
@@ -199,7 +205,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
 
 // All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used by the demo.
 // Your real engine/app may not use them.
-static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, VkExtent2D framebufferSize)
 {
     wd->Surface = surface;
 
@@ -228,7 +234,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     IM_ASSERT(g_MinImageCount >= 2);
-    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, framebufferSize, g_MinImageCount);
 }
 
 static void CleanupVulkan()
@@ -370,11 +376,9 @@ int main(int, char**)
     }
 
     // Create Framebuffers
-    int w, h;
-
-    SDL_Vulkan_GetDrawableSize(window, &w, &h);
+    VkExtent2D framebufferSize = GetSDLFramebufferSize(window);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
-    SetupVulkanWindow(wd, surface, w, h);
+    SetupVulkanWindow(wd, surface, framebufferSize);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -472,20 +476,18 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
-            if(event.type == SDL_WINDOWEVENT || event.window.event == SDL_WINDOWEVENT_RESIZED)
+            if(event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED)
                 g_SwapChainRebuild = true;
         }
 
         // Resize swap chain?
         if (g_SwapChainRebuild)
         {
-            int width, height;
-            SDL_Vulkan_GetDrawableSize(window, &width, &height);
-
-            if (width > 0 && height > 0)
+            framebufferSize = GetSDLFramebufferSize(window);
+            if (framebufferSize.width > 0 && framebufferSize.height > 0)
             {
                 ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, framebufferSize, g_MinImageCount);
                 g_MainWindowData.FrameIndex = 0;
                 g_SwapChainRebuild = false;
             }
