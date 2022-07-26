@@ -146,6 +146,8 @@ Docking+Viewports Branch:
 - Docking: Fixed regression introduced in v1.87 when docked window content not rendered
   while switching between with CTRL+Tab. [@rokups]
 - Docking: Fixed amending into an existing tab bar from rendering invisible items. (#5515)
+- Docking+Viewports: Fixed undocking window node causing parent viewports to become unresponsive
+  in certain situation (e.g. hidden tab bar). (#5503) [@rokups]
 - Backends: GLFW: Fixed leftover static variable preventing from changing or
   reinitializing backend while application is running. (#4616, #5434) [@rtoumazet]
 
