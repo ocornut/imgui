@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-07-28: Inputs: Modified the way delta will be calculated for the initial touch, Should not effect mouse cursor.
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
@@ -198,6 +199,12 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         switch (event_action)
         {
         case AMOTION_EVENT_ACTION_DOWN:
+            if (AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER) {
+                // When pressing on the screen with the touchscreen, it will cause the cursor to jump to the next position. 
+                // Doing this ensures the delta will be set to the exact position, so it won't happen when using io.MouseDelta
+                // This will only happen when you initially touch the screen, and actual positioning/clicking are still handled.
+                io.MousePosPrev = { AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index) };
+            }
         case AMOTION_EVENT_ACTION_UP:
             // Physical mouse buttons (and probably other physical devices) also invoke the actions AMOTION_EVENT_ACTION_DOWN/_UP,
             // but we have to process them separately to identify the actual button pressed. This is done below via
