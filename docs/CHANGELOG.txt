@@ -60,6 +60,7 @@ Other Changes:
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
   appended TabItemButton(). (#5515, #3291) [@rokups]
+- Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
