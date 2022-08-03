@@ -3862,7 +3862,7 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
     g.NavDisableHighlight = true;
     g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - window->RootWindow->Pos;
     g.ActiveIdNoClearOnFocusLoss = true;
-    SetActiveIdUsingNavAndKeys();
+    SetActiveIdUsingAllKeyboardKeys();
 
     bool can_move_window = true;
     if ((window->Flags & ImGuiWindowFlags_NoMove) || (window->RootWindow->Flags & ImGuiWindowFlags_NoMove))
@@ -5233,12 +5233,17 @@ void ImGui::SetItemUsingMouseWheel()
     }
 }
 
-void ImGui::SetActiveIdUsingNavAndKeys()
+// FIXME: Technically this also prevents use of Gamepad D-Pad, may not be an issue.
+void ImGui::SetActiveIdUsingAllKeyboardKeys()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ActiveId != 0);
     g.ActiveIdUsingNavDirMask = ~(ImU32)0;
-    g.ActiveIdUsingKeyInputMask.SetAllBits();
+    g.ActiveIdUsingKeyInputMask.SetBitRange(ImGuiKey_Keyboard_BEGIN, ImGuiKey_Keyboard_END);
+    g.ActiveIdUsingKeyInputMask.SetBit(ImGuiKey_ModCtrl);
+    g.ActiveIdUsingKeyInputMask.SetBit(ImGuiKey_ModShift);
+    g.ActiveIdUsingKeyInputMask.SetBit(ImGuiKey_ModAlt);
+    g.ActiveIdUsingKeyInputMask.SetBit(ImGuiKey_ModSuper);
     NavMoveRequestCancel();
 }
 
@@ -11216,7 +11221,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
         source_drag_active = IsMouseDragging(mouse_button);
 
         // Disable navigation and key inputs while dragging + cancel existing request if any
-        SetActiveIdUsingNavAndKeys();
+        SetActiveIdUsingAllKeyboardKeys();
     }
     else
     {

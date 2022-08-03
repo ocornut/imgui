@@ -1175,6 +1175,8 @@ enum ImGuiKeyPrivate_
 {
     ImGuiKey_LegacyNativeKey_BEGIN  = 0,
     ImGuiKey_LegacyNativeKey_END    = 512,
+    ImGuiKey_Keyboard_BEGIN         = ImGuiKey_NamedKey_BEGIN,
+    ImGuiKey_Keyboard_END           = ImGuiKey_GamepadStart,
     ImGuiKey_Gamepad_BEGIN          = ImGuiKey_GamepadStart,
     ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickDown + 1,
     ImGuiKey_Aliases_BEGIN          = ImGuiKey_MouseLeft,
@@ -2702,7 +2704,7 @@ namespace ImGui
     IMGUI_API ImGuiKeyData* GetKeyData(ImGuiKey key);
     IMGUI_API void          GetKeyChordName(ImGuiModFlags mods, ImGuiKey key, char* out_buf, int out_buf_size);
     IMGUI_API void          SetItemUsingMouseWheel();
-    IMGUI_API void          SetActiveIdUsingNavAndKeys();
+    IMGUI_API void          SetActiveIdUsingAllKeyboardKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask[key]; }
     inline void             SetActiveIdUsingKey(ImGuiKey key)                           { ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key); }
