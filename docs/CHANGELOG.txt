@@ -145,6 +145,7 @@ Docking+Viewports Branch:
   it only contained the standard Collapse/Close buttons and no actual menu. (#5463, #4792)
 - Docking: Fixed regression introduced in v1.87 when docked window content not rendered
   while switching between with CTRL+Tab. [@rokups]
+- Docking: Fixed amending into an existing tab bar from rendering invisible items. (#5515)
 - Backends: GLFW: Fixed leftover static variable preventing from changing or
   reinitializing backend while application is running. (#4616, #5434) [@rtoumazet]
 

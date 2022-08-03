@@ -6205,14 +6205,12 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             }
 
             // Render, for docked windows and host windows we ensure bg goes before decorations
+            if (window->DockIsActive)
+                window->DockNode->LastBgColor = bg_col;
             ImDrawList* bg_draw_list = window->DockIsActive ? window->DockNode->HostWindow->DrawList : window->DrawList;
             if (window->DockIsActive || (flags & ImGuiWindowFlags_DockNodeHost))
                 bg_draw_list->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_BG);
-            if (window->DockIsActive)
-                window->DockNode->LastBgColor = bg_col;
-
             bg_draw_list->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom);
-
             if (window->DockIsActive || (flags & ImGuiWindowFlags_DockNodeHost))
                 bg_draw_list->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_FG);
         }
@@ -15218,7 +15216,6 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     // Update position/size, process and draw resizing splitters
     if (node->IsRootNode() && host_window)
     {
-        host_window->DrawList->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_FG);
         DockNodeTreeUpdatePosSize(node, host_window->Pos, host_window->Size);
         DockNodeTreeUpdateSplitter(node);
     }
@@ -15283,13 +15280,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
         // Render outer borders last (after the tab bar)
         if (node->IsRootNode())
-        {
-            host_window->DrawList->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_FG);
             RenderWindowOuterBorders(host_window);
-        }
-
-        // Further rendering (= hosted windows background) will be drawn on layer 0
-        host_window->DrawList->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_BG);
     }
 
     // End host window
