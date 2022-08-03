@@ -118,6 +118,15 @@ Breaking changes:
    semantic, but the additional indirection and copy added complexity and got in the way of other
    incoming work. User's code (other than backends) should not be affected, unless you have custom
    widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
+ - Changed signature of ImageButton() function: (#5533, #4471, #2464, #1390)
+   - Added 'const char* str_id' parameter + removed 'int frame_padding = -1' parameter.
+   - Old signature: bool ImageButton(ImTextureID tex_id, ImVec2 size, ImVec2 uv0 = ImVec2(0,0), ImVec2 uv1 = ImVec2(1,1), int frame_padding = -1, ImVec4 bg_col = ImVec4(0,0,0,0), ImVec4 tint_col = ImVec4(1,1,1,1));
+     - used the ImTextureID value to create an ID. This was inconsistent with other functions, led to ID conflicts, and caused problems with engines using transient ImTextureID values.
+     - had a FramePadding override which was inconsistent with other functions and made the already-long signature even longer.
+   - New signature: bool ImageButton(const char* str_id, ImTextureID tex_id, ImVec2 size, ImVec2 uv0 = ImVec2(0,0), ImVec2 uv1 = ImVec2(1,1), ImVec4 bg_col = ImVec4(0,0,0,0), ImVec4 tint_col = ImVec4(1,1,1,1));
+     - requires an explicit identifier. You may still use e.g. PushID() calls and then pass an empty identifier.
+     - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
+   - As always we are keeping a redirection function available (will obsolete later).
 
 Other Changes:
 
@@ -597,7 +606,7 @@ If you are stuck on ancient compiler you may need to stay at this version onward
 
 Breaking Changes:
 
-- Removed GetWindowContentRegionWidth() function. Keep inline redirection helper.
+- Removed GetWindowContentRegionWidth() function. Kept inline redirection helper.
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
   Using 'GetContentRegionAvail().x' is generally a better choice.
