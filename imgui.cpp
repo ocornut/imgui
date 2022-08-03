@@ -1127,66 +1127,27 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
 
 ImGuiIO::ImGuiIO()
 {
-    // Most fields are initialized with zero
-    memset(this, 0, sizeof(*this));
     IM_STATIC_ASSERT(IM_ARRAYSIZE(ImGuiIO::MouseDown) == ImGuiMouseButton_COUNT && IM_ARRAYSIZE(ImGuiIO::MouseClicked) == ImGuiMouseButton_COUNT);
 
     // Settings
-    ConfigFlags = ImGuiConfigFlags_None;
-    BackendFlags = ImGuiBackendFlags_None;
     DisplaySize = ImVec2(-1.0f, -1.0f);
-    DeltaTime = 1.0f / 60.0f;
-    IniSavingRate = 5.0f;
-    IniFilename = "imgui.ini"; // Important: "imgui.ini" is relative to current working dir, most apps will want to lock this to an absolute path (e.g. same path as executables).
-    LogFilename = "imgui_log.txt";
-    MouseDoubleClickTime = 0.30f;
-    MouseDoubleClickMaxDist = 6.0f;
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
 #endif
-    KeyRepeatDelay = 0.275f;
-    KeyRepeatRate = 0.050f;
-    UserData = NULL;
 
-    Fonts = NULL;
-    FontGlobalScale = 1.0f;
-    FontDefault = NULL;
-    FontAllowUserScaling = false;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
-    // Miscellaneous options
-    MouseDrawCursor = false;
-#ifdef __APPLE__
-    ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
-#else
-    ConfigMacOSXBehaviors = false;
-#endif
-    ConfigInputTrickleEventQueue = true;
-    ConfigInputTextCursorBlink = true;
-    ConfigInputTextEnterKeepActive = false;
-    ConfigDragClickToInputText = false;
-    ConfigWindowsResizeFromEdges = true;
-    ConfigWindowsMoveFromTitleBarOnly = false;
-    ConfigMemoryCompactTimer = 60.0f;
-
     // Platform Functions
-    BackendPlatformName = BackendRendererName = NULL;
-    BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
-    ClipboardUserData = NULL;
     SetPlatformImeDataFn = SetPlatformImeDataFn_DefaultImpl;
 
-    // Input (NB: we already have memset zero the entire structure!)
+    // Input
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
-    MouseDragThreshold = 6.0f;
     for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(KeysData); i++) { KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f; }
-    AppAcceptingEvents = true;
-    BackendUsingLegacyKeyArrays = (ImS8)-1;
-    BackendUsingLegacyNavInputArray = true; // assume using legacy array until proven wrong
 }
 
 // Pass in translated ASCII characters for text input.
