@@ -1036,9 +1036,61 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     }
 }
 
+void ImGui::ImageRotated(ImTextureID user_texture_id, const ImVec2& size, int angle, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+{
+    IM_ASSERT(angle % 90 == 0);
+    ImVec2 _uv0, _uv1, _uv2, _uv3;
+    switch(angle % 360)
+    {
+    case 0:
+        Image(user_texture_id, size, uv0, uv1, tint_col, border_col);
+        return;
+    case 180:
+        Image(user_texture_id, size, uv1, uv0, tint_col, border_col);
+        return;
+    case 90:
+        _uv3 = uv0;
+        _uv1 = uv1;
+        _uv0 = ImVec2(uv1.x, uv0.y);
+        _uv2 = ImVec2(uv0.x, uv1.y);
+        break;
+    case 270:
+        _uv1 = uv0;
+        _uv3 = uv1;
+        _uv0 = ImVec2(uv0.x, uv1.y);
+        _uv2 = ImVec2(uv1.x, uv0.y);
+        break;
+    }
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    ImVec2 _size(size.y, size.x);
+    ImRect bb(window->DC.CursorPos, window->DC.CursorPos + _size);
+    if (border_col.w > 0.0f)
+        bb.Max += ImVec2(2, 2);
+    ItemSize(bb);
+    if (!ItemAdd(bb, 0))
+        return;
+    if (border_col.w > 0.0f)
+    {
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f);
+        ImVec2 x0 = bb.Min + ImVec2(1, 1);
+        ImVec2 x2 = bb.Max - ImVec2(1, 1);
+        ImVec2 x1 = ImVec2(x2.x, x0.y);
+        ImVec2 x3 = ImVec2(x0.x, x2.y);
+        window->DrawList->AddImageQuad(user_texture_id, x0, x1, x2, x3, _uv0, _uv1, _uv2, _uv3, GetColorU32(tint_col));
+    }
+    else
+    {
+        ImVec2 x1 = ImVec2(bb.Max.x, bb.Min.y);
+        ImVec2 x3 = ImVec2(bb.Min.x, bb.Max.y);
+        window->DrawList->AddImageQuad(user_texture_id, bb.Min, x1, bb.Max, x3, _uv0, _uv1, _uv2, _uv3, GetColorU32(tint_col));
+    }
+}
+
 // ImageButton() is flawed as 'id' is always derived from 'texture_id' (see #2464 #1390)
 // We provide this internal helper to write your own variant while we figure out how to redesign the public ImageButton() API.
-bool ImGui::ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec2& padding, const ImVec4& bg_col, const ImVec4& tint_col)
+bool ImGui::ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec2& padding, const ImVec4& bg_col, const ImVec4& tint_col, bool r90_270)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -1059,10 +1111,41 @@ bool ImGui::ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size
     RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
     if (bg_col.w > 0.0f)
         window->DrawList->AddRectFilled(bb.Min + padding, bb.Max - padding, GetColorU32(bg_col));
-    window->DrawList->AddImage(texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
+    window->DrawList->AddImage(texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col), r90_270);
 
     return pressed;
 }
+
+bool ImGui::ImageButtonRotatedEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& padding, const ImVec4& bg_col, const ImVec4& tint_col)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size + padding * 2);
+    ItemSize(bb);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+    // Render
+    const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
+    if (bg_col.w > 0.0f)
+        window->DrawList->AddRectFilled(bb.Min + padding, bb.Max - padding, GetColorU32(bg_col));
+    ImVec2 x0 = bb.Min + padding;
+    ImVec2 x2 = bb.Max - padding;
+    ImVec2 x1 (x2.x, x0.y);
+    ImVec2 x3 (x0.x, x2.y);
+    window->DrawList->AddImageQuad(texture_id, x0, x1, x2, x3, uv0, uv1, uv2, uv3, GetColorU32(tint_col));
+
+    return pressed;
+}
+
 
 // frame_padding < 0: uses FramePadding from style (default)
 // frame_padding = 0: no framing
@@ -1081,6 +1164,44 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 
     const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : g.Style.FramePadding;
     return ImageButtonEx(id, user_texture_id, size, uv0, uv1, padding, bg_col, tint_col);
+}
+
+bool ImGui::ImageButtonRotated(ImTextureID user_texture_id, const ImVec2& size, int angle, const ImVec2& uv0,  const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
+{
+    ImVec2 _uv0, _uv1, _uv2, _uv3;
+    IM_ASSERT(angle % 90 == 0);
+    switch(angle % 360)
+    {
+    case 0:
+        return ImageButton(user_texture_id, size, uv0, uv1, frame_padding, bg_col, tint_col);
+    case 180:
+        return ImageButton(user_texture_id, size, uv1, uv0, frame_padding, bg_col, tint_col);
+    case 90:
+        _uv3 = uv0;
+        _uv1 = uv1;
+        _uv0 = ImVec2(uv1.x, uv0.y);
+        _uv2 = ImVec2(uv0.x, uv1.y);
+        break;
+    case 270:
+        _uv1 = uv0;
+        _uv3 = uv1;
+        _uv0 = ImVec2(uv0.x, uv1.y);
+        _uv2 = ImVec2(uv1.x, uv0.y);
+        break;
+    }
+
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
+        return false;
+
+    // Default to using texture ID as ID. User can still push string/integer prefixes.
+    PushID((void*)(intptr_t)user_texture_id);
+    const ImGuiID id = window->GetID("#image");
+    PopID();
+
+    const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : g.Style.FramePadding;
+    return ImageButtonRotatedEx(id, user_texture_id, size, _uv0, _uv1, _uv2, _uv3, padding, bg_col, tint_col);
 }
 
 bool ImGui::Checkbox(const char* label, bool* v)
