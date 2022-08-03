@@ -528,7 +528,7 @@ static void ImGui_ImplOSX_UpdateGamepads()
 {
     ImGuiIO& io = ImGui::GetIO();
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
+    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
         return;
 
 #if APPLE_HAS_CONTROLLER

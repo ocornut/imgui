@@ -320,8 +320,8 @@ static void ImGui_ImplWin32_UpdateGamepads()
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
-    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
-        return;
+    //if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
+    //    return;
 
     // Calling XInputGetState() every frame on disconnected gamepads is unfortunately too slow.
     // Instead we refresh gamepad availability by calling XInputGetCapabilities() _only_ after receiving WM_DEVICECHANGE.

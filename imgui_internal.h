@@ -153,7 +153,7 @@ typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // E
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
-typedef int ImGuiInputReadFlags;        // -> enum ImGuiInputReadFlags_     // Flags: for IsKeyPressedEx()
+typedef int ImGuiInputFlags;            // -> enum ImGuiInputFlags_         // Flags: for IsKeyPressedEx()
 typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
@@ -1195,6 +1195,8 @@ enum ImGuiKeyPrivate_
     ImGuiKey_LegacyNativeKey_END    = 512,
     ImGuiKey_Gamepad_BEGIN          = ImGuiKey_GamepadStart,
     ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickDown + 1,
+    ImGuiKey_Aliases_BEGIN          = ImGuiKey_MouseLeft,
+    ImGuiKey_Aliases_END            = ImGuiKey_COUNT,
 
     // [Internal] Named shortcuts for Navigation
     ImGuiKey_NavKeyboardTweakSlow   = ImGuiKey_ModCtrl,
@@ -1262,17 +1264,15 @@ struct ImGuiInputEvent
 
 // Flags for IsKeyPressedEx(). In upcoming feature this will be used more (and IsKeyPressedEx() renamed)
 // Don't mistake with ImGuiInputTextFlags! (for ImGui::InputText() function)
-enum ImGuiInputReadFlags_
+enum ImGuiInputFlags_
 {
     // Flags for IsKeyPressedEx()
-    ImGuiInputReadFlags_None                = 0,
-    ImGuiInputReadFlags_Repeat              = 1 << 0,   // Return true on successive repeats. Default for legacy IsKeyPressed(). NOT Default for legacy IsMouseClicked(). MUST BE == 1.
-
-    // Repeat rate
-    ImGuiInputReadFlags_RepeatRateDefault   = 1 << 1,   // Regular
-    ImGuiInputReadFlags_RepeatRateNavMove   = 1 << 2,   // Fast
-    ImGuiInputReadFlags_RepeatRateNavTweak  = 1 << 3,   // Faster
-    ImGuiInputReadFlags_RepeatRateMask_     = ImGuiInputReadFlags_RepeatRateDefault | ImGuiInputReadFlags_RepeatRateNavMove | ImGuiInputReadFlags_RepeatRateNavTweak,
+    ImGuiInputFlags_None                = 0,
+    ImGuiInputFlags_Repeat              = 1 << 0,   // Return true on successive repeats. Default for legacy IsKeyPressed(). NOT Default for legacy IsMouseClicked(). MUST BE == 1.
+    ImGuiInputFlags_RepeatRateDefault   = 1 << 1,   // Repeat rate: Regular (default)
+    ImGuiInputFlags_RepeatRateNavMove   = 1 << 2,   // Repeat rate: Fast
+    ImGuiInputFlags_RepeatRateNavTweak  = 1 << 3,   // Repeat rate: Faster
+    ImGuiInputFlags_RepeatRateMask_     = ImGuiInputFlags_RepeatRateDefault | ImGuiInputFlags_RepeatRateNavMove | ImGuiInputFlags_RepeatRateNavTweak,
 };
 
 //-----------------------------------------------------------------------------
@@ -1835,7 +1835,6 @@ struct ImGuiContext
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
     // Input Ownership
-    bool                    ActiveIdUsingMouseWheel;            // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
     ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
     ImBitArrayForNamedKeys  ActiveIdUsingKeyInputMask;          // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order the enum to make useful keys come first, either redesign this into e.g. a small array.
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -2094,7 +2093,6 @@ struct ImGuiContext
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
 
-        ActiveIdUsingMouseWheel = false;
         ActiveIdUsingNavDirMask = 0x00;
         ActiveIdUsingKeyInputMask.ClearAllBits();
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -2938,19 +2936,22 @@ namespace ImGui
     inline bool             IsNamedKey(ImGuiKey key)                                    { return key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END; }
     inline bool             IsLegacyKey(ImGuiKey key)                                   { return key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END; }
     inline bool             IsGamepadKey(ImGuiKey key)                                  { return key >= ImGuiKey_Gamepad_BEGIN && key < ImGuiKey_Gamepad_END; }
+    inline bool             IsAliasKey(ImGuiKey key)                                    { return key >= ImGuiKey_Aliases_BEGIN && key < ImGuiKey_Aliases_END; }
     IMGUI_API ImGuiKeyData* GetKeyData(ImGuiKey key);
+    IMGUI_API void          GetKeyChordName(ImGuiModFlags mods, ImGuiKey key, char* out_buf, int out_buf_size);
     IMGUI_API void          SetItemUsingMouseWheel();
     IMGUI_API void          SetActiveIdUsingNavAndKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask[key]; }
     inline void             SetActiveIdUsingKey(ImGuiKey key)                           { ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key); }
+    inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return ImGuiKey_MouseLeft + button; }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
     IMGUI_API ImGuiModFlags GetMergedModFlags();
     IMGUI_API ImVec2        GetKeyVector2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down);
     IMGUI_API float         GetNavTweakPressedAmount(ImGuiAxis axis);
     IMGUI_API int           CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate);
-    IMGUI_API void          GetTypematicRepeatRate(ImGuiInputReadFlags flags, float* repeat_delay, float* repeat_rate);
-    IMGUI_API bool          IsKeyPressedEx(ImGuiKey key, ImGuiInputReadFlags flags = 0);
+    IMGUI_API void          GetTypematicRepeatRate(ImGuiInputFlags flags, float* repeat_delay, float* repeat_rate);
+    IMGUI_API bool          IsKeyPressedEx(ImGuiKey key, ImGuiInputFlags flags = 0);
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     inline bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true)           { IM_ASSERT(IsNamedKey(key)); return IsKeyPressed(key, repeat); } // [removed in 1.87]
 #endif

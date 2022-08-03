@@ -65,7 +65,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.89 WIP"
-#define IMGUI_VERSION_NUM           18804
+#define IMGUI_VERSION_NUM           18806
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
@@ -1492,6 +1492,10 @@ enum ImGuiKey_
     //   backends tend to interfere and break that equivalence. The safer decision is to relay that ambiguity down to the end-user...
     ImGuiKey_ModCtrl, ImGuiKey_ModShift, ImGuiKey_ModAlt, ImGuiKey_ModSuper,
 
+    // Mouse Buttons (auto-submitted from AddMouseButtonEvent() calls)
+    // - This is mirroring the data also written to io.MouseDown[], io.MouseWheel, in a format allowing them to be accessed via standard key API.
+    ImGuiKey_MouseLeft, ImGuiKey_MouseRight, ImGuiKey_MouseMiddle, ImGuiKey_MouseX1, ImGuiKey_MouseX2, ImGuiKey_MouseWheelX, ImGuiKey_MouseWheelY,
+
     // End of list
     ImGuiKey_COUNT,                 // No valid ImGuiKey is ever greater than this value
 
@@ -1519,8 +1523,9 @@ enum ImGuiModFlags_
     ImGuiModFlags_None              = 0,
     ImGuiModFlags_Ctrl              = 1 << 0,
     ImGuiModFlags_Shift             = 1 << 1,
-    ImGuiModFlags_Alt               = 1 << 2,   // Menu
+    ImGuiModFlags_Alt               = 1 << 2,   // Option/Menu key
     ImGuiModFlags_Super             = 1 << 3,   // Cmd/Super/Windows key
+    ImGuiModFlags_All               = 0x0F
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO

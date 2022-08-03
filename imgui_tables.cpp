@@ -1717,6 +1717,8 @@ void ImGui::TableBeginRow(ImGuiTable* table)
     table->RowTextBaseline = 0.0f;
     table->RowIndentOffsetX = window->DC.Indent.x - table->HostIndentX; // Lock indent
     window->DC.PrevLineTextBaseOffset = 0.0f;
+    window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
+    window->DC.IsSameLine = false;
     window->DC.CursorMaxPos.y = next_y1;
 
     // Making the header BG color non-transparent will allow us to overlay it multiple times when handling smooth dragging.
@@ -3957,6 +3959,7 @@ void ImGui::NextColumn()
     {
         // New row/line: column 0 honor IndentX.
         window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
+        window->DC.IsSameLine = false;
         columns->LineMinY = columns->LineMaxY;
     }
     window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
