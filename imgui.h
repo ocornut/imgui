@@ -1893,9 +1893,9 @@ struct ImGuiIO
     // Configuration                            // Default value
     //------------------------------------------------------------------
 
-    ImGuiConfigFlags   ConfigFlags              = ImGuiConfigFlags_None; // See ImGuiConfigFlags_ enum. Set by user/application. Gamepad/keyboard navigation options, etc.
+    ImGuiConfigFlags   ConfigFlags              = ImGuiConfigFlags_None;  // See ImGuiConfigFlags_ enum. Set by user/application. Gamepad/keyboard navigation options, etc.
     ImGuiBackendFlags  BackendFlags             = ImGuiBackendFlags_None; // See ImGuiBackendFlags_ enum. Set by backend (imgui_impl_xxx files or custom backend) to communicate features supported by the backend.
-    ImVec2      DisplaySize;                    // <unset>          // Main display size, in pixels (generally == GetMainViewport()->Size). May change every frame.
+    ImVec2      DisplaySize                     = ImVec2(-1.0f, -1.0f);   // Main display size, in pixels (generally == GetMainViewport()->Size). May change every frame.
     float       DeltaTime                       = 1.0f/60.0f;       // Time elapsed since last frame, in seconds. May change every frame.
     float       IniSavingRate                   = 5.0f;             // Minimum time between saving positions/sizes to .ini file, in seconds.
     const char* IniFilename                     = "imgui.ini";      // Path to .ini file (important: default "imgui.ini" is relative to current working dir! Consider locking this to an absolute path, e.g. same path as executable). Set NULL to disable automatic .ini loading/saving or if you want to manually call LoadIniSettingsXXX() / SaveIniSettingsXXX() functions. 
@@ -1911,7 +1911,7 @@ struct ImGuiIO
     float       FontGlobalScale                 = 1.0f;             // Global scale all fonts
     bool        FontAllowUserScaling            = false;            // Allow user scaling text of individual window with CTRL+Wheel.
     ImFont*     FontDefault                     = NULL;             // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
-    ImVec2      DisplayFramebufferScale;        // = (1, 1)         // For retina display or other situations where window coordinates are different from framebuffer coordinates. This generally ends up in ImDrawData::FramebufferScale.
+    ImVec2      DisplayFramebufferScale         = ImVec2(1.0f, 1.0f); // For retina display or other situations where window coordinates are different from framebuffer coordinates. This generally ends up in ImDrawData::FramebufferScale.
 
     // Miscellaneous options
     bool        MouseDrawCursor                 = false;            // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by backend implementations.
@@ -2011,7 +2011,7 @@ struct ImGuiIO
     // Main Input State
     // (this block used to be written by backend, since 1.87 it is best to NOT write to those directly, call the AddXXX functions above instead)
     // (reading from those variables is fair game, as they are extremely unlikely to be moving anywhere)
-    ImVec2      MousePos;                                // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
+    ImVec2      MousePos                          = ImVec2(-FLT_MAX, -FLT_MAX); // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
     bool        MouseDown[5]                      = {};  // Mouse buttons: 0=left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
     float       MouseWheel                        = {};  // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
     float       MouseWheelH                       = {};  // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all backends.
@@ -2024,7 +2024,7 @@ struct ImGuiIO
     ImGuiModFlags KeyMods                         = {};  // Key mods flags (same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags), updated by NewFrame()
     ImGuiKeyData KeysData[ImGuiKey_KeysData_SIZE] = {};  // Key state for all known keys. Use IsKeyXXX() functions to access this.
     bool        WantCaptureMouseUnlessPopupClose  = {};  // Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
-    ImVec2      MousePosPrev;                            // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
+    ImVec2      MousePosPrev                      = ImVec2(-FLT_MAX, -FLT_MAX); // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
     ImVec2      MouseClickedPos[5]                = {};  // Position at time of clicking
     double      MouseClickedTime[5]               = {};  // Time of last click (used to figure out double-click)
     bool        MouseClicked[5]                   = {};  // Mouse button went from !Down to Down (same as MouseClickedCount[x] != 0)
