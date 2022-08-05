@@ -127,6 +127,20 @@ Breaking changes:
      - requires an explicit identifier. You may still use e.g. PushID() calls and then pass an empty identifier.
      - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
    - As always we are keeping a redirection function available (will obsolete later).
+ - Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
+   This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
+   - Previously this would make the window content size ~200x200:
+       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
+   - Instead, please submit an item:
+       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
+   - Alternative:
+       Begin(...) + Dummy(ImVec2(200,200)) + End();
+   Content size is now only extended when submitting an item.
+   With '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will now be detected and assert.
+   Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
+   (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
+    threads have been amended to refer to this issue).
+
 
 Other Changes:
 
