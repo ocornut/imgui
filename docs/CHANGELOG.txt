@@ -74,6 +74,8 @@ Other Changes:
   can apply to mouse data as well. (#4921)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
+- Platform IME: [Windows] Fixed a call to ImmAssociateContextEx() leading to freeze on some setups.
+  (#2589, #5535, #5264, #4972)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)

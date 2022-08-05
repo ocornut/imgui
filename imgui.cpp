@@ -8535,6 +8535,9 @@ ImVec2 ImGui::GetCursorScreenPos()
     return window->DC.CursorPos;
 }
 
+// 2022/08/05: Setting cursor position also extend boundaries (via modifying CursorMaxPos) used to compute window size, group size etc.
+// I believe this was is a judicious choice but it's probably being relied upon (it has been the case since 1.31 and 1.50)
+// It would be sane if we requested user to use SetCursorPos() + Dummy(ImVec2(0,0)) to extend CursorMaxPos...
 void ImGui::SetCursorScreenPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -12219,10 +12222,9 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport, ImGuiPlatf
     if (hwnd == 0)
         return;
 
-    ::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
-
     if (HIMC himc = ::ImmGetContext(hwnd))
     {
+        ::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
         COMPOSITIONFORM composition_form = {};
         composition_form.ptCurrentPos.x = (LONG)data->InputPos.x;
         composition_form.ptCurrentPos.y = (LONG)data->InputPos.y;
