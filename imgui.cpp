@@ -14749,19 +14749,12 @@ static void ImGui::DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* s
         src_node->TabBar = NULL;
     }
 
-    for (int n_from_node = 0, n_from_tab_bar = 0; n_from_node < src_node->Windows.Size; n_from_node++, n_from_tab_bar++)
+    // Tab order is not important here, it is preserved by sorting in DockNodeUpdateTabBar().
+    for (ImGuiWindow* window : src_node->Windows)
     {
-        // DockNode's TabBar may have non-window Tabs manually appended by user
-        while (src_tab_bar && src_tab_bar->Tabs[n_from_tab_bar].Window == NULL)
-            n_from_tab_bar++;
-
-        // Using TabBar order (FIXME: Why? Clarify + add tests for it)
-        if (ImGuiWindow* window = src_tab_bar ? src_tab_bar->Tabs[n_from_tab_bar].Window : src_node->Windows[n_from_node])
-        {
-            window->DockNode = NULL;
-            window->DockIsActive = false;
-            DockNodeAddWindow(dst_node, window, move_tab_bar ? false : true);
-        }
+        window->DockNode = NULL;
+        window->DockIsActive = false;
+        DockNodeAddWindow(dst_node, window, !move_tab_bar);
     }
     src_node->Windows.clear();
 
