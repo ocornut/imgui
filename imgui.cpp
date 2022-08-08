@@ -12231,9 +12231,9 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport, ImGuiPlatf
     if (hwnd == 0)
         return;
 
+    //::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
     if (HIMC himc = ::ImmGetContext(hwnd))
     {
-        ::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
         COMPOSITIONFORM composition_form = {};
         composition_form.ptCurrentPos.x = (LONG)data->InputPos.x;
         composition_form.ptCurrentPos.y = (LONG)data->InputPos.y;
