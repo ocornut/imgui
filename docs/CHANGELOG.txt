@@ -65,6 +65,8 @@ Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
+- InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
+  by converting them to half-width (U+0021..U+007E).
 - Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
