@@ -2186,7 +2186,6 @@ struct ImGuiTextFilter
     };
     char                    InputBuf[256];
     ImVector<ImGuiTextRange>Filters;
-    int                     CountGrep;
 };
 
 // Helper: Growable text buffer for logging/accumulating text

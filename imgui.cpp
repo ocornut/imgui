@@ -2301,7 +2301,6 @@ void ImGuiStorage::SetAllInt(int v)
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
-    CountGrep = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_ARRAYSIZE(InputBuf));
@@ -2343,7 +2342,6 @@ void ImGuiTextFilter::Build()
     ImGuiTextRange input_range(InputBuf, InputBuf + strlen(InputBuf));
     input_range.split(',', &Filters);
 
-    CountGrep = 0;
     for (int i = 0; i != Filters.Size; i++)
     {
         ImGuiTextRange& f = Filters[i];
@@ -2353,8 +2351,6 @@ void ImGuiTextFilter::Build()
             f.e--;
         if (f.empty())
             continue;
-        if (Filters[i].b[0] != '-')
-            CountGrep += 1;
     }
 }
 
@@ -2380,16 +2376,12 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         else
         {
             // Grep
-            if (ImStristr(text, text_end, f.b, f.e) != NULL)
-                return true;
+            if (ImStristr(text, text_end, f.b, f.e) == NULL)
+                return false;
         }
     }
 
-    // Implicit * grep
-    if (CountGrep == 0)
-        return true;
-
-    return false;
+    return true;
 }
 
 //-----------------------------------------------------------------------------
