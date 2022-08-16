@@ -9336,7 +9336,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
-    popup_ref.SourceWindow = g.NavWindow;
+    popup_ref.BackupNavWindow = g.NavWindow;            // When popup closes focus may be restored to NavWindow (depend on window type).
     popup_ref.OpenFrameCount = g.FrameCount;
     popup_ref.OpenParentId = parent_window->IDStack.back();
     popup_ref.OpenPopupPos = NavCalcPreferredRefPos();
@@ -9438,12 +9438,13 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
     IM_ASSERT(remaining >= 0 && remaining < g.OpenPopupStack.Size);
 
     // Trim open popup stack
-    ImGuiWindow* focus_window = g.OpenPopupStack[remaining].SourceWindow;
     ImGuiWindow* popup_window = g.OpenPopupStack[remaining].Window;
+    ImGuiWindow* popup_backup_nav_window = g.OpenPopupStack[remaining].BackupNavWindow;
     g.OpenPopupStack.resize(remaining);
 
     if (restore_focus_to_window_under_popup)
     {
+        ImGuiWindow* focus_window = (popup_window && popup_window->Flags & ImGuiWindowFlags_ChildMenu) ? popup_window->ParentWindow : popup_backup_nav_window;
         if (focus_window && !focus_window->WasActive && popup_window)
         {
             // Fallback
@@ -12689,8 +12690,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         for (int i = 0; i < g.OpenPopupStack.Size; i++)
         {
-            ImGuiWindow* window = g.OpenPopupStack[i].Window;
-            BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenPopupStack[i].PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
+            // As it's difficult to interact with tree nodes while popups are open, we display everything inline.
+            const ImGuiPopupData* popup_data = &g.OpenPopupStack[i];
+            ImGuiWindow* window = popup_data->Window;
+            BulletText("PopupID: %08x, Window: '%s' (%s%s), BackupNavWindow '%s', ParentWindow '%s'",
+                popup_data->PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? "Child;" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? "Menu;" : "",
+                popup_data->BackupNavWindow ? popup_data->BackupNavWindow->Name : "NULL", window && window->ParentWindow ? window->ParentWindow->Name : "NULL");
         }
         TreePop();
     }
