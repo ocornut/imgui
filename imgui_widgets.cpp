@@ -5195,7 +5195,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         bool accepted_drag_drop = false;
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
         {
-            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any //-V512
+            memcpy((float*)col, payload->Data, sizeof(float) * 3); // Preserve alpha if any //-V512 //-V1086
             value_changed = accepted_drag_drop = true;
         }
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
