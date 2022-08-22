@@ -9828,7 +9828,7 @@ void ImGui::OpenPopup(ImStrv str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->GetID(str_id);
-    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%.*s\" -> 0x%08X\n", (int)(str_id.End - str_id.Begin), str_id, id);
+    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%.*s\" -> 0x%08X\n", (int)(str_id.End - str_id.Begin), str_id.Begin, id);
     OpenPopupEx(id, popup_flags);
 }
 
@@ -12932,7 +12932,7 @@ static void RenderViewportsThumbnails()
 // Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
 void ImGui::DebugTextEncoding(ImStrv str)
 {
-    Text("Text: \"%s\"", str);
+    Text("Text: \"%.*s\"", (int)str.length(), str.Begin);
     if (!BeginTable("list", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
         return;
     TableSetupColumn("Offset");
@@ -12945,7 +12945,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
         unsigned int c;
         const int c_utf8_len = ImTextCharFromUtf8(&c, p, str.End);
         TableNextColumn();
-        Text("%d", (int)(size_t)(p - str));
+        Text("%d", (int)(p - str.Begin));
         TableNextColumn();
         for (int byte_index = 0; byte_index < c_utf8_len; byte_index++)
         {
@@ -12955,7 +12955,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
         }
         TableNextColumn();
         if (GetFont()->FindGlyphNoFallback((ImWchar)c))
-            TextUnformatted(p, p + c_utf8_len);
+            TextUnformatted(ImStrv(p, p + c_utf8_len));
         else
             TextUnformatted((c == IM_UNICODE_CODEPOINT_INVALID) ? "[invalid]" : "[missing]");
         TableNextColumn();
