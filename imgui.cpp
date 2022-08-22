@@ -12179,7 +12179,7 @@ void ImGui::OpenPopup(ImStrv str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->GetID(str_id);
-    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%.*s\" -> 0x%08X\n", (int)(str_id.End - str_id.Begin), str_id, id);
+    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%.*s\" -> 0x%08X\n", (int)(str_id.End - str_id.Begin), str_id.Begin, id);
     OpenPopupEx(id, popup_flags);
 }
 
@@ -16153,7 +16153,7 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 // Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
 void ImGui::DebugTextEncoding(ImStrv str)
 {
-    Text("Text: \"%s\"", str);
+    Text("Text: \"%.*s\"", (int)str.length(), str.Begin);
     if (!BeginTable("##DebugTextEncoding", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable))
         return;
     TableSetupColumn("Offset");
@@ -16166,7 +16166,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
         unsigned int c;
         const int c_utf8_len = ImTextCharFromUtf8(&c, p, str.End); // As we may receive malformed UTF-8, pass an explicit end instead of relying on ImTextCharFromUtf8() assuming enough space.
         TableNextColumn();
-        Text("%d", (int)(size_t)(p - str));
+        Text("%d", (int)(p - str.Begin));
         TableNextColumn();
         for (int byte_index = 0; byte_index < c_utf8_len; byte_index++)
         {
@@ -16175,7 +16175,7 @@ void ImGui::DebugTextEncoding(ImStrv str)
             Text("0x%02X", (int)(unsigned char)p[byte_index]);
         }
         TableNextColumn();
-        TextUnformatted(p, p + c_utf8_len);
+        TextUnformatted(ImStrv(p, p + c_utf8_len));
         if (!GetFont()->IsGlyphInFont((ImWchar)c))
         {
             SameLine();
@@ -16365,7 +16365,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
                     ImFontAtlasRect r = {};
                     atlas->GetCustomRect(id, &r);
                     ImStrv buf;
-                    ImFormatStringToTempBuffer(&buf, NULL, "ID:%08X, used:%d, { w:%3d, h:%3d } { x:%4d, y:%4d }", id, entry.IsUsed, r.w, r.h, r.x, r.y);
+                    ImFormatStringToTempBuffer(&buf, "ID:%08X, used:%d, { w:%3d, h:%3d } { x:%4d, y:%4d }", id, entry.IsUsed, r.w, r.h, r.x, r.y);
                     TableNextColumn();
                     Selectable(buf.Begin);
                     if (IsItemHovered())
@@ -18003,28 +18003,28 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
 
     if (info->DescOffset == -1)
     {
-        const char* result = NULL;
-        const char* result_end = NULL;
+        ImStrv result;
         switch (data_type)
         {
         case ImGuiDataType_S32:
-            ImFormatStringToTempBuffer(&result, &result_end, "%d", (int)(intptr_t)data_id);
+            ImFormatStringToTempBuffer(&result, "%d", (int)(intptr_t)data_id);
             break;
         case ImGuiDataType_String:
-            ImFormatStringToTempBuffer(&result, &result_end, "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
+            ImFormatStringToTempBuffer(&result, "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
             break;
         case ImGuiDataType_Pointer:
-            ImFormatStringToTempBuffer(&result, &result_end, "(void*)0x%p", data_id);
+            ImFormatStringToTempBuffer(&result, "(void*)0x%p", data_id);
             break;
         case ImGuiDataType_ID:
             // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
-            ImFormatStringToTempBuffer(&result, &result_end, "0x%08X [override]", id);
+            ImFormatStringToTempBuffer(&result, "0x%08X [override]", id);
             break;
         default:
             IM_ASSERT(0);
         }
         info->DescOffset = query->ResultsDescBuf.size();
-        query->ResultsDescBuf.append(result, result_end + 1); // Include zero terminator
+        result.End++; // Include zero terminator
+        query->ResultsDescBuf.append(result);
     }
     info->QuerySuccess = true;
     if (info->DataType == -1)
@@ -18064,7 +18064,7 @@ static const char* DebugItemPathQuery_GetResultAsPath(ImGuiDebugItemPathQuery* q
             if (c == '/')
                 buf->append("\\");
             if (c < 256 || !hex_encode_non_ascii_chars)
-                buf->append(p, p_next);
+                buf->append(ImStrv(p, p_next));
             else for (; p < p_next; p++)
                 buf->appendf("\\x%02x", (unsigned char)*p);
             p = p_next;
@@ -18090,6 +18090,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     tool->LastActiveFrame = g.FrameCount;
     const char* result_path = DebugItemPathQuery_GetResultAsPath(query, tool->OptHexEncodeNonAsciiChars);
     Text("0x%08X", query->MainID);
+
     SameLine();
     MetricsHelpMarker("Hover an item with the mouse to display elements of the ID Stack leading to the item's final ID.\nEach level of the stack correspond to a PushID() call.\nAll levels of the stack are hashed together to make the final ID of a widget (ID displayed at the bottom level of the stack).\nRead FAQ entry about the ID stack for details.");
 
