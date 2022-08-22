@@ -1800,7 +1800,6 @@ struct ImGuiContext
     ImGuiWindow*            CurrentWindow;                      // Window being drawn into
     ImGuiWindow*            HoveredWindow;                      // Window the mouse is hovering. Will typically catch mouse inputs.
     ImGuiWindow*            HoveredWindowUnderMovingWindow;     // Hovered window ignoring MovingWindow. Only set if MovingWindow is set.
-    ImGuiDockNode*          HoveredDockNode;                    // [Debug] Hovered dock node.
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actual window that is moved is generally MovingWindow->RootWindowDockTree.
     ImGuiWindow*            WheelingWindow;                     // Track the window we started mouse-wheeling on. Until a timer elapse or mouse has moved, generally keep scrolling the same window even if during the course of scrolling the mouse ends up hovering a child window.
     ImVec2                  WheelingWindowRefMousePos;
@@ -2033,6 +2032,7 @@ struct ImGuiContext
     ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
     ImGuiMetricsConfig      DebugMetricsConfig;
     ImGuiStackTool          DebugStackTool;
+    ImGuiDockNode*          DebugHoveredDockNode;               // Hovered dock node.
 
     // Misc
     float                   FramerateSecPerFrame[60];           // Calculate estimate of framerate for user over the last 60 frames..
@@ -2064,7 +2064,6 @@ struct ImGuiContext
         CurrentWindow = NULL;
         HoveredWindow = NULL;
         HoveredWindowUnderMovingWindow = NULL;
-        HoveredDockNode = NULL;
         MovingWindow = NULL;
         WheelingWindow = NULL;
         WheelingWindowTimer = 0.0f;
@@ -2199,6 +2198,7 @@ struct ImGuiContext
         DebugItemPickerActive = false;
         DebugItemPickerMouseButton = ImGuiMouseButton_Left;
         DebugItemPickerBreakId = 0;
+        DebugHoveredDockNode = NULL;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = FramerateSecPerFrameCount = 0;

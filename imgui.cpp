@@ -13998,13 +13998,13 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiContext* ctx)
     // [DEBUG] Store hovered dock node.
     // We could in theory use DockNodeTreeFindVisibleNodeByPos() on the root host dock node, but using ->DockNode is a good shortcut.
     // Note this is mostly a debug thing and isn't actually used for docking target, because docking involve more detailed filtering.
-    g.HoveredDockNode = NULL;
+    g.DebugHoveredDockNode = NULL;
     if (ImGuiWindow* hovered_window = g.HoveredWindowUnderMovingWindow)
     {
         if (hovered_window->DockNodeAsHost)
-            g.HoveredDockNode = DockNodeTreeFindVisibleNodeByPos(hovered_window->DockNodeAsHost, g.IO.MousePos);
+            g.DebugHoveredDockNode = DockNodeTreeFindVisibleNodeByPos(hovered_window->DockNodeAsHost, g.IO.MousePos);
         else if (hovered_window->RootWindow->DockNode)
-            g.HoveredDockNode = hovered_window->RootWindow->DockNode;
+            g.DebugHoveredDockNode = hovered_window->RootWindow->DockNode;
     }
 
     // Process Docking requests
@@ -18250,7 +18250,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
         Text("HoveredWindow->Root: '%s'", g.HoveredWindow ? g.HoveredWindow->RootWindowDockTree->Name : "NULL");
         Text("HoveredWindowUnderMovingWindow: '%s'", g.HoveredWindowUnderMovingWindow ? g.HoveredWindowUnderMovingWindow->Name : "NULL");
-        Text("HoveredDockNode: 0x%08X", g.HoveredDockNode ? g.HoveredDockNode->ID : 0);
+        Text("HoveredDockNode: 0x%08X", g.DebugHoveredDockNode ? g.DebugHoveredDockNode->ID : 0);
         Text("MovingWindow: '%s'", g.MovingWindow ? g.MovingWindow->Name : "NULL");
         Text("MouseViewport: 0x%08X (UserHovered 0x%08X, LastHovered 0x%08X)", g.MouseViewport->ID, g.IO.MouseHoveredViewport, g.MouseLastHoveredViewport ? g.MouseLastHoveredViewport->ID : 0);
         Unindent();
@@ -18338,11 +18338,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
 #ifdef IMGUI_HAS_DOCK
     // Overlay: Display Docking info
-    if (cfg->ShowDockingNodes && g.IO.KeyCtrl && g.HoveredDockNode)
+    if (cfg->ShowDockingNodes && g.IO.KeyCtrl && g.DebugHoveredDockNode)
     {
         char buf[64] = "";
         char* p = buf;
-        ImGuiDockNode* node = g.HoveredDockNode;
+        ImGuiDockNode* node = g.DebugHoveredDockNode;
         ImDrawList* overlay_draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList(GetMainViewport());
         p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode() ? " *CentralNode*" : "");
         p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "WindowClass: %08X\n", node->WindowClass.ClassId);
