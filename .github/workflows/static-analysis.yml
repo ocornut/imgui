@@ -10,7 +10,7 @@ on:
 
 jobs:
   PVS-Studio:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
         with:
@@ -46,7 +46,7 @@ jobs:
           plog-converter -a 'GA:1,2;OP:1' -d V1071 -t errorfile -w pvs-studio.log
 
   Discord-CI:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: [PVS-Studio]
     if: always()
     steps:
