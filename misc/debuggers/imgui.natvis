@@ -53,7 +53,8 @@ More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/crea
 
 <!-- String view (non zero-terminated begin/end pair) -->
 <Type Name="ImStrv">
-  <DisplayString>{Begin,[End-Begin]s} ({End-Begin,d})</DisplayString>
+  <DisplayString>{Begin,[End-Begin]s8} ({End-Begin,d})</DisplayString>
+  <StringView>Begin,[End-Begin]s8</StringView>
 </Type>
 
 <Type Name="ImGuiWindow">
