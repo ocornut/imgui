@@ -4176,6 +4176,7 @@ void ImGui::UpdateMouseWheel()
     ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
     if (!window || window->Collapsed)
         return;
+    g.IO.WantRender = true;
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
@@ -4345,6 +4346,7 @@ void ImGui::NewFrame()
 
     // Load settings on first frame, save settings when modified (after a delay)
     UpdateSettings();
+    g.IO.WantRender = false;
 
     g.Time += g.IO.DeltaTime;
     g.WithinFrameScope = true;
@@ -4402,6 +4404,8 @@ void ImGui::NewFrame()
         g.HoveredIdTimer += g.IO.DeltaTime;
     if (g.HoveredId && g.ActiveId != g.HoveredId)
         g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
+    if (g.HoveredId != g.HoveredIdPreviousFrame)
+        g.IO.WantRender = true;
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredIdPreviousFrameUsingMouseWheel = g.HoveredIdUsingMouseWheel;
     g.HoveredId = 0;
@@ -4420,7 +4424,10 @@ void ImGui::NewFrame()
 
     // Update ActiveId data (clear reference to active widget if the widget isn't alive anymore)
     if (g.ActiveId)
+    {
         g.ActiveIdTimer += g.IO.DeltaTime;
+        g.IO.WantRender = true;
+    }
     g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdPreviousFrameWindow = g.ActiveIdWindow;
@@ -4490,7 +4497,11 @@ void ImGui::NewFrame()
 
     // Background darkening/whitening
     if (GetTopMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
+    {
         g.DimBgRatio = ImMin(g.DimBgRatio + g.IO.DeltaTime * 6.0f, 1.0f);
+        if (g.DimBgRatio != 1.0)
+            g.IO.WantRender = true;
+    }
     else
         g.DimBgRatio = ImMax(g.DimBgRatio - g.IO.DeltaTime * 10.0f, 0.0f);
 
@@ -6905,6 +6916,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     BringWindowToFocusFront(focus_front_window);
     if (((window->Flags | display_front_window->Flags) & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
         BringWindowToDisplayFront(display_front_window);
+    g.IO.WantRender = true;
 }
 
 void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window)
