@@ -84,6 +84,7 @@ Other Changes:
   to use the Item Picker in e.g. menus. (#2673)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
+- Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 
