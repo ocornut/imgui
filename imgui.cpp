@@ -17572,7 +17572,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
 // Display line, search for 0xXXXXXXXX identifiers and call DebugLocateItemOnHover() when hovered.
 void ImGui::DebugTextUnformattedWithLocateItem(const char* line_begin, const char* line_end)
 {
-    TextUnformatted(line_begin, line_end);
+    TextUnformatted(ImStrv(line_begin, line_end));
     if (!IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         return;
     ImGuiContext& g = *GImGui;
@@ -17582,8 +17582,8 @@ void ImGui::DebugTextUnformattedWithLocateItem(const char* line_begin, const cha
         ImGuiID id = 0;
         if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1 || ImCharIsXdigitA(p[10]))
             continue;
-        ImVec2 p0 = CalcTextSize(line_begin, p);
-        ImVec2 p1 = CalcTextSize(p, p + 10);
+        ImVec2 p0 = CalcTextSize(ImStrv(line_begin, p));
+        ImVec2 p1 = CalcTextSize(ImStrv(p, p + 10));
         g.LastItemData.Rect = ImRect(text_rect.Min + ImVec2(p0.x, 0.0f), text_rect.Min + ImVec2(p0.x + p1.x, p1.y));
         if (IsMouseHoveringRect(g.LastItemData.Rect.Min, g.LastItemData.Rect.Max, true))
             DebugLocateItemOnHover(id);
