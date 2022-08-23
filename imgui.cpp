@@ -2669,10 +2669,9 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     if (data->StepNo == 0 && table != NULL && !table->IsUnfrozenRows)
     {
         clipper->DisplayStart = data->ItemsFrozen;
-        clipper->DisplayEnd = data->ItemsFrozen + 1;
-        if (clipper->DisplayStart >= clipper->ItemsCount)
-            return false;
-        data->ItemsFrozen++;
+        clipper->DisplayEnd = ImMin(data->ItemsFrozen + 1, clipper->ItemsCount);
+        if (clipper->DisplayStart < clipper->DisplayEnd)
+            data->ItemsFrozen++;
         return true;
     }
 
@@ -2687,8 +2686,6 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             data->Ranges.push_front(ImGuiListClipperRange::FromIndices(data->ItemsFrozen, data->ItemsFrozen + 1));
             clipper->DisplayStart = ImMax(data->Ranges[0].Min, data->ItemsFrozen);
             clipper->DisplayEnd = ImMin(data->Ranges[0].Max, clipper->ItemsCount);
-            if (clipper->DisplayStart == clipper->DisplayEnd)
-                return false;
             data->StepNo = 1;
             return true;
         }
@@ -2778,9 +2775,10 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
 bool ImGuiListClipper::Step()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
     bool need_items_height = (ItemsHeight <= 0.0f);
     bool ret = ImGuiListClipper_StepInternal(this);
+    if (ret && (DisplayStart == DisplayEnd))
+        ret = false;
     if (g.CurrentTable && g.CurrentTable->IsUnfrozenRows == false)
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): inside frozen table row.\n");
     if (need_items_height && ItemsHeight > 0.0f)
