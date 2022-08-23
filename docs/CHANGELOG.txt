@@ -79,7 +79,7 @@ Other Changes:
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
-- Debug Tools: Debug Log: Added IO events logging.
+- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
