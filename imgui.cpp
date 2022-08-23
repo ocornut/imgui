@@ -2592,9 +2592,6 @@ ImGuiListClipper::~ImGuiListClipper()
     End();
 }
 
-// Use case A: Begin() called from constructor with items_height<0, then called again from Step() in StepNo 1
-// Use case B: Begin() called from constructor with items_height>0
-// FIXME-LEGACY: Ideally we should remove the Begin/End functions but they are part of the legacy API we still support. This is why some of the code in Step() calling Begin() and reassign some fields, spaghetti style.
 void ImGuiListClipper::Begin(int items_count, float items_height)
 {
     ImGuiContext& g = *GImGui;
@@ -2650,11 +2647,11 @@ void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
         data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_min, item_max));
 }
 
-bool ImGuiListClipper::Step()
+static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
+    ImGuiListClipperData* data = (ImGuiListClipperData*)clipper->TempData;
     IM_ASSERT(data != NULL && "Called ImGuiListClipper::Step() too many times, or before ImGuiListClipper::Begin() ?");
 
     ImGuiTable* table = g.CurrentTable;
@@ -2662,17 +2659,17 @@ bool ImGuiListClipper::Step()
         ImGui::TableEndRow(table);
 
     // No items
-    if (ItemsCount == 0 || GetSkipItemForListClipping())
-        return (void)End(), false;
+    if (clipper->ItemsCount == 0 || GetSkipItemForListClipping())
+        return false;
 
     // While we are in frozen row state, keep displaying items one by one, unclipped
     // FIXME: Could be stored as a table-agnostic state.
     if (data->StepNo == 0 && table != NULL && !table->IsUnfrozenRows)
     {
-        DisplayStart = data->ItemsFrozen;
-        DisplayEnd = data->ItemsFrozen + 1;
-        if (DisplayStart >= ItemsCount)
-            return (void)End(), false;
+        clipper->DisplayStart = data->ItemsFrozen;
+        clipper->DisplayEnd = data->ItemsFrozen + 1;
+        if (clipper->DisplayStart >= clipper->ItemsCount)
+            return false;
         data->ItemsFrozen++;
         return true;
     }
@@ -2681,15 +2678,15 @@ bool ImGuiListClipper::Step()
     bool calc_clipping = false;
     if (data->StepNo == 0)
     {
-        StartPosY = window->DC.CursorPos.y;
-        if (ItemsHeight <= 0.0f)
+        clipper->StartPosY = window->DC.CursorPos.y;
+        if (clipper->ItemsHeight <= 0.0f)
         {
             // Submit the first item (or range) so we can measure its height (generally the first range is 0..1)
             data->Ranges.push_front(ImGuiListClipperRange::FromIndices(data->ItemsFrozen, data->ItemsFrozen + 1));
-            DisplayStart = ImMax(data->Ranges[0].Min, data->ItemsFrozen);
-            DisplayEnd = ImMin(data->Ranges[0].Max, ItemsCount);
-            if (DisplayStart == DisplayEnd)
-                return (void)End(), false;
+            clipper->DisplayStart = ImMax(data->Ranges[0].Min, data->ItemsFrozen);
+            clipper->DisplayEnd = ImMin(data->Ranges[0].Max, clipper->ItemsCount);
+            if (clipper->DisplayStart == clipper->DisplayEnd)
+                return false;
             data->StepNo = 1;
             return true;
         }
@@ -2697,29 +2694,29 @@ bool ImGuiListClipper::Step()
     }
 
     // Step 1: Let the clipper infer height from first range
-    if (ItemsHeight <= 0.0f)
+    if (clipper->ItemsHeight <= 0.0f)
     {
         IM_ASSERT(data->StepNo == 1);
         if (table)
-            IM_ASSERT(table->RowPosY1 == StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
+            IM_ASSERT(table->RowPosY1 == clipper->StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
 
-        ItemsHeight = (window->DC.CursorPos.y - StartPosY) / (float)(DisplayEnd - DisplayStart);
-        bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
+        clipper->ItemsHeight = (window->DC.CursorPos.y - clipper->StartPosY) / (float)(clipper->DisplayEnd - clipper->DisplayStart);
+        bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(clipper->StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
         if (affected_by_floating_point_precision)
-            ItemsHeight = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y; // FIXME: Technically wouldn't allow multi-line entries.
+            clipper->ItemsHeight = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y; // FIXME: Technically wouldn't allow multi-line entries.
 
-        IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
+        IM_ASSERT(clipper->ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
         calc_clipping = true;   // If item height had to be calculated, calculate clipping afterwards.
     }
 
     // Step 0 or 1: Calculate the actual ranges of visible elements.
-    const int already_submitted = DisplayEnd;
+    const int already_submitted = clipper->DisplayEnd;
     if (calc_clipping)
     {
         if (g.LogEnabled)
         {
             // If logging is active, do not perform any clipping
-            data->Ranges.push_back(ImGuiListClipperRange::FromIndices(0, ItemsCount));
+            data->Ranges.push_back(ImGuiListClipperRange::FromIndices(0, clipper->ItemsCount));
         }
         else
         {
@@ -2728,7 +2725,7 @@ bool ImGuiListClipper::Step()
             if (is_nav_request)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(g.NavScoringNoClipRect.Min.y, g.NavScoringNoClipRect.Max.y, 0, 0));
             if (is_nav_request && (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) && g.NavTabbingDir == -1)
-                data->Ranges.push_back(ImGuiListClipperRange::FromIndices(ItemsCount - 1, ItemsCount));
+                data->Ranges.push_back(ImGuiListClipperRange::FromIndices(clipper->ItemsCount - 1, clipper->ItemsCount));
 
             // Add focused/active item
             ImRect nav_rect_abs = ImGui::WindowRectRelToAbs(window, window->NavRectRel[0]);
@@ -2748,10 +2745,10 @@ bool ImGuiListClipper::Step()
         for (int i = 0; i < data->Ranges.Size; i++)
             if (data->Ranges[i].PosToIndexConvert)
             {
-                int m1 = (int)(((double)data->Ranges[i].Min - window->DC.CursorPos.y - data->LossynessOffset) / ItemsHeight);
-                int m2 = (int)((((double)data->Ranges[i].Max - window->DC.CursorPos.y - data->LossynessOffset) / ItemsHeight) + 0.999999f);
-                data->Ranges[i].Min = ImClamp(already_submitted + m1 + data->Ranges[i].PosToIndexOffsetMin, already_submitted, ItemsCount - 1);
-                data->Ranges[i].Max = ImClamp(already_submitted + m2 + data->Ranges[i].PosToIndexOffsetMax, data->Ranges[i].Min + 1, ItemsCount);
+                int m1 = (int)(((double)data->Ranges[i].Min - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight);
+                int m2 = (int)((((double)data->Ranges[i].Max - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight) + 0.999999f);
+                data->Ranges[i].Min = ImClamp(already_submitted + m1 + data->Ranges[i].PosToIndexOffsetMin, already_submitted, clipper->ItemsCount - 1);
+                data->Ranges[i].Max = ImClamp(already_submitted + m2 + data->Ranges[i].PosToIndexOffsetMax, data->Ranges[i].Min + 1, clipper->ItemsCount);
                 data->Ranges[i].PosToIndexConvert = false;
             }
         ImGuiListClipper_SortAndFuseRanges(data->Ranges, data->StepNo);
@@ -2760,21 +2757,28 @@ bool ImGuiListClipper::Step()
     // Step 0+ (if item height is given in advance) or 1+: Display the next range in line.
     if (data->StepNo < data->Ranges.Size)
     {
-        DisplayStart = ImMax(data->Ranges[data->StepNo].Min, already_submitted);
-        DisplayEnd = ImMin(data->Ranges[data->StepNo].Max, ItemsCount);
-        if (DisplayStart > already_submitted) //-V1051
-            ImGuiListClipper_SeekCursorForItem(this, DisplayStart);
+        clipper->DisplayStart = ImMax(data->Ranges[data->StepNo].Min, already_submitted);
+        clipper->DisplayEnd = ImMin(data->Ranges[data->StepNo].Max, clipper->ItemsCount);
+        if (clipper->DisplayStart > already_submitted) //-V1051
+            ImGuiListClipper_SeekCursorForItem(clipper, clipper->DisplayStart);
         data->StepNo++;
         return true;
     }
 
     // After the last step: Let the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
-    if (ItemsCount < INT_MAX)
-        ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
+    if (clipper->ItemsCount < INT_MAX)
+        ImGuiListClipper_SeekCursorForItem(clipper, clipper->ItemsCount);
 
-    End();
     return false;
+}
+
+bool ImGuiListClipper::Step()
+{
+    bool ret = ImGuiListClipper_StepInternal(this);
+    if (ret == false)
+        End();
+    return ret;
 }
 
 //-----------------------------------------------------------------------------
