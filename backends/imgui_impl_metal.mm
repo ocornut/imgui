@@ -14,6 +14,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-XX-XX: Metal: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.
 //  2022-06-01: Metal: Fixed null dereference on exit inside command buffer completion handler.
@@ -712,7 +713,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     pipelineDescriptor.vertexFunction = vertexFunction;
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-    pipelineDescriptor.sampleCount = self.framebufferDescriptor.sampleCount;
+    pipelineDescriptor.rasterSampleCount = self.framebufferDescriptor.sampleCount;
     pipelineDescriptor.colorAttachments[0].pixelFormat = self.framebufferDescriptor.colorPixelFormat;
     pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
     pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;

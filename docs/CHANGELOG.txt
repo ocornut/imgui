@@ -132,6 +132,8 @@ Other Changes:
 
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
+- InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
+  by converting them to half-width (U+0021..U+007E).
 - Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
@@ -141,11 +143,15 @@ Other Changes:
   can apply to mouse data as well. (#4921)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
+- Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
+  (#2589, #5535, #5264, #4972)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
-- Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
+- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
+- Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
+- Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 Docking+Viewports Branch:
@@ -253,10 +259,10 @@ Other Changes:
 - DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
 - DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
 - DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
-- Debug: Added ShowDebugLogWindow() showing an opt-in synthetic log of principal events (focus, popup,
-  active id changes) helping to diagnose issues.
-- Debug: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about whether
-  you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Debug Tools: Debug Log: Added ShowDebugLogWindow() showing an opt-in synthetic log of principal events
+  (focus, popup, active id changes) helping to diagnose issues.
+- Debug Tools: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about
+  whether you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
 - Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
 - Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
 - Metrics: Added "InputText" section to visualize internal state (#4947, #4949).
@@ -2063,8 +2069,8 @@ Other Changes:
   returning true. This also effectively make ColorEdit4() not incorrect trigger IsItemDeactivatedAfterEdit()
   when clicking the color button to open the picker popup. (#1875)
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
-- Debug, Metrics: Added "Tools->Item Picker" tool which allow clicking on a widget to break in the debugger
-  within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h if needed.
+- Debug Tools: Added "Metrics->Tools->Item Picker" tool which allow clicking on a widget to break in the
+  debugger within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h.
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)
