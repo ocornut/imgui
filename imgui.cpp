@@ -10963,10 +10963,6 @@ static void ImGui::NavUpdate()
         for (ImGuiKey key : nav_keyboard_keys_to_change_source)
             if (IsKeyDown(key))
                 g.NavInputSource = ImGuiInputSource_Keyboard;
-    if (!nav_gamepad_active && g.NavInputSource == ImGuiInputSource_Gamepad)
-        g.NavInputSource = ImGuiInputSource_None;
-    if (!nav_keyboard_active && g.NavInputSource == ImGuiInputSource_Keyboard)
-        g.NavInputSource = ImGuiInputSource_None;
 
     // Process navigation init request (select first/default focus)
     if (g.NavInitResultId != 0)
@@ -11616,7 +11612,7 @@ static void ImGui::NavUpdateWindowing()
     const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, false);
-    const bool start_windowing_with_keyboard = allow_windowing && nav_keyboard_active && !g.NavWindowingTarget && io.KeyCtrl && IsKeyPressed(ImGuiKey_Tab, false);
+    const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && io.KeyCtrl && IsKeyPressed(ImGuiKey_Tab, false); // Note: enabled even without NavEnableKeyboard!
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
