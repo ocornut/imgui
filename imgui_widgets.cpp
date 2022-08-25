@@ -1647,7 +1647,7 @@ bool ImGui::BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags
     if (flags & ImGuiComboFlags_CustomPreview)
     {
         g.ComboPreviewData.PreviewRect = ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
-        IM_ASSERT(!preview_value);
+        IM_ASSERT(preview_value.empty());
     }
 
     // Render preview and label
