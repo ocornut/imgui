@@ -2663,7 +2663,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
 
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a Drag widget, p_min and p_max are optional.
 // Read code of e.g. DragFloat(), DragInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, ImStrv format_p, ImGuiSliderFlags flags)
+bool ImGui::DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2683,21 +2683,9 @@ bool ImGui::DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, floa
     if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
         return false;
 
-    // FIXME-IMSTR
-    const char* format;
-    char format_buf[64];
-    if (!format_p)
-    {
-        // Default format string when passing NULL
+    // Default format string when passing NULL
+    if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    }
-    else
-    {
-        // Copy format string (format may not be zero-terminated)
-        format = format_buf;
-        IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_buf));
-        ImStrncpy(format_buf, format_p, IM_ARRAYSIZE(format_buf));
-    }
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
@@ -2774,7 +2762,7 @@ bool ImGui::DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, floa
     return value_changed;
 }
 
-bool ImGui::DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2809,28 +2797,28 @@ bool ImGui::DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int
     return value_changed;
 }
 
-bool ImGui::DragFloat(ImStrv label, float* v, float v_speed, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragFloat(ImStrv label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragFloat2(ImStrv label, float v[2], float v_speed, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragFloat2(ImStrv label, float v[2], float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragFloat3(ImStrv label, float v[3], float v_speed, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragFloat3(ImStrv label, float v[3], float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 3, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragFloat4(ImStrv label, float v[4], float v_speed, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragFloat4(ImStrv label, float v[4], float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
 // NB: You likely want to specify the ImGuiSliderFlags_AlwaysClamp when using this.
-bool ImGui::DragFloatRange2(ImStrv label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, ImStrv format, ImStrv format_max, ImGuiSliderFlags flags)
+bool ImGui::DragFloatRange2(ImStrv label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2864,28 +2852,28 @@ bool ImGui::DragFloatRange2(ImStrv label, float* v_current_min, float* v_current
 }
 
 // NB: v_speed is float to allow adjusting the drag speed with more precision
-bool ImGui::DragInt(ImStrv label, int* v, float v_speed, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragInt(ImStrv label, int* v, float v_speed, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalar(label, ImGuiDataType_S32, v, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt2(ImStrv label, int v[2], float v_speed, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragInt2(ImStrv label, int v[2], float v_speed, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 2, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt3(ImStrv label, int v[3], float v_speed, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragInt3(ImStrv label, int v[3], float v_speed, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 3, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt4(ImStrv label, int v[4], float v_speed, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::DragInt4(ImStrv label, int v[4], float v_speed, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
 // NB: You likely want to specify the ImGuiSliderFlags_AlwaysClamp when using this.
-bool ImGui::DragIntRange2(ImStrv label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, ImStrv format, ImStrv format_max, ImGuiSliderFlags flags)
+bool ImGui::DragIntRange2(ImStrv label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* format, const char* format_max, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3281,7 +3269,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
 
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a slider, they are all required.
 // Read code of e.g. SliderFloat(), SliderInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format_p, ImGuiSliderFlags flags)
+bool ImGui::SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3301,21 +3289,9 @@ bool ImGui::SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, co
     if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
         return false;
 
-    // FIXME-IMSTR
-    const char* format;
-    char format_buf[64];
-    if (!format_p)
-    {
-        // Default format string when passing NULL
+    // Default format string when passing NULL
+    if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    }
-    else
-    {
-        // Copy format string (format may not be zero-terminated)
-        format = format_buf;
-        IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_buf));
-        ImStrncpy(format_buf, format_p, IM_ARRAYSIZE(format_buf));
-    }
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
@@ -3380,7 +3356,7 @@ bool ImGui::SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, co
 }
 
 // Add multiple sliders on 1 line for compact edition of multiple components
-bool ImGui::SliderScalarN(ImStrv label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderScalarN(ImStrv label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3415,27 +3391,27 @@ bool ImGui::SliderScalarN(ImStrv label, ImGuiDataType data_type, void* v, int co
     return value_changed;
 }
 
-bool ImGui::SliderFloat(ImStrv label, float* v, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat(ImStrv label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderFloat2(ImStrv label, float v[2], float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat2(ImStrv label, float v[2], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderFloat3(ImStrv label, float v[3], float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat3(ImStrv label, float v[3], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderFloat4(ImStrv label, float v[4], float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat4(ImStrv label, float v[4], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderAngle(ImStrv label, float* v_rad, float v_degrees_min, float v_degrees_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderAngle(ImStrv label, float* v_rad, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags)
 {
     if (!format)
         format = "%.0f deg";
@@ -3446,27 +3422,27 @@ bool ImGui::SliderAngle(ImStrv label, float* v_rad, float v_degrees_min, float v
     return value_changed;
 }
 
-bool ImGui::SliderInt(ImStrv label, int* v, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderInt(ImStrv label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalar(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt2(ImStrv label, int v[2], int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderInt2(ImStrv label, int v[2], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 2, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt3(ImStrv label, int v[3], int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderInt3(ImStrv label, int v[3], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 3, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt4(ImStrv label, int v[4], int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::SliderInt4(ImStrv label, int v[4], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 4, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStrv format_p, ImGuiSliderFlags flags)
+bool ImGui::VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3484,21 +3460,9 @@ bool ImGui::VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_t
     if (!ItemAdd(frame_bb, id))
         return false;
 
-    // FIXME-IMSTR
-    const char* format;
-    char format_buf[64];
-    if (!format_p)
-    {
-        // Default format string when passing NULL
+    // Default format string when passing NULL
+    if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    }
-    else
-    {
-        // Copy format string (format may not be zero-terminated)
-        format = format_buf;
-        IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_buf));
-        ImStrncpy(format_buf, format_p, IM_ARRAYSIZE(format_buf));
-    }
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
     const bool clicked = hovered && IsMouseClicked(0, ImGuiInputFlags_None, id);
@@ -3538,12 +3502,12 @@ bool ImGui::VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_t
     return value_changed;
 }
 
-bool ImGui::VSliderFloat(ImStrv label, const ImVec2& size, float* v, float v_min, float v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::VSliderFloat(ImStrv label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return VSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::VSliderInt(ImStrv label, const ImVec2& size, int* v, int v_min, int v_max, ImStrv format, ImGuiSliderFlags flags)
+bool ImGui::VSliderInt(ImStrv label, const ImVec2& size, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
 }
@@ -3773,7 +3737,7 @@ void ImGui::SetNextItemRefVal(ImGuiDataType data_type, void* p_data)
 
 // Note: p_data, p_step, p_step_fast are _pointers_ to a memory address holding the data. For an Input widget, p_step and p_step_fast are optional.
 // Read code of e.g. InputFloat(), InputInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_step, const void* p_step_fast, ImStrv format_p, ImGuiInputTextFlags flags)
+bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, const void* p_step, const void* p_step_fast, const char* format, ImGuiInputTextFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3783,21 +3747,8 @@ bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, con
     ImGuiStyle& style = g.Style;
     IM_ASSERT((flags & ImGuiInputTextFlags_EnterReturnsTrue) == 0); // Not supported by InputScalar(). Please open an issue if you this would be useful to you. Otherwise use IsItemDeactivatedAfterEdit()!
 
-    // FIXME-IMSTR
-    const char* format;
-    char format_buf[64];
-    if (!format_p)
-    {
-        // Default format string when passing NULL
+    if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    }
-    else
-    {
-        // Copy format string (format may not be zero-terminated)
-        format = format_buf;
-        IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_buf));
-        ImStrncpy(format_buf, format_p, IM_ARRAYSIZE(format_buf));
-    }
 
     void* p_data_default = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasRefVal) ? &g.NextItemData.RefVal : &g.DataTypeZeroValue;
 
@@ -3870,7 +3821,7 @@ bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, con
     return value_changed;
 }
 
-bool ImGui::InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_step, const void* p_step_fast, ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int components, const void* p_step, const void* p_step_fast, const char* format, ImGuiInputTextFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3905,22 +3856,22 @@ bool ImGui::InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, in
     return value_changed;
 }
 
-bool ImGui::InputFloat(ImStrv label, float* v, float step, float step_fast, ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputFloat(ImStrv label, float* v, float step, float step_fast, const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalar(label, ImGuiDataType_Float, (void*)v, (void*)(step > 0.0f ? &step : NULL), (void*)(step_fast > 0.0f ? &step_fast : NULL), format, flags);
 }
 
-bool ImGui::InputFloat2(ImStrv label, float v[2], ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputFloat2(ImStrv label, float v[2], const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalarN(label, ImGuiDataType_Float, v, 2, NULL, NULL, format, flags);
 }
 
-bool ImGui::InputFloat3(ImStrv label, float v[3], ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputFloat3(ImStrv label, float v[3], const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalarN(label, ImGuiDataType_Float, v, 3, NULL, NULL, format, flags);
 }
 
-bool ImGui::InputFloat4(ImStrv label, float v[4], ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputFloat4(ImStrv label, float v[4], const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalarN(label, ImGuiDataType_Float, v, 4, NULL, NULL, format, flags);
 }
@@ -3947,7 +3898,7 @@ bool ImGui::InputInt4(ImStrv label, int v[4], ImGuiInputTextFlags flags)
     return InputScalarN(label, ImGuiDataType_S32, v, 4, NULL, NULL, "%d", flags);
 }
 
-bool ImGui::InputDouble(ImStrv label, double* v, double step, double step_fast, ImStrv format, ImGuiInputTextFlags flags)
+bool ImGui::InputDouble(ImStrv label, double* v, double step, double step_fast, const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalar(label, ImGuiDataType_Double, (void*)v, (void*)(step > 0.0 ? &step : NULL), (void*)(step_fast > 0.0 ? &step_fast : NULL), format, flags);
 }
