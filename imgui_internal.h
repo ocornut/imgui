@@ -727,6 +727,8 @@ struct IMGUI_API ImDrawListSharedData
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
+    float           FontLineHeight;             // Current/default font line height (optional, for simplified AddText overload)
+    float           FontBaselineOffset;         // Current/default font baseline offset (optional, for simplified AddText overload)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
@@ -1597,8 +1599,10 @@ struct ImGuiContext
     ImVector<ImGuiInputEvent> InputEventsTrail;                 // Past input events processed in NewFrame(). This is to allow domain-specific application to access e.g mouse/pen trail.
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
-    float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
-    float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
+    float                   FontSize;                           // (Shortcut) == FontBaseScale * g.CurrentWindow->FontWindowScale * Font->FontSize == window->FontSize(). Text height for current window.
+    float                   FontLineHeight;                     // (Shortcut) == FontBaseScale * g.CurrentWindow->FontWindowScale * (Font->FontSize + Font->ExtraLineHeight) (optional, for simplified AddText overload)
+    float                   FontBaselineOffset;                 // (Shortcut) == FontBaseScale * g.CurrentWindow->FontWindowScale * Font->BaselineOffset (optional, for simplified AddText overload)
+    float                   FontBaseScale;                      // (Shortcut) == IO.FontGlobalScale * Font->Scale. Base text scale.
     ImDrawListSharedData    DrawListSharedData;
     double                  Time;
     int                     FrameCount;
@@ -1863,7 +1867,7 @@ struct ImGuiContext
         Initialized = false;
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
         Font = NULL;
-        FontSize = FontBaseSize = 0.0f;
+        FontSize = FontBaseScale = FontLineHeight = FontBaselineOffset = 0.0f;
         IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
         Time = 0.0f;
         FrameCount = 0;
@@ -2176,10 +2180,12 @@ public:
 
     // We don't use g.FontSize because the window may be != g.CurrentWindow.
     ImRect      Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
-    float       CalcFontSize() const    { ImGuiContext& g = *GImGui; float scale = g.FontBaseSize * FontWindowScale; if (ParentWindow) scale *= ParentWindow->FontWindowScale; return scale; }
-    float       TitleBarHeight() const  { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + g.Style.FramePadding.y * 2.0f; }
+    float       CalcFontScale() const   { float scale = FontWindowScale; if (ParentWindow) scale *= ParentWindow->FontWindowScale; return scale; }
+    float       CalcFontWidth() const   { ImGuiContext& g = *GImGui; return CalcFontScale() * g.FontSize; }
+    float       CalcFontHeight() const  { ImGuiContext& g = *GImGui; return CalcFontScale() * g.FontLineHeight; }
+    float       TitleBarHeight() const  { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontHeight() + g.Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
-    float       MenuBarHeight() const   { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_MenuBar) ? DC.MenuBarOffset.y + CalcFontSize() + g.Style.FramePadding.y * 2.0f : 0.0f; }
+    float       MenuBarHeight() const   { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_MenuBar) ? DC.MenuBarOffset.y + CalcFontHeight() + g.Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
 };
 
