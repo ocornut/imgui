@@ -4305,7 +4305,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             state->CursorAnimReset();
         }
-        else if (io.MouseClicked[0] && !state->SelectedAllMouseLock)
+        else if (io.MouseClicked[0] && !state->SelectedAllMouseLock && !io.KeyShift)
         {
             // FIXME: unselect on late click could be done release?
             if (hovered)
@@ -4314,7 +4314,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 state->CursorAnimReset();
             }
         }
-        else if (io.MouseDown[0] && !state->SelectedAllMouseLock && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
+        else if (io.MouseDown[0] && !state->SelectedAllMouseLock && ((io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f) || io.KeyShift))
         {
             stb_textedit_drag(state, &state->Stb, mouse_x, mouse_y);
             state->CursorAnimReset();
