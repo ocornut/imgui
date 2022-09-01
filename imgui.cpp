@@ -1171,6 +1171,8 @@ ImGuiIO::ImGuiIO()
 #endif
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
+    HoverDelayNormal = 0.30f;
+    HoverDelayShort = 0.10f;
     UserData = NULL;
 
     Fonts = NULL;
@@ -2907,6 +2909,11 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 void ImGui::PopStyleColor(int count)
 {
     ImGuiContext& g = *GImGui;
+    if (g.ColorStack.Size < count)
+    {
+        IM_ASSERT_USER_ERROR(g.ColorStack.Size > count, "Calling PopStyleColor() too many times: stack underflow.");
+        count = g.ColorStack.Size;
+    }
     while (count > 0)
     {
         ImGuiColorMod& backup = g.ColorStack.back();
@@ -2996,6 +3003,11 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 void ImGui::PopStyleVar(int count)
 {
     ImGuiContext& g = *GImGui;
+    if (g.StyleVarStack.Size < count)
+    {
+        IM_ASSERT_USER_ERROR(g.StyleVarStack.Size > count, "Calling PopStyleVar() too many times: stack underflow.");
+        count = g.StyleVarStack.Size;
+    }
     while (count > 0)
     {
         // We avoid a generic memcpy(data, &backup.Backup.., GDataTypeSize[info->Type] * info->Count), the overhead in Debug is not worth it.
@@ -3641,6 +3653,24 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         // will never be overwritten so we need to detect the case.
         if (g.LastItemData.ID == window->MoveId && window->WriteAccessed)
             return false;
+    }
+
+    // Handle hover delay
+    // (some ideas: https://www.nngroup.com/articles/timing-exposing-content)
+    float delay;
+    if (flags & ImGuiHoveredFlags_DelayNormal)
+        delay = g.IO.HoverDelayNormal;
+    else if (flags & ImGuiHoveredFlags_DelayShort)
+        delay = g.IO.HoverDelayShort;
+    else
+        delay = 0.0f;
+    if (delay > 0.0f)
+    {
+        ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromRectangle(g.LastItemData.Rect);
+        if ((flags & ImGuiHoveredFlags_NoSharedDelay) && (g.HoverDelayIdPreviousFrame != hover_delay_id))
+            g.HoverDelayTimer = 0.0f;
+        g.HoverDelayId = hover_delay_id;
+        return g.HoverDelayTimer >= delay;
     }
 
     return true;
@@ -4630,6 +4660,23 @@ void ImGui::NewFrame()
             IM_ASSERT(0); // Other values unsupported
     }
 #endif
+
+    // Update hover delay for IsItemHovered() with delays and tooltips
+    g.HoverDelayIdPreviousFrame = g.HoverDelayId;
+    if (g.HoverDelayId != 0)
+    {
+        //if (g.IO.MouseDelta.x == 0.0f && g.IO.MouseDelta.y == 0.0f) // Need design/flags
+        g.HoverDelayTimer += g.IO.DeltaTime;
+        g.HoverDelayClearTimer = 0.0f;
+        g.HoverDelayId = 0;
+    }
+    else if (g.HoverDelayTimer > 0.0f)
+    {
+        // This gives a little bit of leeway before clearing the hover timer, allowing mouse to cross gaps
+        g.HoverDelayClearTimer += g.IO.DeltaTime;
+        if (g.HoverDelayClearTimer >= ImMax(0.20f, g.IO.DeltaTime * 2.0f)) // ~6 frames at 30 Hz + allow for low framerate
+            g.HoverDelayTimer = g.HoverDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
+    }
 
     // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
@@ -8378,6 +8425,8 @@ int ImGui::GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float repeat_ra
 {
     ImGuiContext& g = *GImGui;
     const ImGuiKeyData* key_data = GetKeyData(key);
+    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+        return 0;
     const float t = key_data->DownDuration;
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
@@ -8410,6 +8459,8 @@ bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
 bool ImGui::IsKeyPressedEx(ImGuiKey key, ImGuiInputFlags flags)
 {
     const ImGuiKeyData* key_data = GetKeyData(key);
+    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+        return false;
     const float t = key_data->DownDuration;
     if (t < 0.0f)
         return false;
@@ -8446,6 +8497,8 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (!g.IO.MouseDown[button]) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+        return false;
     const float t = g.IO.MouseDownDuration[button];
     if (t == 0.0f)
         return true;
@@ -9925,7 +9978,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
-    popup_ref.SourceWindow = g.NavWindow;
+    popup_ref.BackupNavWindow = g.NavWindow;            // When popup closes focus may be restored to NavWindow (depend on window type).
     popup_ref.OpenFrameCount = g.FrameCount;
     popup_ref.OpenParentId = parent_window->IDStack.back();
     popup_ref.OpenPopupPos = NavCalcPreferredRefPos();
@@ -10028,12 +10081,13 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
     IM_ASSERT(remaining >= 0 && remaining < g.OpenPopupStack.Size);
 
     // Trim open popup stack
-    ImGuiWindow* focus_window = g.OpenPopupStack[remaining].SourceWindow;
     ImGuiWindow* popup_window = g.OpenPopupStack[remaining].Window;
+    ImGuiWindow* popup_backup_nav_window = g.OpenPopupStack[remaining].BackupNavWindow;
     g.OpenPopupStack.resize(remaining);
 
     if (restore_focus_to_window_under_popup)
     {
+        ImGuiWindow* focus_window = (popup_window && popup_window->Flags & ImGuiWindowFlags_ChildMenu) ? popup_window->ParentWindow : popup_backup_nav_window;
         if (focus_window && !focus_window->WasActive && popup_window)
         {
             // Fallback
@@ -17842,7 +17896,7 @@ void ImGui::DebugTextEncoding(const char* str)
 static void MetricsHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -18133,8 +18187,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         for (int i = 0; i < g.OpenPopupStack.Size; i++)
         {
-            ImGuiWindow* window = g.OpenPopupStack[i].Window;
-            BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenPopupStack[i].PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
+            // As it's difficult to interact with tree nodes while popups are open, we display everything inline.
+            const ImGuiPopupData* popup_data = &g.OpenPopupStack[i];
+            ImGuiWindow* window = popup_data->Window;
+            BulletText("PopupID: %08x, Window: '%s' (%s%s), BackupNavWindow '%s', ParentWindow '%s'",
+                popup_data->PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? "Child;" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? "Menu;" : "",
+                popup_data->BackupNavWindow ? popup_data->BackupNavWindow->Name : "NULL", window && window->ParentWindow ? window->ParentWindow->Name : "NULL");
         }
         TreePop();
     }
@@ -18289,6 +18347,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             active_id_using_key_input_count += g.ActiveIdUsingKeyInputMask[n] ? 1 : 0;
         Text("ActiveIdUsing: NavDirMask: %X, KeyInputMask: %d key(s)", g.ActiveIdUsingNavDirMask, active_id_using_key_input_count);
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
+        Text("HoverDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
         Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
         Unindent();
 

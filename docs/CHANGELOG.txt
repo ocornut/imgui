@@ -134,6 +134,11 @@ Other Changes:
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
   by converting them to half-width (U+0021..U+007E).
+- IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
+  allowing to introduce a shared delay for tooltip idioms. The delays are respectively
+  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
+- IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between itemm,
+  so moving from one item to a nearby one will requires delay to elapse again. (#1485)
 - Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
@@ -141,14 +146,24 @@ Other Changes:
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
+- Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
+  Among other things, it would accidentally break part of the closing heuristic logic when moving
+  towards a sub-menu. (#2517, #5614). [@rokups]
+- Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
+  the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
+- Nav: Fixed an issue opening a menu with Right key from a non-menu window.
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
+- Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
+- Demo: Improved "Constrained-resizing window" example, more clearly showcase aspect-ratio. (#5627)
+- Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
+- Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
