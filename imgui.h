@@ -1718,7 +1718,7 @@ enum ImGuiMouseCursor_
 enum ImGuiCond_
 {
     ImGuiCond_None          = 0,        // No condition (always set the variable), same as _Always
-    ImGuiCond_Always        = 1 << 0,   // No condition (always set the variable)
+    ImGuiCond_Always        = 1 << 0,   // No condition (always set the variable), same as _None
     ImGuiCond_Once          = 1 << 1,   // Set the variable once per runtime session (only the first call will succeed)
     ImGuiCond_FirstUseEver  = 1 << 2,   // Set the variable if the object/window has no persistently saved data (no entry in .ini file)
     ImGuiCond_Appearing     = 1 << 3,   // Set the variable if the object/window is appearing after being hidden/inactive (or the first time)
@@ -2097,7 +2097,7 @@ struct ImGuiInputTextCallbackData
 // NB: For basic min/max size constraint on each axis you don't need to use the callback! The SetNextWindowSizeConstraints() parameters are enough.
 struct ImGuiSizeCallbackData
 {
-    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraints()
+    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraints(). Generally store an integer or float in here (need reinterpret_cast<>).
     ImVec2  Pos;            // Read-only.   Window position, for reference.
     ImVec2  CurrentSize;    // Read-only.   Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.

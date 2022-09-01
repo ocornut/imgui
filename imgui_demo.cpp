@@ -7289,51 +7289,82 @@ static void ShowExampleAppAutoResize(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window with custom resize constraints.
+// Note that size constraints currently don't work on a docked window (when in 'docking' branch)
 static void ShowExampleAppConstrainedResize(bool* p_open)
 {
     struct CustomConstraints
     {
         // Helper functions to demonstrate programmatic constraints
-        static void Square(ImGuiSizeCallbackData* data) { data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y); }
-        static void Step(ImGuiSizeCallbackData* data)   { float step = (float)(int)(intptr_t)data->UserData; data->DesiredSize = ImVec2((int)(data->DesiredSize.x / step + 0.5f) * step, (int)(data->DesiredSize.y / step + 0.5f) * step); }
+        // FIXME: This doesn't take account of decoration size (e.g. title bar), library should make this easier.
+        static void AspectRatio(ImGuiSizeCallbackData* data)    { float aspect_ratio = *(float*)data->UserData; data->DesiredSize.x = IM_MAX(data->CurrentSize.x, data->CurrentSize.y); data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio); }
+        static void Square(ImGuiSizeCallbackData* data)         { data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->CurrentSize.x, data->CurrentSize.y); }
+        static void Step(ImGuiSizeCallbackData* data)           { float step = *(float*)data->UserData; data->DesiredSize = ImVec2((int)(data->CurrentSize.x / step + 0.5f) * step, (int)(data->CurrentSize.y / step + 0.5f) * step); }
     };
 
     const char* test_desc[] =
     {
+        "Between 100x100 and 500x500",
+        "At least 100x100",
         "Resize vertical only",
         "Resize horizontal only",
-        "Width > 100, Height > 100",
-        "Width 400-500",
-        "Height 400-500",
+        "Width Between 400 and 500",
+        "Custom: Aspect Ratio 16:9",
         "Custom: Always Square",
         "Custom: Fixed Steps (100)",
     };
 
+    // Options
     static bool auto_resize = false;
-    static int type = 0;
+    static bool window_padding = true;
+    static int type = 5; // Aspect Ratio
     static int display_lines = 10;
-    if (type == 0) ImGui::SetNextWindowSizeConstraints(ImVec2(-1, 0),    ImVec2(-1, FLT_MAX));      // Vertical only
-    if (type == 1) ImGui::SetNextWindowSizeConstraints(ImVec2(0, -1),    ImVec2(FLT_MAX, -1));      // Horizontal only
-    if (type == 2) ImGui::SetNextWindowSizeConstraints(ImVec2(100, 100), ImVec2(FLT_MAX, FLT_MAX)); // Width > 100, Height > 100
-    if (type == 3) ImGui::SetNextWindowSizeConstraints(ImVec2(400, -1),  ImVec2(500, -1));          // Width 400-500
-    if (type == 4) ImGui::SetNextWindowSizeConstraints(ImVec2(-1, 400),  ImVec2(-1, 500));          // Height 400-500
-    if (type == 5) ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Square);                     // Always Square
-    if (type == 6) ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Step, (void*)(intptr_t)100); // Fixed Step
 
-    ImGuiWindowFlags flags = auto_resize ? ImGuiWindowFlags_AlwaysAutoResize : 0;
-    if (ImGui::Begin("Example: Constrained Resize", p_open, flags))
+    // Submit constraint
+    float aspect_ratio = 16.0f / 9.0f;
+    float fixed_step = 100.0f;
+    if (type == 0) ImGui::SetNextWindowSizeConstraints(ImVec2(100, 100), ImVec2(500, 500));         // Between 100x100 and 500x500
+    if (type == 1) ImGui::SetNextWindowSizeConstraints(ImVec2(100, 100), ImVec2(FLT_MAX, FLT_MAX)); // Width > 100, Height > 100
+    if (type == 2) ImGui::SetNextWindowSizeConstraints(ImVec2(-1, 0),    ImVec2(-1, FLT_MAX));      // Vertical only
+    if (type == 3) ImGui::SetNextWindowSizeConstraints(ImVec2(0, -1),    ImVec2(FLT_MAX, -1));      // Horizontal only
+    if (type == 4) ImGui::SetNextWindowSizeConstraints(ImVec2(400, -1),  ImVec2(500, -1));          // Width Between and 400 and 500
+    if (type == 5) ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::AspectRatio, (void*)&aspect_ratio);   // Aspect ratio
+    if (type == 6) ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Square);                              // Always Square
+    if (type == 7) ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Step, (void*)&fixed_step);            // Fixed Step
+
+    // Submit window
+    if (!window_padding)
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    const ImGuiWindowFlags window_flags = auto_resize ? ImGuiWindowFlags_AlwaysAutoResize : 0;
+    const bool window_open = ImGui::Begin("Example: Constrained Resize", p_open, window_flags);
+    if (!window_padding)
+        ImGui::PopStyleVar();
+    if (window_open)
     {
         IMGUI_DEMO_MARKER("Examples/Constrained Resizing window");
-        if (ImGui::Button("200x200")) { ImGui::SetWindowSize(ImVec2(200, 200)); } ImGui::SameLine();
-        if (ImGui::Button("500x500")) { ImGui::SetWindowSize(ImVec2(500, 500)); } ImGui::SameLine();
-        if (ImGui::Button("800x200")) { ImGui::SetWindowSize(ImVec2(800, 200)); }
-        ImGui::SetNextItemWidth(200);
-        ImGui::Combo("Constraint", &type, test_desc, IM_ARRAYSIZE(test_desc));
-        ImGui::SetNextItemWidth(200);
-        ImGui::DragInt("Lines", &display_lines, 0.2f, 1, 100);
-        ImGui::Checkbox("Auto-resize", &auto_resize);
-        for (int i = 0; i < display_lines; i++)
-            ImGui::Text("%*sHello, sailor! Making this line long enough for the example.", i * 4, "");
+        if (ImGui::GetIO().KeyShift)
+        {
+            // Display a dummy viewport (in your real app you would likely use ImageButton() to display a texture.
+            ImVec2 avail_size = ImGui::GetContentRegionAvail();
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImGui::ColorButton("viewport", ImVec4(0.5f, 0.2f, 0.5f, 1.0f), ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop, avail_size);
+            ImGui::SetCursorScreenPos(ImVec2(pos.x + 10, pos.y + 10));
+            ImGui::Text("%.2f x %.2f", avail_size.x, avail_size.y);
+        }
+        else
+        {
+            ImGui::Text("(Hold SHIFT to display a dummy viewport)");
+            if (ImGui::Button("Set 200x200")) { ImGui::SetWindowSize(ImVec2(200, 200)); } ImGui::SameLine();
+            if (ImGui::Button("Set 500x500")) { ImGui::SetWindowSize(ImVec2(500, 500)); } ImGui::SameLine();
+            if (ImGui::Button("Set 800x200")) { ImGui::SetWindowSize(ImVec2(800, 200)); }
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
+            ImGui::Combo("Constraint", &type, test_desc, IM_ARRAYSIZE(test_desc));
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
+            ImGui::DragInt("Lines", &display_lines, 0.2f, 1, 100);
+            ImGui::Checkbox("Auto-resize", &auto_resize);
+            ImGui::Checkbox("Window padding", &window_padding);
+            for (int i = 0; i < display_lines; i++)
+                ImGui::Text("%*sHello, sailor! Making this line long enough for the example.", i * 4, "");
+        }
     }
     ImGui::End();
 }
@@ -7346,28 +7377,34 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 // + a context-menu to choose which corner of the screen to use.
 static void ShowExampleAppSimpleOverlay(bool* p_open)
 {
-    static int corner = 0;
+    static int location = 0;
     ImGuiIO& io = ImGui::GetIO();
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    if (corner != -1)
+    if (location >= 0)
     {
         const float PAD = 10.0f;
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
         ImVec2 work_size = viewport->WorkSize;
         ImVec2 window_pos, window_pos_pivot;
-        window_pos.x = (corner & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
-        window_pos.y = (corner & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
-        window_pos_pivot.x = (corner & 1) ? 1.0f : 0.0f;
-        window_pos_pivot.y = (corner & 2) ? 1.0f : 0.0f;
+        window_pos.x = (location & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
+        window_pos.y = (location & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
+        window_pos_pivot.x = (location & 1) ? 1.0f : 0.0f;
+        window_pos_pivot.y = (location & 2) ? 1.0f : 0.0f;
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        window_flags |= ImGuiWindowFlags_NoMove;
+    }
+    else if (location == -2)
+    {
+        // Center window
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         window_flags |= ImGuiWindowFlags_NoMove;
     }
     ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
     if (ImGui::Begin("Example: Simple overlay", p_open, window_flags))
     {
         IMGUI_DEMO_MARKER("Examples/Simple Overlay");
-        ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
+        ImGui::Text("Simple overlay\n" "(right-click to change position)");
         ImGui::Separator();
         if (ImGui::IsMousePosValid())
             ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
@@ -7375,11 +7412,12 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
             ImGui::Text("Mouse Position: <invalid>");
         if (ImGui::BeginPopupContextWindow())
         {
-            if (ImGui::MenuItem("Custom",       NULL, corner == -1)) corner = -1;
-            if (ImGui::MenuItem("Top-left",     NULL, corner == 0)) corner = 0;
-            if (ImGui::MenuItem("Top-right",    NULL, corner == 1)) corner = 1;
-            if (ImGui::MenuItem("Bottom-left",  NULL, corner == 2)) corner = 2;
-            if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
+            if (ImGui::MenuItem("Custom",       NULL, location == -1)) location = -1;
+            if (ImGui::MenuItem("Center",       NULL, location == -2)) location = -2;
+            if (ImGui::MenuItem("Top-left",     NULL, location == 0)) location = 0;
+            if (ImGui::MenuItem("Top-right",    NULL, location == 1)) location = 1;
+            if (ImGui::MenuItem("Bottom-left",  NULL, location == 2)) location = 2;
+            if (ImGui::MenuItem("Bottom-right", NULL, location == 3)) location = 3;
             if (p_open && ImGui::MenuItem("Close")) *p_open = false;
             ImGui::EndPopup();
         }
