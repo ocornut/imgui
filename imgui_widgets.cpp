@@ -7109,19 +7109,22 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         bool moving_toward_child_menu = false;
         ImGuiPopupData* child_popup = (g.BeginPopupStack.Size < g.OpenPopupStack.Size) ? &g.OpenPopupStack[g.BeginPopupStack.Size] : NULL; // Popup candidate (testing below)
         ImGuiWindow* child_menu_window = (child_popup && child_popup->Window && child_popup->Window->ParentWindow == window) ? child_popup->Window : NULL;
-        if (g.HoveredWindow == window && child_menu_window != NULL && !(window->Flags & ImGuiWindowFlags_MenuBar))
+        if (g.HoveredWindow == window && child_menu_window != NULL)
         {
             float ref_unit = g.FontSize; // FIXME-DPI
+            float child_dir = (window->Pos.x < child_menu_window->Pos.x) ? 1.0f : -1.0f;
             ImRect next_window_rect = child_menu_window->Rect();
             ImVec2 ta = (g.IO.MousePos - g.IO.MouseDelta);
-            ImVec2 tb = (window->Pos.x < child_menu_window->Pos.x) ? next_window_rect.GetTL() : next_window_rect.GetTR();
-            ImVec2 tc = (window->Pos.x < child_menu_window->Pos.x) ? next_window_rect.GetBL() : next_window_rect.GetBR();
+            ImVec2 tb = (child_dir > 0.0f) ? next_window_rect.GetTL() : next_window_rect.GetTR();
+            ImVec2 tc = (child_dir > 0.0f) ? next_window_rect.GetBL() : next_window_rect.GetBR();
             float extra = ImClamp(ImFabs(ta.x - tb.x) * 0.30f, ref_unit * 0.5f, ref_unit * 2.5f);   // add a bit of extra slack.
-            ta.x += (window->Pos.x < child_menu_window->Pos.x) ? -0.5f : +0.5f;                     // to avoid numerical issues (FIXME: ??)
+            ta.x += child_dir * -0.5f;
+            tb.x += child_dir * ref_unit;
+            tc.x += child_dir * ref_unit;
             tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -ref_unit * 8.0f);                           // triangle has maximum height to limit the slope and the bias toward large sub-menus
             tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +ref_unit * 8.0f);
             moving_toward_child_menu = ImTriangleContainsPoint(ta, tb, tc, g.IO.MousePos);
-            //GetForegroundDrawList()->AddTriangleFilled(ta, tb, tc, moving_toward_other_child_menu ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); // [DEBUG]
+            //GetForegroundDrawList()->AddTriangleFilled(ta, tb, tc, moving_toward_child_menu ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); // [DEBUG]
         }
 
         // The 'HovereWindow == window' check creates an inconsistency (e.g. moving away from menu slowly tends to hit same window, whereas moving away fast does not)
