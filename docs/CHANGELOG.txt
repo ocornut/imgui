@@ -83,6 +83,7 @@ Other Changes:
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
+- Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
