@@ -353,19 +353,16 @@ void ImGui_ImplGlfw_WindowFocusCallback(GLFWwindow* window, int focused)
 
 void ImGui_ImplGlfw_CursorPosCallback(GLFWwindow* window, double x, double y)
 {
+    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (bd->PrevUserCallbackCursorPos != NULL && window == bd->Window)
         bd->PrevUserCallbackCursorPos(window, x, y);
 
-    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
     {
-        // Cursor position shouldn't move, though glfw's callback ignores this.
-        return;
+        io.AddMousePosEvent((float)x, (float)y);
+        bd->LastValidMousePos = ImVec2((float)x, (float)y);
     }
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.AddMousePosEvent((float)x, (float)y);
-    bd->LastValidMousePos = ImVec2((float)x, (float)y);
 }
 
 // Workaround: X11 seems to send spurious Leave/Enter events which would make us lose our position,
@@ -376,17 +373,20 @@ void ImGui_ImplGlfw_CursorEnterCallback(GLFWwindow* window, int entered)
     if (bd->PrevUserCallbackCursorEnter != NULL && window == bd->Window)
         bd->PrevUserCallbackCursorEnter(window, entered);
 
-    ImGuiIO& io = ImGui::GetIO();
-    if (entered)
+    if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
     {
-        bd->MouseWindow = window;
-        io.AddMousePosEvent(bd->LastValidMousePos.x, bd->LastValidMousePos.y);
-    }
-    else if (!entered && bd->MouseWindow == window)
-    {
-        bd->LastValidMousePos = io.MousePos;
-        bd->MouseWindow = NULL;
-        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+        ImGuiIO& io = ImGui::GetIO();
+        if (entered)
+        {
+            bd->MouseWindow = window;
+            io.AddMousePosEvent(bd->LastValidMousePos.x, bd->LastValidMousePos.y);
+        }
+        else if (!entered && bd->MouseWindow == window)
+        {
+            bd->LastValidMousePos = io.MousePos;
+            bd->MouseWindow = NULL;
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+        }
     }
 }
 
@@ -546,6 +546,11 @@ static void ImGui_ImplGlfw_UpdateMouseData()
 #endif
     if (is_app_focused)
     {
+        if (glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+        {
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+            return;
+        }
         // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
         if (io.WantSetMousePos)
             glfwSetCursorPos(bd->Window, (double)io.MousePos.x, (double)io.MousePos.y);
