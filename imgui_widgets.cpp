@@ -2570,35 +2570,6 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     return value_changed;
 }
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
-// Obsolete versions with power parameter. See https://github.com/ocornut/imgui/issues/3361 for details.
-bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags drag_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        IM_ASSERT(p_min != NULL && p_max != NULL);  // When using a power curve the drag needs to have known bounds
-        drag_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return DragScalar(label, data_type, p_data, v_speed, p_min, p_max, format, drag_flags);
-}
-
-bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags drag_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        IM_ASSERT(p_min != NULL && p_max != NULL);  // When using a power curve the drag needs to have known bounds
-        drag_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return DragScalarN(label, data_type, p_data, components, v_speed, p_min, p_max, format, drag_flags);
-}
-
-#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: SliderScalar, SliderFloat, SliderInt, etc.
 //-------------------------------------------------------------------------
@@ -3199,33 +3170,6 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 {
     return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
-// Obsolete versions with power parameter. See https://github.com/ocornut/imgui/issues/3361 for details.
-bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags slider_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        slider_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return SliderScalar(label, data_type, p_data, p_min, p_max, format, slider_flags);
-}
-
-bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power)
-{
-    ImGuiSliderFlags slider_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        slider_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return SliderScalarN(label, data_type, v, components, v_min, v_max, format, slider_flags);
-}
-
-#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: InputScalar, InputFloat, InputInt, etc.
