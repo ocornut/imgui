@@ -87,6 +87,7 @@ Other Changes:
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
   by converting them to half-width (U+0021..U+007E).
 - InputText: added support for shift+click style selection. (#5619) [@procedural]
+- InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
