@@ -58,7 +58,7 @@ Steps:
 - If you are involved in cheating schemes (e.g. DLL injection) for competitive online multi-player games, please don't try posting here. We won't answer and you will be blocked. It doesn't matter if your question relates to said project. We've had too many of you and need to project our time and sanity.
 - Due to frequent abuse of this service from aforementioned users, if your GitHub account is anonymous and was created five minutes ago please understand that your post will receive more scrutiny and incomplete questions will be harshly dismissed.
 
-If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information are useful in a given context.
+If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fulfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information is useful in a given context.
 
 ## How to open a Pull Request
 
@@ -67,7 +67,7 @@ If you have been using dear imgui for a while or have been using C/C++ for sever
 - **When adding a feature,** please describe the usage context (how you intend to use it, why you need it, etc.). Be mindful of [The XY Problem](http://xyproblem.info/). 
 - **When fixing a warning or compilation problem,** please post the compiler log and specify the compiler version and platform you are using.
 - **Attach screenshots (or gif/video) to clarify the context and demonstrate the feature at a glance.** You can drag pictures/files in the message edit box. Prefer the long term longevity of GitHub attachments over 3rd party hosting (you can drag pictures into your post).
-- **Make sure your code follows the coding style already used in the codebase:** 4 spaces identations (no tabs), `local_variable`, `FunctionName()`, `MemberName`, `// Text Comment`, `//CodeComment();`, C-style casts, etc.. We don't use modern C++ idioms and tend to use only a minimum of C++11 features. The applications under examples/ are generally less consistent because they sometimes try to mimic the coding style often adopted by a certain ecosystem (e.g. DirectX-related code tend to use the style of their sample). 
+- **Make sure your code follows the coding style already used in the codebase:** 4 spaces indentations (no tabs), `local_variable`, `FunctionName()`, `MemberName`, `// Text Comment`, `//CodeComment();`, C-style casts, etc.. We don't use modern C++ idioms and tend to use only a minimum of C++11 features. The applications under examples/ are generally less consistent because they sometimes try to mimic the coding style often adopted by a certain ecosystem (e.g. DirectX-related code tend to use the style of their sample). 
 - **Make sure you create a branch dedicated to the pull request**. In Git, 1 PR is associated to 1 branch. If you keep pushing to the same branch after you submitted the PR, your new commits will appear in the PR (we can still cherry-pick individual commits).
 
 Thank you for reading!
