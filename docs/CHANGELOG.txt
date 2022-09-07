@@ -100,6 +100,7 @@ Other Changes:
 - Tabs: Fixed shrinking policy leading to infinite loops when fed unrounded tab widths. (#5652)
 - Tabs: Fixed shrinking policy sometimes erroneously making right-most tabs stray a little out
   bar boundaries (bug in 1.88). (#5652).
+- Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
