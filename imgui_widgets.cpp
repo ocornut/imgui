@@ -1575,13 +1575,13 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
         width_excess += items[n].Width - width_rounded;
         items[n].Width = width_rounded;
     }
-    while (width_excess >= 1.0f)
-        for (int n = 0; n < count && width_excess >= 1.0f; n++)
-            if (items[n].Width + 1.0f <= items[n].InitialWidth)
-            {
-                items[n].Width += 1.0f;
-                width_excess -= 1.0f;
-            }
+    while (width_excess > 0.0f)
+        for (int n = 0; n < count && width_excess > 0.0f; n++)
+        {
+            float width_to_add = ImMin(items[n].InitialWidth - items[n].Width, 1.0f);
+            items[n].Width += width_to_add;
+            width_excess -= width_to_add;
+        }
 }
 
 //-------------------------------------------------------------------------
