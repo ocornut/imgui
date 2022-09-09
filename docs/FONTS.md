@@ -149,7 +149,7 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 
 **Font Atlas too large?**
 
-- If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
+- If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyph appears as a white rectangle.
 - Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
 Some solutions:
@@ -316,7 +316,7 @@ ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_ba
 **Please note that many new C/C++ users have issues loading their files _because the filename they provide is wrong_.**
 
 Two things to watch for:
-- Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it oftens start from the folder where object or executable files are stored.
+- Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it often starts from the folder where object or executable files are stored.
 ```cpp
 // Relative filename depends on your Working Directory when running your program!
 io.Fonts->AddFontFromFileTTF("MyImage01.jpg", ...);

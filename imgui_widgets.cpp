@@ -1584,12 +1584,12 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
         items[n].Width = width_rounded;
     }
     while (width_excess > 0.0f)
-        for (int n = 0; n < count; n++)
-            if (items[n].Width + 1.0f <= items[n].InitialWidth)
-            {
-                items[n].Width += 1.0f;
-                width_excess -= 1.0f;
-            }
+        for (int n = 0; n < count && width_excess > 0.0f; n++)
+        {
+            float width_to_add = ImMin(items[n].InitialWidth - items[n].Width, 1.0f);
+            items[n].Width += width_to_add;
+            width_excess -= width_to_add;
+        }
 }
 
 //-------------------------------------------------------------------------
@@ -2578,35 +2578,6 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     return value_changed;
 }
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
-// Obsolete versions with power parameter. See https://github.com/ocornut/imgui/issues/3361 for details.
-bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags drag_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        IM_ASSERT(p_min != NULL && p_max != NULL);  // When using a power curve the drag needs to have known bounds
-        drag_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return DragScalar(label, data_type, p_data, v_speed, p_min, p_max, format, drag_flags);
-}
-
-bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags drag_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        IM_ASSERT(p_min != NULL && p_max != NULL);  // When using a power curve the drag needs to have known bounds
-        drag_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return DragScalarN(label, data_type, p_data, components, v_speed, p_min, p_max, format, drag_flags);
-}
-
-#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: SliderScalar, SliderFloat, SliderInt, etc.
 //-------------------------------------------------------------------------
@@ -3207,33 +3178,6 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 {
     return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-
-// Obsolete versions with power parameter. See https://github.com/ocornut/imgui/issues/3361 for details.
-bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power)
-{
-    ImGuiSliderFlags slider_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        slider_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return SliderScalar(label, data_type, p_data, p_min, p_max, format, slider_flags);
-}
-
-bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power)
-{
-    ImGuiSliderFlags slider_flags = ImGuiSliderFlags_None;
-    if (power != 1.0f)
-    {
-        IM_ASSERT(power == 1.0f && "Call function with ImGuiSliderFlags_Logarithmic flags instead of using the old 'float power' function!");
-        slider_flags |= ImGuiSliderFlags_Logarithmic;   // Fallback for non-asserting paths
-    }
-    return SliderScalarN(label, data_type, v, components, v_min, v_max, format, slider_flags);
-}
-
-#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: InputScalar, InputFloat, InputInt, etc.
@@ -4315,10 +4259,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         else if (io.MouseClicked[0] && !state->SelectedAllMouseLock)
         {
-            // FIXME: unselect on late click could be done release?
             if (hovered)
             {
-                stb_textedit_click(state, &state->Stb, mouse_x, mouse_y);
+                if (io.KeyShift)
+                    stb_textedit_drag(state, &state->Stb, mouse_x, mouse_y);
+                else
+                    stb_textedit_click(state, &state->Stb, mouse_x, mouse_y);
                 state->CursorAnimReset();
             }
         }
@@ -4608,6 +4554,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     if (callback_data.SelectionEnd != utf8_selection_end || buf_dirty)      { state->Stb.select_end = (callback_data.SelectionEnd == callback_data.SelectionStart) ? state->Stb.select_start : ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd); }
                     if (buf_dirty)
                     {
+                        IM_ASSERT((flags & ImGuiInputTextFlags_ReadOnly) == 0);
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
                         InputTextReconcileUndoStateAfterUserCallback(state, callback_data.Buf, callback_data.BufTextLen); // FIXME: Move the rest of this block inside function and rename to InputTextReconcileStateAfterUserCallback() ?
                         if (callback_data.BufTextLen > backup_current_text_length && is_resizable)
@@ -7627,7 +7574,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         // and we cannot wait for the next BeginTabItem() call. We cannot compute this width within TabBarAddTab() because font size depends on the active window.
         const char* tab_name = tab_bar->GetTabName(tab);
         const bool has_close_button = (tab->Flags & ImGuiTabItemFlags_NoCloseButton) ? false : true;
-        tab->ContentWidth = (tab->RequestedWidth > 0.0f) ? tab->RequestedWidth : TabItemCalcSize(tab_name, has_close_button).x;
+        tab->ContentWidth = (tab->RequestedWidth >= 0.0f) ? tab->RequestedWidth : TabItemCalcSize(tab_name, has_close_button).x;
 
         int section_n = TabItemGetSectionIdx(tab);
         ImGuiTabBarSection* section = &sections[section_n];
@@ -7639,9 +7586,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         ImGuiShrinkWidthItem* shrink_width_item = &g.ShrinkWidthBuffer[shrink_buffer_indexes[section_n]++];
         shrink_width_item->Index = tab_n;
         shrink_width_item->Width = shrink_width_item->InitialWidth = tab->ContentWidth;
-
-        IM_ASSERT(tab->ContentWidth > 0.0f);
-        tab->Width = tab->ContentWidth;
+        tab->Width = ImMax(tab->ContentWidth, 1.0f);
     }
 
     // Compute total ideal width (used for e.g. auto-resizing a window)
@@ -7671,7 +7616,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         width_excess = (section_0_w + section_2_w) - tab_bar->BarRect.GetWidth(); // Excess used to shrink leading/trailing section
 
     // With ImGuiTabBarFlags_FittingPolicyScroll policy, we will only shrink leading/trailing if the central section is not visible anymore
-    if (width_excess > 0.0f && ((tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyResizeDown) || !central_section_is_visible))
+    if (width_excess >= 1.0f && ((tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyResizeDown) || !central_section_is_visible))
     {
         int shrink_data_count = (central_section_is_visible ? sections[1].TabCount : sections[0].TabCount + sections[2].TabCount);
         int shrink_data_offset = (central_section_is_visible ? sections[0].TabCount + sections[2].TabCount : 0);
@@ -7685,6 +7630,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
             if (shrinked_width < 0.0f)
                 continue;
 
+            shrinked_width = ImMax(1.0f, shrinked_width);
             int section_n = TabItemGetSectionIdx(tab);
             sections[section_n].Width -= (tab->Width - shrinked_width);
             tab->Width = shrinked_width;
@@ -8201,7 +8147,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
         size.x = tab->RequestedWidth = g.NextItemData.Width;
     if (tab_is_new)
-        tab->Width = size.x;
+        tab->Width = ImMax(1.0f, size.x);
     tab->ContentWidth = size.x;
     tab->BeginOrder = tab_bar->TabsActiveCount++;
 

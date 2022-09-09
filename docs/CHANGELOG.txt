@@ -127,6 +127,11 @@ Breaking changes:
      - requires an explicit identifier. You may still use e.g. PushID() calls and then pass an empty identifier.
      - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
    - As always we are keeping a redirection function available (will obsolete later).
+- Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
+   - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
+   - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
+     - For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
+   - BeginPopupContextWindow(const char*, ImGuiMouseButton, bool)                   -> use BeginPopupContextWindow(const char*, ImGuiPopupFlags)
  - Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
    This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
    - Previously this would make the window content size ~200x200:
@@ -148,6 +153,8 @@ Other Changes:
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
   by converting them to half-width (U+0021..U+007E).
+- InputText: added support for shift+click style selection. (#5619) [@procedural]
+- InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
@@ -157,6 +164,10 @@ Other Changes:
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
   appended TabItemButton(). (#5515, #3291) [@rokups]
+- Tabs: Fixed shrinking policy leading to infinite loops when fed unrounded tab widths. (#5652)
+- Tabs: Fixed shrinking policy sometimes erroneously making right-most tabs stray a little out
+  bar boundaries (bug in 1.88). (#5652).
+- Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
