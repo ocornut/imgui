@@ -408,13 +408,14 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)window;
+    main_viewport->PlatformHandleRaw = NULL;
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     if (SDL_GetWindowWMInfo(window, &info))
     {
 #ifdef _WIN32
         main_viewport->PlatformHandleRaw = (void*)info.info.win.window;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
         main_viewport->PlatformHandleRaw = (void*)info.info.cocoa.window;
 #endif
     }
@@ -754,13 +755,14 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
         SDL_GL_MakeCurrent(vd->Window, backup_context);
 
     viewport->PlatformHandle = (void*)vd->Window;
+    viewport->PlatformHandleRaw = NULL;
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     if (SDL_GetWindowWMInfo(vd->Window, &info))
     {
 #if defined(_WIN32)
         viewport->PlatformHandleRaw = info.info.win.window;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
         viewport->PlatformHandleRaw = (void*)info.info.cocoa.window;
 #endif
     }
