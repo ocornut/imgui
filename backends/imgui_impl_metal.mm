@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.
 //  2022-06-01: Metal: Fixed null dereference on exit inside command buffer completion handler.
@@ -32,6 +33,8 @@
 #include "imgui_impl_metal.h"
 #import <time.h>
 #import <Metal/Metal.h>
+
+#define IMGUI_USE_OBJC_ARC __has_feature(objc_arc)
 
 #pragma mark - Support classes
 
@@ -95,8 +98,8 @@ void ImGui_ImplMetal_NewFrame(MTL::RenderPassDescriptor* renderPassDescriptor)
 }
 
 void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data,
-                                    MTL::CommandBuffer* commandBuffer,
-                                    MTL::RenderCommandEncoder* commandEncoder)
+                               MTL::CommandBuffer* commandBuffer,
+                               MTL::RenderCommandEncoder* commandEncoder)
 {
     ImGui_ImplMetal_RenderDrawData(draw_data,
                                    (__bridge id<MTLCommandBuffer>)(commandBuffer),
@@ -135,6 +138,11 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 void ImGui_ImplMetal_Shutdown()
 {
     ImGui_ImplMetal_DestroyDeviceObjects();
+#if !IMGUI_USE_OBJC_ARC
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    MetalContext* ctx = bd->SharedMetalContext;
+    [ctx release];
+#endif
     ImGui_ImplMetal_DestroyBackendData();
 }
 
@@ -142,15 +150,20 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd->SharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
-    bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+    FramebufferDescriptor *framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+    bd->SharedMetalContext.framebufferDescriptor = framebufferDescriptor;
 
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+
+#if !IMGUI_USE_OBJC_ARC
+    [framebufferDescriptor release];
+#endif
 }
 
 static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer,
-    id<MTLRenderCommandEncoder> commandEncoder, id<MTLRenderPipelineState> renderPipelineState,
-    MetalBuffer* vertexBuffer, size_t vertexBufferOffset)
+                                 id<MTLRenderCommandEncoder> commandEncoder, id<MTLRenderPipelineState> renderPipelineState,
+                                 MetalBuffer* vertexBuffer, size_t vertexBufferOffset)
 {
     IM_UNUSED(commandBuffer);
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
@@ -161,14 +174,14 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommand
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to
     // draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     MTLViewport viewport =
-    {
-        .originX = 0.0,
-        .originY = 0.0,
-        .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
-        .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
-        .znear = 0.0,
-        .zfar = 1.0
-    };
+      {
+          .originX = 0.0,
+          .originY = 0.0,
+          .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
+          .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
+          .znear = 0.0,
+          .zfar = 1.0
+      };
     [commandEncoder setViewport:viewport];
 
     float L = drawData->DisplayPos.x;
@@ -178,12 +191,12 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommand
     float N = (float)viewport.znear;
     float F = (float)viewport.zfar;
     const float ortho_projection[4][4] =
-    {
-        { 2.0f/(R-L),   0.0f,           0.0f,   0.0f },
-        { 0.0f,         2.0f/(T-B),     0.0f,   0.0f },
-        { 0.0f,         0.0f,        1/(F-N),   0.0f },
-        { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
-    };
+      {
+          { 2.0f/(R-L),   0.0f,           0.0f,   0.0f },
+          { 0.0f,         2.0f/(T-B),     0.0f,   0.0f },
+          { 0.0f,         0.0f,        1/(F-N),   0.0f },
+          { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
+      };
     [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
 
     [commandEncoder setRenderPipelineState:renderPipelineState];
@@ -267,12 +280,12 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
 
                 // Apply scissor/clipping rectangle
                 MTLScissorRect scissorRect =
-                {
-                    .x = NSUInteger(clip_min.x),
-                    .y = NSUInteger(clip_min.y),
-                    .width = NSUInteger(clip_max.x - clip_min.x),
-                    .height = NSUInteger(clip_max.y - clip_min.y)
-                };
+                  {
+                      .x = NSUInteger(clip_min.x),
+                      .y = NSUInteger(clip_min.y),
+                      .width = NSUInteger(clip_max.x - clip_min.x),
+                      .height = NSUInteger(clip_max.y - clip_min.y)
+                  };
                 [commandEncoder setScissorRect:scissorRect];
 
                 // Bind texture, Draw
@@ -292,20 +305,29 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
         indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
+#if !IMGUI_USE_OBJC_ARC
+    [vertexBuffer retain];
+    [indexBuffer retain];
+#endif
+
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-            if (bd != NULL)
-            {
-                @synchronized(bd->SharedMetalContext.bufferCache)
-                {
-                    [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-                    [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
-                }
-            }
-        });
-    }];
+                                       {
+                                         dispatch_async(dispatch_get_main_queue(), ^{
+                                           ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+                                           if (bd != NULL)
+                                           {
+                                               @synchronized(bd->SharedMetalContext.bufferCache)
+                                               {
+                                                   [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
+                                                   [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+                                               }
+                                           }
+#if !IMGUI_USE_OBJC_ARC
+                                           [vertexBuffer release];
+                                           [indexBuffer release];
+#endif
+                                         });
+                                       }];
 }
 
 bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
@@ -335,6 +357,10 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     bd->SharedMetalContext.fontTexture = texture;
     io.Fonts->SetTexID((__bridge void*)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
 
+#if !IMGUI_USE_OBJC_ARC
+    [texture release];
+#endif
+
     return (bd->SharedMetalContext.fontTexture != nil);
 }
 
@@ -352,8 +378,14 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
     MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
     depthStencilDescriptor.depthWriteEnabled = NO;
     depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
-    bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+    id<MTLDepthStencilState> depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+    bd->SharedMetalContext.depthStencilState = depthStencilState;
     ImGui_ImplMetal_CreateFontsTexture(device);
+
+#if !IMGUI_USE_OBJC_ARC
+    [depthStencilState release];
+    [depthStencilDescriptor release];
+#endif
 
     return true;
 }
@@ -372,11 +404,22 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     if ((self = [super init]))
     {
+#if !IMGUI_USE_OBJC_ARC
+        [buffer retain];
+#endif
         _buffer = buffer;
         _lastReuseTime = GetMachAbsoluteTimeInSeconds();
     }
     return self;
 }
+
+#if !IMGUI_USE_OBJC_ARC
+- (void)dealloc {
+    [_buffer release];
+    [super dealloc];
+}
+#endif
+
 @end
 
 #pragma mark - FramebufferDescriptor implementation
@@ -420,9 +463,9 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     if (![other isKindOfClass:[FramebufferDescriptor class]])
         return NO;
     return other.sampleCount == self.sampleCount      &&
-    other.colorPixelFormat   == self.colorPixelFormat &&
-    other.depthPixelFormat   == self.depthPixelFormat &&
-    other.stencilPixelFormat == self.stencilPixelFormat;
+           other.colorPixelFormat   == self.colorPixelFormat &&
+           other.depthPixelFormat   == self.depthPixelFormat &&
+           other.stencilPixelFormat == self.stencilPixelFormat;
 }
 
 @end
@@ -450,11 +493,11 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         // Purge old buffers that haven't been useful for a while
         if (now - self.lastBufferCachePurge > 1.0)
         {
-            NSMutableArray* survivors = [NSMutableArray array];
+            NSMutableArray<MetalBuffer *> *survivors = [NSMutableArray array];
             for (MetalBuffer* candidate in self.bufferCache)
                 if (candidate.lastReuseTime > self.lastBufferCachePurge)
                     [survivors addObject:candidate];
-            self.bufferCache = [survivors mutableCopy];
+            self.bufferCache = survivors;
             self.lastBufferCachePurge = now;
         }
 
@@ -466,6 +509,9 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
         if (bestCandidate != nil)
         {
+#if !IMGUI_USE_OBJC_ARC
+            [[bestCandidate retain] autorelease];
+#endif
             [self.bufferCache removeObject:bestCandidate];
             bestCandidate.lastReuseTime = now;
             return bestCandidate;
@@ -474,7 +520,12 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
     // No luck; make a new buffer
     id<MTLBuffer> backing = [device newBufferWithLength:length options:MTLResourceStorageModeShared];
-    return [[MetalBuffer alloc] initWithBuffer:backing];
+    MetalBuffer *buffer = [[MetalBuffer alloc] initWithBuffer:backing];
+#if !IMGUI_USE_OBJC_ARC
+    [backing release];
+    [buffer autorelease];
+#endif
+    return buffer;
 }
 
 // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
@@ -483,40 +534,40 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     NSError* error = nil;
 
     NSString* shaderSource = @""
-    "#include <metal_stdlib>\n"
-    "using namespace metal;\n"
-    "\n"
-    "struct Uniforms {\n"
-    "    float4x4 projectionMatrix;\n"
-    "};\n"
-    "\n"
-    "struct VertexIn {\n"
-    "    float2 position  [[attribute(0)]];\n"
-    "    float2 texCoords [[attribute(1)]];\n"
-    "    uchar4 color     [[attribute(2)]];\n"
-    "};\n"
-    "\n"
-    "struct VertexOut {\n"
-    "    float4 position [[position]];\n"
-    "    float2 texCoords;\n"
-    "    float4 color;\n"
-    "};\n"
-    "\n"
-    "vertex VertexOut vertex_main(VertexIn in                 [[stage_in]],\n"
-    "                             constant Uniforms &uniforms [[buffer(1)]]) {\n"
-    "    VertexOut out;\n"
-    "    out.position = uniforms.projectionMatrix * float4(in.position, 0, 1);\n"
-    "    out.texCoords = in.texCoords;\n"
-    "    out.color = float4(in.color) / float4(255.0);\n"
-    "    return out;\n"
-    "}\n"
-    "\n"
-    "fragment half4 fragment_main(VertexOut in [[stage_in]],\n"
-    "                             texture2d<half, access::sample> texture [[texture(0)]]) {\n"
-    "    constexpr sampler linearSampler(coord::normalized, min_filter::linear, mag_filter::linear, mip_filter::linear);\n"
-    "    half4 texColor = texture.sample(linearSampler, in.texCoords);\n"
-    "    return half4(in.color) * texColor;\n"
-    "}\n";
+                              "#include <metal_stdlib>\n"
+                              "using namespace metal;\n"
+                              "\n"
+                              "struct Uniforms {\n"
+                              "    float4x4 projectionMatrix;\n"
+                              "};\n"
+                              "\n"
+                              "struct VertexIn {\n"
+                              "    float2 position  [[attribute(0)]];\n"
+                              "    float2 texCoords [[attribute(1)]];\n"
+                              "    uchar4 color     [[attribute(2)]];\n"
+                              "};\n"
+                              "\n"
+                              "struct VertexOut {\n"
+                              "    float4 position [[position]];\n"
+                              "    float2 texCoords;\n"
+                              "    float4 color;\n"
+                              "};\n"
+                              "\n"
+                              "vertex VertexOut vertex_main(VertexIn in                 [[stage_in]],\n"
+                              "                             constant Uniforms &uniforms [[buffer(1)]]) {\n"
+                              "    VertexOut out;\n"
+                              "    out.position = uniforms.projectionMatrix * float4(in.position, 0, 1);\n"
+                              "    out.texCoords = in.texCoords;\n"
+                              "    out.color = float4(in.color) / float4(255.0);\n"
+                              "    return out;\n"
+                              "}\n"
+                              "\n"
+                              "fragment half4 fragment_main(VertexOut in [[stage_in]],\n"
+                              "                             texture2d<half, access::sample> texture [[texture(0)]]) {\n"
+                              "    constexpr sampler linearSampler(coord::normalized, min_filter::linear, mag_filter::linear, mip_filter::linear);\n"
+                              "    half4 texColor = texture.sample(linearSampler, in.texCoords);\n"
+                              "    return half4(in.color) * texColor;\n"
+                              "}\n";
 
     id<MTLLibrary> library = [device newLibraryWithSource:shaderSource options:nil error:&error];
     if (library == nil)
@@ -528,9 +579,17 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     id<MTLFunction> vertexFunction = [library newFunctionWithName:@"vertex_main"];
     id<MTLFunction> fragmentFunction = [library newFunctionWithName:@"fragment_main"];
 
+#if !IMGUI_USE_OBJC_ARC
+    [library release];
+#endif
+
     if (vertexFunction == nil || fragmentFunction == nil)
     {
-        NSLog(@"Error: failed to find Metal shader functions in library: %@", error);
+#if !IMGUI_USE_OBJC_ARC
+        [vertexFunction release];
+        [fragmentFunction release];
+#endif
+        NSLog(@"Error: failed to find Metal shader functions in library");
         return nil;
     }
 
@@ -552,7 +611,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     pipelineDescriptor.vertexFunction = vertexFunction;
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-    pipelineDescriptor.sampleCount = self.framebufferDescriptor.sampleCount;
+    pipelineDescriptor.rasterSampleCount = self.framebufferDescriptor.sampleCount;
     pipelineDescriptor.colorAttachments[0].pixelFormat = self.framebufferDescriptor.colorPixelFormat;
     pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
     pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
@@ -568,7 +627,26 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     if (error != nil)
         NSLog(@"Error: failed to create Metal pipeline state: %@", error);
 
+#if !IMGUI_USE_OBJC_ARC
+    [vertexFunction release];
+    [fragmentFunction release];
+    [pipelineDescriptor release];
+    [renderPipelineState autorelease];
+#endif
+
     return renderPipelineState;
 }
+
+#if !IMGUI_USE_OBJC_ARC
+- (void)dealloc {
+    [_bufferCache release];
+    [_depthStencilState release];
+    [_fontTexture release];
+    [_framebufferDescriptor release];
+    [_renderPipelineStateCache release];
+    [_device release];
+    [super dealloc];
+}
+#endif
 
 @end

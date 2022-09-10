@@ -13,7 +13,7 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_metal.mm
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
-LIBS = -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -framework CoreVideo -framework QuartzCore
+LIBS = -liconv -framework AudioToolbox -framework AVFoundation -framework Carbon -framework Cocoa -framework CoreAudio -framework CoreGraphics -framework CoreHaptics -framework CoreMotion -framework Foundation -framework ForceFeedback -framework GameController -framework ImageIO -framework IOKit -framework QuartzCore -framework Metal -framework MetalKit
 LIBS += `sdl2-config --libs`
 LIBS += -L/usr/local/lib
 
