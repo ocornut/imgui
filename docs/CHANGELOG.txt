@@ -121,6 +121,7 @@ Other Changes:
 - Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
+- Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
 - Demo: Improved "Constrained-resizing window" example, more clearly showcase aspect-ratio. (#5627)
 - Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
 - Examples: Added all SDL examples to default VS solution.
