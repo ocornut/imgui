@@ -52,7 +52,7 @@ Index of this file:
 // - sub section: ShowDemoWindowLayout()
 // - sub section: ShowDemoWindowPopups()
 // - sub section: ShowDemoWindowTables()
-// - sub section: ShowDemoWindowMisc()
+// - sub section: ShowDemoWindowInputs()
 // [SECTION] About Window / ShowAboutWindow()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
@@ -248,7 +248,7 @@ void ImGui::ShowUserGuide()
 // - ShowDemoWindowPopups()
 // - ShowDemoWindowTables()
 // - ShowDemoWindowColumns()
-// - ShowDemoWindowMisc()
+// - ShowDemoWindowInputs()
 //-----------------------------------------------------------------------------
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
@@ -258,7 +258,7 @@ static void ShowDemoWindowLayout();
 static void ShowDemoWindowPopups();
 static void ShowDemoWindowTables();
 static void ShowDemoWindowColumns();
-static void ShowDemoWindowMisc();
+static void ShowDemoWindowInputs();
 
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
@@ -559,7 +559,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowLayout();
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
-    ShowDemoWindowMisc();
+    ShowDemoWindowInputs();
 
     // End of ShowDemoWindow()
     ImGui::PopItemWidth();
@@ -2516,6 +2516,26 @@ static void ShowDemoWindowWidgets()
     {
         ImGui::Checkbox("Disable entire section above", &disable_all);
         ImGui::SameLine(); HelpMarker("Demonstrate using BeginDisabled()/EndDisabled() across this section.");
+        ImGui::TreePop();
+    }
+
+    IMGUI_DEMO_MARKER("Widgets/Text Filter");
+    if (ImGui::TreeNode("Text Filter"))
+    {
+        // Helper class to easy setup a text filter.
+        // You may want to implement a more feature-full filtering scheme in your own application.
+        HelpMarker("Not a widget per-se, but ImGuiTextFilter is a helper to perform simple filtering on text strings.");
+        static ImGuiTextFilter filter;
+        ImGui::Text("Filter usage:\n"
+            "  \"\"         display all lines\n"
+            "  \"xxx\"      display lines containing \"xxx\"\n"
+            "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
+            "  \"-xxx\"     hide lines containing \"xxx\"");
+        filter.Draw();
+        const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
+        for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
+            if (filter.PassFilter(lines[i]))
+                ImGui::BulletText("%s", lines[i]);
         ImGui::TreePop();
     }
 }
@@ -5686,26 +5706,8 @@ static void ShowDemoWindowColumns()
 
 namespace ImGui { extern ImGuiKeyData* GetKeyData(ImGuiKey key); }
 
-static void ShowDemoWindowMisc()
+static void ShowDemoWindowInputs()
 {
-    IMGUI_DEMO_MARKER("Filtering");
-    if (ImGui::CollapsingHeader("Filtering"))
-    {
-        // Helper class to easy setup a text filter.
-        // You may want to implement a more feature-full filtering scheme in your own application.
-        static ImGuiTextFilter filter;
-        ImGui::Text("Filter usage:\n"
-                    "  \"\"         display all lines\n"
-                    "  \"xxx\"      display lines containing \"xxx\"\n"
-                    "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-                    "  \"-xxx\"     hide lines containing \"xxx\"");
-        filter.Draw();
-        const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
-        for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
-            if (filter.PassFilter(lines[i]))
-                ImGui::BulletText("%s", lines[i]);
-    }
-
     IMGUI_DEMO_MARKER("Inputs, Navigation & Focus");
     if (ImGui::CollapsingHeader("Inputs, Navigation & Focus"))
     {
@@ -5741,6 +5743,35 @@ static void ShowDemoWindowMisc()
             ImGui::Text("Mouse released:");     for (int i = 0; i < count; i++) if (ImGui::IsMouseReleased(i))  { ImGui::SameLine(); ImGui::Text("b%d", i); }
             ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
             ImGui::Text("Pen Pressure: %.1f", io.PenPressure); // Note: currently unused
+            ImGui::TreePop();
+        }
+
+        // Display mouse cursors
+        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Mouse Cursors");
+        if (ImGui::TreeNode("Mouse Cursors"))
+        {
+            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "NotAllowed" };
+            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
+
+            ImGuiMouseCursor current = ImGui::GetMouseCursor();
+            ImGui::Text("Current mouse cursor = %d: %s", current, mouse_cursors_names[current]);
+            ImGui::BeginDisabled(true);
+            ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
+            ImGui::EndDisabled();
+
+            ImGui::Text("Hover to see mouse cursors:");
+            ImGui::SameLine(); HelpMarker(
+                "Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. "
+                "If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, "
+                "otherwise your backend needs to handle it.");
+            for (int i = 0; i < ImGuiMouseCursor_COUNT; i++)
+            {
+                char label[32];
+                sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
+                ImGui::Bullet(); ImGui::Selectable(label, false);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetMouseCursor(i);
+            }
             ImGui::TreePop();
         }
 
@@ -5934,30 +5965,6 @@ static void ShowDemoWindowMisc()
             ImGui::Text("  w/ default threshold: (%.1f, %.1f)", value_with_lock_threshold.x, value_with_lock_threshold.y);
             ImGui::Text("  w/ zero threshold: (%.1f, %.1f)", value_raw.x, value_raw.y);
             ImGui::Text("io.MouseDelta: (%.1f, %.1f)", mouse_delta.x, mouse_delta.y);
-            ImGui::TreePop();
-        }
-
-        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Mouse cursors");
-        if (ImGui::TreeNode("Mouse cursors"))
-        {
-            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "NotAllowed" };
-            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
-
-            ImGuiMouseCursor current = ImGui::GetMouseCursor();
-            ImGui::Text("Current mouse cursor = %d: %s", current, mouse_cursors_names[current]);
-            ImGui::Text("Hover to see mouse cursors:");
-            ImGui::SameLine(); HelpMarker(
-                "Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. "
-                "If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, "
-                "otherwise your backend needs to handle it.");
-            for (int i = 0; i < ImGuiMouseCursor_COUNT; i++)
-            {
-                char label[32];
-                sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
-                ImGui::Bullet(); ImGui::Selectable(label, false);
-                if (ImGui::IsItemHovered())
-                    ImGui::SetMouseCursor(i);
-            }
             ImGui::TreePop();
         }
     }
