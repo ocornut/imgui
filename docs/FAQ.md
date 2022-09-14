@@ -196,7 +196,7 @@ A primer on labels and the ID Stack...
 
 Dear ImGui internally needs to uniquely identify UI elements.
 Elements that are typically not clickable (such as calls to the Text functions) don't need an ID.
-Interactive widgets (such as calls to Button buttons) need an unique ID.
+Interactive widgets (such as calls to Button buttons) need a unique ID.
 
 **Unique IDs are used internally to track active widgets and occasionally associate state to widgets.<BR>
 Unique IDs are implicitly built from the hash of multiple elements that identify the "path" to the UI element.**
@@ -486,7 +486,7 @@ ImGui::End();
 
 ### Q: How should I handle DPI in my application?
 
-The short answer is: obtain the desired DPI scale, load your fonts resized with that scale (always round down fonts size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
+The short answer is: obtain the desired DPI scale, load your fonts resized with that scale (always round down fonts size to the nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
 
 Your application may want to detect DPI change and reload the fonts and reset style between frames.
 
@@ -564,7 +564,7 @@ io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 ImFontConfig config;
 config.OversampleH = 2;
 config.OversampleV = 1;
-config.GlyphOffset.y -= 1.0f;      // Move everything by 1 pixels up
+config.GlyphOffset.y -= 1.0f;      // Move everything by 1 pixel up
 config.GlyphExtraSpacing.x = 1.0f; // Increase spacing between characters
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
 

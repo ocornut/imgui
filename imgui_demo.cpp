@@ -94,7 +94,7 @@ Index of this file:
 #ifdef _MSC_VER
 #pragma warning (disable: 4127)     // condition expression is constant
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to an 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -1008,7 +1008,7 @@ static void ShowDemoWindowWidgets()
             // Note that characters values are preserved even by InputText() if the font cannot be displayed,
             // so you can safely copy & paste garbled characters into another application.
             ImGui::TextWrapped(
-                "CJK text will only appears if the font was loaded with the appropriate CJK character ranges. "
+                "CJK text will only appear if the font was loaded with the appropriate CJK character ranges. "
                 "Call io.Fonts->AddFontFromFileTTF() manually to load extra character ranges. "
                 "Read docs/FONTS.md for details.");
             ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)"); // Normally we would use u8"blah blah" with the proper characters directly in the string.
@@ -1471,7 +1471,7 @@ static void ShowDemoWindowWidgets()
             static char buf3[64];
             static int edit_count = 0;
             ImGui::InputText("Edit", buf3, 64, ImGuiInputTextFlags_CallbackEdit, Funcs::MyCallback, (void*)&edit_count);
-            ImGui::SameLine(); HelpMarker("Here we toggle the casing of the first character on every edits + count edits.");
+            ImGui::SameLine(); HelpMarker("Here we toggle the casing of the first character on every edit + count edits.");
             ImGui::SameLine(); ImGui::Text("(%d)", edit_count);
 
             ImGui::TreePop();
@@ -2041,7 +2041,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Drags:");
         ImGui::Checkbox("Clamp integers to 0..50", &drag_clamp);
         ImGui::SameLine(); HelpMarker(
-            "As with every widgets in dear imgui, we never modify values unless there is a user interaction.\n"
+            "As with every widget in dear imgui, we never modify values unless there is a user interaction.\n"
             "You can override the clamping limits by using CTRL+Click to input a value.");
         ImGui::DragScalar("drag s8",        ImGuiDataType_S8,     &s8_v,  drag_speed, drag_clamp ? &s8_zero  : NULL, drag_clamp ? &s8_fifty  : NULL);
         ImGui::DragScalar("drag u8",        ImGuiDataType_U8,     &u8_v,  drag_speed, drag_clamp ? &u8_zero  : NULL, drag_clamp ? &u8_fifty  : NULL, "%u ms");
@@ -3860,7 +3860,7 @@ static void ShowDemoWindowTables()
         // as TableNextColumn() will automatically wrap around and create new rows as needed.
         // This is generally more convenient when your cells all contains the same type of data.
         HelpMarker(
-            "Only using TableNextColumn(), which tends to be convenient for tables where every cells contains the same type of contents.\n"
+            "Only using TableNextColumn(), which tends to be convenient for tables where every cell contains the same type of contents.\n"
             "This is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
         if (ImGui::BeginTable("table3", 3))
         {
@@ -3912,7 +3912,7 @@ static void ShowDemoWindowTables()
         ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
         ImGui::SameLine(); ImGui::RadioButton("FillButton", &contents_type, CT_FillButton);
         ImGui::Checkbox("Display headers", &display_headers);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appear in Headers");
         PopStyleCompact();
 
         if (ImGui::BeginTable("table1", 3, flags))
@@ -4074,7 +4074,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", &flags, ImGuiTableFlags_Reorderable);
         ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", &flags, ImGuiTableFlags_Hideable);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appear in Headers)");
         PopStyleCompact();
 
         if (ImGui::BeginTable("table1", 3, flags))
@@ -4132,7 +4132,7 @@ static void ShowDemoWindowTables()
             "- any form of row selection\n"
             "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n\n"
             "Actual padding values are using style.CellPadding.\n\n"
-            "In this demo we don't show horizontal borders to emphasis how they don't affect default horizontal padding.");
+            "In this demo we don't show horizontal borders to emphasize how they don't affect default horizontal padding.");
 
         static ImGuiTableFlags flags1 = ImGuiTableFlags_BordersV;
         PushStyleCompact();
@@ -4601,7 +4601,7 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Nested tables");
     if (ImGui::TreeNode("Nested tables"))
     {
-        HelpMarker("This demonstrate embedding a table into another table cell.");
+        HelpMarker("This demonstrates embedding a table into another table cell.");
 
         if (ImGui::BeginTable("table_nested1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
         {
@@ -4646,7 +4646,7 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Row height");
     if (ImGui::TreeNode("Row height"))
     {
-        HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would requires a unique clipping rectangle per row.");
+        HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would require a unique clipping rectangle per row.");
         if (ImGui::BeginTable("table_row_height", 1, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInnerV))
         {
             for (int row = 0; row < 10; row++)
@@ -5208,7 +5208,7 @@ static void ShowDemoWindowTables()
         static bool show_headers = true;
         static bool show_wrapped_text = false;
         //static ImGuiTextFilter filter;
-        //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // FIXME-TABLE: Enabling this results in initial clipped first pass on table which tend to affects column sizing
+        //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // FIXME-TABLE: Enabling this results in initial clipped first pass on table which tend to affect column sizing
         if (ImGui::TreeNode("Options"))
         {
             // Make the UI compact because there are so many fields
@@ -5235,8 +5235,8 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags, ImGuiTableFlags_BordersH);
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appear in Headers");
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appear in Headers)");
                 ImGui::TreePop();
             }
 
@@ -5299,7 +5299,7 @@ static void ShowDemoWindowTables()
                 HelpMarker("If scrolling is disabled (ScrollX and ScrollY not set):\n"
                     "- The table is output directly in the parent window.\n"
                     "- OuterSize.x < 0.0f will right-align the table.\n"
-                    "- OuterSize.x = 0.0f will narrow fit the table unless there are any Stretch column.\n"
+                    "- OuterSize.x = 0.0f will narrow fit the table unless there are any Stretch columns.\n"
                     "- OuterSize.y then becomes the minimum size for the table, which will extend vertically if there are more rows (unless NoHostExtendY is set).");
 
                 // From a user point of view we will tend to use 'inner_width' differently depending on whether our table is embedding scrolling.
@@ -7472,7 +7472,7 @@ static void ShowExampleAppFullscreen(bool* p_open)
 // [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
 //-----------------------------------------------------------------------------
 
-// Demonstrate using of "##" and "###" in identifiers to manipulate ID generation.
+// Demonstrate the use of "##" and "###" in identifiers to manipulate ID generation.
 // This applies to all regular items as well.
 // Read FAQ section "How can I have multiple widgets with the same label?" for details.
 static void ShowExampleAppWindowTitles(bool*)

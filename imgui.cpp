@@ -898,7 +898,7 @@ CODE
 #if defined(_MSC_VER) && _MSC_VER >= 1922   // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)             // operator '|': deprecated between enumerations of different types
 #endif
-#pragma warning (disable: 26451)            // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26451)            // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to an 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
 #pragma warning (disable: 26495)            // [Static Analyzer] Variable 'XXX' is uninitialized. Always initialize a member variable (type.6).
 #pragma warning (disable: 26812)            // [Static Analyzer] The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
 #endif
@@ -3519,7 +3519,7 @@ void ImGui::KeepAliveID(ImGuiID id)
 void ImGui::MarkItemEdited(ImGuiID id)
 {
     // This marking is solely to be able to provide info for IsItemDeactivatedAfterEdit().
-    // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need need to fill the data.
+    // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
     IM_UNUSED(id); // Avoid unused variable warnings when asserts are compiled out.
@@ -4627,7 +4627,7 @@ void ImGui::NewFrame()
 
     // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
-    // This fallback is particularly important as it avoid ImGui:: calls from crashing.
+    // This fallback is particularly important as it prevents ImGui:: calls from crashing.
     g.WithinFrameScopeWithImplicitWindow = true;
     SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
@@ -5358,7 +5358,7 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     ImVec2 size = ImFloor(size_arg);
     const int auto_fit_axises = ((size.x == 0.0f) ? (1 << ImGuiAxis_X) : 0x00) | ((size.y == 0.0f) ? (1 << ImGuiAxis_Y) : 0x00);
     if (size.x <= 0.0f)
-        size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too much issues)
+        size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too many issues)
     if (size.y <= 0.0f)
         size.y = ImMax(content_avail.y + size.y, 4.0f);
     SetNextWindowSize(size);
@@ -5762,7 +5762,7 @@ ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir)
 }
 
 // Handle resize for: Resize Grips, Borders, Gamepad
-// Return true when using auto-fit (double click on resize grip)
+// Return true when using auto-fit (double-click on resize grip)
 static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
 {
     ImGuiContext& g = *GImGui;
@@ -5770,7 +5770,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
 
     if ((flags & ImGuiWindowFlags_NoResize) || (flags & ImGuiWindowFlags_AlwaysAutoResize) || window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
         return false;
-    if (window->WasActive == false) // Early out to avoid running this code for e.g. an hidden implicit/fallback Debug window.
+    if (window->WasActive == false) // Early out to avoid running this code for e.g. a hidden implicit/fallback Debug window.
         return false;
 
     bool ret_auto_fit = false;
@@ -5949,7 +5949,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     window->SkipItems = false;
 
     // Draw window + handle manual resize
-    // As we highlight the title bar when want_focus is set, multiple reappearing windows will have have their title bar highlighted on their reappearing frame.
+    // As we highlight the title bar when want_focus is set, multiple reappearing windows will have their title bar highlighted on their reappearing frame.
     const float window_rounding = window->WindowRounding;
     const float window_border_size = window->WindowBorderSize;
     if (window->Collapsed)
@@ -6571,7 +6571,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // UPDATE RECTANGLES (1- THOSE NOT AFFECTED BY SCROLLING)
-        // Update various regions. Variables they depends on should be set above in this function.
+        // Update various regions. Variables they depend on should be set above in this function.
         // We set this up after processing the resize grip so that our rectangles doesn't lag by a frame.
 
         // Outer rectangle
@@ -7593,7 +7593,7 @@ void ImGui::SetItemDefaultFocus()
     g.NavInitResultRectRel = WindowRectAbsToRel(window, g.LastItemData.Rect);
     NavUpdateAnyRequestFlag();
 
-    // Scroll could be done in NavInitRequestApplyResult() via a opt-in flag (we however don't want regular init requests to scroll)
+    // Scroll could be done in NavInitRequestApplyResult() via an opt-in flag (we however don't want regular init requests to scroll)
     if (!IsItemVisible())
         ScrollToRectEx(window, g.LastItemData.Rect, ImGuiScrollFlags_None);
 }
@@ -7846,7 +7846,7 @@ int ImGui::GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float repeat_ra
 {
     ImGuiContext& g = *GImGui;
     const ImGuiKeyData* key_data = GetKeyData(key);
-    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on input ownership)
         return 0;
     const float t = key_data->DownDuration;
     return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
@@ -7880,7 +7880,7 @@ bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
 bool ImGui::IsKeyPressedEx(ImGuiKey key, ImGuiInputFlags flags)
 {
     const ImGuiKeyData* key_data = GetKeyData(key);
-    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+    if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on input ownership)
         return false;
     const float t = key_data->DownDuration;
     if (t < 0.0f)
@@ -7918,7 +7918,7 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
-    if (!g.IO.MouseDown[button]) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitate eating mechanism (until we finish work on input ownership)
+    if (!g.IO.MouseDown[button]) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on input ownership)
         return false;
     const float t = g.IO.MouseDownDuration[button];
     if (t == 0.0f)
@@ -8955,7 +8955,7 @@ void ImGui::EndGroup()
     ItemAdd(group_bb, 0, NULL, ImGuiItemFlags_NoTabStop);
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive(), IsItemDeactivated() etc. will be functional on the entire group.
-    // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
+    // It would be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
     // Also if you grep for LastItemId you'll notice it is only used in that context.
     // (The two tests not the same because ActiveIdIsAlive is an ID itself, in order to be able to handle ActiveId being overwritten during the frame.)
     const bool group_contains_curr_active_id = (group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId;
@@ -9174,7 +9174,7 @@ void ImGui::SetScrollY(float scroll_y)
 //  - local_pos = (absolution_pos - window->Pos)
 //  - So local_x/local_y are 0.0f for a position at the upper-left corner of a window,
 //    and generally local_x/local_y are >(padding+decoration) && <(size-padding-decoration) when in the visible area.
-//  - They mostly exists because of legacy API.
+//  - They mostly exist because of legacy API.
 // Following the rules above, when trying to work with scrolling code, consider that:
 //  - SetScrollFromPosY(0.0f) == SetScrollY(0.0f + scroll.y) == has no effect!
 //  - SetScrollFromPosY(-scroll.y) == SetScrollY(-scroll.y + scroll.y) == SetScrollY(0.0f) == reset scroll. Of course writing SetScrollY(0.0f) directly then makes more sense
@@ -9755,7 +9755,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
             const float avail_w = (dir == ImGuiDir_Left ? r_avoid.Min.x : r_outer.Max.x) - (dir == ImGuiDir_Right ? r_avoid.Max.x : r_outer.Min.x);
             const float avail_h = (dir == ImGuiDir_Up ? r_avoid.Min.y : r_outer.Max.y) - (dir == ImGuiDir_Down ? r_avoid.Max.y : r_outer.Min.y);
 
-            // If there not enough room on one axis, there's no point in positioning on a side on this axis (e.g. when not enough width, use a top/bottom position to maximize available width)
+            // If there's not enough room on one axis, there's no point in positioning on a side on this axis (e.g. when not enough width, use a top/bottom position to maximize available width)
             if (avail_w < size.x && (dir == ImGuiDir_Left || dir == ImGuiDir_Right))
                 continue;
             if (avail_h < size.y && (dir == ImGuiDir_Up || dir == ImGuiDir_Down))
@@ -9947,7 +9947,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
     }
 
     // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
-    // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
+    // For example, this ensures that items in one column are not reached when moving vertically from items in another column.
     NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
 
     // Compute distance between boxes
@@ -10011,7 +10011,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
     }
 #endif
 
-    // Is it in the quadrant we're interesting in moving to?
+    // Is it in the quadrant we're interested in moving to?
     bool new_best = false;
     const ImGuiDir move_dir = g.NavMoveDir;
     if (quadrant == move_dir)
@@ -10636,7 +10636,7 @@ void ImGui::NavUpdateCreateMoveRequest()
     if (g.NavMoveDir != ImGuiDir_None)
         NavMoveRequestSubmit(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags);
 
-    // Moving with no reference triggers a init request (will be used as a fallback if the direction fails to find a match)
+    // Moving with no reference triggers an init request (will be used as a fallback if the direction fails to find a match)
     if (g.NavMoveSubmitted && g.NavId == 0)
     {
         IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: from move, window \"%s\", layer=%d\n", window ? window->Name : "<NULL>", g.NavLayer);
@@ -10646,7 +10646,7 @@ void ImGui::NavUpdateCreateMoveRequest()
     }
 
     // When using gamepad, we project the reference nav bounding box into window visible area.
-    // This is to allow resuming navigation inside the visible area after doing a large amount of scrolling, since with gamepad every movements are relative
+    // This is to allow resuming navigation inside the visible area after doing a large amount of scrolling, since with gamepad all movements are relative
     // (can't focus a visible object like we can with the mouse).
     if (g.NavMoveSubmitted && g.NavInputSource == ImGuiInputSource_Gamepad && g.NavLayer == ImGuiNavLayer_Main && window != NULL)// && (g.NavMoveFlags & ImGuiNavMoveFlags_Forwarded))
     {
@@ -10676,7 +10676,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         scoring_rect.TranslateY(scoring_rect_offset_y);
         scoring_rect.Min.x = ImMin(scoring_rect.Min.x + 1.0f, scoring_rect.Max.x);
         scoring_rect.Max.x = scoring_rect.Min.x;
-        IM_ASSERT(!scoring_rect.IsInverted()); // Ensure if we have a finite, non-inverted bounding box here will allows us to remove extraneous ImFabs() calls in NavScoreItem().
+        IM_ASSERT(!scoring_rect.IsInverted()); // Ensure if we have a finite, non-inverted bounding box here will allow us to remove extraneous ImFabs() calls in NavScoreItem().
         //GetForegroundDrawList()->AddRect(scoring_rect.Min, scoring_rect.Max, IM_COL32(255,200,0,255)); // [DEBUG]
         //if (!g.NavScoringNoClipRect.IsInverted()) { GetForegroundDrawList()->AddRect(g.NavScoringNoClipRect.Min, g.NavScoringNoClipRect.Max, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
     }
@@ -10725,7 +10725,7 @@ void ImGui::NavMoveRequestApplyResult()
         if ((g.NavTabbingCounter == 1 || g.NavTabbingDir == 0) && g.NavTabbingResultFirst.ID)
             result = &g.NavTabbingResultFirst;
 
-    // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
+    // In a situation when there are no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
     if (result == NULL)
     {
         if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
@@ -11488,7 +11488,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 }
 
 // We don't use BeginDragDropTargetCustom() and duplicate its code because:
-// 1) we use LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle them.
+// 1) we use LastItemRectHoveredRect which handles items that push a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle them.
 // 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
 // Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
 bool ImGui::BeginDragDropTarget()
@@ -11552,7 +11552,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     // Render default drop visuals
     // FIXME-DRAGDROP: Settle on a proper default visuals for drop target.
     payload.Preview = was_accepted_previously;
-    flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that lives for 1 frame)
+    flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that live for 1 frame)
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
         window->DrawList->AddRect(r.Min - ImVec2(3.5f,3.5f), r.Max + ImVec2(3.5f, 3.5f), GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f);
 
@@ -13502,7 +13502,7 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     ImGuiStackTool* tool = &g.DebugStackTool;
 
     // Step 0: stack query
-    // This assume that the ID was computed with the current ID stack, which tends to be the case for our widget.
+    // This assumes that the ID was computed with the current ID stack, which tends to be the case for our widget.
     if (tool->StackLevel == -1)
     {
         tool->StackLevel++;
