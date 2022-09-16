@@ -3539,11 +3539,17 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFla
             if (focused_root_window->WasActive && focused_root_window != window->RootWindow)
             {
                 // For the purpose of those flags we differentiate "standard popup" from "modal popup"
-                // NB: The order of those two tests is important because Modal windows are also Popups.
+                // NB: The 'else' is important because Modal windows are also Popups.
+                bool want_inhibit = false;
                 if (focused_root_window->Flags & ImGuiWindowFlags_Modal)
-                    return false;
-                if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-                    return false;
+                    want_inhibit = true;
+                else if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+                    want_inhibit = true;
+
+                // Inhibit hover unless the window is within the stack of our modal/popup
+                if (want_inhibit)
+                    if (!ImGui::IsWindowWithinBeginStackOf(window->RootWindow, focused_root_window))
+                        return false;
             }
     return true;
 }
