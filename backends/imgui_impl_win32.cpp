@@ -87,6 +87,8 @@ struct ImGui_ImplWin32_Data
     ImGuiMouseCursor            LastMouseCursor;
     bool                        HasGamepad;
     bool                        WantUpdateHasGamepad;
+    bool                        WantUpdateScancodes;
+    ImGuiKey                    UntranslatedKeyMap[ImGuiKey_COUNT];
 
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     HMODULE                     XInputDLL;
@@ -107,6 +109,54 @@ static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
 }
 
 // Functions
+static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam);
+
+static ImGuiKey ImGui_ImplWin32_GetUntranslatedKey(ImGuiKey key, const ImGuiKeyData* key_data)
+{
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+
+    if (key < 0 || key >= IM_ARRAYSIZE(bd->UntranslatedKeyMap))
+        return ImGuiKey_None;
+
+    return bd->UntranslatedKeyMap[key];
+}
+
+static void ImGui_ImplWin32_UpdateScancodes()
+{
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+
+    if (!bd->WantUpdateScancodes)
+        return;
+
+    bd->WantUpdateScancodes = false;
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    for (int i = 0; i < IM_ARRAYSIZE(bd->UntranslatedKeyMap); ++i)
+        bd->UntranslatedKeyMap[i] = ImGuiKey_None;
+
+    HKL layout = LoadKeyboardLayoutA("00000409", 0); // U.S. English
+    if (layout == NULL)
+        return;
+
+    for (int i = 0; i < IM_ARRAYSIZE(bd->UntranslatedKeyMap); ++i)
+    {
+        int scancode = (int)MapVirtualKey(i, MAPVK_VK_TO_VSC);
+        if (scancode == 0)
+            continue;
+
+        int us_vk = MapVirtualKeyExA(scancode, MAPVK_VSC_TO_VK, layout);
+        if (us_vk == 0)
+            continue;
+
+        ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(us_vk);
+        if (key != ImGuiKey_None)
+            bd->UntranslatedKeyMap[i] = key;
+    }
+
+    UnloadKeyboardLayout(layout);
+}
+
 bool    ImGui_ImplWin32_Init(void* hwnd)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -124,15 +174,20 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.BackendPlatformName = "imgui_impl_win32";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags |= ImGuiBackednFlags_HasUntranslatedKeys;     // We can support mapping keys scancodes into ImGuiKey_XXX (optional, useful in games)
+    io.GetUntranslatedKey = ImGui_ImplWin32_GetUntranslatedKey;
 
     bd->hWnd = (HWND)hwnd;
     bd->WantUpdateHasGamepad = true;
+    bd->WantUpdateScancodes = true;
     bd->TicksPerSecond = perf_frequency;
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 
     // Set platform dependent data in viewport
     ImGui::GetMainViewport()->PlatformHandleRaw = (void*)hwnd;
+
+    ImGui_ImplWin32_UpdateScancodes();
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -361,6 +416,8 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplWin32_UpdateGamepads();
+
+    ImGui_ImplWin32_UpdateScancodes();
 }
 
 // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
@@ -624,6 +681,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_DEVICECHANGE:
         if ((UINT)wParam == DBT_DEVNODES_CHANGED)
             bd->WantUpdateHasGamepad = true;
+        return 0;
+    case WM_INPUTLANGCHANGE:
+        if (io.BackendFlags & ImGuiBackednFlags_HasUntranslatedKeys)
+            bd->WantUpdateScancodes = true;
         return 0;
     }
     return 0;

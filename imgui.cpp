@@ -7799,6 +7799,18 @@ const char* ImGui::GetKeyName(ImGuiKey key)
     return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
 
+ImGuiKey ImGui::GetUntranslatedKey(ImGuiKey key)
+{
+    IM_ASSERT(IsNamedKey(key));
+
+    ImGuiIO& io = GetIO();
+
+    if (io.BackendFlags & ImGuiBackednFlags_HasUntranslatedKeys && io.GetUntranslatedKey)
+        return io.GetUntranslatedKey(key, &io.KeysData[key]);
+
+    return ImGuiKey_None;
+}
+
 void ImGui::GetKeyChordName(ImGuiModFlags mods, ImGuiKey key, char* out_buf, int out_buf_size)
 {
     ImGuiContext& g = *GImGui;
