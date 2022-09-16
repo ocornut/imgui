@@ -127,7 +127,9 @@ Breaking changes:
      - requires an explicit identifier. You may still use e.g. PushID() calls and then pass an empty identifier.
      - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
    - As always we are keeping a redirection function available (will obsolete later).
-- Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
+ - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
+   Must always pass a pointer value explicitly, NULL is ok.
+ - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
    - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
    - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
      - For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
@@ -149,6 +151,9 @@ Breaking changes:
 
 Other Changes:
 
+- Popups & Modals: fixed nested Begin() being erroneously input-inhibited. While it is
+  unusual, you can nest a Begin() inside a popup or modal, it is occasionally useful to
+  achieve certains things (e.g. some ways to implement suggestion popup #718, #4461).
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
@@ -186,8 +191,10 @@ Other Changes:
 - Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
+- Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
 - Demo: Improved "Constrained-resizing window" example, more clearly showcase aspect-ratio. (#5627)
 - Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
+- Examples: Added all SDL examples to default VS solution.
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]

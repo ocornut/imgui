@@ -52,7 +52,7 @@ Index of this file:
 // - sub section: ShowDemoWindowLayout()
 // - sub section: ShowDemoWindowPopups()
 // - sub section: ShowDemoWindowTables()
-// - sub section: ShowDemoWindowMisc()
+// - sub section: ShowDemoWindowInputs()
 // [SECTION] About Window / ShowAboutWindow()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
@@ -95,7 +95,7 @@ Index of this file:
 #ifdef _MSC_VER
 #pragma warning (disable: 4127)     // condition expression is constant
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
+#pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to an 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -213,7 +213,7 @@ static void ShowDockingDisabledMessage()
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
-// Helper to wire demo markers located in code to a interactive browser
+// Helper to wire demo markers located in code to an interactive browser
 typedef void (*ImGuiDemoMarkerCallback)(const char* file, int line, const char* section, void* user_data);
 extern ImGuiDemoMarkerCallback  GImGuiDemoMarkerCallback;
 extern void*                    GImGuiDemoMarkerCallbackUserData;
@@ -260,7 +260,7 @@ void ImGui::ShowUserGuide()
 // - ShowDemoWindowPopups()
 // - ShowDemoWindowTables()
 // - ShowDemoWindowColumns()
-// - ShowDemoWindowMisc()
+// - ShowDemoWindowInputs()
 //-----------------------------------------------------------------------------
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
@@ -270,7 +270,7 @@ static void ShowDemoWindowLayout();
 static void ShowDemoWindowPopups();
 static void ShowDemoWindowTables();
 static void ShowDemoWindowColumns();
-static void ShowDemoWindowMisc();
+static void ShowDemoWindowInputs();
 
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
@@ -617,7 +617,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowLayout();
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
-    ShowDemoWindowMisc();
+    ShowDemoWindowInputs();
 
     // End of ShowDemoWindow()
     ImGui::PopItemWidth();
@@ -715,7 +715,7 @@ static void ShowDemoWindowWidgets()
                 "USER:\n"
                 "Hold SHIFT or use mouse to select text.\n"
                 "CTRL+Left/Right to word jump.\n"
-                "CTRL+A or double-click to select all.\n"
+                "CTRL+A or Double-Click to select all.\n"
                 "CTRL+X,CTRL+C,CTRL+V clipboard.\n"
                 "CTRL+Z,CTRL+Y undo/redo.\n"
                 "ESCAPE to revert.\n\n"
@@ -1066,7 +1066,7 @@ static void ShowDemoWindowWidgets()
             // Note that characters values are preserved even by InputText() if the font cannot be displayed,
             // so you can safely copy & paste garbled characters into another application.
             ImGui::TextWrapped(
-                "CJK text will only appears if the font was loaded with the appropriate CJK character ranges. "
+                "CJK text will only appear if the font was loaded with the appropriate CJK character ranges. "
                 "Call io.Fonts->AddFontFromFileTTF() manually to load extra character ranges. "
                 "Read docs/FONTS.md for details.");
             ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)"); // Normally we would use u8"blah blah" with the proper characters directly in the string.
@@ -1529,7 +1529,7 @@ static void ShowDemoWindowWidgets()
             static char buf3[64];
             static int edit_count = 0;
             ImGui::InputText("Edit", buf3, 64, ImGuiInputTextFlags_CallbackEdit, Funcs::MyCallback, (void*)&edit_count);
-            ImGui::SameLine(); HelpMarker("Here we toggle the casing of the first character on every edits + count edits.");
+            ImGui::SameLine(); HelpMarker("Here we toggle the casing of the first character on every edit + count edits.");
             ImGui::SameLine(); ImGui::Text("(%d)", edit_count);
 
             ImGui::TreePop();
@@ -2054,7 +2054,7 @@ static void ShowDemoWindowWidgets()
         // - integer/float/double
         // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum
         // to pass the type, and passing all arguments by pointer.
-        // This is the reason the test code below creates local variables to hold "zero" "one" etc. for each types.
+        // This is the reason the test code below creates local variables to hold "zero" "one" etc. for each type.
         // In practice, if you frequently use a given type that is not covered by the normal API entry points,
         // you can wrap it yourself inside a 1 line function which can take typed argument as value instead of void*,
         // and then pass their address to the generic function. For example:
@@ -2099,7 +2099,7 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Drags:");
         ImGui::Checkbox("Clamp integers to 0..50", &drag_clamp);
         ImGui::SameLine(); HelpMarker(
-            "As with every widgets in dear imgui, we never modify values unless there is a user interaction.\n"
+            "As with every widget in dear imgui, we never modify values unless there is a user interaction.\n"
             "You can override the clamping limits by using CTRL+Click to input a value.");
         ImGui::DragScalar("drag s8",        ImGuiDataType_S8,     &s8_v,  drag_speed, drag_clamp ? &s8_zero  : NULL, drag_clamp ? &s8_fifty  : NULL);
         ImGui::DragScalar("drag u8",        ImGuiDataType_U8,     &u8_v,  drag_speed, drag_clamp ? &u8_zero  : NULL, drag_clamp ? &u8_fifty  : NULL, "%u ms");
@@ -2398,7 +2398,7 @@ static void ShowDemoWindowWidgets()
         HelpMarker("Testing how various types of items are interacting with the IsItemXXX functions. Note that the bool return value of most ImGui function is generally equivalent to calling ImGui::IsItemHovered().");
         ImGui::Checkbox("Item Disabled",  &item_disabled);
 
-        // Submit selected item item so we can query their status in the code following it.
+        // Submit selected items so we can query their status in the code following it.
         bool ret = false;
         static bool b = false;
         static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
@@ -2589,6 +2589,26 @@ static void ShowDemoWindowWidgets()
     {
         ImGui::Checkbox("Disable entire section above", &disable_all);
         ImGui::SameLine(); HelpMarker("Demonstrate using BeginDisabled()/EndDisabled() across this section.");
+        ImGui::TreePop();
+    }
+
+    IMGUI_DEMO_MARKER("Widgets/Text Filter");
+    if (ImGui::TreeNode("Text Filter"))
+    {
+        // Helper class to easy setup a text filter.
+        // You may want to implement a more feature-full filtering scheme in your own application.
+        HelpMarker("Not a widget per-se, but ImGuiTextFilter is a helper to perform simple filtering on text strings.");
+        static ImGuiTextFilter filter;
+        ImGui::Text("Filter usage:\n"
+            "  \"\"         display all lines\n"
+            "  \"xxx\"      display lines containing \"xxx\"\n"
+            "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
+            "  \"-xxx\"     hide lines containing \"xxx\"");
+        filter.Draw();
+        const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
+        for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
+            if (filter.PassFilter(lines[i]))
+                ImGui::BulletText("%s", lines[i]);
         ImGui::TreePop();
     }
 }
@@ -3505,7 +3525,7 @@ static void ShowDemoWindowPopups()
         //     if (IsItemHovered() && IsMouseReleased(ImGuiMouseButton_Right))
         //         OpenPopup(id);
         //     return BeginPopup(id);
-        // For advanced advanced uses you may want to replicate and customize this code.
+        // For advanced uses you may want to replicate and customize this code.
         // See more details in BeginPopupContextItem().
 
         // Example 1
@@ -3673,7 +3693,7 @@ static void ShowDemoWindowPopups()
 }
 
 // Dummy data structure that we use for the Table demo.
-// (pre-C++11 doesn't allow us to instantiate ImVector<MyItem> template if this structure if defined inside the demo function)
+// (pre-C++11 doesn't allow us to instantiate ImVector<MyItem> template if this structure is defined inside the demo function)
 namespace
 {
 // We are passing our own identifier to TableSetupColumn() to facilitate identifying columns in the sorting code.
@@ -3892,7 +3912,7 @@ static void ShowDemoWindowTables()
         }
 
         // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
-        // This is generally more convenient when you have code manually submitting the contents of each columns.
+        // This is generally more convenient when you have code manually submitting the contents of each column.
         HelpMarker("Using TableNextRow() + calling TableNextColumn() _before_ each cell, manually.");
         if (ImGui::BeginTable("table2", 3))
         {
@@ -3913,7 +3933,7 @@ static void ShowDemoWindowTables()
         // as TableNextColumn() will automatically wrap around and create new rows as needed.
         // This is generally more convenient when your cells all contains the same type of data.
         HelpMarker(
-            "Only using TableNextColumn(), which tends to be convenient for tables where every cells contains the same type of contents.\n"
+            "Only using TableNextColumn(), which tends to be convenient for tables where every cell contains the same type of contents.\n"
             "This is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
         if (ImGui::BeginTable("table3", 3))
         {
@@ -3965,7 +3985,7 @@ static void ShowDemoWindowTables()
         ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
         ImGui::SameLine(); ImGui::RadioButton("FillButton", &contents_type, CT_FillButton);
         ImGui::Checkbox("Display headers", &display_headers);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appear in Headers");
         PopStyleCompact();
 
         if (ImGui::BeginTable("table1", 3, flags))
@@ -4004,8 +4024,8 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Resizable, stretch");
     if (ImGui::TreeNode("Resizable, stretch"))
     {
-        // By default, if we don't enable ScrollX the sizing policy for each columns is "Stretch"
-        // Each columns maintain a sizing weight, and they will occupy all available width.
+        // By default, if we don't enable ScrollX the sizing policy for each column is "Stretch"
+        // All columns maintain a sizing weight, and they will occupy all available width.
         static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_ContextMenuInBody;
         PushStyleCompact();
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
@@ -4127,7 +4147,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", &flags, ImGuiTableFlags_Reorderable);
         ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", &flags, ImGuiTableFlags_Hideable);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appear in Headers)");
         PopStyleCompact();
 
         if (ImGui::BeginTable("table1", 3, flags))
@@ -4185,7 +4205,7 @@ static void ShowDemoWindowTables()
             "- any form of row selection\n"
             "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n\n"
             "Actual padding values are using style.CellPadding.\n\n"
-            "In this demo we don't show horizontal borders to emphasis how they don't affect default horizontal padding.");
+            "In this demo we don't show horizontal borders to emphasize how they don't affect default horizontal padding.");
 
         static ImGuiTableFlags flags1 = ImGuiTableFlags_BordersV;
         PushStyleCompact();
@@ -4654,7 +4674,7 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Nested tables");
     if (ImGui::TreeNode("Nested tables"))
     {
-        HelpMarker("This demonstrate embedding a table into another table cell.");
+        HelpMarker("This demonstrates embedding a table into another table cell.");
 
         if (ImGui::BeginTable("table_nested1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
         {
@@ -4699,7 +4719,7 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Row height");
     if (ImGui::TreeNode("Row height"))
     {
-        HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would requires a unique clipping rectangle per row.");
+        HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would require a unique clipping rectangle per row.");
         if (ImGui::BeginTable("table_row_height", 1, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInnerV))
         {
             for (int row = 0; row < 10; row++)
@@ -5261,7 +5281,7 @@ static void ShowDemoWindowTables()
         static bool show_headers = true;
         static bool show_wrapped_text = false;
         //static ImGuiTextFilter filter;
-        //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // FIXME-TABLE: Enabling this results in initial clipped first pass on table which tend to affects column sizing
+        //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // FIXME-TABLE: Enabling this results in initial clipped first pass on table which tend to affect column sizing
         if (ImGui::TreeNode("Options"))
         {
             // Make the UI compact because there are so many fields
@@ -5288,8 +5308,8 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags, ImGuiTableFlags_BordersH);
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
                 ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appear in Headers");
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appear in Headers)");
                 ImGui::TreePop();
             }
 
@@ -5352,7 +5372,7 @@ static void ShowDemoWindowTables()
                 HelpMarker("If scrolling is disabled (ScrollX and ScrollY not set):\n"
                     "- The table is output directly in the parent window.\n"
                     "- OuterSize.x < 0.0f will right-align the table.\n"
-                    "- OuterSize.x = 0.0f will narrow fit the table unless there are any Stretch column.\n"
+                    "- OuterSize.x = 0.0f will narrow fit the table unless there are any Stretch columns.\n"
                     "- OuterSize.y then becomes the minimum size for the table, which will extend vertically if there are more rows (unless NoHostExtendY is set).");
 
                 // From a user point of view we will tend to use 'inner_width' differently depending on whether our table is embedding scrolling.
@@ -5759,26 +5779,8 @@ static void ShowDemoWindowColumns()
 
 namespace ImGui { extern ImGuiKeyData* GetKeyData(ImGuiKey key); }
 
-static void ShowDemoWindowMisc()
+static void ShowDemoWindowInputs()
 {
-    IMGUI_DEMO_MARKER("Filtering");
-    if (ImGui::CollapsingHeader("Filtering"))
-    {
-        // Helper class to easy setup a text filter.
-        // You may want to implement a more feature-full filtering scheme in your own application.
-        static ImGuiTextFilter filter;
-        ImGui::Text("Filter usage:\n"
-                    "  \"\"         display all lines\n"
-                    "  \"xxx\"      display lines containing \"xxx\"\n"
-                    "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-                    "  \"-xxx\"     hide lines containing \"xxx\"");
-        filter.Draw();
-        const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
-        for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
-            if (filter.PassFilter(lines[i]))
-                ImGui::BulletText("%s", lines[i]);
-    }
-
     IMGUI_DEMO_MARKER("Inputs, Navigation & Focus");
     if (ImGui::CollapsingHeader("Inputs, Navigation & Focus"))
     {
@@ -5817,11 +5819,40 @@ static void ShowDemoWindowMisc()
             ImGui::TreePop();
         }
 
+        // Display mouse cursors
+        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Mouse Cursors");
+        if (ImGui::TreeNode("Mouse Cursors"))
+        {
+            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "NotAllowed" };
+            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
+
+            ImGuiMouseCursor current = ImGui::GetMouseCursor();
+            ImGui::Text("Current mouse cursor = %d: %s", current, mouse_cursors_names[current]);
+            ImGui::BeginDisabled(true);
+            ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
+            ImGui::EndDisabled();
+
+            ImGui::Text("Hover to see mouse cursors:");
+            ImGui::SameLine(); HelpMarker(
+                "Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. "
+                "If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, "
+                "otherwise your backend needs to handle it.");
+            for (int i = 0; i < ImGuiMouseCursor_COUNT; i++)
+            {
+                char label[32];
+                sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
+                ImGui::Bullet(); ImGui::Selectable(label, false);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetMouseCursor(i);
+            }
+            ImGui::TreePop();
+        }
+
         // Display Keyboard/Mouse state
         IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Keyboard, Gamepad & Navigation State");
         if (ImGui::TreeNode("Keyboard, Gamepad & Navigation State"))
         {
-            // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allow displaying the data for old/new backends.
+            // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
             // User code should never have to go through such hoops: old code may use native keycodes, new code may use ImGuiKey codes.
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
             struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
@@ -6007,30 +6038,6 @@ static void ShowDemoWindowMisc()
             ImGui::Text("  w/ default threshold: (%.1f, %.1f)", value_with_lock_threshold.x, value_with_lock_threshold.y);
             ImGui::Text("  w/ zero threshold: (%.1f, %.1f)", value_raw.x, value_raw.y);
             ImGui::Text("io.MouseDelta: (%.1f, %.1f)", mouse_delta.x, mouse_delta.y);
-            ImGui::TreePop();
-        }
-
-        IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Mouse cursors");
-        if (ImGui::TreeNode("Mouse cursors"))
-        {
-            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "NotAllowed" };
-            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
-
-            ImGuiMouseCursor current = ImGui::GetMouseCursor();
-            ImGui::Text("Current mouse cursor = %d: %s", current, mouse_cursors_names[current]);
-            ImGui::Text("Hover to see mouse cursors:");
-            ImGui::SameLine(); HelpMarker(
-                "Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. "
-                "If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, "
-                "otherwise your backend needs to handle it.");
-            for (int i = 0; i < ImGuiMouseCursor_COUNT; i++)
-            {
-                char label[32];
-                sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
-                ImGui::Bullet(); ImGui::Selectable(label, false);
-                if (ImGui::IsItemHovered())
-                    ImGui::SetMouseCursor(i);
-            }
             ImGui::TreePop();
         }
     }
@@ -7060,7 +7067,7 @@ struct ExampleAppLog
         if (Filter.IsActive())
         {
             // In this example we don't use the clipper when Filter is enabled.
-            // This is because we don't have a random access on the result on our filter.
+            // This is because we don't have random access to the result of our filter.
             // A real application processing logs with ten of thousands of entries may want to store the result of
             // search/filter.. especially if the filtering function is not trivial (e.g. reg-exp).
             for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
@@ -7082,7 +7089,7 @@ struct ExampleAppLog
             // on your side is recommended. Using ImGuiListClipper requires
             // - A) random access into your data
             // - B) items all being the  same height,
-            // both of which we can handle since we an array pointing to the beginning of each line of text.
+            // both of which we can handle since we have an array pointing to the beginning of each line of text.
             // When using the filter (in the block of code above) we don't have random access into the data to display
             // anymore, which is why we don't use the clipper. Storing or skimming through the search result would make
             // it possible (and would be recommended if you want to search through tens of thousands of entries).
@@ -7562,8 +7569,8 @@ static void ShowExampleAppFullscreen(bool* p_open)
 // [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
 //-----------------------------------------------------------------------------
 
-// Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
-// This apply to all regular items as well.
+// Demonstrate the use of "##" and "###" in identifiers to manipulate ID generation.
+// This applies to all regular items as well.
 // Read FAQ section "How can I have multiple widgets with the same label?" for details.
 static void ShowExampleAppWindowTitles(bool*)
 {

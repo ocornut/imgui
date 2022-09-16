@@ -54,4 +54,9 @@
   <ItemGroup>
     <None Include="..\README.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\..\misc\debuggers\imgui.natvis">
+      <Filter>imgui</Filter>
+    </Natvis>
+  </ItemGroup>
 </Project>
