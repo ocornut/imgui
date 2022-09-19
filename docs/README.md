@@ -51,10 +51,9 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-Result:
-<br>![sample code output (dark)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v175/capture_readme_styles_0001.png) ![sample code output (light)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v175/capture_readme_styles_0002.png)
+![sample code output (dark, segoeui font, freetype)](https://user-images.githubusercontent.com/8225057/191050833-b7ecf528-bfae-4a9f-ac1b-f3d83437a2f4.png)
+![sample code output (light, segoeui font, freetype)](https://user-images.githubusercontent.com/8225057/191050838-8742efd4-504d-4334-a9a2-e756d15bc2ab.png)
 
-Code:
 ```cpp
 // Create a window called "My First Tool", with a menu bar.
 ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
@@ -70,12 +69,14 @@ if (ImGui::BeginMenuBar())
     ImGui::EndMenuBar();
 }
 
-// Edit a color (stored as ~4 floats)
+// Edit a color stored as 4 floats
 ImGui::ColorEdit4("Color", my_color);
 
-// Plot some values
-const float my_values[] = { 0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f };
-ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
+// Generate samples and plot them
+float samples[100];
+for (int n = 0; n < 100; n++)
+    samples[n] = sinf(n * 0.2f + ImGui::GetTime() * 1.5f);
+ImGui::PlotLines("Samples", samples, 100);
 
 // Display contents in a scrolling region
 ImGui::TextColored(ImVec4(1,1,0,1), "Important Stuff");
@@ -85,8 +86,7 @@ for (int n = 0; n < 50; n++)
 ImGui::EndChild();
 ImGui::End();
 ```
-Result:
-<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v180/code_sample_04_color.gif)
+![my_first_tool_v188](https://user-images.githubusercontent.com/8225057/191055698-690a5651-458f-4856-b5a9-e8cc95c543e2.gif)
 
 Dear ImGui allows you to **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweak variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game-making editor/framework, etc.
 
