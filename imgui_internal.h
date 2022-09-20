@@ -1174,27 +1174,24 @@ struct ImGuiPtrOrIndex
 typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitArrayForNamedKeys;
 
 // Extend ImGuiKey_
-enum ImGuiKeyPrivate_
-{
-    ImGuiKey_LegacyNativeKey_BEGIN  = 0,
-    ImGuiKey_LegacyNativeKey_END    = 512,
-    ImGuiKey_Keyboard_BEGIN         = ImGuiKey_NamedKey_BEGIN,
-    ImGuiKey_Keyboard_END           = ImGuiKey_GamepadStart,
-    ImGuiKey_Gamepad_BEGIN          = ImGuiKey_GamepadStart,
-    ImGuiKey_Gamepad_END            = ImGuiKey_GamepadRStickDown + 1,
-    ImGuiKey_Aliases_BEGIN          = ImGuiKey_MouseLeft,
-    ImGuiKey_Aliases_END            = ImGuiKey_COUNT,
+#define ImGuiKey_LegacyNativeKey_BEGIN  0
+#define ImGuiKey_LegacyNativeKey_END    512
+#define ImGuiKey_Keyboard_BEGIN         (ImGuiKey_NamedKey_BEGIN)
+#define ImGuiKey_Keyboard_END           (ImGuiKey_GamepadStart)
+#define ImGuiKey_Gamepad_BEGIN          (ImGuiKey_GamepadStart)
+#define ImGuiKey_Gamepad_END            (ImGuiKey_GamepadRStickDown + 1)
+#define ImGuiKey_Aliases_BEGIN          (ImGuiKey_MouseLeft)
+#define ImGuiKey_Aliases_END            (ImGuiKey_COUNT)
 
-    // [Internal] Named shortcuts for Navigation
-    ImGuiKey_NavKeyboardTweakSlow   = ImGuiKey_ModCtrl,
-    ImGuiKey_NavKeyboardTweakFast   = ImGuiKey_ModShift,
-    ImGuiKey_NavGamepadTweakSlow    = ImGuiKey_GamepadL1,
-    ImGuiKey_NavGamepadTweakFast    = ImGuiKey_GamepadR1,
-    ImGuiKey_NavGamepadActivate     = ImGuiKey_GamepadFaceDown,
-    ImGuiKey_NavGamepadCancel       = ImGuiKey_GamepadFaceRight,
-    ImGuiKey_NavGamepadMenu         = ImGuiKey_GamepadFaceLeft,
-    ImGuiKey_NavGamepadInput        = ImGuiKey_GamepadFaceUp,
-};
+// [Internal] Named shortcuts for Navigation
+#define ImGuiKey_NavKeyboardTweakSlow   ImGuiKey_ModCtrl
+#define ImGuiKey_NavKeyboardTweakFast   ImGuiKey_ModShift
+#define ImGuiKey_NavGamepadTweakSlow    ImGuiKey_GamepadL1
+#define ImGuiKey_NavGamepadTweakFast    ImGuiKey_GamepadR1
+#define ImGuiKey_NavGamepadActivate     ImGuiKey_GamepadFaceDown
+#define ImGuiKey_NavGamepadCancel       ImGuiKey_GamepadFaceRight
+#define ImGuiKey_NavGamepadMenu         ImGuiKey_GamepadFaceLeft
+#define ImGuiKey_NavGamepadInput        ImGuiKey_GamepadFaceUp
 
 enum ImGuiInputEventType
 {
@@ -2721,7 +2718,7 @@ namespace ImGui
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
     inline bool             IsActiveIdUsingKey(ImGuiKey key)                            { ImGuiContext& g = *GImGui; return g.ActiveIdUsingKeyInputMask[key]; }
     inline void             SetActiveIdUsingKey(ImGuiKey key)                           { ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key); }
-    inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return ImGuiKey_MouseLeft + button; }
+    inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return (ImGuiKey)(ImGuiKey_MouseLeft + button); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
     IMGUI_API ImGuiModFlags GetMergedModFlags();
     IMGUI_API ImVec2        GetKeyVector2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down);

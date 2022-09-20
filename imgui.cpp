@@ -1356,14 +1356,14 @@ void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native
     if (key == ImGuiKey_None)
         return;
     IM_ASSERT(ImGui::IsNamedKey(key)); // >= 512
-    IM_ASSERT(native_legacy_index == -1 || ImGui::IsLegacyKey(native_legacy_index)); // >= 0 && <= 511
+    IM_ASSERT(native_legacy_index == -1 || ImGui::IsLegacyKey((ImGuiKey)native_legacy_index)); // >= 0 && <= 511
     IM_UNUSED(native_keycode);  // Yet unused
     IM_UNUSED(native_scancode); // Yet unused
 
     // Build native->imgui map so old user code can still call key functions with native 0..511 values.
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     const int legacy_key = (native_legacy_index != -1) ? native_legacy_index : native_keycode;
-    if (!ImGui::IsLegacyKey(legacy_key))
+    if (!ImGui::IsLegacyKey((ImGuiKey)legacy_key))
         return;
     KeyMap[legacy_key] = key;
     KeyMap[key] = legacy_key;
@@ -4057,7 +4057,7 @@ static void ImGui::UpdateKeyboardInputs()
     {
         // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written to externally.
         for (int n = 0; n < ImGuiKey_LegacyNativeKey_END; n++)
-            IM_ASSERT((io.KeysDown[n] == false || IsKeyDown(n)) && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+            IM_ASSERT((io.KeysDown[n] == false || IsKeyDown((ImGuiKey)n)) && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
     }
     else
     {
@@ -7749,12 +7749,12 @@ ImGuiKeyData* ImGui::GetKeyData(ImGuiKey key)
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-int ImGui::GetKeyIndex(ImGuiKey key)
+ImGuiKey ImGui::GetKeyIndex(ImGuiKey key)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(IsNamedKey(key));
     const ImGuiKeyData* key_data = GetKeyData(key);
-    return (int)(key_data - g.IO.KeysData);
+    return (ImGuiKey)(key_data - g.IO.KeysData);
 }
 #endif
 
