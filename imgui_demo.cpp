@@ -8092,6 +8092,249 @@ static void DemoWindowInputs()
                 ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, false) ? "PRESSED!" : "..");
                 ImGui::TreePop();
             }
+
+            // Miscellaneous examples
+            if (ImGui::TreeNode("Usage Scenarios"))
+            {
+                // We use colored buttons for the demo but this would generally apply to any widget.
+                const ImVec2 button_sz(60.0f, 60.0f);
+                const ImGuiColorEditFlags button_flags = ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop;
+
+                if (ImGui::TreeNode("1. Claiming Mouse Wheel"))
+                {
+                    static float value1 = 0.0f;
+                    ImGui::Text("%.2f", value1);
+                    ImGui::SameLine();
+                    HelpMarker("Hover button and use mouse wheel: window scrolling won't be activated.");
+                    ImGui::ColorButton("Item1", ImVec4(0.4f, 0.4f, 0.8f, 1.0f), button_flags, button_sz);
+                    ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+                    if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+                        value1 += io.MouseWheel;
+
+                    static float value2 = 0.0f;
+                    ImGui::Text("%.2f", value2);
+                    ImGui::SameLine();
+                    HelpMarker("Hold button and use mouse wheel: window scrolling won't be activated.");
+                    ImGui::ColorButton("Item2", ImVec4(0.4f, 0.4f, 0.8f, 1.0f), button_flags, button_sz);
+                    ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY, ImGuiInputFlags_CondActive);
+                    if (ImGui::IsItemActive())
+                        value2 += io.MouseWheel;
+
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("2. Claiming Alt key"))
+                {
+                    ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", &io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+
+                    static float spinner0 = 0.0f;
+                    ImGui::Text("%.3f", spinner0);
+                    ImGui::SameLine();
+                    HelpMarker("Click, hold ALT drag to tweak value. Notice that Alt doesn't move focus to menu bar.");
+                    ImGui::Button("Spin me", button_sz);
+                    if (ImGui::IsItemActive())
+                    {
+                        ImGui::SetKeyOwner(ImGuiMod_Alt, ImGui::GetItemID());
+                        if (ImGui::IsKeyDown(ImGuiMod_Alt)) // Poll on Active: we don't need to check for ownership of ImGuiMod_Alt since we know we unconditionally own it.
+                            spinner0 += io.MouseDelta.x;
+                    }
+
+                    // When using of keys is conditioned by item being hovered or active,
+                    // it creates a natural exclusivity, since only one item can be hovered or active.
+                    // SetItemKeyOwner(...) is a shortcut for doing 'if (IsItemHovered() || IsItemActive()) { SetKeyOwner(..., GetItemID()); }'
+                    static int value1 = 0;
+                    ImGui::Text("%d", value1);
+                    ImGui::SameLine();
+                    HelpMarker("Item1 claims ALT key when Hovered or Active, counter increase when pressing ALT while Hovered.");
+                    ImGui::Button("Item1", button_sz);
+                    ImGui::SetItemKeyOwner(ImGuiMod_Alt); // Claim Alt on Hover and Active
+                    if (ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiMod_Alt, false)) // Poll on Hover: we don't need to check for ownership of ImGuiMod_Alt since we know we unconditionally own it.
+                        value1++;
+
+                    ImGui::TreePop();
+                }
+
+                // Routing options are only available for Shortcuts (not Key)
+                // Using shortcut functions with only ImGuiMod_Alt means that other modifiers e.g. CTRL+ALT+S won't be affected, which is often desirable.
+                // Here we use ImGuiInputFlags_RouteFocused which will claim the Alt shortcut when the window is focused.
+                // Notice that opening this node will claim Alt, therefore change the behavior of the key checks in section (2) above.
+                if (ImGui::TreeNode("3. Claiming Alt shortcut"))
+                {
+                    // Using Shortcut() with ImGuiInputFlags_RouteFocused means we react when parent window is focused.
+                    // - Passing 0 (== ImGuiKeyOwner_Any) means current location will be used to identify.
+                    //   As both calls are from the same location, both items will receive the shortcut.
+                    // - Passing GetItemID() here means they both have their unique id,
+                    //    - Item2 will only receive the shortcut when parent window is focused.
+                    //    - Item3 will only receive the shortcut when active.
+                    // Not passing an item id would use current location as id so both items will always receive shortcut.
+                    static bool use_shared_owner = false;
+                    ImGui::Checkbox("Item2 and Item3 use same owner/location", &use_shared_owner);
+                    static int value2 = 0;
+                    ImGui::Text("%d", value2);
+                    ImGui::SameLine();
+                    HelpMarker("Item2 reads ALT shortcut when its parent window is focused.");
+                    ImGui::Button("Item2", button_sz);
+                    if (ImGui::Shortcut(ImGuiMod_Alt, 0, use_shared_owner ? 0 : ImGui::GetItemID()))
+                        value2++;
+
+                    static int value3 = 0;
+                    ImGui::Text("%d", value3);
+                    ImGui::SameLine();
+                    HelpMarker("Item3 reads ALT shortcut when its parent window is focused AND it is active. Therefore, only active previous button will get the shortcut");
+                    ImGui::Button("Item3", button_sz);
+                    if (ImGui::Shortcut(ImGuiMod_Alt, 0, use_shared_owner ? 0 : ImGui::GetItemID()))
+                        value3++;
+
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("4. Claiming Home key globally"))
+                {
+                    static bool enable_home_robbery = false;
+                    static int home_presses = 0;
+                    ImGui::Checkbox("Global steal ImGuiKey_Home", &enable_home_robbery);
+                    ImGui::Text("Home presses: %d", home_presses);
+                    if (enable_home_robbery)
+                    {
+                        // Claim ownership is enough to keep Key away from main library behavior or any owner-aware code.
+                        // - We optionally use the ImGuiInputFlags_LockUntilRelease to keep key away from code that is not owner-aware,
+                        //   but Dear ImGui itself is so that's not technically needed (unless you are stealing from another piece of code).
+                        ImGuiID robber_id = ImGui::GetID("Some Identifier");
+                        ImGui::SetKeyOwner(ImGuiKey_Home, robber_id, ImGuiInputFlags_LockUntilRelease);
+                        if (ImGui::IsKeyPressed(ImGuiKey_Home, ImGuiInputFlags_Repeat, robber_id)) // We unconditionally own the key so no need to test for ownership
+                            home_presses++;
+                    }
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("5. Claiming CTRL+A shortcut globally"))
+                {
+                    // Using a priority of ImGuiInputFlags_RouteGlobal + RouteOverActive means we takes away even from an active item (e.g. InputText)
+                    // This is better covered in "Shortcut Routing basics" above.
+                    static bool enable_ctrl_a_robbery = false;
+                    static int ctrl_a_presses = 0;
+                    ImGui::Checkbox("Global steal CTRL+A", &enable_ctrl_a_robbery);
+                    ImGui::Text("CTRL+A presses: %d", ctrl_a_presses);
+                    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, enable_ctrl_a_robbery ? ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive : ImGuiInputFlags_RouteAlways))
+                        ctrl_a_presses++;
+
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("6. Disable ESC key from InputText()"))
+                {
+                    static char buf[9];
+                    ImGui::InputText("Text", buf, IM_ARRAYSIZE(buf));
+
+                    // - If you don't need to use the key, you can use 'owner_id=0', 'flags=ImGuiInputFlags_LockXXX'
+                    //   as a convenience to hide the key from everyone.
+                    // - If you need to use the key yourself, you need to use any arbitrary ID, and then use this ID to read the key.
+                    //   e.g. ImGui::SetKeyOwner(ImGuiKey_Escape, ImGui::GetID("robber")); + later use same ID to access the key.
+                    if (ImGui::IsItemActive())
+                        ImGui::SetKeyOwner(ImGuiKey_Escape, 0, ImGuiInputFlags_LockUntilRelease);
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("7. Claiming ESC key away from InputText()"))
+                {
+                    static char buf[9];
+                    ImGui::InputText("Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_EscapeClearsAll);
+                    if (ImGui::IsItemActive())
+                    {
+                        // Using a route which is higher priority than one claimed the ActiveId
+                        ImGuiID robber_id = ImGui::GetID("robber");
+                        if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive, robber_id))
+                        {
+                            strcpy(buf, "Esc!");
+                            ImGui::ClearActiveID();
+                        }
+                    }
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("8. Claiming ESC away from nav logic (e.g. exiting a child)"))
+                {
+                    ImGui::BeginChild("child", ImVec2(-FLT_MIN, 50), true);
+                    ImGui::Button("Button in child");
+                    if (ImGui::IsWindowFocused())
+                        ImGui::SetKeyOwner(ImGuiKey_Escape, ImGui::GetID("")); // any id
+                    ImGui::EndChild();
+
+                    ImGui::TreePop();
+                }
+
+                if (ImGui::TreeNode("9. Claiming Tab, CTRL+Tab"))
+                {
+                    static int mode = 0;
+                    static int counter = 0;
+
+                    HelpMarker("Showcasing many variants as a recap.\nPlease read code and comments carefully!");
+
+                    const char* mode_names[] = { "None", "Disable Tab key (item)", "Disable Tab key (global)", "Disable CTRL+Tab (global)", "Disable CTRL+Tab (if focused)", "Read CTRL+Tab (global)", "Replace CTRL+Tab (global)", "Replace CTRL+Tab (if focused)" };
+                    ImGui::Combo("Operation Mode", &mode, mode_names, IM_ARRAYSIZE(mode_names));
+                    ImGui::Text("Counter = %d", counter);
+
+                    switch (mode)
+                    {
+                    case 1:
+                        // Item take ownership of Tab key when hovered/active (meaning ALL uses of Tab will be disabled, not just CTRL+Tab)
+                        ImGui::Button("This Button Steals The Tab Key");
+                        ImGui::SetItemKeyOwner(ImGuiKey_Tab);
+                        ImGui::SameLine();
+                        HelpMarker("While hovering or activating this button, TAB key is stolen (e.g. won't tab out into other systems)");
+                        break;
+                    case 2:
+                        // Take ownership of Tab key (meaning ALL uses of Tab will be disabled, not just CTRL+Tab)
+                        ImGui::SetKeyOwner(ImGuiKey_Tab, ImGui::GetID("some-id"));
+                        break;
+                    case 3:
+                        // Disable CTRL+Tab shortcuts (global): assign an owner to steal the route to our two shortcuts
+                        ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiKey_Tab, 0, ImGui::GetID("some-id"));
+                        ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, 0, ImGui::GetID("some-id"));
+                        break;
+                    case 4:
+                        // Disable CTRL+Tab shortcuts (if focused): assign an owner to steal the route to our two shortcuts, applies focus testing so will only apply if window is in focus chain
+                        ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiKey_Tab, ImGuiInputFlags_RouteFocused, ImGui::GetID("some-id"));
+                        ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, ImGuiInputFlags_RouteFocused, ImGui::GetID("some-id"));
+                        break;
+                    case 5:
+                        // Read CTRL+Tab (global): reading keys without interfering with any behaviors (need to specify ImGuiInputFlags_RouteAlways as other policies will interfere)
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Tab, ImGuiInputFlags_RouteAlways, ImGuiKeyOwner_Any))
+                            counter++;
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, ImGuiInputFlags_RouteAlways, ImGuiKeyOwner_Any))
+                            counter--;
+                        break;
+                    case 6:
+                    {
+                        // Replace CTRL+Tab (global)
+                        // - We steal the route and assign it to our ID (so core system won't access it). Our reading queries now need to specify that ID.
+                        ImGuiID id = ImGui::GetID("My-Ctrl-Tab-Handler");
+                        //ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiKey_Tab, id, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive);
+                        //ImGui::SetShortcutRouting(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, id, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive);
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Tab, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive, id))
+                            counter++; // You could perform some other action here.
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive, id))
+                            counter--;
+                        break;
+                    }
+                    case 7:
+                        // Replace CTRL+Tab (if focused)
+                        // - Passing ImGuiInputFlags_RouteFocused will test for focus and assign a route using a default owner id based on location (so we can use 0 as id)
+                        // - This would also work if we replaced 0 with ImGui::GetID("My-Ctrl-Tab-Handler")
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Tab))
+                            counter++; // You could perform some other action here.
+                        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab))
+                            counter--;
+                        break;
+                    }
+
+                    static char buf[8] = "";
+                    ImGui::InputTextWithHint("Dummy", "(dummy input text to test effect of Tabbing)", buf, IM_ARRAYSIZE(buf));
+
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
             ImGui::TreePop();
         }
 
