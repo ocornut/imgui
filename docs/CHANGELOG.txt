@@ -91,6 +91,8 @@ Other Changes:
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
   by converting them to half-width (U+0021..U+007E).
+- InputText: added ImGuiInputTextFlags_EscapeClearsAll flag: first press on Escape clears
+  text if any, second press deactivate the InputText(). (#5688)
 - InputText: added support for shift+click style selection. (#5619) [@procedural]
 - InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
 - InputText: fixed minor one-frame selection glitch when reverting with Escape.
