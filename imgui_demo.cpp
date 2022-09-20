@@ -7799,6 +7799,8 @@ static void DemoWindowColumns()
 // [SECTION] DemoWindowInputs()
 //-----------------------------------------------------------------------------
 
+#include "imgui_internal.h" // FIXME Until the new key owner/routing system are in public API this section of the demo needs internal (and is kept in a branch).
+
 static void DemoWindowInputs()
 {
     if (ImGui::CollapsingHeader("Inputs & Focus"))
@@ -7984,7 +7986,112 @@ static void DemoWindowInputs()
             }
             ImGui::EndChild();
             ImGui::PopStyleColor();
+            ImGui::TreePop();
+        }
 
+        // Ownership, Routings
+        IMGUI_DEMO_MARKER("Inputs & Focus/Key Ownership");
+        if (ImGui::TreeNode("Key Ownership"))
+        {
+            HelpMarker("See 'Tools->Metrics/Debugger->Inputs' to visualize ownership/routing data.");
+
+            // Demonstrate basic key ownership system
+            // Standard widgets all claim and test for key ownership
+            // (note that the ActiveId and HoveredId systems also generally prevents multiple items from interacting, but at a different level)
+            if (ImGui::TreeNode("1. Standard widgets taking input ownership"))
+            {
+                HelpMarker("Standard widgets claim and test for key ownership.\n\n\"Keys\" include mouse buttons, gamepad axises etc.");
+
+                const ImGuiKey key = ImGuiKey_MouseLeft; // Note how mouse and gamepad are also included in ImGuiKey: same data type for all.
+                const char* key_name = ImGui::GetKeyName(key);
+                ImGui::Text("Press '%s'", key_name);
+
+                ImGui::Text("1st read: (button)");
+                ImGui::Button("Click and Hold Me Tight!");
+
+                // Assume this is another piece of code running later.
+                // The *default* value for owner is ImGuiKeyOwner_Any, same as calling the simplified function:
+                //     IsKeyDown(key) == IsKeyDown(key, ImGuiKeyOwner_Any)
+                //     IsKeyPressed(key) == IsKeyPressed(key, ImGuiKeyOwner_Any)
+                // But notice the "bool repeat = true" parameter in old signature 'IsKeyPressed(key, repeat)'
+                // with the new signature becomes 'IsKeyPressed(key, owner, ImGuiInputFlags_Repeat)'
+                ImGui::Text("2nd read: (NOT owner-aware)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key) ? "PRESSED!" : "..");
+
+                ImGui::Text("3rd read: (owner-aware: ImGuiKeyOwner_NoOwner)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key, ImGuiKeyOwner_NoOwner) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, ImGuiInputFlags_Repeat, ImGuiKeyOwner_NoOwner) ? "PRESSED!" : "..");
+
+                ImGuiID another_owner = ImGui::GetID("AnotherItem");
+                ImGui::Text("4nd read: (owner-aware: different owner)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key, another_owner) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, ImGuiInputFlags_Repeat, another_owner) ? "PRESSED!" : "..");
+
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("2. Calling SetKeyOwner()"))
+            {
+                const ImGuiKey key = ImGuiKey_A;
+                const char* key_name = ImGui::GetKeyName(key);
+                ImGui::Text("Press '%s'", key_name);
+
+                ImGui::Text("1st read:");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, false) ? "PRESSED!" : "..");
+                ImGui::Text("...when pressed, call SetKeyOwner() with an owner ID.");
+                ImGuiID owner_1 = ImGui::GetID("MyItemID");
+                if (ImGui::IsKeyPressed(key, ImGuiInputFlags_Repeat, owner_1))
+                    ImGui::SetKeyOwner(key, owner_1);
+
+                // Assume this is another piece of code running later.
+                // (same comments as in section 1)
+                ImGui::Text("2nd read: (NOT owner-aware)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key) ? "PRESSED!" : "..");
+
+                ImGui::Text("3rd read: (owner-aware: ImGuiKeyOwner_NoOwner)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key, ImGuiKeyOwner_NoOwner) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, ImGuiInputFlags_Repeat, ImGuiKeyOwner_NoOwner) ? "PRESSED!" : "..");
+
+                ImGuiID another_owner = ImGui::GetID("AnotherItem");
+                ImGui::Text("4th read: (owner-aware: different owner)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key, another_owner) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, ImGuiInputFlags_Repeat, another_owner) ? "PRESSED!" : "..");
+
+                ImGui::TreePop();
+            }
+
+            // Demonstrate using SetKeyOwner() with ImGuiInputFlags_LockThisFrame / ImGuiInputFlags_LockUntilRelease flags.
+            // - Using an owner id solves all/most cases as long as everyone is "owner-id-aware",
+            //   meaning they call the long form of IsKeyXXX function. This is the preferred way to do things.
+            // - Using ImGuiInputFlags_LockXXXX flags is a way to prevent code that is NOT owner-id-aware from accessing the key.
+            //   Think of it as "eating" a key completely: only same owner ID can access the key/button.
+            if (ImGui::TreeNode("3. Calling SetKeyOwner() with ImGuiInputFlags_LockXXX flags for non-owner-aware code"))
+            {
+                const ImGuiKey key = ImGuiKey_B;
+                const char* key_name = ImGui::GetKeyName(key);
+                ImGui::Text("Press '%s'", key_name);
+                static bool lock_this_frame = false;
+                static bool lock_until_release = false;
+
+                ImGui::Text("1st read:");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, false) ? "PRESSED!" : "..");
+                ImGui::Text("...when pressed, call SetKeyOwner() with:");
+                ImGui::Checkbox("ImGuiInputFlags_LockThisFrame", &lock_this_frame);
+                ImGui::Checkbox("ImGuiInputFlags_LockUntilRelease", &lock_until_release);
+                if (ImGui::IsKeyPressed(key, false) && (lock_this_frame || lock_until_release))
+                    ImGui::SetKeyOwner(key, 0, (lock_this_frame ? ImGuiInputFlags_LockThisFrame : 0) | (lock_until_release ? ImGuiInputFlags_LockUntilRelease : 0));
+
+                // Assume this is another piece of code running later. The calls are not owner-aware,
+                // due to the lock they won't be able to see the key.
+                ImGui::Text("2nd read: (NOT owner-aware)");
+                ImGui::Text("- IsKeyDown(%s): %s", key_name, ImGui::IsKeyDown(key) ? "DOWN!" : "..");
+                ImGui::Text("- IsKeyPressed(%s): %s", key_name, ImGui::IsKeyPressed(key, false) ? "PRESSED!" : "..");
+                ImGui::TreePop();
+            }
             ImGui::TreePop();
         }
 
