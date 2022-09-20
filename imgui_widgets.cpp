@@ -3745,11 +3745,12 @@ static void stb_textedit_replace(ImGuiInputTextState* str, STB_TexteditState* st
 {
     stb_text_makeundo_replace(str, state, 0, str->CurLenW, text_len);
     ImStb::STB_TEXTEDIT_DELETECHARS(str, 0, str->CurLenW);
+    state->cursor = state->select_start = state->select_end = 0;
     if (text_len <= 0)
         return;
     if (ImStb::STB_TEXTEDIT_INSERTCHARS(str, 0, text, text_len))
     {
-        state->cursor = text_len;
+        state->cursor = state->select_start = state->select_end = text_len;
         state->has_preferred_x = 0;
         return;
     }
@@ -4152,7 +4153,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         clear_active_id = true;
 
     // Lock the decision of whether we are going to take the path displaying the cursor or selection
-    const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
+    bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
     bool render_selection = state && (state->HasSelection() || select_all) && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     bool value_changed = false;
     bool validated = false;
@@ -4372,6 +4373,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         else if (is_cancel)
         {
             clear_active_id = cancel_edit = true;
+            render_cursor = render_selection = false;
         }
         else if (is_undo || is_redo)
         {
@@ -4442,10 +4444,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
-        if (cancel_edit)
+        if (cancel_edit && !is_readonly)
         {
             // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
-            if (!is_readonly && strcmp(buf, state->InitialTextA.Data) != 0)
+            if (strcmp(buf, state->InitialTextA.Data) != 0)
             {
                 // Push records into the undo stack so we can CTRL+Z the revert operation itself
                 apply_new_text = state->InitialTextA.Data;
