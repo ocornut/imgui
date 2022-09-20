@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <ctime>
+#include <mutex>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -66,17 +67,21 @@ struct MetalContext
 {
     explicit MetalContext(MTL::Device* device);
     ~MetalContext();
-    [[nodiscard]] const MetalBuffer*                      dequeueReusableBuffer(NS::UInteger length);
+    [[nodiscard]] std::shared_ptr<MetalBuffer>            dequeueReusableBuffer(NS::UInteger length);
     [[nodiscard]] NS::SharedPtr<MTL::RenderPipelineState> renderPipelineStateForFramebufferDescriptor(
       const FramebufferDescriptor* framebufferDescriptor) const;
+    void synchronizedBufferCache(std::function<void(std::vector<std::shared_ptr<MetalBuffer>>&)>&& fn);
 
     MTL::Device*                                                                              device;
     NS::SharedPtr<MTL::DepthStencilState>                                                     depthStencilState;
     const FramebufferDescriptor*                                                              framebufferDescriptor;
     std::unordered_map<const FramebufferDescriptor*, NS::SharedPtr<MTL::RenderPipelineState>> renderPipelineStateCache;
     NS::SharedPtr<MTL::Texture>                                                               fontTexture;
-    std::vector<std::unique_ptr<MetalBuffer>>                                                 bufferCache;
     double                                                                                    lastBufferCachePurge;
+
+  private:
+    std::mutex                                _bufferCacheMutex;
+    std::vector<std::shared_ptr<MetalBuffer>> _bufferCache;
 };
 
 struct ImGui_ImplMetal_Data
@@ -294,7 +299,8 @@ ImGui_ImplMetal_RenderDrawData(ImDrawData*                drawData,
     auto   vertexBuffer       = ctx->dequeueReusableBuffer(vertexBufferLength);
     auto   indexBuffer        = ctx->dequeueReusableBuffer(indexBufferLength);
 
-    ImGui_ImplMetal_SetupRenderState(drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
+    ImGui_ImplMetal_SetupRenderState(
+      drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer.get(), 0);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off   = drawData->DisplayPos;       // (0,0) unless using multi-viewports
@@ -320,8 +326,12 @@ ImGui_ImplMetal_RenderDrawData(ImDrawData*                drawData,
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer
                 // to reset render state.)
                 if (pCmd->UserCallback == ImDrawCallback_ResetRenderState) {
-                    ImGui_ImplMetal_SetupRenderState(
-                      drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, vertexBufferOffset);
+                    ImGui_ImplMetal_SetupRenderState(drawData,
+                                                     commandBuffer,
+                                                     commandEncoder,
+                                                     renderPipelineState,
+                                                     vertexBuffer.get(),
+                                                     vertexBufferOffset);
                 } else {
                     pCmd->UserCallback(cmd_list, pCmd);
                 }
@@ -368,6 +378,15 @@ ImGui_ImplMetal_RenderDrawData(ImDrawData*                drawData,
         vertexBufferOffset += (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
         indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
+
+    commandBuffer->addCompletedHandler(^(MTL::CommandBuffer*) {
+      if (bd) {
+          bd->SharedMetalContext->synchronizedBufferCache([&](std::vector<std::shared_ptr<MetalBuffer>>& bufferCache) {
+              bufferCache.emplace_back(vertexBuffer);
+              bufferCache.emplace_back(indexBuffer);
+          });
+      }
+    });
 }
 // ------------------------------------------------------------------------------------------------
 
@@ -446,57 +465,60 @@ MetalContext::MetalContext(MTL::Device* device)
   , framebufferDescriptor(nullptr)
   , renderPipelineStateCache()
   , fontTexture()
-  , bufferCache()
+  , _bufferCache()
   , lastBufferCachePurge(GetMachAbsoluteTimeInSeconds())
 {
 }
 
 MetalContext::~MetalContext()
 {
-    bufferCache.clear();
+    synchronizedBufferCache([&](std::vector<std::shared_ptr<MetalBuffer>>& bufferCache) { bufferCache.clear(); });
     renderPipelineStateCache.clear();
     device->release();
 }
 
-const MetalBuffer*
+std::shared_ptr<MetalBuffer>
 MetalContext::dequeueReusableBuffer(NS::UInteger length)
 {
     double now = GetMachAbsoluteTimeInSeconds();
 
-    // Purge old buffers that haven't been useful for a while
-    if (now - lastBufferCachePurge > 1.0) {
-        for (auto it = bufferCache.begin(); it != bufferCache.end();) {
-            if ((*it)->lastReuseTime <= lastBufferCachePurge) {
-                it = bufferCache.erase(it);
-            } else {
-                ++it;
+    std::shared_ptr<MetalBuffer> bestCandidate;
+
+    synchronizedBufferCache([&](std::vector<std::shared_ptr<MetalBuffer>>& bufferCache) {
+        // Purge old buffers that haven't been useful for a while
+        if (now - lastBufferCachePurge > 1.0) {
+            for (auto it = bufferCache.begin(); it != bufferCache.end();) {
+                if ((*it)->lastReuseTime <= lastBufferCachePurge) {
+                    it = bufferCache.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+            lastBufferCachePurge = now;
+        }
+
+        // see if we have a buffer we can reuse
+        auto bestCandidateIt = bufferCache.end();
+        for (auto it = bufferCache.begin(); it != bufferCache.end(); ++it) {
+            if ((*it)->buffer->length() >= length &&
+                (bestCandidateIt == bufferCache.end() || (*bestCandidateIt)->lastReuseTime > (*it)->lastReuseTime)) {
+                bestCandidateIt = it;
             }
         }
-        lastBufferCachePurge = now;
-    }
 
-    // see if we have a buffer we can reuse
-    auto bestCandidateIt = bufferCache.end();
-    for (auto it = bufferCache.begin(); it != bufferCache.end(); ++it) {
-        if ((*it)->buffer->length() >= length &&
-            (bestCandidateIt == bufferCache.end() || (*bestCandidateIt)->lastReuseTime > (*it)->lastReuseTime)) {
-            bestCandidateIt = it;
+        if (bestCandidateIt != bufferCache.end()) {
+            (*bestCandidateIt)->lastReuseTime = now;
+            bestCandidate                     = std::move(*bestCandidateIt);
+            bufferCache.erase(bestCandidateIt);
+            return;
         }
-    }
 
-    if (bestCandidateIt != bufferCache.end()) {
-        (*bestCandidateIt)->lastReuseTime = now;
-        const MetalBuffer* bestCandidate  = (*bestCandidateIt).get();
-        return bestCandidate;
-    }
-
-    // no luck, make a new buffer
-    // the backing buffer is released when MetalBuffer is destructed, see destructor
-    auto               backing        = NS::TransferPtr(device->newBuffer(length, MTL::ResourceStorageModeShared));
-    auto               metalBuffer    = std::make_unique<MetalBuffer>(backing);
-    const MetalBuffer* returnedBuffer = metalBuffer.get();
-    bufferCache.emplace_back(std::move(metalBuffer));
-    return returnedBuffer;
+        // no luck, make a new buffer
+        // the backing buffer is released when MetalBuffer is destructed, see destructor
+        auto backing  = NS::TransferPtr(device->newBuffer(length, MTL::ResourceStorageModeShared));
+        bestCandidate = std::make_unique<MetalBuffer>(backing);
+    });
+    return bestCandidate;
 }
 
 NS::SharedPtr<MTL::RenderPipelineState>
@@ -593,4 +615,12 @@ MetalContext::renderPipelineStateForFramebufferDescriptor(const FramebufferDescr
 
     return { pipelineState };
 }
+
+void
+MetalContext::synchronizedBufferCache(std::function<void(std::vector<std::shared_ptr<MetalBuffer>>&)>&& fn)
+{
+    std::lock_guard<std::mutex> lock(_bufferCacheMutex);
+    fn(_bufferCache);
+}
+
 // ------------------------------------------------------------------------------------------------
