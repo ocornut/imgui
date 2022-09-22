@@ -1173,7 +1173,7 @@ struct ImGuiPtrOrIndex
 
 typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitArrayForNamedKeys;
 
-// Extend ImGuiKey_
+// [Internal] Key ranges
 #define ImGuiKey_LegacyNativeKey_BEGIN  0
 #define ImGuiKey_LegacyNativeKey_END    512
 #define ImGuiKey_Keyboard_BEGIN         (ImGuiKey_NamedKey_BEGIN)
@@ -1181,7 +1181,7 @@ typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitAr
 #define ImGuiKey_Gamepad_BEGIN          (ImGuiKey_GamepadStart)
 #define ImGuiKey_Gamepad_END            (ImGuiKey_GamepadRStickDown + 1)
 #define ImGuiKey_Aliases_BEGIN          (ImGuiKey_MouseLeft)
-#define ImGuiKey_Aliases_END            (ImGuiKey_COUNT)
+#define ImGuiKey_Aliases_END            (ImGuiKey_MouseWheelY + 1)
 
 // [Internal] Named shortcuts for Navigation
 #define ImGuiKey_NavKeyboardTweakSlow   ImGuiKey_ModCtrl
@@ -2720,7 +2720,6 @@ namespace ImGui
     inline void             SetActiveIdUsingKey(ImGuiKey key)                           { ImGuiContext& g = *GImGui; g.ActiveIdUsingKeyInputMask.SetBit(key); }
     inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return (ImGuiKey)(ImGuiKey_MouseLeft + button); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
-    IMGUI_API ImGuiModFlags GetMergedModFlags();
     IMGUI_API ImVec2        GetKeyVector2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down);
     IMGUI_API float         GetNavTweakPressedAmount(ImGuiAxis axis);
     IMGUI_API int           CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate);
