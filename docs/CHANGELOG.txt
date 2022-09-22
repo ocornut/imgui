@@ -37,6 +37,20 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
+    - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
+    - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
+    - ImGuiKey_ModAlt   and ImGuiModFlags_Alt   -> ImGuiMod_Alt
+    - ImGuiKey_ModSuper and ImGuiModFlags_Super -> ImGuiMod_Super
+   Kept inline redirection enums (will obsolete).
+   This change simplifies a few things, reduces confusion, and will facilitate upcoming
+   shortcut/input ownership apis.
+   - The ImGuiKey_ModXXX were introduced in 1.87 and mostly used by backends.
+   - The ImGuiModFlags_XXX have been exposed in imgui.h but not really used by any public api,
+     only by third-party extensions. They were however subject to a recent rename
+     (ImGuiKeyModFlags_XXX -> ImGuiModFlags_XXX) and we are exceptionally commenting out
+     the older ImGuiKeyModFlags_XXX names ahead of obsolescence schedule to reduce confusion
+     and because they were not meant to be used anyway.
  - Removed io.NavInputs[] and ImGuiNavInput enum that were used to feed gamepad inputs.
    Basically 1.87 already obsoleted them from the backend's point of view, but internally
    our navigation code still used this array and enum, so they were still present.

@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
@@ -208,9 +209,9 @@ static void ImGui_ImplGLUT_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
     int glut_key_mods = glutGetModifiers();
-    io.AddKeyEvent(ImGuiKey_ModCtrl, (glut_key_mods & GLUT_ACTIVE_CTRL) != 0);
-    io.AddKeyEvent(ImGuiKey_ModShift, (glut_key_mods & GLUT_ACTIVE_SHIFT) != 0);
-    io.AddKeyEvent(ImGuiKey_ModAlt, (glut_key_mods & GLUT_ACTIVE_ALT) != 0);
+    io.AddKeyEvent(ImGuiMod_Ctrl, (glut_key_mods & GLUT_ACTIVE_CTRL) != 0);
+    io.AddKeyEvent(ImGuiMod_Shift, (glut_key_mods & GLUT_ACTIVE_SHIFT) != 0);
+    io.AddKeyEvent(ImGuiMod_Alt, (glut_key_mods & GLUT_ACTIVE_ALT) != 0);
 }
 
 static void ImGui_ImplGLUT_AddKeyEvent(ImGuiKey key, bool down, int native_keycode)
