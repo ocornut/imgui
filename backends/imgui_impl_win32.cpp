@@ -36,7 +36,8 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago)with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
+//  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
+//  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
 //  2022-01-17: Inputs: always update key mods next and before a key event (not in NewFrame) to fix input queue with very low framerates.
@@ -254,10 +255,10 @@ static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
 static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyEvent(ImGuiKey_ModCtrl, IsVkDown(VK_CONTROL));
-    io.AddKeyEvent(ImGuiKey_ModShift, IsVkDown(VK_SHIFT));
-    io.AddKeyEvent(ImGuiKey_ModAlt, IsVkDown(VK_MENU));
-    io.AddKeyEvent(ImGuiKey_ModSuper, IsVkDown(VK_APPS));
+    io.AddKeyEvent(ImGuiMod_Ctrl, IsVkDown(VK_CONTROL));
+    io.AddKeyEvent(ImGuiMod_Shift, IsVkDown(VK_SHIFT));
+    io.AddKeyEvent(ImGuiMod_Alt, IsVkDown(VK_MENU));
+    io.AddKeyEvent(ImGuiMod_Super, IsVkDown(VK_APPS));
 }
 
 // This code supports multi-viewports (multiple OS Windows mapped into different Dear ImGui viewports)

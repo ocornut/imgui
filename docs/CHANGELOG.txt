@@ -104,6 +104,20 @@ Other changes:
 
 Breaking changes:
 
+ - Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
+    - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
+    - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
+    - ImGuiKey_ModAlt   and ImGuiModFlags_Alt   -> ImGuiMod_Alt
+    - ImGuiKey_ModSuper and ImGuiModFlags_Super -> ImGuiMod_Super
+   Kept inline redirection enums (will obsolete).
+   This change simplifies a few things, reduces confusion, and will facilitate upcoming
+   shortcut/input ownership apis.
+   - The ImGuiKey_ModXXX were introduced in 1.87 and mostly used by backends.
+   - The ImGuiModFlags_XXX have been exposed in imgui.h but not really used by any public api,
+     only by third-party extensions. They were however subject to a recent rename
+     (ImGuiKeyModFlags_XXX -> ImGuiModFlags_XXX) and we are exceptionally commenting out
+     the older ImGuiKeyModFlags_XXX names ahead of obsolescence schedule to reduce confusion
+     and because they were not meant to be used anyway.
  - Removed io.NavInputs[] and ImGuiNavInput enum that were used to feed gamepad inputs.
    Basically 1.87 already obsoleted them from the backend's point of view, but internally
    our navigation code still used this array and enum, so they were still present.
@@ -158,8 +172,11 @@ Other Changes:
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
   by converting them to half-width (U+0021..U+007E).
+- InputText: added ImGuiInputTextFlags_EscapeClearsAll flag: first press on Escape clears
+  text if any, second press deactivate the InputText(). (#5688)
 - InputText: added support for shift+click style selection. (#5619) [@procedural]
 - InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
+- InputText: fixed minor one-frame selection glitch when reverting with Escape.
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
@@ -174,6 +191,7 @@ Other Changes:
   bar boundaries (bug in 1.88). (#5652).
 - Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
+- IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
 - Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
@@ -186,6 +204,7 @@ Other Changes:
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
+- Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
