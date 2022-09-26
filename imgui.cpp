@@ -15514,7 +15514,7 @@ void ImGui::DockNodeEndAmendTabBar()
     End();
 }
 
-static bool IsDockNodeTitleBarHighlighted(ImGuiDockNode* node, ImGuiDockNode* root_node, ImGuiWindow* host_window)
+static bool IsDockNodeTitleBarHighlighted(ImGuiDockNode* node, ImGuiDockNode* root_node)
 {
     // CTRL+Tab highlight (only highlighting leaf node, not whole hierarchy)
     ImGuiContext& g = *GImGui;
@@ -15522,10 +15522,16 @@ static bool IsDockNodeTitleBarHighlighted(ImGuiDockNode* node, ImGuiDockNode* ro
         return (g.NavWindowingTarget->DockNode == node);
 
     // FIXME-DOCKING: May want alternative to treat central node void differently? e.g. if (g.NavWindow == host_window)
-    if (g.NavWindow && g.NavWindow->RootWindowForTitleBarHighlight == host_window->RootWindowDockTree && root_node->LastFocusedNodeId == node->ID)
-        for (ImGuiDockNode* parent_node = g.NavWindow->RootWindow->DockNode; parent_node != NULL; parent_node = parent_node->HostWindow ? parent_node->HostWindow->RootWindow->DockNode : NULL)
+    if (g.NavWindow && root_node->LastFocusedNodeId == node->ID)
+    {
+        // FIXME: This could all be backed in RootWindowForTitleBarHighlight? Probably need to reorganize for both dock nodes + other RootWindowForTitleBarHighlight users (not-node)
+        ImGuiWindow* parent_window = g.NavWindow->RootWindow;
+        while (parent_window->Flags & ImGuiWindowFlags_ChildMenu)
+            parent_window = parent_window->ParentWindow->RootWindow;
+        for (ImGuiDockNode* parent_node = parent_window->DockNode; parent_node != NULL; parent_node = parent_node->HostWindow ? parent_node->HostWindow->RootWindow->DockNode : NULL)
             if ((parent_node = ImGui::DockNodeGetRootNode(parent_node)) == root_node)
                 return true;
+    }
     return false;
 }
 
@@ -15544,7 +15550,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     // Decide if we should use a focused title bar color
     bool is_focused = false;
     ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-    if (IsDockNodeTitleBarHighlighted(node, root_node, host_window))
+    if (IsDockNodeTitleBarHighlighted(node, root_node))
         is_focused = true;
 
     // Hidden tab bar will show a triangle on the upper-left (in Begin)

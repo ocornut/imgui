@@ -224,6 +224,7 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Docking: Fixed incorrect focus highlight on docking node when focusing a menu. (#5702)
 - Docking, Nav: Fixed using gamepad/keyboard navigation not being able enter menu layer when
   it only contained the standard Collapse/Close buttons and no actual menu. (#5463, #4792)
 - Docking: Fixed regression introduced in v1.87 when docked window content not rendered
