@@ -8,6 +8,9 @@ on:
     types:
       - requested
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   PVS-Studio:
     runs-on: ubuntu-20.04
@@ -46,6 +49,10 @@ jobs:
           plog-converter -a 'GA:1,2;OP:1' -d V1071 -t errorfile -w pvs-studio.log
 
   Discord-CI:
+    permissions:
+      contents: read # to fetch code (actions/checkout)
+      actions: read # to get actions runs
+
     runs-on: ubuntu-20.04
     needs: [PVS-Studio]
     if: always()
