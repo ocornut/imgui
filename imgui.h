@@ -1459,6 +1459,11 @@ enum ImGuiKey : int
     ImGuiMod_Alt                    = 1 << 14, // Option/Menu
     ImGuiMod_Super                  = 1 << 15, // Cmd/Super/Windows
     ImGuiMod_Mask_                  = 0xF000,
+#if defined(__APPLE__)
+    ImGuiMod_Shortcut               = ImGuiMod_Super,
+#else
+    ImGuiMod_Shortcut               = ImGuiMod_Ctrl,
+#endif
 
     // [Internal] Prior to 1.87 we required user to fill io.KeysDown[512] using their own native index + the io.KeyMap[] array.
     // We are ditching this method but keeping a legacy path for user code doing e.g. IsKeyPressed(MY_NATIVE_KEY_CODE)
