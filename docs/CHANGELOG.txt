@@ -215,6 +215,8 @@ Other Changes:
 - Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
 - Examples: Added all SDL examples to default VS solution.
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
+- Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
+  (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
