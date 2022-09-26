@@ -154,7 +154,7 @@
 #endif
 
 // Desktop GL 2.0+ has glPolygonMode() which GL ES and WebGL don't have.
-#ifdef GL_POLYGON_MODE
+#if defined( GL_POLYGON_MODE ) && !defined( IMGUI_IMPL_OPENGL_ES2_ON_DESKTOP )
 #define IMGUI_IMPL_HAS_POLYGON_MODE
 #endif
 
@@ -284,7 +284,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
     if (glsl_version == NULL)
     {
-#if defined(IMGUI_IMPL_OPENGL_ES2)
+#if defined( IMGUI_IMPL_OPENGL_ES2 ) || defined( IMGUI_IMPL_OPENGL_ES2_ON_DESKTOP )
         glsl_version = "#version 100";
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
         glsl_version = "#version 300 es";
