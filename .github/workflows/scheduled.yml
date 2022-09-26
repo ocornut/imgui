@@ -8,6 +8,7 @@ on:
   schedule:
     - cron:  '0 9 * * *'
 
+permissions: {}
 jobs:
   scheduled:
     runs-on: ubuntu-latest
