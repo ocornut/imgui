@@ -1295,6 +1295,7 @@ void ImDrawList::PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, cons
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
+        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
         PathBezierCubicCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0); // Auto-tessellated
     }
     else
@@ -1310,6 +1311,7 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
+        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
         PathBezierQuadraticCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, _Data->CurveTessellationTol, 0);// Auto-tessellated
     }
     else
