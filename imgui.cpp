@@ -4299,9 +4299,15 @@ void ImGui::UpdateMouseWheel()
     if (wheel_y != 0.0f || wheel_x != 0.0f)
     {
         StartLockWheelingWindow(window);
-        bool noScroll = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
-        while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f && window->ScrollMax.x == 0.0f) || noScroll))
-            window = window->ParentWindow;
+        bool noScroll;
+	while (1) {
+            noScroll = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
+	    if ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f && window->ScrollMax.x == 0.0f) || noScroll)) {
+	      window = window->ParentWindow;
+	      continue;
+	    }
+	    break;
+	}
 
         // Vertical Mouse Wheel scrolling
         if (!noScroll && wheel_y != 0.0f)
