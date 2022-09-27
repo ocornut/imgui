@@ -4229,6 +4229,7 @@ static void StartLockWheelingWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     if (g.WheelingWindow == window)
         return;
+    IMGUI_DEBUG_LOG_IO("StartLockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
     g.WheelingWindow = window;
     g.WheelingWindowRefMousePos = g.IO.MousePos;
     g.WheelingWindowTimer = WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER;
@@ -4246,6 +4247,7 @@ void ImGui::UpdateMouseWheel()
             g.WheelingWindowTimer = 0.0f;
         if (g.WheelingWindowTimer <= 0.0f)
         {
+            IMGUI_DEBUG_LOG_IO("UpdateMouseWheel() release WheelingWindow lock \"%s\"\n", g.WheelingWindow->Name);
             g.WheelingWindow = NULL;
             g.WheelingWindowTimer = 0.0f;
         }
