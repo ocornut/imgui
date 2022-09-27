@@ -6,8 +6,8 @@
 
 @set OUT_DIR=Debug
 mkdir %OUT_DIR%
-cl /nologo /Zi /MD %INCLUDES% %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%
+cl /nologo /Zi /MD %INCLUDES% /D ImTextureID=ImU64 %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%
 
 @set OUT_DIR=Release
 mkdir %OUT_DIR%
-cl /nologo /Zi /MD /Ox /Oi %INCLUDES% %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%
+cl /nologo /Zi /MD /Ox /Oi %INCLUDES% /D ImTextureID=ImU64 %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%

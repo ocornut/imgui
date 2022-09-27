@@ -53,8 +53,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
-    <None Include="..\..\misc\natvis\imgui.natvis">
-      <Filter>sources</Filter>
+    <None Include="..\..\misc\debuggers\imgui.natvis">
+      <Filter>imgui</Filter>
     </None>
   </ItemGroup>
 </Project>

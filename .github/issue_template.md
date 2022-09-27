@@ -1,12 +1,12 @@
 (Click "Preview" above ^ to turn URL into clickable links)
 
-1. PLEASE CAREFULLY READ: [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
+1. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING or LOADING FONTS,  please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions).
 
-2. PLEASE CAREFULLY READ: [Issue Submitting Guidelines](https://github.com/ocornut/imgui/issues/2261)
+2. PLEASE CAREFULLY READ: [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
 
-3. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING/LOADING FONTS,  please use the [Discord server](http://discord.dearimgui.org).
+3. PLEASE CAREFULLY READ: [Contributing Guidelines](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md)
 
-4. PLEASE MAKE SURE that you have: read the FAQ; explored the contents of `ShowDemoWindow()` including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the link provided in (1) (2).
+4. PLEASE MAKE SURE that you have: read the FAQ; explored the contents of `ShowDemoWindow()` including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the links above.
 
 5. Be mindful that messages are being sent to the e-mail box of "Watching" users. Try to proof-read your messages before sending them. Edits are not seen by those users.
 

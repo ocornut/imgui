@@ -72,7 +72,7 @@ int main(int, char**)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
@@ -83,14 +83,16 @@ int main(int, char**)
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
     // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
     //io.Fonts->AddFontDefault();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
-    io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
+    io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
@@ -147,7 +149,7 @@ static void main_loop(void* window)
         wgpu_swap_chain_height = height;
 
         WGPUSwapChainDescriptor swap_chain_desc = {};
-        swap_chain_desc.usage = WGPUTextureUsage_OutputAttachment;
+        swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
         swap_chain_desc.format = WGPUTextureFormat_RGBA8Unorm;
         swap_chain_desc.width = width;
         swap_chain_desc.height = height;
@@ -166,7 +168,7 @@ static void main_loop(void* window)
     if (show_demo_window)
         ImGui::ShowDemoWindow(&show_demo_window);
 
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
     {
         static float f = 0.0f;
         static int counter = 0;
@@ -198,15 +200,15 @@ static void main_loop(void* window)
             show_another_window = false;
         ImGui::End();
     }
-    
+
     // Rendering
     ImGui::Render();
 
-    WGPURenderPassColorAttachmentDescriptor color_attachments = {};
+    WGPURenderPassColorAttachment color_attachments = {};
     color_attachments.loadOp = WGPULoadOp_Clear;
     color_attachments.storeOp = WGPUStoreOp_Store;
-    color_attachments.clearColor = { clear_color.x, clear_color.y, clear_color.z, clear_color.w };
-    color_attachments.attachment = wgpuSwapChainGetCurrentTextureView(wgpu_swap_chain);
+    color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+    color_attachments.view = wgpuSwapChainGetCurrentTextureView(wgpu_swap_chain);
     WGPURenderPassDescriptor render_pass_desc = {};
     render_pass_desc.colorAttachmentCount = 1;
     render_pass_desc.colorAttachments = &color_attachments;
@@ -217,11 +219,11 @@ static void main_loop(void* window)
 
     WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
     ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
-    wgpuRenderPassEncoderEndPass(pass);
+    wgpuRenderPassEncoderEnd(pass);
 
     WGPUCommandBufferDescriptor cmd_buffer_desc = {};
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
-    WGPUQueue queue = wgpuDeviceGetDefaultQueue(wgpu_device);
+    WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
 }
 

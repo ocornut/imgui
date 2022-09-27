@@ -14,9 +14,10 @@ SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 LIBS = -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -framework CoreVideo -framework QuartzCore
-LIBS += -L/usr/local/lib -lglfw
+LIBS += -L/usr/local/lib -L/opt/homebrew/lib
+LIBS += -lglfw
 
-CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I/usr/local/include
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I/usr/local/include -I/opt/homebrew/include
 CXXFLAGS += -Wall -Wformat
 CFLAGS = $(CXXFLAGS)
 

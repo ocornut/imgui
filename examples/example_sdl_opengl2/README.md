@@ -1,6 +1,10 @@
 
 # How to Build
 
+- On Windows with Visual Studio's IDE
+
+Use the provided project file (.vcxproj). Add to solution (imgui_examples.sln) if necessary.
+
 - On Windows with Visual Studio's CLI
 
 ```
@@ -14,12 +18,12 @@ cl /Zi /MD /I.. /I..\.. /I%SDL2_DIR%\include main.cpp ..\..\backends\imgui_impl_
 - On Linux and similar Unixes
 
 ```
-c++ `sdl2-config --cflags` -I .. -I ../.. main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl2.cpp ../../imgui*.cpp `sdl2-config --libs` -lGL
+c++ `sdl2-config --cflags` -I .. -I ../.. -I ../../backends main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl2.cpp ../../imgui*.cpp `sdl2-config --libs` -lGL
 ```
 
 - On Mac OS X
 
 ```
 brew install sdl2
-c++ `sdl2-config --cflags` -I .. -I ../.. main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl2.cpp ../../imgui*.cpp `sdl2-config --libs` -framework OpenGl
+c++ `sdl2-config --cflags` -I .. -I ../.. -I ../../backends main.cpp ../../backends/imgui_impl_sdl.cpp ../../backends/imgui_impl_opengl2.cpp ../../imgui*.cpp `sdl2-config --libs` -framework OpenGl
 ```
