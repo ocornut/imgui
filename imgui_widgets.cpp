@@ -4590,9 +4590,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 apply_new_text_length = state->CurLenA;
             }
         }
-
-        // Clear temporary user storage
-        state->Flags = ImGuiInputTextFlags_None;
     }
 
     // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)
