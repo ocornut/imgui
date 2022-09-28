@@ -4591,8 +4591,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
         }
 
+#ifndef __WIIU__
         // Clear temporary user storage
         state->Flags = ImGuiInputTextFlags_None;
+#endif
     }
 
     // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)

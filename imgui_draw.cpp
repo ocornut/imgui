@@ -753,7 +753,12 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
         // Temporary buffer
         // The first <points_count> items are normals at each line point, then after that there are either 2 or 4 temp points for each line point
+#ifdef __WIIU__
+        // avoid using alloca on the Wii U
+        ImVec2 temp_normals[points_count * ((use_texture || !thick_line) ? 3 : 5) * sizeof(ImVec2)]; //-V630
+#else
         ImVec2* temp_normals = (ImVec2*)alloca(points_count * ((use_texture || !thick_line) ? 3 : 5) * sizeof(ImVec2)); //-V630
+#endif
         ImVec2* temp_points = temp_normals + points_count;
 
         // Calculate normals (tangents) for each line segment
@@ -1001,7 +1006,12 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
 
         // Compute normals
+#ifdef __WIIU__
+        // Avoid using alloca on the Wii U
+        ImVec2 temp_normals[points_count * sizeof(ImVec2)]; //-V630
+#else
         ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2)); //-V630
+#endif
         for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
             const ImVec2& p0 = points[i0];
