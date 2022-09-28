@@ -94,6 +94,8 @@ Breaking changes:
    Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
    (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
     threads have been amended to refer to this issue).
+ - Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
+   They only made sense before we could use IMGUI_USER_CONFIG.
 
 
 Other Changes:

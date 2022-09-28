@@ -48,13 +48,12 @@ Index of this file:
 
 #pragma once
 
-// Configuration file with compile-time options (edit imconfig.h or '#define IMGUI_USER_CONFIG "myfilename.h" from your build system')
+// Configuration file with compile-time options
+// (edit imconfig.h or '#define IMGUI_USER_CONFIG "myfilename.h" from your build system')
 #ifdef IMGUI_USER_CONFIG
 #include IMGUI_USER_CONFIG
 #endif
-#if !defined(IMGUI_DISABLE_INCLUDE_IMCONFIG_H) || defined(IMGUI_INCLUDE_IMCONFIG_H)
 #include "imconfig.h"
-#endif
 
 #ifndef IMGUI_DISABLE
 
