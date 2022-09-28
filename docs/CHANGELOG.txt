@@ -154,6 +154,7 @@ Other Changes:
 - Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
 - Demo: Fixed Log & Console from losing scrolling position with Auto-Scroll when child is clipped. (#5721)
 - Examples: Added all SDL examples to default VS solution.
+- Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
 - Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
