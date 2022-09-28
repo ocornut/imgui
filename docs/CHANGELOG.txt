@@ -103,6 +103,8 @@ Other Changes:
 - Popups & Modals: fixed nested Begin() being erroneously input-inhibited. While it is
   unusual, you can nest a Begin() inside a popup or modal, it is occasionally useful to
   achieve certains things (e.g. some ways to implement suggestion popup #718, #4461).
+- Scrolling: Tweak mouse-wheel locked window timer so it is shorter but also gets reset
+  whenever scrolling again (#2604).
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
