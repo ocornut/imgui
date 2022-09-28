@@ -138,9 +138,10 @@ Other Changes:
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
-- Fonts, Text: Fixed wrapped-text not doing a fast-forward on lines above the clipping region,
+- Text: Fixed wrapped-text not doing a fast-forward on lines above the clipping region,
   which would result in an abnormal number of vertices created (was slower and more likely to
   asserts with 16-bits ImDrawVtx). (#5720)
+- Fonts: Added GetGlyphRangesGreek() helper for Greek & Coptic glyph range. (#5676, #5727) [@azonenberg]
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
 - Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
