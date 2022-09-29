@@ -161,6 +161,8 @@ Breaking changes:
    Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
    (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
     threads have been amended to refer to this issue).
+ - Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
+   They only made sense before we could use IMGUI_USER_CONFIG.
 
 
 Other Changes:
@@ -177,6 +179,7 @@ Other Changes:
 - InputText: added support for shift+click style selection. (#5619) [@procedural]
 - InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
 - InputText: fixed minor one-frame selection glitch when reverting with Escape.
+- ColorEdit3: fixed id collision leading to an assertion. (#5707)
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
@@ -194,14 +197,24 @@ Other Changes:
 - IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
+- IO: Filter duplicate input events during the AddXXX() calls. (#5599, #4921)
 - Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
   Among other things, it would accidentally break part of the closing heuristic logic when moving
   towards a sub-menu. (#2517, #5614). [@rokups]
 - Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
   the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
+- Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item
+  in parent window when the parent is not a popup. (#5730)
+- Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)
+- Menus, Nav: Fixed using left/right navigation when appending to an existing menu (multiple
+  BeginMenu() call with same names). (#1207)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
+- Text: Fixed wrapped-text not doing a fast-forward on lines above the clipping region,
+  which would result in an abnormal number of vertices created (was slower and more likely to
+  asserts with 16-bits ImDrawVtx). (#5720)
+- Fonts: Added GetGlyphRangesGreek() helper for Greek & Coptic glyph range. (#5676, #5727) [@azonenberg]
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
 - Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
@@ -213,10 +226,14 @@ Other Changes:
 - Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
 - Demo: Improved "Constrained-resizing window" example, more clearly showcase aspect-ratio. (#5627)
 - Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
+- Demo: Fixed Log & Console from losing scrolling position with Auto-Scroll when child is clipped. (#5721)
 - Examples: Added all SDL examples to default VS solution.
+- Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
 - Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
+- Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
+  registered as MBCS (not Unicode). (#5725, #1807, #471, #2815, #1060) [@or75, @ocornut]
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]

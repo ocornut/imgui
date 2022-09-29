@@ -6758,66 +6758,68 @@ struct ExampleAppConsole
 
         // Reserve enough left-over height for 1 separator + 1 input text
         const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), false, ImGuiWindowFlags_HorizontalScrollbar);
-        if (ImGui::BeginPopupContextWindow())
+        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), false, ImGuiWindowFlags_HorizontalScrollbar))
         {
-            if (ImGui::Selectable("Clear")) ClearLog();
-            ImGui::EndPopup();
+            if (ImGui::BeginPopupContextWindow())
+            {
+                if (ImGui::Selectable("Clear")) ClearLog();
+                ImGui::EndPopup();
+            }
+
+            // Display every line as a separate entry so we can change their color or add custom widgets.
+            // If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
+            // NB- if you have thousands of entries this approach may be too inefficient and may require user-side clipping
+            // to only process visible items. The clipper will automatically measure the height of your first item and then
+            // "seek" to display only items in the visible area.
+            // To use the clipper we can replace your standard loop:
+            //      for (int i = 0; i < Items.Size; i++)
+            //   With:
+            //      ImGuiListClipper clipper;
+            //      clipper.Begin(Items.Size);
+            //      while (clipper.Step())
+            //         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+            // - That your items are evenly spaced (same height)
+            // - That you have cheap random access to your elements (you can access them given their index,
+            //   without processing all the ones before)
+            // You cannot this code as-is if a filter is active because it breaks the 'cheap random-access' property.
+            // We would need random-access on the post-filtered list.
+            // A typical application wanting coarse clipping and filtering may want to pre-compute an array of indices
+            // or offsets of items that passed the filtering test, recomputing this array when user changes the filter,
+            // and appending newly elements as they are inserted. This is left as a task to the user until we can manage
+            // to improve this example code!
+            // If your items are of variable height:
+            // - Split them into same height items would be simpler and facilitate random-seeking into your list.
+            // - Consider using manual call to IsRectVisible() and skipping extraneous decoration from your items.
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
+            if (copy_to_clipboard)
+                ImGui::LogToClipboard();
+            for (int i = 0; i < Items.Size; i++)
+            {
+                const char* item = Items[i];
+                if (!Filter.PassFilter(item))
+                    continue;
+
+                // Normally you would store more information in your item than just a string.
+                // (e.g. make Items[] an array of structure, store color/type etc.)
+                ImVec4 color;
+                bool has_color = false;
+                if (strstr(item, "[error]")) { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; }
+                else if (strncmp(item, "# ", 2) == 0) { color = ImVec4(1.0f, 0.8f, 0.6f, 1.0f); has_color = true; }
+                if (has_color)
+                    ImGui::PushStyleColor(ImGuiCol_Text, color);
+                ImGui::TextUnformatted(item);
+                if (has_color)
+                    ImGui::PopStyleColor();
+            }
+            if (copy_to_clipboard)
+                ImGui::LogFinish();
+
+            if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
+                ImGui::SetScrollHereY(1.0f);
+            ScrollToBottom = false;
+
+            ImGui::PopStyleVar();
         }
-
-        // Display every line as a separate entry so we can change their color or add custom widgets.
-        // If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
-        // NB- if you have thousands of entries this approach may be too inefficient and may require user-side clipping
-        // to only process visible items. The clipper will automatically measure the height of your first item and then
-        // "seek" to display only items in the visible area.
-        // To use the clipper we can replace your standard loop:
-        //      for (int i = 0; i < Items.Size; i++)
-        //   With:
-        //      ImGuiListClipper clipper;
-        //      clipper.Begin(Items.Size);
-        //      while (clipper.Step())
-        //         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-        // - That your items are evenly spaced (same height)
-        // - That you have cheap random access to your elements (you can access them given their index,
-        //   without processing all the ones before)
-        // You cannot this code as-is if a filter is active because it breaks the 'cheap random-access' property.
-        // We would need random-access on the post-filtered list.
-        // A typical application wanting coarse clipping and filtering may want to pre-compute an array of indices
-        // or offsets of items that passed the filtering test, recomputing this array when user changes the filter,
-        // and appending newly elements as they are inserted. This is left as a task to the user until we can manage
-        // to improve this example code!
-        // If your items are of variable height:
-        // - Split them into same height items would be simpler and facilitate random-seeking into your list.
-        // - Consider using manual call to IsRectVisible() and skipping extraneous decoration from your items.
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
-        if (copy_to_clipboard)
-            ImGui::LogToClipboard();
-        for (int i = 0; i < Items.Size; i++)
-        {
-            const char* item = Items[i];
-            if (!Filter.PassFilter(item))
-                continue;
-
-            // Normally you would store more information in your item than just a string.
-            // (e.g. make Items[] an array of structure, store color/type etc.)
-            ImVec4 color;
-            bool has_color = false;
-            if (strstr(item, "[error]"))          { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; }
-            else if (strncmp(item, "# ", 2) == 0) { color = ImVec4(1.0f, 0.8f, 0.6f, 1.0f); has_color = true; }
-            if (has_color)
-                ImGui::PushStyleColor(ImGuiCol_Text, color);
-            ImGui::TextUnformatted(item);
-            if (has_color)
-                ImGui::PopStyleColor();
-        }
-        if (copy_to_clipboard)
-            ImGui::LogFinish();
-
-        if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
-            ImGui::SetScrollHereY(1.0f);
-        ScrollToBottom = false;
-
-        ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::Separator();
 
@@ -7065,63 +7067,64 @@ struct ExampleAppLog
         Filter.Draw("Filter", -100.0f);
 
         ImGui::Separator();
-        ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-        if (clear)
-            Clear();
-        if (copy)
-            ImGui::LogToClipboard();
+        if (ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar))
+        {
+            if (clear)
+                Clear();
+            if (copy)
+                ImGui::LogToClipboard();
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-        const char* buf = Buf.begin();
-        const char* buf_end = Buf.end();
-        if (Filter.IsActive())
-        {
-            // In this example we don't use the clipper when Filter is enabled.
-            // This is because we don't have random access to the result of our filter.
-            // A real application processing logs with ten of thousands of entries may want to store the result of
-            // search/filter.. especially if the filtering function is not trivial (e.g. reg-exp).
-            for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+            const char* buf = Buf.begin();
+            const char* buf_end = Buf.end();
+            if (Filter.IsActive())
             {
-                const char* line_start = buf + LineOffsets[line_no];
-                const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                if (Filter.PassFilter(line_start, line_end))
-                    ImGui::TextUnformatted(line_start, line_end);
-            }
-        }
-        else
-        {
-            // The simplest and easy way to display the entire buffer:
-            //   ImGui::TextUnformatted(buf_begin, buf_end);
-            // And it'll just work. TextUnformatted() has specialization for large blob of text and will fast-forward
-            // to skip non-visible lines. Here we instead demonstrate using the clipper to only process lines that are
-            // within the visible area.
-            // If you have tens of thousands of items and their processing cost is non-negligible, coarse clipping them
-            // on your side is recommended. Using ImGuiListClipper requires
-            // - A) random access into your data
-            // - B) items all being the  same height,
-            // both of which we can handle since we have an array pointing to the beginning of each line of text.
-            // When using the filter (in the block of code above) we don't have random access into the data to display
-            // anymore, which is why we don't use the clipper. Storing or skimming through the search result would make
-            // it possible (and would be recommended if you want to search through tens of thousands of entries).
-            ImGuiListClipper clipper;
-            clipper.Begin(LineOffsets.Size);
-            while (clipper.Step())
-            {
-                for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
+                // In this example we don't use the clipper when Filter is enabled.
+                // This is because we don't have random access to the result of our filter.
+                // A real application processing logs with ten of thousands of entries may want to store the result of
+                // search/filter.. especially if the filtering function is not trivial (e.g. reg-exp).
+                for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
                 {
                     const char* line_start = buf + LineOffsets[line_no];
                     const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                    ImGui::TextUnformatted(line_start, line_end);
+                    if (Filter.PassFilter(line_start, line_end))
+                        ImGui::TextUnformatted(line_start, line_end);
                 }
             }
-            clipper.End();
+            else
+            {
+                // The simplest and easy way to display the entire buffer:
+                //   ImGui::TextUnformatted(buf_begin, buf_end);
+                // And it'll just work. TextUnformatted() has specialization for large blob of text and will fast-forward
+                // to skip non-visible lines. Here we instead demonstrate using the clipper to only process lines that are
+                // within the visible area.
+                // If you have tens of thousands of items and their processing cost is non-negligible, coarse clipping them
+                // on your side is recommended. Using ImGuiListClipper requires
+                // - A) random access into your data
+                // - B) items all being the  same height,
+                // both of which we can handle since we have an array pointing to the beginning of each line of text.
+                // When using the filter (in the block of code above) we don't have random access into the data to display
+                // anymore, which is why we don't use the clipper. Storing or skimming through the search result would make
+                // it possible (and would be recommended if you want to search through tens of thousands of entries).
+                ImGuiListClipper clipper;
+                clipper.Begin(LineOffsets.Size);
+                while (clipper.Step())
+                {
+                    for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
+                    {
+                        const char* line_start = buf + LineOffsets[line_no];
+                        const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
+                        ImGui::TextUnformatted(line_start, line_end);
+                    }
+                }
+                clipper.End();
+            }
+            ImGui::PopStyleVar();
+
+            if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+                ImGui::SetScrollHereY(1.0f);
         }
-        ImGui::PopStyleVar();
-
-        if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-            ImGui::SetScrollHereY(1.0f);
-
         ImGui::EndChild();
         ImGui::End();
     }

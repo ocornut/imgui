@@ -1303,6 +1303,7 @@ void ImDrawList::PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, cons
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
+        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
         PathBezierCubicCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0); // Auto-tessellated
     }
     else
@@ -1318,6 +1319,7 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
+        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
         PathBezierQuadraticCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, _Data->CurveTessellationTol, 0);// Auto-tessellated
     }
     else
@@ -2827,6 +2829,17 @@ const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
     return &ranges[0];
 }
 
+const ImWchar*   ImFontAtlas::GetGlyphRangesGreek()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0x0370, 0x03FF, // Greek and Coptic
+        0,
+    };
+    return &ranges[0];
+}
+
 const ImWchar*  ImFontAtlas::GetGlyphRangesKorean()
 {
     static const ImWchar ranges[] =
@@ -3339,11 +3352,21 @@ const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
     return &Glyphs.Data[i];
 }
 
+// Wrapping skips upcoming blanks
+static inline const char* CalcWordWrapNextLineStartA(const char* text, const char* text_end)
+{
+    while (text < text_end && ImCharIsBlankA(*text))
+        text++;
+    if (*text == '\n')
+        text++;
+    return text;
+}
+
+// Simple word-wrapping for English, not full-featured. Please submit failing cases!
+// This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
+// FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
 const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
 {
-    // Simple word-wrapping for English, not full-featured. Please submit failing cases!
-    // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
-
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
     //      ^    ^    ^   ^   ^__    ^    ^
@@ -3355,7 +3378,6 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
 
     // Cut words that cannot possibly fit within one line.
     // e.g.: "The tropical fish" with ~5 characters worth of width --> "The tr" "opical" "fish"
-
     float line_width = 0.0f;
     float word_width = 0.0f;
     float blank_width = 0.0f;
@@ -3435,6 +3457,10 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         s = next_s;
     }
 
+    // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
+    // +1 may not be a character start point in UTF-8 but it's ok because caller loops use (text >= word_wrap_eol).
+    if (s == text && text < text_end)
+        return s + 1;
     return s;
 }
 
@@ -3459,11 +3485,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-            {
                 word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width);
-                if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
-                    word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
-            }
 
             if (s >= word_wrap_eol)
             {
@@ -3472,13 +3494,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 text_size.y += line_height;
                 line_width = 0.0f;
                 word_wrap_eol = NULL;
-
-                // Wrapping skips upcoming blanks
-                while (s < text_end)
-                {
-                    const char c = *s;
-                    if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
-                }
+                s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
                 continue;
             }
         }
@@ -3563,15 +3579,25 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     const float scale = size / FontSize;
     const float line_height = FontSize * scale;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
-    const char* word_wrap_eol = NULL;
 
     // Fast-forward to first visible line
     const char* s = text_begin;
-    if (y + line_height < clip_rect.y && !word_wrap_enabled)
+    if (y + line_height < clip_rect.y)
         while (y + line_height < clip_rect.y && s < text_end)
         {
-            s = (const char*)memchr(s, '\n', text_end - s);
-            s = s ? s + 1 : text_end;
+            const char* line_end = (const char*)memchr(s, '\n', text_end - s);
+            if (word_wrap_enabled)
+            {
+                // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPositionA().
+                // If the specs for CalcWordWrapPositionA() were reworked to optionally return on \n we could combine both.
+                // However it is still better than nothing performing the fast-forward!
+                s = CalcWordWrapPositionA(scale, s, line_end, wrap_width);
+                s = CalcWordWrapNextLineStartA(s, text_end);
+            }
+            else
+            {
+                s = line_end ? line_end + 1 : text_end;
+            }
             y += line_height;
         }
 
@@ -3603,6 +3629,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
+    const char* word_wrap_eol = NULL;
 
     while (s < text_end)
     {
@@ -3610,24 +3637,14 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-            {
                 word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - start_x));
-                if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
-                    word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
-            }
 
             if (s >= word_wrap_eol)
             {
                 x = start_x;
                 y += line_height;
                 word_wrap_eol = NULL;
-
-                // Wrapping skips upcoming blanks
-                while (s < text_end)
-                {
-                    const char c = *s;
-                    if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
-                }
+                s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
                 continue;
             }
         }
