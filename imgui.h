@@ -116,13 +116,14 @@ Index of this file:
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic ignored "-Wformat-nonliteral"  // warning: format string is not a string literal            // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
 #endif
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"          // warning: unknown option after '#pragma GCC diagnostic' kind
-#pragma GCC diagnostic ignored "-Wclass-memaccess"  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wpragmas"              // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wclass-memaccess"      // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
 //-----------------------------------------------------------------------------
@@ -961,6 +962,21 @@ namespace ImGui
     IMGUI_API void          GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data);
     IMGUI_API void*         MemAlloc(size_t size);
     IMGUI_API void          MemFree(void* ptr);
+
+    // FIXME-IMSTR
+    // Functions which could accept both 'const char*' and 'const void*' now have an ambiguity between 'ImStrv' and 'const void*' when passed literals.
+    // Binding generators would likely need to ignore those.
+    // See https://github.com/ocornut/imgui/issues/5079
+IM_MSVC_RUNTIME_CHECKS_OFF
+    inline               void    PushID(const char* str_id)                                                               { PushID(ImStrv(str_id)); }
+    inline               ImGuiID GetID(const char* str_id)                                                                { return GetID(ImStrv(str_id)); }
+    inline IM_FMTARGS(2) bool    TreeNode(const char* str_id, const char* fmt, ...)                                       { va_list args; va_start(args, fmt); bool ret = TreeNodeV(ImStrv(str_id), fmt, args); va_end(args); return ret; }
+    inline IM_FMTLIST(2) bool    TreeNodeV(const char* str_id, const char* fmt, va_list args)                             { return TreeNodeV(ImStrv(str_id), fmt, args); }
+    inline IM_FMTARGS(3) bool    TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)           { va_list args; va_start(args, fmt); bool ret = TreeNodeExV(ImStrv(str_id), flags, fmt, args); va_end(args); return ret; }
+    inline IM_FMTLIST(3) bool    TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) { return TreeNodeEx(ImStrv(str_id), flags, fmt, args); }
+    inline               void    TreePush(const char* str_id)                                                             { TreePush(ImStrv(str_id)); }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
+
 
 } // namespace ImGui
 
