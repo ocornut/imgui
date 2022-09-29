@@ -1282,11 +1282,13 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     }
 }
 
+// FIXME: Perhaps we could clear queued events as well?
 void ImGuiIO::ClearInputCharacters()
 {
     InputQueueCharacters.resize(0);
 }
 
+// FIXME: Perhaps we could clear queued events as well?
 void ImGuiIO::ClearInputKeys()
 {
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -1300,6 +1302,23 @@ void ImGuiIO::ClearInputKeys()
     }
     KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
     KeyMods = ImGuiMod_None;
+}
+
+static ImGuiInputEvent* FindLatestInputEvent(ImGuiInputEventType type, int arg = -1)
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = g.InputEventsQueue.Size - 1; n >= 0; n--)
+    {
+        ImGuiInputEvent* e = &g.InputEventsQueue[n];
+        if (e->Type != type)
+            continue;
+        if (type == ImGuiInputEventType_Key && e->Key.Key != arg)
+            continue;
+        if (type == ImGuiInputEventType_MouseButton && e->MouseButton.Button != arg)
+            continue;
+        return e;
+    }
+    return NULL;
 }
 
 // Queue a new key down/up event.
@@ -1327,17 +1346,13 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
     if (ImGui::IsGamepadKey(key))
         BackendUsingLegacyNavInputArray = false;
 
-    // Partial filter of duplicates (not strictly needed, but makes data neater in particular for key mods and gamepad values which are most commonly spmamed)
-    ImGuiKeyData* key_data = ImGui::GetKeyData(key);
-    if (key_data->Down == down && key_data->AnalogValue == analog_value)
-    {
-        bool found = false;
-        for (int n = g.InputEventsQueue.Size - 1; n >= 0 && !found; n--)
-            if (g.InputEventsQueue[n].Type == ImGuiInputEventType_Key && g.InputEventsQueue[n].Key.Key == key)
-                found = true;
-        if (!found)
-            return;
-    }
+    // Filter duplicate (in particular: key mods and gamepad analog values are commonly spammed)
+    const ImGuiInputEvent* latest_event = FindLatestInputEvent(ImGuiInputEventType_Key, (int)key);
+    const ImGuiKeyData* key_data = ImGui::GetKeyData(key);
+    const bool latest_key_down = latest_event ? latest_event->Key.Down : key_data->Down;
+    const float latest_key_analog = latest_event ? latest_event->Key.AnalogValue : key_data->AnalogValue;
+    if (latest_key_down == down && latest_key_analog == analog_value)
+        return;
 
     // Add event
     ImGuiInputEvent e;
@@ -1395,11 +1410,20 @@ void ImGuiIO::AddMousePosEvent(float x, float y)
     if (!AppAcceptingEvents)
         return;
 
+    // Apply same flooring as UpdateMouseInputs()
+    ImVec2 pos((x > -FLT_MAX) ? ImFloorSigned(x) : x, (y > -FLT_MAX) ? ImFloorSigned(y) : y);
+
+    // Filter duplicate
+    const ImGuiInputEvent* latest_event = FindLatestInputEvent(ImGuiInputEventType_MousePos);
+    const ImVec2 latest_pos = latest_event ? ImVec2(latest_event->MousePos.PosX, latest_event->MousePos.PosY) : g.IO.MousePos;
+    if (latest_pos.x == pos.x && latest_pos.y == pos.y)
+        return;
+
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_MousePos;
     e.Source = ImGuiInputSource_Mouse;
-    e.MousePos.PosX = x;
-    e.MousePos.PosY = y;
+    e.MousePos.PosX = pos.x;
+    e.MousePos.PosY = pos.y;
     g.InputEventsQueue.push_back(e);
 }
 
@@ -1409,6 +1433,12 @@ void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
     if (!AppAcceptingEvents)
+        return;
+
+    // Filter duplicate
+    const ImGuiInputEvent* latest_event = FindLatestInputEvent(ImGuiInputEventType_MouseButton, (int)mouse_button);
+    const bool latest_button_down = latest_event ? latest_event->MouseButton.Down : g.IO.MouseDown[mouse_button];
+    if (latest_button_down == down)
         return;
 
     ImGuiInputEvent e;
@@ -1424,7 +1454,9 @@ void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
-    if ((wheel_x == 0.0f && wheel_y == 0.0f) || !AppAcceptingEvents)
+
+    // Filter duplicate (unlike most events, wheel values are relative and easy to filter)
+    if (!AppAcceptingEvents || (wheel_x == 0.0f && wheel_y == 0.0f))
         return;
 
     ImGuiInputEvent e;
@@ -1439,6 +1471,12 @@ void ImGuiIO::AddFocusEvent(bool focused)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
+
+    // Filter duplicate
+    const ImGuiInputEvent* latest_event = FindLatestInputEvent(ImGuiInputEventType_Focus);
+    const bool latest_focused = latest_event ? latest_event->AppFocused.Focused : !g.IO.AppFocusLost;
+    if (latest_focused == focused)
+        return;
 
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_Focus;
@@ -8123,8 +8161,6 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
         {
             // Trickling Rule: Stop processing queued events if we already handled a mouse button change
             ImVec2 event_pos(e->MousePos.PosX, e->MousePos.PosY);
-            if (IsMousePosValid(&event_pos))
-                event_pos = ImVec2(ImFloorSigned(event_pos.x), ImFloorSigned(event_pos.y)); // Apply same flooring as UpdateMouseInputs()
             if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_wheeled || key_changed || text_inputted))
                 break;
             io.MousePos = event_pos;
