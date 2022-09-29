@@ -3572,7 +3572,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2 & pos, I
                 // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPositionA().
                 // If the specs for CalcWordWrapPositionA() were reworked to optionally return on \n we could combine both.
                 // However it is still better than nothing performing the fast-forward!
-                s = CalcWordWrapPositionA(scale, s, line_end, wrap_width);
+                s = CalcWordWrapPositionA(scale, ImStrv(s, line_end), wrap_width);
                 s = CalcWordWrapNextLineStartA(s, text_end);
             }
             else
