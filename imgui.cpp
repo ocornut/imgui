@@ -1508,6 +1508,14 @@ void ImGuiIO::AddMouseViewportEvent(ImGuiID viewport_id)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(&g.IO == this && "Can only add events to current context.");
     IM_ASSERT(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport);
+    if (!AppAcceptingEvents)
+        return;
+
+    // Filter duplicate
+    const ImGuiInputEvent* latest_event = FindLatestInputEvent(ImGuiInputEventType_MouseViewport);
+    const ImGuiID latest_viewport_id = latest_event ? latest_event->MouseViewport.HoveredViewportID : g.IO.MouseHoveredViewport;
+    if (latest_viewport_id == viewport_id)
+        return;
 
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_MouseViewport;
@@ -8728,6 +8736,7 @@ static void DebugPrintInputEvent(const char* prefix, const ImGuiInputEvent* e)
     if (e->Type == ImGuiInputEventType_MousePos)    { if (e->MousePos.PosX == -FLT_MAX && e->MousePos.PosY == -FLT_MAX) IMGUI_DEBUG_LOG_IO("%s: MousePos (-FLT_MAX, -FLT_MAX)\n", prefix); else IMGUI_DEBUG_LOG_IO("%s: MousePos (%.1f, %.1f)\n", prefix, e->MousePos.PosX, e->MousePos.PosY); return; }
     if (e->Type == ImGuiInputEventType_MouseButton) { IMGUI_DEBUG_LOG_IO("%s: MouseButton %d %s\n", prefix, e->MouseButton.Button, e->MouseButton.Down ? "Down" : "Up"); return; }
     if (e->Type == ImGuiInputEventType_MouseWheel)  { IMGUI_DEBUG_LOG_IO("%s: MouseWheel (%.1f, %.1f)\n", prefix, e->MouseWheel.WheelX, e->MouseWheel.WheelY); return; }
+    if (e->Type == ImGuiInputEventType_MouseViewport){IMGUI_DEBUG_LOG_IO("%s: MouseViewport (0x%08X)\n", prefix, e->MouseViewport.HoveredViewportID); return; }
     if (e->Type == ImGuiInputEventType_Key)         { IMGUI_DEBUG_LOG_IO("%s: Key \"%s\" %s\n", prefix, ImGui::GetKeyName(e->Key.Key), e->Key.Down ? "Down" : "Up"); return; }
     if (e->Type == ImGuiInputEventType_Text)        { IMGUI_DEBUG_LOG_IO("%s: Text: %c (U+%08X)\n", prefix, e->Text.Char, e->Text.Char); return; }
     if (e->Type == ImGuiInputEventType_Focus)       { IMGUI_DEBUG_LOG_IO("%s: AppFocused %d\n", prefix, e->AppFocused.Focused); return; }
