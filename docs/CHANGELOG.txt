@@ -135,6 +135,8 @@ Other Changes:
   towards a sub-menu. (#2517, #5614). [@rokups]
 - Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
   the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
+- Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item in
+  parent when the parent is not a popup. (#5730)
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.

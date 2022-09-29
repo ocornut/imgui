@@ -7020,9 +7020,8 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent without always being a Child window)
     // This is only done for items for the menu set and not the full parent window.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
-    ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
-        g.NavWindow = window;
+        PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
     // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
@@ -7071,7 +7070,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     const bool hovered = (g.HoveredId == id) && enabled && !g.NavDisableMouseHover;
     if (menuset_is_open)
-        g.NavWindow = backed_nav_window;
+        PopItemFlag();
 
     bool want_open = false;
     bool want_close = false;
@@ -7207,9 +7206,8 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
 
     // See BeginMenuEx() for comments about this.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
-    ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
-        g.NavWindow = window;
+        PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
 
     // We've been using the equivalent of ImGuiSelectableFlags_SetNavIdOnHover on all Selectable() since early Nav system days (commit 43ee5d73),
     // but I am unsure whether this should be kept at all. For now moved it to be an opt-in feature used by menus only.
@@ -7261,7 +7259,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         EndDisabled();
     PopID();
     if (menuset_is_open)
-        g.NavWindow = backed_nav_window;
+        PopItemFlag();
 
     return pressed;
 }

@@ -3651,7 +3651,8 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
 
     // Done with rectangle culling so we can perform heavier checks now.
-    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
+    ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
+    if (!(item_flags & ImGuiItemFlags_NoWindowHoverableCheck) && !IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
     {
         g.HoveredIdDisabled = true;
         return false;
@@ -3663,7 +3664,6 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         SetHoveredID(id);
 
     // When disabled we'll return false but still set HoveredId
-    ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
     if (item_flags & ImGuiItemFlags_Disabled)
     {
         // Release active id if turning disabled
