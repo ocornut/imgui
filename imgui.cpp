@@ -10859,7 +10859,7 @@ static void ImGui::NavUpdateCancelRequest()
         SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, WindowRectAbsToRel(parent_window, child_rect));
         NavRestoreHighlightAfterMove();
     }
-    else if (g.OpenPopupStack.Size > 0 && !(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
+    else if (g.OpenPopupStack.Size > 0 && g.OpenPopupStack.back().Window != NULL && !(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
     {
         // Close open popup/menu
         ClosePopupToLevel(g.OpenPopupStack.Size - 1, true);
