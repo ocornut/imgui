@@ -276,7 +276,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
-bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
+void ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -289,8 +289,6 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 
     bd->pd3dDevice = device;
     bd->pd3dDevice->AddRef();
-
-    return true;
 }
 
 void ImGui_ImplDX9_Shutdown()

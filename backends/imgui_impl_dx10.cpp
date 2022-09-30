@@ -526,7 +526,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
     if (bd->pVertexShader)          { bd->pVertexShader->Release(); bd->pVertexShader = NULL; }
 }
 
-bool    ImGui_ImplDX10_Init(ID3D10Device* device)
+void    ImGui_ImplDX10_Init(ID3D10Device* device)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -551,8 +551,6 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     if (pDXGIDevice) pDXGIDevice->Release();
     if (pDXGIAdapter) pDXGIAdapter->Release();
     bd->pd3dDevice->AddRef();
-
-    return true;
 }
 
 void ImGui_ImplDX10_Shutdown()
