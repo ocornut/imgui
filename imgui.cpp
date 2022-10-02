@@ -4339,27 +4339,29 @@ void ImGui::UpdateMouseWheel()
         wheel_y = 0.0f;
     }
 
-    // Vertical Mouse Wheel scrolling
-    if (wheel_y != 0.0f)
+    if (wheel_y != 0.0f || wheel_x != 0.0f)
     {
         StartLockWheelingWindow(window);
-        while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
-            window = window->ParentWindow;
-        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
+        bool noScroll;
+	while (1) {
+            noScroll = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
+	    if ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f && window->ScrollMax.x == 0.0f) || noScroll)) {
+	      window = window->ParentWindow;
+	      continue;
+	    }
+	    break;
+	}
+
+        // Vertical Mouse Wheel scrolling
+        if (!noScroll && wheel_y != 0.0f)
         {
             float max_step = window->InnerRect.GetHeight() * 0.67f;
             float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
             SetScrollY(window, window->Scroll.y - wheel_y * scroll_step);
         }
-    }
 
-    // Horizontal Mouse Wheel scrolling, or Vertical Mouse Wheel w/ Shift held
-    if (wheel_x != 0.0f)
-    {
-        StartLockWheelingWindow(window);
-        while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.x == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
-            window = window->ParentWindow;
-        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
+        // Horizontal Mouse Wheel scrolling, or Vertical Mouse Wheel w/ Shift held
+        if (!noScroll && wheel_x != 0.0f)
         {
             float max_step = window->InnerRect.GetWidth() * 0.67f;
             float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
