@@ -2789,6 +2789,8 @@ struct ImFontAtlas
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();               // Default + about 400 Cyrillic characters
     IMGUI_API const ImWchar*    GetGlyphRangesThai();                   // Default + Thai characters
     IMGUI_API const ImWchar*    GetGlyphRangesVietnamese();             // Default + Vietnamese characters
+    IMGUI_API const ImWchar*    GetGlyphRangesCurrencies();             // Default + 32 currency characters
+    IMGUI_API const ImWchar*    GetGlyphRangesMath();                   // Default + about 500 mathematical operator and notational symbols
 
     //-------------------------------------------
     // [BETA] Custom Rectangles/Glyphs API

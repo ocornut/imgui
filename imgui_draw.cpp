@@ -3061,6 +3061,30 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesVietnamese()
     return &ranges[0];
 }
 
+const ImWchar* ImFontAtlas::GetGlyphRangesCurrencies()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin
+        0x20A0, 0x20C0, // Currency Symbols
+        0
+    };
+    return &ranges[0];
+}
+
+const ImWchar* ImFontAtlas::GetGlyphRangesMath()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin
+        0x2070, 0x208e, // Superscripts and Subscripts
+        0x2200, 0x2300, // Mathematical Operators
+        0x2A00, 0x2AFF, // Supplemental Mathematical Operators
+        0
+    };
+    return &ranges[0];
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontGlyphRangesBuilder
 //-----------------------------------------------------------------------------
