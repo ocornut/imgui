@@ -15563,7 +15563,8 @@ static bool IsDockNodeTitleBarHighlighted(ImGuiDockNode* node, ImGuiDockNode* ro
         ImGuiWindow* parent_window = g.NavWindow->RootWindow;
         while (parent_window->Flags & ImGuiWindowFlags_ChildMenu)
             parent_window = parent_window->ParentWindow->RootWindow;
-        for (ImGuiDockNode* parent_node = parent_window->DockNode; parent_node != NULL; parent_node = parent_node->HostWindow ? parent_node->HostWindow->RootWindow->DockNode : NULL)
+        ImGuiDockNode* start_parent_node = parent_window->DockNodeAsHost ? parent_window->DockNodeAsHost : parent_window->DockNode;
+        for (ImGuiDockNode* parent_node = start_parent_node; parent_node != NULL; parent_node = parent_node->HostWindow ? parent_node->HostWindow->RootWindow->DockNode : NULL)
             if ((parent_node = ImGui::DockNodeGetRootNode(parent_node)) == root_node)
                 return true;
     }
