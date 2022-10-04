@@ -105,6 +105,8 @@ Other Changes:
   achieve certains things (e.g. some ways to implement suggestion popup #718, #4461).
 - Scrolling: Tweak mouse-wheel locked window timer so it is shorter but also gets reset
   whenever scrolling again (#2604).
+- Scrolling: Mitigated issue where multi-axis mouse-wheel inputs (usually from touch pad
+  events) are incorrectly locking scrolling in a parent window. (#4559, #3795, #2604)
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)

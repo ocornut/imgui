@@ -4299,15 +4299,17 @@ void ImGui::UpdateMouseWheel()
     if (wheel_x == 0.0f && wheel_y == 0.0f)
         return;
 
-    ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
-    if (!window || window->Collapsed)
+    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
+    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
+    if (!mouse_window || mouse_window->Collapsed)
         return;
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
     if (wheel_y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
-        LockWheelingWindow(window);
+        LockWheelingWindow(mouse_window);
+        ImGuiWindow* window = mouse_window;
         const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
         const float scale = new_font_scale / window->FontWindowScale;
         window->FontWindowScale = new_font_scale;
@@ -4338,11 +4340,12 @@ void ImGui::UpdateMouseWheel()
     // Vertical Mouse Wheel scrolling
     if (wheel_y != 0.0f)
     {
-        LockWheelingWindow(window);
+        ImGuiWindow* window = mouse_window;
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
+            LockWheelingWindow(mouse_window);
             float max_step = window->InnerRect.GetHeight() * 0.67f;
             float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
             SetScrollY(window, window->Scroll.y - wheel_y * scroll_step);
@@ -4352,11 +4355,12 @@ void ImGui::UpdateMouseWheel()
     // Horizontal Mouse Wheel scrolling, or Vertical Mouse Wheel w/ Shift held
     if (wheel_x != 0.0f)
     {
-        LockWheelingWindow(window);
+        ImGuiWindow* window = mouse_window;
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.x == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
+            LockWheelingWindow(mouse_window);
             float max_step = window->InnerRect.GetWidth() * 0.67f;
             float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
             SetScrollX(window, window->Scroll.x - wheel_x * scroll_step);
