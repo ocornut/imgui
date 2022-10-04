@@ -952,6 +952,8 @@ Docking+Viewports Branch:
   (#4292, #3834, #3633, #3521, #3492, #3335, #2999, #2648)
 - Docking: (Internal/Experimental) Removed DockNodeFlagsOverrideClear flags from ImGuiWindowClass as
   it is ambiguous how to apply them and we haven't got a use out of them yet.
+- Docking: Fixed ImGuiWindowFlags_UnsavedDocument clipping label in docked windows when there are
+  no close button. (#5745)
 - Viewports: Fix popup/tooltip created without a parent window from being given a ParentViewportId value
   from the implicit/fallback window. (#4236, #2409)
 - Backends: Vulkan: Fix the use of the incorrect fence for secondary viewports. (#4208) [@FunMiles]
