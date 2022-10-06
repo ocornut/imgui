@@ -176,6 +176,7 @@ Other Changes:
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
+- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 
