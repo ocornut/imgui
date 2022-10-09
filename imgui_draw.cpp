@@ -2081,6 +2081,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.FontData = IM_ALLOC(new_font_cfg.FontDataSize);
         new_font_cfg.FontDataOwnedByAtlas = true;
         memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
+        IM_FREE(font_cfg->FontData);
     }
 
     if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
