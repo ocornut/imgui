@@ -18,10 +18,6 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// About GLSL version:
-// The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
-// Only override if your GL version doesn't handle this GLSL version. Keep NULL if unsure!
-
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 

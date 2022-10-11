@@ -16,6 +16,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2022-09-27: OpenGL: Added ability to '#define IMGUI_IMPL_OPENGL_DEBUG'.
 //  2022-05-23: OpenGL: Reworking 2021-12-15 "Using buffer orphaning" so it only happens on Intel GPU, seems to cause problems otherwise. (#4468, #4825, #4832, #5127).
 //  2022-05-13: OpenGL: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING and vertex attribute states.
@@ -59,7 +60,7 @@
 //  2018-06-08: Misc: Extracted imgui_impl_opengl3.cpp/.h away from the old combined GLFW/SDL+OpenGL3 examples.
 //  2018-06-08: OpenGL: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-05-25: OpenGL: Removed unnecessary backup/restore of GL_ELEMENT_ARRAY_BUFFER_BINDING since this is part of the VAO state.
-//  2018-05-14: OpenGL: Making the call to glBindSampler() optional so 3.2 context won't fail if the function is a NULL pointer.
+//  2018-05-14: OpenGL: Making the call to glBindSampler() optional so 3.2 context won't fail if the function is a nullptr pointer.
 //  2018-03-06: OpenGL: Added const char* glsl_version parameter to ImGui_ImplOpenGL3_Init() so user can override the GLSL version e.g. "#version 150".
 //  2018-02-23: OpenGL: Create the VAO in the render function so the setup can more easily be used with multiple shared GL context.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL3_RenderDrawData() in the .h file so you can call it yourself.
@@ -109,9 +110,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"     // warning: use of old-style cast
 #pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
 #endif
 
 // GL includes
@@ -215,7 +213,7 @@ struct ImGui_ImplOpenGL3_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 static ImGui_ImplOpenGL3_Data* ImGui_ImplOpenGL3_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL3_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+    return ImGui::GetCurrentContext() ? (ImGui_ImplOpenGL3_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
 // Forward Declarations
@@ -250,7 +248,7 @@ struct ImGui_ImplOpenGL3_VtxAttribState
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
     // Initialize our loader
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
@@ -301,8 +299,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
-    // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
-    if (glsl_version == NULL)
+    // Note: GLSL version is NOT the same as GL version. Leave this to nullptr if unsure.
+    if (glsl_version == nullptr)
     {
 #if defined(IMGUI_IMPL_OPENGL_ES2)
         glsl_version = "#version 100";
@@ -331,7 +329,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     for (GLint i = 0; i < num_extensions; i++)
     {
         const char* extension = (const char*)glGetStringi(GL_EXTENSIONS, i);
-        if (extension != NULL && strcmp(extension, "GL_ARB_clip_control") == 0)
+        if (extension != nullptr && strcmp(extension, "GL_ARB_clip_control") == 0)
             bd->HasClipOrigin = true;
     }
 #endif
@@ -345,20 +343,20 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 void    ImGui_ImplOpenGL3_Shutdown()
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplOpenGL3_ShutdownPlatformInterface();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
-    io.BackendRendererName = NULL;
-    io.BackendRendererUserData = NULL;
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
     IM_DELETE(bd);
 }
 
 void    ImGui_ImplOpenGL3_NewFrame()
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplOpenGL3_Init()?");
+    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplOpenGL3_Init()?");
 
     if (!bd->ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
@@ -518,12 +516,12 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
             if (bd->VertexBufferSize < vtx_buffer_size)
             {
                 bd->VertexBufferSize = vtx_buffer_size;
-                GL_CALL(glBufferData(GL_ARRAY_BUFFER, bd->VertexBufferSize, NULL, GL_STREAM_DRAW));
+                GL_CALL(glBufferData(GL_ARRAY_BUFFER, bd->VertexBufferSize, nullptr, GL_STREAM_DRAW));
             }
             if (bd->IndexBufferSize < idx_buffer_size)
             {
                 bd->IndexBufferSize = idx_buffer_size;
-                GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, bd->IndexBufferSize, NULL, GL_STREAM_DRAW));
+                GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, bd->IndexBufferSize, nullptr, GL_STREAM_DRAW));
             }
             GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, 0, vtx_buffer_size, (const GLvoid*)cmd_list->VtxBuffer.Data));
             GL_CALL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, idx_buffer_size, (const GLvoid*)cmd_list->IdxBuffer.Data));
@@ -537,7 +535,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback != NULL)
+            if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
@@ -668,7 +666,7 @@ static bool CheckShader(GLuint handle, const char* desc)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
-        glGetShaderInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
+        glGetShaderInfoLog(handle, log_length, nullptr, (GLchar*)buf.begin());
         fprintf(stderr, "%s\n", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
@@ -687,7 +685,7 @@ static bool CheckProgram(GLuint handle, const char* desc)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
-        glGetProgramInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
+        glGetProgramInfoLog(handle, log_length, nullptr, (GLchar*)buf.begin());
         fprintf(stderr, "%s\n", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
@@ -811,8 +809,8 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "}\n";
 
     // Select shaders matching our GLSL versions
-    const GLchar* vertex_shader = NULL;
-    const GLchar* fragment_shader = NULL;
+    const GLchar* vertex_shader = nullptr;
+    const GLchar* fragment_shader = nullptr;
     if (glsl_version < 130)
     {
         vertex_shader = vertex_shader_glsl_120;
@@ -837,13 +835,13 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Create shaders
     const GLchar* vertex_shader_with_version[2] = { bd->GlslVersionString, vertex_shader };
     GLuint vert_handle = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vert_handle, 2, vertex_shader_with_version, NULL);
+    glShaderSource(vert_handle, 2, vertex_shader_with_version, nullptr);
     glCompileShader(vert_handle);
     CheckShader(vert_handle, "vertex shader");
 
     const GLchar* fragment_shader_with_version[2] = { bd->GlslVersionString, fragment_shader };
     GLuint frag_handle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(frag_handle, 2, fragment_shader_with_version, NULL);
+    glShaderSource(frag_handle, 2, fragment_shader_with_version, nullptr);
     glCompileShader(frag_handle);
     CheckShader(frag_handle, "fragment shader");
 

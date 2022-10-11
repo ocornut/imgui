@@ -961,7 +961,7 @@ static const float NAV_WINDOWING_LIST_APPEAR_DELAY          = 0.15f;    // Time 
 // Window resizing from edges (when io.ConfigWindowsResizeFromEdges = true and ImGuiBackendFlags_HasMouseCursors is set in io.BackendFlags by backend)
 static const float WINDOWS_HOVER_PADDING                    = 4.0f;     // Extend outside window for hovering/resizing (maxxed with TouchPadding) and inside windows for borders. Affect FindHoveredWindow().
 static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
-static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 2.00f;    // Lock scrolled window (so it doesn't pick child windows that are scrolling through) for a certain time, unless mouse moved.
+static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 0.80f;    // Lock scrolled window (so it doesn't pick child windows that are scrolling through) for a certain time, unless mouse moved.
 
 // Docking
 static const float DOCKING_TRANSPARENT_PAYLOAD_ALPHA        = 0.50f;    // For use with io.ConfigDockingTransparentPayload. Apply to Viewport _or_ WindowBg in host viewport.
@@ -4433,15 +4433,15 @@ static void ImGui::UpdateMouseInputs()
     }
 }
 
-static void StartLockWheelingWindow(ImGuiWindow* window)
+static void LockWheelingWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
+    g.WheelingWindowReleaseTimer = window ? WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER : 0.0f;
     if (g.WheelingWindow == window)
         return;
-    IMGUI_DEBUG_LOG_IO("StartLockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
+    IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
     g.WheelingWindow = window;
     g.WheelingWindowRefMousePos = g.IO.MousePos;
-    g.WheelingWindowTimer = WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER;
 }
 
 void ImGui::UpdateMouseWheel()
@@ -4451,35 +4451,34 @@ void ImGui::UpdateMouseWheel()
     // Reset the locked window if we move the mouse or after the timer elapses
     if (g.WheelingWindow != NULL)
     {
-        g.WheelingWindowTimer -= g.IO.DeltaTime;
+        g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
         if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
-            g.WheelingWindowTimer = 0.0f;
-        if (g.WheelingWindowTimer <= 0.0f)
-        {
-            IMGUI_DEBUG_LOG_IO("UpdateMouseWheel() release WheelingWindow lock \"%s\"\n", g.WheelingWindow->Name);
-            g.WheelingWindow = NULL;
-            g.WheelingWindowTimer = 0.0f;
-        }
+            g.WheelingWindowReleaseTimer = 0.0f;
+        if (g.WheelingWindowReleaseTimer <= 0.0f)
+            LockWheelingWindow(NULL);
     }
 
     const bool hovered_id_using_mouse_wheel = (g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrameUsingMouseWheel);
     const bool active_id_using_mouse_wheel_x = g.ActiveIdUsingKeyInputMask.TestBit(ImGuiKey_MouseWheelX);
     const bool active_id_using_mouse_wheel_y = g.ActiveIdUsingKeyInputMask.TestBit(ImGuiKey_MouseWheelY);
 
-    float wheel_x = (!hovered_id_using_mouse_wheel && !active_id_using_mouse_wheel_x) ? g.IO.MouseWheelH : 0.0f;
-    float wheel_y = (!hovered_id_using_mouse_wheel && !active_id_using_mouse_wheel_y) ? g.IO.MouseWheel : 0;
-    if (wheel_x == 0.0f && wheel_y == 0.0f)
+    ImVec2 wheel;
+    wheel.x = (!hovered_id_using_mouse_wheel && !active_id_using_mouse_wheel_x) ? g.IO.MouseWheelH : 0.0f;
+    wheel.y = (!hovered_id_using_mouse_wheel && !active_id_using_mouse_wheel_y) ? g.IO.MouseWheel : 0;
+    if (wheel.x == 0.0f && wheel.y == 0.0f)
         return;
 
-    ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
-    if (!window || window->Collapsed)
+    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
+    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
+    if (!mouse_window || mouse_window->Collapsed)
         return;
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
-    if (wheel_y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+    if (wheel.y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
-        StartLockWheelingWindow(window);
+        LockWheelingWindow(mouse_window);
+        ImGuiWindow* window = mouse_window;
         const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
         const float scale = new_font_scale / window->FontWindowScale;
         window->FontWindowScale = new_font_scale;
@@ -4492,46 +4491,50 @@ void ImGui::UpdateMouseWheel()
         }
         return;
     }
-
-    // Mouse wheel scrolling
-    // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent
     if (g.IO.KeyCtrl)
         return;
 
+    // Mouse wheel scrolling
     // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
     // (we avoid doing it on OSX as it the OS input layer handles this already)
     const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
     if (swap_axis)
     {
-        wheel_x = wheel_y;
-        wheel_y = 0.0f;
+        wheel.x = wheel.y;
+        wheel.y = 0.0f;
     }
 
     // Vertical Mouse Wheel scrolling
-    if (wheel_y != 0.0f)
+    // Bubble up into parent window if:
+    // - a child window doesn't allow any scrolling.
+    // - a child window doesn't need scrolling because it is already at the edge for the direction we are going in.
+    // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
+    if (wheel.y != 0.0f)
     {
-        StartLockWheelingWindow(window);
+        ImGuiWindow* window = mouse_window;
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.y == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
+            LockWheelingWindow(mouse_window);
             float max_step = window->InnerRect.GetHeight() * 0.67f;
             float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
-            SetScrollY(window, window->Scroll.y - wheel_y * scroll_step);
+            SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
         }
     }
 
     // Horizontal Mouse Wheel scrolling, or Vertical Mouse Wheel w/ Shift held
-    if (wheel_x != 0.0f)
+    if (wheel.x != 0.0f)
     {
-        StartLockWheelingWindow(window);
+        ImGuiWindow* window = mouse_window;
         while ((window->Flags & ImGuiWindowFlags_ChildWindow) && ((window->ScrollMax.x == 0.0f) || ((window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))))
             window = window->ParentWindow;
         if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
         {
+            LockWheelingWindow(mouse_window);
             float max_step = window->InnerRect.GetWidth() * 0.67f;
             float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
-            SetScrollX(window, window->Scroll.x - wheel_x * scroll_step);
+            SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
         }
     }
 }
@@ -4924,6 +4927,7 @@ void ImGui::Shutdown()
         IM_DELETE(g.IO.Fonts);
     }
     g.IO.Fonts = NULL;
+    g.DrawListSharedData.TempBuffer.clear();
 
     // Cleanup of other data are conditional on actually having initialized Dear ImGui.
     if (!g.Initialized)

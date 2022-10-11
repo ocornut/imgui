@@ -744,6 +744,9 @@ struct IMGUI_API ImDrawListSharedData
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
+    // [Internal] Temp write buffer
+    ImVector<ImVec2> TempBuffer;
+
     // [Internal] Lookup tables
     ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.
     float           ArcFastRadiusCutoff;                        // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
@@ -1811,7 +1814,7 @@ struct ImGuiContext
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actual window that is moved is generally MovingWindow->RootWindowDockTree.
     ImGuiWindow*            WheelingWindow;                     // Track the window we started mouse-wheeling on. Until a timer elapse or mouse has moved, generally keep scrolling the same window even if during the course of scrolling the mouse ends up hovering a child window.
     ImVec2                  WheelingWindowRefMousePos;
-    float                   WheelingWindowTimer;
+    float                   WheelingWindowReleaseTimer;
 
     // Item/widgets state and tracking information
     ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
@@ -2079,7 +2082,7 @@ struct ImGuiContext
         HoveredWindowUnderMovingWindow = NULL;
         MovingWindow = NULL;
         WheelingWindow = NULL;
-        WheelingWindowTimer = 0.0f;
+        WheelingWindowReleaseTimer = 0.0f;
 
         DebugHookIdInfo = 0;
         HoveredId = HoveredIdPreviousFrame = 0;

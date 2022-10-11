@@ -19,6 +19,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
+//  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-12-21: Update SDL_RenderGeometryRaw() format to work with SDL 2.0.19.
 //  2021-12-03: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2021-10-06: Backup and restore modified ClipRect/Viewport.
@@ -50,15 +51,15 @@ struct ImGui_ImplSDLRenderer_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+    return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
 // Functions
 bool ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
-    IM_ASSERT(renderer != NULL && "SDL_Renderer not initialized!");
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
+    IM_ASSERT(renderer != nullptr && "SDL_Renderer not initialized!");
 
     // Setup backend capabilities flags
     ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
@@ -74,13 +75,13 @@ bool ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
 void ImGui_ImplSDLRenderer_Shutdown()
 {
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
-    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplSDLRenderer_DestroyDeviceObjects();
 
-    io.BackendRendererName = NULL;
-    io.BackendRendererUserData = NULL;
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
     IM_DELETE(bd);
 }
 
@@ -90,14 +91,14 @@ static void ImGui_ImplSDLRenderer_SetupRenderState()
 
 	// Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
-	SDL_RenderSetViewport(bd->SDLRenderer, NULL);
-	SDL_RenderSetClipRect(bd->SDLRenderer, NULL);
+	SDL_RenderSetViewport(bd->SDLRenderer, nullptr);
+	SDL_RenderSetClipRect(bd->SDLRenderer, nullptr);
 }
 
 void ImGui_ImplSDLRenderer_NewFrame()
 {
     ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
-    IM_ASSERT(bd != NULL && "Did you call ImGui_ImplSDLRenderer_Init()?");
+    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplSDLRenderer_Init()?");
 
     if (!bd->FontTexture)
         ImGui_ImplSDLRenderer_CreateDeviceObjects();
@@ -166,20 +167,20 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
                 if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x > (float)fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
                 SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
                 SDL_RenderSetClipRect(bd->SDLRenderer, &r);
 
-                const float* xy = (const float*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, pos));
-                const float* uv = (const float*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, uv));
+                const float* xy = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, pos));
+                const float* uv = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, uv));
 #if SDL_VERSION_ATLEAST(2,0,19)
-                const SDL_Color* color = (const SDL_Color*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, col)); // SDL 2.0.19+
+                const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, col)); // SDL 2.0.19+
 #else
-                const int* color = (const int*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, col)); // SDL 2.0.17 and 2.0.18
+                const int* color = (const int*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + IM_OFFSETOF(ImDrawVert, col)); // SDL 2.0.17 and 2.0.18
 #endif
 
                 // Bind texture, Draw
@@ -196,7 +197,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 
     // Restore modified SDL_Renderer state
     SDL_RenderSetViewport(bd->SDLRenderer, &old.Viewport);
-    SDL_RenderSetClipRect(bd->SDLRenderer, old.ClipEnabled ? &old.ClipRect : NULL);
+    SDL_RenderSetClipRect(bd->SDLRenderer, old.ClipEnabled ? &old.ClipRect : nullptr);
 }
 
 // Called by Init/NewFrame/Shutdown
@@ -213,12 +214,12 @@ bool ImGui_ImplSDLRenderer_CreateFontsTexture()
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     bd->FontTexture = SDL_CreateTexture(bd->SDLRenderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (bd->FontTexture == NULL)
+    if (bd->FontTexture == nullptr)
     {
         SDL_Log("error creating texture");
         return false;
     }
-    SDL_UpdateTexture(bd->FontTexture, NULL, pixels, 4 * width);
+    SDL_UpdateTexture(bd->FontTexture, nullptr, pixels, 4 * width);
     SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
     SDL_SetTextureScaleMode(bd->FontTexture, SDL_ScaleModeLinear);
 
@@ -236,7 +237,7 @@ void ImGui_ImplSDLRenderer_DestroyFontsTexture()
     {
         io.Fonts->SetTexID(0);
         SDL_DestroyTexture(bd->FontTexture);
-        bd->FontTexture = NULL;
+        bd->FontTexture = nullptr;
     }
 }
 

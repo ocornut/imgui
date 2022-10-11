@@ -25,12 +25,13 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-10-06: Fixed mouse inputs on flipped views.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
 //  2022-05-03: Inputs: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend automatically handling event capture.
 //  2022-04-27: Misc: Store backend data in a per-context struct, allowing to use this backend with multiple contexts.
 //  2022-03-22: Inputs: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key
 //  2022-02-07: Inputs: Forward keyDown/keyUp events to OS when unused by dear imgui.
-//  2022-01-31: Fix building with old Xcode versions that are missing gamepad features.
+//  2022-01-31: Fixed building with old Xcode versions that are missing gamepad features.
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2021-01-20: Inputs: calling new io.AddKeyAnalogEvent() for gamepad support, instead of writing directly to io.NavInputs[].
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
@@ -650,8 +651,10 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         {
             mousePoint = event.locationInWindow;
             mousePoint = [view convertPoint:mousePoint fromView:nil]; // Convert to local coordinates of view
-            CGSize size = view.bounds.size;
-            mousePoint.y = size.height - mousePoint.y;
+            if ([view isFlipped])
+                mousePoint = NSMakePoint(mousePoint.x, mousePoint.y);
+            else
+                mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
         }
 
         io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
