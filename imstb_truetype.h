@@ -4591,7 +4591,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
 
    stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale, scale, 0.0f,0.0f, &ix0,&iy0,&ix1,&iy1);
 
-   // if empty, return NULL
+   // if empty, return nullptr
    if (ix0 == ix1 || iy0 == iy1)
       return nullptr;
 

@@ -2607,7 +2607,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
 // - TableSortSpecsBuild() [Internal]
 //-------------------------------------------------------------------------
 
-// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
+// Return nullptr if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
 // You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since
 // last call, or the first time.
 // Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!

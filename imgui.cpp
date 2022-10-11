@@ -1039,8 +1039,8 @@ static void             UpdateViewportsNewFrame();
 // - Using Dear ImGui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
 // - Confused? In a debugger: add GImGui to your watch window and notice how its value changes depending on your current location (which DLL boundary you are in).
 
-// Current context pointer. Implicitly used by all Dear ImGui functions. Always assumed to be != NULL.
-// - ImGui::CreateContext() will automatically set this pointer if it is NULL.
+// Current context pointer. Implicitly used by all Dear ImGui functions. Always assumed to be != nullptr.
+// - ImGui::CreateContext() will automatically set this pointer if it is nullptr.
 //   Change to a different context by calling ImGui::SetCurrentContext().
 // - Important: Dear ImGui functions are not thread-safe because of this pointer.
 //   If you want thread-safety to allow N threads to access N different contexts:

@@ -6875,7 +6875,7 @@ void ImGui::EndMenuBar()
         }
     }
 
-    IM_MSVC_WARNING_SUPPRESS(6011); // Static Analysis false positive "warning C6011: Dereferencing NULL pointer 'window'"
+    IM_MSVC_WARNING_SUPPRESS(6011); // Static Analysis false positive "warning C6011: Dereferencing nullptr 'window'"
     IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
     IM_ASSERT(window->DC.MenuBarAppending);
     PopClipRect();
@@ -6953,7 +6953,7 @@ void ImGui::EndMainMenuBar()
     EndMenuBar();
 
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
-    // FIXME: With this strategy we won't be able to restore a NULL focus.
+    // FIXME: With this strategy we won't be able to restore a nullptr focus.
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == ImGuiNavLayer_Main && !g.NavAnyRequest)
         FocusTopMostWindowUnderOne(g.NavWindow, nullptr);
