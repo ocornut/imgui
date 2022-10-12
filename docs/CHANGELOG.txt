@@ -65,6 +65,8 @@ Breaking changes:
    semantic, but the additional indirection and copy added complexity and got in the way of other
    incoming work. User's code (other than backends) should not be affected, unless you have custom
    widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
+ - Removed runtime patching of invalid "%f"/"%.0f" types of format strings for DragInt()/SliderInt().
+   This was obsoleted in 1.61 (May 2018). See 1.61 changelog for details.
  - Changed signature of ImageButton() function: (#5533, #4471, #2464, #1390)
    - Added 'const char* str_id' parameter + removed 'int frame_padding = -1' parameter.
    - Old signature: bool ImageButton(ImTextureID tex_id, ImVec2 size, ImVec2 uv0 = ImVec2(0,0), ImVec2 uv1 = ImVec2(1,1), int frame_padding = -1, ImVec4 bg_col = ImVec4(0,0,0,0), ImVec4 tint_col = ImVec4(1,1,1,1));

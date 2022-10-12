@@ -384,6 +384,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2022/10/12 (1.89) - removed runtime patching of invalid "%f"/"%0.f" format strings for DragInt()/SliderInt(). This was obsoleted in 1.61 (May 2018). See 1.61 changelog for details.
  - 2022/09/26 (1.89) - renamed and merged keyboard modifiers key enums and flags into a same set. Kept inline redirection enums (will obsolete).
                          - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
                          - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
