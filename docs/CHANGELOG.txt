@@ -124,6 +124,8 @@ Other Changes:
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
 - IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between itemm,
   so moving from one item to a nearby one will requires delay to elapse again. (#1485)
+- Tables: activating an ID (e.g. clicking button inside) column doesn't prevent columns
+  output flags from having ImGuiTableColumnFlags_IsHovered set. (#2957)
 - Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
   next row in such state where subsequent SameLine() would move back to previous row.
 - Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an

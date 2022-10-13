@@ -936,11 +936,19 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             width_remaining_for_stretched_columns -= 1.0f;
         }
 
+    // Determine if table is hovered which will be used to flag columns as hovered.
+    // - In principle we'd like to use the equivalent of IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+    //   but because our item is partially submitted at this point we use ItemHoverable() and a workaround (temporarily
+    //   clear ActiveId, which is equivalent to the change provided by _AllowWhenBLockedByActiveItem).
+    // - This allows columns to be marked as hovered when e.g. clicking a button inside the column, or using drag and drop.
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
     const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table_instance->LastOuterHeight));
+    const ImGuiID backup_active_id = g.ActiveId;
+    g.ActiveId = 0;
     const bool is_hovering_table = ItemHoverable(mouse_hit_rect, 0);
+    g.ActiveId = backup_active_id;
 
     // [Part 6] Setup final position, offset, skip/clip states and clipping rectangles, detect hovered column
     // Process columns in their visible orders as we are comparing the visible order and adjusting host_clip_rect while looping.
