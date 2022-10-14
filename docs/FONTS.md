@@ -277,8 +277,8 @@ io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
 
 for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
 {
-    int rect_id = rects_ids[rect_n];
-    if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+    int rect_id = rect_ids[rect_n];
+    if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
     {
         // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
         for (int y = 0; y < rect->Height; y++)
