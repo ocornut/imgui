@@ -145,6 +145,9 @@ Other Changes:
 - Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
   the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
 - Menus: Fixed using IsItemHovered()/IsItemClicked() on BeginMenu(). (#5775)
+- Menus, Popups: Experimental fix for issue where clicking on an open BeginMenu() item called from
+  a window which is neither a popup neither a menu used to incorrectly close and reopen the menu.
+  (the fix may have side-effect so labelld as experimental as we may need to revert) (#5775)
 - Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item
   in parent window when the parent is not a popup. (#5730)
 - Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)

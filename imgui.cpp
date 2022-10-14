@@ -7025,10 +7025,10 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavLayer = ImGuiNavLayer_Main;
         g.NavFocusScopeId = 0;
         g.NavIdIsAlive = false;
-    }
 
-    // Close popups if any
-    ClosePopupsOverWindow(window, false);
+        // Close popups if any
+        ClosePopupsOverWindow(window, false);
+    }
 
     // Move the root window to the top of the pile
     IM_ASSERT(window == NULL || window->RootWindow != NULL);
