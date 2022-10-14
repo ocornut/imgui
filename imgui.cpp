@@ -3640,7 +3640,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 
         // Test if interactions on this window are blocked by an active popup or modal.
         // The ImGuiHoveredFlags_AllowWhenBlockedByPopup flag will be tested here.
-        if (!IsWindowContentHoverable(window, flags))
+        if (!IsWindowContentHoverable(window, flags) && !(g.LastItemData.InFlags & ImGuiItemFlags_NoWindowHoverableCheck))
             return false;
 
         // Test if the item is disabled

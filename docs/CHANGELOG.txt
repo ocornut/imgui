@@ -144,6 +144,7 @@ Other Changes:
   towards a sub-menu. (#2517, #5614). [@rokups]
 - Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
   the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
+- Menus: Fixed using IsItemHovered()/IsItemClicked() on BeginMenu(). (#5775)
 - Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item
   in parent window when the parent is not a popup. (#5730)
 - Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)

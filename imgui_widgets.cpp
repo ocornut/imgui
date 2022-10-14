@@ -7125,11 +7125,19 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     if (menu_is_open)
     {
-        // FIXME: This technically breaks functions relying on LastItemData, somehow nobody complained yet. Should backup/restore LastItemData.
+        ImGuiLastItemData last_item_in_parent = g.LastItemData;
         SetNextWindowPos(popup_pos, ImGuiCond_Always);                  // Note: misleading: the value will serve as reference for FindBestWindowPosForPopup(), not actual pos.
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.PopupRounding); // First level will use _PopupRounding, subsequent will use _ChildRounding
         menu_is_open = BeginPopupEx(id, flags);                         // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
         PopStyleVar();
+        if (menu_is_open)
+        {
+            // Restore LastItemData so IsItemXXXX functions can work after BeginMenu()/EndMenu()
+            // (This fixes using IsItemClicked() and IsItemHovered(), but IsItemHovered() also relies on its support for ImGuiItemFlags_NoWindowHoverableCheck)
+            g.LastItemData = last_item_in_parent;
+            if (g.HoveredWindow == window)
+                g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
+        }
     }
     else
     {
