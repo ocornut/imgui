@@ -42,6 +42,7 @@ Index of this file:
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
 // [SECTION] Platform Dependent Interfaces (ImGuiPlatformImeData)
+// [SECTION] Text highlight and text compact support
 // [SECTION] Obsolete functions and types
 
 */
@@ -176,6 +177,7 @@ typedef int ImGuiMouseCursor;       // -> enum ImGuiMouseCursor_     // Enum: A 
 typedef int ImGuiSortDirection;     // -> enum ImGuiSortDirection_   // Enum: A sorting direction (ascending or descending)
 typedef int ImGuiStyleVar;          // -> enum ImGuiStyleVar_        // Enum: A variable identifier for styling
 typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A color target for TableSetBgColor()
+typedef int ImGuiTextCompactType;   // -> enum ImGuiTextCompactType_ // Enum: A text compact strategy for text rendering
 
 // Flags (declared as int for compatibility with old C++, to allow using as flags without overhead, and to not pollute the top of this file)
 // - Tip: Use your programming IDE navigation facilities on the names in the _central column_ below to find the actual flags/enum lists!
@@ -240,6 +242,18 @@ typedef ImWchar32 ImWchar;
 #else
 typedef ImWchar16 ImWchar;
 #endif
+
+// Range [Begin, End)
+struct ImGuiRange
+{
+    ImU16 Begin;
+    ImU16 End;
+
+    ImGuiRange() { Begin = End = 0; }
+    ImGuiRange(ImU16 begin, ImU16 end) { Begin = begin; End = end; }
+
+    int size() const { return (int)(End - Begin); }
+};
 
 // Callback and functions types
 typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    // Callback function for ImGui::InputText()
@@ -400,6 +414,7 @@ namespace ImGui
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);                     // modify a style float variable. always use this if you modify the style after NewFrame().
+    IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, ImS32 val);                     // modify a style ImS32 variable. always use this if you modify the style after NewFrame().
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);             // modify a style ImVec2 variable. always use this if you modify the style after NewFrame().
     IMGUI_API void          PopStyleVar(int count = 1);
     IMGUI_API void          PushAllowKeyboardFocus(bool allow_keyboard_focus);              // == tab stop enable. Allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets
@@ -1249,6 +1264,18 @@ enum ImGuiTableBgTarget_
     ImGuiTableBgTarget_CellBg                   = 3,        // Set cell background color (top-most color)
 };
 
+// Enum for ImGui::CompactText()
+enum ImGuiTextCompactType_
+{
+    ImGuiTextCompactType_None,
+    ImGuiTextCompactType_Begin,  // Example: ...long string
+    ImGuiTextCompactType_Middle, // Example: Very long s...
+    ImGuiTextCompactType_End,    // Example: Vety l...tring
+    ImGuiTextCompactType_Path,   // Example: /very/l.../path.ext
+
+    ImGuiTextCompactType_COUNT
+};
+
 // Flags for ImGui::IsWindowFocused()
 enum ImGuiFocusedFlags_
 {
@@ -1569,6 +1596,8 @@ enum ImGuiCol_
     ImGuiCol_NavWindowingHighlight, // Highlight window when using CTRL+TAB
     ImGuiCol_NavWindowingDimBg,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
     ImGuiCol_ModalWindowDimBg,      // Darken/colorize entire screen behind a modal window, when one is active
+    ImGuiCol_TextHighlight,           // Color of text highlighted by ImGui::SetTextHighlight*()
+    ImGuiCol_TextBackgroundHighlight, // Background for highlighted text
     ImGuiCol_COUNT
 };
 
@@ -1607,6 +1636,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_TabRounding,         // float     TabRounding
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_SelectableTextAlign, // ImVec2    SelectableTextAlign
+    ImGuiStyleVar_TextCompactType,     // ImS32     TextCompactType
     ImGuiStyleVar_COUNT
 };
 
@@ -1804,6 +1834,7 @@ struct ImVector
 
     // NB: It is illegal to call push_back/push_front/insert with a reference pointing inside the ImVector data itself! e.g. v.push_back(v[10]) is forbidden.
     inline void         push_back(const T& v)               { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); memcpy(&Data[Size], &v, sizeof(v)); Size++; }
+    inline T&           push_back_uninitialized()           { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); return Data[Size++]; }
     inline void         pop_back()                          { IM_ASSERT(Size > 0); Size--; }
     inline void         push_front(const T& v)              { if (Size == 0) push_back(v); else insert(Data, v); }
     inline T*           erase(const T* it)                  { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(T)); Size--; return Data + off; }
@@ -1870,6 +1901,7 @@ struct ImGuiStyle
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     float       CircleTessellationMaxError; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
     ImVec4      Colors[ImGuiCol_COUNT];
+    ImS32       TextCompactType;
 
     IMGUI_API ImGuiStyle();
     IMGUI_API void ScaleAllSizes(float scale_factor);
@@ -2942,6 +2974,20 @@ struct ImGuiPlatformImeData
 
     ImGuiPlatformImeData() { memset(this, 0, sizeof(*this)); }
 };
+
+//-----------------------------------------------------------------------------
+// [SECTION] Text highlight and text compact support
+//-----------------------------------------------------------------------------
+
+typedef ImVector<ImGuiRange> ImGuiTextParts;
+typedef bool(*ImGuiMatchTextCallback)(const char* source_begin, const char* source_end, const char* pattern_begin, const char* pattern_end, ImGuiTextParts& matches);
+
+namespace ImGui
+{
+    IMGUI_API void          SetTextHighlightCopy(const char* text_begin, const char* text_end = NULL, ImGuiMatchTextCallback match_callback = NULL); // partially override current text color, copies given string into internal buffer
+    IMGUI_API void          SetTextHighlightView(const char* text_begin, const char* text_end = NULL, ImGuiMatchTextCallback match_callback = NULL); // partially override current text color, does not copy string into internal buffer
+    IMGUI_API void          ClearTextHighlight();
+}
 
 //-----------------------------------------------------------------------------
 // [SECTION] Obsolete functions and types

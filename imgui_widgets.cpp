@@ -4611,6 +4611,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         buf_display_end = hint + strlen(hint);
     }
 
+    if (g.ActiveId == id)
+    {
+        PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_None);
+    }
+
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
     if (render_cursor || render_selection)
@@ -4816,6 +4821,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             g.LastItemData.InFlags = item_data_backup.InFlags;
             g.LastItemData.StatusFlags = item_data_backup.StatusFlags;
         }
+    }
+
+    if (g.ActiveId == id)
+    {
+        PopStyleVar();
     }
 
     // Log as text

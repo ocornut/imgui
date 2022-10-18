@@ -16,6 +16,7 @@ Index of this file:
 // [SECTION] STB libraries includes
 // [SECTION] Macros
 // [SECTION] Generic helpers
+// [SECTION] Text highlight and text compact support
 // [SECTION] ImDrawList support
 // [SECTION] Widgets support: flags, enums, data structures
 // [SECTION] Inputs support
@@ -635,6 +636,30 @@ struct ImSpanAllocator
     inline void  GetSpan(int n, ImSpan<T>* span)    { span->set((T*)GetSpanPtrBegin(n), (T*)GetSpanPtrEnd(n)); }
 };
 
+// Helper: generic pair of values of the same type
+template<typename TFirst, typename TSecond>
+struct ImPair
+{
+    TFirst  First;
+    TSecond Second;
+
+    ImPair() { memset(this, 0, sizeof(*this)); }
+    ImPair(const TFirst& first, const TSecond& second) : First(first), Second(second) {}
+};
+
+// C++17 like string view
+struct ImGuiStringView
+{
+    const char* Begin;
+    const char* End;
+
+    ImGuiStringView() { Begin = End = nullptr; }
+    ImGuiStringView(const char* begin, const char* end = nullptr) { Begin = begin; End = end ? end : (begin + strlen(begin)); }
+
+    bool empty() const { return !Begin || Begin == End || Begin[0] == '\0'; }
+    int  size() const { return Begin ? (int)(End - Begin) : 0; }
+};
+
 // Helper: ImPool<>
 // Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
 // Honor constructor/destructor. Add/remove invalidate all pointers. Indexes have the same lifetime as the associated object.
@@ -656,6 +681,7 @@ struct ImPool
     bool        Contains(const T* p) const          { return (p >= Buf.Data && p < Buf.Data + Buf.Size); }
     void        Clear()                             { for (int n = 0; n < Map.Data.Size; n++) { int idx = Map.Data[n].val_i; if (idx != -1) Buf[idx].~T(); } Map.Clear(); Buf.clear(); FreeIdx = AliveCount = 0; }
     T*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Buf[idx]; } IM_PLACEMENT_NEW(&Buf[idx]) T(); AliveCount++; return &Buf[idx]; }
+    T*          Add(ImGuiID key)                    { T* p = Add(); Map.SetInt(key, GetIndex(p)); return p; }
     void        Remove(ImGuiID key, const T* p)     { Remove(key, GetIndex(p)); }
     void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); AliveCount--; }
     void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
@@ -708,6 +734,32 @@ struct ImGuiTextIndex
     const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < LineOffsets.Size ? (LineOffsets[n + 1] - 1) : EndOffset); }
     void            append(const char* base, int old_size, int new_size);
 };
+
+//-----------------------------------------------------------------------------
+// [SECTION] Text highlight and text compact support
+//-----------------------------------------------------------------------------
+
+struct ImGuiTextHighlightData
+{
+    ImGuiTextBuffer        Buf;
+    ImGuiStringView        Text;
+    ImGuiMatchTextCallback Callback;
+
+    ImGuiTextHighlightData()  { Callback = nullptr; }
+
+    void SetTextCopy(const char* begin, const char* end = nullptr) { Buf.clear(); Buf.append(begin, end); SetTextView(Buf.begin(), Buf.end()); }
+    void SetTextView(const char* begin, const char* end = nullptr) { Text = ImGuiStringView(begin, end); }
+};
+
+typedef ImPair<ImGuiMatchTextCallback, ImPair<ImGuiID, ImGuiTextParts>> ImGuiTextPartsCacheEntry;
+typedef ImPool<ImGuiTextPartsCacheEntry> ImGuiTextPartsCache;
+
+namespace ImGui
+{
+    IMGUI_API bool          MatchTextDirect(const char* source_begin, const char* source_end, const char* pattern_begin, const char* pattern_end, ImGuiTextParts& matches);
+    IMGUI_API bool          CompactText(ImGuiStringView text, ImGuiTextCompactType type, float max_width, ImGuiTextBuffer& out, ImGuiTextParts* skipped_parts = nullptr);
+    IMGUI_API void          TransformCompactTextMatches(ImGuiTextParts& matches, const ImGuiTextParts& skipped_parts);
+}
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImDrawList support
@@ -1871,6 +1923,11 @@ struct ImGuiContext
     ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
     ImGuiMetricsConfig      DebugMetricsConfig;
     ImGuiStackTool          DebugStackTool;
+
+    // Text comapct and text highlight caches
+    ImGuiTextHighlightData  TextHighlightData;
+    ImGuiTextPartsCache     TextHighlightCache;
+    ImGuiTextBuffer         TextCompactBuffer;
 
     // Misc
     float                   FramerateSecPerFrame[60];           // Calculate estimate of framerate for user over the last 60 frames..
