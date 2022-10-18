@@ -176,6 +176,7 @@ Other Changes:
 - Examples: Added all SDL examples to default VS solution.
 - Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
+- Backends: GLFW: Add glfwGetError() call on GLFW 3.3 to inhibit missing mouse cursor errors. (#5785) [@mitchellh]
 - Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
