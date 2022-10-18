@@ -550,6 +550,9 @@ STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int nu
    // we use the 'was_packed' field internally to allow sorting/unsorting
    for (i=0; i < num_rects; ++i) {
       rects[i].was_packed = i;
+#ifdef IMGUI_FREETYPE_KOREAN
+      rects[i].w *= 2;
+#endif
    }
 
    // sort according to heuristic
