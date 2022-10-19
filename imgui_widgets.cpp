@@ -6965,9 +6965,9 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
     // The first menu in a hierarchy isn't so hovering doesn't get across (otherwise e.g. resizing borders with ImGuiButtonFlags_FlattenChildren would react), but top-most BeginMenu() will bypass that limitation.
-    ImGuiWindowFlags flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
-        flags |= ImGuiWindowFlags_ChildWindow;
+        window_flags |= ImGuiWindowFlags_ChildWindow;
 
     // If a menu with same the ID was already submitted, we will append to it, matching the behavior of Begin().
     // We are relying on a O(N) search - so O(N log N) over the frame - which seems like the most efficient for the expected small amount of BeginMenu() calls per frame.
@@ -6975,7 +6975,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     if (g.MenusIdSubmittedThisFrame.contains(id))
     {
         if (menu_is_open)
-            menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+            menu_is_open = BeginPopupEx(id, window_flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
         else
             g.NextWindowData.ClearFlags();          // we behave like Begin() and need to consume those values
         return menu_is_open;
@@ -7112,23 +7112,23 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
     PopID();
 
-    if (!menu_is_open && want_open && g.OpenPopupStack.Size > g.BeginPopupStack.Size)
+    if (want_open && !menu_is_open && g.OpenPopupStack.Size > g.BeginPopupStack.Size)
     {
-        // Don't recycle same menu level in the same frame, first close the other menu and yield for a frame.
+        // Don't reopen/recycle same menu level in the same frame, first close the other menu and yield for a frame.
         OpenPopup(label);
-        return false;
     }
-
-    menu_is_open |= want_open;
-    if (want_open)
+    else if (want_open)
+    {
+        menu_is_open = true;
         OpenPopup(label);
+    }
 
     if (menu_is_open)
     {
         ImGuiLastItemData last_item_in_parent = g.LastItemData;
         SetNextWindowPos(popup_pos, ImGuiCond_Always);                  // Note: misleading: the value will serve as reference for FindBestWindowPosForPopup(), not actual pos.
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.PopupRounding); // First level will use _PopupRounding, subsequent will use _ChildRounding
-        menu_is_open = BeginPopupEx(id, flags);                         // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+        menu_is_open = BeginPopupEx(id, window_flags);                  // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
         PopStyleVar();
         if (menu_is_open)
         {

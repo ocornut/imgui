@@ -154,6 +154,8 @@ Other Changes:
 - Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)
 - Menus, Nav: Fixed using left/right navigation when appending to an existing menu (multiple
   BeginMenu() call with same names). (#1207)
+- Menus: Fixed a one-frame issue where SetNextWindowXXX data are not consumed by a BeginMenu()
+  returning false (specifically )
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
