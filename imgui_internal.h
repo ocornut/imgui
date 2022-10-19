@@ -1337,13 +1337,25 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_LockThisFrame       = 1 << 6,   // Access to key data will requires EXPLICIT owner ID (ImGuiKeyOwner_Any/0 will NOT accepted for polling). Cleared at end of frame. This is useful to make input-owner-aware code steal keys from non-input-owner-aware code.
     ImGuiInputFlags_LockUntilRelease    = 1 << 7,   // Access to key data will requires EXPLICIT owner ID (ImGuiKeyOwner_Any/0 will NOT accepted for polling). Cleared when key is released or at end of frame is not down. This is useful to make input-owner-aware code steal keys from non-input-owner-aware code.
 
-    // Flags for Shortcut(), SetShortcutRouting()
-    // When Focus Routing is enabled, function will call SetShortcutRouting(): Accept inputs if currently in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
-    ImGuiInputFlags_RouteFocused        = 1 << 8,   // Enable focus routing
+    // Routing policies for Shortcut(), SetShortcutRouting()
+    // - When a policy is set, Shortcut() will register itself with SetShortcutRouting(),
+    //   allowing the system to decide where to route the input among other route-aware calls.
+    //   The general idea is that several callers register a shortcut, and only one gets it.
+    // - Routing is NOT registered by default, meaning that a simple Shortcut() call
+    //   will see all inputs, won't have any side-effect and won't interfere with other inputs.
+    // - Priorities (highest-to-lowest): GlobalHigh > Focused (when active item) > Global > Focused (when focused window) > GlobalLow.
+    // - Can select only 1 policy among all available.
+    ImGuiInputFlags_RouteNone           = 0,        // Do not register route (provided for completeness but technically zero-value)
+    ImGuiInputFlags_RouteFocused        = 1 << 8,   // Register route if focused: Accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
+    ImGuiInputFlags_RouteGlobalLow      = 1 << 9,   // Register route globally (lowest priority: unless a focused window or active item registered the route) -> recommended Global priority.
+    ImGuiInputFlags_RouteGlobal         = 1 << 10,  // Register route globally (medium priority: unless an active item registered the route, e.g. CTRL+A registered by InputText).
+    ImGuiInputFlags_RouteGlobalHigh     = 1 << 11,  // Register route globally (highest priority: unlikely you need to use that: will interfere with every active items)
+    ImGuiInputFlags_RouteMask_          = ImGuiInputFlags_RouteFocused | ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteGlobalLow | ImGuiInputFlags_RouteGlobalHigh,
+    ImGuiInputFlags_RouteUnlessBgFocused= 1 << 12,  // Global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
 
     // [Internal] Mask of which function support which flags
     ImGuiInputFlags_SupportedByIsKeyPressed     = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateMask_,
-    ImGuiInputFlags_SupportedByShortcut         = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RouteFocused,
+    ImGuiInputFlags_SupportedByShortcut         = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RouteMask_ | ImGuiInputFlags_RouteUnlessBgFocused,
     ImGuiInputFlags_SupportedBySetKeyOwner      = ImGuiInputFlags_LockThisFrame | ImGuiInputFlags_LockUntilRelease,
     ImGuiInputFlags_SupportedBySetItemKeyOwner  = ImGuiInputFlags_SupportedBySetKeyOwner | ImGuiInputFlags_CondMask_,
 };

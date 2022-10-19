@@ -8052,11 +8052,24 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
 bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags, ImGuiWindow* location)
 {
     ImGuiContext& g = *GImGui;
+    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+        flags = ImGuiInputFlags_RouteGlobalHigh; // This is the default for SetShortcutRouting() but NOT Shortcut() which doesn't touch routing by default!
+    else
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_None);
 
-    // Calculate our score
+    if (flags & ImGuiInputFlags_RouteUnlessBgFocused)
+        if (g.NavWindow == NULL)
+            return false;
+
+    // Current score encoding (lower is highest priority):
+    //  -   0: ImGuiInputFlags_RouteGlobalHigh
+    //  -   1: ImGuiInputFlags_RouteFocused (if item active)
+    //  -   2: ImGuiInputFlags_RouteGlobal
+    //  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
+    //  - 254: ImGuiInputFlags_RouteGlobalLow
+    //  - 255: none
     int score = 255;
-    bool always_set_next_route = false;
     if (flags & ImGuiInputFlags_RouteFocused)
     {
         if (location == NULL)
@@ -8065,44 +8078,48 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
 
         if (g.ActiveId != 0 && g.ActiveId == owner_id)
         {
-            // ActiveID gets top priority (0)
+            // ActiveID gets top priority
             // (we don't check g.ActiveIdUsingAllKeys here. Routing is applied but if input ownership is tested later it may discard it)
-            score = 0;
+            score = 1;
         }
         else if (focused != NULL && focused->RootWindow == location->RootWindow) // Early out
         {
             // Score based on distance to focused window (lower is better)
             // Assuming both windows are submitting a routing request,
-            // - When WindowA...... is focused -> WindowA scores 1 (best), WindowA/ChildB scores 255 (no match)
-            // - When Window/ChildB is focused -> WindowA scores 2,        WindowA/ChildB scores 1 (best)
+            // - When Window....... is focused -> Window scores 3 (best), Window/ChildB scores 255 (no match)
+            // - When Window/ChildB is focused -> Window scores 4,        Window/ChildB scores 3 (best)
             // Assuming only WindowA is submitting a routing request,
-            // - When Window/ChildB is focused -> WindowA scores 2 (best), WindowA/ChildB doesn't have a scoe.
-            for (int next_score = 1; focused != NULL; next_score++)
+            // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
+            for (int next_score = 3; focused != NULL; next_score++)
             {
                 if (focused == location)
                 {
+                    IM_ASSERT(next_score < 255);
                     score = (ImU8)next_score;
                     break;
                 }
                 focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
             }
         }
-
-        if (score == 255)
-            return false;
     }
     else
     {
-        score = 0;
-        always_set_next_route = true;
+        if (flags & ImGuiInputFlags_RouteGlobal)
+            score = 2;
+        else if (flags & ImGuiInputFlags_RouteGlobalLow)
+            score = 254;
+        else // ImGuiInputFlags_RouteGlobalHigh is default, so call to SetShorcutRouting() without no flags are not conditional
+            score = 0;
     }
+    if (score == 255)
+        return false;
 
     // Submit routing for NEXT frame (assuming score is sufficient)
     // FIXME: Could expose a way to use a "serve last" policy for same score resolution (using <= instead of <).
     ImGuiKeyRoutingData* routing_data = GetShortcutRoutingData(key_chord);
     const ImGuiID routing_id = GetRoutingIdFromOwnerId(owner_id); // FIXME: Location
     //const bool set_route = (flags & ImGuiInputFlags_ServeLast) ? (score <= routing_data->RoutingNextScore) : (score < routing_data->RoutingNextScore);
-    if (score < routing_data->RoutingNextScore || always_set_next_route)
+    if (score < routing_data->RoutingNextScore)
     {
         routing_data->RoutingNext = routing_id;
         routing_data->RoutingNextScore = (ImU8)score;
@@ -8598,8 +8615,9 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
 {
     ImGuiContext& g = *GImGui;
 
-    if (flags & ImGuiInputFlags_RouteFocused)
-        if (!SetShortcutRouting(key_chord, owner_id, ImGuiInputFlags_RouteFocused, g.CurrentWindow))
+    // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter  with this, so IsKeyPressed() is fine with he 0/Any.
+    if (flags & (ImGuiInputFlags_RouteMask_ | ImGuiInputFlags_RouteUnlessBgFocused))
+        if (!SetShortcutRouting(key_chord, owner_id, flags, g.CurrentWindow))
             return false;
 
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);

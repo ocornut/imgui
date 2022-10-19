@@ -4290,7 +4290,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_wordmove_key_down = is_osx ? io.KeyAlt : io.KeyCtrl;                     // OS X style: Text editing cursor movement using Alt instead of Ctrl
         const bool is_startend_key_down = is_osx && io.KeySuper && !io.KeyCtrl && !io.KeyAlt;  // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
 
-        // Using Shortcut() with ImGuiInputFlags_FocusRouting flag to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: formet would be handled by InputText)
+        // Using Shortcut() with ImGuiInputFlags_RouteFocused flag to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: formet would be handled by InputText)
         // Otherwise we could simply assume that we own the keys as we are active.
         const ImGuiInputFlags shortcut_flags = ImGuiInputFlags_RouteFocused | ImGuiInputFlags_Repeat;
         const bool is_cut   = (Shortcut(ImGuiMod_Shortcut | ImGuiKey_X, id, shortcut_flags) || Shortcut(ImGuiMod_Shift | ImGuiKey_Delete, id, shortcut_flags)) && !is_readonly && !is_password && (!is_multiline || state->HasSelection());
