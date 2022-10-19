@@ -77,7 +77,8 @@ Breaking changes:
      - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
    - As always we are keeping a redirection function available (will obsolete later).
  - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
-   Must always pass a pointer value explicitly, NULL is ok.
+   Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
+   If you used TreePush() replace with TreePush((void*)NULL);
  - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
    - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
    - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
