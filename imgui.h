@@ -1328,11 +1328,15 @@ enum ImGuiDataType_
 // A cardinal direction
 enum ImGuiDir_
 {
-    ImGuiDir_None    = -1,
-    ImGuiDir_Left    = 0,
-    ImGuiDir_Right   = 1,
-    ImGuiDir_Up      = 2,
-    ImGuiDir_Down    = 3,
+    ImGuiDir_None        = -1,
+    ImGuiDir_Left        = 0,
+    ImGuiDir_Right       = 1,
+    ImGuiDir_Up          = 2,
+    ImGuiDir_Down        = 3,
+    ImGuiDir_UpLeft      = 4,
+    ImGuiDir_UpRight     = 5,
+    ImGuiDir_DownLeft    = 6,
+    ImGuiDir_DownRight   = 7,
     ImGuiDir_COUNT
 };
 
