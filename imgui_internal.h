@@ -77,7 +77,7 @@ Index of this file:
 #endif
 #if IMGUI_ISA_AVAILABLE > 0
 #include <immintrin.h>
-#if (defined __INTEL_COMPILER || (defined _MSC_VER && _MSC_VER >= 1920))
+#if (defined __INTEL_COMPILER || (defined _MSC_VER && _MSC_VER >= 1920)) && !defined(IMGUI_DISABLE_SVML)
 #define IMGUI_ENABLE_SVML
 #endif
 #endif
