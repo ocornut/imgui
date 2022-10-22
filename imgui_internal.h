@@ -54,35 +54,10 @@ Index of this file:
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 
-// Enable SSE/AVX/SVML intrinsics if available
-#ifndef IMGUI_DISABLE_ENHACED_INSTRUCTION_SET
-#if (defined __AVX__) && !defined(IMGUI_DISABLE_AVX)
-#ifdef __AVX2__
-#define IMGUI_ISA_AVAILABLE 60
-#else
-#define IMGUI_ISA_AVAILABLE 50
-#endif
-#elif (defined _M_IX86_FP && _M_IX86_FP >= 2)
-#define IMGUI_ISA_AVAILABLE 50
-#elif defined(__SSE4_1__)
-#define IMGUI_ISA_AVAILABLE 41
-#elif defined(__SSE3__)
-#define IMGUI_ISA_AVAILABLE 30
-#elif defined __SSE2__
-#define IMGUI_ISA_AVAILABLE 20
-#elif (defined __SSE__ || defined __x86_64__ || defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 1))
-#define IMGUI_ISA_AVAILABLE 10
-#else
-#define IMGUI_ISA_AVAILABLE 0
-#endif
-#if IMGUI_ISA_AVAILABLE > 0
+// Enable SSE intrinsics if available
+#if (defined __SSE__ || defined __x86_64__ || defined _M_X64) && !defined(IMGUI_DISABLE_SSE)
+#define IMGUI_ENABLE_SSE
 #include <immintrin.h>
-#if (defined __INTEL_COMPILER || (defined _MSC_VER && _MSC_VER >= 1920)) && !defined(IMGUI_DISABLE_SVML)
-#define IMGUI_ENABLE_SVML
-#endif
-#endif
-#else
-#define IMGUI_ISA_AVAILABLE 0
 #endif
 
 // Visual Studio warnings
@@ -436,63 +411,25 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
 #ifndef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #define ImFabs(X)           fabsf(X)
-#define ImFmod(X, Y)        fmodf((X), (Y))
-#define ImAtof(STR)         atof(STR)
-//#define ImFloorStd(X)     floorf(X)           // We use our own, see ImFloor() and ImFloorSigned()
-static inline float  ImAbs(float x)             { return fabsf(x); }
-static inline double ImAbs(double x)            { return fabs(x); }
-static inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : (x > 0.0f) ? 1.0f : 0.0f; } // Sign operator - returns -1, 0 or 1 based on sign of argument
-static inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : (x > 0.0) ? 1.0 : 0.0; }
-#if IMGUI_ISA_AVAILABLE >= 10
-static inline float  ImSqrt(float x)            { return _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(x))); }
-#else
 #define ImSqrt(X)           sqrtf(X)
-#endif
-#if IMGUI_ISA_AVAILABLE >= 41
-static inline float  ImCeil(float x) { return _mm_cvtss_f32(_mm_ceil_ps(_mm_set_ss(x))); }
-#else
-#define ImCeil(X)           ceilf(X)
-#endif
-#if defined(IMGUI_ENABLE_SVML) && IMGUI_ISA_AVAILABLE >= 10
-#if IMGUI_ISA_AVAILABLE >= 50
-static inline float  ImSin(float x)             { return _mm256_cvtss_f32(_mm256_sin_ps(_mm256_castps128_ps256(_mm_set_ss(x)))); }
-static inline float  ImCos(float x)             { return _mm256_cvtss_f32(_mm256_cos_ps(_mm256_castps128_ps256(_mm_set_ss(x)))); }
-static inline float  ImAcos(float x)            { return _mm256_cvtss_f32(_mm256_acos_ps(_mm256_castps128_ps256(_mm_set_ss(x)))); }
-static inline float  ImAtan2(float x, float y)  { return _mm256_cvtss_f32(_mm256_atan2_ps(_mm256_castps128_ps256(_mm_set_ss(x)), _mm256_castps128_ps256(_mm_set_ss(y)))); }
-static inline float  ImPow(float x, float y)    { return _mm256_cvtss_f32(_mm256_pow_ps(_mm256_castps128_ps256(_mm_set_ss(x)), _mm256_castps128_ps256(_mm_set_ss(y)))); }
-static inline double ImPow(double x, double y)  { return _mm256_cvtsd_f64(_mm256_pow_pd(_mm256_castpd128_pd256(_mm_set_sd(x)), _mm256_castpd128_pd256(_mm_set_sd(y)))); }
-static inline float  ImLog(float x)             { return _mm256_cvtss_f32(_mm256_log_ps(_mm256_castps128_ps256(_mm_set_ss(x)))); }
-static inline double ImLog(double x)            { return _mm256_cvtsd_f64(_mm256_log_pd(_mm256_castpd128_pd256(_mm_set_sd(x)))); }
-#else
-static inline float  ImSin(float x)             { return _mm_cvtss_f32(_mm_sin_ps(_mm_set_ss(x))); }
-static inline float  ImCos(float x)             { return _mm_cvtss_f32(_mm_cos_ps(_mm_set_ss(x))); }
-static inline float  ImAcos(float x)            { return _mm_cvtss_f32(_mm_acos_ps(_mm_set_ss(x))); }
-static inline float  ImAtan2(float x, float y)  { return _mm_cvtss_f32(_mm_atan2_ps(_mm_set_ss(x), _mm_set_ss(y))); }
-static inline float  ImPow(float x, float y)    { return _mm_cvtss_f32(_mm_pow_ps(_mm_set_ss(x), _mm_set_ss(y))); }
-static inline double ImPow(double x, double y)  { return _mm_cvtsd_f64(_mm_pow_pd(_mm_set_sd(x), _mm_set_sd(y))); }
-static inline float  ImLog(float x)             { return _mm_cvtss_f32(_mm_log_ps(_mm_set_ss(x))); }
-static inline float  ImLog(double x)            { return _mm_cvtss_f32(_mm_cvtpd_ps(_mm_log_pd(_mm_set_sd(x)))); }
-#endif
-#else
-#define ImSin(X)            sinf(X)
+#define ImFmod(X, Y)        fmodf((X), (Y))
 #define ImCos(X)            cosf(X)
+#define ImSin(X)            sinf(X)
 #define ImAcos(X)           acosf(X)
 #define ImAtan2(Y, X)       atan2f((Y), (X))
+#define ImAtof(STR)         atof(STR)
+//#define ImFloorStd(X)     floorf(X)           // We use our own, see ImFloor() and ImFloorSigned()
+#define ImCeil(X)           ceilf(X)
 static inline float  ImPow(float x, float y)    { return powf(x, y); }          // DragBehaviorT/SliderBehaviorT uses ImPow with either float/double and need the precision
 static inline double ImPow(double x, double y)  { return pow(x, y); }
 static inline float  ImLog(float x)             { return logf(x); }             // DragBehaviorT/SliderBehaviorT uses ImLog with either float/double and need the precision
 static inline double ImLog(double x)            { return log(x); }
-#endif
-#if IMGUI_ISA_AVAILABLE >= 60
-static inline int    ImAbs(int x)               { return _mm256_cvtsi256_si32(_mm256_abs_epi32(_mm256_castsi128_si256(_mm_cvtsi32_si128(x)))); }
-#elif IMGUI_ISA_AVAILABLE >= 30
-static inline int    ImAbs(int x)               { return _mm_cvtsi128_si32(_mm_abs_epi32(_mm_cvtsi32_si128(x))); }
-#else
 static inline int    ImAbs(int x)               { return x < 0 ? -x : x; }
-#endif
-#if IMGUI_ISA_AVAILABLE >= 50
-static inline float  ImRsqrt(float x)           { return _mm256_cvtss_f32(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm_set_ss(x)))); }
-#elif IMGUI_ISA_AVAILABLE > 0
+static inline float  ImAbs(float x)             { return fabsf(x); }
+static inline double ImAbs(double x)            { return fabs(x); }
+static inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : (x > 0.0f) ? 1.0f : 0.0f; } // Sign operator - returns -1, 0 or 1 based on sign of argument
+static inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : (x > 0.0) ? 1.0 : 0.0; }
+#ifdef IMGUI_ENABLE_SSE
 static inline float  ImRsqrt(float x)           { return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); }
 #else
 static inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
