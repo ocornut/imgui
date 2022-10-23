@@ -1070,6 +1070,7 @@ enum ImGuiSelectableFlags_
     ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2,   // Generate press events on double clicks too
     ImGuiSelectableFlags_Disabled           = 1 << 3,   // Cannot be selected, display grayed out text
     ImGuiSelectableFlags_AllowItemOverlap   = 1 << 4,   // (WIP) Hit testing to allow subsequent widgets to overlap this one
+    ImGuiSelectableFlags_AllowRightClick    = 1 << 5,   // Generate press events on right clicks also
 };
 
 // Flags for ImGui::BeginCombo()
