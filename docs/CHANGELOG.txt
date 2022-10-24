@@ -144,7 +144,8 @@ Breaking changes:
      - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
    - As always we are keeping a redirection function available (will obsolete later).
  - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
-   Must always pass a pointer value explicitly, NULL is ok.
+   Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
+   If you used TreePush() replace with TreePush((void*)NULL);
  - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
    - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
    - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
@@ -202,6 +203,7 @@ Other Changes:
   bar boundaries (bug in 1.88). (#5652).
 - Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
+- Window: Fixed an issue where uncollapsed a window would show a scrollbar for a frame.
 - IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
@@ -220,6 +222,8 @@ Other Changes:
 - Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)
 - Menus, Nav: Fixed using left/right navigation when appending to an existing menu (multiple
   BeginMenu() call with same names). (#1207)
+- Menus: Fixed a one-frame issue where SetNextWindowXXX data are not consumed by a BeginMenu()
+  returning false (specifically )
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
@@ -243,6 +247,7 @@ Other Changes:
 - Examples: Added all SDL examples to default VS solution.
 - Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
+- Backends: GLFW: Add glfwGetError() call on GLFW 3.3 to inhibit missing mouse cursor errors. (#5785) [@mitchellh]
 - Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was

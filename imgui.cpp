@@ -65,7 +65,7 @@ CODE
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
 // [SECTION] ImGuiStorage
 // [SECTION] ImGuiTextFilter
-// [SECTION] ImGuiTextBuffer
+// [SECTION] ImGuiTextBuffer, ImGuiTextIndex
 // [SECTION] ImGuiListClipper
 // [SECTION] STYLING
 // [SECTION] RENDER HELPERS
@@ -401,7 +401,7 @@ CODE
                        the ImGuiKey_ModXXX were introduced in 1.87 and mostly used by backends.
                        the ImGuiModFlags_XXX have been exposed in imgui.h but not really used by any public api only by third-party extensions.
                        exceptionally commenting out the older ImGuiKeyModFlags_XXX names ahead of obsolescence schedule to reduce confusion and because they were not meant to be used anyway.
- - 2022/09/12 (1.89) - removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)', always pass a pointer value explicitly, NULL is ok.
+ - 2022/09/12 (1.89) - removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)', always pass a pointer value explicitly. NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
  - 2022/09/05 (1.89) - commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020):
                          - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4(): For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
                          - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4(): For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
@@ -868,7 +868,6 @@ CODE
 #include "imgui_internal.h"
 
 // System includes
-#include <ctype.h>      // toupper
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
@@ -1670,14 +1669,14 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 int ImStricmp(const char* str1, const char* str2)
 {
     int d;
-    while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; }
+    while ((d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; }
     return d;
 }
 
 int ImStrnicmp(const char* str1, const char* str2, size_t count)
 {
     int d = 0;
-    while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
+    while (count > 0 && (d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
     return d;
 }
 
@@ -1744,14 +1743,14 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     if (!needle_end)
         needle_end = needle + strlen(needle);
 
-    const char un0 = (char)toupper(*needle);
+    const char un0 = (char)ImToUpper(*needle);
     while ((!haystack_end && *haystack) || (haystack_end && haystack < haystack_end))
     {
-        if (toupper(*haystack) == un0)
+        if (ImToUpper(*haystack) == un0)
         {
             const char* b = needle + 1;
             for (const char* a = haystack + 1; b < needle_end; a++, b++)
-                if (toupper(*a) != toupper(*b))
+                if (ImToUpper(*a) != ImToUpper(*b))
                     break;
             if (b == needle_end)
                 return haystack;
@@ -2515,7 +2514,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImGuiTextBuffer
+// [SECTION] ImGuiTextBuffer, ImGuiTextIndex
 //-----------------------------------------------------------------------------
 
 // On some platform vsnprintf() takes va_list by reference and modifies it.
@@ -2581,6 +2580,20 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     Buf.resize(needed_sz);
     ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
     va_end(args_copy);
+}
+
+void ImGuiTextIndex::append(const char* base, int old_size, int new_size)
+{
+    IM_ASSERT(old_size >= 0 && new_size >= old_size && new_size >= EndOffset);
+    if (old_size == new_size)
+        return;
+    if (EndOffset == 0 || base[EndOffset - 1] == '\n')
+        LineOffsets.push_back(EndOffset);
+    const char* base_end = base + new_size;
+    for (const char* p = base + old_size; (p = (const char*)memchr(p, '\n', base_end - p)) != 0; )
+        if (++p < base_end) // Don't push a trailing offset on last \n
+            LineOffsets.push_back((int)(intptr_t)(p - base));
+    EndOffset = ImMax(EndOffset, new_size);
 }
 
 //-----------------------------------------------------------------------------
@@ -3797,8 +3810,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         // [DEBUG] Item Picker tool!
         // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
         // the cost of this tool near-zero. We can get slightly better call-stack and support picking non-hovered
-        // items if we perform the test in ItemAdd(), but that would incur a small runtime cost.
-        // #define IMGUI_DEBUG_TOOL_ITEM_PICKER_EX in imconfig.h if you want this check to also be performed in ItemAdd().
+        // items if we performed the test in ItemAdd(), but that would incur a small runtime cost.
         if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
             GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
         if (g.DebugItemPickerBreakId == id)
@@ -3811,6 +3823,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     return true;
 }
 
+// FIXME: This is inlined/duplicated in ItemAdd()
 bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -4993,6 +5006,7 @@ void ImGui::Shutdown()
     }
     g.LogBuffer.clear();
     g.DebugLogBuf.clear();
+    g.DebugLogIndex.clear();
 
     g.Initialized = false;
 }
@@ -5614,7 +5628,7 @@ bool ImGui::IsAnyItemFocused()
 bool ImGui::IsItemVisible()
 {
     ImGuiContext& g = *GImGui;
-    return g.CurrentWindow->ClipRect.Overlaps(g.LastItemData.Rect);
+    return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible) != 0;
 }
 
 bool ImGui::IsItemEdited()
@@ -6168,7 +6182,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         if (resize_rect.Min.x > resize_rect.Max.x) ImSwap(resize_rect.Min.x, resize_rect.Max.x);
         if (resize_rect.Min.y > resize_rect.Max.y) ImSwap(resize_rect.Min.y, resize_rect.Max.y);
         ImGuiID resize_grip_id = window->GetID(resize_grip_n); // == GetWindowResizeCornerID()
-        KeepAliveID(resize_grip_id);
+        ItemAdd(resize_rect, resize_grip_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(resize_rect, resize_grip_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
         //GetForegroundDrawList(window)->AddRect(resize_rect.Min, resize_rect.Max, IM_COL32(255, 255, 0, 255));
         if (hovered || held)
@@ -6204,7 +6218,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         bool hovered, held;
         ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, WINDOWS_HOVER_PADDING);
         ImGuiID border_id = window->GetID(border_n + 4); // == GetWindowResizeBorderID()
-        KeepAliveID(border_id);
+        ItemAdd(border_rect, border_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
         //GetForegroundDrawLists(window)->AddRect(border_rect.Min, border_rect.Max, IM_COL32(255, 255, 0, 255));
         if ((hovered && g.HoveredIdTimer > WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER) || held)
@@ -6869,6 +6883,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
         window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
 
+        bool use_current_size_for_scrollbar_x = window_just_created;
+        bool use_current_size_for_scrollbar_y = window_just_created;
+
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse) && !window->DockIsActive)
@@ -6880,6 +6897,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->WantCollapseToggle)
             {
                 window->Collapsed = !window->Collapsed;
+                if (!window->Collapsed)
+                    use_current_size_for_scrollbar_y = true;
                 MarkIniSettingsDirty(window);
             }
         }
@@ -6893,8 +6912,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal);
-        bool use_current_size_for_scrollbar_x = window_just_created;
-        bool use_current_size_for_scrollbar_y = window_just_created;
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
             // Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
@@ -9285,25 +9302,19 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         //      to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick).
         // We intentionally don't check if g.NavWindow != NULL because g.NavAnyRequest should only be set when it is non null.
         // If we crash on a NULL g.NavWindow we need to fix the bug elsewhere.
-        window->DC.NavLayersActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
-        if (g.NavId == id || g.NavAnyRequest)
-            if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
-                if (window == g.NavWindow || ((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened))
-                    NavProcessItem();
+        if (!(g.LastItemData.InFlags & ImGuiItemFlags_NoNav))
+        {
+            window->DC.NavLayersActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
+            if (g.NavId == id || g.NavAnyRequest)
+                if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
+                    if (window == g.NavWindow || ((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened))
+                        NavProcessItem();
+        }
 
         // [DEBUG] People keep stumbling on this problem and using "" as identifier in the root of a window instead of "##something".
         // Empty identifier are valid and useful in a small amount of cases, but 99.9% of the time you want to use "##something".
         // READ THE FAQ: https://dearimgui.org/faq
         IM_ASSERT(id != window->ID && "Cannot have an empty ID at the root of a window. If you need an empty label, use ## and read the FAQ about how the ID Stack works!");
-
-        // [DEBUG] Item Picker tool, when enabling the "extended" version we perform the check in ItemAdd()
-#ifdef IMGUI_DEBUG_TOOL_ITEM_PICKER_EX
-        if (id == g.DebugItemPickerBreakId)
-        {
-            IM_DEBUG_BREAK();
-            g.DebugItemPickerBreakId = 0;
-        }
-#endif
     }
     g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
 
@@ -9313,12 +9324,21 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 #endif
 
     // Clipping test
-    const bool is_clipped = IsClippedEx(bb, id);
-    if (is_clipped)
-        return false;
+    // (FIXME: This is a modified copy of IsClippedEx() so we can reuse the is_rect_visible value)
+    //const bool is_clipped = IsClippedEx(bb, id);
+    //if (is_clipped)
+    //    return false;
+    const bool is_rect_visible = bb.Overlaps(window->ClipRect);
+    if (!is_rect_visible)
+        if (id == 0 || (id != g.ActiveId && id != g.NavId))
+            if (!g.LogEnabled)
+                return false;
+
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
+    if (is_rect_visible)
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Visible;
     if (IsMouseHoveringRect(bb.Min, bb.Max))
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect;
     return true;
@@ -10818,7 +10838,7 @@ static void ImGui::NavProcessItem()
             if (is_tab_stop || (g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi))
                 NavProcessItemForTabbingRequest(id);
         }
-        else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & (ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNav)))
+        else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & ImGuiItemFlags_Disabled))
         {
             ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
             if (!is_tabbing)
@@ -19092,7 +19112,7 @@ void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int wi
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] DEBUG LOG
+// [SECTION] DEBUG LOG WINDOW
 //-----------------------------------------------------------------------------
 
 void ImGui::DebugLog(const char* fmt, ...)
@@ -19111,6 +19131,7 @@ void ImGui::DebugLogV(const char* fmt, va_list args)
     g.DebugLogBuf.appendfv(fmt, args);
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTTY)
         IMGUI_DEBUG_PRINTF("%s", g.DebugLogBuf.begin() + old_size);
+    g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
 }
 
 void ImGui::ShowDebugLogWindow(bool* p_open)
@@ -19137,12 +19158,24 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     SameLine(); CheckboxFlags("Viewport", &g.DebugLogFlags, ImGuiDebugLogFlags_EventViewport);
 
     if (SmallButton("Clear"))
+    {
         g.DebugLogBuf.clear();
+        g.DebugLogIndex.clear();
+    }
     SameLine();
     if (SmallButton("Copy"))
         SetClipboardText(g.DebugLogBuf.c_str());
     BeginChild("##log", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
-    TextUnformatted(g.DebugLogBuf.begin(), g.DebugLogBuf.end()); // FIXME-OPT: Could use a line index, but TextUnformatted() has a semi-decent fast path for large text.
+
+    ImGuiListClipper clipper;
+    clipper.Begin(g.DebugLogIndex.size());
+    while (clipper.Step())
+        for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
+        {
+            const char* line_begin = g.DebugLogIndex.get_line_begin(g.DebugLogBuf.c_str(), line_no);
+            const char* line_end = g.DebugLogIndex.get_line_end(g.DebugLogBuf.c_str(), line_no);
+            TextUnformatted(line_begin, line_end);
+        }
     if (GetScrollY() >= GetScrollMaxY())
         SetScrollHereY(1.0f);
     EndChild();
