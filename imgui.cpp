@@ -4707,6 +4707,8 @@ void ImGui::NewFrame()
     // [DEBUG] Update debug features
     UpdateDebugToolItemPicker();
     UpdateDebugToolStackQueries();
+    if (g.DebugLocateFrames > 0 && --g.DebugLocateFrames == 0)
+        g.DebugLocateId = 0;
 
     // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -6854,6 +6856,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // This is useful to allow creating context menus on title bar only, etc.
         SetLastItemData(window->MoveId, g.CurrentItemFlags, IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0, title_bar_rect);
 
+        // [DEBUG]
+        if (g.DebugLocateId != 0 && (window->ID == g.DebugLocateId || window->MoveId == g.DebugLocateId))
+            DebugLocateItemResolveWithLastItem();
+
         // [Test Engine] Register title bar / tab
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
             IMGUI_TEST_ENGINE_ITEM_ADD(g.LastItemData.Rect, g.LastItemData.ID);
@@ -8690,6 +8696,9 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
             if (!g.LogEnabled)
                 return false;
 
+    // [DEBUG]
+    if (id != 0 && id == g.DebugLocateId)
+        DebugLocateItemResolveWithLastItem();
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
@@ -12945,6 +12954,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("ITEMS");
         Indent();
         Text("ActiveId: 0x%08X/0x%08X (%.2f sec), AllowOverlap: %d, Source: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, g.ActiveIdAllowOverlap, GetInputSourceName(g.ActiveIdSource));
+        DebugLocateItemOnHover(g.ActiveId);
         Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
 
         int active_id_using_key_input_count = 0;
@@ -12954,12 +12964,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
         Text("HoverDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
         Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
+        DebugLocateItemOnHover(g.DragDropPayload.SourceId);
         Unindent();
 
         Text("NAV,FOCUS");
         Indent();
         Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
         Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
+        DebugLocateItemOnHover(g.NavId);
         Text("NavInputSource: %s", GetInputSourceName(g.NavInputSource));
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
         Text("NavActivateId/DownId/PressedId/InputId: %08X/%08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId, g.NavActivateInputId);
@@ -13383,13 +13395,10 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
     {
         ImRect r = window->NavRectRel[layer];
         if (r.Min.x >= r.Max.y && r.Min.y >= r.Max.y)
-        {
             BulletText("NavLastIds[%d]: 0x%08X", layer, window->NavLastIds[layer]);
-            continue;
-        }
-        BulletText("NavLastIds[%d]: 0x%08X at +(%.1f,%.1f)(%.1f,%.1f)", layer, window->NavLastIds[layer], r.Min.x, r.Min.y, r.Max.x, r.Max.y);
-        if (IsItemHovered())
-            GetForegroundDrawList(window)->AddRect(r.Min + window->Pos, r.Max + window->Pos, IM_COL32(255, 255, 0, 255));
+        else
+            BulletText("NavLastIds[%d]: 0x%08X at +(%.1f,%.1f)(%.1f,%.1f)", layer, window->NavLastIds[layer], r.Min.x, r.Min.y, r.Max.x, r.Max.y);
+        DebugLocateItemOnHover(window->NavLastIds[layer]);
     }
     BulletText("NavLayersActiveMask: %X, NavLastChildNavWindow: %s", window->DC.NavLayersActiveMask, window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
     if (window->RootWindow != window)       { DebugNodeWindow(window->RootWindow, "RootWindow"); }
@@ -13504,6 +13513,20 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
             const char* line_begin = g.DebugLogIndex.get_line_begin(g.DebugLogBuf.c_str(), line_no);
             const char* line_end = g.DebugLogIndex.get_line_end(g.DebugLogBuf.c_str(), line_no);
             TextUnformatted(line_begin, line_end);
+            ImRect text_rect = g.LastItemData.Rect;
+            if (IsItemHovered())
+                for (const char* p = line_begin; p < line_end - 10; p++)
+                {
+                    ImGuiID id = 0;
+                    if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1)
+                        continue;
+                    ImVec2 p0 = CalcTextSize(line_begin, p);
+                    ImVec2 p1 = CalcTextSize(p, p + 10);
+                    g.LastItemData.Rect = ImRect(text_rect.Min + ImVec2(p0.x, 0.0f), text_rect.Min + ImVec2(p0.x + p1.x, p1.y));
+                    if (IsMouseHoveringRect(g.LastItemData.Rect.Min, g.LastItemData.Rect.Max, true))
+                        DebugLocateItemOnHover(id);
+                    p += 10;
+                }
         }
     if (GetScrollY() >= GetScrollMaxY())
         SetScrollHereY(1.0f);
@@ -13515,6 +13538,38 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
 //-----------------------------------------------------------------------------
 // [SECTION] OTHER DEBUG TOOLS (ITEM PICKER, STACK TOOL)
 //-----------------------------------------------------------------------------
+
+static const ImU32 DEBUG_LOCATE_ITEM_COLOR = IM_COL32(0, 255, 0, 255);  // Green
+
+void ImGui::DebugLocateItem(ImGuiID target_id)
+{
+    ImGuiContext& g = *GImGui;
+    g.DebugLocateId = target_id;
+    g.DebugLocateFrames = 2;
+}
+
+void ImGui::DebugLocateItemOnHover(ImGuiID target_id)
+{
+    if (target_id == 0 || !IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        return;
+    ImGuiContext& g = *GImGui;
+    DebugLocateItem(target_id);
+    GetForegroundDrawList(g.CurrentWindow)->AddRect(g.LastItemData.Rect.Min - ImVec2(3.0f, 3.0f), g.LastItemData.Rect.Max + ImVec2(3.0f, 3.0f), DEBUG_LOCATE_ITEM_COLOR);
+}
+
+void ImGui::DebugLocateItemResolveWithLastItem()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiLastItemData item_data = g.LastItemData;
+    g.DebugLocateId = 0;
+    ImDrawList* draw_list = GetForegroundDrawList(g.CurrentWindow);
+    ImRect r = item_data.Rect;
+    r.Expand(3.0f);
+    ImVec2 p1 = g.IO.MousePos;
+    ImVec2 p2 = ImVec2((p1.x < r.Min.x) ? r.Min.x : (p1.x > r.Max.x) ? r.Max.x : p1.x, (p1.y < r.Min.y) ? r.Min.y : (p1.y > r.Max.y) ? r.Max.y : p1.y);
+    draw_list->AddRect(r.Min, r.Max, DEBUG_LOCATE_ITEM_COLOR);
+    draw_list->AddLine(p1, p2, DEBUG_LOCATE_ITEM_COLOR);
+}
 
 // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
 void ImGui::UpdateDebugToolItemPicker()

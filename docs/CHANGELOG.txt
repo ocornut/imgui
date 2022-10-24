@@ -175,7 +175,9 @@ Other Changes:
 - Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
-- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
+- Debug Tools: Debug Log: Visually locate items when hovering a 0xXXXXXXXX value. (#5855)
+- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging. (#5855)
+- Debug Tools: Metrics: Visually locate items when hovering a 0xXXXXXXXX value (in most places).
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
 - Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
