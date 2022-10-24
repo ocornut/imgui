@@ -15379,8 +15379,17 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     if (node->IsSplitNode())
         IM_ASSERT(node->TabBar == NULL);
     if (node->IsRootNode())
-        if (g.NavWindow && g.NavWindow->RootWindow->DockNode && g.NavWindow->RootWindow->ParentWindow == host_window)
-            node->LastFocusedNodeId = g.NavWindow->RootWindow->DockNode->ID;
+        if (ImGuiWindow* p_window = g.NavWindow ? g.NavWindow->RootWindow : NULL)
+            while (p_window != NULL && p_window->DockNode != NULL)
+            {
+                ImGuiDockNode* p_node = DockNodeGetRootNode(p_window->DockNode);
+                if (p_node == node)
+                {
+                    node->LastFocusedNodeId = p_window->DockNode->ID; // Note: not using root node ID!
+                    break;
+                }
+                p_window = p_node->HostWindow ? p_node->HostWindow->RootWindow : NULL;
+            }
 
     // Register a hit-test hole in the window unless we are currently dragging a window that is compatible with our dockspace
     ImGuiDockNode* central_node = node->CentralNode;
