@@ -2879,8 +2879,9 @@ namespace ImGui
     // - Routes are resolved during NewFrame(): if keyboard modifiers are matching current ones: SetKeyOwner() is called + route is granted for the frame.
     // - Route is granted to a single owner. When multiple requests are made we have policies to select the winning route.
     // - Multiple read sites may use a same owner and will all get the granted route.
+    // - For routing: when owner_id is 0 we use the current Focus Scope ID as a default owner in order to identify our location.
     IMGUI_API bool              Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
-    IMGUI_API bool              SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0, ImGuiWindow* location = NULL);
+    IMGUI_API bool              SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
     IMGUI_API bool              TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id);
     IMGUI_API ImGuiKeyRoutingData* GetShortcutRoutingData(ImGuiKeyChord key_chord);
 

@@ -7999,11 +7999,11 @@ ImVec2 ImGui::GetKeyVector2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key
         GetKeyData(key_down)->AnalogValue - GetKeyData(key_up)->AnalogValue);
 }
 
-// owner_id may be None/Any, but routing_id needs to be always be set, so we default to GetID("") aka current ID stack.
+// owner_id may be None/Any, but routing_id needs to be always be set, so we default to GetCurrentFocusScope().
 static inline ImGuiID GetRoutingIdFromOwnerId(ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    return (owner_id != ImGuiKeyOwner_None && owner_id != ImGuiKeyOwner_Any) ? owner_id : g.CurrentWindow->IDStack.back();
+    return (owner_id != ImGuiKeyOwner_None && owner_id != ImGuiKeyOwner_Any) ? owner_id : g.CurrentFocusScopeId;
 }
 
 ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
@@ -8049,7 +8049,7 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
 //   As such, it could be called TrySetXXX or SubmitXXX, or the Submit and Test operations should be separate.)
 // - Using 'owner_id == ImGuiKeyOwner_Any/0': auto-assign an owner based on current focus scope (each window has its focus scope by default)
 // - Using 'owner_id == ImGuiKeyOwner_None': allows disabling/locking a shortcut.
-bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags, ImGuiWindow* location)
+bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
     if ((flags & ImGuiInputFlags_RouteMask_) == 0)
@@ -8073,8 +8073,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     int score = 255;
     if (flags & ImGuiInputFlags_RouteFocused)
     {
-        if (location == NULL)
-            location = g.CurrentWindow;
+        ImGuiWindow* location = g.CurrentWindow;
         ImGuiWindow* focused = g.NavWindow;
 
         if (g.ActiveId != 0 && g.ActiveId == owner_id)
@@ -8118,7 +8117,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     // Submit routing for NEXT frame (assuming score is sufficient)
     // FIXME: Could expose a way to use a "serve last" policy for same score resolution (using <= instead of <).
     ImGuiKeyRoutingData* routing_data = GetShortcutRoutingData(key_chord);
-    const ImGuiID routing_id = GetRoutingIdFromOwnerId(owner_id); // FIXME: Location
+    const ImGuiID routing_id = GetRoutingIdFromOwnerId(owner_id);
     //const bool set_route = (flags & ImGuiInputFlags_ServeLast) ? (score <= routing_data->RoutingNextScore) : (score < routing_data->RoutingNextScore);
     if (score < routing_data->RoutingNextScore)
     {
@@ -8619,7 +8618,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
     // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
     if ((flags & ImGuiInputFlags_RouteMask_) == 0)
         flags |= ImGuiInputFlags_RouteFocused;
-    if (!SetShortcutRouting(key_chord, owner_id, flags, g.CurrentWindow))
+    if (!SetShortcutRouting(key_chord, owner_id, flags))
         return false;
 
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
