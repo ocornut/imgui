@@ -79,11 +79,12 @@ Breaking changes:
  - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
    Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
    If you used TreePush() replace with TreePush((void*)NULL);
- - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
+ - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.79 (August 2020): (#3361)
    - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
    - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
      - For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
    - BeginPopupContextWindow(const char*, ImGuiMouseButton, bool)                   -> use BeginPopupContextWindow(const char*, ImGuiPopupFlags)
+   - OpenPopupContextItem() (briefly existed from 1.77 to 1.79)                     -> use OpenPopupOnItemClick()
  - Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
    This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
    - Previously this would make the window content size ~200x200:
