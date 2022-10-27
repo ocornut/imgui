@@ -142,6 +142,7 @@ Other Changes:
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
 - IO: Filter duplicate input events during the AddXXX() calls. (#5599, #4921)
+- IO: Fixed AddFocusEvent(false) to also clear MouseDown[] state. (#4921)
 - Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
   Among other things, it would accidentally break part of the closing heuristic logic when moving
   towards a sub-menu. (#2517, #5614). [@rokups]
