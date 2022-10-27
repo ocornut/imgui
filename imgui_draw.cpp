@@ -2630,7 +2630,11 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
         {
             user_rects[i].X = (unsigned short)pack_rects[i].x;
             user_rects[i].Y = (unsigned short)pack_rects[i].y;
+#ifdef IMGUI_FREETYPE_KOREAN
+            IM_ASSERT(pack_rects[i].w == user_rects[i].Width * 2 && pack_rects[i].h == user_rects[i].Height);
+#else
             IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
+#endif // IMGUI_FREETYPE_KOREAN
             atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
         }
 }
