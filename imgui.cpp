@@ -1304,7 +1304,11 @@ void ImGuiIO::ClearInputKeys()
     KeyCtrl = KeyShift = KeyAlt = KeySuper = false;
     KeyMods = ImGuiMod_None;
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    memset(MouseDown, 0, sizeof(MouseDown));
+    for (int n = 0; n < IM_ARRAYSIZE(MouseDown); n++)
+    {
+        MouseDown[n] = false;
+        MouseDownDuration[n] = MouseDownDurationPrev[n] = -1.0f;
+    }
     MouseWheel = MouseWheelH = 0.0f;
 }
 
@@ -5122,6 +5126,7 @@ void ImGui::EndFrame()
     g.IO.Fonts->Locked = false;
 
     // Clear Input data for next frame
+    g.IO.AppFocusLost = false;
     g.IO.MouseWheel = g.IO.MouseWheelH = 0.0f;
     g.IO.InputQueueCharacters.resize(0);
 
@@ -8283,12 +8288,11 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
         g.InputEventsQueue.erase(g.InputEventsQueue.Data, g.InputEventsQueue.Data + event_n);
 
     // Clear buttons state when focus is lost
-    // (this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle)
+    // - this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle.
+    // - we clear in EndFrame() and not now in order allow application/user code polling this flag
+    //   (e.g. custom backend may want to clear additional data, custom widgets may want to react with a "canceling" event).
     if (g.IO.AppFocusLost)
-    {
         g.IO.ClearInputKeys();
-        g.IO.AppFocusLost = false;
-    }
 }
 
 
