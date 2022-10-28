@@ -646,11 +646,16 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         {
             ImFontBuildSrcGlyphFT& src_glyph = src_tmp.GlyphsList[glyph_i];
             stbrp_rect& pack_rect = src_tmp.Rects[glyph_i];
-            IM_ASSERT(pack_rect.was_packed);
             if (pack_rect.w == 0 && pack_rect.h == 0)
                 continue;
 
             GlyphInfo& info = src_glyph.Info;
+			if(!pack_rect.was_packed)
+			{
+				dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, 0, 0, 0, 0, 0, 0, 0, 0, info.AdvanceX);
+				continue;
+			}
+			
             IM_ASSERT(info.Width + padding <= pack_rect.w);
             IM_ASSERT(info.Height + padding <= pack_rect.h);
             const int tx = pack_rect.x + padding;
