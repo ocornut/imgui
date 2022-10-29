@@ -9,6 +9,7 @@
 #include <android/asset_manager.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <string>
 
 // Data
 static EGLDisplay           g_EglDisplay = EGL_NO_DISPLAY;
@@ -17,6 +18,7 @@ static EGLContext           g_EglContext = EGL_NO_CONTEXT;
 static struct android_app*  g_App = NULL;
 static bool                 g_Initialized = false;
 static char                 g_LogTag[] = "ImGuiExample";
+static std::string          imgui_ini_path = "";
 
 // Forward declarations of helper functions
 static int ShowSoftKeyboardInput();
@@ -29,6 +31,8 @@ void init(struct android_app* app)
         return;
 
     g_App = app;
+    imgui_ini_path = std::string(app->activity->internalDataPath) + "/imgui.ini";
+
     ANativeWindow_acquire(g_App->window);
 
     // Initialize EGL
@@ -71,8 +75,9 @@ void init(struct android_app* app)
     ImGuiIO& io = ImGui::GetIO();
 
     // Disable loading/saving of .ini file from disk.
-    // FIXME: Consider using LoadIniSettingsFromMemory() / SaveIniSettingsToMemory() to save in appropriate location for Android.
     io.IniFilename = NULL;
+
+    ImGui::LoadIniSettingsFromDisk(imgui_ini_path.c_str());
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -191,6 +196,12 @@ void tick()
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    if (io.WantSaveIniSettings) {
+        ImGui::SaveIniSettingsToDisk(imgui_ini_path.c_str());
+        io.WantSaveIniSettings = false;
+    }
+
     eglSwapBuffers(g_EglDisplay, g_EglSurface);
 }
 
