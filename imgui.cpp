@@ -4666,8 +4666,6 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_ARRAYSIZE(g.FramerateSecPerFrame));
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)g.FramerateSecPerFrameCount)) : FLT_MAX;
 
-    UpdateViewportsNewFrame();
-
     // Setup current font and draw list shared data
     // FIXME-VIEWPORT: the concept of a single ClipRectFullscreen is not ideal!
     g.IO.Fonts->Locked = true;
@@ -4791,6 +4789,9 @@ void ImGui::NewFrame()
     // Process input queue (trickle as many events as possible)
     g.InputEventsTrail.resize(0);
     UpdateInputEvents(g.IO.ConfigInputTrickleEventQueue);
+
+    // After processing ImGuiInputEventType_MouseViewport
+    UpdateViewportsNewFrame();
 
     // Update keyboard input state
     UpdateKeyboardInputs();
