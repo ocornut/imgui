@@ -418,6 +418,9 @@ Docking+Viewports Branch:
 - Docking: Fixed incorrect focus highlight on docking node when focusing empty central node
   or a child window which was manually injected into a dockspace window.
 - Docking, Modal: Fixed a crash when opening popup from a parent which is being docked on the same frame. (#5401)
+- Viewports: Fixed an issue where MouseViewport was lagging by a frame when using 1.87 Input Queue.
+  A common side-effect would be that when releasing a window drag the underlying window would highlight
+  for a frame. (#5837, #4921) [@cfillion]
 - Viewports: Fixed translating a host viewport from briefly altering the size of AlwaysAutoResize windows. (#5057)
 - Viewports: Fixed main viewport size not matching ImDrawData::DisplaySize for one frame during resize
   when multi-viewports are disabled. (#4900)
