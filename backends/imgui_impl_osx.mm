@@ -631,6 +631,9 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged || event.type == NSEventTypeRightMouseDragged || event.type == NSEventTypeOtherMouseDragged)
     {
         NSPoint mousePoint = event.locationInWindow;
+        if (event.window == nil){
+          mousePoint = [[view window] convertPointFromScreen:mousePoint];
+        }
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         if ([view isFlipped])
             mousePoint = NSMakePoint(mousePoint.x, mousePoint.y);
