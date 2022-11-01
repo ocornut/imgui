@@ -868,6 +868,40 @@ CODE
 #include <stdint.h>     // intptr_t
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+class ImAtomicCounter {
+public:
+    ImAtomicCounter() : _value(0) {}
+    inline void Increment() { __atomic_add_fetch(&_value, 1, __ATOMIC_SEQ_CST); }
+    inline void Decrement() { __atomic_sub_fetch(&_value, 1, __ATOMIC_SEQ_CST); }
+    inline int GetValue() const { return _value; }
+private:
+    int _value;
+};
+#elif defined(_MSC_VER)
+#include <intrin.h>
+class ImAtomicCounter {
+public:
+    ImAtomicCounter() : _value(0) {}
+    inline void Increment() { _InterlockedIncrement(&_value); }
+    inline void Decrement() { _InterlockedDecrement(&_value); }
+    inline int GetValue() const { return static_cast<int>(_value); }
+private:
+    long _value;
+};
+#else
+#include <atomic>
+class ImAtomicCounter {
+public:
+    ImAtomicCounter() : _value(0) {}
+    inline void Increment() { _value.fetch_add(1); }
+    inline void Decrement() { _value.fetch_sub(1); }
+    inline long GetValue() const { return _value.load(); }
+private:
+    std::atomic_int _value;
+};
+#endif
+
 // [Windows] On non-Visual Studio compilers, we default to IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS unless explicitly enabled
 #if defined(_WIN32) && !defined(_MSC_VER) && !defined(IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
@@ -1069,6 +1103,8 @@ static void    FreeWrapper(void* ptr, void* user_data)        { IM_UNUSED(user_d
 static ImGuiMemAllocFunc    GImAllocatorAllocFunc = MallocWrapper;
 static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
 static void*                GImAllocatorUserData = NULL;
+static ImAtomicCounter      GImAllocatorMetricsActiveAllocations; // Number of active allocations, updated by MemAlloc/MemFree based on current context.
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
@@ -3808,8 +3844,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 // IM_ALLOC() == ImGui::MemAlloc()
 void* ImGui::MemAlloc(size_t size)
 {
-    if (ImGuiContext* ctx = GImGui)
-        ctx->IO.MetricsActiveAllocations++;
+    GImAllocatorMetricsActiveAllocations.Increment();
     return (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
 }
 
@@ -3817,8 +3852,7 @@ void* ImGui::MemAlloc(size_t size)
 void ImGui::MemFree(void* ptr)
 {
     if (ptr)
-        if (ImGuiContext* ctx = GImGui)
-            ctx->IO.MetricsActiveAllocations--;
+        GImAllocatorMetricsActiveAllocations.Decrement();
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
@@ -12644,7 +12678,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     Text("Dear ImGui %s", GetVersion());
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
-    Text("%d visible windows, %d active allocations", io.MetricsRenderWindows, io.MetricsActiveAllocations);
+    Text("%d visible windows, %d active allocations", io.MetricsRenderWindows, GImAllocatorMetricsActiveAllocations.GetValue());
     //SameLine(); if (SmallButton("GC")) { g.GcCompactAll = true; }
 
     Separator();
