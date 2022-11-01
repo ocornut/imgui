@@ -1236,9 +1236,9 @@ ImGuiIO::ImGuiIO(ImGuiContext* ctx)
     // Platform Functions
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
-    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
-    ClipboardUserData = NULL;
+    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
+    ClipboardUserData = ctx;                               // Default implementation use the ImGuiContext as user data
     SetPlatformImeDataFn = SetPlatformImeDataFn_DefaultImpl;
 
     // Input (NB: we already have memset zero the entire structure!)
@@ -5110,7 +5110,20 @@ void ImGui::EndFrame()
 
     // Notify Platform/OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.SetPlatformImeDataFn && memcmp(&g.PlatformImeData, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
-        g.IO.SetPlatformImeDataFn(GetMainViewport(), &g.PlatformImeData);
+    {
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        // `SetPlatformImeDataFn_DefaultImpl` use ImeWindowHandle as a fallback when PlatformHandleRaw is not set.
+        // In order to make SetPlatformImeDataFn_DefaultImpl independent from the implict context
+        // (i.e `ImGui::GetIO().ImeWindowHandle`) and in order to  the keep the historical behavior
+        // we use the trick below:
+        ImGuiViewport viewport = *GetMainViewport();
+        if (viewport.PlatformHandleRaw == 0 && g.IO.SetPlatformImeDataFn == SetPlatformImeDataFn_DefaultImpl)
+            viewport.PlatformHandleRaw = ImGui::GetIO().ImeWindowHandle;
+#else
+        ImGuiViewport& viewport = *GetMainViewport();
+#endif
+        g.IO.SetPlatformImeDataFn(&viewport, &g.PlatformImeData);
+    }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
     g.WithinFrameScopeWithImplicitWindow = false;
@@ -12351,9 +12364,9 @@ static void ImGui::UpdateViewportsNewFrame()
 
 // Win32 clipboard implementation
 // We use g.ClipboardHandlerData for temporary storage to ensure it is freed on Shutdown()
-static const char* GetClipboardTextFn_DefaultImpl(void*)
+static const char* GetClipboardTextFn_DefaultImpl(void* user_data)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g =  *(ImGuiContext*)user_data;
     g.ClipboardHandlerData.clear();
     if (!::OpenClipboard(NULL))
         return NULL;
@@ -12480,10 +12493,6 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport, ImGuiPlatf
 {
     // Notify OS Input Method Editor of text input position
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    if (hwnd == 0)
-        hwnd = (HWND)ImGui::GetIO().ImeWindowHandle;
-#endif
     if (hwnd == 0)
         return;
 
