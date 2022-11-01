@@ -4250,21 +4250,13 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 void* ImGui::MemAlloc(size_t size)
 {
     void* ptr = (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-    if (ImGuiContext* ctx = GImGui)
-        DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, size);
-#endif
+
     return ptr;
 }
 
 // IM_FREE() == ImGui::MemFree()
 void ImGui::MemFree(void* ptr)
 {
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-    if (ptr != NULL)
-        if (ImGuiContext* ctx = GImGui)
-            DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, (size_t)-1);
-#endif
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
