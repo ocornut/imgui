@@ -3729,9 +3729,10 @@ void ImGuiInputTextState::OnKeyPressed(int key)
     CursorAnimReset();
 }
 
-ImGuiInputTextCallbackData::ImGuiInputTextCallbackData()
+ImGuiInputTextCallbackData::ImGuiInputTextCallbackData(ImGuiContext* ctx)
 {
     memset(this, 0, sizeof(*this));
+    Context = ctx;
 }
 
 // Public API to manipulate UTF-8 text
@@ -3765,7 +3766,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
             return;
 
         // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
-        ImGuiContext& g = *GImGui;
+        ImGuiContext& g = *Context;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
         IM_ASSERT(Buf == edit_state->TextA.Data);
@@ -3869,7 +3870,8 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     // Custom callback filter
     if (flags & ImGuiInputTextFlags_CallbackCharFilter)
     {
-        ImGuiInputTextCallbackData callback_data;
+        ImGuiContext& g = *GImGui;
+        ImGuiInputTextCallbackData callback_data(&g);
         memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
         callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
         callback_data.EventChar = (ImWchar)c;
@@ -4501,7 +4503,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
                 if (event_flag)
                 {
-                    ImGuiInputTextCallbackData callback_data;
+                    ImGuiInputTextCallbackData callback_data(&g);
                     memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
@@ -4564,7 +4566,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         IM_ASSERT(apply_new_text_length >= 0);
         if (is_resizable)
         {
-            ImGuiInputTextCallbackData callback_data;
+            ImGuiInputTextCallbackData callback_data(&g);
             callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
             callback_data.Flags = flags;
             callback_data.Buf = buf;
@@ -6489,7 +6491,7 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     // Assume all items have even height (= 1 line of text). If you need items of different height,
     // you can create a custom version of ListBox() in your code without using the clipper.
     bool value_changed = false;
-    ImGuiListClipper clipper;
+    ImGuiListClipperEx clipper(&g);
     clipper.Begin(items_count, GetTextLineHeightWithSpacing()); // We know exactly our line height here so we pass it as a minor optimization, but generally you don't need to.
     while (clipper.Step())
         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)

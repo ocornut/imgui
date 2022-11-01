@@ -2049,7 +2049,9 @@ struct ImGuiIO
     ImWchar16   InputQueueSurrogate;                // For AddInputCharacterUTF16()
     ImVector<ImWchar> InputQueueCharacters;         // Queue of _characters_ input (obtained by platform backend). Fill using AddInputCharacter() helper.
 
-    IMGUI_API   ImGuiIO();
+    ImGuiContext* Context;
+
+    IMGUI_API   ImGuiIO(ImGuiContext* ctx);
 };
 
 //-----------------------------------------------------------------------------
@@ -2084,9 +2086,10 @@ struct ImGuiInputTextCallbackData
     int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always] == to SelectionEnd when no selection)
     int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always]
 
+    ImGuiContext*       Context;
     // Helper functions for text manipulation.
     // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
-    IMGUI_API ImGuiInputTextCallbackData();
+    IMGUI_API ImGuiInputTextCallbackData(ImGuiContext* ctx);
     IMGUI_API void      DeleteChars(int pos, int bytes_count);
     IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
     void                SelectAll()             { SelectionStart = 0; SelectionEnd = BufTextLen; }
@@ -2172,10 +2175,10 @@ struct ImGuiOnceUponAFrame
 };
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-struct ImGuiTextFilter
+struct ImGuiTextFilterEx
 {
-    IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
-    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);  // Helper calling InputText+Build
+    IMGUI_API           ImGuiTextFilterEx(const char* default_filter = "");
+    IMGUI_API bool      Draw(ImGuiContext* ctx, const char* label = "Filter (inc,-exc)", float width = 0.0f);  // Helper calling InputText+Build
     IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
     IMGUI_API void      Build();
     void                Clear()          { InputBuf[0] = 0; Build(); }
@@ -2195,6 +2198,11 @@ struct ImGuiTextFilter
     char                    InputBuf[256];
     ImVector<ImGuiTextRange>Filters;
     int                     CountGrep;
+};
+
+struct ImGuiTextFilter: public ImGuiTextFilterEx
+{
+    IMGUI_API bool Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);
 };
 
 // Helper: Growable text buffer for logging/accumulating text
@@ -2289,7 +2297,7 @@ struct ImGuiStorage
 // - Clipper calculate the actual range of elements to display based on the current clipping rectangle, position the cursor before the first visible element.
 // - User code submit visible elements.
 // - The clipper also handles various subtleties related to keyboard/gamepad navigation, wrapping etc.
-struct ImGuiListClipper
+struct ImGuiListClipperEx
 {
     int             DisplayStart;       // First item to display, updated by each call to Step()
     int             DisplayEnd;         // End of items to display (exclusive)
@@ -2298,10 +2306,12 @@ struct ImGuiListClipper
     float           StartPosY;          // [Internal] Cursor position at the time of Begin() or after table frozen rows are all processed
     void*           TempData;           // [Internal] Internal data
 
+    ImGuiContext* Context;
+
     // items_count: Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step)
     // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
-    IMGUI_API ImGuiListClipper();
-    IMGUI_API ~ImGuiListClipper();
+    IMGUI_API ImGuiListClipperEx(ImGuiContext* ctx);
+    IMGUI_API ~ImGuiListClipperEx();
     IMGUI_API void  Begin(int items_count, float items_height = -1.0f);
     IMGUI_API void  End();             // Automatically called on the last call of Step() that returns false.
     IMGUI_API bool  Step();            // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
@@ -2310,8 +2320,13 @@ struct ImGuiListClipper
     IMGUI_API void  ForceDisplayRangeByIndices(int item_min, int item_max); // item_max is exclusive e.g. use (42, 42+1) to make item 42 always visible BUT due to alignment/padding of certain items it is likely that an extra item may be included on either end of the display range.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    inline ImGuiListClipper(int items_count, float items_height = -1.0f) { memset(this, 0, sizeof(*this)); ItemsCount = -1; Begin(items_count, items_height); } // [removed in 1.79]
+    inline ImGuiListClipperEx(int items_count, float items_height = -1.0f) { memset(this, 0, sizeof(*this)); ItemsCount = -1; Begin(items_count, items_height); } // [removed in 1.79]
 #endif
+};
+
+struct ImGuiListClipper : public ImGuiListClipperEx
+{
+    ImGuiListClipper() : ImGuiListClipperEx(ImGui::GetCurrentContext()) {}
 };
 
 // Helpers macros to generate 32-bit encoded colors
