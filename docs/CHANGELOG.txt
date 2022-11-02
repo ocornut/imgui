@@ -139,6 +139,8 @@ Other Changes:
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - Window: Fixed an issue where uncollapsed a window would show a scrollbar for a frame.
 - Window: Auto-fit size takes account of work rectangle (menu bars eating from viewport). (#5843)
+- Window: Fixed position not being clamped while auto-resizing (fixes appearing windows without
+  .ini data from moving for a frame when using io.ConfigWindowsMoveFromTitleBarOnly). (#5843)
 - IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
