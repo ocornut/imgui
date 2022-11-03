@@ -1388,14 +1388,6 @@ struct ImGuiNavItemData
     void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; DistBox = DistCenter = DistAxial = FLT_MAX; }
 };
 
-struct ImGuiFocusScope
-{
-    ImGuiID             FocusScopeId;
-    ImGuiWindow*        Window;
-
-    ImGuiFocusScope()   { memset(this, 0, sizeof(*this)); }
-};
-
 //-----------------------------------------------------------------------------
 // [SECTION] Columns support
 //-----------------------------------------------------------------------------
@@ -1696,7 +1688,7 @@ struct ImGuiContext
 #endif
 
     // Next window/item data
-    ImGuiID                 CurrentFocusScopeId;                // == g.FocusScopeStack.back().FocusScopeId
+    ImGuiID                 CurrentFocusScopeId;                // == g.FocusScopeStack.back()
     ImGuiItemFlags          CurrentItemFlags;                   // == g.ItemFlagsStack.back()
     ImGuiNextItemData       NextItemData;                       // Storage for SetNextItem** functions
     ImGuiLastItemData       LastItemData;                       // Storage for last submitted item (setup by ItemAdd)
@@ -1706,13 +1698,12 @@ struct ImGuiContext
     ImVector<ImGuiColorMod> ColorStack;                         // Stack for PushStyleColor()/PopStyleColor() - inherited by Begin()
     ImVector<ImGuiStyleMod> StyleVarStack;                      // Stack for PushStyleVar()/PopStyleVar() - inherited by Begin()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont() - inherited by Begin()
-    ImVector<ImGuiFocusScope> FocusScopeStack;                  // Stack for PushFocusScope()/PopFocusScope() - inherited by BeginChild(), pushed into by Begin()
+    ImVector<ImGuiID>       FocusScopeStack;                    // Stack for PushFocusScope()/PopFocusScope() - inherited by BeginChild(), pushed into by Begin()
     ImVector<ImGuiItemFlags>ItemFlagsStack;                     // Stack for PushItemFlag()/PopItemFlag() - inherited by Begin()
     ImVector<ImGuiGroupData>GroupStack;                         // Stack for BeginGroup()/EndGroup() - not inherited by Begin()
     ImVector<ImGuiPopupData>OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupData>BeginPopupStack;                    // Which level of BeginPopup() we are in (reset every frame)
     int                     BeginMenuCount;
-    int                     FocusScopeStackLocked;              // Prevent PushFocusScope()/PopFocusScope()
 
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (Size==1 in 'master' branch). Each viewports hold their copy of ImDrawData.
@@ -1950,7 +1941,6 @@ struct ImGuiContext
         CurrentFocusScopeId = 0;
         CurrentItemFlags = ImGuiItemFlags_None;
         BeginMenuCount = 0;
-        FocusScopeStackLocked = 0;
 
         NavWindow = NULL;
         NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavActivateInputId = 0;

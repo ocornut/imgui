@@ -6329,9 +6329,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ParentWindowInBeginStack = parent_window_in_stack;
     }
 
-    // Add to focus scope stack - inherited by default by child windows from parent, reset by regular window
-    //if (window == window->RootWindow && (window->Flags & ImGuiWindowFlags_ChildMenu) == 0)
-        PushFocusScope(window->ID);
+    // Add to focus scope stack
+    PushFocusScope(window->ID);
     window->NavRootFocusScopeId = g.CurrentFocusScopeId;
     g.CurrentWindow = NULL;
 
@@ -6942,8 +6941,7 @@ void ImGui::End()
     if (window->DC.CurrentColumns)
         EndColumns();
     PopClipRect();   // Inner window clip rectangle
-    //if (window == window->RootWindow && (window->Flags & ImGuiWindowFlags_ChildMenu) == 0)
-        PopFocusScope();
+    PopFocusScope();
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
@@ -7624,24 +7622,16 @@ void ImGui::ActivateItem(ImGuiID id)
 void ImGui::PushFocusScope(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    if (g.FocusScopeStackLocked > 0)
-        return;
-    ImGuiFocusScope scope;
-    scope.FocusScopeId = id;
-    scope.Window = g.CurrentWindow;
-    g.FocusScopeStack.push_back(scope);
-    g.CurrentFocusScopeId = scope.FocusScopeId;
+    g.FocusScopeStack.push_back(id);
+    g.CurrentFocusScopeId = id;
 }
 
 void ImGui::PopFocusScope()
 {
     ImGuiContext& g = *GImGui;
-    if (g.FocusScopeStackLocked > 0)
-        return;
     IM_ASSERT(g.FocusScopeStack.Size > 0); // Too many PopFocusScope() ?
-    IM_ASSERT(g.FocusScopeStack.back().Window == g.CurrentWindow); // Mismatched pop location?
     g.FocusScopeStack.pop_back();
-    g.CurrentFocusScopeId = g.FocusScopeStack.Size ? g.FocusScopeStack.back().FocusScopeId : 0;
+    g.CurrentFocusScopeId = g.FocusScopeStack.Size ? g.FocusScopeStack.back() : 0;
 }
 
 // Note: this will likely be called ActivateItem() once we rework our Focus/Activation system!
@@ -10750,7 +10740,7 @@ void ImGui::NavUpdateCreateMoveRequest()
             inner_rect_rel.Min.y = clamp_y ? (inner_rect_rel.Min.y + pad_y) : -FLT_MAX;
             inner_rect_rel.Max.y = clamp_y ? (inner_rect_rel.Max.y - pad_y) : +FLT_MAX;
             window->NavRectRel[g.NavLayer].ClipWithFull(inner_rect_rel);
-            g.NavId = /*g.NavFocusScopeId =*/ 0;
+            g.NavId = 0;
         }
     }
 
@@ -10933,7 +10923,7 @@ static void ImGui::NavUpdateCancelRequest()
         // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
         if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
             g.NavWindow->NavLastIds[0] = 0;
-        g.NavId = /*g.NavFocusScopeId =*/ 0;
+        g.NavId = 0;
     }
 }
 
