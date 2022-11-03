@@ -8053,14 +8053,15 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
 {
     ImGuiContext& g = *GImGui;
     if ((flags & ImGuiInputFlags_RouteMask_) == 0)
-        flags = ImGuiInputFlags_RouteGlobalHigh; // This is the default for SetShortcutRouting() but NOT Shortcut() which doesn't touch routing by default!
+        flags |= ImGuiInputFlags_RouteGlobalHigh; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
-    IM_ASSERT(owner_id != ImGuiKeyOwner_None);
 
     if (flags & ImGuiInputFlags_RouteUnlessBgFocused)
         if (g.NavWindow == NULL)
             return false;
+    if (flags & ImGuiInputFlags_RouteAlways)
+        return true;
 
     // Current score encoding (lower is highest priority):
     //  -   0: ImGuiInputFlags_RouteGlobalHigh
@@ -8615,10 +8616,11 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
 {
     ImGuiContext& g = *GImGui;
 
-    // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter  with this, so IsKeyPressed() is fine with he 0/Any.
-    if (flags & (ImGuiInputFlags_RouteMask_ | ImGuiInputFlags_RouteUnlessBgFocused))
-        if (!SetShortcutRouting(key_chord, owner_id, flags, g.CurrentWindow))
-            return false;
+    // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
+    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+        flags |= ImGuiInputFlags_RouteFocused;
+    if (!SetShortcutRouting(key_chord, owner_id, flags, g.CurrentWindow))
+        return false;
 
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
     ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
