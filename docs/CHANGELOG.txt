@@ -146,11 +146,12 @@ Breaking changes:
  - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
    Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
    If you used TreePush() replace with TreePush((void*)NULL);
- - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.78 (June 2020): (#3361)
+ - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.79 (August 2020): (#3361)
    - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
    - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
      - For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
    - BeginPopupContextWindow(const char*, ImGuiMouseButton, bool)                   -> use BeginPopupContextWindow(const char*, ImGuiPopupFlags)
+   - OpenPopupContextItem() (briefly existed from 1.77 to 1.79)                     -> use OpenPopupOnItemClick()
  - Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
    This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
    - Previously this would make the window content size ~200x200:
@@ -204,10 +205,14 @@ Other Changes:
 - Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
 - Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
 - Window: Fixed an issue where uncollapsed a window would show a scrollbar for a frame.
+- Window: Auto-fit size takes account of work rectangle (menu bars eating from viewport). (#5843)
+- Window: Fixed position not being clamped while auto-resizing (fixes appearing windows without
+  .ini data from moving for a frame when using io.ConfigWindowsMoveFromTitleBarOnly). (#5843)
 - IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
 - IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
   can apply to mouse data as well. (#4921)
 - IO: Filter duplicate input events during the AddXXX() calls. (#5599, #4921)
+- IO: Fixed AddFocusEvent(false) to also clear MouseDown[] state. (#4921)
 - Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
   Among other things, it would accidentally break part of the closing heuristic logic when moving
   towards a sub-menu. (#2517, #5614). [@rokups]
@@ -237,7 +242,9 @@ Other Changes:
 - Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
-- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging.
+- Debug Tools: Debug Log: Visually locate items when hovering a 0xXXXXXXXX value. (#5855)
+- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging. (#5855)
+- Debug Tools: Metrics: Visually locate items when hovering a 0xXXXXXXXX value (in most places).
 - Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
   to use the Item Picker in e.g. menus. (#2673)
 - Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
@@ -246,6 +253,7 @@ Other Changes:
 - Demo: Fixed Log & Console from losing scrolling position with Auto-Scroll when child is clipped. (#5721)
 - Examples: Added all SDL examples to default VS solution.
 - Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
+- Examples: Android: Enable .ini file loading/saving into application internal data folder. (#5836) [@rewtio]
 - Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
 - Backends: GLFW: Add glfwGetError() call on GLFW 3.3 to inhibit missing mouse cursor errors. (#5785) [@mitchellh]
 - Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
@@ -257,6 +265,7 @@ Other Changes:
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
 - Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
+- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
 - Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 
 Docking+Viewports Branch:
