@@ -206,6 +206,9 @@ Other Changes:
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
   registered as MBCS (not Unicode). (#5725, #1807, #471, #2815, #1060) [@or75, @ocornut]
+- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
+- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
+- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 - Backends: OpenGL3: Reverted use of glBufferSubData(), too many corruptions issues were reported,
   and old leaks issues seemingly can't be reproed with Intel drivers nowadays (revert earlier changes).
   (#4468, #4504, #3381, #2981, #4825, #4832, #5127).
@@ -213,9 +216,7 @@ Other Changes:
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
-- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
-- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
-- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
+- Backends: WebGPU: fixed rendering when a depth buffer is enabled. (#5869) [@brainlag]
 
 
 -----------------------------------------------------------------------
