@@ -541,18 +541,20 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         hovered = false;
 
     // Mouse handling
+    const ImGuiID test_owner_id = (flags & ImGuiButtonFlags_NoTestKeyOwner) ? ImGuiKeyOwner_Any : id;
     if (hovered)
     {
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             // Poll buttons
             int mouse_button_clicked = -1;
-            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseClicked[0])         { mouse_button_clicked = 0; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseClicked[1])   { mouse_button_clicked = 1; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseClicked[2])  { mouse_button_clicked = 2; }
-
+            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && IsMouseClicked(0, test_owner_id))         { mouse_button_clicked = 0; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && IsMouseClicked(1, test_owner_id))   { mouse_button_clicked = 1; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && IsMouseClicked(2, test_owner_id))  { mouse_button_clicked = 2; }
             if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
+                if (!(flags & ImGuiButtonFlags_NoSetKeyOwner))
+                    SetKeyOwner(MouseButtonToKey(mouse_button_clicked), id);
                 if (flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere))
                 {
                     SetActiveID(id, window);
@@ -577,9 +579,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if (flags & ImGuiButtonFlags_PressedOnRelease)
             {
                 int mouse_button_released = -1;
-                if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseReleased[0])        { mouse_button_released = 0; }
-                else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseReleased[1])  { mouse_button_released = 1; }
-                else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseReleased[2]) { mouse_button_released = 2; }
+                if ((flags & ImGuiButtonFlags_MouseButtonLeft) && IsMouseReleased(0, test_owner_id))        { mouse_button_released = 0; }
+                else if ((flags & ImGuiButtonFlags_MouseButtonRight) && IsMouseReleased(1, test_owner_id))  { mouse_button_released = 1; }
+                else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && IsMouseReleased(2, test_owner_id)) { mouse_button_released = 2; }
                 if (mouse_button_released != -1)
                 {
                     const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay; // Repeat mode trumps on release behavior
@@ -594,7 +596,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // 'Repeat' mode acts when held regardless of _PressedOn flags (see table above).
             // Relies on repeat logic of IsMouseClicked() but we may as well do it ourselves if we end up exposing finer RepeatDelay/RepeatRate settings.
             if (g.ActiveId == id && (flags & ImGuiButtonFlags_Repeat))
-                if (g.IO.MouseDownDuration[g.ActiveIdMouseButton] > 0.0f && IsMouseClicked(g.ActiveIdMouseButton, true))
+                if (g.IO.MouseDownDuration[g.ActiveIdMouseButton] > 0.0f && IsMouseClicked(g.ActiveIdMouseButton, test_owner_id, ImGuiInputFlags_Repeat))
                     pressed = true;
         }
 
@@ -640,8 +642,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
 
             const int mouse_button = g.ActiveIdMouseButton;
-            IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
-            if (g.IO.MouseDown[mouse_button])
+            if (IsMouseDown(mouse_button, test_owner_id))
             {
                 held = true;
             }
@@ -654,7 +655,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                     // Report as pressed when releasing the mouse (this is the most common path)
                     bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseReleased[mouse_button] && g.IO.MouseClickedLastCount[mouse_button] == 2;
                     bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
-                    if (!is_double_click_release && !is_repeating_already)
+                    bool is_button_avail_or_owned = TestKeyOwner(MouseButtonToKey(mouse_button), test_owner_id);
+                    if (!is_double_click_release && !is_repeating_already && is_button_avail_or_owned)
                         pressed = true;
                 }
                 ClearActiveID();
@@ -2347,9 +2349,11 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     {
         // Tabbing or CTRL-clicking on Drag turns it into an InputText
         const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
-        const bool clicked = (hovered && g.IO.MouseClicked[0]);
-        const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2);
+        const bool clicked = hovered && IsMouseClicked(0, id);
+        const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2 && TestKeyOwner(ImGuiKey_MouseLeft, id));
         const bool make_active = (input_requested_by_tabbing || clicked || double_clicked || g.NavActivateId == id || g.NavActivateInputId == id);
+        if (make_active && (clicked || double_clicked))
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
         if (make_active && temp_input_allowed)
             if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavActivateInputId == id)
                 temp_input_is_active = true;
@@ -2938,8 +2942,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     {
         // Tabbing or CTRL-clicking on Slider turns it into an input box
         const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
-        const bool clicked = (hovered && g.IO.MouseClicked[0]);
+        const bool clicked = hovered && IsMouseClicked(0, id);
         const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id || g.NavActivateInputId == id);
+        if (make_active && clicked)
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
         if (make_active && temp_input_allowed)
             if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id)
                 temp_input_is_active = true;
@@ -3098,8 +3104,11 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
         format = DataTypeGetInfo(data_type)->PrintFmt;
 
     const bool hovered = ItemHoverable(frame_bb, id);
-    if ((hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavActivateInputId == id)
+    const bool clicked = hovered && IsMouseClicked(0, id);
+    if (clicked || g.NavActivateId == id || g.NavActivateInputId == id)
     {
+        if (clicked)
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
@@ -4095,23 +4104,27 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
-
+    }
+    if (g.ActiveId == id)
+    {
         // Declare our inputs
+        if (user_clicked)
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
         if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-        SetActiveIdUsingKey(ImGuiKey_Escape);
-        SetActiveIdUsingKey(ImGuiKey_NavGamepadCancel);
-        SetActiveIdUsingKey(ImGuiKey_Home);
-        SetActiveIdUsingKey(ImGuiKey_End);
+        SetKeyOwner(ImGuiKey_Escape, id);
+        SetKeyOwner(ImGuiKey_NavGamepadCancel, id);
+        SetKeyOwner(ImGuiKey_Home, id);
+        SetKeyOwner(ImGuiKey_End, id);
         if (is_multiline)
         {
-            SetActiveIdUsingKey(ImGuiKey_PageUp);
-            SetActiveIdUsingKey(ImGuiKey_PageDown);
+            SetKeyOwner(ImGuiKey_PageUp, id);
+            SetKeyOwner(ImGuiKey_PageDown, id);
         }
         if (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput)) // Disable keyboard tabbing out as we will use the \t character.
         {
-            SetActiveIdUsingKey(ImGuiKey_Tab);
+            SetKeyOwner(ImGuiKey_Tab, id);
         }
     }
 
@@ -4282,25 +4295,24 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         const int k_mask = (io.KeyShift ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_osx = io.ConfigMacOSXBehaviors;
-        const bool is_osx_shift_shortcut = is_osx && (io.KeyMods == (ImGuiMod_Super | ImGuiMod_Shift));
         const bool is_wordmove_key_down = is_osx ? io.KeyAlt : io.KeyCtrl;                     // OS X style: Text editing cursor movement using Alt instead of Ctrl
         const bool is_startend_key_down = is_osx && io.KeySuper && !io.KeyCtrl && !io.KeyAlt;  // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
-        const bool is_ctrl_key_only = (io.KeyMods == ImGuiMod_Ctrl);
-        const bool is_shift_key_only = (io.KeyMods == ImGuiMod_Shift);
-        const bool is_shortcut_key = g.IO.ConfigMacOSXBehaviors ? (io.KeyMods == ImGuiMod_Super) : (io.KeyMods == ImGuiMod_Ctrl);
 
-        const bool is_cut   = ((is_shortcut_key && IsKeyPressed(ImGuiKey_X)) || (is_shift_key_only && IsKeyPressed(ImGuiKey_Delete))) && !is_readonly && !is_password && (!is_multiline || state->HasSelection());
-        const bool is_copy  = ((is_shortcut_key && IsKeyPressed(ImGuiKey_C, false)) || (is_ctrl_key_only  && IsKeyPressed(ImGuiKey_Insert, false))) && !is_password && (!is_multiline || state->HasSelection());
-        const bool is_paste = ((is_shortcut_key && IsKeyPressed(ImGuiKey_V)) || (is_shift_key_only && IsKeyPressed(ImGuiKey_Insert))) && !is_readonly;
-        const bool is_undo  = ((is_shortcut_key && IsKeyPressed(ImGuiKey_Z)) && !is_readonly && is_undoable);
-        const bool is_redo  = ((is_shortcut_key && IsKeyPressed(ImGuiKey_Y)) || (is_osx_shift_shortcut && IsKeyPressed(ImGuiKey_Z))) && !is_readonly && is_undoable;
-        const bool is_select_all = is_shortcut_key && IsKeyPressed(ImGuiKey_A, false);
+        // Using Shortcut() with ImGuiInputFlags_RouteFocused flag to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: formet would be handled by InputText)
+        // Otherwise we could simply assume that we own the keys as we are active.
+        const ImGuiInputFlags shortcut_flags = ImGuiInputFlags_RouteFocused | ImGuiInputFlags_Repeat;
+        const bool is_cut   = (Shortcut(ImGuiMod_Shortcut | ImGuiKey_X, id, shortcut_flags) || Shortcut(ImGuiMod_Shift | ImGuiKey_Delete, id, shortcut_flags)) && !is_readonly && !is_password && (!is_multiline || state->HasSelection());
+        const bool is_copy  = (Shortcut(ImGuiMod_Shortcut | ImGuiKey_C, id, shortcut_flags & ~ImGuiInputFlags_Repeat) || Shortcut(ImGuiMod_Ctrl | ImGuiKey_Insert, id, shortcut_flags & ~ImGuiInputFlags_Repeat))  && !is_password && (!is_multiline || state->HasSelection());
+        const bool is_paste = (Shortcut(ImGuiMod_Shortcut | ImGuiKey_V, id, shortcut_flags) || Shortcut(ImGuiMod_Shift | ImGuiKey_Insert, id, shortcut_flags)) && !is_readonly;
+        const bool is_undo  = (Shortcut(ImGuiMod_Shortcut | ImGuiKey_Z, id, shortcut_flags)) && !is_readonly && is_undoable;
+        const bool is_redo =  (Shortcut(ImGuiMod_Shortcut | ImGuiKey_Y, id, shortcut_flags) || (is_osx && Shortcut(ImGuiMod_Shortcut | ImGuiMod_Shift | ImGuiKey_Z, id, shortcut_flags))) && !is_readonly && is_undoable;
+        const bool is_select_all = Shortcut(ImGuiMod_Shortcut | ImGuiKey_A, id, shortcut_flags & ~ImGuiInputFlags_Repeat);
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
         const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
         const bool is_enter_pressed = IsKeyPressed(ImGuiKey_Enter, true) || IsKeyPressed(ImGuiKey_KeypadEnter, true);
         const bool is_gamepad_validate = nav_gamepad_active && (IsKeyPressed(ImGuiKey_NavGamepadActivate, false) || IsKeyPressed(ImGuiKey_NavGamepadInput, false));
-        const bool is_cancel = IsKeyPressed(ImGuiKey_Escape, false) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, false));
+        const bool is_cancel = Shortcut(ImGuiKey_Escape, id, shortcut_flags) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, false));
 
         if (IsKeyPressed(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
         else if (IsKeyPressed(ImGuiKey_RightArrow))                  { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
@@ -6323,6 +6335,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // We use NoHoldingActiveID on menus so user can click and _hold_ on a menu then drag to browse child entries
     ImGuiButtonFlags button_flags = 0;
     if (flags & ImGuiSelectableFlags_NoHoldingActiveID) { button_flags |= ImGuiButtonFlags_NoHoldingActiveId; }
+    if (flags & ImGuiSelectableFlags_NoSetKeyOwner)   { button_flags |= ImGuiButtonFlags_NoSetKeyOwner; }
     if (flags & ImGuiSelectableFlags_SelectOnClick)     { button_flags |= ImGuiButtonFlags_PressedOnClick; }
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
@@ -7009,7 +7022,9 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         BeginDisabled();
     const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     bool pressed;
-    const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_NoHoldingActiveID | ImGuiSelectableFlags_SelectOnClick | ImGuiSelectableFlags_DontClosePopups;
+
+    // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
+    const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_NoHoldingActiveID | ImGuiSelectableFlags_NoSetKeyOwner | ImGuiSelectableFlags_SelectOnClick | ImGuiSelectableFlags_DontClosePopups;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
         // Menu inside an horizontal menu bar
@@ -7201,7 +7216,8 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     if (!enabled)
         BeginDisabled();
 
-    const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_SelectOnRelease | ImGuiSelectableFlags_SetNavIdOnHover;
+    // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
+    const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_SelectOnRelease | ImGuiSelectableFlags_NoSetKeyOwner | ImGuiSelectableFlags_SetNavIdOnHover;
     const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
