@@ -271,6 +271,9 @@ Other Changes:
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
   registered as MBCS (not Unicode). (#5725, #1807, #471, #2815, #1060) [@or75, @ocornut]
+- Backends: OpenGL3: Reverted use of glBufferSubData(), too many corruptions issues were reported,
+  and old leaks issues seemingly can't be reproed with Intel drivers nowadays (revert earlier changes).
+  (#4468, #4504, #3381, #2981, #4825, #4832, #5127).
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]

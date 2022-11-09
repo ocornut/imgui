@@ -16,6 +16,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2022-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2022-11-09: OpenGL: Reverted use of glBufferSubData(), too many corruptions issues + old issues seemingly can't be reproed with Intel drivers nowadays (revert 2021-12-15 and 2022-05-23 changes).
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2022-09-27: OpenGL: Added ability to '#define IMGUI_IMPL_OPENGL_DEBUG'.
 //  2022-05-23: OpenGL: Reworking 2021-12-15 "Using buffer orphaning" so it only happens on Intel GPU, seems to cause problems otherwise. (#4468, #4825, #4832, #5127).
@@ -278,12 +279,15 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     }
     bd->GlVersion = (GLuint)(major * 100 + minor * 10);
 
+    bd->UseBufferSubData = false;
+    /*
     // Query vendor to enable glBufferSubData kludge
 #ifdef _WIN32
     if (const char* vendor = (const char*)glGetString(GL_VENDOR))
         if (strncmp(vendor, "Intel", 5) == 0)
             bd->UseBufferSubData = true;
 #endif
+    */
 #else
     bd->GlVersion = 200; // GLES 2
 #endif
@@ -506,9 +510,13 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
         // Upload vertex/index buffers
-        // - On Intel windows drivers we got reports that regular glBufferData() led to accumulating leaks when using multi-viewports, so we started using orphaning + glBufferSubData(). (See https://github.com/ocornut/imgui/issues/4468)
-        // - On NVIDIA drivers we got reports that using orphaning + glBufferSubData() led to glitches when using multi-viewports.
-        // - OpenGL drivers are in a very sorry state in 2022, for now we are switching code path based on vendors.
+        // - OpenGL drivers are in a very sorry state nowadays....
+        //   During 2021 we attempted to switch from glBufferData() to orphaning+glBufferSubData() following reports
+        //   of leaks on Intel GPU when using multi-viewports on Windows.
+        // - After this we kept hearing of various display corruptions issues. We started disabling on non-Intel GPU, but issues still got reported on Intel.
+        // - We are now back to using exclusively glBufferData(). So bd->UseBufferSubData IS ALWAYS FALSE in this code.
+        //   We are keeping the old code path for a while in case people finding new issues may want to test the bd->UseBufferSubData path.
+        // - See https://github.com/ocornut/imgui/issues/4468 and please report any corruption issues.
         const GLsizeiptr vtx_buffer_size = (GLsizeiptr)cmd_list->VtxBuffer.Size * (int)sizeof(ImDrawVert);
         const GLsizeiptr idx_buffer_size = (GLsizeiptr)cmd_list->IdxBuffer.Size * (int)sizeof(ImDrawIdx);
         if (bd->UseBufferSubData)
