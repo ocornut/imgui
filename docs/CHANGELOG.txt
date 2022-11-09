@@ -122,6 +122,8 @@ Other Changes:
   whenever scrolling again (#2604).
 - Scrolling: Mitigated issue where multi-axis mouse-wheel inputs (usually from touch pad
   events) are incorrectly locking scrolling in a parent window. (#4559, #3795, #2604)
+- Scrolling: Exposed SetNextWindowScroll() in public API. Useful to remove a scrolling
+  delay in some situations where e.g. windows need to be synched. (#1526)
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
