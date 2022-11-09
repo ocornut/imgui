@@ -8042,6 +8042,53 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
     return routing_data;
 }
 
+// Current score encoding (lower is highest priority):
+//  -   0: ImGuiInputFlags_RouteGlobalHigh
+//  -   1: ImGuiInputFlags_RouteFocused (if item active)
+//  -   2: ImGuiInputFlags_RouteGlobal
+//  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
+//  - 254: ImGuiInputFlags_RouteGlobalLow
+//  - 255: never route
+// 'flags' should include an explicit routing policy
+static int CalcRoutingScore(ImGuiWindow* location, ImGuiID owner_id, ImGuiInputFlags flags)
+{
+    if (flags & ImGuiInputFlags_RouteFocused)
+    {
+        ImGuiContext& g = *GImGui;
+        ImGuiWindow* focused = g.NavWindow;
+
+        // ActiveID gets top priority
+        // (we don't check g.ActiveIdUsingAllKeys here. Routing is applied but if input ownership is tested later it may discard it)
+        if (owner_id != 0 && g.ActiveId == owner_id)
+            return 1;
+
+        // Score based on distance to focused window (lower is better)
+        // Assuming both windows are submitting a routing request,
+        // - When Window....... is focused -> Window scores 3 (best), Window/ChildB scores 255 (no match)
+        // - When Window/ChildB is focused -> Window scores 4,        Window/ChildB scores 3 (best)
+        // Assuming only WindowA is submitting a routing request,
+        // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
+        if (focused != NULL && focused->RootWindow == location->RootWindow)
+            for (int next_score = 3; focused != NULL; next_score++)
+            {
+                if (focused == location)
+                {
+                    IM_ASSERT(next_score < 255);
+                    return next_score;
+                }
+                focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
+            }
+        return 255;
+    }
+
+    // ImGuiInputFlags_RouteGlobalHigh is default, so calls without flags are not conditional
+    if (flags & ImGuiInputFlags_RouteGlobal)
+        return 2;
+    if (flags & ImGuiInputFlags_RouteGlobalLow)
+        return 254;
+    return 0;
+}
+
 // Request a desired route for an input chord (key + mods).
 // Return true if the route is available this frame.
 // - Routes and key ownership are attributed at the beginning of next frame based on best score and mod state.
@@ -8063,54 +8110,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     if (flags & ImGuiInputFlags_RouteAlways)
         return true;
 
-    // Current score encoding (lower is highest priority):
-    //  -   0: ImGuiInputFlags_RouteGlobalHigh
-    //  -   1: ImGuiInputFlags_RouteFocused (if item active)
-    //  -   2: ImGuiInputFlags_RouteGlobal
-    //  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
-    //  - 254: ImGuiInputFlags_RouteGlobalLow
-    //  - 255: none
-    int score = 255;
-    if (flags & ImGuiInputFlags_RouteFocused)
-    {
-        ImGuiWindow* location = g.CurrentWindow;
-        ImGuiWindow* focused = g.NavWindow;
-
-        if (g.ActiveId != 0 && g.ActiveId == owner_id)
-        {
-            // ActiveID gets top priority
-            // (we don't check g.ActiveIdUsingAllKeys here. Routing is applied but if input ownership is tested later it may discard it)
-            score = 1;
-        }
-        else if (focused != NULL && focused->RootWindow == location->RootWindow) // Early out
-        {
-            // Score based on distance to focused window (lower is better)
-            // Assuming both windows are submitting a routing request,
-            // - When Window....... is focused -> Window scores 3 (best), Window/ChildB scores 255 (no match)
-            // - When Window/ChildB is focused -> Window scores 4,        Window/ChildB scores 3 (best)
-            // Assuming only WindowA is submitting a routing request,
-            // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
-            for (int next_score = 3; focused != NULL; next_score++)
-            {
-                if (focused == location)
-                {
-                    IM_ASSERT(next_score < 255);
-                    score = (ImU8)next_score;
-                    break;
-                }
-                focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
-            }
-        }
-    }
-    else
-    {
-        if (flags & ImGuiInputFlags_RouteGlobal)
-            score = 2;
-        else if (flags & ImGuiInputFlags_RouteGlobalLow)
-            score = 254;
-        else // ImGuiInputFlags_RouteGlobalHigh is default, so call to SetShorcutRouting() without no flags are not conditional
-            score = 0;
-    }
+    const int score = CalcRoutingScore(g.CurrentWindow, owner_id, flags);
     if (score == 255)
         return false;
 
@@ -8349,6 +8349,10 @@ void ImGui::ResetMouseDragDelta(ImGuiMouseButton button)
     g.IO.MouseClickedPos[button] = g.IO.MousePos;
 }
 
+// Get desired mouse cursor shape.
+// Important: this is meant to be used by a platform backend, it is reset in ImGui::NewFrame(),
+// updated during the frame, and locked in EndFrame()/Render().
+// If you use software rendering by setting io.MouseDrawCursor then Dear ImGui will render those for you
 ImGuiMouseCursor ImGui::GetMouseCursor()
 {
     ImGuiContext& g = *GImGui;
