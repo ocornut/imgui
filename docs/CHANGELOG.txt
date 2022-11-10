@@ -295,6 +295,7 @@ Docking+Viewports Branch:
 - Docking+Viewports: Fixed undocking window node causing parent viewports to become unresponsive
   in certain situation (e.g. hidden tab bar). (#5503) [@rokups]
 - Backends: SDL: Fixed building backend under non-OSX Apple targets (e.g. iPhone). (#5665)
+- Backends: SDL: Fixed drag'n drop crossing a viewport border losing mouse coordinates. (#5710, #5012)
 - Backends: GLFW: Fixed leftover static variable preventing from changing or
   reinitializing backend while application is running. (#4616, #5434) [@rtoumazet]
 
