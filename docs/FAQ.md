@@ -507,18 +507,16 @@ This approach is relatively easy and functional but comes with two issues:
 
 Please note that if you are not using multi-viewports with multi-monitors using different DPI scales, you can ignore that and use the simpler technique recommended at the top.
     
-On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to set the application manifest to inform Windows that your application is DPI aware. If this is not done, the UI text will be blurry.
-    
-```
-<?xml version="1.0" encoding="utf-8"?>
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
-    </windowsSettings>
-  </application>
-</assembly>
-```
+On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, the UI text will be blurry.
+
+Potential solutions to indicate DPI awareness on Windows are:
+
+- For SDL: the flag SDL_WINDOW_ALLOW_HIGHDPI needs to be passed to SDL_CreateWindow().
+- For GLFW: this is automatically always done.
+
+For other backends or wrapper projects that abstract SDL/GLFW calls:
+- Use `ImGui_ImplWin32_EnableDpiAwareness()` helper method.
+- Use an [application manifest file](https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process) to set the `<dpiAware>` property.
 
 ### Q: How can I load a different font than the default?
 Use the font atlas to load the TTF/OTF file you want:
