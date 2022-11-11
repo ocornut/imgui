@@ -99,6 +99,52 @@ static D3DMATRIX ImGui_ImplDX9_BuildProjectionMatrix(ImDrawData* draw_data)
     return mat_projection;
 }
 
+static void ImGui_ImplDX9_ResetRenderState(ImDrawData* draw_data);
+
+static void ImGui_ImplDX9_RenderCommandLists(ImDrawData* draw_data)
+{
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+
+    // Render command lists
+    // (Because we merged all buffers into a single one, we maintain our own offset into them)
+    int global_vtx_offset = 0;
+    int global_idx_offset = 0;
+    ImVec2 clip_off = draw_data->DisplayPos;
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    {
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback != nullptr)
+            {
+                // User callback, registered via ImDrawList::AddCallback()
+                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                    ImGui_ImplDX9_ResetRenderState(draw_data);
+                else
+                    pcmd->UserCallback(cmd_list, pcmd);
+            }
+            else
+            {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
+                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+                    continue;
+
+                // Apply Scissor/clipping rectangle, Bind texture, Draw
+                const RECT rect = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
+                bd->pd3dDevice->SetScissorRect(&rect);
+                bd->pd3dDevice->SetTexture(0, (IDirect3DTexture9*)pcmd->GetTexID());
+                bd->pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
+            }
+        }
+        global_idx_offset += cmd_list->IdxBuffer.Size;
+        global_vtx_offset += cmd_list->VtxBuffer.Size;
+    }
+}
+
 // Programmable render pipeline
 static bool ImGui_ImplDX9WithShader_CreateDeviceObjects()
 {
@@ -339,43 +385,7 @@ static bool ImGui_ImplDX9WithShader_RenderDrawData(ImDrawData* draw_data)
     ImGui_ImplDX9WithShader_SetRenderState(draw_data);
     
     // Render command lists
-    // (Because we merged all buffers into a single one, we maintain our own offset into them)
-    int global_vtx_offset = 0;
-    int global_idx_offset = 0;
-    ImVec2 clip_off = draw_data->DisplayPos;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
-            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback != nullptr)
-            {
-                // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplDX9WithShader_SetRenderState(draw_data);
-                else
-                    pcmd->UserCallback(cmd_list, pcmd);
-            }
-            else
-            {
-                // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
-                if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
-                    continue;
-
-                // Apply Scissor/clipping rectangle, Bind texture, Draw
-                const RECT rect = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
-                bd->pd3dDevice->SetScissorRect(&rect);
-                bd->pd3dDevice->SetTexture(0, (IDirect3DTexture9*)pcmd->GetTexID());
-                bd->pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
-            }
-        }
-        global_idx_offset += cmd_list->IdxBuffer.Size;
-        global_vtx_offset += cmd_list->VtxBuffer.Size;
-    }
+    ImGui_ImplDX9_RenderCommandLists(draw_data);
     
     // Restore the DX9 state
     bd->pd3dDevice->SetVertexShaderConstantF(0, (float*)&last_float4x4, 4);
@@ -388,6 +398,11 @@ static bool ImGui_ImplDX9WithShader_RenderDrawData(ImDrawData* draw_data)
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+
+    // Setup buffers
+    bd->pd3dDevice->SetStreamSource(0, bd->pVB, 0, sizeof(CUSTOMVERTEX));
+    bd->pd3dDevice->SetIndices(bd->pIB);
+    bd->pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
 
     // Setup viewport
     D3DVIEWPORT9 vp;
@@ -438,6 +453,15 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     bd->pd3dDevice->SetTransform(D3DTS_WORLD, &mat_identity);
     bd->pd3dDevice->SetTransform(D3DTS_VIEW, &mat_identity);
     bd->pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat_projection);
+}
+
+void ImGui_ImplDX9_ResetRenderState(ImDrawData* draw_data)
+{
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    if (bd->IsShaderSupported)
+        ImGui_ImplDX9WithShader_SetRenderState(draw_data);
+    else
+        ImGui_ImplDX9_SetupRenderState(draw_data);
 }
 
 // Render function.
@@ -526,52 +550,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     }
     bd->pVB->Unlock();
     bd->pIB->Unlock();
-    bd->pd3dDevice->SetStreamSource(0, bd->pVB, 0, sizeof(CUSTOMVERTEX));
-    bd->pd3dDevice->SetIndices(bd->pIB);
-    bd->pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
-
+    
     // Setup desired DX state
     ImGui_ImplDX9_SetupRenderState(draw_data);
 
     // Render command lists
-    // (Because we merged all buffers into a single one, we maintain our own offset into them)
-    int global_vtx_offset = 0;
-    int global_idx_offset = 0;
-    ImVec2 clip_off = draw_data->DisplayPos;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
-            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback != nullptr)
-            {
-                // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplDX9_SetupRenderState(draw_data);
-                else
-                    pcmd->UserCallback(cmd_list, pcmd);
-            }
-            else
-            {
-                // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
-                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
-                    continue;
-
-                // Apply Scissor/clipping rectangle, Bind texture, Draw
-                const RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
-                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->GetTexID();
-                bd->pd3dDevice->SetTexture(0, texture);
-                bd->pd3dDevice->SetScissorRect(&r);
-                bd->pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
-            }
-        }
-        global_idx_offset += cmd_list->IdxBuffer.Size;
-        global_vtx_offset += cmd_list->VtxBuffer.Size;
-    }
+    ImGui_ImplDX9_RenderCommandLists(draw_data);
 
     // Restore the DX9 transform
     bd->pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
