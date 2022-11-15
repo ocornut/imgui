@@ -99,11 +99,26 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89 WIP (In Progress)
+ VERSION 1.89 (Released 2022-11-15)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89
 
 Breaking changes:
 
+ - Layout: Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
+   This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
+   - Previously this would make the window content size ~200x200:
+       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
+   - Instead, please submit an item:
+       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
+   - Alternative:
+       Begin(...) + Dummy(ImVec2(200,200)) + End();
+   Content size is now only extended when submitting an item.
+   With '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will now be detected and assert.
+   Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
+   (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
+    threads have been amended to refer to this issue).
  - Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
     - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
     - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
@@ -128,11 +143,11 @@ Breaking changes:
     - Custom backends not writing to io.NavInputs[] -> no issue.
     - Custom backends writing to io.NavInputs[]     -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need fixing!
     - TL;DR: Backends should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values instead of filling io.NavInput[].
-   That data was essentially 1.60's attempt to combine keyboard and gamepad inputs with named
+   The ImGuiNavInput enum was essentially 1.60's attempt to combine keyboard and gamepad inputs with named
    semantic, but the additional indirection and copy added complexity and got in the way of other
    incoming work. User's code (other than backends) should not be affected, unless you have custom
    widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
- - Removed runtime patching of invalid "%f"/"%.0f" types of format strings for DragInt()/SliderInt().
+ - DragInt()/SliderInt(): Removed runtime patching of invalid "%f"/"%.0f" types of format strings.
    This was obsoleted in 1.61 (May 2018). See 1.61 changelog for details.
  - Changed signature of ImageButton() function: (#5533, #4471, #2464, #1390)
    - Added 'const char* str_id' parameter + removed 'int frame_padding = -1' parameter.
@@ -146,34 +161,15 @@ Breaking changes:
  - Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
    Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
    If you used TreePush() replace with TreePush((void*)NULL);
- - Commented out redirecting functions/enums names that were marked obsolete in 1.77 and 1.79 (August 2020): (#3361)
-   - DragScalar(), DragScalarN(), DragFloat(), DragFloat2(), DragFloat3(), DragFloat4()
-   - SliderScalar(), SliderScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4()
-     - For old signatures ending with (..., const char* format, float power = 1.0f) -> use (..., format ImGuiSliderFlags_Logarithmic) if power != 1.0f.
-   - BeginPopupContextWindow(const char*, ImGuiMouseButton, bool)                   -> use BeginPopupContextWindow(const char*, ImGuiPopupFlags)
-   - OpenPopupContextItem() (briefly existed from 1.77 to 1.79)                     -> use OpenPopupOnItemClick()
- - Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
-   This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
-   - Previously this would make the window content size ~200x200:
-       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
-   - Instead, please submit an item:
-       Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
-   - Alternative:
-       Begin(...) + Dummy(ImVec2(200,200)) + End();
-   Content size is now only extended when submitting an item.
-   With '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will now be detected and assert.
-   Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
-   (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
-    threads have been amended to refer to this issue).
  - Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
    They only made sense before we could use IMGUI_USER_CONFIG.
 
 
 Other Changes:
 
-- Popups & Modals: fixed nested Begin() being erroneously input-inhibited. While it is
-  unusual, you can nest a Begin() inside a popup or modal, it is occasionally useful to
-  achieve certains things (e.g. some ways to implement suggestion popup #718, #4461).
+- Popups & Modals: fixed nested Begin() inside a popup being erroneously input-inhibited.
+  While it is unusual, you can nest a Begin() inside a popup or modal, it is occasionally
+  useful to achieve certain things (e.g. to implement suggestion popups #718, #4461).
 - Inputs: Standard widgets now claim for key/button ownership and test for them.
   - Fixes scenario where e.g. a Popup with a Selectable() reacting on mouse down
     (e.g. double click) closes, and behind it is another window with an item reacting
@@ -186,9 +182,11 @@ Other Changes:
     systems while letting early adopters adopters toy with internals.
     (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
 - Scrolling: Tweak mouse-wheel locked window timer so it is shorter but also gets reset
-  whenever scrolling again (#2604).
+  whenever scrolling again. Modulate for small (sub-pixel) amounts. (#2604)
 - Scrolling: Mitigated issue where multi-axis mouse-wheel inputs (usually from touch pad
   events) are incorrectly locking scrolling in a parent window. (#4559, #3795, #2604)
+- Scrolling: Exposed SetNextWindowScroll() in public API. Useful to remove a scrolling
+  delay in some situations where e.g. windows need to be synched. (#1526)
 - InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
   Enter keep the input active and select all text.
 - InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
@@ -202,7 +200,7 @@ Other Changes:
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
   io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
-- IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between itemm,
+- IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between items,
   so moving from one item to a nearby one will requires delay to elapse again. (#1485)
 - Tables: activating an ID (e.g. clicking button inside) column doesn't prevent columns
   output flags from having ImGuiTableColumnFlags_IsHovered set. (#2957)
@@ -231,15 +229,15 @@ Other Changes:
   the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
 - Menus: Fixed using IsItemHovered()/IsItemClicked() on BeginMenu(). (#5775)
 - Menus, Popups: Experimental fix for issue where clicking on an open BeginMenu() item called from
-  a window which is neither a popup neither a menu used to incorrectly close and reopen the menu.
-  (the fix may have side-effect so labelld as experimental as we may need to revert) (#5775)
+  a window which is neither a popup neither a menu used to incorrectly close and reopen the menu
+  (the fix may have side-effect and is labelld as experimental as we may need to revert). (#5775)
 - Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item
   in parent window when the parent is not a popup. (#5730)
 - Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)
 - Menus, Nav: Fixed using left/right navigation when appending to an existing menu (multiple
   BeginMenu() call with same names). (#1207)
 - Menus: Fixed a one-frame issue where SetNextWindowXXX data are not consumed by a BeginMenu()
-  returning false (specifically )
+  returning false.
 - Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
 - Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
 - Nav: Fixed an issue opening a menu with Right key from a non-menu window.
@@ -271,6 +269,9 @@ Other Changes:
   (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
 - Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
   registered as MBCS (not Unicode). (#5725, #1807, #471, #2815, #1060) [@or75, @ocornut]
+- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
+- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
+- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
 - Backends: OpenGL3: Reverted use of glBufferSubData(), too many corruptions issues were reported,
   and old leaks issues seemingly can't be reproed with Intel drivers nowadays (revert earlier changes).
   (#4468, #4504, #3381, #2981, #4825, #4832, #5127).
@@ -278,9 +279,7 @@ Other Changes:
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
 - Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
-- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
-- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
-- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
+- Backends: WebGPU: fixed rendering when a depth buffer is enabled. (#5869) [@brainlag]
 
 Docking+Viewports Branch:
 

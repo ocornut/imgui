@@ -506,6 +506,14 @@ This approach is relatively easy and functional but comes with two issues:
 - Style override may be lost during the `Begin()` call crossing monitor boundaries. You may need to do some custom scaling mumbo-jumbo if you want your `OnChangedViewport()` handler to preserve style overrides.
 
 Please note that if you are not using multi-viewports with multi-monitors using different DPI scales, you can ignore that and use the simpler technique recommended at the top.
+    
+On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
+
+- For SDL: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()``.
+- For GLFW: this is done automatically.
+- For other Windows projects with other backends, or wrapper projects:
+  - We provide a `ImGui_ImplWin32_EnableDpiAwareness()` helper method in the Win32 backend.
+  - Use an [application manifest file](https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process) to set the `<dpiAware>` property.
 
 ### Q: How can I load a different font than the default?
 Use the font atlas to load the TTF/OTF file you want:
