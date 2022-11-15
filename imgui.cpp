@@ -1,4 +1,4 @@
-// dear imgui, v1.89 WIP
+// dear imgui, v1.89
 // (main code and documentation)
 
 // Help:
@@ -4344,7 +4344,7 @@ static void LockWheelingWindow(ImGuiWindow* window, float wheel_amount)
     if (window)
         g.WheelingWindowReleaseTimer = ImMin(g.WheelingWindowReleaseTimer + ImAbs(wheel_amount) * WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER, WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER);
     else
-        g.WheelingWindowReleaseTimer = NULL;
+        g.WheelingWindowReleaseTimer = 0.0f;
     if (g.WheelingWindow == window)
         return;
     IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
