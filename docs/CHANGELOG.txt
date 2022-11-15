@@ -119,7 +119,7 @@ Other Changes:
     systems while letting early adopters adopters toy with internals.
     (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
 - Scrolling: Tweak mouse-wheel locked window timer so it is shorter but also gets reset
-  whenever scrolling again (#2604).
+  whenever scrolling again. Modulate for small (sub-pixel) amounts. (#2604)
 - Scrolling: Mitigated issue where multi-axis mouse-wheel inputs (usually from touch pad
   events) are incorrectly locking scrolling in a parent window. (#4559, #3795, #2604)
 - Scrolling: Exposed SetNextWindowScroll() in public API. Useful to remove a scrolling
