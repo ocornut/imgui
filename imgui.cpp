@@ -8035,13 +8035,13 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
             return routing_data;
     }
 
-    // Add
-    ImGuiKeyRoutingIndex idx = (ImGuiKeyRoutingIndex)rt->Entries.Size;
+    // Add to linked-list
+    ImGuiKeyRoutingIndex routing_data_idx = (ImGuiKeyRoutingIndex)rt->Entries.Size;
     rt->Entries.push_back(ImGuiKeyRoutingData());
-    routing_data = &rt->Entries[idx];
+    routing_data = &rt->Entries[routing_data_idx];
     routing_data->Mods = (ImU16)mods;
     routing_data->NextEntryIndex = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; // Setup linked list
-    rt->Index[key - ImGuiKey_NamedKey_BEGIN] = idx;
+    rt->Index[key - ImGuiKey_NamedKey_BEGIN] = routing_data_idx;
     return routing_data;
 }
 
