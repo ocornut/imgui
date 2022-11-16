@@ -8537,7 +8537,7 @@ ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);
     ImGuiID owner_id = owner_data->OwnerCurr;
 
-    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId)
+    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId && owner_id != ImGuiKeyOwner_Any)
         if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
             return ImGuiKeyOwner_None;
 
@@ -8554,7 +8554,7 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
         return true;
 
     ImGuiContext& g = *GImGui;
-    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId)
+    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId && owner_id != ImGuiKeyOwner_Any)
         if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
             return false;
 
