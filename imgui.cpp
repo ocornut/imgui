@@ -1,4 +1,4 @@
-// dear imgui, v1.89
+// dear imgui, v1.90 WIP
 // (main code and documentation)
 
 // Help:
@@ -8643,13 +8643,13 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
             return routing_data;
     }
 
-    // Add
-    ImGuiKeyRoutingIndex idx = (ImGuiKeyRoutingIndex)rt->Entries.Size;
+    // Add to linked-list
+    ImGuiKeyRoutingIndex routing_data_idx = (ImGuiKeyRoutingIndex)rt->Entries.Size;
     rt->Entries.push_back(ImGuiKeyRoutingData());
-    routing_data = &rt->Entries[idx];
+    routing_data = &rt->Entries[routing_data_idx];
     routing_data->Mods = (ImU16)mods;
     routing_data->NextEntryIndex = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; // Setup linked list
-    rt->Index[key - ImGuiKey_NamedKey_BEGIN] = idx;
+    rt->Index[key - ImGuiKey_NamedKey_BEGIN] = routing_data_idx;
     return routing_data;
 }
 
@@ -9150,8 +9150,8 @@ ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);
     ImGuiID owner_id = owner_data->OwnerCurr;
 
-    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId)
-        if ((key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END) || key == ImGuiMod_Ctrl || key == ImGuiMod_Shift || key == ImGuiMod_Alt || key == ImGuiMod_Super)
+    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId && owner_id != ImGuiKeyOwner_Any)
+        if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
             return ImGuiKeyOwner_None;
 
     return owner_id;
@@ -9167,8 +9167,8 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
         return true;
 
     ImGuiContext& g = *GImGui;
-    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId)
-        if ((key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END) || key == ImGuiMod_Ctrl || key == ImGuiMod_Shift || key == ImGuiMod_Alt || key == ImGuiMod_Super)
+    if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId && owner_id != ImGuiKeyOwner_Any)
+        if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
             return false;
 
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);

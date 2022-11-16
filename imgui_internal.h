@@ -1,4 +1,4 @@
-// dear imgui, v1.89
+// dear imgui, v1.89.1 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -1304,8 +1304,8 @@ typedef ImS16 ImGuiKeyRoutingIndex;
 struct ImGuiKeyRoutingData
 {
     ImGuiKeyRoutingIndex            NextEntryIndex;
-    ImU16                           Mods;
-    ImU8                            RoutingNextScore;               // Lower is better (0: perfect score)
+    ImU16                           Mods;               // Technically we'd only need 4 bits but for simplify we store ImGuiMod_ values which need 16 bits.
+    ImU8                            RoutingNextScore;   // Lower is better (0: perfect score)
     ImGuiID                         RoutingCurr;
     ImGuiID                         RoutingNext;
 
