@@ -106,6 +106,13 @@ Other changes:
   from accessing keys. (#5888, #4921, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
 
+Docking+Viewports Branch:
+
+- Viewport: Fixed collapsed windows setting ImGuiViewportFlags_NoRendererClear without
+  making title bar color opaque, leading to potential texture/fb garbage being visible.
+  Right now as we don't fully support transparent viewports (#2766), so we turn that
+  'TitleBgCollapsed' color opaque just lke we do for 'WindowBG' on uncollapsed windows.
+
 
 -----------------------------------------------------------------------
  VERSION 1.89 (Released 2022-11-15)
