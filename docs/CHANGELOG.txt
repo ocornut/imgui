@@ -39,8 +39,10 @@ Breaking changes:
 
 Other changes:
 
- - Text: Fixed layouting of wrapped-text block when the last source line is above the
-   clipping region. Regression added in 1.89. (#5720, #5919)
+- Text: fixed layouting of wrapped-text block when the last source line is above the
+  clipping region. Regression added in 1.89. (#5720, #5919)
+- Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
+  with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
 
 
 -----------------------------------------------------------------------

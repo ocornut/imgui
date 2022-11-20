@@ -2871,11 +2871,14 @@ bool ImGuiListClipper::Step()
     if (need_items_height && ItemsHeight > 0.0f)
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): computed ItemsHeight: %.2f.\n", ItemsHeight);
     if (ret)
+    {
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): display %d to %d.\n", DisplayStart, DisplayEnd);
+    }
     else
+    {
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): End.\n");
-    if (!ret)
         End();
+    }
     return ret;
 }
 
