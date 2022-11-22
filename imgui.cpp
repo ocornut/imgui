@@ -13932,7 +13932,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
         {
             const char* line_begin = g.DebugLogIndex.get_line_begin(g.DebugLogBuf.c_str(), line_no);
             const char* line_end = g.DebugLogIndex.get_line_end(g.DebugLogBuf.c_str(), line_no);
-            TextUnformatted(line_begin, line_end);
+            TextUnformatted(ImStrv(line_begin, line_end));
             ImRect text_rect = g.LastItemData.Rect;
             if (IsItemHovered())
                 for (const char* p = line_begin; p < line_end - 10; p++)
