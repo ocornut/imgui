@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-11-22: Perform a dummy glfwGetError() read to cancel missing names with glfwGetKeyName(). (#5908)
 //  2022-10-18: Perform a dummy glfwGetError() read to cancel missing mouse cursors errors. Using GLFW_VERSION_COMBINED directly. (#5785)
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
@@ -305,7 +306,12 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     // This won't cover edge cases but this is at least going to cover common cases.
     if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_EQUAL)
         return key;
+    GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     const char* key_name = glfwGetKeyName(key, scancode);
+    glfwSetErrorCallback(prev_error_callback);
+#if (GLFW_VERSION_COMBINED >= 3300) // Eat errors (see #5908)
+    (void)glfwGetError(NULL);
+#endif
     if (key_name && key_name[0] != 0 && key_name[1] == 0)
     {
         const char char_names[] = "`-=[]\\,;\'./";
@@ -495,10 +501,10 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
+    glfwSetErrorCallback(prev_error_callback);
 #if (GLFW_VERSION_COMBINED >= 3300) // Eat errors (see #5785)
     (void)glfwGetError(NULL);
 #endif
-    glfwSetErrorCallback(prev_error_callback);
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     if (install_callbacks)

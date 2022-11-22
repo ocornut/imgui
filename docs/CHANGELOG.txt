@@ -38,6 +38,7 @@ HOW TO UPDATE?
 - Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
   from accessing keys. (#5888, #4921, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
+- Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
 
 
 -----------------------------------------------------------------------
