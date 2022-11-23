@@ -606,6 +606,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     WGPUDepthStencilState depth_stencil_state = {};
     depth_stencil_state.format = g_depthStencilFormat;
     depth_stencil_state.depthWriteEnabled = false;
+    depth_stencil_state.depthCompare = WGPUCompareFunction_Always;
+    depth_stencil_state.stencilFront.compare = WGPUCompareFunction_Always;
+    depth_stencil_state.stencilBack.compare = WGPUCompareFunction_Always;
 
     // Configure disabled depth-stencil state
     graphics_pipeline_desc.depthStencil = g_depthStencilFormat == WGPUTextureFormat_Undefined  ? nullptr :  &depth_stencil_state;
