@@ -38,6 +38,8 @@ HOW TO UPDATE?
 - Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
   from accessing keys. (#5888, #4921, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
+- Layout: fixed End()/EndChild() incorrectly asserting if users manipulates cursor position
+  inside a collapsed/culled window and IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. (#5548, #5911)
 - ColorEdit: fixed label overlapping when using style.ColorButtonPosition == ImGuiDir_Left to
   move the color button on the left side (regression introduced in 1.88 WIP 2022/02/28). (#5912)
 - Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
