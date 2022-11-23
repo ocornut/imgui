@@ -80,7 +80,8 @@ CODE
 // [SECTION] DRAG AND DROP
 // [SECTION] LOGGING/CAPTURING
 // [SECTION] SETTINGS
-// [SECTION] VIEWPORTS
+// [SECTION] LOCALIZATION
+// [SECTION] VIEWPORTS, PLATFORM WINDOWS
 // [SECTION] PLATFORM DEPENDENT HELPERS
 // [SECTION] METRICS/DEBUGGER WINDOW
 // [SECTION] DEBUG LOG WINDOW
@@ -4772,12 +4773,24 @@ void ImGui::NewFrame()
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
 
+// IMPORTANT: ###xxx suffixes must be same in ALL languages
+static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
+{
+    { ImGuiLocKey_TableSizeOne,         "Size column to fit###SizeOne"          },
+    { ImGuiLocKey_TableSizeAllFit,      "Size all columns to fit###SizeAll"     },
+    { ImGuiLocKey_TableSizeAllDefault,  "Size all columns to default###SizeAll" },
+    { ImGuiLocKey_TableResetOrder,      "Reset order###ResetOrder"              },
+    { ImGuiLocKey_WindowingMainMenuBar, "(Main menu bar)"                       },
+    { ImGuiLocKey_WindowingPopup,       "(Popup)"                               },
+    { ImGuiLocKey_WindowingUntitled,    "(Untitled)"                            },
+};
+
 void ImGui::Initialize()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
 
-    // Add .ini handle for ImGuiWindow type
+    // Add .ini handle for ImGuiWindow and ImGuiTable types
     {
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "Window";
@@ -4789,9 +4802,10 @@ void ImGui::Initialize()
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
         AddSettingsHandler(&ini_handler);
     }
-
-    // Add .ini handle for ImGuiTable type
     TableSettingsAddSettingsHandler();
+
+    // Setup default localization table
+    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -11660,10 +11674,10 @@ static void ImGui::NavUpdateWindowing()
 static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window)
 {
     if (window->Flags & ImGuiWindowFlags_Popup)
-        return "(Popup)";
+        return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingPopup);
     if ((window->Flags & ImGuiWindowFlags_MenuBar) && strcmp(window->Name, "##MainMenuBar") == 0)
-        return "(Main menu bar)";
-    return "(Untitled)";
+        return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingMainMenuBar);
+    return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingUntitled);
 }
 
 // Overlay displayed when using CTRL+TAB. Called by EndFrame().
@@ -12590,6 +12604,18 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         buf->appendf("Collapsed=%d\n", settings->Collapsed);
         buf->append("\n");
     }
+}
+
+
+//-----------------------------------------------------------------------------
+// [SECTION] LOCALIZATION
+//-----------------------------------------------------------------------------
+
+void ImGui::LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = 0; n < count; n++)
+        g.LocalizationTable[entries[n].Key] = entries[n].Text;
 }
 
 
