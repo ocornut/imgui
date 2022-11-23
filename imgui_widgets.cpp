@@ -147,7 +147,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags, const ImTextCustomization *customization)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -178,7 +178,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
+        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width, customization);
     }
     else
     {
@@ -226,7 +226,7 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
                 if (!line_end)
                     line_end = text_end;
                 text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
-                RenderText(pos, line, line_end, false);
+                RenderText(pos, line, line_end, false, customization);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
                 line_rect.Max.y += line_height;
@@ -255,9 +255,19 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
     }
 }
 
-void ImGui::TextUnformatted(const char* text, const char* text_end)
+void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, bool disabled, const ImTextCustomization *customization)
 {
-    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
+    ImGuiContext& g = *GImGui;
+    bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
+    if (need_backup && warpped)
+        PushTextWrapPos(0.0f);
+    if (disabled)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, customization);
+    if (disabled)
+        PopStyleColor();
+    if (need_backup && warpped)
+        PopTextWrapPos();
 }
 
 void ImGui::Text(const char* fmt, ...)
