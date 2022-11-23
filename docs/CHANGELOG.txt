@@ -46,6 +46,7 @@ HOW TO UPDATE?
   active but a payload hasn't been submitted yet. This is convenient to detect new payload
   from within a drag source handler. (#5910, #143)
 - Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
+- Backends: WebGPU: fixed validation error with default depth buffer settings. (#5869, #5914) [@kdchambers]
 
 
 -----------------------------------------------------------------------
@@ -113,7 +114,6 @@ Breaking changes:
   If you used TreePush() replace with TreePush((void*)NULL);
 - Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
   They only made sense before we could use IMGUI_USER_CONFIG.
-
 
 Other Changes:
 
