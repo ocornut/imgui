@@ -986,8 +986,13 @@ static void ShowDemoWindowWidgets()
             ImTextCustomization tc;
 
             ImGui::NewLine();
-            ImGui::Text("Color the whole text");            
+            ImGui::Text("Color the whole text");
             ImGui::TextUnformatted(text, NULL, true, false, &tc.Range(text).TextColor(green));
+
+            ImGui::NewLine();
+            // With ImTextCustomization we can chain multiple styles for one range
+            ImGui::Text("Or color and underline it at the same time"); 
+            ImGui::TextUnformatted(text, NULL, true, false, &tc.Range(text).TextColor(yellow).Unerline(red));
 
             ImGui::NewLine();
             ImGui::Text("Color the substring of the text");

@@ -2404,12 +2404,12 @@ struct ImTextCustomization
     // Sepcify a range of the text first 
     ImTextCustomization& Range(const char* begin, const char* end=NULL)
     {
-        // add this range to list
-        if (end != NULL)
+       // add valid range to list. ignore invalid range
+        if (begin != NULL && end >= begin)
             _Ranges.push_back(_RangeItem(begin, end));
-        else
-            _Ranges.push_back(_RangeItem(begin, begin+strlen(begin)));
-
+        else if (begin != NULL && end == NULL)
+            _Ranges.push_back(_RangeItem(begin, begin + strlen(begin)));
+        
         return *this;
     }
     // The last range specified will be colored
@@ -2483,7 +2483,7 @@ struct ImTextCustomization
     };
 
     // Find the style for given position
-    Style GetStyleByPositin(const char* char_pos) const
+    Style GetStyleByPosition(const char* char_pos) const
     {
         Style s;
 

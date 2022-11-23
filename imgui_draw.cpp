@@ -3539,8 +3539,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     float x = IM_FLOOR(pos.x);
     float y = IM_FLOOR(pos.y);
     draw_list->PrimReserve(6, 4);
-    draw_list->PrimRectUV(ImVec2(x + glyph->X0 * scale, y + glyph->Y0 * scale), ImVec2(x + glyph->X1 * scale, y + glyph->Y1 * scale),
-        ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
+    draw_list->PrimRectUV(ImVec2(x + glyph->X0 * scale, y + glyph->Y0 * scale), ImVec2(x + glyph->X1 * scale, y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
@@ -3601,14 +3600,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     // draw_list_text 
     ImDrawList* draw_list_text = nullptr;
 
-
-    ImDrawList _draw_list_text(ImGui::GetDrawListSharedData());
+    
 
     // Create a dedicated draw list for text. The reson is that the highlight texts must draw before the text.
-    // The highlight texts is genrated during the glyph drawing process.
+    // The highlight texts is generated during the glyph drawing process.
     if (customization)
     {
-        draw_list_text = &_draw_list_text;
+        draw_list_text = new ImDrawList(ImGui::GetDrawListSharedData());
         draw_list_text->AddDrawCmd();
     }
     else
@@ -3732,7 +3730,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
             // check custom style
             last_style = style;
-            style = custom_style->GetStyleByPositin(glyph_pos);
+            style = custom_style->GetStyleByPosition(glyph_pos);
 
             // Update text color
             if (style.Disabled)
@@ -3866,7 +3864,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
      
     };
 
-    // Create test customizaiton parser, do nothing if no text customization is used
+    // Create text customizaiton parser, it is only called if customization is applied.
     _CustomizationParser parser(text_col, size, text_begin, text_end, this, customization);
 
     while (s < text_end)
@@ -4054,6 +4052,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             draw_list->_VtxWritePtr += draw_list_text->VtxBuffer.Size;
             draw_list->_IdxWritePtr += draw_list_text->IdxBuffer.Size;
             draw_list->_VtxCurrentIdx += vtx_current_idx;
+
+            // Free draw_list_text. It is created for customized text only 
+            delete draw_list_text;
         }
 
 

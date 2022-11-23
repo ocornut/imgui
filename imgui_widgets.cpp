@@ -255,18 +255,18 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags,
     }
 }
 
-void ImGui::TextUnformatted(const char* text, const char* text_end, bool warpped, bool disabled, const ImTextCustomization *customization)
+void ImGui::TextUnformatted(const char* text, const char* text_end, bool wrapped, bool disabled, const ImTextCustomization *customization)
 {
     ImGuiContext& g = *GImGui;
     bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
-    if (need_backup && warpped)
+    if (need_backup && wrapped)
         PushTextWrapPos(0.0f);
     if (disabled)
         PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
     TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText, customization);
     if (disabled)
         PopStyleColor();
-    if (need_backup && warpped)
+    if (need_backup && wrapped)
         PopTextWrapPos();
 }
 
