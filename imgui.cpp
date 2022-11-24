@@ -1,4 +1,4 @@
-// dear imgui, v1.90 WIP
+// dear imgui, v1.89.1
 // (main code and documentation)
 
 // Help:
@@ -80,6 +80,7 @@ CODE
 // [SECTION] DRAG AND DROP
 // [SECTION] LOGGING/CAPTURING
 // [SECTION] SETTINGS
+// [SECTION] LOCALIZATION
 // [SECTION] VIEWPORTS, PLATFORM WINDOWS
 // [SECTION] DOCKING
 // [SECTION] PLATFORM DEPENDENT HELPERS
@@ -4953,12 +4954,24 @@ void ImGui::NewFrame()
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
 
+// IMPORTANT: ###xxx suffixes must be same in ALL languages
+static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
+{
+    { ImGuiLocKey_TableSizeOne,         "Size column to fit###SizeOne"          },
+    { ImGuiLocKey_TableSizeAllFit,      "Size all columns to fit###SizeAll"     },
+    { ImGuiLocKey_TableSizeAllDefault,  "Size all columns to default###SizeAll" },
+    { ImGuiLocKey_TableResetOrder,      "Reset order###ResetOrder"              },
+    { ImGuiLocKey_WindowingMainMenuBar, "(Main menu bar)"                       },
+    { ImGuiLocKey_WindowingPopup,       "(Popup)"                               },
+    { ImGuiLocKey_WindowingUntitled,    "(Untitled)"                            },
+};
+
 void ImGui::Initialize()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
 
-    // Add .ini handle for ImGuiWindow type
+    // Add .ini handle for ImGuiWindow and ImGuiTable types
     {
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "Window";
@@ -4970,9 +4983,10 @@ void ImGui::Initialize()
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
         AddSettingsHandler(&ini_handler);
     }
-
-    // Add .ini handle for ImGuiTable type
     TableSettingsAddSettingsHandler();
+
+    // Setup default localization table
+    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -9308,6 +9322,8 @@ void ImGui::ErrorCheckUsingSetCursorPosToExtendParentBoundaries()
 #ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (window->DC.CursorPos.x <= window->DC.CursorMaxPos.x && window->DC.CursorPos.y <= window->DC.CursorMaxPos.y)
         return;
+    if (window->SkipItems)
+        return;
     IM_ASSERT(0 && "Code uses SetCursorPos()/SetCursorScreenPos() to extend window/parent boundaries. Please submit an item e.g. Dummy() to validate extent.");
 #else
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
@@ -10157,8 +10173,8 @@ ImVec2 ImGui::ScrollToRectEx(ImGuiWindow* window, const ImRect& item_rect, ImGui
 
     const bool fully_visible_x = item_rect.Min.x >= window_rect.Min.x && item_rect.Max.x <= window_rect.Max.x;
     const bool fully_visible_y = item_rect.Min.y >= window_rect.Min.y && item_rect.Max.y <= window_rect.Max.y;
-    const bool can_be_fully_visible_x = (item_rect.GetWidth() + g.Style.ItemSpacing.x * 2.0f) <= window_rect.GetWidth();
-    const bool can_be_fully_visible_y = (item_rect.GetHeight() + g.Style.ItemSpacing.y * 2.0f) <= window_rect.GetHeight();
+    const bool can_be_fully_visible_x = (item_rect.GetWidth() + g.Style.ItemSpacing.x * 2.0f) <= window_rect.GetWidth() || (window->AutoFitFramesX > 0) || (window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0;
+    const bool can_be_fully_visible_y = (item_rect.GetHeight() + g.Style.ItemSpacing.y * 2.0f) <= window_rect.GetHeight() || (window->AutoFitFramesY > 0) || (window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0;
 
     if ((flags & ImGuiScrollFlags_KeepVisibleEdgeX) && !fully_visible_x)
     {
@@ -10169,8 +10185,10 @@ ImVec2 ImGui::ScrollToRectEx(ImGuiWindow* window, const ImRect& item_rect, ImGui
     }
     else if (((flags & ImGuiScrollFlags_KeepVisibleCenterX) && !fully_visible_x) || (flags & ImGuiScrollFlags_AlwaysCenterX))
     {
-        float target_x = can_be_fully_visible_x ? ImFloor((item_rect.Min.x + item_rect.Max.x - window->InnerRect.GetWidth()) * 0.5f) : item_rect.Min.x;
-        SetScrollFromPosX(window, target_x - window->Pos.x, 0.0f);
+        if (can_be_fully_visible_x)
+            SetScrollFromPosX(window, ImFloor((item_rect.Min.x + item_rect.Max.y) * 0.5f) - window->Pos.x, 0.5f);
+        else
+            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x, 0.0f);
     }
 
     if ((flags & ImGuiScrollFlags_KeepVisibleEdgeY) && !fully_visible_y)
@@ -10182,8 +10200,10 @@ ImVec2 ImGui::ScrollToRectEx(ImGuiWindow* window, const ImRect& item_rect, ImGui
     }
     else if (((flags & ImGuiScrollFlags_KeepVisibleCenterY) && !fully_visible_y) || (flags & ImGuiScrollFlags_AlwaysCenterY))
     {
-        float target_y = can_be_fully_visible_y ? ImFloor((item_rect.Min.y + item_rect.Max.y - window->InnerRect.GetHeight()) * 0.5f) : item_rect.Min.y;
-        SetScrollFromPosY(window, target_y - window->Pos.y, 0.0f);
+        if (can_be_fully_visible_y)
+            SetScrollFromPosY(window, ImFloor((item_rect.Min.y + item_rect.Max.y) * 0.5f) - window->Pos.y, 0.5f);
+        else
+            SetScrollFromPosY(window, item_rect.Min.y - window->Pos.y, 0.0f);
     }
 
     ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
@@ -12333,12 +12353,12 @@ static void ImGui::NavUpdateWindowing()
 static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window)
 {
     if (window->Flags & ImGuiWindowFlags_Popup)
-        return "(Popup)";
+        return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingPopup);
     if ((window->Flags & ImGuiWindowFlags_MenuBar) && strcmp(window->Name, "##MainMenuBar") == 0)
-        return "(Main menu bar)";
+        return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingMainMenuBar);
     if (window->DockNodeAsHost)
         return "(Dock node)";
-    return "(Untitled)";
+    return ImGui::LocalizeGetMsg(ImGuiLocKey_WindowingUntitled);
 }
 
 // Overlay displayed when using CTRL+TAB. Called by EndFrame().
@@ -12684,7 +12704,7 @@ void ImGui::RenderDragDropTargetRect(const ImRect& bb)
 const ImGuiPayload* ImGui::GetDragDropPayload()
 {
     ImGuiContext& g = *GImGui;
-    return g.DragDropActive ? &g.DragDropPayload : NULL;
+    return (g.DragDropActive && g.DragDropPayload.DataFrameCount != -1) ? &g.DragDropPayload : NULL;
 }
 
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
@@ -13293,6 +13313,18 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         }
         buf->append("\n");
     }
+}
+
+
+//-----------------------------------------------------------------------------
+// [SECTION] LOCALIZATION
+//-----------------------------------------------------------------------------
+
+void ImGui::LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = 0; n < count; n++)
+        g.LocalizationTable[entries[n].Key] = entries[n].Text;
 }
 
 

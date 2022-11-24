@@ -1,4 +1,4 @@
-// dear imgui, v1.89.1 WIP
+// dear imgui, v1.89.1
 // (tables and columns code)
 
 /*
@@ -3070,15 +3070,15 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
         if (column != NULL)
         {
             const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
-            if (MenuItem("Size column to fit###SizeOne", NULL, false, can_resize))
+            if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableSizeOne), NULL, false, can_resize)) // "###SizeOne"
                 TableSetColumnWidthAutoSingle(table, column_n);
         }
 
         const char* size_all_desc;
         if (table->ColumnsEnabledFixedCount == table->ColumnsEnabledCount && (table->Flags & ImGuiTableFlags_SizingMask_) != ImGuiTableFlags_SizingFixedSame)
-            size_all_desc = "Size all columns to fit###SizeAll";        // All fixed
+            size_all_desc = LocalizeGetMsg(ImGuiLocKey_TableSizeAllFit);        // "###SizeAll" All fixed
         else
-            size_all_desc = "Size all columns to default###SizeAll";    // All stretch or mixed
+            size_all_desc = LocalizeGetMsg(ImGuiLocKey_TableSizeAllDefault);    // "###SizeAll" All stretch or mixed
         if (MenuItem(size_all_desc, NULL))
             TableSetColumnWidthAutoAll(table);
         want_separator = true;
@@ -3087,7 +3087,7 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
     // Ordering
     if (table->Flags & ImGuiTableFlags_Reorderable)
     {
-        if (MenuItem("Reset order", NULL, false, !table->IsDefaultDisplayOrder))
+        if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder))
             table->IsResetDisplayOrderRequest = true;
         want_separator = true;
     }

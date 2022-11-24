@@ -99,12 +99,27 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.1 WIP (In Progress)
+ VERSION 1.89.1 (Released 2022-11-24)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.1
+
+- Scrolling, Focus: fixed SetKeyboardFocusHere()/SetItemDefaultFocus() during a window-appearing
+  frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
 - Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
   from accessing keys. (#5888, #4921, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
+- Layout: fixed End()/EndChild() incorrectly asserting if users manipulates cursor position
+  inside a collapsed/culled window and IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. (#5548, #5911)
+- Combo: fixed selected item (marked with SetItemDefaultFocus()) from not being centered when
+  the combo window initially appears. (#5902).
+- ColorEdit: fixed label overlapping when using style.ColorButtonPosition == ImGuiDir_Left to
+  move the color button on the left side (regression introduced in 1.88 WIP 2022/02/28). (#5912)
+- Drag and Drop: fixed GetDragDropPayload() returning a non-NULL value if a drag source is
+  active but a payload hasn't been submitted yet. This is convenient to detect new payload
+  from within a drag source handler. (#5910, #143)
+- Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
+- Backends: WebGPU: fixed validation error with default depth buffer settings. (#5869, #5914) [@kdchambers]
 
 Docking+Viewports Branch:
 
@@ -179,7 +194,6 @@ Breaking changes:
   If you used TreePush() replace with TreePush((void*)NULL);
 - Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
   They only made sense before we could use IMGUI_USER_CONFIG.
-
 
 Other Changes:
 

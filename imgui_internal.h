@@ -1,4 +1,4 @@
-// dear imgui, v1.89.1 WIP
+// dear imgui, v1.89.1
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -26,6 +26,7 @@ Index of this file:
 // [SECTION] Docking support
 // [SECTION] Viewport support
 // [SECTION] Settings support
+// [SECTION] Localization support
 // [SECTION] Metrics, Debug tools
 // [SECTION] Generic context hooks
 // [SECTION] ImGuiContext (main imgui context)
@@ -125,6 +126,7 @@ struct ImGuiDockNodeSettings;       // Storage for a dock node in .ini file (we 
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
 struct ImGuiLastItemData;           // Status storage for last submitted items
+struct ImGuiLocEntry;               // A localization entry.
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
 struct ImGuiMetricsConfig;          // Storage for ShowMetricsWindow() and DebugNodeXXX() functions
@@ -148,9 +150,13 @@ struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
 
+// Enumerations
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
+enum ImGuiLocKey : int;                 // -> enum ImGuiLocKey              // Enum: a localization entry for translation.
 typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // Enum: for storing the source authority (dock node vs window) of a field
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
+
+// Flags
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiInputFlags;            // -> enum ImGuiInputFlags_         // Flags: for IsKeyPressed(), IsMouseClicked(), SetKeyOwner(), SetItemKeyOwner() etc.
@@ -1228,8 +1234,10 @@ typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitAr
 #define ImGuiKey_Keyboard_END           (ImGuiKey_GamepadStart)
 #define ImGuiKey_Gamepad_BEGIN          (ImGuiKey_GamepadStart)
 #define ImGuiKey_Gamepad_END            (ImGuiKey_GamepadRStickDown + 1)
-#define ImGuiKey_Aliases_BEGIN          (ImGuiKey_MouseLeft)
-#define ImGuiKey_Aliases_END            (ImGuiKey_MouseWheelY + 1)
+#define ImGuiKey_Mouse_BEGIN            (ImGuiKey_MouseLeft)
+#define ImGuiKey_Mouse_END              (ImGuiKey_MouseWheelY + 1)
+#define ImGuiKey_Aliases_BEGIN          (ImGuiKey_Mouse_BEGIN)
+#define ImGuiKey_Aliases_END            (ImGuiKey_Mouse_END)
 
 // [Internal] Named shortcuts for Navigation
 #define ImGuiKey_NavKeyboardTweakSlow   ImGuiMod_Ctrl
@@ -1781,6 +1789,30 @@ struct ImGuiSettingsHandler
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Localization support
+//-----------------------------------------------------------------------------
+
+// This is experimental and not officially supported, it'll probably fall short of features, if/when it does we may backtrack.
+enum ImGuiLocKey : int
+{
+    ImGuiLocKey_TableSizeOne,
+    ImGuiLocKey_TableSizeAllFit,
+    ImGuiLocKey_TableSizeAllDefault,
+    ImGuiLocKey_TableResetOrder,
+    ImGuiLocKey_WindowingMainMenuBar,
+    ImGuiLocKey_WindowingPopup,
+    ImGuiLocKey_WindowingUntitled,
+    ImGuiLocKey_COUNT
+};
+
+struct ImGuiLocEntry
+{
+    ImGuiLocKey     Key;
+    const char*     Text;
+};
+
+
+//-----------------------------------------------------------------------------
 // [SECTION] Metrics, Debug Tools
 //-----------------------------------------------------------------------------
 
@@ -2130,6 +2162,9 @@ struct ImGuiContext
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
     ImGuiID                             HookIdNext;             // Next available HookId
 
+    // Localization
+    const char*             LocalizationTable[ImGuiLocKey_COUNT];
+
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
     ImGuiLogType            LogType;                            // Capture target
@@ -2309,6 +2344,8 @@ struct ImGuiContext
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
         HookIdNext = 0;
+
+        memset(LocalizationTable, 0, sizeof(LocalizationTable));
 
         LogEnabled = false;
         LogType = ImGuiLogType_None;
@@ -2960,6 +2997,10 @@ namespace ImGui
     IMGUI_API void                  RemoveSettingsHandler(const char* type_name);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
 
+    // Localization
+    IMGUI_API void          LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count);
+    inline const char*      LocalizeGetMsg(ImGuiLocKey key) { ImGuiContext& g = *GImGui; const char* msg = g.LocalizationTable[key]; return msg ? msg : "*Missing Text*"; }
+
     // Scrolling
     IMGUI_API void          SetScrollX(ImGuiWindow* window, float scroll_x);
     IMGUI_API void          SetScrollY(ImGuiWindow* window, float scroll_y);
@@ -3058,7 +3099,9 @@ namespace ImGui
     inline bool             IsNamedKey(ImGuiKey key)                                    { return key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END; }
     inline bool             IsNamedKeyOrModKey(ImGuiKey key)                            { return (key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END) || key == ImGuiMod_Ctrl || key == ImGuiMod_Shift || key == ImGuiMod_Alt || key == ImGuiMod_Super; }
     inline bool             IsLegacyKey(ImGuiKey key)                                   { return key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_LegacyNativeKey_END; }
+    inline bool             IsKeyboardKey(ImGuiKey key)                                 { return key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END; }
     inline bool             IsGamepadKey(ImGuiKey key)                                  { return key >= ImGuiKey_Gamepad_BEGIN && key < ImGuiKey_Gamepad_END; }
+    inline bool             IsMouseKey(ImGuiKey key)                                    { return key >= ImGuiKey_Mouse_BEGIN && key < ImGuiKey_Mouse_END; }
     inline bool             IsAliasKey(ImGuiKey key)                                    { return key >= ImGuiKey_Aliases_BEGIN && key < ImGuiKey_Aliases_END; }
     inline ImGuiKey         ConvertSingleModFlagToKey(ImGuiKey key)
     {
