@@ -32,8 +32,10 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.1 WIP (In Progress)
+ VERSION 1.89.1 (Released 2022-11-24)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.1
 
 - Scrolling, Focus: fixed SetKeyboardFocusHere()/SetItemDefaultFocus() during a window-appearing
   frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
