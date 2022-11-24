@@ -1802,6 +1802,7 @@ enum ImGuiLocKey : int
     ImGuiLocKey_WindowingMainMenuBar,
     ImGuiLocKey_WindowingPopup,
     ImGuiLocKey_WindowingUntitled,
+    ImGuiLocKey_DockingHideTabBar,
     ImGuiLocKey_COUNT
 };
 
