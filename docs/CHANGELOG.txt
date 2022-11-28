@@ -32,10 +32,24 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+ - Text: Fixed layouting of wrapped-text block when the last source line is above the
+   clipping region. Regression added in 1.89. (#5720, #5919)
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.1 (Released 2022-11-24)
 -----------------------------------------------------------------------
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.1
+
+Other changes:
 
 - Scrolling, Focus: fixed SetKeyboardFocusHere()/SetItemDefaultFocus() during a window-appearing
   frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
