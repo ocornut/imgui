@@ -1,0 +1,74 @@
+name: "Bug report"
+description: "A bug report within the code base. Use the documentation template for documentation bugs."
+title: "[BUG] <description>"
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        1. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING or LOADING FONTS, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions)
+        2. PLEASE CAREFULLY READ: [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
+        3. PLEASE CAREFULLY READ: [Contributing Guidelines](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md)
+        4. Be mindful that messages are being sent to the e-mail box of "Watching" users. Try to proof-read your messages before sending them. Edits are not seen by those users.
+
+        Thank you for contributing!
+  - type: textarea
+    id: imgui_version
+    attributes:
+      label: "ImGUI specifications"
+      description: "Version and branch of ImGUI."
+      placeholder: |
+        Version: 1.76
+        Branch: docking
+    validations:
+      required: true
+  - type: textarea
+    id: specs
+    attributes:
+      label: "System specifications"
+      description: "Back-end, renderer, used compiler, what OS are you using, etc."
+      placeholder: |
+        Back-ends: `imgui_impl_XXX.cpp` + `imgui_impl_XXX.cpp` (or specify if using a custom engine/back-end)
+        Compiler: XXX (if the question is related to building or platform specific features)
+        Operating System: XXX (should be always specified)
+    validations:
+      required: true
+  - type: textarea 
+    id: bug_description
+    attributes:
+      label: "Bug description"
+      description: "Explain what's the bug, how does it occur, etc. Provide as much detail as possible."
+      placeholder: |
+        The bug occurs when you do <placeholder>
+        Follow these steps to reproduce the bug:
+
+        <placeholder>
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "Provide any videos or screenshots (if applicable)"
+    validations:
+      required: false
+  - type: textarea
+    id: reproducable_code
+    attributes:
+      label: "Reproducable code"
+      description: "Show some code that anyone can use to reproduce the bug you're reporting."
+      placeholder: |
+        ```c++
+        // Here's some code anyone can copy and paste to reproduce your issue
+        ImGui::Begin("Example Bug");
+        MoreCodeToExplainMyIssue();
+        ImGui::End();
+        ```
+    validations:
+      required: false
+  - type: textarea
+    id: additional_info
+    attributes:
+      label: "Additional information"
+      description: "Is there anything else we should know about this bug?"
+    validations:
+      required: false

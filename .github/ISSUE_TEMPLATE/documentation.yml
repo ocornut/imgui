@@ -1,0 +1,30 @@
+name: "Documentation report"
+description: "Report any documentation bugs, improvements, or changes you want to suggest."
+title: "[DOCS] <description>"
+labels: [doc]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: |
+        Describe if you've found a documentation error or if you want to make an improvement.
+        If you've found a bug, specify in what file the bug is and if possible, add a link.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context"
+      description: |
+        Applies only if it's a new documentation file, new guidelines, etc..
+        Why should this be added? In what way would it benefit others and you?
+    validations:
+      required: false # If they're reporting a bug, this section does not fit for that.
+  - type: textarea
+    id: additional_information
+    attributes:
+      label: "Additional information"
+      description: "Is there anything else you'd like to mention about this issue?"
+    validations:
+      required: false
