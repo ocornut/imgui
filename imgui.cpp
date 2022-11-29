@@ -4160,16 +4160,15 @@ static void UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
     rt->Entries.swap(rt->EntriesNext); // Swap new and old indexes
 }
 
-// [Internal] Do not use directly (should read io.KeyMods instead)
-static ImGuiKeyChord GetMergedModsFromBools()
+// [Internal] Do not use directly
+static ImGuiKeyChord GetMergedModsFromKeys()
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiKeyChord key_chord = 0;
-    if (g.IO.KeyCtrl)  { key_chord |= ImGuiMod_Ctrl; }
-    if (g.IO.KeyShift) { key_chord |= ImGuiMod_Shift; }
-    if (g.IO.KeyAlt)   { key_chord |= ImGuiMod_Alt; }
-    if (g.IO.KeySuper) { key_chord |= ImGuiMod_Super; }
-    return key_chord;
+    ImGuiKeyChord mods = 0;
+    if (ImGui::IsKeyDown(ImGuiMod_Ctrl))     { mods |= ImGuiMod_Ctrl; }
+    if (ImGui::IsKeyDown(ImGuiMod_Shift))    { mods |= ImGuiMod_Shift; }
+    if (ImGui::IsKeyDown(ImGuiMod_Alt))      { mods |= ImGuiMod_Alt; }
+    if (ImGui::IsKeyDown(ImGuiMod_Super))    { mods |= ImGuiMod_Super; }
+    return mods;
 }
 
 static void ImGui::UpdateKeyboardInputs()
@@ -4244,12 +4243,21 @@ static void ImGui::UpdateKeyboardInputs()
 #endif
 #endif
 
-    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools, update aliases
-    io.KeyMods = GetMergedModsFromBools();
+    // Update aliases
     for (int n = 0; n < ImGuiMouseButton_COUNT; n++)
         UpdateAliasKey(MouseButtonToKey(n), io.MouseDown[n], io.MouseDown[n] ? 1.0f : 0.0f);
     UpdateAliasKey(ImGuiKey_MouseWheelX, io.MouseWheelH != 0.0f, io.MouseWheelH);
     UpdateAliasKey(ImGuiKey_MouseWheelY, io.MouseWheel != 0.0f, io.MouseWheel);
+
+    // Synchronize io.KeyMods and io.KeyXXX values.
+    // - New backends (1.87+): send io.AddKeyEvent(ImGuiMod_XXX) ->                                      -> (here) deriving io.KeyMods + io.KeyXXX from key array.
+    // - Legacy backends:      set io.KeyXXX bools               -> (above) set key array from io.KeyXXX -> (here) deriving io.KeyMods + io.KeyXXX from key array.
+    // So with legacy backends the 4 values will do a unnecessary back-and-forth but it makes the code simpler and future facing.
+    io.KeyMods = GetMergedModsFromKeys();
+    io.KeyCtrl = (io.KeyMods & ImGuiMod_Ctrl) != 0;
+    io.KeyShift = (io.KeyMods & ImGuiMod_Shift) != 0;
+    io.KeyAlt = (io.KeyMods & ImGuiMod_Alt) != 0;
+    io.KeySuper = (io.KeyMods & ImGuiMod_Super) != 0;
 
     // Clear gamepad data if disabled
     if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
@@ -8485,15 +8493,6 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             key_changed = true;
             key_changed_mask.SetBit(key_data_index);
 
-            if (key == ImGuiMod_Ctrl || key == ImGuiMod_Shift || key == ImGuiMod_Alt || key == ImGuiMod_Super)
-            {
-                if (key == ImGuiMod_Ctrl) { io.KeyCtrl = key_data->Down; }
-                if (key == ImGuiMod_Shift) { io.KeyShift = key_data->Down; }
-                if (key == ImGuiMod_Alt) { io.KeyAlt = key_data->Down; }
-                if (key == ImGuiMod_Super) { io.KeySuper = key_data->Down; }
-                io.KeyMods = GetMergedModsFromBools();
-            }
-
             // Allow legacy code using io.KeysDown[GetKeyIndex()] with new backends
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
             io.KeysDown[key_data_index] = key_data->Down;
@@ -8775,7 +8774,7 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     // send key release events mid-frame. This would normally trigger this assertion and lead to sheared inputs.
     // We silently accommodate for this case by ignoring the case where all io.KeyXXX modifiers were released (aka key_mod_flags == 0),
     // while still correctly asserting on mid-frame key press events.
-    const ImGuiKeyChord key_mods = GetMergedModsFromBools();
+    const ImGuiKeyChord key_mods = GetMergedModsFromKeys();
     IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mods);
 
