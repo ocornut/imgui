@@ -146,22 +146,6 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             dst_v->col = al_map_rgba(c[0], c[1], c[2], c[3]);
         }
 
-        const int* indices = nullptr;
-        if (sizeof(ImDrawIdx) == 2)
-        {
-            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx int' in imconfig.h to request Dear ImGui to output 32-bit indices.
-            // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
-            static ImVector<int> indices_converted;
-            indices_converted.resize(cmd_list->IdxBuffer.Size);
-            for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
-                indices_converted[i] = (int)cmd_list->IdxBuffer.Data[i];
-            indices = indices_converted.Data;
-        }
-        else if (sizeof(ImDrawIdx) == 4)
-        {
-            indices = (const int*)cmd_list->IdxBuffer.Data;
-        }
-
         // Render command lists
         ImVec2 clip_off = draw_data->DisplayPos;
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
