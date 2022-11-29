@@ -95,6 +95,11 @@ Breaking changes:
   Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
   (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
    threads have been amended to refer to this issue).
+- Inputs: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
+  This will require uses of legacy backend-dependent indices to be casted, e.g.
+   - with imgui_impl_glfw:  IsKeyPressed(GLFW_KEY_A) -> IsKeyPressed((ImGuiKey)GLFW_KEY_A);
+   - with imgui_impl_win32: IsKeyPressed('A')        -> IsKeyPressed((ImGuiKey)'A')
+   - etc. however if you are upgrading code you might as well use the backend-agnostic IsKeyPressed(ImGuiKey_A) now.
 - Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
    - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
    - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
@@ -223,7 +228,6 @@ Other Changes:
 - ImDrawList: Not using alloca() anymore, lift single polygon size limits. (#5704, #1811)
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
-- Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Debug Tools: Debug Log: Visually locate items when hovering a 0xXXXXXXXX value. (#5855)
