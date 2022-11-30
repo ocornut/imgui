@@ -31,6 +31,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_glut.h"
+#define GL_SILENCE_DEPRECATION
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else

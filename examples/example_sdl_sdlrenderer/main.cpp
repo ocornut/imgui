@@ -38,7 +38,7 @@ int main(int, char**)
     if (renderer == NULL)
     {
         SDL_Log("Error creating SDL_Renderer!");
-        return false;
+        return 0;
     }
     //SDL_RendererInfo info;
     //SDL_GetRendererInfo(renderer, &info);

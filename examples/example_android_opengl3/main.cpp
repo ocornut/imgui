@@ -9,6 +9,7 @@
 #include <android/asset_manager.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <string>
 
 // Data
 static EGLDisplay           g_EglDisplay = EGL_NO_DISPLAY;
@@ -17,6 +18,7 @@ static EGLContext           g_EglContext = EGL_NO_CONTEXT;
 static struct android_app*  g_App = NULL;
 static bool                 g_Initialized = false;
 static char                 g_LogTag[] = "ImGuiExample";
+static std::string          g_IniFilename = "";
 
 // Forward declarations of helper functions
 static int ShowSoftKeyboardInput();
@@ -70,9 +72,10 @@ void init(struct android_app* app)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
-    // Disable loading/saving of .ini file from disk.
-    // FIXME: Consider using LoadIniSettingsFromMemory() / SaveIniSettingsToMemory() to save in appropriate location for Android.
-    io.IniFilename = NULL;
+    // Redirect loading/saving of .ini file to our location.
+    // Make sure 'g_IniFilename' persists while we use Dear ImGui.
+    g_IniFilename = std::string(app->activity->internalDataPath) + "/imgui.ini";
+    io.IniFilename = g_IniFilename.c_str();;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
