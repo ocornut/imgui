@@ -39,6 +39,10 @@ Breaking changes:
 
 Other changes:
 
+- Inputs, Scrolling: better selection of scrolling window when hovering nested windows
+  and when backend/OS is emitting dual-axis wheeling inputs (typically touch pads on macOS).
+  We now select a primary axis based on recent events, and select a target window based on it.
+  We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
 - Text: fixed layouting of wrapped-text block when the last source line is above the
   clipping region. Regression added in 1.89. (#5720, #5919)
 - Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
