@@ -12982,6 +12982,55 @@ static void RenderViewportsThumbnails()
     ImGui::Dummy(bb_full.GetSize() * SCALE);
 }
 
+// Draw an arbitrary US keyboard layout to visualize translated keys
+void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
+{
+    const ImVec2 key_size = ImVec2(35.0f, 35.0f);
+    const float  key_rounding = 3.0f;
+    const ImVec2 key_face_size = ImVec2(25.0f, 25.0f);
+    const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f);
+    const float  key_face_rounding = 2.0f;
+    const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f);
+    const ImVec2 key_step = ImVec2(key_size.x - 1.0f, key_size.y - 1.0f);
+    const float  key_row_offset = 9.0f;
+
+    ImVec2 board_min = GetCursorScreenPos();
+    ImVec2 board_max = ImVec2(board_min.x + 3 * key_step.x + 2 * key_row_offset + 10.0f, board_min.y + 3 * key_step.y + 10.0f);
+    ImVec2 start_pos = ImVec2(board_min.x + 5.0f - key_step.x, board_min.y);
+
+    struct KeyLayoutData { int Row, Col; const char* Label; ImGuiKey Key; };
+    const KeyLayoutData keys_to_display[] =
+    {
+        { 0, 0, "", ImGuiKey_Tab },      { 0, 1, "Q", ImGuiKey_Q }, { 0, 2, "W", ImGuiKey_W }, { 0, 3, "E", ImGuiKey_E }, { 0, 4, "R", ImGuiKey_R },
+        { 1, 0, "", ImGuiKey_CapsLock }, { 1, 1, "A", ImGuiKey_A }, { 1, 2, "S", ImGuiKey_S }, { 1, 3, "D", ImGuiKey_D }, { 1, 4, "F", ImGuiKey_F },
+        { 2, 0, "", ImGuiKey_LeftShift },{ 2, 1, "Z", ImGuiKey_Z }, { 2, 2, "X", ImGuiKey_X }, { 2, 3, "C", ImGuiKey_C }, { 2, 4, "V", ImGuiKey_V }
+    };
+
+    // Elements rendered manually via ImDrawList API are not clipped automatically.
+    // While not strictly necessary, here IsItemVisible() is used to avoid rendering these shapes when they are out of view.
+    Dummy(board_max - board_min);
+    if (!IsItemVisible())
+        return;
+    draw_list->PushClipRect(board_min, board_max, true);
+    for (int n = 0; n < IM_ARRAYSIZE(keys_to_display); n++)
+    {
+        const KeyLayoutData* key_data = &keys_to_display[n];
+        ImVec2 key_min = ImVec2(start_pos.x + key_data->Col * key_step.x + key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
+        ImVec2 key_max = key_min + key_size;
+        draw_list->AddRectFilled(key_min, key_max, IM_COL32(204, 204, 204, 255), key_rounding);
+        draw_list->AddRect(key_min, key_max, IM_COL32(24, 24, 24, 255), key_rounding);
+        ImVec2 face_min = ImVec2(key_min.x + key_face_pos.x, key_min.y + key_face_pos.y);
+        ImVec2 face_max = ImVec2(face_min.x + key_face_size.x, face_min.y + key_face_size.y);
+        draw_list->AddRect(face_min, face_max, IM_COL32(193, 193, 193, 255), key_face_rounding, ImDrawFlags_None, 2.0f);
+        draw_list->AddRectFilled(face_min, face_max, IM_COL32(252, 252, 252, 255), key_face_rounding);
+        ImVec2 label_min = ImVec2(key_min.x + key_label_pos.x, key_min.y + key_label_pos.y);
+        draw_list->AddText(label_min, IM_COL32(64, 64, 64, 255), key_data->Label);
+        if (ImGui::IsKeyDown(key_data->Key))
+            draw_list->AddRectFilled(key_min, key_max, IM_COL32(255, 0, 0, 128), key_rounding);
+    }
+    draw_list->PopClipRect();
+}
+
 // Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
 void ImGui::DebugTextEncoding(const char* str)
 {
@@ -13380,41 +13429,95 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         TreePop();
     }
 
-    if (TreeNode("Key Owners & Shortcut Routing"))
+    if (TreeNode("Inputs"))
     {
-        TextUnformatted("Key Owners:");
-        if (BeginListBox("##owners", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 8)))
+        Text("KEYBOARD/GAMEPAD/MOUSE KEYS");
         {
-            for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
-            {
-                ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);
-                if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
-                    continue;
-                Text("%s: 0x%08X%s", GetKeyName(key), owner_data->OwnerCurr,
-                    owner_data->LockUntilRelease ? " LockUntilRelease" : owner_data->LockThisFrame ? " LockThisFrame" : "");
-                DebugLocateItemOnHover(owner_data->OwnerCurr);
-            }
-            EndListBox();
+            // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
+            // User code should never have to go through such hoops: old code may use native keycodes, new code may use ImGuiKey codes.
+            Indent();
+#ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
+            struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
+#else
+            struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { return key < 512 && GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+            //Text("Legacy raw:");      for (ImGuiKey key = ImGuiKey_KeysData_OFFSET; key < ImGuiKey_COUNT; key++) { if (io.KeysDown[key]) { SameLine(); Text("\"%s\" %d", GetKeyName(key), key); } }
+#endif
+            Text("Keys down:");         for (ImGuiKey key = ImGuiKey_KeysData_OFFSET; key < ImGuiKey_COUNT; key = (ImGuiKey)(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !IsKeyDown(key)) continue;     SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); SameLine(); Text("(%.02f)", GetKeyData(key)->DownDuration); }
+            Text("Keys pressed:");      for (ImGuiKey key = ImGuiKey_KeysData_OFFSET; key < ImGuiKey_COUNT; key = (ImGuiKey)(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !IsKeyPressed(key)) continue;  SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
+            Text("Keys released:");     for (ImGuiKey key = ImGuiKey_KeysData_OFFSET; key < ImGuiKey_COUNT; key = (ImGuiKey)(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !IsKeyReleased(key)) continue; SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
+            Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
+            Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; SameLine(); Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
+            DebugRenderKeyboardPreview(GetWindowDrawList());
+            Unindent();
         }
-        TextUnformatted("Shortcut Routing:");
-        if (BeginListBox("##routes", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 8)))
+
+        Text("MOUSE STATE");
         {
-            for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+            Indent();
+            if (IsMousePosValid())
+                Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+            else
+                Text("Mouse pos: <INVALID>");
+            Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
+            int count = IM_ARRAYSIZE(io.MouseDown);
+            Text("Mouse down:");     for (int i = 0; i < count; i++) if (IsMouseDown(i)) { SameLine(); Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
+            Text("Mouse clicked:");  for (int i = 0; i < count; i++) if (IsMouseClicked(i)) { SameLine(); Text("b%d (%d)", i, io.MouseClickedCount[i]); }
+            Text("Mouse released:"); for (int i = 0; i < count; i++) if (IsMouseReleased(i)) { SameLine(); Text("b%d", i); }
+            Text("Mouse wheel: %.1f", io.MouseWheel);
+            Text("Pen Pressure: %.1f", io.PenPressure); // Note: currently unused
+            Unindent();
+        }
+
+        Text("MOUSE WHEELING");
+        {
+            Indent();
+            Text("WheelingWindow: '%s'", g.WheelingWindow ? g.WheelingWindow->Name : "NULL");
+            Text("WheelingWindowReleaseTimer: %.2f", g.WheelingWindowReleaseTimer);
+            Text("WheelingAxisAvg[] = { %.3f, %.3f }, Main Axis: %s", g.WheelingAxisAvg.x, g.WheelingAxisAvg.y, (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? "X" : (g.WheelingAxisAvg.x < g.WheelingAxisAvg.y) ? "Y" : "<none>");
+            Unindent();
+        }
+
+        Text("KEY OWNERS");
+        {
+            Indent();
+            if (BeginListBox("##owners", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 6)))
             {
-                ImGuiKeyRoutingTable* rt = &g.KeysRoutingTable;
-                for (ImGuiKeyRoutingIndex idx = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; idx != -1; )
+                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
                 {
-                    char key_chord_name[64];
-                    ImGuiKeyRoutingData* routing_data = &rt->Entries[idx];
-                    GetKeyChordName(key | routing_data->Mods, key_chord_name, IM_ARRAYSIZE(key_chord_name));
-                    Text("%s: 0x%08X", key_chord_name, routing_data->RoutingCurr);
-                    DebugLocateItemOnHover(routing_data->RoutingCurr);
-                    idx = routing_data->NextEntryIndex;
+                    ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);
+                    if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
+                        continue;
+                    Text("%s: 0x%08X%s", GetKeyName(key), owner_data->OwnerCurr,
+                        owner_data->LockUntilRelease ? " LockUntilRelease" : owner_data->LockThisFrame ? " LockThisFrame" : "");
+                    DebugLocateItemOnHover(owner_data->OwnerCurr);
                 }
+                EndListBox();
             }
-            EndListBox();
+            Unindent();
         }
-        Text("(ActiveIdUsing: AllKeyboardKeys: %d, NavDirMask: 0x%X)", g.ActiveIdUsingAllKeyboardKeys, g.ActiveIdUsingNavDirMask);
+        Text("SHORTCUT ROUTING");
+        {
+            Indent();
+            if (BeginListBox("##routes", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 6)))
+            {
+                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+                {
+                    ImGuiKeyRoutingTable* rt = &g.KeysRoutingTable;
+                    for (ImGuiKeyRoutingIndex idx = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; idx != -1; )
+                    {
+                        char key_chord_name[64];
+                        ImGuiKeyRoutingData* routing_data = &rt->Entries[idx];
+                        GetKeyChordName(key | routing_data->Mods, key_chord_name, IM_ARRAYSIZE(key_chord_name));
+                        Text("%s: 0x%08X", key_chord_name, routing_data->RoutingCurr);
+                        DebugLocateItemOnHover(routing_data->RoutingCurr);
+                        idx = routing_data->NextEntryIndex;
+                    }
+                }
+                EndListBox();
+            }
+            Text("(ActiveIdUsing: AllKeyboardKeys: %d, NavDirMask: 0x%X)", g.ActiveIdUsingAllKeyboardKeys, g.ActiveIdUsingNavDirMask);
+            Unindent();
+        }
         TreePop();
     }
 
@@ -13452,13 +13555,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
         Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
         Text("NavWindowingTarget: '%s'", g.NavWindowingTarget ? g.NavWindowingTarget->Name : "NULL");
-        Unindent();
-
-        Text("MOUSE WHEELING");
-        Indent();
-        Text("WheelingWindow: '%s'", g.WheelingWindow ? g.WheelingWindow->Name : "NULL");
-        Text("WheelingWindowReleaseTimer: %.2f", g.WheelingWindowReleaseTimer);
-        Text("WheelingAxisAvg[] = { %.3f, %.3f }, Main Axis: %s", g.WheelingAxisAvg.x, g.WheelingAxisAvg.y, (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? "X" : (g.WheelingAxisAvg.x < g.WheelingAxisAvg.y) ? "Y" : "<none>");
         Unindent();
 
         TreePop();
