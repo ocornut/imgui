@@ -47,6 +47,7 @@ Other changes:
   clipping region. Regression added in 1.89. (#5720, #5919)
 - Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
   with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
+- Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
 - Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
 
 
