@@ -48,6 +48,10 @@ Other changes:
   We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
 - Text: fixed layouting of wrapped-text block when the last source line is above the
   clipping region. Regression added in 1.89. (#5720, #5919)
+- Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
+  applications using multiple font atlases.
+- Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
+- Debug Tools: Metrics: added "Inputs" section, moved from Demo for consistency.
 - Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
   with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
 - Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
@@ -79,8 +83,6 @@ Other changes:
 - Drag and Drop: fixed GetDragDropPayload() returning a non-NULL value if a drag source is
   active but a payload hasn't been submitted yet. This is convenient to detect new payload
   from within a drag source handler. (#5910, #143)
-- Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
-- Debug Tools: Metrics: added "Inputs" section, moved from Demo for consistency.
 - Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
 - Backends: WebGPU: fixed validation error with default depth buffer settings. (#5869, #5914) [@kdchambers]
 
