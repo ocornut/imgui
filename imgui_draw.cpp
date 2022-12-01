@@ -449,8 +449,7 @@ void ImDrawList::_PopUnusedDrawCmd()
 {
     if (CmdBuffer.Size == 0)
         return;
-    ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
-    if (curr_cmd->ElemCount == 0 && curr_cmd->UserCallback == NULL)
+    for (ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1]; curr_cmd->ElemCount == 0 && curr_cmd->UserCallback == NULL; curr_cmd--)
         CmdBuffer.pop_back();
 }
 
