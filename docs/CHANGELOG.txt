@@ -99,15 +99,48 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Fixed cases where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with
+  zero triangles, which would makes the render loop of some backends assert (e.g. Metal with
+  debugging, Allegro). (#4857, #5937)
+- Tables, Columns: Fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Inputs, Scrolling: better selection of scrolling window when hovering nested windows
+  and when backend/OS is emitting dual-axis wheeling inputs (typically touch pads on macOS).
+  We now select a primary axis based on recent events, and select a target window based on it.
+  We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
+- Text: fixed layouting of wrapped-text block when the last source line is above the
+  clipping region. Regression added in 1.89. (#5720, #5919)
+- Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
+  applications using multiple font atlases.
+- Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
+- Debug Tools: Metrics: added "Inputs" section, moved from Demo for consistency.
+- Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
+  with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
+- Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
+- Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.1 (Released 2022-11-24)
 -----------------------------------------------------------------------
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.1
 
+Other changes:
+
 - Scrolling, Focus: fixed SetKeyboardFocusHere()/SetItemDefaultFocus() during a window-appearing
   frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
 - Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
   from accessing keys. (#5888, #4921, #456)
+- Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
+  compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
+  easier for bindings generators to process that value. (#5923, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
 - Layout: fixed End()/EndChild() incorrectly asserting if users manipulates cursor position
   inside a collapsed/culled window and IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. (#5548, #5911)
@@ -150,6 +183,11 @@ Breaking changes:
   Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
   (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
    threads have been amended to refer to this issue).
+- Inputs: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
+  This will require uses of legacy backend-dependent indices to be casted, e.g.
+   - with imgui_impl_glfw:  IsKeyPressed(GLFW_KEY_A) -> IsKeyPressed((ImGuiKey)GLFW_KEY_A);
+   - with imgui_impl_win32: IsKeyPressed('A')        -> IsKeyPressed((ImGuiKey)'A')
+   - etc. however if you are upgrading code you might as well use the backend-agnostic IsKeyPressed(ImGuiKey_A) now.
 - Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
    - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
    - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
@@ -278,7 +316,6 @@ Other Changes:
 - ImDrawList: Not using alloca() anymore, lift single polygon size limits. (#5704, #1811)
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
-- Misc: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
 - Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
 - Debug Tools: Debug Log: Visually locate items when hovering a 0xXXXXXXXX value. (#5855)

@@ -1,6 +1,7 @@
 // dear imgui: Platform Backend for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
-// [ALPHA] Early backend, not well tested. If you want a portable application, prefer using the GLFW or SDL platform Backends on Mac.
+// - Not well tested. If you want a portable application, prefer using the GLFW or SDL platform Backends on Mac.
+// - Requires linking with the GameController framework ("-framework GameController").
 
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.

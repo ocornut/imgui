@@ -1,4 +1,4 @@
-// dear imgui, v1.89.1
+// dear imgui, v1.89.2 WIP
 // (headers)
 
 // Help:
@@ -22,8 +22,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM > 12345')
-#define IMGUI_VERSION               "1.89.1"
-#define IMGUI_VERSION_NUM           18910
+#define IMGUI_VERSION               "1.89.2 WIP"
+#define IMGUI_VERSION_NUM           18914
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -1491,7 +1491,7 @@ enum ImGuiKey : int
     ImGuiKey_GamepadRStickUp,       // [Analog]
     ImGuiKey_GamepadRStickDown,     // [Analog]
 
-    // Mouse Buttons (auto-submitted from AddMouseButtonEvent() calls)
+    // Aliases: Mouse Buttons (auto-submitted from AddMouseButtonEvent() calls)
     // - This is mirroring the data also written to io.MouseDown[], io.MouseWheel, in a format allowing them to be accessed via standard key API.
     ImGuiKey_MouseLeft, ImGuiKey_MouseRight, ImGuiKey_MouseMiddle, ImGuiKey_MouseX1, ImGuiKey_MouseX2, ImGuiKey_MouseWheelX, ImGuiKey_MouseWheelY,
 
@@ -1512,12 +1512,8 @@ enum ImGuiKey : int
     ImGuiMod_Shift                  = 1 << 13,
     ImGuiMod_Alt                    = 1 << 14, // Option/Menu
     ImGuiMod_Super                  = 1 << 15, // Cmd/Super/Windows
-    ImGuiMod_Mask_                  = 0xF000,
-#if defined(__APPLE__)
-    ImGuiMod_Shortcut               = ImGuiMod_Super,
-#else
-    ImGuiMod_Shortcut               = ImGuiMod_Ctrl,
-#endif
+    ImGuiMod_Shortcut               = 1 << 11, // [Internal, read-only] Alias of ImGuiMod_Super (macOS) or ImGuiMod_Ctrl (otherwise), decided by io.ConfigMacOSXBehaviors.
+    ImGuiMod_Mask_                  = 0xF800,  // 5-bits
 
     // [Internal] Prior to 1.87 we required user to fill io.KeysDown[512] using their own native index + the io.KeyMap[] array.
     // We are ditching this method but keeping a legacy path for user code doing e.g. IsKeyPressed(MY_NATIVE_KEY_CODE)
@@ -1991,7 +1987,7 @@ struct ImGuiIO
     float       KeyRepeatRate;                  // = 0.050f         // When holding a key/button, rate at which it repeats, in seconds.
     float       HoverDelayNormal;               // = 0.30 sec       // Delay on hovering before IsItemHovered(ImGuiHoveredFlags_DelayNormal) returns true.
     float       HoverDelayShort;                // = 0.10 sec       // Delay on hovering before IsItemHovered(ImGuiHoveredFlags_DelayShort) returns true.
-    void*       UserData;                       // = NULL           // Store your own data for retrieval by callbacks.
+    void*       UserData;                       // = NULL           // Store your own data.
 
     ImFontAtlas*Fonts;                          // <auto>           // Font atlas: load, rasterize and pack one or more fonts into a single texture.
     float       FontGlobalScale;                // = 1.0f           // Global scale all fonts
@@ -2118,7 +2114,7 @@ struct ImGuiIO
     bool        KeySuper;                           // Keyboard modifier down: Cmd/Super/Windows
 
     // Other state maintained from data above + IO function calls
-    ImGuiKeyChord KeyMods;                          // Key mods flags (any of ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Alt/ImGuiMod_Super flags, same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags). Read-only, updated by NewFrame()
+    ImGuiKeyChord KeyMods;                          // Key mods flags (any of ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Alt/ImGuiMod_Super flags, same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags. DOES NOT CONTAINS ImGuiMod_Shortcut which is pretranslated). Read-only, updated by NewFrame()
     ImGuiKeyData  KeysData[ImGuiKey_KeysData_SIZE]; // Key state for all known keys. Use IsKeyXXX() functions to access this.
     bool        WantCaptureMouseUnlessPopupClose;   // Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
     ImVec2      MousePosPrev;                       // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
@@ -2925,6 +2921,7 @@ struct ImFontAtlas
     int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
     int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0 (will also need to set AntiAliasedLinesUseTex = false).
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
+    void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
     // [Internal]
     // NB: Access texture data via GetTexData*() calls! Which will setup a default font for you.
