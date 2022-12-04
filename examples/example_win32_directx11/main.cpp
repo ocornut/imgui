@@ -136,7 +136,8 @@ int main(int, char**)
                 show_another_window = false;
             ImGui::End();
         }
-
+        
+        ImGui::EndFrame();
         // Rendering
         ImGui::Render();
         const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
