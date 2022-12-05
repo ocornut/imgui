@@ -6067,6 +6067,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
         if (toggled)
         {
+            g.IO.WantRender = true;
             is_open = !is_open;
             window->DC.StateStorage->SetInt(id, is_open);
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
