@@ -109,7 +109,14 @@ Other changes:
 - Fixed cases where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with
   zero triangles, which would makes the render loop of some backends assert (e.g. Metal with
   debugging, Allegro). (#4857, #5937)
-- Tables, Columns: Fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Tables, Nav, Scrolling: fixed scrolling functions and focus tracking with frozen rows and
+  frozen columns. Windows now have a better understanding of outer/inner decoration sizes,
+  which should later lead us toward more flexible uses of menu/status bars. (#5143, #3692)
+- Tables, Nav: frozen columns are not part of menu layer and can be crossed over. (#5143, #3692)
+- Tables, Columns: fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
+  compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
+  easier for bindings generators to process that value. (#5923, #456)
 - Inputs, Scrolling: better selection of scrolling window when hovering nested windows
   and when backend/OS is emitting dual-axis wheeling inputs (typically touch pads on macOS).
   We now select a primary axis based on recent events, and select a target window based on it.
@@ -138,9 +145,6 @@ Other changes:
   frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
 - Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
   from accessing keys. (#5888, #4921, #456)
-- Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
-  compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
-  easier for bindings generators to process that value. (#5923, #456)
 - Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
 - Layout: fixed End()/EndChild() incorrectly asserting if users manipulates cursor position
   inside a collapsed/culled window and IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. (#5548, #5911)

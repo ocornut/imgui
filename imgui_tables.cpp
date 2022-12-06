@@ -964,7 +964,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
 
-        column->NavLayerCurrent = (ImS8)((table->FreezeRowsCount > 0 || column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main);
+        column->NavLayerCurrent = (ImS8)(table->FreezeRowsCount > 0 ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main); // Use Count NOT request so Header line changes layer when frozen
 
         if (offset_x_frozen && table->FreezeColumnsCount == visible_n)
         {
@@ -1123,6 +1123,13 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // This path will only be exercised when sort specs are modified before header rows (e.g. init or visibility change)
     if (table->IsSortSpecsDirty && (table->Flags & ImGuiTableFlags_Sortable))
         TableSortSpecsBuild(table);
+
+    // [Part 14] Setup inner window decoration size (for scrolling / nav tracking to properly take account of frozen rows/columns)
+    if (table->FreezeColumnsRequest > 0)
+        table->InnerWindow->DecoInnerSizeX1 = table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsRequest - 1]].MaxX - table->OuterRect.Min.x;
+    if (table->FreezeRowsRequest > 0)
+        table->InnerWindow->DecoInnerSizeY1 = table_instance->LastFrozenHeight;
+    table_instance->LastFrozenHeight = 0.0f;
 
     // Initial state
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -1839,17 +1846,15 @@ void ImGui::TableEndRow(ImGuiTable* table)
     // get the new cursor position.
     if (unfreeze_rows_request)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            column->NavLayerCurrent = (ImS8)((column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main);
-        }
+            table->Columns[column_n].NavLayerCurrent = ImGuiNavLayer_Main;
     if (unfreeze_rows_actual)
     {
         IM_ASSERT(table->IsUnfrozenRows == false);
+        const float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->IsUnfrozenRows = true;
+        TableGetInstanceData(table, table->InstanceCurrent)->LastFrozenHeight = y0 - table->OuterRect.Min.y;
 
         // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
-        float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
         table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
         table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
