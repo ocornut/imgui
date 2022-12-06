@@ -69,6 +69,7 @@ CODE
 // [SECTION] ImGuiListClipper
 // [SECTION] STYLING
 // [SECTION] RENDER HELPERS
+// [SECTION] INITIALIZATION, SHUTDOWN
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
 // [SECTION] INPUTS
 // [SECTION] ERROR CHECKING
@@ -1028,11 +1029,14 @@ static void             ErrorCheckEndFrameSanityChecks();
 static void             UpdateDebugToolItemPicker();
 static void             UpdateDebugToolStackQueries();
 
-// Misc
-static void             UpdateSettings();
+// Inputs
 static void             UpdateKeyboardInputs();
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
+static void             UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt);
+
+// Misc
+static void             UpdateSettings();
 static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
@@ -3462,6 +3466,230 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
     }
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] INITIALIZATION, SHUTDOWN
+//-----------------------------------------------------------------------------
+
+// Internal state access - if you want to share Dear ImGui state between modules (e.g. DLL) or allocate it yourself
+// Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
+ImGuiContext* ImGui::GetCurrentContext()
+{
+    return GImGui;
+}
+
+void ImGui::SetCurrentContext(ImGuiContext* ctx)
+{
+#ifdef IMGUI_SET_CURRENT_CONTEXT_FUNC
+    IMGUI_SET_CURRENT_CONTEXT_FUNC(ctx); // For custom thread-based hackery you may want to have control over this.
+#else
+    GImGui = ctx;
+#endif
+}
+
+void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data)
+{
+    GImAllocatorAllocFunc = alloc_func;
+    GImAllocatorFreeFunc = free_func;
+    GImAllocatorUserData = user_data;
+}
+
+// This is provided to facilitate copying allocators from one static/DLL boundary to another (e.g. retrieve default allocator of your executable address space)
+void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data)
+{
+    *p_alloc_func = GImAllocatorAllocFunc;
+    *p_free_func = GImAllocatorFreeFunc;
+    *p_user_data = GImAllocatorUserData;
+}
+
+ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
+{
+    ImGuiContext* prev_ctx = GetCurrentContext();
+    ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
+    SetCurrentContext(ctx);
+    Initialize();
+    if (prev_ctx != NULL)
+        SetCurrentContext(prev_ctx); // Restore previous context if any, else keep new one.
+    return ctx;
+}
+
+void ImGui::DestroyContext(ImGuiContext* ctx)
+{
+    ImGuiContext* prev_ctx = GetCurrentContext();
+    if (ctx == NULL) //-V1051
+        ctx = prev_ctx;
+    SetCurrentContext(ctx);
+    Shutdown();
+    SetCurrentContext((prev_ctx != ctx) ? prev_ctx : NULL);
+    IM_DELETE(ctx);
+}
+
+// IMPORTANT: ###xxx suffixes must be same in ALL languages
+static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
+{
+    { ImGuiLocKey_TableSizeOne,         "Size column to fit###SizeOne"          },
+    { ImGuiLocKey_TableSizeAllFit,      "Size all columns to fit###SizeAll"     },
+    { ImGuiLocKey_TableSizeAllDefault,  "Size all columns to default###SizeAll" },
+    { ImGuiLocKey_TableResetOrder,      "Reset order###ResetOrder"              },
+    { ImGuiLocKey_WindowingMainMenuBar, "(Main menu bar)"                       },
+    { ImGuiLocKey_WindowingPopup,       "(Popup)"                               },
+    { ImGuiLocKey_WindowingUntitled,    "(Untitled)"                            },
+    { ImGuiLocKey_DockingHideTabBar,    "Hide tab bar###HideTabBar"             },
+};
+
+void ImGui::Initialize()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
+
+    // Add .ini handle for ImGuiWindow and ImGuiTable types
+    {
+        ImGuiSettingsHandler ini_handler;
+        ini_handler.TypeName = "Window";
+        ini_handler.TypeHash = ImHashStr("Window");
+        ini_handler.ClearAllFn = WindowSettingsHandler_ClearAll;
+        ini_handler.ReadOpenFn = WindowSettingsHandler_ReadOpen;
+        ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
+        ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
+        ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
+        AddSettingsHandler(&ini_handler);
+    }
+    TableSettingsAddSettingsHandler();
+
+    // Setup default localization table
+    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
+
+    // Create default viewport
+    ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
+    viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
+    viewport->Idx = 0;
+    viewport->PlatformWindowCreated = true;
+    viewport->Flags = ImGuiViewportFlags_OwnedByApp;
+    g.Viewports.push_back(viewport);
+    g.TempBuffer.resize(1024 * 3 + 1, 0);
+    g.PlatformIO.Viewports.push_back(g.Viewports[0]);
+
+#ifdef IMGUI_HAS_DOCK
+    // Initialize Docking
+    DockContextInitialize(&g);
+#endif
+
+    g.Initialized = true;
+}
+
+// This function is merely here to free heap allocations.
+void ImGui::Shutdown()
+{
+    // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
+    ImGuiContext& g = *GImGui;
+    if (g.IO.Fonts && g.FontAtlasOwnedByContext)
+    {
+        g.IO.Fonts->Locked = false;
+        IM_DELETE(g.IO.Fonts);
+    }
+    g.IO.Fonts = NULL;
+    g.DrawListSharedData.TempBuffer.clear();
+
+    // Cleanup of other data are conditional on actually having initialized Dear ImGui.
+    if (!g.Initialized)
+        return;
+
+    // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
+    if (g.SettingsLoaded && g.IO.IniFilename != NULL)
+        SaveIniSettingsToDisk(g.IO.IniFilename);
+
+    // Destroy platform windows
+    DestroyPlatformWindows();
+
+    // Shutdown extensions
+    DockContextShutdown(&g);
+
+    CallContextHooks(&g, ImGuiContextHookType_Shutdown);
+
+    // Clear everything else
+    g.Windows.clear_delete();
+    g.WindowsFocusOrder.clear();
+    g.WindowsTempSortBuffer.clear();
+    g.CurrentWindow = NULL;
+    g.CurrentWindowStack.clear();
+    g.WindowsById.Clear();
+    g.NavWindow = NULL;
+    g.HoveredWindow = g.HoveredWindowUnderMovingWindow = NULL;
+    g.ActiveIdWindow = g.ActiveIdPreviousFrameWindow = NULL;
+    g.MovingWindow = NULL;
+
+    g.KeysRoutingTable.Clear();
+
+    g.ColorStack.clear();
+    g.StyleVarStack.clear();
+    g.FontStack.clear();
+    g.OpenPopupStack.clear();
+    g.BeginPopupStack.clear();
+
+    g.CurrentViewport = g.MouseViewport = g.MouseLastHoveredViewport = NULL;
+    g.Viewports.clear_delete();
+
+    g.TabBars.Clear();
+    g.CurrentTabBarStack.clear();
+    g.ShrinkWidthBuffer.clear();
+
+    g.ClipperTempData.clear_destruct();
+
+    g.Tables.Clear();
+    g.TablesTempData.clear_destruct();
+    g.DrawChannelsTempMergeBuffer.clear();
+
+    g.ClipboardHandlerData.clear();
+    g.MenusIdSubmittedThisFrame.clear();
+    g.InputTextState.ClearFreeMemory();
+
+    g.SettingsWindows.clear();
+    g.SettingsHandlers.clear();
+
+    if (g.LogFile)
+    {
+#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
+        if (g.LogFile != stdout)
+#endif
+            ImFileClose(g.LogFile);
+        g.LogFile = NULL;
+    }
+    g.LogBuffer.clear();
+    g.DebugLogBuf.clear();
+    g.DebugLogIndex.clear();
+
+    g.Initialized = false;
+}
+
+// No specific ordering/dependency support, will see as needed
+ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
+{
+    ImGuiContext& g = *ctx;
+    IM_ASSERT(hook->Callback != NULL && hook->HookId == 0 && hook->Type != ImGuiContextHookType_PendingRemoval_);
+    g.Hooks.push_back(*hook);
+    g.Hooks.back().HookId = ++g.HookIdNext;
+    return g.HookIdNext;
+}
+
+// Deferred removal, avoiding issue with changing vector while iterating it
+void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
+{
+    ImGuiContext& g = *ctx;
+    IM_ASSERT(hook_id != 0);
+    for (int n = 0; n < g.Hooks.Size; n++)
+        if (g.Hooks[n].HookId == hook_id)
+            g.Hooks[n].Type = ImGuiContextHookType_PendingRemoval_;
+}
+
+// Call context hooks (used by e.g. test engine)
+// We assume a small number of hooks so all stored in same array
+void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
+{
+    ImGuiContext& g = *ctx;
+    for (int n = 0; n < g.Hooks.Size; n++)
+        if (g.Hooks[n].Type == hook_type)
+            g.Hooks[n].Callback(&g, &g.Hooks[n]);
+}
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
@@ -3922,89 +4150,6 @@ const char* ImGui::GetVersion()
     return IMGUI_VERSION;
 }
 
-// Internal state access - if you want to share Dear ImGui state between modules (e.g. DLL) or allocate it yourself
-// Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
-ImGuiContext* ImGui::GetCurrentContext()
-{
-    return GImGui;
-}
-
-void ImGui::SetCurrentContext(ImGuiContext* ctx)
-{
-#ifdef IMGUI_SET_CURRENT_CONTEXT_FUNC
-    IMGUI_SET_CURRENT_CONTEXT_FUNC(ctx); // For custom thread-based hackery you may want to have control over this.
-#else
-    GImGui = ctx;
-#endif
-}
-
-void ImGui::SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func, ImGuiMemFreeFunc free_func, void* user_data)
-{
-    GImAllocatorAllocFunc = alloc_func;
-    GImAllocatorFreeFunc = free_func;
-    GImAllocatorUserData = user_data;
-}
-
-// This is provided to facilitate copying allocators from one static/DLL boundary to another (e.g. retrieve default allocator of your executable address space)
-void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data)
-{
-    *p_alloc_func = GImAllocatorAllocFunc;
-    *p_free_func = GImAllocatorFreeFunc;
-    *p_user_data = GImAllocatorUserData;
-}
-
-ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
-{
-    ImGuiContext* prev_ctx = GetCurrentContext();
-    ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
-    SetCurrentContext(ctx);
-    Initialize();
-    if (prev_ctx != NULL)
-        SetCurrentContext(prev_ctx); // Restore previous context if any, else keep new one.
-    return ctx;
-}
-
-void ImGui::DestroyContext(ImGuiContext* ctx)
-{
-    ImGuiContext* prev_ctx = GetCurrentContext();
-    if (ctx == NULL) //-V1051
-        ctx = prev_ctx;
-    SetCurrentContext(ctx);
-    Shutdown();
-    SetCurrentContext((prev_ctx != ctx) ? prev_ctx : NULL);
-    IM_DELETE(ctx);
-}
-
-// No specific ordering/dependency support, will see as needed
-ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
-{
-    ImGuiContext& g = *ctx;
-    IM_ASSERT(hook->Callback != NULL && hook->HookId == 0 && hook->Type != ImGuiContextHookType_PendingRemoval_);
-    g.Hooks.push_back(*hook);
-    g.Hooks.back().HookId = ++g.HookIdNext;
-    return g.HookIdNext;
-}
-
-// Deferred removal, avoiding issue with changing vector while iterating it
-void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
-{
-    ImGuiContext& g = *ctx;
-    IM_ASSERT(hook_id != 0);
-    for (int n = 0; n < g.Hooks.Size; n++)
-        if (g.Hooks[n].HookId == hook_id)
-            g.Hooks[n].Type = ImGuiContextHookType_PendingRemoval_;
-}
-
-// Call context hooks (used by e.g. test engine)
-// We assume a small number of hooks so all stored in same array
-void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
-{
-    ImGuiContext& g = *ctx;
-    for (int n = 0; n < g.Hooks.Size; n++)
-        if (g.Hooks[n].Type == hook_type)
-            g.Hooks[n].Callback(&g, &g.Hooks[n]);
-}
-
 ImGuiIO& ImGui::GetIO()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -4281,396 +4426,6 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 static bool IsWindowActiveAndVisible(ImGuiWindow* window)
 {
     return (window->Active) && (!window->Hidden);
-}
-
-static void UpdateAliasKey(ImGuiKey key, bool v, float analog_value)
-{
-    IM_ASSERT(ImGui::IsAliasKey(key));
-    ImGuiKeyData* key_data = ImGui::GetKeyData(key);
-    key_data->Down = v;
-    key_data->AnalogValue = analog_value;
-}
-
-// Rewrite routing data buffers to strip old entries + sort by key to make queries not touch scattered data.
-//   Entries   D,A,B,B,A,C,B     --> A,A,B,B,B,C,D
-//   Index     A:1 B:2 C:5 D:0   --> A:0 B:2 C:5 D:6
-// See 'Metrics->Key Owners & Shortcut Routing' to visualize the result of that operation.
-static void UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
-{
-    ImGuiContext& g = *GImGui;
-    rt->EntriesNext.resize(0);
-    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
-    {
-        const int new_routing_start_idx = rt->EntriesNext.Size;
-        ImGuiKeyRoutingData* routing_entry;
-        for (int old_routing_idx = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; old_routing_idx != -1; old_routing_idx = routing_entry->NextEntryIndex)
-        {
-            routing_entry = &rt->Entries[old_routing_idx];
-            routing_entry->RoutingCurr = routing_entry->RoutingNext; // Update entry
-            routing_entry->RoutingNext = ImGuiKeyOwner_None;
-            routing_entry->RoutingNextScore = 255;
-            if (routing_entry->RoutingCurr == ImGuiKeyOwner_None)
-                continue;
-            rt->EntriesNext.push_back(*routing_entry); // Write alive ones into new buffer
-
-            // Apply routing to owner if there's no owner already (RoutingCurr == None at this point)
-            if (routing_entry->Mods == g.IO.KeyMods)
-            {
-                ImGuiKeyOwnerData* owner_data = ImGui::GetKeyOwnerData(key);
-                if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
-                    owner_data->OwnerCurr = routing_entry->RoutingCurr;
-            }
-        }
-
-        // Rewrite linked-list
-        rt->Index[key - ImGuiKey_NamedKey_BEGIN] = (ImGuiKeyRoutingIndex)(new_routing_start_idx < rt->EntriesNext.Size ? new_routing_start_idx : -1);
-        for (int n = new_routing_start_idx; n < rt->EntriesNext.Size; n++)
-            rt->EntriesNext[n].NextEntryIndex = (ImGuiKeyRoutingIndex)((n + 1 < rt->EntriesNext.Size) ? n + 1 : -1);
-    }
-    rt->Entries.swap(rt->EntriesNext); // Swap new and old indexes
-}
-
-// [Internal] Do not use directly
-static ImGuiKeyChord GetMergedModsFromKeys()
-{
-    ImGuiKeyChord mods = 0;
-    if (ImGui::IsKeyDown(ImGuiMod_Ctrl))     { mods |= ImGuiMod_Ctrl; }
-    if (ImGui::IsKeyDown(ImGuiMod_Shift))    { mods |= ImGuiMod_Shift; }
-    if (ImGui::IsKeyDown(ImGuiMod_Alt))      { mods |= ImGuiMod_Alt; }
-    if (ImGui::IsKeyDown(ImGuiMod_Super))    { mods |= ImGuiMod_Super; }
-    return mods;
-}
-
-static void ImGui::UpdateKeyboardInputs()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiIO& io = g.IO;
-
-    // Import legacy keys or verify they are not used
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    if (io.BackendUsingLegacyKeyArrays == 0)
-    {
-        // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written to externally.
-        for (int n = 0; n < ImGuiKey_LegacyNativeKey_END; n++)
-            IM_ASSERT((io.KeysDown[n] == false || IsKeyDown((ImGuiKey)n)) && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
-    }
-    else
-    {
-        if (g.FrameCount == 0)
-            for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
-                IM_ASSERT(g.IO.KeyMap[n] == -1 && "Backend is not allowed to write to io.KeyMap[0..511]!");
-
-        // Build reverse KeyMap (Named -> Legacy)
-        for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
-            if (io.KeyMap[n] != -1)
-            {
-                IM_ASSERT(IsLegacyKey((ImGuiKey)io.KeyMap[n]));
-                io.KeyMap[io.KeyMap[n]] = n;
-            }
-
-        // Import legacy keys into new ones
-        for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
-            if (io.KeysDown[n] || io.BackendUsingLegacyKeyArrays == 1)
-            {
-                const ImGuiKey key = (ImGuiKey)(io.KeyMap[n] != -1 ? io.KeyMap[n] : n);
-                IM_ASSERT(io.KeyMap[n] == -1 || IsNamedKey(key));
-                io.KeysData[key].Down = io.KeysDown[n];
-                if (key != n)
-                    io.KeysDown[key] = io.KeysDown[n]; // Allow legacy code using io.KeysDown[GetKeyIndex()] with old backends
-                io.BackendUsingLegacyKeyArrays = 1;
-            }
-        if (io.BackendUsingLegacyKeyArrays == 1)
-        {
-            GetKeyData(ImGuiMod_Ctrl)->Down = io.KeyCtrl;
-            GetKeyData(ImGuiMod_Shift)->Down = io.KeyShift;
-            GetKeyData(ImGuiMod_Alt)->Down = io.KeyAlt;
-            GetKeyData(ImGuiMod_Super)->Down = io.KeySuper;
-        }
-    }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
-    if (io.BackendUsingLegacyNavInputArray && nav_gamepad_active)
-    {
-        #define MAP_LEGACY_NAV_INPUT_TO_KEY1(_KEY, _NAV1)           do { io.KeysData[_KEY].Down = (io.NavInputs[_NAV1] > 0.0f); io.KeysData[_KEY].AnalogValue = io.NavInputs[_NAV1]; } while (0)
-        #define MAP_LEGACY_NAV_INPUT_TO_KEY2(_KEY, _NAV1, _NAV2)    do { io.KeysData[_KEY].Down = (io.NavInputs[_NAV1] > 0.0f) || (io.NavInputs[_NAV2] > 0.0f); io.KeysData[_KEY].AnalogValue = ImMax(io.NavInputs[_NAV1], io.NavInputs[_NAV2]); } while (0)
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceDown, ImGuiNavInput_Activate);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceRight, ImGuiNavInput_Cancel);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceLeft, ImGuiNavInput_Menu);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceUp, ImGuiNavInput_Input);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadLeft, ImGuiNavInput_DpadLeft);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadRight, ImGuiNavInput_DpadRight);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadUp, ImGuiNavInput_DpadUp);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadDown, ImGuiNavInput_DpadDown);
-        MAP_LEGACY_NAV_INPUT_TO_KEY2(ImGuiKey_GamepadL1, ImGuiNavInput_FocusPrev, ImGuiNavInput_TweakSlow);
-        MAP_LEGACY_NAV_INPUT_TO_KEY2(ImGuiKey_GamepadR1, ImGuiNavInput_FocusNext, ImGuiNavInput_TweakFast);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickLeft, ImGuiNavInput_LStickLeft);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickRight, ImGuiNavInput_LStickRight);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickUp, ImGuiNavInput_LStickUp);
-        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickDown, ImGuiNavInput_LStickDown);
-        #undef NAV_MAP_KEY
-    }
-#endif
-#endif
-
-    // Update aliases
-    for (int n = 0; n < ImGuiMouseButton_COUNT; n++)
-        UpdateAliasKey(MouseButtonToKey(n), io.MouseDown[n], io.MouseDown[n] ? 1.0f : 0.0f);
-    UpdateAliasKey(ImGuiKey_MouseWheelX, io.MouseWheelH != 0.0f, io.MouseWheelH);
-    UpdateAliasKey(ImGuiKey_MouseWheelY, io.MouseWheel != 0.0f, io.MouseWheel);
-
-    // Synchronize io.KeyMods and io.KeyXXX values.
-    // - New backends (1.87+): send io.AddKeyEvent(ImGuiMod_XXX) ->                                      -> (here) deriving io.KeyMods + io.KeyXXX from key array.
-    // - Legacy backends:      set io.KeyXXX bools               -> (above) set key array from io.KeyXXX -> (here) deriving io.KeyMods + io.KeyXXX from key array.
-    // So with legacy backends the 4 values will do a unnecessary back-and-forth but it makes the code simpler and future facing.
-    io.KeyMods = GetMergedModsFromKeys();
-    io.KeyCtrl = (io.KeyMods & ImGuiMod_Ctrl) != 0;
-    io.KeyShift = (io.KeyMods & ImGuiMod_Shift) != 0;
-    io.KeyAlt = (io.KeyMods & ImGuiMod_Alt) != 0;
-    io.KeySuper = (io.KeyMods & ImGuiMod_Super) != 0;
-
-    // Clear gamepad data if disabled
-    if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
-        for (int i = ImGuiKey_Gamepad_BEGIN; i < ImGuiKey_Gamepad_END; i++)
-        {
-            io.KeysData[i - ImGuiKey_KeysData_OFFSET].Down = false;
-            io.KeysData[i - ImGuiKey_KeysData_OFFSET].AnalogValue = 0.0f;
-        }
-
-    // Update keys
-    for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++)
-    {
-        ImGuiKeyData* key_data = &io.KeysData[i];
-        key_data->DownDurationPrev = key_data->DownDuration;
-        key_data->DownDuration = key_data->Down ? (key_data->DownDuration < 0.0f ? 0.0f : key_data->DownDuration + io.DeltaTime) : -1.0f;
-    }
-
-    // Update keys/input owner (named keys only): one entry per key
-    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
-    {
-        ImGuiKeyData* key_data = &io.KeysData[key - ImGuiKey_KeysData_OFFSET];
-        ImGuiKeyOwnerData* owner_data = &g.KeysOwnerData[key - ImGuiKey_NamedKey_BEGIN];
-        owner_data->OwnerCurr = owner_data->OwnerNext;
-        if (!key_data->Down) // Important: ownership is released on the frame after a release. Ensure a 'MouseDown -> CloseWindow -> MouseUp' chain doesn't lead to someone else seeing the MouseUp.
-            owner_data->OwnerNext = ImGuiKeyOwner_None;
-        owner_data->LockThisFrame = owner_data->LockUntilRelease = owner_data->LockUntilRelease && key_data->Down;  // Clear LockUntilRelease when key is not Down anymore
-    }
-
-    UpdateKeyRoutingTable(&g.KeysRoutingTable);
-}
-
-static void ImGui::UpdateMouseInputs()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiIO& io = g.IO;
-
-    // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
-    if (IsMousePosValid(&io.MousePos))
-        io.MousePos = g.MouseLastValidPos = ImFloorSigned(io.MousePos);
-
-    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
-    if (IsMousePosValid(&io.MousePos) && IsMousePosValid(&io.MousePosPrev))
-        io.MouseDelta = io.MousePos - io.MousePosPrev;
-    else
-        io.MouseDelta = ImVec2(0.0f, 0.0f);
-
-    // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
-    if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
-        g.NavDisableMouseHover = false;
-
-    io.MousePosPrev = io.MousePos;
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-    {
-        io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
-        io.MouseClickedCount[i] = 0; // Will be filled below
-        io.MouseReleased[i] = !io.MouseDown[i] && io.MouseDownDuration[i] >= 0.0f;
-        io.MouseDownDurationPrev[i] = io.MouseDownDuration[i];
-        io.MouseDownDuration[i] = io.MouseDown[i] ? (io.MouseDownDuration[i] < 0.0f ? 0.0f : io.MouseDownDuration[i] + io.DeltaTime) : -1.0f;
-        if (io.MouseClicked[i])
-        {
-            bool is_repeated_click = false;
-            if ((float)(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
-            {
-                ImVec2 delta_from_click_pos = IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
-                if (ImLengthSqr(delta_from_click_pos) < io.MouseDoubleClickMaxDist * io.MouseDoubleClickMaxDist)
-                    is_repeated_click = true;
-            }
-            if (is_repeated_click)
-                io.MouseClickedLastCount[i]++;
-            else
-                io.MouseClickedLastCount[i] = 1;
-            io.MouseClickedTime[i] = g.Time;
-            io.MouseClickedPos[i] = io.MousePos;
-            io.MouseClickedCount[i] = io.MouseClickedLastCount[i];
-            io.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
-            io.MouseDragMaxDistanceSqr[i] = 0.0f;
-        }
-        else if (io.MouseDown[i])
-        {
-            // Maintain the maximum distance we reaching from the initial click position, which is used with dragging threshold
-            ImVec2 delta_from_click_pos = IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
-            io.MouseDragMaxDistanceSqr[i] = ImMax(io.MouseDragMaxDistanceSqr[i], ImLengthSqr(delta_from_click_pos));
-            io.MouseDragMaxDistanceAbs[i].x = ImMax(io.MouseDragMaxDistanceAbs[i].x, delta_from_click_pos.x < 0.0f ? -delta_from_click_pos.x : delta_from_click_pos.x);
-            io.MouseDragMaxDistanceAbs[i].y = ImMax(io.MouseDragMaxDistanceAbs[i].y, delta_from_click_pos.y < 0.0f ? -delta_from_click_pos.y : delta_from_click_pos.y);
-        }
-
-        // We provide io.MouseDoubleClicked[] as a legacy service
-        io.MouseDoubleClicked[i] = (io.MouseClickedCount[i] == 2);
-
-        // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
-        if (io.MouseClicked[i])
-            g.NavDisableMouseHover = false;
-    }
-}
-
-static void LockWheelingWindow(ImGuiWindow* window, float wheel_amount)
-{
-    ImGuiContext& g = *GImGui;
-    if (window)
-        g.WheelingWindowReleaseTimer = ImMin(g.WheelingWindowReleaseTimer + ImAbs(wheel_amount) * WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER, WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER);
-    else
-        g.WheelingWindowReleaseTimer = 0.0f;
-    if (g.WheelingWindow == window)
-        return;
-    IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
-    g.WheelingWindow = window;
-    g.WheelingWindowRefMousePos = g.IO.MousePos;
-    if (window == NULL)
-    {
-        g.WheelingWindowStartFrame = -1;
-        g.WheelingAxisAvg = ImVec2(0.0f, 0.0f);
-    }
-}
-
-static ImGuiWindow* FindBestWheelingWindow(const ImVec2& wheel)
-{
-    // For each axis, find window in the hierarchy that may want to use scrolling
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* windows[2] = { NULL, NULL };
-    for (int axis = 0; axis < 2; axis++)
-        if (wheel[axis] != 0.0f)
-            for (ImGuiWindow* window = windows[axis] = g.HoveredWindow; window->Flags & ImGuiWindowFlags_ChildWindow; window = windows[axis] = window->ParentWindow)
-            {
-                // Bubble up into parent window if:
-                // - a child window doesn't allow any scrolling.
-                // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
-                //// - a child window doesn't need scrolling because it is already at the edge for the direction we are going in (FIXME-WIP)
-                const bool has_scrolling = (window->ScrollMax[axis] != 0.0f);
-                const bool inputs_disabled = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
-                //const bool scrolling_past_limits = (wheel_v < 0.0f) ? (window->Scroll[axis] <= 0.0f) : (window->Scroll[axis] >= window->ScrollMax[axis]);
-                if (has_scrolling && !inputs_disabled) // && !scrolling_past_limits)
-                    break; // select this window
-            }
-    if (windows[0] == NULL && windows[1] == NULL)
-        return NULL;
-
-    // If there's only one window or only one axis then there's no ambiguity
-    if (windows[0] == windows[1] || windows[0] == NULL || windows[1] == NULL)
-        return windows[1] ? windows[1] : windows[0];
-
-    // If candidate are different windows we need to decide which one to prioritize
-    // - First frame: only find a winner if one axis is zero.
-    // - Subsequent frames: only find a winner when one is more than the other.
-    if (g.WheelingWindowStartFrame == -1)
-        g.WheelingWindowStartFrame = g.FrameCount;
-    if ((g.WheelingWindowStartFrame == g.FrameCount && wheel.x != 0.0f && wheel.y != 0.0f) || (g.WheelingAxisAvg.x == g.WheelingAxisAvg.y))
-    {
-        g.WheelingWindowWheelRemainder = wheel;
-        return NULL;
-    }
-    return (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? windows[0] : windows[1];
-}
-
-void ImGui::UpdateMouseWheel()
-{
-    ImGuiContext& g = *GImGui;
-
-    // Reset the locked window if we move the mouse or after the timer elapses.
-    // FIXME: Ideally we could refactor to have one timer for "changing window w/ same axis" and a shorter timer for "changing window or axis w/ other axis" (#3795)
-    if (g.WheelingWindow != NULL)
-    {
-        g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
-        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
-            g.WheelingWindowReleaseTimer = 0.0f;
-        if (g.WheelingWindowReleaseTimer <= 0.0f)
-            LockWheelingWindow(NULL, 0.0f);
-    }
-
-    ImVec2 wheel;
-    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_None) ? g.IO.MouseWheelH : 0.0f;
-    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_None) ? g.IO.MouseWheel : 0.0f;
-
-    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
-    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
-    if (!mouse_window || mouse_window->Collapsed)
-        return;
-
-    // Zoom / Scale window
-    // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
-    if (wheel.y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
-    {
-        LockWheelingWindow(mouse_window, wheel.y);
-        ImGuiWindow* window = mouse_window;
-        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-        const float scale = new_font_scale / window->FontWindowScale;
-        window->FontWindowScale = new_font_scale;
-        if (window == window->RootWindow)
-        {
-            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-            SetWindowPos(window, window->Pos + offset, 0);
-            window->Size = ImFloor(window->Size * scale);
-            window->SizeFull = ImFloor(window->SizeFull * scale);
-        }
-        return;
-    }
-    if (g.IO.KeyCtrl)
-        return;
-
-    // Mouse wheel scrolling
-    // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
-    // (we avoid doing it on OSX as it the OS input layer handles this already)
-    const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
-    if (swap_axis)
-    {
-        wheel.x = wheel.y;
-        wheel.y = 0.0f;
-    }
-
-    // Maintain a rough average of moving magnitude on both axises
-    // FIXME: should by based on wall clock time rather than frame-counter
-    g.WheelingAxisAvg.x = ImExponentialMovingAverage(g.WheelingAxisAvg.x, ImAbs(wheel.x), 30);
-    g.WheelingAxisAvg.y = ImExponentialMovingAverage(g.WheelingAxisAvg.y, ImAbs(wheel.y), 30);
-
-    // In the rare situation where FindBestWheelingWindow() had to defer first frame of wheeling due to ambiguous main axis, reinject it now.
-    wheel += g.WheelingWindowWheelRemainder;
-    g.WheelingWindowWheelRemainder = ImVec2(0.0f, 0.0f);
-    if (wheel.x == 0.0f && wheel.y == 0.0f)
-        return;
-
-    // Mouse wheel scrolling: find target and apply
-    // - don't renew lock if axis doesn't apply on the window.
-    // - select a main axis when both axises are being moved.
-    if (ImGuiWindow* window = (g.WheelingWindow ? g.WheelingWindow : FindBestWheelingWindow(wheel)))
-        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
-        {
-            bool do_scroll[2] = { wheel.x != 0.0f && window->ScrollMax.x != 0.0f, wheel.y != 0.0f && window->ScrollMax.y != 0.0f };
-            if (do_scroll[ImGuiAxis_X] && do_scroll[ImGuiAxis_Y])
-                do_scroll[(g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? ImGuiAxis_Y : ImGuiAxis_X] = false;
-            if (do_scroll[ImGuiAxis_X])
-            {
-                LockWheelingWindow(window, wheel.x);
-                float max_step = window->InnerRect.GetWidth() * 0.67f;
-                float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
-                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
-            }
-            if (do_scroll[ImGuiAxis_Y])
-            {
-                LockWheelingWindow(window, wheel.y);
-                float max_step = window->InnerRect.GetHeight() * 0.67f;
-                float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
-                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
-            }
-        }
 }
 
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
@@ -5013,143 +4768,6 @@ void ImGui::NewFrame()
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
-}
-
-// IMPORTANT: ###xxx suffixes must be same in ALL languages
-static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
-{
-    { ImGuiLocKey_TableSizeOne,         "Size column to fit###SizeOne"          },
-    { ImGuiLocKey_TableSizeAllFit,      "Size all columns to fit###SizeAll"     },
-    { ImGuiLocKey_TableSizeAllDefault,  "Size all columns to default###SizeAll" },
-    { ImGuiLocKey_TableResetOrder,      "Reset order###ResetOrder"              },
-    { ImGuiLocKey_WindowingMainMenuBar, "(Main menu bar)"                       },
-    { ImGuiLocKey_WindowingPopup,       "(Popup)"                               },
-    { ImGuiLocKey_WindowingUntitled,    "(Untitled)"                            },
-    { ImGuiLocKey_DockingHideTabBar,    "Hide tab bar###HideTabBar"             },
-};
-
-void ImGui::Initialize()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
-
-    // Add .ini handle for ImGuiWindow and ImGuiTable types
-    {
-        ImGuiSettingsHandler ini_handler;
-        ini_handler.TypeName = "Window";
-        ini_handler.TypeHash = ImHashStr("Window");
-        ini_handler.ClearAllFn = WindowSettingsHandler_ClearAll;
-        ini_handler.ReadOpenFn = WindowSettingsHandler_ReadOpen;
-        ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
-        ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
-        ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
-        AddSettingsHandler(&ini_handler);
-    }
-    TableSettingsAddSettingsHandler();
-
-    // Setup default localization table
-    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
-
-    // Create default viewport
-    ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
-    viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
-    viewport->Idx = 0;
-    viewport->PlatformWindowCreated = true;
-    viewport->Flags = ImGuiViewportFlags_OwnedByApp;
-    g.Viewports.push_back(viewport);
-    g.TempBuffer.resize(1024 * 3 + 1, 0);
-    g.PlatformIO.Viewports.push_back(g.Viewports[0]);
-
-#ifdef IMGUI_HAS_DOCK
-    // Initialize Docking
-    DockContextInitialize(&g);
-#endif
-
-    g.Initialized = true;
-}
-
-// This function is merely here to free heap allocations.
-void ImGui::Shutdown()
-{
-    // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
-    ImGuiContext& g = *GImGui;
-    if (g.IO.Fonts && g.FontAtlasOwnedByContext)
-    {
-        g.IO.Fonts->Locked = false;
-        IM_DELETE(g.IO.Fonts);
-    }
-    g.IO.Fonts = NULL;
-    g.DrawListSharedData.TempBuffer.clear();
-
-    // Cleanup of other data are conditional on actually having initialized Dear ImGui.
-    if (!g.Initialized)
-        return;
-
-    // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
-    if (g.SettingsLoaded && g.IO.IniFilename != NULL)
-        SaveIniSettingsToDisk(g.IO.IniFilename);
-
-    // Destroy platform windows
-    DestroyPlatformWindows();
-
-    // Shutdown extensions
-    DockContextShutdown(&g);
-
-    CallContextHooks(&g, ImGuiContextHookType_Shutdown);
-
-    // Clear everything else
-    g.Windows.clear_delete();
-    g.WindowsFocusOrder.clear();
-    g.WindowsTempSortBuffer.clear();
-    g.CurrentWindow = NULL;
-    g.CurrentWindowStack.clear();
-    g.WindowsById.Clear();
-    g.NavWindow = NULL;
-    g.HoveredWindow = g.HoveredWindowUnderMovingWindow = NULL;
-    g.ActiveIdWindow = g.ActiveIdPreviousFrameWindow = NULL;
-    g.MovingWindow = NULL;
-
-    g.KeysRoutingTable.Clear();
-
-    g.ColorStack.clear();
-    g.StyleVarStack.clear();
-    g.FontStack.clear();
-    g.OpenPopupStack.clear();
-    g.BeginPopupStack.clear();
-
-    g.CurrentViewport = g.MouseViewport = g.MouseLastHoveredViewport = NULL;
-    g.Viewports.clear_delete();
-
-    g.TabBars.Clear();
-    g.CurrentTabBarStack.clear();
-    g.ShrinkWidthBuffer.clear();
-
-    g.ClipperTempData.clear_destruct();
-
-    g.Tables.Clear();
-    g.TablesTempData.clear_destruct();
-    g.DrawChannelsTempMergeBuffer.clear();
-
-    g.ClipboardHandlerData.clear();
-    g.MenusIdSubmittedThisFrame.clear();
-    g.InputTextState.ClearFreeMemory();
-
-    g.SettingsWindows.clear();
-    g.SettingsHandlers.clear();
-
-    if (g.LogFile)
-    {
-#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
-        if (g.LogFile != stdout)
-#endif
-            ImFileClose(g.LogFile);
-        g.LogFile = NULL;
-    }
-    g.LogBuffer.clear();
-    g.DebugLogBuf.clear();
-    g.DebugLogIndex.clear();
-
-    g.Initialized = false;
 }
 
 // FIXME: Add a more explicit sort order in the window structure.
@@ -6374,9 +5992,9 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     {
         ImVec2 nav_resize_dir;
         if (g.NavInputSource == ImGuiInputSource_Keyboard && g.IO.KeyShift)
-            nav_resize_dir = GetKeyVector2d(ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow);
+            nav_resize_dir = GetKeyMagnitude2d(ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow);
         if (g.NavInputSource == ImGuiInputSource_Gamepad)
-            nav_resize_dir = GetKeyVector2d(ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadDpadDown);
+            nav_resize_dir = GetKeyMagnitude2d(ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadDpadDown);
         if (nav_resize_dir.x != 0.0f || nav_resize_dir.y != 0.0f)
         {
             const float NAV_RESIZE_SPEED = 600.0f;
@@ -8524,27 +8142,65 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
 //-----------------------------------------------------------------------------
-
-// Test if mouse cursor is hovering given rectangle
-// NB- Rectangle is clipped by our current clip setting
-// NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
-{
-    ImGuiContext& g = *GImGui;
-
-    // Clip
-    ImRect rect_clipped(r_min, r_max);
-    if (clip)
-        rect_clipped.ClipWith(g.CurrentWindow->ClipRect);
-
-    // Expand for touch input
-    const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
-    if (!rect_for_touch.Contains(g.IO.MousePos))
-        return false;
-    if (!g.MouseViewport->GetMainRect().Overlaps(rect_clipped))
-        return false;
-    return true;
-}
+// - GetKeyData() [Internal]
+// - GetKeyIndex() [Internal]
+// - GetKeyName()
+// - GetKeyChordName() [Internal]
+// - CalcTypematicRepeatAmount() [Internal]
+// - GetTypematicRepeatRate() [Internal]
+// - GetKeyPressedAmount() [Internal]
+// - GetKeyMagnitude2d() [Internal]
+//-----------------------------------------------------------------------------
+// - UpdateKeyRoutingTable() [Internal]
+// - GetRoutingIdFromOwnerId() [Internal]
+// - GetShortcutRoutingData() [Internal]
+// - CalcRoutingScore() [Internal]
+// - SetShortcutRouting() [Internal]
+// - TestShortcutRouting() [Internal]
+//-----------------------------------------------------------------------------
+// - IsKeyDown()
+// - IsKeyPressed()
+// - IsKeyReleased()
+//-----------------------------------------------------------------------------
+// - IsMouseDown()
+// - IsMouseClicked()
+// - IsMouseReleased()
+// - IsMouseDoubleClicked()
+// - GetMouseClickedCount()
+// - IsMouseHoveringRect() [Internal]
+// - IsMouseDragPastThreshold() [Internal]
+// - IsMouseDragging()
+// - GetMousePos()
+// - GetMousePosOnOpeningCurrentPopup()
+// - IsMousePosValid()
+// - IsAnyMouseDown()
+// - GetMouseDragDelta()
+// - ResetMouseDragDelta()
+// - GetMouseCursor()
+// - SetMouseCursor()
+//-----------------------------------------------------------------------------
+// - UpdateAliasKey()
+// - GetMergedModsFromKeys()
+// - UpdateKeyboardInputs()
+// - UpdateMouseInputs()
+//-----------------------------------------------------------------------------
+// - LockWheelingWindow [Internal]
+// - FindBestWheelingWindow [Internal]
+// - UpdateMouseWheel() [Internal]
+//-----------------------------------------------------------------------------
+// - SetNextFrameWantCaptureKeyboard()
+// - SetNextFrameWantCaptureMouse()
+//-----------------------------------------------------------------------------
+// - GetInputSourceName() [Internal]
+// - DebugPrintInputEvent() [Internal]
+// - UpdateInputEvents() [Internal]
+//-----------------------------------------------------------------------------
+// - GetKeyOwner() [Internal]
+// - TestKeyOwner() [Internal]
+// - SetKeyOwner() [Internal]
+// - SetItemKeyOwner() [Internal]
+// - Shortcut() [Internal]
+//-----------------------------------------------------------------------------
 
 ImGuiKeyData* ImGui::GetKeyData(ImGuiKey key)
 {
@@ -8683,11 +8339,50 @@ int ImGui::GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float repeat_ra
 }
 
 // Return 2D vector representing the combination of four cardinal direction, with analog value support (for e.g. ImGuiKey_GamepadLStick* values).
-ImVec2 ImGui::GetKeyVector2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down)
+ImVec2 ImGui::GetKeyMagnitude2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down)
 {
     return ImVec2(
         GetKeyData(key_right)->AnalogValue - GetKeyData(key_left)->AnalogValue,
         GetKeyData(key_down)->AnalogValue - GetKeyData(key_up)->AnalogValue);
+}
+
+// Rewrite routing data buffers to strip old entries + sort by key to make queries not touch scattered data.
+//   Entries   D,A,B,B,A,C,B     --> A,A,B,B,B,C,D
+//   Index     A:1 B:2 C:5 D:0   --> A:0 B:2 C:5 D:6
+// See 'Metrics->Key Owners & Shortcut Routing' to visualize the result of that operation.
+static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
+{
+    ImGuiContext& g = *GImGui;
+    rt->EntriesNext.resize(0);
+    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+    {
+        const int new_routing_start_idx = rt->EntriesNext.Size;
+        ImGuiKeyRoutingData* routing_entry;
+        for (int old_routing_idx = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; old_routing_idx != -1; old_routing_idx = routing_entry->NextEntryIndex)
+        {
+            routing_entry = &rt->Entries[old_routing_idx];
+            routing_entry->RoutingCurr = routing_entry->RoutingNext; // Update entry
+            routing_entry->RoutingNext = ImGuiKeyOwner_None;
+            routing_entry->RoutingNextScore = 255;
+            if (routing_entry->RoutingCurr == ImGuiKeyOwner_None)
+                continue;
+            rt->EntriesNext.push_back(*routing_entry); // Write alive ones into new buffer
+
+            // Apply routing to owner if there's no owner already (RoutingCurr == None at this point)
+            if (routing_entry->Mods == g.IO.KeyMods)
+            {
+                ImGuiKeyOwnerData* owner_data = ImGui::GetKeyOwnerData(key);
+                if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
+                    owner_data->OwnerCurr = routing_entry->RoutingCurr;
+            }
+        }
+
+        // Rewrite linked-list
+        rt->Index[key - ImGuiKey_NamedKey_BEGIN] = (ImGuiKeyRoutingIndex)(new_routing_start_idx < rt->EntriesNext.Size ? new_routing_start_idx : -1);
+        for (int n = new_routing_start_idx; n < rt->EntriesNext.Size; n++)
+            rt->EntriesNext[n].NextEntryIndex = (ImGuiKeyRoutingIndex)((n + 1 < rt->EntriesNext.Size) ? n + 1 : -1);
+    }
+    rt->Entries.swap(rt->EntriesNext); // Swap new and old indexes
 }
 
 // owner_id may be None/Any, but routing_id needs to be always be set, so we default to GetCurrentFocusScope().
@@ -8962,6 +8657,27 @@ int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
     return g.IO.MouseClickedCount[button];
 }
 
+// Test if mouse cursor is hovering given rectangle
+// NB- Rectangle is clipped by our current clip setting
+// NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
+bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
+{
+    ImGuiContext& g = *GImGui;
+
+    // Clip
+    ImRect rect_clipped(r_min, r_max);
+    if (clip)
+        rect_clipped.ClipWith(g.CurrentWindow->ClipRect);
+
+    // Expand for touch input
+    const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
+    if (!rect_for_touch.Contains(g.IO.MousePos))
+        return false;
+    if (!g.MouseViewport->GetMainRect().Overlaps(rect_clipped))
+        return false;
+    return true;
+}
+
 // Return if a mouse click/drag went past the given threshold. Valid to call during the MouseReleased frame.
 // [Internal] This doesn't test if the button is pressed
 bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold)
@@ -9056,6 +8772,357 @@ void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
 {
     ImGuiContext& g = *GImGui;
     g.MouseCursor = cursor_type;
+}
+
+static void UpdateAliasKey(ImGuiKey key, bool v, float analog_value)
+{
+    IM_ASSERT(ImGui::IsAliasKey(key));
+    ImGuiKeyData* key_data = ImGui::GetKeyData(key);
+    key_data->Down = v;
+    key_data->AnalogValue = analog_value;
+}
+
+// [Internal] Do not use directly
+static ImGuiKeyChord GetMergedModsFromKeys()
+{
+    ImGuiKeyChord mods = 0;
+    if (ImGui::IsKeyDown(ImGuiMod_Ctrl))     { mods |= ImGuiMod_Ctrl; }
+    if (ImGui::IsKeyDown(ImGuiMod_Shift))    { mods |= ImGuiMod_Shift; }
+    if (ImGui::IsKeyDown(ImGuiMod_Alt))      { mods |= ImGuiMod_Alt; }
+    if (ImGui::IsKeyDown(ImGuiMod_Super))    { mods |= ImGuiMod_Super; }
+    return mods;
+}
+
+static void ImGui::UpdateKeyboardInputs()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
+    // Import legacy keys or verify they are not used
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    if (io.BackendUsingLegacyKeyArrays == 0)
+    {
+        // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written to externally.
+        for (int n = 0; n < ImGuiKey_LegacyNativeKey_END; n++)
+            IM_ASSERT((io.KeysDown[n] == false || IsKeyDown((ImGuiKey)n)) && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+    }
+    else
+    {
+        if (g.FrameCount == 0)
+            for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+                IM_ASSERT(g.IO.KeyMap[n] == -1 && "Backend is not allowed to write to io.KeyMap[0..511]!");
+
+        // Build reverse KeyMap (Named -> Legacy)
+        for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
+            if (io.KeyMap[n] != -1)
+            {
+                IM_ASSERT(IsLegacyKey((ImGuiKey)io.KeyMap[n]));
+                io.KeyMap[io.KeyMap[n]] = n;
+            }
+
+        // Import legacy keys into new ones
+        for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+            if (io.KeysDown[n] || io.BackendUsingLegacyKeyArrays == 1)
+            {
+                const ImGuiKey key = (ImGuiKey)(io.KeyMap[n] != -1 ? io.KeyMap[n] : n);
+                IM_ASSERT(io.KeyMap[n] == -1 || IsNamedKey(key));
+                io.KeysData[key].Down = io.KeysDown[n];
+                if (key != n)
+                    io.KeysDown[key] = io.KeysDown[n]; // Allow legacy code using io.KeysDown[GetKeyIndex()] with old backends
+                io.BackendUsingLegacyKeyArrays = 1;
+            }
+        if (io.BackendUsingLegacyKeyArrays == 1)
+        {
+            GetKeyData(ImGuiMod_Ctrl)->Down = io.KeyCtrl;
+            GetKeyData(ImGuiMod_Shift)->Down = io.KeyShift;
+            GetKeyData(ImGuiMod_Alt)->Down = io.KeyAlt;
+            GetKeyData(ImGuiMod_Super)->Down = io.KeySuper;
+        }
+    }
+
+#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+    const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
+    if (io.BackendUsingLegacyNavInputArray && nav_gamepad_active)
+    {
+        #define MAP_LEGACY_NAV_INPUT_TO_KEY1(_KEY, _NAV1)           do { io.KeysData[_KEY].Down = (io.NavInputs[_NAV1] > 0.0f); io.KeysData[_KEY].AnalogValue = io.NavInputs[_NAV1]; } while (0)
+        #define MAP_LEGACY_NAV_INPUT_TO_KEY2(_KEY, _NAV1, _NAV2)    do { io.KeysData[_KEY].Down = (io.NavInputs[_NAV1] > 0.0f) || (io.NavInputs[_NAV2] > 0.0f); io.KeysData[_KEY].AnalogValue = ImMax(io.NavInputs[_NAV1], io.NavInputs[_NAV2]); } while (0)
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceDown, ImGuiNavInput_Activate);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceRight, ImGuiNavInput_Cancel);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceLeft, ImGuiNavInput_Menu);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadFaceUp, ImGuiNavInput_Input);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadLeft, ImGuiNavInput_DpadLeft);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadRight, ImGuiNavInput_DpadRight);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadUp, ImGuiNavInput_DpadUp);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadDpadDown, ImGuiNavInput_DpadDown);
+        MAP_LEGACY_NAV_INPUT_TO_KEY2(ImGuiKey_GamepadL1, ImGuiNavInput_FocusPrev, ImGuiNavInput_TweakSlow);
+        MAP_LEGACY_NAV_INPUT_TO_KEY2(ImGuiKey_GamepadR1, ImGuiNavInput_FocusNext, ImGuiNavInput_TweakFast);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickLeft, ImGuiNavInput_LStickLeft);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickRight, ImGuiNavInput_LStickRight);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickUp, ImGuiNavInput_LStickUp);
+        MAP_LEGACY_NAV_INPUT_TO_KEY1(ImGuiKey_GamepadLStickDown, ImGuiNavInput_LStickDown);
+        #undef NAV_MAP_KEY
+    }
+#endif
+#endif
+
+    // Update aliases
+    for (int n = 0; n < ImGuiMouseButton_COUNT; n++)
+        UpdateAliasKey(MouseButtonToKey(n), io.MouseDown[n], io.MouseDown[n] ? 1.0f : 0.0f);
+    UpdateAliasKey(ImGuiKey_MouseWheelX, io.MouseWheelH != 0.0f, io.MouseWheelH);
+    UpdateAliasKey(ImGuiKey_MouseWheelY, io.MouseWheel != 0.0f, io.MouseWheel);
+
+    // Synchronize io.KeyMods and io.KeyXXX values.
+    // - New backends (1.87+): send io.AddKeyEvent(ImGuiMod_XXX) ->                                      -> (here) deriving io.KeyMods + io.KeyXXX from key array.
+    // - Legacy backends:      set io.KeyXXX bools               -> (above) set key array from io.KeyXXX -> (here) deriving io.KeyMods + io.KeyXXX from key array.
+    // So with legacy backends the 4 values will do a unnecessary back-and-forth but it makes the code simpler and future facing.
+    io.KeyMods = GetMergedModsFromKeys();
+    io.KeyCtrl = (io.KeyMods & ImGuiMod_Ctrl) != 0;
+    io.KeyShift = (io.KeyMods & ImGuiMod_Shift) != 0;
+    io.KeyAlt = (io.KeyMods & ImGuiMod_Alt) != 0;
+    io.KeySuper = (io.KeyMods & ImGuiMod_Super) != 0;
+
+    // Clear gamepad data if disabled
+    if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
+        for (int i = ImGuiKey_Gamepad_BEGIN; i < ImGuiKey_Gamepad_END; i++)
+        {
+            io.KeysData[i - ImGuiKey_KeysData_OFFSET].Down = false;
+            io.KeysData[i - ImGuiKey_KeysData_OFFSET].AnalogValue = 0.0f;
+        }
+
+    // Update keys
+    for (int i = 0; i < ImGuiKey_KeysData_SIZE; i++)
+    {
+        ImGuiKeyData* key_data = &io.KeysData[i];
+        key_data->DownDurationPrev = key_data->DownDuration;
+        key_data->DownDuration = key_data->Down ? (key_data->DownDuration < 0.0f ? 0.0f : key_data->DownDuration + io.DeltaTime) : -1.0f;
+    }
+
+    // Update keys/input owner (named keys only): one entry per key
+    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+    {
+        ImGuiKeyData* key_data = &io.KeysData[key - ImGuiKey_KeysData_OFFSET];
+        ImGuiKeyOwnerData* owner_data = &g.KeysOwnerData[key - ImGuiKey_NamedKey_BEGIN];
+        owner_data->OwnerCurr = owner_data->OwnerNext;
+        if (!key_data->Down) // Important: ownership is released on the frame after a release. Ensure a 'MouseDown -> CloseWindow -> MouseUp' chain doesn't lead to someone else seeing the MouseUp.
+            owner_data->OwnerNext = ImGuiKeyOwner_None;
+        owner_data->LockThisFrame = owner_data->LockUntilRelease = owner_data->LockUntilRelease && key_data->Down;  // Clear LockUntilRelease when key is not Down anymore
+    }
+
+    UpdateKeyRoutingTable(&g.KeysRoutingTable);
+}
+
+static void ImGui::UpdateMouseInputs()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
+    // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
+    if (IsMousePosValid(&io.MousePos))
+        io.MousePos = g.MouseLastValidPos = ImFloorSigned(io.MousePos);
+
+    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
+    if (IsMousePosValid(&io.MousePos) && IsMousePosValid(&io.MousePosPrev))
+        io.MouseDelta = io.MousePos - io.MousePosPrev;
+    else
+        io.MouseDelta = ImVec2(0.0f, 0.0f);
+
+    // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
+    if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
+        g.NavDisableMouseHover = false;
+
+    io.MousePosPrev = io.MousePos;
+    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    {
+        io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
+        io.MouseClickedCount[i] = 0; // Will be filled below
+        io.MouseReleased[i] = !io.MouseDown[i] && io.MouseDownDuration[i] >= 0.0f;
+        io.MouseDownDurationPrev[i] = io.MouseDownDuration[i];
+        io.MouseDownDuration[i] = io.MouseDown[i] ? (io.MouseDownDuration[i] < 0.0f ? 0.0f : io.MouseDownDuration[i] + io.DeltaTime) : -1.0f;
+        if (io.MouseClicked[i])
+        {
+            bool is_repeated_click = false;
+            if ((float)(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
+            {
+                ImVec2 delta_from_click_pos = IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
+                if (ImLengthSqr(delta_from_click_pos) < io.MouseDoubleClickMaxDist * io.MouseDoubleClickMaxDist)
+                    is_repeated_click = true;
+            }
+            if (is_repeated_click)
+                io.MouseClickedLastCount[i]++;
+            else
+                io.MouseClickedLastCount[i] = 1;
+            io.MouseClickedTime[i] = g.Time;
+            io.MouseClickedPos[i] = io.MousePos;
+            io.MouseClickedCount[i] = io.MouseClickedLastCount[i];
+            io.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
+            io.MouseDragMaxDistanceSqr[i] = 0.0f;
+        }
+        else if (io.MouseDown[i])
+        {
+            // Maintain the maximum distance we reaching from the initial click position, which is used with dragging threshold
+            ImVec2 delta_from_click_pos = IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
+            io.MouseDragMaxDistanceSqr[i] = ImMax(io.MouseDragMaxDistanceSqr[i], ImLengthSqr(delta_from_click_pos));
+            io.MouseDragMaxDistanceAbs[i].x = ImMax(io.MouseDragMaxDistanceAbs[i].x, delta_from_click_pos.x < 0.0f ? -delta_from_click_pos.x : delta_from_click_pos.x);
+            io.MouseDragMaxDistanceAbs[i].y = ImMax(io.MouseDragMaxDistanceAbs[i].y, delta_from_click_pos.y < 0.0f ? -delta_from_click_pos.y : delta_from_click_pos.y);
+        }
+
+        // We provide io.MouseDoubleClicked[] as a legacy service
+        io.MouseDoubleClicked[i] = (io.MouseClickedCount[i] == 2);
+
+        // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
+        if (io.MouseClicked[i])
+            g.NavDisableMouseHover = false;
+    }
+}
+
+static void LockWheelingWindow(ImGuiWindow* window, float wheel_amount)
+{
+    ImGuiContext& g = *GImGui;
+    if (window)
+        g.WheelingWindowReleaseTimer = ImMin(g.WheelingWindowReleaseTimer + ImAbs(wheel_amount) * WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER, WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER);
+    else
+        g.WheelingWindowReleaseTimer = 0.0f;
+    if (g.WheelingWindow == window)
+        return;
+    IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
+    g.WheelingWindow = window;
+    g.WheelingWindowRefMousePos = g.IO.MousePos;
+    if (window == NULL)
+    {
+        g.WheelingWindowStartFrame = -1;
+        g.WheelingAxisAvg = ImVec2(0.0f, 0.0f);
+    }
+}
+
+static ImGuiWindow* FindBestWheelingWindow(const ImVec2& wheel)
+{
+    // For each axis, find window in the hierarchy that may want to use scrolling
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* windows[2] = { NULL, NULL };
+    for (int axis = 0; axis < 2; axis++)
+        if (wheel[axis] != 0.0f)
+            for (ImGuiWindow* window = windows[axis] = g.HoveredWindow; window->Flags & ImGuiWindowFlags_ChildWindow; window = windows[axis] = window->ParentWindow)
+            {
+                // Bubble up into parent window if:
+                // - a child window doesn't allow any scrolling.
+                // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
+                //// - a child window doesn't need scrolling because it is already at the edge for the direction we are going in (FIXME-WIP)
+                const bool has_scrolling = (window->ScrollMax[axis] != 0.0f);
+                const bool inputs_disabled = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
+                //const bool scrolling_past_limits = (wheel_v < 0.0f) ? (window->Scroll[axis] <= 0.0f) : (window->Scroll[axis] >= window->ScrollMax[axis]);
+                if (has_scrolling && !inputs_disabled) // && !scrolling_past_limits)
+                    break; // select this window
+            }
+    if (windows[0] == NULL && windows[1] == NULL)
+        return NULL;
+
+    // If there's only one window or only one axis then there's no ambiguity
+    if (windows[0] == windows[1] || windows[0] == NULL || windows[1] == NULL)
+        return windows[1] ? windows[1] : windows[0];
+
+    // If candidate are different windows we need to decide which one to prioritize
+    // - First frame: only find a winner if one axis is zero.
+    // - Subsequent frames: only find a winner when one is more than the other.
+    if (g.WheelingWindowStartFrame == -1)
+        g.WheelingWindowStartFrame = g.FrameCount;
+    if ((g.WheelingWindowStartFrame == g.FrameCount && wheel.x != 0.0f && wheel.y != 0.0f) || (g.WheelingAxisAvg.x == g.WheelingAxisAvg.y))
+    {
+        g.WheelingWindowWheelRemainder = wheel;
+        return NULL;
+    }
+    return (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? windows[0] : windows[1];
+}
+
+// Called by NewFrame()
+void ImGui::UpdateMouseWheel()
+{
+    // Reset the locked window if we move the mouse or after the timer elapses.
+    // FIXME: Ideally we could refactor to have one timer for "changing window w/ same axis" and a shorter timer for "changing window or axis w/ other axis" (#3795)
+    ImGuiContext& g = *GImGui;
+    if (g.WheelingWindow != NULL)
+    {
+        g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
+        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
+            g.WheelingWindowReleaseTimer = 0.0f;
+        if (g.WheelingWindowReleaseTimer <= 0.0f)
+            LockWheelingWindow(NULL, 0.0f);
+    }
+
+    ImVec2 wheel;
+    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_None) ? g.IO.MouseWheelH : 0.0f;
+    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_None) ? g.IO.MouseWheel : 0.0f;
+
+    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
+    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
+    if (!mouse_window || mouse_window->Collapsed)
+        return;
+
+    // Zoom / Scale window
+    // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
+    if (wheel.y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+    {
+        LockWheelingWindow(mouse_window, wheel.y);
+        ImGuiWindow* window = mouse_window;
+        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+        const float scale = new_font_scale / window->FontWindowScale;
+        window->FontWindowScale = new_font_scale;
+        if (window == window->RootWindow)
+        {
+            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+            SetWindowPos(window, window->Pos + offset, 0);
+            window->Size = ImFloor(window->Size * scale);
+            window->SizeFull = ImFloor(window->SizeFull * scale);
+        }
+        return;
+    }
+    if (g.IO.KeyCtrl)
+        return;
+
+    // Mouse wheel scrolling
+    // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
+    // (we avoid doing it on OSX as it the OS input layer handles this already)
+    const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
+    if (swap_axis)
+    {
+        wheel.x = wheel.y;
+        wheel.y = 0.0f;
+    }
+
+    // Maintain a rough average of moving magnitude on both axises
+    // FIXME: should by based on wall clock time rather than frame-counter
+    g.WheelingAxisAvg.x = ImExponentialMovingAverage(g.WheelingAxisAvg.x, ImAbs(wheel.x), 30);
+    g.WheelingAxisAvg.y = ImExponentialMovingAverage(g.WheelingAxisAvg.y, ImAbs(wheel.y), 30);
+
+    // In the rare situation where FindBestWheelingWindow() had to defer first frame of wheeling due to ambiguous main axis, reinject it now.
+    wheel += g.WheelingWindowWheelRemainder;
+    g.WheelingWindowWheelRemainder = ImVec2(0.0f, 0.0f);
+    if (wheel.x == 0.0f && wheel.y == 0.0f)
+        return;
+
+    // Mouse wheel scrolling: find target and apply
+    // - don't renew lock if axis doesn't apply on the window.
+    // - select a main axis when both axises are being moved.
+    if (ImGuiWindow* window = (g.WheelingWindow ? g.WheelingWindow : FindBestWheelingWindow(wheel)))
+        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
+        {
+            bool do_scroll[2] = { wheel.x != 0.0f && window->ScrollMax.x != 0.0f, wheel.y != 0.0f && window->ScrollMax.y != 0.0f };
+            if (do_scroll[ImGuiAxis_X] && do_scroll[ImGuiAxis_Y])
+                do_scroll[(g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? ImGuiAxis_Y : ImGuiAxis_X] = false;
+            if (do_scroll[ImGuiAxis_X])
+            {
+                LockWheelingWindow(window, wheel.x);
+                float max_step = window->InnerRect.GetWidth() * 0.67f;
+                float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
+                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
+            }
+            if (do_scroll[ImGuiAxis_Y])
+            {
+                LockWheelingWindow(window, wheel.y);
+                float max_step = window->InnerRect.GetHeight() * 0.67f;
+                float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
+                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
+            }
+        }
 }
 
 void ImGui::SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard)
@@ -11702,7 +11769,7 @@ static void ImGui::NavUpdate()
         // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
         if (nav_gamepad_active)
         {
-            const ImVec2 scroll_dir = GetKeyVector2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
+            const ImVec2 scroll_dir = GetKeyMagnitude2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
             const float tweak_factor = IsKeyDown(ImGuiKey_NavGamepadTweakSlow) ? 1.0f / 10.0f : IsKeyDown(ImGuiKey_NavGamepadTweakFast) ? 10.0f : 1.0f;
             if (scroll_dir.x != 0.0f && window->ScrollbarX)
                 SetScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed * tweak_factor));
@@ -12328,9 +12395,9 @@ static void ImGui::NavUpdateWindowing()
     {
         ImVec2 nav_move_dir;
         if (g.NavInputSource == ImGuiInputSource_Keyboard && !io.KeyShift)
-            nav_move_dir = GetKeyVector2d(ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow);
+            nav_move_dir = GetKeyMagnitude2d(ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow);
         if (g.NavInputSource == ImGuiInputSource_Gamepad)
-            nav_move_dir = GetKeyVector2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
+            nav_move_dir = GetKeyMagnitude2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
         if (nav_move_dir.x != 0.0f || nav_move_dir.y != 0.0f)
         {
             const float NAV_MOVE_SPEED = 800.0f;
