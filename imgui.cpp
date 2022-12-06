@@ -9577,38 +9577,24 @@ static float CalcScrollEdgeSnap(float target, float snap_min, float snap_max, fl
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 {
     ImVec2 scroll = window->Scroll;
-    if (window->ScrollTarget.x < FLT_MAX)
+    ImVec2 decoration_size(window->ScrollbarSizes.x, window->TitleBarHeight() + window->MenuBarHeight() + window->ScrollbarSizes.y);
+    for (int axis = 0; axis < 2; axis++)
     {
-        float decoration_total_width = window->ScrollbarSizes.x;
-        float center_x_ratio = window->ScrollTargetCenterRatio.x;
-        float scroll_target_x = window->ScrollTarget.x;
-        if (window->ScrollTargetEdgeSnapDist.x > 0.0f)
+        if (window->ScrollTarget[axis] < FLT_MAX)
         {
-            float snap_x_min = 0.0f;
-            float snap_x_max = window->ScrollMax.x + window->SizeFull.x - decoration_total_width;
-            scroll_target_x = CalcScrollEdgeSnap(scroll_target_x, snap_x_min, snap_x_max, window->ScrollTargetEdgeSnapDist.x, center_x_ratio);
+            float center_ratio = window->ScrollTargetCenterRatio[axis];
+            float scroll_target = window->ScrollTarget[axis];
+            if (window->ScrollTargetEdgeSnapDist[axis] > 0.0f)
+            {
+                float snap_min = 0.0f;
+                float snap_max = window->ScrollMax[axis] + window->SizeFull[axis] - decoration_size[axis];
+                scroll_target = CalcScrollEdgeSnap(scroll_target, snap_min, snap_max, window->ScrollTargetEdgeSnapDist[axis], center_ratio);
+            }
+            scroll[axis] = scroll_target - center_ratio * (window->SizeFull[axis] - decoration_size[axis]);
         }
-        scroll.x = scroll_target_x - center_x_ratio * (window->SizeFull.x - decoration_total_width);
-    }
-    if (window->ScrollTarget.y < FLT_MAX)
-    {
-        float decoration_total_height = window->TitleBarHeight() + window->MenuBarHeight() + window->ScrollbarSizes.y;
-        float center_y_ratio = window->ScrollTargetCenterRatio.y;
-        float scroll_target_y = window->ScrollTarget.y;
-        if (window->ScrollTargetEdgeSnapDist.y > 0.0f)
-        {
-            float snap_y_min = 0.0f;
-            float snap_y_max = window->ScrollMax.y + window->SizeFull.y - decoration_total_height;
-            scroll_target_y = CalcScrollEdgeSnap(scroll_target_y, snap_y_min, snap_y_max, window->ScrollTargetEdgeSnapDist.y, center_y_ratio);
-        }
-        scroll.y = scroll_target_y - center_y_ratio * (window->SizeFull.y - decoration_total_height);
-    }
-    scroll.x = IM_FLOOR(ImMax(scroll.x, 0.0f));
-    scroll.y = IM_FLOOR(ImMax(scroll.y, 0.0f));
-    if (!window->Collapsed && !window->SkipItems)
-    {
-        scroll.x = ImMin(scroll.x, window->ScrollMax.x);
-        scroll.y = ImMin(scroll.y, window->ScrollMax.y);
+        scroll[axis] = IM_FLOOR(ImMax(scroll[axis], 0.0f));
+        if (!window->Collapsed && !window->SkipItems)
+            scroll[axis] = ImMin(scroll[axis], window->ScrollMax[axis]);
     }
     return scroll;
 }
