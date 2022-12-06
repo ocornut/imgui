@@ -44,7 +44,8 @@ Other changes:
   debugging, Allegro). (#4857, #5937)
 - Tables, Nav, Scrolling: fixed scrolling functions and focus tracking with frozen rows and
   frozen columns. Windows now have a better understanding of outer/inner decoration sizes,
-  which should later lead us toward more flexible uses of menu/status bars. (#5143, #4868, #3692)
+  which should later lead us toward more flexible uses of menu/status bars. (#5143, #3692)
+- Tables, Nav: frozen columns are not part of menu layer and can be crossed over. (#5143, #3692)
 - Tables, Columns: fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
 - Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
   compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
