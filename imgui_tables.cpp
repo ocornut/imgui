@@ -1124,6 +1124,13 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if (table->IsSortSpecsDirty && (table->Flags & ImGuiTableFlags_Sortable))
         TableSortSpecsBuild(table);
 
+    // [Part 14] Setup inner window decoration size (for scrolling / nav tracking to properly take account of frozen rows/columns)
+    if (table->FreezeColumnsRequest > 0)
+        table->InnerWindow->DecoInnerSizeX1 = table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsRequest - 1]].MaxX - table->OuterRect.Min.x;
+    if (table->FreezeRowsRequest > 0)
+        table->InnerWindow->DecoInnerSizeY1 = table_instance->LastFrozenHeight;
+    table_instance->LastFrozenHeight = 0.0f;
+
     // Initial state
     ImGuiWindow* inner_window = table->InnerWindow;
     if (table->Flags & ImGuiTableFlags_NoClip)
@@ -1846,10 +1853,11 @@ void ImGui::TableEndRow(ImGuiTable* table)
     if (unfreeze_rows_actual)
     {
         IM_ASSERT(table->IsUnfrozenRows == false);
+        const float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->IsUnfrozenRows = true;
+        TableGetInstanceData(table, table->InstanceCurrent)->LastFrozenHeight = y0 - table->OuterRect.Min.y;
 
         // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
-        float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
         table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
         table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
