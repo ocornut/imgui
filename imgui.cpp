@@ -4446,156 +4446,6 @@ static void ImGui::UpdateMouseInputs()
     }
 }
 
-static void LockWheelingWindow(ImGuiWindow* window, float wheel_amount)
-{
-    ImGuiContext& g = *GImGui;
-    if (window)
-        g.WheelingWindowReleaseTimer = ImMin(g.WheelingWindowReleaseTimer + ImAbs(wheel_amount) * WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER, WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER);
-    else
-        g.WheelingWindowReleaseTimer = 0.0f;
-    if (g.WheelingWindow == window)
-        return;
-    IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
-    g.WheelingWindow = window;
-    g.WheelingWindowRefMousePos = g.IO.MousePos;
-    if (window == NULL)
-    {
-        g.WheelingWindowStartFrame = -1;
-        g.WheelingAxisAvg = ImVec2(0.0f, 0.0f);
-    }
-}
-
-static ImGuiWindow* FindBestWheelingWindow(const ImVec2& wheel)
-{
-    // For each axis, find window in the hierarchy that may want to use scrolling
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* windows[2] = { NULL, NULL };
-    for (int axis = 0; axis < 2; axis++)
-        if (wheel[axis] != 0.0f)
-            for (ImGuiWindow* window = windows[axis] = g.HoveredWindow; window->Flags & ImGuiWindowFlags_ChildWindow; window = windows[axis] = window->ParentWindow)
-            {
-                // Bubble up into parent window if:
-                // - a child window doesn't allow any scrolling.
-                // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
-                //// - a child window doesn't need scrolling because it is already at the edge for the direction we are going in (FIXME-WIP)
-                const bool has_scrolling = (window->ScrollMax[axis] != 0.0f);
-                const bool inputs_disabled = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
-                //const bool scrolling_past_limits = (wheel_v < 0.0f) ? (window->Scroll[axis] <= 0.0f) : (window->Scroll[axis] >= window->ScrollMax[axis]);
-                if (has_scrolling && !inputs_disabled) // && !scrolling_past_limits)
-                    break; // select this window
-            }
-    if (windows[0] == NULL && windows[1] == NULL)
-        return NULL;
-
-    // If there's only one window or only one axis then there's no ambiguity
-    if (windows[0] == windows[1] || windows[0] == NULL || windows[1] == NULL)
-        return windows[1] ? windows[1] : windows[0];
-
-    // If candidate are different windows we need to decide which one to prioritize
-    // - First frame: only find a winner if one axis is zero.
-    // - Subsequent frames: only find a winner when one is more than the other.
-    if (g.WheelingWindowStartFrame == -1)
-        g.WheelingWindowStartFrame = g.FrameCount;
-    if ((g.WheelingWindowStartFrame == g.FrameCount && wheel.x != 0.0f && wheel.y != 0.0f) || (g.WheelingAxisAvg.x == g.WheelingAxisAvg.y))
-    {
-        g.WheelingWindowWheelRemainder = wheel;
-        return NULL;
-    }
-    return (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? windows[0] : windows[1];
-}
-
-void ImGui::UpdateMouseWheel()
-{
-    ImGuiContext& g = *GImGui;
-
-    // Reset the locked window if we move the mouse or after the timer elapses.
-    // FIXME: Ideally we could refactor to have one timer for "changing window w/ same axis" and a shorter timer for "changing window or axis w/ other axis" (#3795)
-    if (g.WheelingWindow != NULL)
-    {
-        g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
-        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
-            g.WheelingWindowReleaseTimer = 0.0f;
-        if (g.WheelingWindowReleaseTimer <= 0.0f)
-            LockWheelingWindow(NULL, 0.0f);
-    }
-
-    ImVec2 wheel;
-    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_None) ? g.IO.MouseWheelH : 0.0f;
-    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_None) ? g.IO.MouseWheel : 0.0f;
-
-    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
-    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
-    if (!mouse_window || mouse_window->Collapsed)
-        return;
-
-    // Zoom / Scale window
-    // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
-    if (wheel.y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
-    {
-        LockWheelingWindow(mouse_window, wheel.y);
-        ImGuiWindow* window = mouse_window;
-        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-        const float scale = new_font_scale / window->FontWindowScale;
-        window->FontWindowScale = new_font_scale;
-        if (window == window->RootWindow)
-        {
-            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-            SetWindowPos(window, window->Pos + offset, 0);
-            window->Size = ImFloor(window->Size * scale);
-            window->SizeFull = ImFloor(window->SizeFull * scale);
-        }
-        return;
-    }
-    if (g.IO.KeyCtrl)
-        return;
-
-    // Mouse wheel scrolling
-    // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
-    // (we avoid doing it on OSX as it the OS input layer handles this already)
-    const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
-    if (swap_axis)
-    {
-        wheel.x = wheel.y;
-        wheel.y = 0.0f;
-    }
-
-    // Maintain a rough average of moving magnitude on both axises
-    // FIXME: should by based on wall clock time rather than frame-counter
-    g.WheelingAxisAvg.x = ImExponentialMovingAverage(g.WheelingAxisAvg.x, ImAbs(wheel.x), 30);
-    g.WheelingAxisAvg.y = ImExponentialMovingAverage(g.WheelingAxisAvg.y, ImAbs(wheel.y), 30);
-
-    // In the rare situation where FindBestWheelingWindow() had to defer first frame of wheeling due to ambiguous main axis, reinject it now.
-    wheel += g.WheelingWindowWheelRemainder;
-    g.WheelingWindowWheelRemainder = ImVec2(0.0f, 0.0f);
-    if (wheel.x == 0.0f && wheel.y == 0.0f)
-        return;
-
-    // Mouse wheel scrolling: find target and apply
-    // - don't renew lock if axis doesn't apply on the window.
-    // - select a main axis when both axises are being moved.
-    if (ImGuiWindow* window = (g.WheelingWindow ? g.WheelingWindow : FindBestWheelingWindow(wheel)))
-        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
-        {
-            bool do_scroll[2] = { wheel.x != 0.0f && window->ScrollMax.x != 0.0f, wheel.y != 0.0f && window->ScrollMax.y != 0.0f };
-            if (do_scroll[ImGuiAxis_X] && do_scroll[ImGuiAxis_Y])
-                do_scroll[(g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? ImGuiAxis_Y : ImGuiAxis_X] = false;
-            if (do_scroll[ImGuiAxis_X])
-            {
-                LockWheelingWindow(window, wheel.x);
-                float max_step = window->InnerRect.GetWidth() * 0.67f;
-                float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
-                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
-            }
-            if (do_scroll[ImGuiAxis_Y])
-            {
-                LockWheelingWindow(window, wheel.y);
-                float max_step = window->InnerRect.GetHeight() * 0.67f;
-                float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
-                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
-            }
-        }
-}
-
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
 void ImGui::UpdateHoveredWindowAndCaptureFlags()
 {
@@ -7922,6 +7772,10 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 // - GetMouseCursor()
 // - SetMouseCursor()
 //-----------------------------------------------------------------------------
+// - LockWheelingWindow [Internal]
+// - FindBestWheelingWindow [Internal]
+// - UpdateMouseWheel() [Internal]
+//-----------------------------------------------------------------------------
 // - SetNextFrameWantCaptureKeyboard()
 // - SetNextFrameWantCaptureMouse()
 //-----------------------------------------------------------------------------
@@ -8504,6 +8358,156 @@ void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
 {
     ImGuiContext& g = *GImGui;
     g.MouseCursor = cursor_type;
+}
+
+static void LockWheelingWindow(ImGuiWindow* window, float wheel_amount)
+{
+    ImGuiContext& g = *GImGui;
+    if (window)
+        g.WheelingWindowReleaseTimer = ImMin(g.WheelingWindowReleaseTimer + ImAbs(wheel_amount) * WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER, WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER);
+    else
+        g.WheelingWindowReleaseTimer = 0.0f;
+    if (g.WheelingWindow == window)
+        return;
+    IMGUI_DEBUG_LOG_IO("LockWheelingWindow() \"%s\"\n", window ? window->Name : "NULL");
+    g.WheelingWindow = window;
+    g.WheelingWindowRefMousePos = g.IO.MousePos;
+    if (window == NULL)
+    {
+        g.WheelingWindowStartFrame = -1;
+        g.WheelingAxisAvg = ImVec2(0.0f, 0.0f);
+    }
+}
+
+static ImGuiWindow* FindBestWheelingWindow(const ImVec2& wheel)
+{
+    // For each axis, find window in the hierarchy that may want to use scrolling
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* windows[2] = { NULL, NULL };
+    for (int axis = 0; axis < 2; axis++)
+        if (wheel[axis] != 0.0f)
+            for (ImGuiWindow* window = windows[axis] = g.HoveredWindow; window->Flags & ImGuiWindowFlags_ChildWindow; window = windows[axis] = window->ParentWindow)
+            {
+                // Bubble up into parent window if:
+                // - a child window doesn't allow any scrolling.
+                // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
+                //// - a child window doesn't need scrolling because it is already at the edge for the direction we are going in (FIXME-WIP)
+                const bool has_scrolling = (window->ScrollMax[axis] != 0.0f);
+                const bool inputs_disabled = (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
+                //const bool scrolling_past_limits = (wheel_v < 0.0f) ? (window->Scroll[axis] <= 0.0f) : (window->Scroll[axis] >= window->ScrollMax[axis]);
+                if (has_scrolling && !inputs_disabled) // && !scrolling_past_limits)
+                    break; // select this window
+            }
+    if (windows[0] == NULL && windows[1] == NULL)
+        return NULL;
+
+    // If there's only one window or only one axis then there's no ambiguity
+    if (windows[0] == windows[1] || windows[0] == NULL || windows[1] == NULL)
+        return windows[1] ? windows[1] : windows[0];
+
+    // If candidate are different windows we need to decide which one to prioritize
+    // - First frame: only find a winner if one axis is zero.
+    // - Subsequent frames: only find a winner when one is more than the other.
+    if (g.WheelingWindowStartFrame == -1)
+        g.WheelingWindowStartFrame = g.FrameCount;
+    if ((g.WheelingWindowStartFrame == g.FrameCount && wheel.x != 0.0f && wheel.y != 0.0f) || (g.WheelingAxisAvg.x == g.WheelingAxisAvg.y))
+    {
+        g.WheelingWindowWheelRemainder = wheel;
+        return NULL;
+    }
+    return (g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? windows[0] : windows[1];
+}
+
+// Called by NewFrame()
+void ImGui::UpdateMouseWheel()
+{
+    // Reset the locked window if we move the mouse or after the timer elapses.
+    // FIXME: Ideally we could refactor to have one timer for "changing window w/ same axis" and a shorter timer for "changing window or axis w/ other axis" (#3795)
+    ImGuiContext& g = *GImGui;
+    if (g.WheelingWindow != NULL)
+    {
+        g.WheelingWindowReleaseTimer -= g.IO.DeltaTime;
+        if (IsMousePosValid() && ImLengthSqr(g.IO.MousePos - g.WheelingWindowRefMousePos) > g.IO.MouseDragThreshold * g.IO.MouseDragThreshold)
+            g.WheelingWindowReleaseTimer = 0.0f;
+        if (g.WheelingWindowReleaseTimer <= 0.0f)
+            LockWheelingWindow(NULL, 0.0f);
+    }
+
+    ImVec2 wheel;
+    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_None) ? g.IO.MouseWheelH : 0.0f;
+    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_None) ? g.IO.MouseWheel : 0.0f;
+
+    //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
+    ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
+    if (!mouse_window || mouse_window->Collapsed)
+        return;
+
+    // Zoom / Scale window
+    // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
+    if (wheel.y != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+    {
+        LockWheelingWindow(mouse_window, wheel.y);
+        ImGuiWindow* window = mouse_window;
+        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+        const float scale = new_font_scale / window->FontWindowScale;
+        window->FontWindowScale = new_font_scale;
+        if (window == window->RootWindow)
+        {
+            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+            SetWindowPos(window, window->Pos + offset, 0);
+            window->Size = ImFloor(window->Size * scale);
+            window->SizeFull = ImFloor(window->SizeFull * scale);
+        }
+        return;
+    }
+    if (g.IO.KeyCtrl)
+        return;
+
+    // Mouse wheel scrolling
+    // As a standard behavior holding SHIFT while using Vertical Mouse Wheel triggers Horizontal scroll instead
+    // (we avoid doing it on OSX as it the OS input layer handles this already)
+    const bool swap_axis = g.IO.KeyShift && !g.IO.ConfigMacOSXBehaviors;
+    if (swap_axis)
+    {
+        wheel.x = wheel.y;
+        wheel.y = 0.0f;
+    }
+
+    // Maintain a rough average of moving magnitude on both axises
+    // FIXME: should by based on wall clock time rather than frame-counter
+    g.WheelingAxisAvg.x = ImExponentialMovingAverage(g.WheelingAxisAvg.x, ImAbs(wheel.x), 30);
+    g.WheelingAxisAvg.y = ImExponentialMovingAverage(g.WheelingAxisAvg.y, ImAbs(wheel.y), 30);
+
+    // In the rare situation where FindBestWheelingWindow() had to defer first frame of wheeling due to ambiguous main axis, reinject it now.
+    wheel += g.WheelingWindowWheelRemainder;
+    g.WheelingWindowWheelRemainder = ImVec2(0.0f, 0.0f);
+    if (wheel.x == 0.0f && wheel.y == 0.0f)
+        return;
+
+    // Mouse wheel scrolling: find target and apply
+    // - don't renew lock if axis doesn't apply on the window.
+    // - select a main axis when both axises are being moved.
+    if (ImGuiWindow* window = (g.WheelingWindow ? g.WheelingWindow : FindBestWheelingWindow(wheel)))
+        if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs))
+        {
+            bool do_scroll[2] = { wheel.x != 0.0f && window->ScrollMax.x != 0.0f, wheel.y != 0.0f && window->ScrollMax.y != 0.0f };
+            if (do_scroll[ImGuiAxis_X] && do_scroll[ImGuiAxis_Y])
+                do_scroll[(g.WheelingAxisAvg.x > g.WheelingAxisAvg.y) ? ImGuiAxis_Y : ImGuiAxis_X] = false;
+            if (do_scroll[ImGuiAxis_X])
+            {
+                LockWheelingWindow(window, wheel.x);
+                float max_step = window->InnerRect.GetWidth() * 0.67f;
+                float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
+                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
+            }
+            if (do_scroll[ImGuiAxis_Y])
+            {
+                LockWheelingWindow(window, wheel.y);
+                float max_step = window->InnerRect.GetHeight() * 0.67f;
+                float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
+                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
+            }
+        }
 }
 
 void ImGui::SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard)
