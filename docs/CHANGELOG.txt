@@ -51,6 +51,9 @@ All changes:
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 - ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
   color alpha is zero.
+- Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
+  DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
+  when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
 
 
 -----------------------------------------------------------------------
