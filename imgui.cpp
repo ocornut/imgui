@@ -7921,25 +7921,55 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
 //-----------------------------------------------------------------------------
-
-// Test if mouse cursor is hovering given rectangle
-// NB- Rectangle is clipped by our current clip setting
-// NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
-{
-    ImGuiContext& g = *GImGui;
-
-    // Clip
-    ImRect rect_clipped(r_min, r_max);
-    if (clip)
-        rect_clipped.ClipWith(g.CurrentWindow->ClipRect);
-
-    // Expand for touch input
-    const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
-    if (!rect_for_touch.Contains(g.IO.MousePos))
-        return false;
-    return true;
-}
+// - GetKeyData() [Internal]
+// - GetKeyIndex() [Internal]
+// - GetKeyName()
+// - GetKeyChordName() [Internal]
+// - CalcTypematicRepeatAmount() [Internal]
+// - GetTypematicRepeatRate() [Internal]
+// - GetKeyPressedAmount() [Internal]
+// - GetKeyVector2d() [Internal]
+//-----------------------------------------------------------------------------
+// - GetRoutingIdFromOwnerId() [Internal]
+// - GetShortcutRoutingData() [Internal]
+// - CalcRoutingScore() [Internal]
+// - SetShortcutRouting() [Internal]
+// - TestShortcutRouting() [Internal]
+//-----------------------------------------------------------------------------
+// - IsKeyDown()
+// - IsKeyPressed()
+// - IsKeyReleased()
+//-----------------------------------------------------------------------------
+// - IsMouseDown()
+// - IsMouseClicked()
+// - IsMouseReleased()
+// - IsMouseDoubleClicked()
+// - GetMouseClickedCount()
+// - IsMouseHoveringRect() [Internal]
+// - IsMouseDragPastThreshold() [Internal]
+// - IsMouseDragging()
+// - GetMousePos()
+// - GetMousePosOnOpeningCurrentPopup()
+// - IsMousePosValid()
+// - IsAnyMouseDown()
+// - GetMouseDragDelta()
+// - ResetMouseDragDelta()
+// - GetMouseCursor()
+// - SetMouseCursor()
+//-----------------------------------------------------------------------------
+// - SetNextFrameWantCaptureKeyboard()
+// - SetNextFrameWantCaptureMouse()
+//-----------------------------------------------------------------------------
+// - GetInputSourceName() [Internal]
+// - DebugPrintInputEvent() [Internal]
+// - UpdateInputEvents() [Internal]
+//-----------------------------------------------------------------------------
+// - GetKeyOwner() [Internal]
+// - TestKeyOwner() [Internal]
+// - SetKeyOwner() [Internal]
+// - SetItemKeyOwner() [Internal]
+// - Shortcut() [Internal]
+//-----------------------------------------------------------------------------
 
 ImGuiKeyData* ImGui::GetKeyData(ImGuiKey key)
 {
@@ -8355,6 +8385,25 @@ int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
     return g.IO.MouseClickedCount[button];
+}
+
+// Test if mouse cursor is hovering given rectangle
+// NB- Rectangle is clipped by our current clip setting
+// NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
+bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
+{
+    ImGuiContext& g = *GImGui;
+
+    // Clip
+    ImRect rect_clipped(r_min, r_max);
+    if (clip)
+        rect_clipped.ClipWith(g.CurrentWindow->ClipRect);
+
+    // Expand for touch input
+    const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
+    if (!rect_for_touch.Contains(g.IO.MousePos))
+        return false;
+    return true;
 }
 
 // Return if a mouse click/drag went past the given threshold. Valid to call during the MouseReleased frame.
