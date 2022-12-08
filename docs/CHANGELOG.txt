@@ -30,9 +30,536 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+
+-----------------------------------------------------------------------
+ VERSION 1.89.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Fixed cases where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with
+  zero triangles, which would makes the render loop of some backends assert (e.g. Metal with
+  debugging, Allegro). (#4857, #5937)
+- Tables, Nav, Scrolling: fixed scrolling functions and focus tracking with frozen rows and
+  frozen columns. Windows now have a better understanding of outer/inner decoration sizes,
+  which should later lead us toward more flexible uses of menu/status bars. (#5143, #3692)
+- Tables, Nav: frozen columns are not part of menu layer and can be crossed over. (#5143, #3692)
+- Tables, Columns: fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
+  compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
+  easier for bindings generators to process that value. (#5923, #456)
+- Inputs, Scrolling: better selection of scrolling window when hovering nested windows
+  and when backend/OS is emitting dual-axis wheeling inputs (typically touch pads on macOS).
+  We now select a primary axis based on recent events, and select a target window based on it.
+  We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
+- Text: fixed layouting of wrapped-text block when the last source line is above the
+  clipping region. Regression added in 1.89. (#5720, #5919)
+- Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
+  applications using multiple font atlases.
+- Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
+- Debug Tools: Metrics: added "Inputs" section, moved from Demo for consistency.
+- Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
+  with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
+- Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
+- Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.1 (Released 2022-11-24)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.1
+
+Other changes:
+
+- Scrolling, Focus: fixed SetKeyboardFocusHere()/SetItemDefaultFocus() during a window-appearing
+  frame (and associated lower-level functions e.g. ScrollToRectEx()) from not centering item. (#5902)
+- Inputs: fixed moving a window or drag and dropping from preventing input-owner-unaware code
+  from accessing keys. (#5888, #4921, #456)
+- Inputs: fixed moving a window or drag and dropping from capturing mods. (#5888, #4921, #456)
+- Layout: fixed End()/EndChild() incorrectly asserting if users manipulates cursor position
+  inside a collapsed/culled window and IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. (#5548, #5911)
+- Combo: fixed selected item (marked with SetItemDefaultFocus()) from not being centered when
+  the combo window initially appears. (#5902).
+- ColorEdit: fixed label overlapping when using style.ColorButtonPosition == ImGuiDir_Left to
+  move the color button on the left side (regression introduced in 1.88 WIP 2022/02/28). (#5912)
+- Drag and Drop: fixed GetDragDropPayload() returning a non-NULL value if a drag source is
+  active but a payload hasn't been submitted yet. This is convenient to detect new payload
+  from within a drag source handler. (#5910, #143)
+- Backends: GLFW: cancel out errors emitted by glfwGetKeyName() when a name is missing. (#5908)
+- Backends: WebGPU: fixed validation error with default depth buffer settings. (#5869, #5914) [@kdchambers]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89 (Released 2022-11-15)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89
+
+Breaking changes:
+
+- Layout: Obsoleted using SetCursorPos()/SetCursorScreenPos() to extend parent window/cell boundaries. (#5548)
+  This relates to when moving the cursor position beyond current boundaries WITHOUT submitting an item.
+  - Previously this would make the window content size ~200x200:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
+  - Instead, please submit an item:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
+  - Alternative:
+      Begin(...) + Dummy(ImVec2(200,200)) + End();
+  Content size is now only extended when submitting an item.
+  With '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will now be detected and assert.
+  Without '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' this will silently be fixed until we obsolete it.
+  (This incorrect pattern has been mentioned or suggested in: #4510, #3355, #1760, #1490, #4152, #150,
+   threads have been amended to refer to this issue).
+- Inputs: ImGuiKey is now a typed enum, allowing ImGuiKey_XXX symbols to be named in debuggers. (#4921)
+  This will require uses of legacy backend-dependent indices to be casted, e.g.
+   - with imgui_impl_glfw:  IsKeyPressed(GLFW_KEY_A) -> IsKeyPressed((ImGuiKey)GLFW_KEY_A);
+   - with imgui_impl_win32: IsKeyPressed('A')        -> IsKeyPressed((ImGuiKey)'A')
+   - etc. however if you are upgrading code you might as well use the backend-agnostic IsKeyPressed(ImGuiKey_A) now.
+- Renamed and merged keyboard modifiers key enums and flags into a same set:  (#4921, #456)
+   - ImGuiKey_ModCtrl  and ImGuiModFlags_Ctrl  -> ImGuiMod_Ctrl
+   - ImGuiKey_ModShift and ImGuiModFlags_Shift -> ImGuiMod_Shift
+   - ImGuiKey_ModAlt   and ImGuiModFlags_Alt   -> ImGuiMod_Alt
+   - ImGuiKey_ModSuper and ImGuiModFlags_Super -> ImGuiMod_Super
+  Kept inline redirection enums (will obsolete).
+  This change simplifies a few things, reduces confusion, and will facilitate upcoming
+  shortcut/input ownership apis.
+  - The ImGuiKey_ModXXX were introduced in 1.87 and mostly used by backends.
+  - The ImGuiModFlags_XXX have been exposed in imgui.h but not really used by any public api,
+    only by third-party extensions. They were however subject to a recent rename
+    (ImGuiKeyModFlags_XXX -> ImGuiModFlags_XXX) and we are exceptionally commenting out
+    the older ImGuiKeyModFlags_XXX names ahead of obsolescence schedule to reduce confusion
+    and because they were not meant to be used anyway.
+- Removed io.NavInputs[] and ImGuiNavInput enum that were used to feed gamepad inputs.
+  Basically 1.87 already obsoleted them from the backend's point of view, but internally
+  our navigation code still used this array and enum, so they were still present.
+  Not anymore! (#4921, #4858, #787, #1599, #323)
+  Transition guide:
+   - Official backends from 1.87+                  -> no issue.
+   - Official backends from 1.60 to 1.86           -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need updating!
+   - Custom backends not writing to io.NavInputs[] -> no issue.
+   - Custom backends writing to io.NavInputs[]     -> will build and convert gamepad inputs, unless IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Need fixing!
+   - TL;DR: Backends should call io.AddKeyEvent()/io.AddKeyAnalogEvent() with ImGuiKey_GamepadXXX values instead of filling io.NavInput[].
+  The ImGuiNavInput enum was essentially 1.60's attempt to combine keyboard and gamepad inputs with named
+  semantic, but the additional indirection and copy added complexity and got in the way of other
+  incoming work. User's code (other than backends) should not be affected, unless you have custom
+  widgets intercepting navigation events via the named enums (in which case you can upgrade your code).
+- DragInt()/SliderInt(): Removed runtime patching of invalid "%f"/"%.0f" types of format strings.
+  This was obsoleted in 1.61 (May 2018). See 1.61 changelog for details.
+- Changed signature of ImageButton() function: (#5533, #4471, #2464, #1390)
+  - Added 'const char* str_id' parameter + removed 'int frame_padding = -1' parameter.
+  - Old signature: bool ImageButton(ImTextureID tex_id, ImVec2 size, ImVec2 uv0 = ImVec2(0,0), ImVec2 uv1 = ImVec2(1,1), int frame_padding = -1, ImVec4 bg_col = ImVec4(0,0,0,0), ImVec4 tint_col = ImVec4(1,1,1,1));
+    - used the ImTextureID value to create an ID. This was inconsistent with other functions, led to ID conflicts, and caused problems with engines using transient ImTextureID values.
+    - had a FramePadding override which was inconsistent with other functions and made the already-long signature even longer.
+  - New signature: bool ImageButton(const char* str_id, ImTextureID tex_id, ImVec2 size, ImVec2 uv0 = ImVec2(0,0), ImVec2 uv1 = ImVec2(1,1), ImVec4 bg_col = ImVec4(0,0,0,0), ImVec4 tint_col = ImVec4(1,1,1,1));
+    - requires an explicit identifier. You may still use e.g. PushID() calls and then pass an empty identifier.
+    - always uses style.FramePadding for padding, to be consistent with other buttons. You may use PushStyleVar() to alter this.
+  - As always we are keeping a redirection function available (will obsolete later).
+- Removed the bizarre legacy default argument for 'TreePush(const void* ptr = NULL)'. (#1057)
+  Must always pass a pointer value explicitly, NULL/nullptr is ok but require cast, e.g. TreePush((void*)nullptr);
+  If you used TreePush() replace with TreePush((void*)NULL);
+- Removed support for 1.42-era IMGUI_DISABLE_INCLUDE_IMCONFIG_H / IMGUI_INCLUDE_IMCONFIG_H. (#255)
+  They only made sense before we could use IMGUI_USER_CONFIG.
+
+Other Changes:
+
+- Popups & Modals: fixed nested Begin() inside a popup being erroneously input-inhibited.
+  While it is unusual, you can nest a Begin() inside a popup or modal, it is occasionally
+  useful to achieve certain things (e.g. to implement suggestion popups #718, #4461).
+- Inputs: Standard widgets now claim for key/button ownership and test for them.
+  - Fixes scenario where e.g. a Popup with a Selectable() reacting on mouse down
+    (e.g. double click) closes, and behind it is another window with an item reacting
+    on mouse up. Previously this would lead to both items reacting, now the item in the
+    window behind won't react on the mouse up since the mouse button ownership has already
+    been claimed earlier.
+  - Internals: There are MANY more aspects to this changes. Added experimental/internal APIs
+    to allow handling input/shorting routing and key ownership. Things will be moved into
+    public APIs over time. For now this release is a way to test the solidity of underlying
+    systems while letting early adopters adopters toy with internals.
+    (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
+- Scrolling: Tweak mouse-wheel locked window timer so it is shorter but also gets reset
+  whenever scrolling again. Modulate for small (sub-pixel) amounts. (#2604)
+- Scrolling: Mitigated issue where multi-axis mouse-wheel inputs (usually from touch pad
+  events) are incorrectly locking scrolling in a parent window. (#4559, #3795, #2604)
+- Scrolling: Exposed SetNextWindowScroll() in public API. Useful to remove a scrolling
+  delay in some situations where e.g. windows need to be synched. (#1526)
+- InputText: added experimental io.ConfigInputTextEnterKeepActive feature to make pressing
+  Enter keep the input active and select all text.
+- InputText: numerical fields automatically accept full-width characters (U+FF01..U+FF5E)
+  by converting them to half-width (U+0021..U+007E).
+- InputText: added ImGuiInputTextFlags_EscapeClearsAll flag: first press on Escape clears
+  text if any, second press deactivate the InputText(). (#5688, #2620)
+- InputText: added support for shift+click style selection. (#5619) [@procedural]
+- InputText: clarified that callbacks cannot modify buffer when using the ReadOnly flag.
+- InputText: fixed minor one-frame selection glitch when reverting with Escape.
+- ColorEdit3: fixed id collision leading to an assertion. (#5707)
+- IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
+  allowing to introduce a shared delay for tooltip idioms. The delays are respectively
+  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
+- IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between items,
+  so moving from one item to a nearby one will requires delay to elapse again. (#1485)
+- Tables: activating an ID (e.g. clicking button inside) column doesn't prevent columns
+  output flags from having ImGuiTableColumnFlags_IsHovered set. (#2957)
+- Tables,Columns: fixed a layout issue where SameLine() prior to a row change would set the
+  next row in such state where subsequent SameLine() would move back to previous row.
+- Tabs: Fixed a crash when closing multiple windows (possible with docking only) with an
+  appended TabItemButton(). (#5515, #3291) [@rokups]
+- Tabs: Fixed shrinking policy leading to infinite loops when fed unrounded tab widths. (#5652)
+- Tabs: Fixed shrinking policy sometimes erroneously making right-most tabs stray a little out
+  bar boundaries (bug in 1.88). (#5652).
+- Tabs: Enforcing minimum size of 1.0f, fixed asserting on zero-tab widths. (#5572)
+- Window: Fixed a potential crash when appending to a child window. (#5515, #3496, #4797) [@rokups]
+- Window: Fixed an issue where uncollapsed a window would show a scrollbar for a frame.
+- Window: Auto-fit size takes account of work rectangle (menu bars eating from viewport). (#5843)
+- Window: Fixed position not being clamped while auto-resizing (fixes appearing windows without
+  .ini data from moving for a frame when using io.ConfigWindowsMoveFromTitleBarOnly). (#5843)
+- IO: Added ImGuiMod_Shortcut which is ImGuiMod_Super on Mac and ImGuiMod_Ctrl otherwise. (#456)
+- IO: Added ImGuiKey_MouseXXX aliases for mouse buttons/wheel so all operations done on ImGuiKey
+  can apply to mouse data as well. (#4921)
+- IO: Filter duplicate input events during the AddXXX() calls. (#5599, #4921)
+- IO: Fixed AddFocusEvent(false) to also clear MouseDown[] state. (#4921)
+- Menus: Fixed incorrect sub-menu parent association when opening a menu by closing another.
+  Among other things, it would accidentally break part of the closing heuristic logic when moving
+  towards a sub-menu. (#2517, #5614). [@rokups]
+- Menus: Fixed gaps in closing logic which would make child-menu erroneously close when crossing
+  the gap between a menu item inside a window and a child-menu in a secondary viewport. (#5614)
+- Menus: Fixed using IsItemHovered()/IsItemClicked() on BeginMenu(). (#5775)
+- Menus, Popups: Experimental fix for issue where clicking on an open BeginMenu() item called from
+  a window which is neither a popup neither a menu used to incorrectly close and reopen the menu
+  (the fix may have side-effect and is labelld as experimental as we may need to revert). (#5775)
+- Menus, Nav: Fixed keyboard/gamepad navigation occasionally erroneously landing on menu-item
+  in parent window when the parent is not a popup. (#5730)
+- Menus, Nav: Fixed not being able to close a menu with Left arrow when parent is not a popup. (#5730)
+- Menus, Nav: Fixed using left/right navigation when appending to an existing menu (multiple
+  BeginMenu() call with same names). (#1207)
+- Menus: Fixed a one-frame issue where SetNextWindowXXX data are not consumed by a BeginMenu()
+  returning false.
+- Nav: Fixed moving/resizing window with gamepad or keyboard when running at very high framerate.
+- Nav: Pressing Space/GamepadFaceDown on a repeating button uses the same repeating rate as a mouse hold.
+- Nav: Fixed an issue opening a menu with Right key from a non-menu window.
+- Text: Fixed wrapped-text not doing a fast-forward on lines above the clipping region,
+  which would result in an abnormal number of vertices created (was slower and more likely to
+  asserts with 16-bits ImDrawVtx). (#5720)
+- Fonts: Added GetGlyphRangesGreek() helper for Greek & Coptic glyph range. (#5676, #5727) [@azonenberg]
+- ImDrawList: Not using alloca() anymore, lift single polygon size limits. (#5704, #1811)
+- Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
+  (#2589, #5535, #5264, #4972)
+- Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
+- Misc: io.Framerate moving average now converge in 60 frames instead of 120. (#5236, #4138)
+- Debug Tools: Debug Log: Visually locate items when hovering a 0xXXXXXXXX value. (#5855)
+- Debug Tools: Debug Log: Added 'IO' and 'Clipper' events logging. (#5855)
+- Debug Tools: Metrics: Visually locate items when hovering a 0xXXXXXXXX value (in most places).
+- Debug Tools: Item Picker: Mouse button can be changed by holding Ctrl+Shift, making it easier
+  to use the Item Picker in e.g. menus. (#2673)
+- Docs: Fixed various typos in comments and documentations. (#5649, #5675, #5679) [@tocic, @lessigsx]
+- Demo: Improved "Constrained-resizing window" example, more clearly showcase aspect-ratio. (#5627)
+- Demo: Added more explicit "Center window" mode to "Overlay example". (#5618)
+- Demo: Fixed Log & Console from losing scrolling position with Auto-Scroll when child is clipped. (#5721)
+- Examples: Added all SDL examples to default VS solution.
+- Examples: Win32: Always use RegisterClassW() to ensure windows are Unicode. (#5725)
+- Examples: Android: Enable .ini file loading/saving into application internal data folder. (#5836) [@rewtio]
+- Backends: GLFW: Honor GLFW_CURSOR_DISABLED by not setting mouse position. (#5625) [@scorpion-26]
+- Backends: GLFW: Add glfwGetError() call on GLFW 3.3 to inhibit missing mouse cursor errors. (#5785) [@mitchellh]
+- Backends: SDL: Disable SDL 2.0.22 new "auto capture" which prevents drag and drop across windows
+  (e.g. for multi-viewport support) and don't capture mouse when drag and dropping. (#5710)
+- Backends: Win32: Convert WM_CHAR values with MultiByteToWideChar() when window class was
+  registered as MBCS (not Unicode). (#5725, #1807, #471, #2815, #1060) [@or75, @ocornut]
+- Backends: OSX: Fixed mouse inputs on flipped views. (#5756) [@Nemirtingas]
+- Backends: OSX: Fixed mouse coordinate before clicking on the host window. (#5842) [@maezawa-akira]
+- Backends: OSX: Fixes to support full app creation in C++. (#5403) [@stack]
+- Backends: OpenGL3: Reverted use of glBufferSubData(), too many corruptions issues were reported,
+  and old leaks issues seemingly can't be reproed with Intel drivers nowadays (revert earlier changes).
+  (#4468, #4504, #3381, #2981, #4825, #4832, #5127).
+- Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
+- Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
+- Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
+- Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
+- Backends: WebGPU: fixed rendering when a depth buffer is enabled. (#5869) [@brainlag]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.88 (Released 2022-06-21)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.88
+
+Breaking changes:
+
+- Renamed IMGUI_DISABLE_METRICS_WINDOW to IMGUI_DISABLE_DEBUG_TOOLS for correctness.
+  Kept support for old define (will obsolete).
+- Renamed CaptureMouseFromApp() and CaptureKeyboardFromApp() to SetNextFrameWantCaptureMouse()
+  and SetNextFrameWantCaptureKeyboard() to clarify purpose, old name was too misleading.
+  Kept inline redirection functions (will obsolete).
+- Renamed ImGuiKeyModFlags to ImGuiModFlags. Kept inline redirection enums (will obsolete).
+  (This was never used in public API functions but technically present in imgui.h and ImGuiIO).
+- Backends: OSX: Removed ImGui_ImplOSX_HandleEvent() from backend API in favor of backend
+  automatically handling event capture. Examples that are using the OSX backend have removed
+  all the now-unnecessary calls to ImGui_ImplOSX_HandleEvent(), applications can do as well.
+  [@stuartcarnie] (#4821)
+- Internals: calling ButtonBehavior() without calling ItemAdd() now requires a KeepAliveID()
+  call. This is because the KeepAliveID() call was moved from GetID() to ItemAdd(). (#5181)
+
+Other Changes:
+
+- IO: Fixed backward-compatibility regression introduced in 1.87: (#4921, #4858)
+  - Direct accesses to io.KeysDown[] with legacy indices didn't work (with new backends).
+  - Direct accesses to io.KeysDown[GetKeyIndex(XXX)] would access invalid data (with old/new backends).
+  - Calling IsKeyDown() didn't have those problems, and is recommended as io.KeysDown[] is obsolete.
+- IO: Fixed input queue trickling of interleaved keys/chars events (which are frequent especially
+  when holding down a key as OS submits chars repeat events) delaying key presses and mouse movements.
+  In particular, using the input system for fast game-like actions (e.g. WASD camera move) would
+  typically have been impacted, as well as holding a key while dragging mouse. Constraints have
+  been lifted and are now only happening when e.g. an InputText() widget is active. (#4921, #4858)
+  Note that even thought you shouldn't need to disable io.ConfigInputTrickleEventQueue, you can
+  technically dynamically change its setting based on the context (e.g. disable only when hovering
+  or interacting with a game/3D view).
+- IO: Fixed input queue trickling of mouse wheel events: multiple wheel events are merged, while
+  a mouse pos followed by a mouse wheel are now trickled. (#4921, #4821)
+- IO: Added io.SetAppAcceptingEvents() to set a master flag for accepting key/mouse/characters
+  events (default to true). Useful if you have native dialog boxes that are interrupting your
+  application loop/refresh, and you want to disable events being queued while your app is frozen.
+- Windows: Fixed first-time windows appearing in negative coordinates from being initialized
+  with a wrong size. This would most often be noticeable in multi-viewport mode (docking branch)
+  when spawning a window in a monitor with negative coordinates. (#5215, #3414) [@DimaKoltun]
+- Clipper: Fixed a regression in 1.86 when not calling clipper.End() and late destructing the
+  clipper instance. High-level languages (Lua,Rust etc.) would typically be affected. (#4822)
+- Layout: Fixed mixing up SameLine() and SetCursorPos() together from creating situations where line
+  height would be emitted from the wrong location (e.g. 'ItemA+SameLine()+SetCursorPos()+ItemB' would
+  emit ItemA worth of height from the position of ItemB, which is not necessarily aligned with ItemA).
+- Sliders: An initial click within the knob/grab doesn't shift its position. (#1946, #5328)
+- Sliders, Drags: Fixed dragging when using hexadecimal display format string. (#5165, #3133)
+- Sliders, Drags: Fixed manual input when using hexadecimal display format string. (#5165, #3133)
+- InputScalar: Fixed manual input when using %03d style width in display format string. (#5165, #3133)
+- InputScalar: Automatically allow hexadecimal input when format is %X (without extra flag).
+- InputScalar: Automatically allow scientific input when format is float/double (without extra flag).
+- Nav: Fixed nav movement in a scope with only one disabled item from focusing the disabled item. (#5189)
+- Nav: Fixed issues with nav request being transferred to another window when calling SetKeyboardFocusHere()
+  and simultaneous changing window focus. (#4449)
+- Nav: Changed SetKeyboardFocusHere() to not behave if a drag or window moving is in progress.
+- Nav: Fixed inability to cancel nav in modal popups. (#5400) [@rokups]
+- IsItemHovered(): added ImGuiHoveredFlags_NoNavOverride to disable the behavior where the
+  return value is overridden by focus when gamepad/keyboard navigation is active.
+- InputText: Fixed pressing Tab emitting two tabs characters because of dual Keys/Chars events being
+  trickled with the new input queue (happened on some backends only). (#2467, #1336)
+- InputText: Fixed a one-frame display glitch where pressing Escape to revert after a deletion
+  would lead to small garbage being displayed for one frame. Curiously a rather old bug! (#3008)
+- InputText: Fixed an undo-state corruption issue when editing main buffer before reactivating item. (#4947)
+- InputText: Fixed an undo-state corruption issue when editing in-flight buffer in user callback.
+  (#4947, #4949] [@JoshuaWebb]
+- Tables: Fixed incorrect border height used for logic when resizing one of several synchronized
+  instance of a same table ID, when instances have a different height. (#3955).
+- Tables: Fixed incorrect auto-fit of parent windows when using non-resizable weighted columns. (#5276)
+- Tables: Fixed draw-call merging of last column. Depending on some unrelated settings (e.g. BorderH)
+  merging draw-call of the last column didn't always work (regression since 1.87). (#4843, #4844) [@rokups]
+- Inputs: Fixed IsMouseClicked() repeat mode rate being half of keyboard repeat rate.
+- ColorEdit: Fixed text baseline alignment after a SameLine() after a ColorEdit() with visible label.
+- Tabs: BeginTabItem() now reacts to SetNextItemWidth(). (#5262)
+- Tabs: Tweak shrinking policy so that while resizing tabs that don't need shrinking keep their
+  initial width more precisely (without the occasional +1 worth of width).
+- Menus: Adjusted BeginMenu() closing logic so hovering void or non-MenuItem() in parent window
+  always lead to menu closure. Fixes using items that are not MenuItem() or BeginItem() at the root
+  level of a popup with a child menu opened.
+- Menus: Menus emitted from the main/scrolling layer are not part of the same menu-set as menus emitted
+  from the menu-bar, avoiding  accidental hovering from one to the other. (#3496, #4797) [@rokups]
+- Style: Adjust default value of GrabMinSize from 10.0f to 12.0f.
+- Stack Tool: Added option to copy item path to clipboard. (#4631)
+- Settings: Fixed out-of-bounds read when .ini file on disk is empty. (#5351) [@quantum5]
+- Settings: Fixed some SetNextWindowPos/SetNextWindowSize API calls not marking settings as dirty.
+- DrawList: Fixed PathArcTo() emitting terminating vertices too close to arc vertices. (#4993) [@thedmd]
+- DrawList: Fixed texture-based anti-aliasing path with RGBA textures (#5132, #3245) [@cfillion]
+- DrawList: Fixed divide-by-zero or glitches with Radius/Rounding values close to zero. (#5249, #5293, #3491)
+- DrawList: Circle with a radius smaller than 0.5f won't appear, to be consistent with other primitives. [@thedmd]
+- Debug Tools: Debug Log: Added ShowDebugLogWindow() showing an opt-in synthetic log of principal events
+  (focus, popup, active id changes) helping to diagnose issues.
+- Debug Tools: Added DebugTextEncoding() function to facilitate diagnosing issues when not sure about
+  whether you have a UTF-8 text encoding issue or a font loading issue. [@LaMarche05, @ocornut]
+- Demo: Add better demo of how to use SetNextFrameWantCaptureMouse()/SetNextFrameWantCaptureKeyboard().
+- Metrics: Added a "UTF-8 Encoding Viewer" section using the aforementioned DebugTextEncoding() function.
+- Metrics: Added "InputText" section to visualize internal state (#4947, #4949).
+- Misc: Fixed calling GetID("label") _before_ a widget emitting this item inside a group (such as InputInt())
+  from causing an assertion when closing the group. (#5181).
+- Misc: Fixed IsAnyItemHovered() returning false when using navigation.
+- Misc: Allow redefining IM_COL32_XXX layout macros to facilitate use on big-endian systems. (#5190, #767, #844)
+- Misc: Added IMGUI_STB_SPRINTF_FILENAME to support custom path to stb_sprintf. (#5068, #2954) [@jakubtomsu]
+- Misc: Added constexpr to ImVec2/ImVec4 inline constructors. (#4995) [@Myriachan]
+- Misc: Updated stb_truetype.h from 1.20 to 1.26 (many fixes). (#5075)
+- Misc: Updated stb_textedit.h from 1.13 to 1.14 (our changes so this effectively is a no-op). (#5075)
+- Misc: Updated stb_rect_pack.h from 1.00 to 1.01 (minor). (#5075)
+- Misc: binary_to_compressed_c tool: Added -nostatic option. (#5021) [@podsvirov]
+- ImVector: Fixed erase() with empty range. (#5009) [@thedmd]
+- Backends: Vulkan: Don't use VK_PRESENT_MODE_MAX_ENUM_KHR as specs state it isn't part of the API. (#5254)
+- Backends: GLFW: Fixed a regression in 1.87 which resulted in keyboard modifiers events being
+  reported incorrectly on Linux/X11, due to a bug in GLFW. [@rokups]
+- Backends: GLFW: Fixed untranslated keys when pressing lower case letters on OSX (#5260, #5261) [@cpichard]
+- Backends: SDL: Fixed dragging out viewport broken on some SDL setups. (#5012) [@rokups]
+- Backends: SDL: Added support for extra mouse buttons (SDL_BUTTON_X1/SDL_BUTTON_X2). (#5125) [@sgiurgiu]
+- Backends: SDL, OpenGL3: Fixes to facilitate building on AmigaOS4. (#5190) [@afxgroup]
+- Backends: OSX: Monitor NSKeyUp events to catch missing keyUp for key when user press Cmd + key (#5128) [@thedmd]
+- Backends: OSX, Metal: Store backend data in a per-context struct, allowing to use these backends with
+  multiple contexts. (#5203, #5221, #4141) [@noisewuwei]
+- Backends: Metal: Fixed null dereference on exit inside command buffer completion handler. (#5363, #5365) [@warrenm]
+- Backends: OpenGL3: Partially revert 1.86 change of using glBufferSubData(): now only done on Windows and
+  Intel GPU, based on querying glGetString(GL_VENDOR). Essentially we got report of accumulating leaks on Intel
+  with multi-viewports when using simple glBufferData() without orphaning, and report of corruptions on other
+  GPUs with multi-viewports when using orphaning and glBufferSubData(), so currently switching technique based
+  on GPU vendor, which unfortunately reinforce the cargo-cult nature of dealing with OpenGL drivers.
+  Navigating the space of mysterious OpenGL drivers is particularly difficult as they are known to rely on
+  application specific whitelisting. (#4468, #3381, #2981, #4825, #4832, #5127).
+- Backends: OpenGL3: Fix state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
+  and vertex attribute states. [@rokups]
+- Examples: Emscripten+WebGPU: Fix building for latest WebGPU specs. (#3632)
+- Examples: OSX+Metal, OSX+OpenGL: Removed now-unnecessary calls to ImGui_ImplOSX_HandleEvent(). (#4821)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.87 (Released 2022-02-07)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.87
+
+Breaking Changes:
+
+- Removed support for pre-C++11 compilers. We'll stop supporting VS2010. (#4537)
+- Reworked IO mouse input API: (#4921, #4858) [@thedmd, @ocornut]
+  - Added io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() functions,
+    obsoleting writing directly to io.MousePos, io.MouseDown[], io.MouseWheel, etc.
+  - This enable input queue trickling to support low framerates. (#2787, #1992, #3383, #2525, #1320)
+  - For all calls to IO new functions, the Dear ImGui context should be bound/current.
+- Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
+  - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
+  - For keyboard modifiers, you can call io.AddKeyEvent() with ImGuiKey_ModXXX values,
+    obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
+  - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
+  - Added full range of key enums in ImGuiKey (e.g. ImGuiKey_F1).
+  - Added GetKeyName() helper function.
+  - Obsoleted GetKeyIndex(): it is now unnecessary and will now return the same value.
+  - All keyboard related functions taking 'int user_key_index' now take 'ImGuiKey key':
+    - IsKeyDown(), IsKeyPressed(), IsKeyReleased(), GetKeyPressedAmount().
+  - Added io.ConfigInputTrickleEventQueue (defaulting to true) to disable input queue trickling.
+  - Backward compatibility:
+    - All backends updated to use new functions.
+    - Old backends populating those arrays should still work!
+    - Calling e.g. IsKeyPressed(MY_NATIVE_KEY_XXX) will still work! (for a while)
+    - Those legacy arrays will only be disabled if '#define IMGUI_DISABLE_OBSOLETE_KEYIO' is set in your imconfig.
+      In a few versions, IMGUI_DISABLE_OBSOLETE_FUNCTIONS will automatically enable IMGUI_DISABLE_OBSOLETE_KEYIO,
+      so this will be moved into the regular obsolescence path.
+    - BREAKING: If your custom backend used ImGuiKey as mock native indices (e.g. "io.KeyMap[ImGuiKey_A] = ImGuiKey_A")
+      this is a use case that will now assert and be breaking for your old backend.
+  - Transition guide:
+     - IsKeyPressed(MY_NATIVE_KEY_XXX)           -> use IsKeyPressed(ImGuiKey_XXX)
+     - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))   -> use IsKeyPressed(ImGuiKey_XXX)
+     - Backend writing to io.KeyMap[],KeysDown[] -> backend should call io.AddKeyEvent(), if legacy indexing is desired, call io.SetKeyEventNativeData()
+     - Basically the trick we took advantage of is that we previously only supported native keycode from 0 to 511,
+       so ImGuiKey values can still express a legacy native keycode, and new named keys are all >= 512.
+  - This will enable a few things in the future:
+     - Access to portable keys allows for backend-agnostic keyboard input code. Until now it was difficult
+       to share code using keyboard across project because of this gap. (#2625, #3724)
+     - Access to full key ranges will allow us to develop a proper keyboard shortcut system. (#456)
+     - io.SetKeyEventNativeData() include native keycode/scancode which may later be exposed. (#3141, #2959)
+- Reworked IO nav/gamepad input API and unifying inputs sources: (#4921, #4858, #787)
+  - Added full range of ImGuiKey_GamepadXXXX enums (e.g. ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadR2) to use with
+    io.AddKeyEvent(), io.AddKeyAnalogEvent().
+  - Added io.AddKeyAnalogEvent() function, obsoleting writing directly to io.NavInputs[] arrays.
+- Renamed ImGuiKey_KeyPadEnter to ImGuiKey_KeypadEnter to align with new symbols. Kept redirection enum. (#2625)
+- Removed support for legacy arithmetic operators (+,+-,*,/) when inputing text into a slider/drag. (#4917, #3184)
+  This doesn't break any api/code but a feature that was accessible by end-users (which seemingly no one used).
+  (Instead you may implement custom expression evaluators to provide a better version of this).
+- Backends: GLFW: backend now uses glfwSetCursorPosCallback().
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: nothing to do. is already done for you.
+  - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=false: you WILL NEED to register the GLFW callback
+    using glfwSetCursorPosCallback() and forward it to the backend function ImGui_ImplGlfw_CursorPosCallback().
+- Backends: SDL: Added SDL_Renderer* parameter to ImGui_ImplSDL2_InitForSDLRenderer(), so backend can call
+  SDL_GetRendererOutputSize() to obtain framebuffer size valid for hi-dpi. (#4927) [@Clownacy]
+- Commented out redirecting functions/enums names that were marked obsolete in 1.69, 1.70, 1.71, 1.72 (March-July 2019)
+  - ImGui::SetNextTreeNodeOpen()        -> use ImGui::SetNextItemOpen()
+  - ImGui::GetContentRegionAvailWidth() -> use ImGui::GetContentRegionAvail().x
+  - ImGui::TreeAdvanceToLabelPos()      -> use ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing());
+  - ImFontAtlas::CustomRect             -> use ImFontAtlasCustomRect
+  - ImGuiColorEditFlags_RGB/HSV/HEX     -> use ImGuiColorEditFlags_DisplayRGB/HSV/Hex
+- Removed io.ImeSetInputScreenPosFn() in favor of more flexible io.SetPlatformImeDataFn() for IME support.
+  Because this field was mostly only ever used by Dear ImGui internally, not by backends nor the vast majority
+  of user code, this should only affect a very small fraction for users who are already very IME-aware.
+- Obsoleted 'void* io.ImeWindowHandle' in favor of writing to 'void* ImGuiViewport::PlatformHandleRaw'.
+  This removes an incompatibility between 'master' and 'multi-viewports' backends and toward enabling
+  better support for IME. Updated backends accordingly. Because the old field is set by existing backends,
+  we are keeping it (marked as obsolete).
+
+Other Changes:
+
+- IO: Added event based input queue API, which now trickles events to support low framerates. [@thedmd, @ocornut]
+  Previously the most common issue case (button presses in low framerates) was handled by backend. This is now
+  handled by core automatically for all kind of inputs. (#4858, #2787, #1992, #3383, #2525, #1320)
+  - New IO functions for keyboard/gamepad: AddKeyEvent(), AddKeyAnalogEvent().
+  - New IO functions for mouse: AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent().
+- IO: Unified key enums allow using key functions on key mods and gamepad values.
+- Fixed CTRL+Tab into an empty window causing artifacts on the highlight rectangle due to bad reordering on ImDrawCmd.
+- Fixed a situation where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with zero triangles,
+  which would makes the draw operation of some backends assert (e.g. Metal with debugging). (#4857)
+- Popups: Fixed a regression crash when a new window is created after a modal on the same frame. (#4920) [@rokups]
+- Popups: Fixed an issue when reopening a same popup multiple times would offset them by 1 pixel on the right. (#4936)
+- Tables, ImDrawListSplitter: Fixed erroneously stripping trailing ImDrawList::AddCallback() when submitted in
+  last column or last channel and when there are no other drawing operation. (#4843, #4844) [@hoffstadt]
+- Tables: Fixed positioning of Sort icon on right-most column with some settings (not resizable + no borders). (#4918).
+- Nav: Fixed gamepad navigation in wrapping popups not wrapping all the way. (#4365)
+- Sliders, Drags: Fixed text input of values with a leading sign, common when using a format enforcing sign. (#4917)
+- Demo: draw a section of keyboard in "Inputs > Keyboard, Gamepad & Navigation state" to visualize keys. [@thedmd]
+- Platform IME: changed io.ImeSetInputScreenPosFn() to io.SetPlatformImeDataFn() API,
+  now taking a ImGuiPlatformImeData structure which we can more easily extend in the future.
+- Platform IME: moved io.ImeWindowHandle to GetMainViewport()->PlatformHandleRaw.
+- Platform IME: add ImGuiPlatformImeData::WantVisible, hide IME composition window when not used. (#2589) [@actboy168]
+- Platform IME: add ImGuiPlatformImeData::InputLineHeight. (#3113) [@liuliu]
+- Platform IME: [windows] call ImmSetCandidateWindow() to position candidate window.
+- Backends: GLFW: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts.
+  We are now converting GLFW untranslated keycodes back to translated keycodes in order to match the behavior of
+  other backend, and facilitate the use of GLFW with lettered-shortcuts API. (#456, #2625)
+- Backends: GLFW: Submit keys and key mods using io.AddKeyEvent(). (#2625, #4921)
+- Backends: GLFW: Submit mouse data using io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() functions. (#4921)
+- Backends: GLFW: Retrieve mouse position using glfwSetCursorPosCallback() + fallback when focused but not hovered/captured.
+- Backends: GLFW: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4921)
+- Backends: GLFW: Added ImGui_ImplGlfw_InstallCallbacks()/ImGui_ImplGlfw_RestoreCallbacks() helpers to facilitate user installing
+  callbacks after iniitializing backend. (#4981)
+- Backends: Win32: Submit keys and key mods using io.AddKeyEvent(). (#2625, #4921)
+- Backends: Win32: Retrieve mouse position using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback when focused but not hovered/captured.
+- Backends: Win32: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4921)
+- Backends: Win32: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
+- Backends: Win32: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4921)
+- Backends: SDL: Pass localized keys (matching keyboard layout). Fix e.g. CTRL+A, CTRL+Z, CTRL+Y shortcuts. (#456, #2625)
+- Backends: SDL: Submit key data using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: SDL: Retrieve mouse position using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback when focused but not hovered/captured.
+- Backends: SDL: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4921)
+- Backends: SDL: Maintain a MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
+- Backends: SDL: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4921)
+- Backends: Allegro5: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: Allegro5: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4921)
+- Backends: OSX: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: OSX: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4921)
+- Backends: OSX: Submit gamepad data using io.AddKeyEvent/AddKeyAnalogEvent() functions, stopped writing to io.NavInputs[]. (#4921)
+- Backends: OSX: Added basic Platform IME support. (#3108, #2598) [@liuliu]
+- Backends: OSX: Fix Game Controller nav mapping to use shoulder for both focusing and tweak speed. (#4759)
+- Backends: OSX: Fix building with old Xcode versions that are missing gamepad features. [@rokups]
+- Backends: OSX: Forward keyDown/keyUp events to OS when unused by Dear ImGui.
+- Backends: Android, GLUT: Submit keys using io.AddKeyEvent(). Submit keymods using io.AddKeyModsEvent() at the same time. (#2625)
+- Backends: Android, GLUT: Submit mouse data using io.AddMousePosEvent(), AddMouseButtonEvent(), AddMouseWheelEvent() functions. (#4858)
+- Backends: OpenGL3: Fixed a buffer overflow in imgui_impl_opengl3_loader.h init (added in 1.86). (#4468, #4830) [@dymk]
+  It would generally not have noticeable side-effect at runtime but would be detected by runtime checkers.
+- Backends: OpenGL3: Fix OpenGL ES2 includes on Apple systems. [@rokups]
+- Backends: Metal: Added Apple Metal C++ API support. (#4824, #4746) [@luigifcruz]
+  Enable with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file.
+- Backends: Metal: Ignore ImDrawCmd where ElemCount == 0, which are normally not emitted by the library but
+  can theoretically be created by user code manipulating a ImDrawList. (#4857)
+- Backends: Vulkan: Added support for ImTextureID as VkDescriptorSet, add ImGui_ImplVulkan_AddTexture(). (#914) [@martty]
+- Backends: SDL_Renderer: Fix texture atlas format on big-endian hardware (#4927) [@Clownacy]
+- Backends: WebGPU: Fixed incorrect size parameters in wgpuRenderPassEncoderSetIndexBuffer() and
+  wgpuRenderPassEncoderSetVertexBuffer() calls. (#4891) [@FeepsDev]
+
+
 -----------------------------------------------------------------------
  VERSION 1.86 (Released 2021-12-22)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.86
 
 Breaking Changes:
 
@@ -130,6 +657,8 @@ Other Changes:
  VERSION 1.85 (Released 2021-10-12)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.85
+
 This is the last release officially supporting C++03 and Visual Studio 2008/2010. (#4537)
 We expect that the next release will require a subset of the C++11 language (VS 2012~, GCC 4.8.1, Clang 3.3).
 We may use some C++11 language features but we will not use any C++ library headers.
@@ -137,7 +666,7 @@ If you are stuck on ancient compiler you may need to stay at this version onward
 
 Breaking Changes:
 
-- Removed GetWindowContentRegionWidth() function. keep inline redirection helper.
+- Removed GetWindowContentRegionWidth() function. Kept inline redirection helper.
   Can use 'GetWindowContentRegionMax().x - GetWindowContentRegionMin().x' instead but it's not
   very useful in practice, and the only use of it in the demo was illfit.
   Using 'GetContentRegionAvail().x' is generally a better choice.
@@ -219,7 +748,7 @@ Other Changes:
  VERSION 1.84.2 (Released 2021-08-23)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.2
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.84.2
 
 - Disabled: Fixed nested BeginDisabled()/EndDisabled() calls. (#211, #4452, #4453, #4462) [@Legulysse]
 - Backends: OpenGL3: OpenGL: Fixed ES 3.0 shader ("#version 300 es") to use normal precision
@@ -230,7 +759,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.2
  VERSION 1.84.1 (Released 2021-08-20)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.1
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.84.1
 
 - Disabled: Fixed BeginDisabled(false) - BeginDisabled(true) was working. (#211, #4452, #4453)
 
@@ -239,7 +768,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84.1
  VERSION 1.84 (Released 2021-08-20)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.84
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.84
 
 Breaking Changes:
 
@@ -289,7 +818,7 @@ Other Changes:
   Convenient for some small columns. Name will still appear in context menu. (#4206).
 - Tables: Fixed columns order on TableSetupScrollFreeze() if previous data got frozen columns out of their section.
 - Tables: Fixed invalid data in TableGetSortSpecs() when SpecsDirty flag is unset. (#4233)
-- TabBar: Fixed using more than 32 KB-worth of tab names. (#4176)
+- Tabs: Fixed using more than 32 KB-worth of tab names. (#4176)
 - InputInt/InputFloat: When used with Steps values and _ReadOnly flag, the step button look disabled. (#211)
 - InputText: Fixed named filtering flags disabling newline or tabs in multiline inputs (#4409, #4410) [@kfsone]
 - Drag and Drop: drop target highlight doesn't try to bypass host clipping rectangle. (#4281, #3272)
@@ -355,7 +884,7 @@ Other Changes:
  VERSION 1.83 (Released 2021-05-24)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.83
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.83
 
 Breaking Changes:
 
@@ -382,7 +911,7 @@ Other Changes:
 - Tables: Expose TableSetColumnEnabled() in public api. (#3935)
 - Tables: Better preserve widths when columns count changes. (#4046)
 - Tables: Sharing more memory buffers between tables, reducing general memory footprints. (#3740)
-- TabBar: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
+- Tabs: Fixed mouse reordering with very fast movements (e.g. crossing multiple tabs in a single
   frame and then immediately standing still (would only affect automation/bots). [@rokups]
 - Menus: made MenuItem() in a menu bar reflect the 'selected' argument with a highlight. (#4128) [@mattelegende]
 - Drags, Sliders, Inputs: Specifying a NULL format to Float functions default them to "%.3f" to be
@@ -439,7 +968,7 @@ Other Changes:
  VERSION 1.82 (Released 2021-02-15)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.82
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.82
 
 Breaking Changes:
 
@@ -534,7 +1063,7 @@ Other Changes:
  VERSION 1.81 (Released 2021-02-10)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.81
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.81
 
 Breaking Changes:
 
@@ -615,7 +1144,7 @@ Other Changes:
  VERSION 1.80 (Released 2021-01-21)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.80
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.80
 
 Breaking Changes:
 
@@ -665,11 +1194,11 @@ Other Changes:
   - Added 2 enums: ImGuiSortDirection, ImGuiTableBgTarget
   - Added 1 style variable: ImGuiStyleVar_CellPadding
   - Added 5 style colors: ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
-- Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
-- Tab Bar: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
-- Tab Bar: Do not display a tooltip if the name already fits over a given tab. (#3521)
-- Tab Bar: Fixed minor/unlikely bug skipping over a button when scrolling left with arrows.
-- Tab Bar: Requested ideal content size (for auto-fit) doesn't affect horizontal scrolling. (#3414)
+- Tabs: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
+- Tabs: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
+- Tabs: Do not display a tooltip if the name already fits over a given tab. (#3521)
+- Tabs: Fixed minor/unlikely bug skipping over a button when scrolling left with arrows.
+- Tabs: Requested ideal content size (for auto-fit) doesn't affect horizontal scrolling. (#3414)
 - Drag and Drop: Fix losing drop source ActiveID (and often source tooltip) when opening a TreeNode()
   or CollapsingHeader() while dragging. (#1738)
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by chosen the later one. Fixes dragging
@@ -734,7 +1263,7 @@ Other Changes:
  VERSION 1.79 (Released 2020-10-08)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.79
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.79
 
 Breaking Changes:
 
@@ -790,16 +1319,16 @@ Other Changes:
   rather than the Mouse Down+Up sequence, even if the _OpenOnArrow flag isn't set. This is standard behavior
   and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set.
   (This is also necessary to support full multi/range-select/drag and drop operations.)
-- Tab Bar: Added TabItemButton() to submit tab that behave like a button. (#3291) [@Xipiryon]
-- Tab Bar: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button
+- Tabs: Added TabItemButton() to submit tab that behave like a button. (#3291) [@Xipiryon]
+- Tabs: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button
   at either end of the tab bar. Those tabs won't be part of the scrolling region, and when reordering cannot
   be moving outside of their section. Most often used with TabItemButton(). (#3291) [@Xipiryon]
-- Tab Bar: Added ImGuiTabItemFlags_NoReorder flag to disable reordering a given tab.
-- Tab Bar: Keep tab item close button visible while dragging a tab (independent of hovering state).
-- Tab Bar: Fixed a small bug where closing a tab that is not selected would leave a tab hole for a frame.
-- Tab Bar: Fixed a small bug where scrolling buttons (with ImGuiTabBarFlags_FittingPolicyScroll) would
+- Tabs: Added ImGuiTabItemFlags_NoReorder flag to disable reordering a given tab.
+- Tabs: Keep tab item close button visible while dragging a tab (independent of hovering state).
+- Tabs: Fixed a small bug where closing a tab that is not selected would leave a tab hole for a frame.
+- Tabs: Fixed a small bug where scrolling buttons (with ImGuiTabBarFlags_FittingPolicyScroll) would
   generate an unnecessary extra draw call.
-- Tab Bar: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
+- Tabs: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
   tabs reordered in the tab list popup. [@Xipiryon]
 - Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
   a fully clipped column. (#3475) [@szreder]
@@ -828,7 +1357,7 @@ Other Changes:
  VERSION 1.78 (Released 2020-08-18)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.78
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.78
 
 Breaking Changes:
 
@@ -893,7 +1422,7 @@ Other Changes:
   limits when close-enough by (WindowPadding - ItemPadding), which was a tweak with too many
   side-effects. The behavior is still present in SetScrollHere functions as they are more explicitly
   aiming at making widgets visible. May later be moved to a flag.
-- Tab Bar: Allow calling SetTabItemClosed() after a tab has been submitted (will process next frame).
+- Tabs: Allow calling SetTabItemClosed() after a tab has been submitted (will process next frame).
 - InvisibleButton: Made public a small selection of ImGuiButtonFlags (previously in imgui_internal.h)
   and allowed to pass them to InvisibleButton(): ImGuiButtonFlags_MouseButtonLeft/Right/Middle.
   This is a small but rather important change because lots of multi-button behaviors could previously
@@ -929,7 +1458,7 @@ Other Changes:
  VERSION 1.77 (Released 2020-06-29)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.77
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.77
 
 Breaking Changes:
 
@@ -1020,7 +1549,7 @@ Other Changes:
  VERSION 1.76 (Released 2020-04-12)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.76
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.76
 
 Other Changes:
 
@@ -1092,7 +1621,7 @@ Other Changes:
  VERSION 1.75 (Released 2020-02-10)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.75
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.75
 
 Breaking Changes:
 
@@ -1190,7 +1719,7 @@ Other Changes:
  VERSION 1.74 (Released 2019-11-25)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.74
 
 Breaking Changes:
 
@@ -1269,7 +1798,7 @@ Other Changes:
  VERSION 1.73 (Released 2019-09-24)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.73
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.73
 
 Other Changes:
 
@@ -1280,11 +1809,11 @@ Other Changes:
 - ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
   Note that some elements won't accurately fade down with the same intensity, and the color wheel
   when enabled will have small overlap glitches with (style.Alpha < 1.0).
-- TabBar: Fixed single-tab not shrinking their width down.
-- TabBar: Fixed clicking on a tab larger than tab-bar width creating a bouncing feedback loop.
-- TabBar: Feed desired width (sum of unclipped tabs width) into layout system to allow for auto-resize. (#2768)
+- Tabs: Fixed single-tab not shrinking their width down.
+- Tabs: Fixed clicking on a tab larger than tab-bar width creating a bouncing feedback loop.
+- Tabs: Feed desired width (sum of unclipped tabs width) into layout system to allow for auto-resize. (#2768)
   (before 1.71 tab bars fed the sum of current width which created feedback loops in certain situations).
-- TabBar: Improved shrinking for large number of tabs to avoid leaving extraneous space on the right side.
+- Tabs: Improved shrinking for large number of tabs to avoid leaving extraneous space on the right side.
   Individuals tabs are given integer-rounded width and remainder is spread between tabs left-to-right.
 - Columns, Separator: Fixed a bug where non-visible separators within columns would alter the next row position
   differently than visible ones.
@@ -1331,7 +1860,7 @@ Other Changes:
  VERSION 1.72b (Released 2019-07-31)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72b
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.72b
 
 Other Changes:
 
@@ -1348,7 +1877,7 @@ Other Changes:
  VERSION 1.72 (Released 2019-07-27)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
 
@@ -1384,7 +1913,7 @@ Other Changes:
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Combo: Hide arrow when there's not enough space even for the square button.
 - InputText: Testing for newly added ImGuiKey_KeyPadEnter key. (#2677, #2005) [@amc522]
-- TabBar: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
+- Tabs: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
 - Columns: Fixed a regression from 1.71 where the right-side of the contents rectangle within each column
   would wrongly use a WindowPadding.x instead of ItemSpacing.x like it always did. (#125, #2666)
 - Columns: Made the right-most edge reaches up to the clipping rectangle (removing half of WindowPadding.x
@@ -1406,8 +1935,8 @@ Other Changes:
   returning true. This also effectively make ColorEdit4() not incorrect trigger IsItemDeactivatedAfterEdit()
   when clicking the color button to open the picker popup. (#1875)
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
-- Debug, Metrics: Added "Tools->Item Picker" tool which allow clicking on a widget to break in the debugger
-  within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h if needed.
+- Debug Tools: Added "Metrics->Tools->Item Picker" tool which allow clicking on a widget to break in the
+  debugger within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h.
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)
@@ -1433,7 +1962,7 @@ Other Changes:
  VERSION 1.71 (Released 2019-06-12)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.71
 
 Breaking Changes:
 
@@ -1479,7 +2008,7 @@ Other Changes:
   viewport triggering the issue. (#2609)
 - TreeNode, CollapsingHeader: Fixed highlight frame not covering horizontal area fully when using
   horizontal scrolling. (#2211, #2579)
-- TabBar: Fixed BeginTabBar() within a window with horizontal scrolling from creating a feedback
+- Tabs: Fixed BeginTabBar() within a window with horizontal scrolling from creating a feedback
   loop with the horizontal contents size.
 - Columns: Fixed Columns() within a window with horizontal scrolling from not covering the full
   horizontal area (previously only worked with an explicit contents size). (#125)
@@ -1517,7 +2046,7 @@ Other Changes:
  VERSION 1.70 (Released 2019-05-06)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
 
@@ -1608,7 +2137,7 @@ Other Changes:
  VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.69
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.69
 
 Breaking Changes:
 
@@ -1648,14 +2177,14 @@ Other Changes:
 - ColorEdit: Fixed tooltip not honoring the ImGuiColorEditFlags_NoAlpha contract of never
   reading the 4th float in the array (value was read and discarded). (#2384) [@haldean]
 - MenuItem, Selectable: Fixed disabled widget interfering with navigation (fix c2db7f63 in 1.67).
-- TabBar: Fixed a crash when using many BeginTabBar() recursively (didn't affect docking). (#2371)
-- TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
+- Tabs: Fixed a crash when using many BeginTabBar() recursively (didn't affect docking). (#2371)
+- Tabs: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
-- TabBar: Fixed ImGuiTabItemFlags_SetSelected being ignored if the tab is not visible (with
+- Tabs: Fixed ImGuiTabItemFlags_SetSelected being ignored if the tab is not visible (with
   scrolling policy enabled) or if is currently appearing.
-- TabBar: Fixed Tab tooltip code making drag and drop tooltip disappear during the frame where
+- Tabs: Fixed Tab tooltip code making drag and drop tooltip disappear during the frame where
   the drag payload activate a tab.
-- TabBar: Reworked scrolling policy (when ImGuiTabBarFlags_FittingPolicyScroll is set) to
+- Tabs: Reworked scrolling policy (when ImGuiTabBarFlags_FittingPolicyScroll is set) to
   teleport the view when aiming at a tab far away the visible section, and otherwise accelerate
   the scrolling speed to cap the scrolling time to 0.3 seconds.
 - Text: Fixed large Text/TextUnformatted calls not feeding their size into layout when starting
@@ -1686,7 +2215,7 @@ Other Changes:
  VERSION 1.68 (Released 2019-02-19)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.68
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.68
 
 Breaking Changes:
 
@@ -1756,7 +2285,7 @@ Other Changes:
  VERSION 1.67 (Released 2019-01-14)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.67
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.67
 
 Breaking Changes:
 
@@ -1821,7 +2350,7 @@ Other Changes:
  VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66b
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.66b
 
 Other Changes:
 
@@ -1840,7 +2369,7 @@ Other Changes:
  VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.66
 
 Breaking Changes:
 
@@ -1901,7 +2430,7 @@ Other Changes:
  VERSION 1.65 (Released 2018-09-06)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.65
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.65
 
 Breaking Changes:
 
@@ -1927,7 +2456,7 @@ Other Changes:
  VERSION 1.64 (Released 2018-08-31)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.64
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.64
 
 Changes:
 
@@ -1951,7 +2480,7 @@ Changes:
  VERSION 1.63 (Released 2018-08-29)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.63
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.63
 
 Breaking Changes:
 
@@ -2045,7 +2574,7 @@ Other Changes:
  VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.62
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.62
 
 Breaking Changes:
 
@@ -2126,7 +2655,7 @@ Other Changes:
  VERSION 1.61 (Released 2018-05-14)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.61
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.61
 
 Breaking Changes:
 
@@ -2202,7 +2731,7 @@ Other Changes:
  VERSION 1.60 (Released 2018-04-07)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.60
 
 The gamepad/keyboard navigation branch (which has been in the work since July 2016) has been merged.
 Gamepad/keyboard navigation is still marked as Beta and has to be enabled explicitly.
@@ -2368,7 +2897,7 @@ Other Changes:
  VERSION 1.53 (Released 2017-12-25)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.53
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.53
 
 Breaking Changes:
 
@@ -2507,7 +3036,7 @@ Other Changes:
  VERSION 1.52 (2017-10-27)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.52
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.52
 
 Breaking Changes:
 
@@ -2613,7 +3142,7 @@ Beta Navigation Branch:
  VERSION 1.51 (2017-08-24)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.51
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.51
 
 Breaking Changes:
 
@@ -2677,7 +3206,7 @@ Other Changes:
  VERSION 1.50 (2017-06-02)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.50
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.50
 
 Breaking Changes:
 
@@ -2773,7 +3302,7 @@ Other Changes:
  VERSION 1.49 (2016-05-09)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.49
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.49
 
 Breaking Changes:
 
@@ -2851,7 +3380,7 @@ Other changes:
  VERSION 1.48 (2016-04-09)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.48
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.48
 
 Breaking Changes:
 
@@ -2921,7 +3450,7 @@ Other Changes:
  VERSION 1.47 (2015-12-25)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.47
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.47
 
 Changes:
 
@@ -2974,7 +3503,7 @@ Changes:
  VERSION 1.46 (2015-10-18)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.46
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.46
 
 Changes:
 
@@ -3026,7 +3555,7 @@ Changes:
  VERSION 1.45 (2015-09-01)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.45
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.45
 
 Breaking Changes:
 
@@ -3086,7 +3615,7 @@ Other Changes:
  VERSION 1.44 (2015-08-08)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.44
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.44
 
 Breaking Changes:
 
@@ -3130,7 +3659,7 @@ Other Changes:
  VERSION 1.43 (2015-07-17)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.43
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.43
 
 Breaking Changes:
 
@@ -3202,7 +3731,7 @@ Other Changes:
  VERSION 1.42 (2015-07-08)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.42
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.42
 
 Breaking Changes:
 
@@ -3247,7 +3776,7 @@ Other Changes:
  VERSION 1.41 (2015-06-26)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.41
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.41
 
 Breaking Changes:
 
@@ -3291,7 +3820,7 @@ Other Changes:
  VERSION 1.40 (2015-05-31)
 -----------------------------------------------------------------------
 
-Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.40
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.40
 
 Breaking Changes:
 

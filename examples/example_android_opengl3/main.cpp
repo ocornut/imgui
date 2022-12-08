@@ -9,6 +9,7 @@
 #include <android/asset_manager.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <string>
 
 // Data
 static EGLDisplay           g_EglDisplay = EGL_NO_DISPLAY;
@@ -17,6 +18,7 @@ static EGLContext           g_EglContext = EGL_NO_CONTEXT;
 static struct android_app*  g_App = NULL;
 static bool                 g_Initialized = false;
 static char                 g_LogTag[] = "ImGuiExample";
+static std::string          g_IniFilename = "";
 
 // Forward declarations of helper functions
 static int ShowSoftKeyboardInput();
@@ -70,13 +72,14 @@ void init(struct android_app* app)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
-    // Disable loading/saving of .ini file from disk.
-    // FIXME: Consider using LoadIniSettingsFromMemory() / SaveIniSettingsToMemory() to save in appropriate location for Android.
-    io.IniFilename = NULL;
+    // Redirect loading/saving of .ini file to our location.
+    // Make sure 'g_IniFilename' persists while we use Dear ImGui.
+    g_IniFilename = std::string(app->activity->internalDataPath) + "/imgui.ini";
+    io.IniFilename = g_IniFilename.c_str();;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
     ImGui_ImplAndroid_Init(g_App->window);
@@ -99,17 +102,17 @@ void init(struct android_app* app)
     //void* font_data;
     //int font_data_size;
     //ImFont* font;
+    //font_data_size = GetAssetData("segoeui.ttf", &font_data);
+    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 16.0f);
+    //IM_ASSERT(font != NULL);
+    //font_data_size = GetAssetData("DroidSans.ttf", &font_data);
+    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 16.0f);
+    //IM_ASSERT(font != NULL);
     //font_data_size = GetAssetData("Roboto-Medium.ttf", &font_data);
     //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 16.0f);
     //IM_ASSERT(font != NULL);
     //font_data_size = GetAssetData("Cousine-Regular.ttf", &font_data);
     //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 15.0f);
-    //IM_ASSERT(font != NULL);
-    //font_data_size = GetAssetData("DroidSans.ttf", &font_data);
-    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 16.0f);
-    //IM_ASSERT(font != NULL);
-    //font_data_size = GetAssetData("ProggyTiny.ttf", &font_data);
-    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 10.0f);
     //IM_ASSERT(font != NULL);
     //font_data_size = GetAssetData("ArialUni.ttf", &font_data);
     //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
@@ -152,7 +155,7 @@ void tick()
     if (show_demo_window)
         ImGui::ShowDemoWindow(&show_demo_window);
 
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
     {
         static float f = 0.0f;
         static int counter = 0;

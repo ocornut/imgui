@@ -26,12 +26,12 @@ See https://gist.github.com/ocornut/b3a9ecf13502fd818799a452969649ad
 
 ### Comparaison
 
-Small, thin anti-aliased fonts are typically benefiting a lots from Freetype's hinting:
+Small, thin anti-aliased fonts typically benefit a lot from FreeType's hinting:
 ![comparing_font_rasterizers](https://user-images.githubusercontent.com/8225057/107550178-fef87f00-6bd0-11eb-8d09-e2edb2f0ccfc.gif)
 
 ### Colorful glyphs/emojis
 
-You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain colorful glyphs. See
-["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/edit/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
+You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain colorful glyphs. See the
+["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
 
 ![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)

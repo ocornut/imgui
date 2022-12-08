@@ -10,7 +10,7 @@ on:
 
 jobs:
   PVS-Studio:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
         with:
@@ -44,34 +44,3 @@ jobs:
           pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
           pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
           plog-converter -a 'GA:1,2;OP:1' -d V1071 -t errorfile -w pvs-studio.log
-
-  Discord-CI:
-    runs-on: ubuntu-18.04
-    needs: [PVS-Studio]
-    if: always()
-    steps:
-    - uses: dearimgui/github_discord_notifier@latest
-      with:
-        discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        github-token: ${{ github.token }}
-        action-task: discord-jobs
-        discord-filter: "'{{ github.branch }}'.match(/master|docking/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
-        discord-username: GitHub Actions
-        discord-job-new-failure-message: ''
-        discord-job-fixed-failure-message: ''
-        discord-job-new-failure-embed: |
-          {
-            "title": "`{{ job.name }}` job is failing on `{{ github.branch }}`!",
-            "description": "Commit [{{ github.context.payload.head_commit.title }}]({{ github.context.payload.head_commit.url }}) pushed to [{{ github.branch }}]({{ github.branch_url }}) broke static analysis [{{ job.name }}]({{ job.url }}) job.\nFailing steps: {{ failing_steps }}",
-            "url": "{{ job.url }}",
-            "color": "0xFF0000",
-            "timestamp": "{{ run.updated_at }}"
-          }
-        discord-job-fixed-failure-embed: |
-          {
-            "title": "`{{ github.branch }}` branch is no longer failing!",
-            "description": "Static analysis failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
-            "color": "0x00FF00",
-            "url": "{{ github.context.payload.head_commit.url }}",
-            "timestamp": "{{ run.completed_at }}"
-          }
