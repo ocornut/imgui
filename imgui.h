@@ -881,12 +881,11 @@ namespace ImGui
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
 
-    // Inputs Utilities: Keyboard
-    // Without IMGUI_DISABLE_OBSOLETE_KEYIO: (legacy support)
-    //   - For 'ImGuiKey key' you can still use your legacy native/user indices according to how your backend/engine stored them in io.KeysDown[].
-    // With IMGUI_DISABLE_OBSOLETE_KEYIO: (this is the way forward)
-    //   - Any use of 'ImGuiKey' will assert when key < 512 will be passed, previously reserved as native/user keys indices
-    //   - GetKeyIndex() is pass-through and therefore deprecated (gone if IMGUI_DISABLE_OBSOLETE_KEYIO is defined)
+    // Inputs Utilities: Keyboard/Mouse/Gamepad
+    // - the ImGuiKey enum contains all possible keyboard, mouse and gamepad inputs (e.g. ImGuiKey_A, ImGuiKey_MouseLeft, ImGuiKey_GamepadDpadUp...).
+    // - before v1.87, we used ImGuiKey to carry native/user indices as defined by each backends. About use of those legacy ImGuiKey values:
+    //  - without IMGUI_DISABLE_OBSOLETE_KEYIO (legacy support): you can still use your legacy native/user indices (< 512) according to how your backend/engine stored them in io.KeysDown[], but need to cast them to ImGuiKey.
+    //  - with    IMGUI_DISABLE_OBSOLETE_KEYIO (this is the way forward): any use of ImGuiKey will assert with key < 512. GetKeyIndex() is pass-through and therefore deprecated (gone if IMGUI_DISABLE_OBSOLETE_KEYIO is defined).
     IMGUI_API bool          IsKeyDown(ImGuiKey key);                                            // is key being held.
     IMGUI_API bool          IsKeyPressed(ImGuiKey key, bool repeat = true);                     // was key pressed (went from !Down to Down)? if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
     IMGUI_API bool          IsKeyReleased(ImGuiKey key);                                        // was key released (went from Down to !Down)?
@@ -894,7 +893,7 @@ namespace ImGui
     IMGUI_API const char*   GetKeyName(ImGuiKey key);                                           // [DEBUG] returns English name of the key. Those names a provided for debugging purpose and are not meant to be saved persistently not compared.
     IMGUI_API void          SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard);        // Override io.WantCaptureKeyboard flag next frame (said flag is left for your application to handle, typically when true it instructs your app to ignore inputs). e.g. force capture keyboard when your widget is being hovered. This is equivalent to setting "io.WantCaptureKeyboard = want_capture_keyboard"; after the next NewFrame() call.
 
-    // Inputs Utilities: Mouse
+    // Inputs Utilities: Mouse specific
     // - To refer to a mouse button, you may use named enums in your code e.g. ImGuiMouseButton_Left, ImGuiMouseButton_Right.
     // - You can also use regular integer: it is forever guaranteed that 0=Left, 1=Right, 2=Middle.
     // - Dragging operations are only reported after mouse has moved a certain distance away from the initial clicking position (see 'lock_threshold' and 'io.MouseDraggingThreshold')
@@ -1011,7 +1010,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CharsScientific     = 1 << 17,  // Allow 0123456789.+-*/eE (Scientific notation input)
     ImGuiInputTextFlags_CallbackResize      = 1 << 18,  // Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. Notify when the string wants to be resized (for string types which hold a cache of their Size). You will be provided a new BufSize in the callback and NEED to honor it. (see misc/cpp/imgui_stdlib.h for an example of using this)
     ImGuiInputTextFlags_CallbackEdit        = 1 << 19,  // Callback on any edit (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the underlying buffer while focus is active)
-    ImGuiInputTextFlags_EscapeClearsAll     = 1 << 20,  // Escape key clears content if not empty, and deactivate otherwise (constrast to default behavior of Escape to revert)
+    ImGuiInputTextFlags_EscapeClearsAll     = 1 << 20,  // Escape key clears content if not empty, and deactivate otherwise (contrast to default behavior of Escape to revert)
 
     // Obsolete names (will be removed soon)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -1347,9 +1346,10 @@ enum ImGuiSortDirection_
     ImGuiSortDirection_Descending   = 2     // Descending = 9->0, Z->A etc.
 };
 
-// A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value)
-// All our named keys are >= 512. Keys value 0 to 511 are left unused as legacy native/opaque key values (< 1.87)
+// A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value): can represent Keyboard, Mouse and Gamepad values.
+// All our named keys are >= 512. Keys value 0 to 511 are left unused as legacy native/opaque key values (< 1.87).
 // Since >= 1.89 we increased typing (went from int to enum), some legacy code may need a cast to ImGuiKey.
+// Read details about the 1.87 and 1.89 transition : https://github.com/ocornut/imgui/issues/4921
 enum ImGuiKey : int
 {
     // Keyboard
@@ -1404,7 +1404,7 @@ enum ImGuiKey : int
     ImGuiKey_KeypadEnter,
     ImGuiKey_KeypadEqual,
 
-    // Gamepad (some of those are analog values, 0.0f to 1.0f)                          // GAME NAVIGATION ACTION
+    // Gamepad (some of those are analog values, 0.0f to 1.0f)                          // NAVIGATION ACTION
     // (download controller mapping PNG/PSD at http://dearimgui.org/controls_sheets)
     ImGuiKey_GamepadStart,          // Menu (Xbox)      + (Switch)   Start/Options (PS)
     ImGuiKey_GamepadBack,           // View (Xbox)      - (Switch)   Share (PS)
@@ -1452,7 +1452,7 @@ enum ImGuiKey : int
     ImGuiMod_Shift                  = 1 << 13,
     ImGuiMod_Alt                    = 1 << 14, // Option/Menu
     ImGuiMod_Super                  = 1 << 15, // Cmd/Super/Windows
-    ImGuiMod_Shortcut               = 1 << 11, // [Internal, read-only] Alias of ImGuiMod_Super (macOS) or ImGuiMod_Ctrl (otherwise), decided by io.ConfigMacOSXBehaviors.
+    ImGuiMod_Shortcut               = 1 << 11, // Alias for Ctrl (non-macOS) OR Super (macOS).
     ImGuiMod_Mask_                  = 0xF800,  // 5-bits
 
     // [Internal] Prior to 1.87 we required user to fill io.KeysDown[512] using their own native index + the io.KeyMap[] array.
