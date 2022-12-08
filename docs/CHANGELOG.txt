@@ -53,6 +53,8 @@ Other changes:
   which should later lead us toward more flexible uses of menu/status bars. (#5143, #3692)
 - Tables, Nav: frozen columns are not part of menu layer and can be crossed over. (#5143, #3692)
 - Tables, Columns: fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Tables: fixed matching width of synchronized tables (multiple tables with same id) when only
+  some instances have a vertical scrollbar and not all. (#5920)
 - Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
   compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
   easier for bindings generators to process that value. (#5923, #456)
