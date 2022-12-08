@@ -56,6 +56,9 @@ Other changes:
   We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
 - Text: fixed layouting of wrapped-text block when the last source line is above the
   clipping region. Regression added in 1.89. (#5720, #5919)
+- Misc: added GetItemID() in public API. It is not often expected that you would use this,
+  but it is useful for Shortcut() and upcoming owner-aware input functions which wants to
+  be implemented with public API.
 - Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
   applications using multiple font atlases.
 - Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
