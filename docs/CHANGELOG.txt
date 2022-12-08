@@ -106,6 +106,12 @@ Breaking changes:
 
 Other changes:
 
+- Inputs: added Shortcut() function (w/ routing policies) in public API. (#456, #2637)
+  Added ImGuiInputFlags_RouteFocused, ImGuiInputFlags_RouteGlobalXXX and other routing policies.
+    e.g. ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
+    - check that CTRL+C is pressed,
+    - and that current window is in focus stack,
+    - and that no other requests for CTRL+C have been made from deeper locations of the window/item stack.
 - Fixed cases where CTRL+Tab or Modal can occasionally lead to the creation of ImDrawCmd with
   zero triangles, which would makes the render loop of some backends assert (e.g. Metal with
   debugging, Allegro). (#4857, #5937)
@@ -114,6 +120,8 @@ Other changes:
   which should later lead us toward more flexible uses of menu/status bars. (#5143, #3692)
 - Tables, Nav: frozen columns are not part of menu layer and can be crossed over. (#5143, #3692)
 - Tables, Columns: fixed cases where empty columns may lead to empty ImDrawCmd. (#4857, #5937)
+- Tables: fixed matching width of synchronized tables (multiple tables with same id) when only
+  some instances have a vertical scrollbar and not all. (#5920)
 - Inputs, IO: reworked ImGuiMod_Shortcut to redirect to Ctrl/Super at runtime instead of
   compile-time, being consistent with our support for io.ConfigMacOSXBehaviors and making it
   easier for bindings generators to process that value. (#5923, #456)
@@ -123,8 +131,12 @@ Other changes:
   We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
 - Text: fixed layouting of wrapped-text block when the last source line is above the
   clipping region. Regression added in 1.89. (#5720, #5919)
+- Misc: added GetItemID() in public API. It is not often expected that you would use this,
+  but it is useful for Shortcut() and upcoming owner-aware input functions which wants to
+  be implemented with public API.
 - Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
   applications using multiple font atlases.
+- Demo: added "Inputs->Shortcut Routing" section.
 - Demo: simplified "Inputs" section, moved contents to Metrics->Inputs.
 - Debug Tools: Metrics: added "Inputs" section, moved from Demo for consistency.
 - Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building

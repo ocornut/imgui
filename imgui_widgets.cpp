@@ -7722,7 +7722,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     window->DC.IdealMaxPos.x = ImMax(window->DC.IdealMaxPos.x, tab_bar->BarRect.Min.x + tab_bar->WidthAllTabsIdeal);
 }
 
-// Dockable uses Name/ID in the global namespace. Non-dockable items use the ID stack.
+// Dockable windows uses Name/ID in the global namespace. Non-dockable items use the ID stack.
 static ImU32   ImGui::TabBarCalcTabID(ImGuiTabBar* tab_bar, const char* label, ImGuiWindow* docked_window)
 {
     if (docked_window != NULL)
@@ -8178,18 +8178,17 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     tab->Flags = flags;
     tab->Window = docked_window;
 
-    // Append name with zero-terminator
+    // Append name _WITH_ the zero-terminator
     // (regular tabs are permitted in a DockNode tab bar, but window tabs not permitted in a non-DockNode tab bar)
-    if (tab->Window != NULL)
+    if (docked_window != NULL)
     {
         IM_ASSERT(tab_bar->Flags & ImGuiTabBarFlags_DockNode);
         tab->NameOffset = -1;
     }
     else
     {
-        IM_ASSERT(tab->Window == NULL);
         tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
-        tab_bar->TabsNames.append(label, label + strlen(label) + 1); // Append name _with_ the zero-terminator.
+        tab_bar->TabsNames.append(label, label + strlen(label) + 1);
     }
 
     // Update selected tab
