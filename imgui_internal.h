@@ -205,7 +205,7 @@ namespace ImStb
 #ifndef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 #define IMGUI_DEBUG_PRINTF(_FMT,...)    printf(_FMT, __VA_ARGS__)
 #else
-#define IMGUI_DEBUG_PRINTF(_FMT,...)
+#define IMGUI_DEBUG_PRINTF(_FMT,...)    ((void)0)
 #endif
 #endif
 
