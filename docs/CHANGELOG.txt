@@ -76,6 +76,8 @@ Other changes:
   with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
 - Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
 - Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
+- Backends: Vulkan: Fixed sampler passed to ImGui_ImplVulkan_AddTexture() not being honored as we were using
+  an immutable sampler. (#5502, #6001, #914) [@martin-ejdestig, @rytisss]
 
 
 -----------------------------------------------------------------------
