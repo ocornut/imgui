@@ -15716,18 +15716,21 @@ static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
     if (node->LastFocusedNodeId == 0 && info.FirstNodeWithWindows != NULL)
         node->LastFocusedNodeId = info.FirstNodeWithWindows->ID;
 
-    // Copy the window class from of our first window so it can be used for proper dock filtering.
+    // Copy the window class from of our first window so it can be used for proper dock filtering,
+    // unless the node already has a defined class (e.g. one specified via call to DockSpace).
     // When node has mixed windows, prioritize the class with the most constraint (DockingAllowUnclassed = false) as the reference to copy.
     // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
-    if (ImGuiDockNode* first_node_with_windows = info.FirstNodeWithWindows)
-    {
-        node->WindowClass = first_node_with_windows->Windows[0]->WindowClass;
-        for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
-            if (first_node_with_windows->Windows[n]->WindowClass.DockingAllowUnclassed == false)
-            {
-                node->WindowClass = first_node_with_windows->Windows[n]->WindowClass;
-                break;
-            }
+    if ( node->WindowClass.ClassId == 0 ) {
+        if (ImGuiDockNode* first_node_with_windows = info.FirstNodeWithWindows)
+        {
+            node->WindowClass = first_node_with_windows->Windows[0]->WindowClass;
+            for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
+                if (first_node_with_windows->Windows[n]->WindowClass.DockingAllowUnclassed == false)
+                {
+                    node->WindowClass = first_node_with_windows->Windows[n]->WindowClass;
+                    break;
+                }
+        }
     }
 
     ImGuiDockNode* mark_node = node->CentralNode;
@@ -16428,6 +16431,8 @@ static void ImGui::DockNodeRemoveTabBar(ImGuiDockNode* node)
 
 static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_window)
 {
+
+    // Prevent docking with any dock space that is defined after the payload
     if (host_window->DockNodeAsHost && host_window->DockNodeAsHost->IsDockSpace() && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
         return false;
 
@@ -16459,7 +16464,48 @@ static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_win
 static bool ImGui::DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* root_payload)
 {
 
-    if (root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsSplitNode()) {
+    // If class filtering is enabled, check to see if the payload references a class 
+    // that is allowed to dock in this host.
+    ImGuiWindowClass* host_class = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->WindowClass : &host_window->WindowClass;
+    ImGuiWindowClass* payload_class = &root_payload->WindowClass;
+    if ( host_class->DockingAllowedClassesOnly ) {
+
+        // Filter based on the allowed class list for the host.
+        bool allowed = false;
+        for ( int i = 0; i < host_class->DockingAllowedClasses.Size && !allowed; ++i ) {
+            if ( payload_class->ClassId == host_class->DockingAllowedClasses[i] )
+                allowed = true;
+        }
+        if ( !allowed )
+            return false;
+    
+    }
+    else {
+
+        // No class filtering. Check to see if unclassed docking is allowed.
+        if ( host_class->ClassId != payload_class->ClassId ) {
+            if ( !host_class->DockingAllowUnclassed && payload_class->ClassId == 0 )
+                return false;
+            if ( !payload_class->DockingAllowUnclassed && host_class->ClassId == 0 )
+                return false;
+        }
+    }
+
+    // Prevent docking any window created above a popup
+    // Technically we should support it (e.g. in the case of a long-lived modal window that had fancy docking features),
+    // by e.g. adding a 'if (!ImGui::IsWindowWithinBeginStackOf(host_window, popup_window))' test.
+    // But it would requires more work on our end because the dock host windows is technically created in NewFrame()
+    // and our ->ParentXXX and ->RootXXX pointers inside windows are currently mislading or lacking.
+    ImGuiContext& g = *GImGui;
+    for (int i = g.OpenPopupStack.Size - 1; i >= 0; i--)
+        if (ImGuiWindow* popup_window = g.OpenPopupStack[i].Window)
+            if (ImGui::IsWindowWithinBeginStackOf(root_payload, popup_window))   // Payload is created from within a popup begin stack.
+                return false;
+
+    // Docking is allowed.
+    return true;
+
+    /*if (root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsSplitNode()) {
         ImGuiWindowClass* host_class = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->WindowClass : &host_window->WindowClass;
         ImGuiWindowClass* payload_class = &root_payload->DockNodeAsHost->WindowClass;
         if (host_class->ClassId != payload_class->ClassId)
@@ -16480,7 +16526,7 @@ static bool ImGui::DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* 
         if (DockNodeIsDropAllowedOne(payload, host_window))
             return true;
     }
-    return false;
+    return false;*/
 }
 
 // window menu button == collapse button when not in a dock node.
