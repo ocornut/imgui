@@ -816,7 +816,7 @@ struct ImGuiViewportDataOSX
 
 static void ConvertNSRect(NSScreen* screen, NSRect* r)
 {
-    r->origin.y = CGDisplayPixelsHigh(kCGDirectMainDisplay) - r->origin.y - r->size.height;
+    r->origin.y = screen.frame.size.height - r->origin.y - r->size.height;
 }
 
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
@@ -924,7 +924,7 @@ static ImVec2 ImGui_ImplOSX_GetWindowSize(ImGuiViewport* viewport)
 
     NSWindow* window = data->Window;
     NSSize size = window.contentLayoutRect.size;
-    return ImVec2(size.width, size.width);
+    return ImVec2(size.width, size.height);
 }
 
 static void ImGui_ImplOSX_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)

@@ -144,6 +144,11 @@ Other changes:
 - Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
 - Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
 
+Docking+Viewports Branch:
+
+- Backends: OSX: fixed typo in ImGui_ImplOSX_GetWindowSize that would cause issues when resiing
+  from OS decorations, if they are enabled on secondary viewports. (#6009) [@sivu]
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.1 (Released 2022-11-24)
