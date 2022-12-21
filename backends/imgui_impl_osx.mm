@@ -647,7 +647,18 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             mousePoint = NSEvent.mouseLocation;
-            mousePoint.y = CGDisplayPixelsHigh(kCGDirectMainDisplay) - mousePoint.y; // Normalize y coordinate to top-left of main display.
+            NSScreen* screen = nil;
+            
+            for (NSScreen* _s : [NSScreen screens])
+            {
+                if (NSMouseInRect(mousePoint,[_s frame],false))
+                {
+                    screen = _s;
+                    break;
+                }
+            }
+
+            mousePoint.y = screen.frame.size.height - mousePoint.y; // Normalize y coordinate to top-left of current display
         }
         else
         {
