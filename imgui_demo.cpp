@@ -3438,11 +3438,14 @@ static void ShowDemoWindowPopups()
         // and BeginPopupContextItem() will use the last item ID as the popup ID.
         {
             const char* names[5] = { "Label1", "Label2", "Label3", "Label4", "Label5" };
+            static int selected = -1;
             for (int n = 0; n < 5; n++)
             {
-                ImGui::Selectable(names[n]);
+                if (ImGui::Selectable(names[n], selected == n))
+                    selected = n;
                 if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
                 {
+                    selected = n;
                     ImGui::Text("This a popup for \"%s\"!", names[n]);
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
