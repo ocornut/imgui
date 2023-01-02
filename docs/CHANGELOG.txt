@@ -146,6 +146,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking: Internals: fixed DockBuilderCopyDockSpace() crashing when windows not in the
+  remapping list are docked on the left or top side of a split. (#6035)
 - Backends: OSX: fixed typo in ImGui_ImplOSX_GetWindowSize that would cause issues when resiing
   from OS decorations, if they are enabled on secondary viewports. (#6009) [@sivu]
 

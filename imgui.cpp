@@ -17740,8 +17740,11 @@ void ImGui::DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_docks
         }
     }
 
-    // Anything else in the source nodes of 'node_remap_pairs' are windows that were docked in src_dockspace_id but are not owned by it (unaffiliated windows, e.g. "ImGui Demo")
+    // Anything else in the source nodes of 'node_remap_pairs' are windows that are not included in the remapping list.
     // Find those windows and move to them to the cloned dock node. This may be optional?
+    // Dock those are a second step as undocking would invalidate source dock nodes.
+    struct DockRemainingWindowTask { ImGuiWindow* Window; ImGuiID DockId; DockRemainingWindowTask(ImGuiWindow* window, ImGuiID dock_id) { Window = window; DockId = dock_id; } };
+    ImVector<DockRemainingWindowTask> dock_remaining_windows;
     for (int dock_remap_n = 0; dock_remap_n < node_remap_pairs.Size; dock_remap_n += 2)
         if (ImGuiID src_dock_id = node_remap_pairs[dock_remap_n])
         {
@@ -17755,9 +17758,11 @@ void ImGui::DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_docks
 
                 // Docked windows gets redocked into the new node hierarchy.
                 IMGUI_DEBUG_LOG_DOCKING("[docking] Remap window '%s' %08X -> %08X\n", window->Name, src_dock_id, dst_dock_id);
-                DockBuilderDockWindow(window->Name, dst_dock_id);
+                dock_remaining_windows.push_back(DockRemainingWindowTask(window, dst_dock_id));
             }
         }
+    for (const DockRemainingWindowTask& task : dock_remaining_windows)
+        DockBuilderDockWindow(task.Window->Name, task.DockId);
 }
 
 // FIXME-DOCK: This is awkward because in series of split user is likely to loose access to its root node.
