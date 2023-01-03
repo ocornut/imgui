@@ -150,6 +150,7 @@ Docking+Viewports Branch:
   remapping list are docked on the left or top side of a split. (#6035)
 - Backends: OSX: fixed typo in ImGui_ImplOSX_GetWindowSize that would cause issues when resiing
   from OS decorations, if they are enabled on secondary viewports. (#6009) [@sivu]
+- Backends: Metal: fixed secondary viewport rendering. (#6015) [@dmirty-kuzmenko]
 
 
 -----------------------------------------------------------------------

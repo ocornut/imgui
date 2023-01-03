@@ -415,7 +415,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     IM_ASSERT(handle != nullptr);
 
-    id<MTLDevice> device = [bd->SharedMetalContext.depthStencilState device];
+    id<MTLDevice> device = bd->SharedMetalContext.device;
     CAMetalLayer* layer = [CAMetalLayer layer];
     layer.device = device;
     layer.framebufferOnly = YES;
