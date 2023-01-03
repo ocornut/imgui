@@ -3722,6 +3722,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) : DrawListInst
     DrawList = &DrawListInst;
     DrawList->_Data = &context->DrawListSharedData;
     DrawList->_OwnerName = Name;
+    bUseCustomBgColor = false;
     IM_PLACEMENT_NEW(&WindowClass) ImGuiWindowClass();
 }
 
