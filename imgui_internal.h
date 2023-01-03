@@ -2436,6 +2436,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ContentSizeIdeal;
     ImVec2                  ContentSizeExplicit;                // Size of contents/scrollable client area explicitly request by the user via SetNextWindowContentSize().
     ImVec2                  WindowPadding;                      // Window padding at the time of Begin().
+    ImU32                   BgColor;                            // Client specified window background color
     float                   WindowRounding;                     // Window rounding at the time of Begin(). May be clamped lower to avoid rendering artifacts with title bar, menu bar etc.
     float                   WindowBorderSize;                   // Window border size at the time of Begin().
     float                   DecoOuterSizeX1, DecoOuterSizeY1;   // Left/Up offsets. Sum of non-scrolling outer decorations (X1 generally == 0.0f. Y1 generally = TitleBarHeight + MenuBarHeight). Locked during Begin().
@@ -2451,6 +2452,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollTargetCenterRatio;            // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
     ImVec2                  ScrollTargetEdgeSnapDist;           // 0.0f = no snapping, >0.0f snapping threshold
     ImVec2                  ScrollbarSizes;                     // Size taken by each scrollbars on their smaller axis. Pay attention! ScrollbarSizes.x == width of the vertical scrollbar, ScrollbarSizes.y = height of the horizontal scrollbar.
+    bool                    bUseCustomBgColor;                  // Shoule we use custom (client specified) bg color for window?
     bool                    ScrollbarX, ScrollbarY;             // Are scrollbars visible?
     bool                    ViewportOwned;
     bool                    Active;                             // Set to true on Begin(), unless Collapsed

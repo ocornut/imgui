@@ -1665,6 +1665,18 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
         PopTextureID();
 }
 
+void ImDrawList::SetWindowBackgroundColor(ImVec4 bgColor)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems || (window->Size.x <= window->TitleBarRect().GetSize().x && window->Size.y <= window->TitleBarRect().GetSize().y))
+    {
+        return;
+    }
+
+    window->bUseCustomBgColor = true;
+    window->BgColor = ImGui::GetColorU32(bgColor);
+
+}
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImDrawListSplitter
