@@ -75,6 +75,7 @@ Other changes:
 - Misc: fixed parameters to IMGUI_DEBUG_LOG() not being dead-stripped when building
   with IMGUI_DISABLE_DEBUG_TOOLS is used. (#5901) [@Teselka]
 - Misc: fixed compile-time detection of SSE features on MSVC 32-bits builds. (#5943) [@TheMostDiligent]
+- Examples: DirectX10, DirectX11: try WARP software driver if hardware driver is not available. (#5924, #5562)
 - Backends: Allegro5: restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5. (#5937) [@Espyo]
 - Backends: Vulkan: Fixed sampler passed to ImGui_ImplVulkan_AddTexture() not being honored as we were using
   an immutable sampler. (#5502, #6001, #914) [@martin-ejdestig, @rytisss]
