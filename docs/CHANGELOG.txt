@@ -67,6 +67,8 @@ Other changes:
 - Misc: added GetItemID() in public API. It is not often expected that you would use this,
   but it is useful for Shortcut() and upcoming owner-aware input functions which wants to
   be implemented with public API.
+- Fonts: imgui_freetype: fixed a packing issue which in some occurrences would prevent large
+  amount of glyphs from being packed correctly. (#5788, #5829)
 - Fonts: added a 'void* UserData' field in ImFontAtlas, as a convenience for use by
   applications using multiple font atlases.
 - Demo: added "Inputs->Shortcut Routing" section.
