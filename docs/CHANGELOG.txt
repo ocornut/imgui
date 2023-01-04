@@ -62,6 +62,8 @@ Other changes:
   and when backend/OS is emitting dual-axis wheeling inputs (typically touch pads on macOS).
   We now select a primary axis based on recent events, and select a target window based on it.
   We expect this behavior to be further improved/tweaked. (#3795, #4559) [@ocornut, @folays]
+- InputText: fixed cursor navigation when pressing Up Arrow on the last character of a
+  multiline buffer which doesn't end with a carriage return. (#6000)
 - Text: fixed layouting of wrapped-text block when the last source line is above the
   clipping region. Regression added in 1.89. (#5720, #5919)
 - Misc: added GetItemID() in public API. It is not often expected that you would use this,
