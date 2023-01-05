@@ -1,4 +1,4 @@
-// dear imgui, v1.89.2 WIP
+// dear imgui, v1.89.2
 // (widgets code)
 
 /*
@@ -544,13 +544,21 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     const ImGuiID test_owner_id = (flags & ImGuiButtonFlags_NoTestKeyOwner) ? ImGuiKeyOwner_Any : id;
     if (hovered)
     {
+        // Poll mouse buttons
+        // - 'mouse_button_clicked' is generally carried into ActiveIdMouseButton when setting ActiveId.
+        // - Technically we only need some values in one code path, but since this is gated by hovered test this is fine.
+        int mouse_button_clicked = -1;
+        int mouse_button_released = -1;
+        for (int button = 0; button < 3; button++)
+            if (flags & (ImGuiButtonFlags_MouseButtonLeft << button)) // Handle ImGuiButtonFlags_MouseButtonRight and ImGuiButtonFlags_MouseButtonMiddle here.
+            {
+                if (IsMouseClicked(button, test_owner_id) && mouse_button_clicked == -1) { mouse_button_clicked = button; }
+                if (IsMouseReleased(button, test_owner_id) && mouse_button_released == -1) { mouse_button_released = button; }
+            }
+
+        // Process initial action
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            // Poll buttons
-            int mouse_button_clicked = -1;
-            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && IsMouseClicked(0, test_owner_id))         { mouse_button_clicked = 0; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && IsMouseClicked(1, test_owner_id))   { mouse_button_clicked = 1; }
-            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && IsMouseClicked(2, test_owner_id))  { mouse_button_clicked = 2; }
             if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
                 if (!(flags & ImGuiButtonFlags_NoSetKeyOwner))
@@ -578,10 +586,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
             if (flags & ImGuiButtonFlags_PressedOnRelease)
             {
-                int mouse_button_released = -1;
-                if ((flags & ImGuiButtonFlags_MouseButtonLeft) && IsMouseReleased(0, test_owner_id))        { mouse_button_released = 0; }
-                else if ((flags & ImGuiButtonFlags_MouseButtonRight) && IsMouseReleased(1, test_owner_id))  { mouse_button_released = 1; }
-                else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && IsMouseReleased(2, test_owner_id)) { mouse_button_released = 2; }
                 if (mouse_button_released != -1)
                 {
                     const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay; // Repeat mode trumps on release behavior
@@ -4865,6 +4869,7 @@ void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
     Text("ID: 0x%08X, ActiveID: 0x%08X", state->ID, g.ActiveId);
     DebugLocateItemOnHover(state->ID);
     Text("CurLenW: %d, CurLenA: %d, Cursor: %d, Selection: %d..%d", state->CurLenA, state->CurLenW, stb_state->cursor, stb_state->select_start, stb_state->select_end);
+    Text("has_preferred_x: %d (%.2f)", stb_state->has_preferred_x, stb_state->preferred_x);
     Text("undo_point: %d, redo_point: %d, undo_char_point: %d, redo_char_point: %d", undo_state->undo_point, undo_state->redo_point, undo_state->undo_char_point, undo_state->redo_char_point);
     if (BeginChild("undopoints", ImVec2(0.0f, GetTextLineHeight() * 15), true)) // Visualize undo state
     {
@@ -6376,8 +6381,6 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
-    if (held && (flags & ImGuiSelectableFlags_DrawHoveredWhenHeld))
-        hovered = true;
     if (hovered || selected)
     {
         const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);

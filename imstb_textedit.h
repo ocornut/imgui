@@ -2,6 +2,7 @@
 // This is a slightly modified version of stb_textedit.h 1.14.
 // Those changes would need to be pushed into nothings/stb:
 // - Fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
+// - Fix in stb_textedit_find_charpos to handle last line (see https://github.com/ocornut/imgui/issues/6000)
 // Grep for [DEAR IMGUI] to find the changes.
 
 // stb_textedit.h - v1.14  - public domain - Sean Barrett
@@ -524,29 +525,14 @@ static void stb_textedit_find_charpos(StbFindState *find, STB_TEXTEDIT_STRING *s
    int z = STB_TEXTEDIT_STRINGLEN(str);
    int i=0, first;
 
-   if (n == z) {
-      // if it's at the end, then find the last line -- simpler than trying to
-      // explicitly handle this case in the regular code
-      if (single_line) {
-         STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
-         find->y = 0;
-         find->first_char = 0;
-         find->length = z;
-         find->height = r.ymax - r.ymin;
-         find->x = r.x1;
-      } else {
-         find->y = 0;
-         find->x = 0;
-         find->height = 1;
-         while (i < z) {
-            STB_TEXTEDIT_LAYOUTROW(&r, str, i);
-            prev_start = i;
-            i += r.num_chars;
-         }
-         find->first_char = i;
-         find->length = 0;
-         find->prev_first = prev_start;
-      }
+   if (n == z && single_line) {
+      // special case if it's at the end (may not be needed?)
+      STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
+      find->y = 0;
+      find->first_char = 0;
+      find->length = z;
+      find->height = r.ymax - r.ymin;
+      find->x = r.x1;
       return;
    }
 
@@ -557,9 +543,13 @@ static void stb_textedit_find_charpos(StbFindState *find, STB_TEXTEDIT_STRING *s
       STB_TEXTEDIT_LAYOUTROW(&r, str, i);
       if (n < i + r.num_chars)
          break;
+      if (i + r.num_chars == z && z > 0 && STB_TEXTEDIT_GETCHAR(str, z - 1) != STB_TEXTEDIT_NEWLINE)  // [DEAR IMGUI] special handling for last line
+         break;   // [DEAR IMGUI]
       prev_start = i;
       i += r.num_chars;
       find->y += r.baseline_y_delta;
+      if (i == z) // [DEAR IMGUI]
+         break;   // [DEAR IMGUI]
    }
 
    find->first_char = first = i;
