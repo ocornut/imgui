@@ -2937,19 +2937,19 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
     // 2999 ideograms code points for Japanese
     // - 2136 Joyo (meaning "for regular use" or "for common use") Kanji code points
     // - 863 Jinmeiyo (meaning "for personal name") Kanji code points
-    // - Sourced from the character information database of the Information-technology Promotion Agency, Japan
-    //   - https://mojikiban.ipa.go.jp/mji/
-    //   - Available under the terms of the Creative Commons Attribution-ShareAlike 2.1 Japan (CC BY-SA 2.1 JP).
-    //     - https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en
-    //     - https://creativecommons.org/licenses/by-sa/2.1/jp/legalcode
-    //   - You can generate this code by the script at:
-    //     - https://github.com/vaiorabbit/everyday_use_kanji
+    // - Sourced from official information provided by the government agencies of Japan:
+    //   - List of Joyo Kanji by the Agency for Cultural Affairs
+    //     - https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/naikaku/kanji/
+    //   - List of Jinmeiyo Kanji by the Ministry of Justice
+    //     - http://www.moj.go.jp/MINJI/minji86.html
+    //   - Available under the terms of the Creative Commons Attribution 4.0 International (CC BY 4.0).
+    //     - https://creativecommons.org/licenses/by/4.0/legalcode
+    // - You can generate this code by the script at:
+    //   - https://github.com/vaiorabbit/everyday_use_kanji
     // - References:
     //   - List of Joyo Kanji
-    //     - (Official list by the Agency for Cultural Affairs) https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kakuki/14/tosin02/index.html
     //     - (Wikipedia) https://en.wikipedia.org/wiki/List_of_j%C5%8Dy%C5%8D_kanji
     //   - List of Jinmeiyo Kanji
-    //     - (Official list by the Ministry of Justice) http://www.moj.go.jp/MINJI/minji86.html
     //     - (Wikipedia) https://en.wikipedia.org/wiki/Jinmeiy%C5%8D_kanji
     // - Missing 1 Joyo Kanji: U+20B9F (Kun'yomi: Shikaru, On'yomi: Shitsu,shichi), see https://github.com/ocornut/imgui/pull/3627 for details.
     // You can use ImFontGlyphRangesBuilder to create your own ranges derived from this, by merging existing ranges or adding new characters.
