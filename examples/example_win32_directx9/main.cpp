@@ -7,7 +7,7 @@
 #include "imgui_impl_win32.h"
 #include <d3d9.h>
 #include <tchar.h>
-
+#include "implot.h"
 // Data
 static LPDIRECT3D9              g_pD3D = NULL;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
@@ -20,6 +20,36 @@ void ResetDevice();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
+float RandomRange(float min, float max) {
+    float scale = rand() / (float)RAND_MAX;
+    return min + scale * (max - min);
+}
+void TextCentered(char* text) {
+    auto windowWidth = ImGui::GetColumnWidth();
+    auto textWidth = ImGui::CalcTextSize(text).x;
+
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (windowWidth - textWidth) * 0.5f);
+    ImGui::Text(text);
+}
+void DrawBasicTable(char* label, char* contents[], int row, int col) {
+    if (ImGui::BeginTable(label, col)) {
+
+        for (int i = 0; i < row; i++) {
+            ImGui::TableNextRow();
+            for (int j = 0; j < col; j++) {
+                ImGui::TableSetColumnIndex(j);
+                ImGui::PushItemWidth(-FLT_MIN);
+                //ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(contents[i * col + j]).x
+                //    - ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+                //ImGui::Text(contents[i * col + j]);
+                TextCentered(contents[i * col + j]);
+                ImGui::PopItemWidth();
+            }
+        }
+        ImGui::EndTable();
+    }
+};
+
 int main(int, char**)
 {
     // Create application window
@@ -43,13 +73,14 @@ int main(int, char**)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
+    //ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
@@ -63,19 +94,61 @@ int main(int, char**)
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
+    io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
+    ImFont* font_h0 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 30.0f);
+    ImFont* font_h1 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 24.0f);
 
+    ImFont* font_h2 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 20.0f);
+    ImFont* font_text = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 16.0f);
+    IM_ASSERT(font_h0 != NULL);
+    IM_ASSERT(font_h1 != NULL);
+    IM_ASSERT(font_h2 != NULL);
+    IM_ASSERT(font_text != NULL);
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    bool my_tool_active = false;
+    bool show_implot_demo_window = false;
+    bool my_form = false;
+    bool my_table = true;
+    const int rand_data_count = 200;
+    ImVec4 clear_color = ImVec4(0.25f, 0.35f, 0.00f, 1.00f);
 
+    static double x[rand_data_count];
+    static double y[rand_data_count];
+    for (int j = 0; j < rand_data_count; j++) {
+        x[j] = RandomRange(60, 150);
+        if (j > 0)
+            y[j] = y[j - 1] + RandomRange(0, 1);
+        else
+            y[j] = 1;
+    }
+    static double x1[rand_data_count];
+    static double y1[rand_data_count];
+    for (int j = 0; j < rand_data_count; j++) {
+        x1[j] = RandomRange(75, 16 + 75);
+        if (j > 0)
+            y1[j] = y1[j - 1] + RandomRange(0, 1);
+        else
+            y1[j] = 1;
+
+    }
+    static double resist_x[rand_data_count];
+    static double resist_y[rand_data_count];
+    for (int j = 0; j < rand_data_count; j++) {
+        resist_x[j] = RandomRange(2, 2000);
+        if (j > 0)
+            resist_y[j] = resist_y[j - 1] + RandomRange(0, 1);
+        else
+            resist_y[j] = 1;
+
+    }
     // Main loop
     bool done = false;
     while (!done)
@@ -101,7 +174,9 @@ int main(int, char**)
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
-
+        if (show_implot_demo_window) {
+            ImPlot::ShowDemoWindow(&show_implot_demo_window);
+        }
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
             static float f = 0.0f;
@@ -111,8 +186,11 @@ int main(int, char**)
 
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Implot Demo", &show_implot_demo_window);
             ImGui::Checkbox("Another Window", &show_another_window);
-
+            ImGui::Checkbox("My first Window", &my_tool_active);
+            ImGui::Checkbox("Appeal Application Form", &my_form);
+            ImGui::Checkbox("Demo Table", &my_table);
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
@@ -134,7 +212,187 @@ int main(int, char**)
                 show_another_window = false;
             ImGui::End();
         }
+        if (my_table) {
+            ImGui::Begin("My Table", &my_table);
+            static ImGuiTableFlags flags_petropy = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit;
+            static ImGuiTableColumnFlags column_flags = ImGuiTableColumnFlags_NoHeaderWidth | ImGuiTableColumnFlags_WidthFixed;
+            if (ImGui::BeginTable("petropy", 8, flags_petropy)) {
 
+                // Header Row
+                //ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("GAMMA RAY", column_flags);
+                ImGui::TableSetupColumn("DEPTH", column_flags);
+                ImGui::TableSetupColumn("RESISTIVITY", column_flags);
+                ImGui::TableSetupColumn("NEUTRON DENSITY", column_flags);
+                ImGui::TableSetupColumn("MINERALOGOY", column_flags);
+                ImGui::TableSetupColumn("POROSITY SATURATION", column_flags);
+                ImGui::TableSetupColumn("OIL IN PLACE ", column_flags);
+                ImGui::TableSetupColumn("ELECTROFACIES", column_flags);
+                ImGui::TableHeadersRow();
+                // Legend Row
+                ImGui::TableNextRow();
+
+                // Sub-table GAMMA RAY
+                char* contents[6] = { "0", "GR", "150", "0", "CAL", "16" };
+                ImGui::TableSetColumnIndex(0);
+                DrawBasicTable("gamma-ray", contents, 2, 3);
+
+                // Sub-table Resist
+                char* resist_contents[6] = { "2","RESDEEP", "2000", "2","RESMED", "2000" };
+                ImGui::TableSetColumnIndex(2);
+                DrawBasicTable("resist", resist_contents, 2, 3);
+
+                // Sub-table Neutron
+                char* neutron_contents[9] = { "0.45", "NPHI", "-0.15", "1.95", "RHOB", "2.95", "0", "PE", "10" };
+                ImGui::TableSetColumnIndex(3);
+                DrawBasicTable("neutron", neutron_contents, 3, 3);
+
+                // Sub-table Mineral
+                char* mineral_contents[9] = { "VCLAY", "VQTZ", "VDOL", "VCLC", "VPYR", "VOM", "BVH", "BVWF", "BVWI" };
+                ImGui::TableSetColumnIndex(4);
+                DrawBasicTable("mineral", mineral_contents, 1, 9);
+
+                // Sub-table Porosity
+                char* porosity_contents[3] = { "1", "Sw", "0" };
+                ImGui::TableSetColumnIndex(5);
+                DrawBasicTable("porosity", porosity_contents, 1, 3);
+
+                char* oil_contents[6] = { "0", "OIP", "0.25", "50", "SUM OIP", "0" };
+                ImGui::TableSetColumnIndex(6);
+                DrawBasicTable("oil", oil_contents, 2, 1);
+
+                char* electro_contents[2] = { "0", "1" };
+                ImGui::TableSetColumnIndex(7);
+                DrawBasicTable("electro", electro_contents, 2, 1);
+
+
+                //Graph Row
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                if (ImPlot::BeginPlot("##Test", ImVec2(-1, -1))) {
+                    // Set opactity of shade to 25%
+                    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+                    ImPlot::SetupAxes("X", "Y", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoDecorations);
+                    ImVec4 color = { 0.5f, 0.3f, 0.4f, 0.9f };
+                    ImPlot::PlotShaded("##Test", x, y, rand_data_count, 0, ImPlotShadedFlags_Vertical);
+                    ImPlot::SetNextLineStyle(color);
+                    ImPlot::PlotLine("##Test", x, y, rand_data_count);
+                    ImPlot::SetNextLineStyle(color);
+                    ImPlot::PlotLine("##Test1", x1, y1, rand_data_count);
+                    ImPlot::PopStyleVar();
+                    ImPlot::EndPlot();
+                }
+
+                //Depth Row
+                ImGui::TableSetColumnIndex(1);
+                int depth_start = 7050;
+                char buffer[6];
+                for (int i = 0; i < 20; i++) {
+
+                    ImGui::Text(itoa(depth_start, buffer, 10));
+                    depth_start += 50;
+
+                }
+
+                //Resist Row
+                ImGui::TableSetColumnIndex(2);
+                if (ImPlot::BeginPlot("##Test_Depth", ImVec2(-1, -1))) {
+                    // Set opactity of shade to 25%
+                    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+                    ImPlot::SetupAxes("X", "Y", ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels, ImPlotAxisFlags_NoDecorations);
+                    ImPlot::PlotShaded("##Test_Depth", resist_x, resist_y, rand_data_count, 0, ImPlotShadedFlags_Vertical);
+                    ImPlot::PlotLine("##Test_Depth", resist_x, resist_y, rand_data_count);
+                    ImPlot::PopStyleVar();
+                    ImPlot::EndPlot();
+                }
+                ImGui::EndTable();
+            }
+            //if (ImPlot::BeginSubplots("My Subplot", 1, 2, ImVec2(800, 400))) {
+            //    for (int i = 0; i < 2; ++i) {
+            //        char id[5] = "##id";
+            //        id[4] = (char)i;
+            //        if (ImPlot::BeginPlot(id)) {
+            //            
+            //            ImPlot::PlotLine(id, x, y, rand_data_count);
+
+            //            ImPlot::EndPlot();
+            //        }
+            //    }
+            //    ImPlot::EndSubplots();
+            //}
+            ImGui::End();
+        }
+        if (my_form) {
+            ImGui::Begin("Appeal Application Form", &my_form);
+
+            ImGui::PushFont(font_h0);
+            ImGui::Text("Appeal Application Form");
+            ImGui::PopFont(); ImGui::PushFont(font_h1);
+            ImGui::Text("Personal Information");
+
+            ImGui::PushFont(font_h2);
+            ImGui::Text("Name");
+
+            ImGui::PushFont(font_text);
+            if (ImGui::BeginTable("table1", 2)) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::PushItemWidth(-1);
+                static char buf1[64] = ""; ImGui::InputTextWithHint("##First", "First", buf1, 64);
+                ImGui::PopItemWidth();
+                ImGui::TableSetColumnIndex(1);
+                ImGui::PushItemWidth(-1);
+                static char buf2[64] = ""; ImGui::InputTextWithHint("##Last", "Last", buf2, 64);
+                ImGui::PopItemWidth();
+                ImGui::EndTable();
+            }
+
+
+            ImGui::PopFont();
+
+            ImGui::Text("Student Number");
+
+            ImGui::PushFont(font_text);
+            ImGui::PushItemWidth(-1);
+            static char buf3[64] = ""; ImGui::InputText("##Number", buf3, 64, ImGuiInputTextFlags_CharsDecimal);
+            ImGui::PopItemWidth();
+            ImGui::PopFont();
+
+            ImGui::PopFont();
+
+            ImGui::Text("Appeal Information");
+
+            ImGui::PushFont(font_h2);
+            ImGui::Text("Request Summary");
+
+            ImGui::PushFont(font_text);
+            static char text[1024 * 16] = "";
+            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 4));
+            ImGui::PopFont();
+
+            ImGui::Text("Letter of Appeal Upload");
+
+            ImGui::PushFont(font_text);
+            ImGui::PushItemWidth(-1);
+            static char upload[64] = "Choose File or Upload"; ImGui::InputText("##Upload", upload, 64);
+            ImGui::PopItemWidth();
+            ImGui::PopFont();
+
+            ImGui::Text("Do you have supporting documents");
+            ImGui::PushFont(font_text);
+            static int item_current_2 = 0;
+            ImGui::PushItemWidth(-1);
+            ImGui::Combo("##combo", &item_current_2, "Yes\0No\0\0");
+            ImGui::PopItemWidth();
+            ImGui::PopFont();
+
+            ImGui::PopFont();
+
+            ImGui::PopFont();
+            ImGui::End();
+
+
+        }
         // Rendering
         ImGui::EndFrame();
         g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
@@ -157,6 +415,7 @@ int main(int, char**)
 
     ImGui_ImplDX9_Shutdown();
     ImGui_ImplWin32_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     CleanupDeviceD3D();
