@@ -32,12 +32,19 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.3 (In Progress)
+-----------------------------------------------------------------------
+
+All changes:
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.2 (Released 2023-01-05)
 -----------------------------------------------------------------------
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.2
 
-Other changes:
+All changes:
 
 - Tables, Nav, Scrolling: fixed scrolling functions and focus tracking with frozen rows and
   frozen columns. Windows now have a better understanding of outer/inner decoration sizes,
