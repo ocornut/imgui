@@ -3261,29 +3261,10 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         const float font_size = draw_list->_Data->FontSize;
         const float font_scale = font_size / font->FontSize;
         const char* text_end_ellipsis = NULL;
-
-        ImWchar ellipsis_char = font->EllipsisChar;
-        int ellipsis_char_count = 1;
-        if (ellipsis_char == (ImWchar)-1)
-        {
-            ellipsis_char = font->DotChar;
-            ellipsis_char_count = 3;
-        }
-        const ImFontGlyph* glyph = font->FindGlyph(ellipsis_char);
-
-        float ellipsis_glyph_width = glyph->X1 * font_scale;    // Width of the glyph with no padding on either side
-        float ellipsis_total_width = ellipsis_glyph_width;      // Full width of entire ellipsis
-
-        if (ellipsis_char_count > 1)
-        {
-            // Full ellipsis size without free spacing after it.
-            const float spacing_between_dots = 1.0f * font_scale;
-            ellipsis_glyph_width = (glyph->X1 - glyph->X0) * font_scale + spacing_between_dots;
-            ellipsis_total_width = ellipsis_glyph_width * (float)ellipsis_char_count - spacing_between_dots;
-        }
+        const float ellipsis_width = font->EllipsisWidth * font_scale;
 
         // We can now claim the space between pos_max.x and ellipsis_max.x
-        const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_total_width) - pos_min.x, 1.0f);
+        const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_width) - pos_min.x, 1.0f);
         float text_size_clipped_x = font->CalcTextSizeA(font_size, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
         if (text == text_end_ellipsis && text_end_ellipsis < text_end_full)
         {
@@ -3300,13 +3281,10 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         // Render text, render ellipsis
         RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
-        float ellipsis_x = pos_min.x + text_size_clipped_x;
-        if (ellipsis_x + ellipsis_total_width <= ellipsis_max_x)
-            for (int i = 0; i < ellipsis_char_count; i++)
-            {
-                font->RenderChar(draw_list, font_size, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_char);
-                ellipsis_x += ellipsis_glyph_width;
-            }
+        ImVec2 ellipsis_pos = ImFloor(ImVec2(pos_min.x + text_size_clipped_x, pos_min.y));
+        if (ellipsis_pos.x + ellipsis_width <= ellipsis_max_x)
+            for (int i = 0; i < font->EllipsisCharCount; i++, ellipsis_pos.x += font->EllipsisCharStep * font_scale)
+                font->RenderChar(draw_list, font_size, ellipsis_pos, GetColorU32(ImGuiCol_Text), font->EllipsisChar);
     }
     else
     {
