@@ -37,6 +37,10 @@ HOW TO UPDATE?
 
 All changes:
 
+- Text: Fix clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
+  is scaled. Scaling wasn't taken into account, leading to ellipsis character straying
+  slightly out of its expected boundaries. (#2775)
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.2 (Released 2023-01-05)

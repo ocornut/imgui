@@ -3236,7 +3236,6 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
         LogRenderedText(&pos_min, text, text_display_end);
 }
 
-
 // Another overly complex function until we reorganize everything into a nice all-in-one helper.
 // This is made more complex because we have dissociated the layout rectangle (pos_min..pos_max) which define _where_ the ellipsis is, from actual clipping of text and limit of the ellipsis display.
 // This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move.
@@ -3260,6 +3259,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         const ImFont* font = draw_list->_Data->Font;
         const float font_size = draw_list->_Data->FontSize;
+        const float font_scale = font_size / font->FontSize;
         const char* text_end_ellipsis = NULL;
 
         ImWchar ellipsis_char = font->EllipsisChar;
@@ -3271,14 +3271,14 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         }
         const ImFontGlyph* glyph = font->FindGlyph(ellipsis_char);
 
-        float ellipsis_glyph_width = glyph->X1;                 // Width of the glyph with no padding on either side
+        float ellipsis_glyph_width = glyph->X1 * font_scale;    // Width of the glyph with no padding on either side
         float ellipsis_total_width = ellipsis_glyph_width;      // Full width of entire ellipsis
 
         if (ellipsis_char_count > 1)
         {
             // Full ellipsis size without free spacing after it.
-            const float spacing_between_dots = 1.0f * (draw_list->_Data->FontSize / font->FontSize);
-            ellipsis_glyph_width = glyph->X1 - glyph->X0 + spacing_between_dots;
+            const float spacing_between_dots = 1.0f * font_scale;
+            ellipsis_glyph_width = (glyph->X1 - glyph->X0) * font_scale + spacing_between_dots;
             ellipsis_total_width = ellipsis_glyph_width * (float)ellipsis_char_count - spacing_between_dots;
         }
 
