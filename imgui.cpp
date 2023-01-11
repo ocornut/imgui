@@ -1967,6 +1967,8 @@ void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_f
 // [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 //-----------------------------------------------------------------------------
 
+IM_MSVC_RUNTIME_CHECKS_OFF
+
 // Convert UTF-8 to 32-bit character, process single character input.
 // A nearly-branchless UTF-8 decoder, based on work of Christopher Wellons (https://github.com/skeeto/branchless-utf8).
 // We handle UTF-8 decoding error by skipping forward.
@@ -1978,7 +1980,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     static const int shiftc[] = { 0, 18, 12, 6, 0 };
     static const int shifte[] = { 0, 6, 4, 2, 0 };
     int len = lengths[*(const unsigned char*)in_text >> 3];
-    int wanted = len + !len;
+    int wanted = len + (len ? 0 : 1);
 
     if (in_text_end == NULL)
         in_text_end = in_text + wanted; // Max length, nulls will be taken into account.
@@ -2142,6 +2144,7 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     }
     return bytes_count;
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
