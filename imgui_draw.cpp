@@ -229,6 +229,8 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+    colors[ImGuiCol_TextHighlight]          = colors[ImGuiCol_Text];
+    colors[ImGuiCol_TextBackgroundHighlight] = colors[ImGuiCol_NavHighlight];
 }
 
 void ImGui::StyleColorsClassic(ImGuiStyle* dst)
@@ -289,6 +291,8 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_TextHighlight]          = colors[ImGuiCol_Text];
+    colors[ImGuiCol_TextBackgroundHighlight] = colors[ImGuiCol_NavHighlight];
 }
 
 // Those light colors are better suited with a thicker font than the default one + FrameBorder
@@ -350,6 +354,8 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(0.70f, 0.70f, 0.70f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.20f, 0.20f, 0.20f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_TextHighlight]          = colors[ImGuiCol_Text];
+    colors[ImGuiCol_TextBackgroundHighlight] = colors[ImGuiCol_NavHighlight];
 }
 
 //-----------------------------------------------------------------------------
@@ -3574,6 +3580,27 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     const float line_height = FontSize * scale;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
 
+    ImGuiContext& g = *GImGui;
+
+    // Save original text pointers for later use
+    ImGuiStringView original_text(text_begin, text_end);
+
+    // Compact text if needed
+    ImGuiTextParts skipped_parts;
+    if (!word_wrap_enabled && g.Style.TextCompactType != ImGuiTextCompactType_None)
+    {
+        const float avail_width = ImAbs(clip_rect.z - pos.x);
+
+        g.TextCompactBuffer.clear();
+        g.TextCompactBuffer.reserve((int)original_text.size());
+
+        if (ImGui::CompactText(original_text, g.Style.TextCompactType, avail_width, g.TextCompactBuffer, &skipped_parts))
+        {
+            text_begin = g.TextCompactBuffer.begin();
+            text_end = g.TextCompactBuffer.end();
+        }
+    }
+
     // Fast-forward to first visible line
     const char* s = text_begin;
     if (y + line_height < clip_rect.y)
@@ -3614,8 +3641,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         return;
 
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
-    const int vtx_count_max = (int)(text_end - s) * 4;
-    const int idx_count_max = (int)(text_end - s) * 6;
+    const int vtx_count_max = (int)(text_end - s) * 4 * 2;
+    const int idx_count_max = (int)(text_end - s) * 6 * 2;
     const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
     draw_list->PrimReserve(idx_count_max, vtx_count_max);
 
@@ -3625,6 +3652,56 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
+
+
+    // Calculate matches to highlight text
+    ImGuiTextParts transformed_matches;
+
+    const ImGuiRange* matches_it = nullptr;
+    const ImGuiRange* matches_end = nullptr;
+
+    if (!g.TextHighlightData.Text.empty())
+    {
+        ImGuiMatchTextCallback match_callback = g.TextHighlightData.Callback ? g.TextHighlightData.Callback : &ImGui::MatchTextDirect;
+
+        ImGuiID source_hash = ImHashStr(original_text.Begin, original_text.size());
+        ImGuiID pattern_hash = ImHashStr(g.TextHighlightData.Text.Begin, g.TextHighlightData.Text.size());
+
+        ImGuiTextPartsCacheEntry* cache_entry = g.TextHighlightCache.GetByKey(source_hash);
+        if (cache_entry == nullptr)
+        {
+            cache_entry = g.TextHighlightCache.Add(source_hash);
+            cache_entry->First = nullptr;
+            cache_entry->Second.First = 0;
+        }
+
+        if (cache_entry->Second.First != pattern_hash || cache_entry->First != match_callback)
+        {
+            cache_entry->Second.Second.clear();
+            match_callback(original_text.Begin, original_text.End, g.TextHighlightData.Text.Begin, g.TextHighlightData.Text.End, cache_entry->Second.Second);
+
+            cache_entry->First = match_callback;
+            cache_entry->Second.First = pattern_hash;
+        }
+
+        if (!skipped_parts.empty())
+        {
+            transformed_matches = cache_entry->Second.Second;
+            ImGui::TransformCompactTextMatches(transformed_matches, skipped_parts);
+
+            matches_it = transformed_matches.begin();
+            matches_end = transformed_matches.end();
+        }
+        else
+        {
+            matches_it = cache_entry->Second.Second.begin();
+            matches_end = cache_entry->Second.Second.end();
+        }
+    }
+
+    ImS32 hightlight_n = 0;
+
+    ImDrawVert* backgound_highlight_vertex_ptr = nullptr;
 
     while (s < text_end)
     {
@@ -3639,20 +3716,42 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 x = start_x;
                 y += line_height;
                 word_wrap_eol = NULL;
-                s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
+                const char* new_s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
+                hightlight_n = ImMax(0, (ImS32)(hightlight_n - (new_s - s)));
+                s = new_s;
+
+                while (matches_it != matches_end && matches_it->Begin < (s - text_begin))
+                {
+                    ++matches_it;
+                }
+
                 continue;
             }
         }
+
+        if (matches_it != matches_end && matches_it->Begin == (s - text_begin))
+        {
+            hightlight_n = matches_it->End - matches_it->Begin;
+            ++matches_it;
+        }
+
+        ImU32 text_col = hightlight_n > 0 ? ImGui::GetColorU32(ImGuiCol_TextHighlight) : col;
+        ImU32 background_col = hightlight_n > 0 ? ImGui::GetColorU32(ImGuiCol_TextBackgroundHighlight) : IM_COL32_DISABLE;
+
+        backgound_highlight_vertex_ptr = hightlight_n > 0 ? backgound_highlight_vertex_ptr : nullptr;
 
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
         {
             s += 1;
+            hightlight_n = ImMax(0, hightlight_n - 1);
         }
         else
         {
-            s += ImTextCharFromUtf8(&c, s, text_end);
+            const int offset = ImTextCharFromUtf8(&c, s, text_end);
+            s += offset;
+            hightlight_n = ImMax(0, hightlight_n - offset);
             if (c == 0) // Malformed UTF-8?
                 break;
         }
@@ -3721,8 +3820,58 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                     }
                 }
 
+                if (background_col != IM_COL32_DISABLE)
+                {
+                    ImVec2 p0(x1 - 1 * scale, y);
+                    ImVec2 p1(x2 + 1 * scale, y + line_height);
+
+                    if (backgound_highlight_vertex_ptr != nullptr && backgound_highlight_vertex_ptr->pos.y != p0.y)
+                    {
+                        backgound_highlight_vertex_ptr = nullptr;
+                    }
+
+                    if (backgound_highlight_vertex_ptr == nullptr)
+                    {
+                        idx_write[0] = (ImDrawIdx)(vtx_current_idx);
+                        idx_write[1] = (ImDrawIdx)(vtx_current_idx + 1);
+                        idx_write[2] = (ImDrawIdx)(vtx_current_idx + 2);
+                        idx_write[3] = (ImDrawIdx)(vtx_current_idx);
+                        idx_write[4] = (ImDrawIdx)(vtx_current_idx + 2);
+                        idx_write[5] = (ImDrawIdx)(vtx_current_idx + 3);
+
+                        vtx_write[0].pos = p0;
+                        vtx_write[1].pos = ImVec2(p1.x, p0.y);
+                        vtx_write[2].pos = p1;
+                        vtx_write[3].pos = ImVec2(p0.x, p1.y);
+
+                        const ImVec2& uv = draw_list->_Data->TexUvWhitePixel;
+                        vtx_write[0].uv = uv; vtx_write[0].col = background_col;
+                        vtx_write[1].uv = uv; vtx_write[1].col = background_col;
+                        vtx_write[2].uv = uv; vtx_write[2].col = background_col;
+                        vtx_write[3].uv = uv; vtx_write[3].col = background_col;
+
+                        backgound_highlight_vertex_ptr = vtx_write;
+
+                        vtx_write += 4;
+                        vtx_current_idx += 4;
+                        idx_write += 6;
+                    }
+                    else
+                    {
+                        float& vert1_x = backgound_highlight_vertex_ptr[1].pos.x;
+                        float& vert2_x = backgound_highlight_vertex_ptr[2].pos.x;
+
+                        vert1_x = ImMax(vert1_x, p1.x);
+                        vert2_x = ImMax(vert2_x, p1.x);
+                    }
+                }
+                else
+                {
+                    backgound_highlight_vertex_ptr = nullptr;
+                }
+
                 // Support for untinted glyphs
-                ImU32 glyph_col = glyph->Colored ? col_untinted : col;
+                ImU32 glyph_col = glyph->Colored ? col_untinted : text_col;
 
                 // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                 {
@@ -3738,6 +3887,52 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 }
             }
         }
+        else if (background_col != IM_COL32_DISABLE)
+        {
+            float x1 = ImMax(x + glyph->X0 * scale - 1.0f * scale, clip_rect.x);
+            float x2 = ImMin(x + char_width + 1.0f * scale, clip_rect.z);
+
+            if (backgound_highlight_vertex_ptr != nullptr && backgound_highlight_vertex_ptr->pos.y != y)
+            {
+                backgound_highlight_vertex_ptr = nullptr;
+            }
+
+            if (backgound_highlight_vertex_ptr == nullptr)
+            {
+                idx_write[0] = (ImDrawIdx)(vtx_current_idx);
+                idx_write[1] = (ImDrawIdx)(vtx_current_idx + 1);
+                idx_write[2] = (ImDrawIdx)(vtx_current_idx + 2);
+                idx_write[3] = (ImDrawIdx)(vtx_current_idx);
+                idx_write[4] = (ImDrawIdx)(vtx_current_idx + 2);
+                idx_write[5] = (ImDrawIdx)(vtx_current_idx + 3);
+
+                vtx_write[0].pos = ImVec2(x1, y);
+                vtx_write[1].pos = ImVec2(x2, y);
+                vtx_write[2].pos = ImVec2(x2, y + line_height);
+                vtx_write[3].pos = ImVec2(x1, y + line_height);
+
+                const ImVec2& uv = draw_list->_Data->TexUvWhitePixel;
+                vtx_write[0].uv = uv; vtx_write[0].col = background_col;
+                vtx_write[1].uv = uv; vtx_write[1].col = background_col;
+                vtx_write[2].uv = uv; vtx_write[2].col = background_col;
+                vtx_write[3].uv = uv; vtx_write[3].col = background_col;
+
+                backgound_highlight_vertex_ptr = vtx_write;
+
+                vtx_write += 4;
+                vtx_current_idx += 4;
+                idx_write += 6;
+            }
+            else
+            {
+                float& vert1_x = backgound_highlight_vertex_ptr[1].pos.x;
+                float& vert2_x = backgound_highlight_vertex_ptr[2].pos.x;
+
+                vert1_x = ImMax(vert1_x, x2);
+                vert2_x = ImMax(vert2_x, x2);
+            }
+        }
+
         x += char_width;
     }
 

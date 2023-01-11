@@ -59,6 +59,7 @@ Index of this file:
 // - sub section: ShowDemoWindowPopups()
 // - sub section: ShowDemoWindowTables()
 // - sub section: ShowDemoWindowInputs()
+// - sub section: ShowDemoTextCompact()
 // [SECTION] About Window / ShowAboutWindow()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] User Guide / ShowUserGuide()
@@ -201,6 +202,7 @@ static void ShowDemoWindowPopups();
 static void ShowDemoWindowTables();
 static void ShowDemoWindowColumns();
 static void ShowDemoWindowInputs();
+static void ShowDemoTextCompact();
 
 //-----------------------------------------------------------------------------
 // [SECTION] Helpers
@@ -239,6 +241,7 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 // - ShowDemoWindowTables()
 // - ShowDemoWindowColumns()
 // - ShowDemoWindowInputs()
+// - ShowDemoTextCompact()
 //-----------------------------------------------------------------------------
 
 // Demonstrate most Dear ImGui features (this is big function!)
@@ -537,6 +540,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
     ShowDemoWindowInputs();
+    ShowDemoTextCompact();
 
     // End of ShowDemoWindow()
     ImGui::PopItemWidth();
@@ -2176,7 +2180,7 @@ static void ShowDemoWindowWidgets()
         {
             if (i > 0) ImGui::SameLine();
             ImGui::PushID(i);
-            ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
+            ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40.0f);
             ImGui::VSliderFloat("##v", ImVec2(40, 160), &values[i], 0.0f, 1.0f, "%.2f\nsec");
             ImGui::PopStyleVar();
             ImGui::PopID();
@@ -5888,6 +5892,124 @@ static void ShowDemoWindowInputs()
             ImGui::Text("  w/ default threshold: (%.1f, %.1f)", value_with_lock_threshold.x, value_with_lock_threshold.y);
             ImGui::Text("  w/ zero threshold: (%.1f, %.1f)", value_raw.x, value_raw.y);
             ImGui::Text("io.MouseDelta: (%.1f, %.1f)", mouse_delta.x, mouse_delta.y);
+            ImGui::TreePop();
+        }
+    }
+}
+
+static void ShowDemoTextCompact()
+{
+    IMGUI_DEMO_MARKER("Text compact & Highlight");
+    if (ImGui::CollapsingHeader("Text compact & Highlight"))
+    {
+        static char buf[256] = { '\0' };
+
+        ImGui::InputText("Highlight text", buf, IM_ARRAYSIZE(buf));
+        ImGui::Separator();
+
+        IMGUI_DEMO_MARKER("Text compact & Highlight/Text compact");
+        if (ImGui::TreeNode("Text compact"))
+        {
+            static float width_percent = 100.0f;
+            ImGui::SliderFloat("Width %", &width_percent, 10.0f, 100, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+
+            if (ImGui::BeginTable("##Table", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV, ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 4.0f)))
+            {
+                const float width_precent_proj = width_percent * 0.6f;
+                ImGui::TableSetupColumn("##Preview", 0, width_precent_proj / 100.0f);
+                ImGui::TableSetupColumn("##Label", 0, 1.0f - width_precent_proj / 100.0f);
+
+                ImGui::TableNextRow();
+
+                if (ImGui::TableSetColumnIndex(0))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_Begin);
+                    ImGui::TextUnformatted("Very very very very very very very very very very long string");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                if (ImGui::TableSetColumnIndex(1))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_None);
+                    ImGui::TextUnformatted("ImGuiTextCompactType_Begin");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                ImGui::TableNextRow();
+
+                if (ImGui::TableSetColumnIndex(0))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_Middle);
+                    ImGui::TextUnformatted("Very very very very very very very very very very long string");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                if (ImGui::TableSetColumnIndex(1))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_None);
+                    ImGui::TextUnformatted("ImGuiTextCompactType_Middle");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                ImGui::TableNextRow();
+
+                if (ImGui::TableSetColumnIndex(0))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_End);
+                    ImGui::TextUnformatted("Very very very very very very very very very very long string");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                if (ImGui::TableSetColumnIndex(1))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_None);
+                    ImGui::TextUnformatted("ImGuiTextCompactType_End");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                ImGui::TableNextRow();
+
+                if (ImGui::TableSetColumnIndex(0))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_Path);
+                    ImGui::TextUnformatted("/very/very/very/long/path/with/alot/of/slashes/and/filename.ext");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                if (ImGui::TableSetColumnIndex(1))
+                {
+                    ImGui::SetTextHighlightView(buf);
+                    ImGui::PushStyleVar(ImGuiStyleVar_TextCompactType, ImGuiTextCompactType_None);
+                    ImGui::TextUnformatted("ImGuiTextCompactType_Path");
+                    ImGui::PopStyleVar();
+                    ImGui::ClearTextHighlight();
+                }
+
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
+        }
+
+        IMGUI_DEMO_MARKER("Text compact & Highlight/Multiline text highlight");
+        if (ImGui::TreeNode("Multiline text highlight"))
+        {
+            ImGui::SetTextHighlightView(buf);
+            ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
+            ImGui::ClearTextHighlight();
             ImGui::TreePop();
         }
     }

@@ -63,6 +63,7 @@ CODE
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 // [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
+// [SECTION] Text highlight and text compact support
 // [SECTION] ImGuiStorage
 // [SECTION] ImGuiTextFilter
 // [SECTION] ImGuiTextBuffer, ImGuiTextIndex
@@ -1126,6 +1127,7 @@ ImGuiStyle::ImGuiStyle()
     AntiAliasedFill         = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
     CurveTessellationTol    = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError = 0.30f;         // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
+    TextCompactType         = ImGuiTextCompactType_End;
 
     // Default theme
     ImGui::StyleColorsDark(this);
@@ -1642,6 +1644,43 @@ int ImStrnicmp(const char* str1, const char* str2, size_t count)
     return d;
 }
 
+bool ImStriequal(const char* str1_begin, const char* str2_begin, const char* str2_end)
+{
+    for (; str2_begin != str2_end; ++str1_begin, ++str2_begin)
+    {
+        if (ImToUpper(*str1_begin) != ImToUpper(*str2_begin))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+const char* ImStrifind(const char* str1_begin, const char* str1_end, const char* str2_begin, const char* str2_end)
+{
+    long long str2_size = str2_end - str2_begin;
+    if ((str1_end - str1_begin) >= str2_size)
+    {
+        const char* last_possible = str1_end - str2_size;
+        for (;; ++str1_begin)
+        {
+            if (ImStriequal(str1_begin, str2_begin, str2_end))
+            {
+                str1_end = str1_begin;
+                break;
+            }
+
+            if (str1_begin == last_possible)
+            {
+                break;
+            }
+        }
+    }
+
+    return str1_end;
+}
+
 void ImStrncpy(char* dst, const char* src, size_t count)
 {
     if (count < 1)
@@ -1743,6 +1782,21 @@ const char* ImStrSkipBlank(const char* str)
     while (str[0] == ' ' || str[0] == '\t')
         str++;
     return str;
+}
+
+const char* ImPathFindFileName(const char* path_begin, const char* path_end)
+{
+    const char* last_slash = path_begin;
+
+    for (; path_begin != path_end && *path_begin != '\0'; ++path_begin)
+    {
+        if ((*path_begin == '\\' || *path_begin == '/' || *path_begin == ':') && path_begin[1] && path_begin[1] != '\\' && path_begin[1] != '/')
+        {
+            last_slash = path_begin + 1;
+        }
+    }
+
+    return last_slash;
 }
 
 // A) MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size).
@@ -2143,6 +2197,44 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     return bytes_count;
 }
 
+static int CodepointSizeInBytes(char c)
+{
+    if ((c & 0x80) == 0x0)
+    {
+        return 1;
+    }
+    else if ((c & 0xE0) == 0xC0)
+    {
+        return 2;
+    }
+    else if ((c & 0xF0) == 0xE0)
+    {
+        return 3;
+    }
+    else if ((c & 0xF8) == 0xF0)
+    {
+        return 4;
+    }
+
+    return 0;
+}
+
+static const char* NextCodepoint(const char* pos)
+{
+    return pos + ImMax(1, CodepointSizeInBytes(*pos));
+}
+
+static const char* PrevCodepoint(const char* pos, const char* min_pos)
+{
+    int expected_size = 0;
+    while (expected_size == 0 && --pos >= min_pos)
+    {
+        expected_size = CodepointSizeInBytes(*pos);
+    }
+
+    return pos;
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
 // Note: The Convert functions are early design which are not consistent with other API.
@@ -2226,6 +2318,368 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     case 4: out_r = t; out_g = p; out_b = v; break;
     case 5: default: out_r = v; out_g = p; out_b = q; break;
     }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] Text highlight and text compact support
+//-----------------------------------------------------------------------------
+static const char   ELLIPSIS[] = "...";
+static const size_t ELLIPSIS_SIZE = IM_ARRAYSIZE(ELLIPSIS) - 1;
+
+bool ImGui::MatchTextDirect(const char* source_begin, const char* source_end, const char* pattern_begin, const char* pattern_end, ImGuiTextParts& matches)
+{
+    if (!source_begin ||
+        source_begin == source_end ||
+        source_begin[0] == '\0' ||
+        !pattern_begin ||
+        pattern_begin == pattern_end ||
+        pattern_begin[0] == '\0' ||
+        (source_end - source_begin) < (pattern_end - pattern_begin))
+    {
+        return false;
+    }
+
+    matches.Size = 0;
+    ImS32 pattern_size = (ImS32)(pattern_end - pattern_begin);
+
+    const char* start_pos = source_begin;
+    const char* found_pos = source_begin;
+    while ((found_pos = ImStrifind(start_pos, source_end, pattern_begin, pattern_end)) != source_end)
+    {
+        matches.push_back(ImGuiRange((ImU16)(found_pos - source_begin), (ImU16)(found_pos + pattern_size - source_begin)));
+        start_pos = found_pos + pattern_size;
+    }
+
+    return !matches.empty();
+}
+
+bool ImGui::CompactText(ImGuiStringView text, ImGuiTextCompactType type, float max_width, ImGuiTextBuffer& out, ImGuiTextParts* skipped_parts)
+{
+    if (text.empty())
+    {
+        return false;
+    }
+
+    const float ellipsis_width = CalcTextSize(ELLIPSIS).x;
+
+    float text_width = CalcTextSize(text.Begin, text.End).x;
+    if (text_width <= max_width || type == ImGuiTextCompactType_None)
+    {
+        return false;
+    }
+
+    switch (type)
+    {
+    case ImGuiTextCompactType_Begin:
+    {
+        const char* it = text.Begin;
+        while (text_width + ellipsis_width > max_width && it < text.End)
+        {
+            text_width = CalcTextSize(it, text.End).x;
+            it = ImMin(NextCodepoint(it), text.End);
+        }
+
+        out.reserve((int)(ELLIPSIS_SIZE + out.size() + (text.End - it) + 1));
+        out.append(ELLIPSIS, ELLIPSIS + ELLIPSIS_SIZE);
+        out.append(it, text.End);
+
+        if (skipped_parts)
+        {
+            skipped_parts->push_back(ImGuiRange(0, (ImU16)(it - text.Begin)));
+        }
+
+        return true;
+    }
+
+    case ImGuiTextCompactType_Middle:
+    {
+        const char* it_left = ImMax(text.Begin, text.Begin + ((text.size() - 1) / 2) - 1);
+        const char* it_right = ImMin(text.End, it_left + 2);
+
+        float left_width = CalcTextSize(text.Begin, it_left).x;
+        float right_width = CalcTextSize(it_right, text.End).x;
+
+        while (it_left != text.Begin && it_right != text.End)
+        {
+            right_width = CalcTextSize(it_right, text.End).x;
+
+            if (left_width + ellipsis_width + right_width < max_width)
+            {
+                break;
+            }
+
+            it_left = ImMax(text.Begin, PrevCodepoint(it_left, text.Begin));
+
+            left_width = CalcTextSize(text.Begin, it_left).x;
+
+            if (left_width + ellipsis_width + right_width < max_width)
+            {
+                break;
+            }
+
+            it_right = ImMin(NextCodepoint(it_right), text.End);
+        }
+
+        out.reserve((int)(ELLIPSIS_SIZE + out.size() + (it_left - text.Begin) + (text.End - it_right) + 1));
+        out.append(text.Begin, it_left);
+        out.append(ELLIPSIS, ELLIPSIS + ELLIPSIS_SIZE);
+        out.append(it_right, text.End);
+
+        if (skipped_parts)
+        {
+            skipped_parts->push_back(ImGuiRange((ImU16)(it_left - text.Begin), (ImU16)(it_right - text.Begin)));
+        }
+
+        return true;
+    }
+
+    case ImGuiTextCompactType_End:
+    {
+        const char* it = text.End;
+        while (text_width + ellipsis_width > max_width && it > text.Begin)
+        {
+            text_width = CalcTextSize(text.Begin, it).x;
+            it = ImMax(text.Begin, PrevCodepoint(it, text.Begin));
+        }
+
+        out.reserve((int)(ELLIPSIS_SIZE + out.size() + (text.End - it) + 1));
+        out.append(text.Begin, it);
+        out.append(ELLIPSIS, ELLIPSIS + ELLIPSIS_SIZE);
+
+        if (skipped_parts)
+        {
+            skipped_parts->push_back(ImGuiRange((ImU16)(it - text.Begin), (ImU16)(text.End - text.Begin)));
+        }
+
+        return true;
+    }
+
+    case ImGuiTextCompactType_Path:
+    {
+        const size_t text_len = text.size();
+
+        const char* file_name_start = ImPathFindFileName(text.Begin, text.End);
+        size_t file_name_len = text.End - file_name_start;
+
+        // No root in path
+        if (file_name_len == text_len)
+        {
+            return CompactText(text, ImGuiTextCompactType_End, max_width, out, skipped_parts);
+        }
+
+        // Start compacted filename with the path separator
+        --file_name_start;
+        ++file_name_len;
+
+        // Ellipsis + separator + first name letter + ellipsis
+        if ((ellipsis_width * 2.0f + CalcTextSize(file_name_start, ImMin(file_name_start + 3, text.End)).x) > max_width)
+        {
+            out.reserve((int)(ELLIPSIS_SIZE + out.size() + 1));
+            out.append(ELLIPSIS, ELLIPSIS + ELLIPSIS_SIZE);
+
+            if (skipped_parts)
+            {
+                skipped_parts->push_back(ImGuiRange(0, (ImU16)(text.size())));
+            }
+
+            return true;
+        }
+
+        // Ellipsis + separator + compacted file name
+        const float file_name_width = CalcTextSize(file_name_start, text.End).x;
+        if (ellipsis_width + file_name_width > max_width)
+        {
+            out.append(ELLIPSIS, ELLIPSIS + ELLIPSIS_SIZE);
+
+            if (skipped_parts)
+            {
+                skipped_parts->push_back(ImGuiRange(0, (ImU16)(file_name_start - text.Begin)));
+            }
+
+            if (CompactText(ImGuiStringView(file_name_start, text.End), ImGuiTextCompactType_End, max_width - ellipsis_width, out, skipped_parts))
+            {
+                if (skipped_parts)
+                {
+                    ImGuiRange& part = skipped_parts->back();
+                    part.Begin += (ImU16)(file_name_start - text.Begin);
+                    part.End += (ImU16)(file_name_start - text.Begin);
+                }
+            }
+            else
+            {
+                out.append(file_name_start, text.End);
+            }
+
+            return true;
+        }
+
+        // Compacted root + full file name
+        CompactText(ImGuiStringView(text.Begin, file_name_start), ImGuiTextCompactType_End, max_width - file_name_width, out, skipped_parts);
+        out.append(file_name_start, text.End);
+
+        return true;
+    }
+
+    default:
+    {
+        IM_ASSERT(false);
+        return false;
+    }
+    }
+}
+
+void ImGui::TransformCompactTextMatches(ImGuiTextParts& matches, const ImGuiTextParts& skipped_parts)
+{
+    ImGuiTextParts out;
+    out.reserve(matches.size());
+
+    const ImGuiRange* matches_it = matches.begin();
+    const ImGuiRange* skipped_parts_it = skipped_parts.begin();
+
+    ImU16 offset = 0;
+
+    while (matches_it != matches.end() && skipped_parts_it != skipped_parts.end())
+    {
+        // Part is inside of match
+        if (matches_it->Begin <= skipped_parts_it->Begin && skipped_parts_it->End < matches_it->End)
+        {
+            if (matches_it->Begin < skipped_parts_it->Begin)
+            {
+                ImGuiRange& part = out.push_back_uninitialized();
+                part.Begin = matches_it->Begin - offset;
+                part.End = skipped_parts_it->Begin - offset;
+            }
+
+            offset += (ImU16)((size_t)(skipped_parts_it->End - skipped_parts_it->Begin) - ELLIPSIS_SIZE);
+
+            {
+                ImGuiRange& part = out.push_back_uninitialized();
+                part.Begin = skipped_parts_it->End - offset;
+                part.End = matches_it->End - offset;
+            }
+
+            // Check if next part intersects with match
+            const ImGuiRange* skipped_parts_next = ++skipped_parts_it;
+            if (skipped_parts_next != skipped_parts.end() && skipped_parts_next->Begin < matches_it->End)
+            {
+                out.back().End = skipped_parts_next->Begin - offset;
+            }
+
+            if (out.back().size() == 0)
+            {
+                out.pop_back();
+            }
+
+            ++matches_it;
+            continue;
+        }
+
+        // Match is inside of part
+        if (skipped_parts_it->Begin <= matches_it->Begin && matches_it->End <= skipped_parts_it->End)
+        {
+            ++matches_it;
+            continue;
+        }
+
+        // Part lays left from match
+        if ((skipped_parts_it->End - 1) < matches_it->Begin)
+        {
+            offset += (ImU16)((size_t)(skipped_parts_it->End - skipped_parts_it->Begin) - ELLIPSIS_SIZE);
+
+            ++skipped_parts_it;
+            continue;
+        }
+
+        // Part intersects match on left side
+        if (skipped_parts_it->Begin < matches_it->Begin && matches_it->Begin <= (skipped_parts_it->End - 1))
+        {
+            offset += (ImU16)((size_t)(skipped_parts_it->End - skipped_parts_it->Begin) - ELLIPSIS_SIZE);
+
+            ImGuiRange& part = out.push_back_uninitialized();
+            part.Begin = skipped_parts_it->End - offset;
+            part.End = matches_it->End - offset;
+
+            // Check if next part intersects with match
+            const ImGuiRange* skipped_parts_next = ++skipped_parts_it;
+            if (skipped_parts_next != skipped_parts.end() && skipped_parts_next->Begin < matches_it->End)
+            {
+                out.back().End = skipped_parts_next->Begin - offset;
+            }
+
+            if (out.back().size() == 0)
+            {
+                out.pop_back();
+            }
+
+            ++matches_it;
+            continue;
+        }
+
+        // Part lays right from match
+        if ((matches_it->End - 1) < skipped_parts_it->Begin)
+        {
+            ImGuiRange& part = out.push_back_uninitialized();
+            part.Begin = matches_it->Begin - offset;
+            part.End = matches_it->End - offset;
+
+            ++matches_it;
+            continue;
+        }
+
+        // Part intersects match on right side
+        if (skipped_parts_it->Begin < matches_it->End && matches_it->End <= skipped_parts_it->End)
+        {
+            if (matches_it->Begin < skipped_parts_it->Begin)
+            {
+                ImGuiRange& part = out.push_back_uninitialized();
+                part.Begin = matches_it->Begin - offset;
+                part.End = skipped_parts_it->Begin - offset;
+            }
+
+            offset += (ImU16)((size_t)(skipped_parts_it->End - skipped_parts_it->Begin) - ELLIPSIS_SIZE);
+
+            ++matches_it;
+            continue;
+        }
+
+        // Should never happen, increment just in case
+        ++skipped_parts_it;
+        ++matches_it;
+    }
+
+    for (; matches_it != matches.end(); ++matches_it)
+    {
+        ImGuiRange& part = out.push_back_uninitialized();
+        part.Begin = matches_it->Begin - offset;
+        part.End = matches_it->End - offset;
+    }
+
+    matches.swap(out);
+}
+
+void ImGui::SetTextHighlightCopy(const char* text_begin, const char* text_end, ImGuiMatchTextCallback match_callback)
+{
+    ImGuiContext& g = *GImGui;
+
+    g.TextHighlightData.SetTextCopy(text_begin, text_end);
+    g.TextHighlightData.Callback = match_callback;
+}
+
+void ImGui::SetTextHighlightView(const char* text_begin, const char* text_end, ImGuiMatchTextCallback match_callback)
+{
+    ImGuiContext& g = *GImGui;
+
+    g.TextHighlightData.SetTextView(text_begin, text_end);
+    g.TextHighlightData.Callback = match_callback;
+}
+
+void ImGui::ClearTextHighlight()
+{
+    ImGuiContext& g = *GImGui;
+
+    g.TextHighlightData.Buf.clear();
+    g.TextHighlightData.Text = ImGuiStringView();
+    g.TextHighlightData.Callback = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -3007,6 +3461,7 @@ static const ImGuiStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, TabRounding) },         // ImGuiStyleVar_TabRounding
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ButtonTextAlign) },     // ImGuiStyleVar_ButtonTextAlign
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, SelectableTextAlign) }, // ImGuiStyleVar_SelectableTextAlign
+    { ImGuiDataType_S32,   1, (ImU32)IM_OFFSETOF(ImGuiStyle, TextCompactType) },     // ImGuiStyleVar_TextCompactType
 };
 
 static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
@@ -3028,6 +3483,20 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
         return;
     }
     IM_ASSERT(0 && "Called PushStyleVar() float variant but variable is not a float!");
+}
+
+void ImGui::PushStyleVar(ImGuiStyleVar idx, ImS32 val)
+{
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_S32 && var_info->Count == 1)
+    {
+        ImGuiContext& g = *GImGui;
+        ImS32* pvar = (ImS32*)var_info->GetVarPtr(&g.Style);
+        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
+    }
+    IM_ASSERT(0 && "Called PushStyleVar() ImS32 variant but variable is not a ImS32!");
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
@@ -3123,6 +3592,8 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
     case ImGuiCol_NavWindowingDimBg: return "NavWindowingDimBg";
     case ImGuiCol_ModalWindowDimBg: return "ModalWindowDimBg";
+    case ImGuiCol_TextHighlight: return "TextHighlight";
+    case ImGuiCol_TextBackgroundHighlight: return "TextBackgroundHighlight";
     }
     IM_ASSERT(0);
     return "Unknown";
