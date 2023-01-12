@@ -3382,6 +3382,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     bool inside_word = true;
 
     const char* s = text;
+    IM_ASSERT(text_end != NULL);
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -3390,8 +3391,6 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             next_s = s + 1;
         else
             next_s = s + ImTextCharFromUtf8(&c, s, text_end);
-        if (c == 0)
-            break;
 
         if (c < 32)
         {
@@ -3497,15 +3496,9 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         const char* prev_s = s;
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
-        {
             s += 1;
-        }
         else
-        {
             s += ImTextCharFromUtf8(&c, s, text_end);
-            if (c == 0) // Malformed UTF-8?
-                break;
-        }
 
         if (c < 32)
         {
@@ -3647,15 +3640,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
-        {
             s += 1;
-        }
         else
-        {
             s += ImTextCharFromUtf8(&c, s, text_end);
-            if (c == 0) // Malformed UTF-8?
-                break;
-        }
 
         if (c < 32)
         {

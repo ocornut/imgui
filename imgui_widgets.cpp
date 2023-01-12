@@ -4407,12 +4407,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 const int clipboard_len = (int)strlen(clipboard);
                 ImWchar* clipboard_filtered = (ImWchar*)IM_ALLOC((clipboard_len + 1) * sizeof(ImWchar));
                 int clipboard_filtered_len = 0;
-                for (const char* s = clipboard; *s; )
+                for (const char* s = clipboard; *s != 0; )
                 {
                     unsigned int c;
                     s += ImTextCharFromUtf8(&c, s, NULL);
-                    if (c == 0)
-                        break;
                     if (!InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Clipboard))
                         continue;
                     clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
