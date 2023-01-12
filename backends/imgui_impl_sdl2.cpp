@@ -84,6 +84,7 @@
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    0
 #endif
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
+#define SDL_HAS_SET_TEXT_INPUT_RECT         SDL_VERSION_ATLEAST(2,0,0)
 
 // SDL Data
 struct ImGui_ImplSDL2_Data
@@ -336,6 +337,27 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     return false;
 }
 
+#if SDL_HAS_SET_TEXT_INPUT_RECT
+static void ImGui_ImplSDL2_SetPlatformImeData(ImGuiViewport* viewport, ImGuiPlatformImeData* data)
+{
+    (void)viewport;
+    if (data->WantVisible)
+    {
+        SDL_Rect r;
+        r.x = (int)data->InputPos.x;
+        r.y = (int)data->InputPos.y;
+        r.w = 1;
+        r.h = (int)data->InputLineHeight;
+        SDL_SetTextInputRect(&r);
+        SDL_StartTextInput();
+    }
+    else
+    {
+        SDL_StopTextInput();
+    }
+}
+#endif
+
 static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -366,6 +388,10 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer)
     io.SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = nullptr;
+
+#if SDL_HAS_SET_TEXT_INPUT_RECT
+    io.SetPlatformImeDataFn = ImGui_ImplSDL2_SetPlatformImeData;
+#endif
 
     // Load mouse cursors
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
