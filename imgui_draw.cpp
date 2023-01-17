@@ -3611,10 +3611,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     const int idx_count_max = (int)(text_end - s) * 6;
     const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
     draw_list->PrimReserve(idx_count_max, vtx_count_max);
-
-    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
-    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
-    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
+    ImDrawVert*  vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx*   idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_index = draw_list->_VtxCurrentIdx;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
@@ -3713,14 +3712,14 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
                 // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                 {
-                    idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
-                    idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
                     vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
                     vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
                     vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
                     vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                    idx_write[0] = (ImDrawIdx)(vtx_index); idx_write[1] = (ImDrawIdx)(vtx_index + 1); idx_write[2] = (ImDrawIdx)(vtx_index + 2);
+                    idx_write[3] = (ImDrawIdx)(vtx_index); idx_write[4] = (ImDrawIdx)(vtx_index + 2); idx_write[5] = (ImDrawIdx)(vtx_index + 3);
                     vtx_write += 4;
-                    vtx_current_idx += 4;
+                    vtx_index += 4;
                     idx_write += 6;
                 }
             }
@@ -3734,7 +3733,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
-    draw_list->_VtxCurrentIdx = vtx_current_idx;
+    draw_list->_VtxCurrentIdx = vtx_index;
 }
 
 //-----------------------------------------------------------------------------
