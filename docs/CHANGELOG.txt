@@ -41,6 +41,7 @@ All changes:
   is scaled. Scaling wasn't taken into account, leading to ellipsis character straying
   slightly out of its expected boundaries. (#2775)
 - Text: Tweaked rendering of three-dots "..." ellipsis variant. (#2775, #4269)
+- PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 
 
 -----------------------------------------------------------------------
