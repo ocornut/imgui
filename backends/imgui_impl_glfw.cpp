@@ -21,6 +21,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-01-18: Handle unsupported glfwGetVideoMode() call on e.g. Emscripten.
 //  2023-01-04: Inputs: Fixed mods state on Linux when using Alt-GR text input (e.g. German keyboard layout), could lead to broken text input. Revert a 2022/01/17 change were we resumed using mods provided by GLFW, turns out they were faulty.
 //  2022-11-22: Perform a dummy glfwGetError() read to cancel missing names with glfwGetKeyName(). (#5908)
 //  2022-10-18: Perform a dummy glfwGetError() read to cancel missing mouse cursors errors. Using GLFW_VERSION_COMBINED directly. (#5785)
@@ -759,12 +760,15 @@ static void ImGui_ImplGlfw_UpdateMonitors()
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
     for (int n = 0; n < monitors_count; n++)
     {
         ImGuiPlatformMonitor monitor;
         int x, y;
         glfwGetMonitorPos(glfw_monitors[n], &x, &y);
         const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
+        if (vid_mode == NULL)
+            continue; // Failed to get Video mode (e.g. Emscripten does not support this function)
         monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
         monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
 #if GLFW_HAS_MONITOR_WORK_AREA
@@ -784,7 +788,6 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 #endif
         platform_io.Monitors.push_back(monitor);
     }
-    bd->WantUpdateMonitors = false;
 }
 
 void ImGui_ImplGlfw_NewFrame()
