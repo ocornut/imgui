@@ -2296,6 +2296,29 @@ void    ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsig
             *data = table[*data];
 }
 
+void    ImFontAtlasBuildParseKernTable(const unsigned char* kern, const ImVector<int>& glyph_index_to_codepoint_map, float font_scale, ImFont* dst_font) {
+    // Modification of stbtt__GetGlyphKernInfoAdvance, to iterate over every pairs, instead of searching for every possible pairs
+
+    // we only look at the first table. it must be 'horizontal' and format 0.
+    if (ImReadU16BE(kern + 2) < 1) // number of tables, need at least 1
+        return;
+    if (ImReadU16BE(kern + 8) != 1) // horizontal flag must be set in format
+        return;
+
+    int num_pairs = ImReadU16BE(kern + 10);
+    dst_font->KerningPairs.reserve(dst_font->KerningPairs.size() + num_pairs);
+    for (int i = 0, i_ = num_pairs * 6; i < i_; i += 6)
+    {
+        int l = glyph_index_to_codepoint_map.Data[ImReadU16BE(kern + 18 + i)];
+        int r = glyph_index_to_codepoint_map.Data[ImReadU16BE(kern + 20 + i)];
+        if (l == -1 || r == -1)
+            continue;
+
+        short dist = ImReadS16BE(kern + 22 + i);
+        dst_font->AddKerningPair((ImWchar)l, (ImWchar)r, (float)dist * font_scale);
+    }
+}
+
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
 // Temporary data for one source font (multiple source fonts can be merged into one destination ImFont)
 // (C++03 doesn't allow instancing ImVector<> with function-local types so we declare the type here.)
@@ -2545,6 +2568,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     buf_rects.clear();
 
     // 9. Setup ImFont and glyphs for runtime
+    ImVector<int> glyph_index_to_codepoint_map;
+    glyph_index_to_codepoint_map.reserve(0x10000);
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
@@ -2578,43 +2603,19 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             dst_font->AddGlyph(&cfg, (ImWchar)codepoint, q.x0 + font_off_x, q.y0 + font_off_y, q.x1 + font_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
         }
 
-        // Modification of stbtt__GetGlyphKernInfoAdvance, to iterate over every pairs, instead of searching for one
-        do
-        {
-            const stbtt_fontinfo* info = &src_tmp.FontInfo;
-            stbtt_uint8* data = info->data + info->kern;
-
-            // we only look at the first table. it must be 'horizontal' and format 0.
-            if (!info->kern)
-                break;
-            if (ttUSHORT(data + 2) < 1) // number of tables, need at least 1
-                break;
-            if (ttUSHORT(data + 8) != 1) // horizontal flag must be set in format
-                break;
-
-            ImVector<int> glyph_index_to_codepoint_map;
-            glyph_index_to_codepoint_map.resize(src_tmp.FontInfo.numGlyphs, -1);
-            for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
+        if (src_tmp.FontInfo.kern) {
+            glyph_index_to_codepoint_map.clear();
+            glyph_index_to_codepoint_map.resize(0x10000, -1);
+            for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.size(); glyph_i++)
             {
                 const int codepoint = src_tmp.GlyphsList[glyph_i];
-                const int glyph_index = stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint);
-                IM_ASSERT(0 <= glyph_index && glyph_index <= 0xFFFF);
+                const unsigned int glyph_index = stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint);
+                IM_ASSERT(glyph_index < (unsigned int)glyph_index_to_codepoint_map.size());
                 glyph_index_to_codepoint_map[glyph_index] = codepoint;
             }
 
-            int num_pairs = ttUSHORT(data + 10);
-            dst_font->KerningPairs.reserve(num_pairs);
-            for (int i = 0, i_ = num_pairs * 6; i < i_; i += 6)
-            {
-                int l = glyph_index_to_codepoint_map.Data[ttUSHORT(data + 18 + i)];
-                int r = glyph_index_to_codepoint_map.Data[ttUSHORT(data + 20 + i)];
-                if (l == -1 || r == -1)
-                    continue;
-
-                short dist = ttSHORT(data + 22 + i);
-                dst_font->AddKerningPair((ImWchar)l, (ImWchar)r, (float)dist * font_scale);
-            }
-        } while (false);
+            ImFontAtlasBuildParseKernTable(src_tmp.FontInfo.data + src_tmp.FontInfo.kern, glyph_index_to_codepoint_map, font_scale, dst_font);
+        }
     }
 
     // Cleanup
