@@ -3481,18 +3481,21 @@ IMGUI_API float ImFont::GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar rig
 {
     IM_ASSERT(!DirtyLookupTables);
 
-    if (left_c < ImFont_FrequentKerningPairs_MaxCodepoint && right_c < ImFont_FrequentKerningPairs_MaxCodepoint)
-        return FrequentKerningPairs.Data[left_c * ImFont_FrequentKerningPairs_MaxCodepoint + right_c];
-
     if (IndexLookup.Size <= right_c || IndexedHotData.Data[right_c].KerningPairCount == 0)
         return 0.0f;
 
-    return GetDistanceAdjustmentForPairFromHotData(left_c, &IndexedHotData.Data[right_c]);
+    return GetDistanceAdjustmentForPairFromHotData(left_c, right_c, &IndexedHotData.Data[right_c]);
 }
 
-IMGUI_API float ImFont::GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, const ImFontGlyphHotData* right_c_info) const
+IMGUI_API float ImFont::GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, ImWchar right_c, const ImFontGlyphHotData* right_c_info) const
 {
     IM_ASSERT(!DirtyLookupTables);
+
+    if (left_c < ImFont_FrequentKerningPairs_MaxCodepoint && right_c < ImFont_FrequentKerningPairs_MaxCodepoint)
+        return FrequentKerningPairs.Data[left_c * ImFont_FrequentKerningPairs_MaxCodepoint + right_c];
+
+    if (right_c_info->KerningPairCount == 0)
+        return 0.0f;
 
     if (right_c_info->KerningPairUseBisect)
     {
@@ -3646,12 +3649,8 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
 
         if (use_kerning)
-        {
-            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
-                line_width += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c];
-            else if (c_info->KerningPairCount)
-                line_width += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info);
-        }
+            line_width += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, (ImWchar)c, c_info);
+
         prev_c = c;
         s = next_s;
     }
@@ -3737,12 +3736,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         }
 
         if (use_kerning)
-        {
-            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
-                line_width += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
-            else if (c_info->KerningPairCount)
-                line_width += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info) * scale;
-        }
+            line_width += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, (ImWchar)c, c_info) * scale;
+
         prev_c = c;
         text_size.x = ImMax(text_size.x, line_width + occupy_width);
         line_width += char_width;
@@ -3895,18 +3890,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         const float char_width = glyph->AdvanceX * scale;
 
         if (use_kerning)
-        {
-            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
-            {
-                x += FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
-            }
-            else if ((int)glyph->Codepoint < IndexedHotData.Size)
-            {
-                const ImFontGlyphHotData* c_info = &IndexedHotData.Data[glyph->Codepoint];
-                if (c_info->KerningPairCount)
-                    x += GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info) * scale;
-            }
-        }
+            x += GetDistanceAdjustmentForPair((ImWchar)prev_c, (ImWchar)c) * scale;
+
         prev_c = glyph->Codepoint;
 
         if (glyph->Visible)

@@ -2919,11 +2919,7 @@ struct ImFont
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
     IMGUI_API void              AddKerningPair(ImWchar left_c, ImWchar right_c, float distance_adjustment);
-
-    // When this function is called...
-    // * ...right_c_info->KerningPairCount must be a known non-zero value.
-    // * ...both left_c and (supposed) right_c must not be covered in FrequentKerningPairs.
-    IMGUI_API float             GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, const ImFontGlyphHotData* right_c_info) const;
+    IMGUI_API float             GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, ImWchar right_c, const ImFontGlyphHotData* right_c_info) const;
 };
 
 //-----------------------------------------------------------------------------

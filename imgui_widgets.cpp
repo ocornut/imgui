@@ -3604,14 +3604,9 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
         const ImFontGlyphHotData* c_info = (int)c >= font->IndexedHotData.Size ? font->FallbackHotData : &font->IndexedHotData.Data[c];
         const float char_width = c_info->AdvanceX * scale;
         if (use_kerning)
-        {
-            if (prev_c < ImFont_FrequentKerningPairs_MaxCodepoint && c < ImFont_FrequentKerningPairs_MaxCodepoint)
-                line_width += font->FrequentKerningPairs.Data[prev_c * ImFont_FrequentKerningPairs_MaxCodepoint + c] * scale;
-            else if (c_info->KerningPairCount)
-                line_width += font->GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, c_info) * scale;
-        }
-        prev_c = c;
+            line_width += font->GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, (ImWchar)c, c_info) * scale;
 
+        prev_c = c;
         line_width += char_width;
     }
 
