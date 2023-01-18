@@ -729,8 +729,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const ImGuiTableFlags table_sizing_policy = (table->Flags & ImGuiTableFlags_SizingMask_);
     table->IsDefaultDisplayOrder = true;
     table->ColumnsEnabledCount = 0;
-    table->EnabledMaskByIndex = 0x00;
-    table->EnabledMaskByDisplayOrder = 0x00;
+    table->EnabledMaskByIndex.ClearAllBits();
+    table->EnabledMaskByDisplayOrder.ClearAllBits();
     table->LeftMostEnabledColumn = -1;
     table->MinColumnWidth = ImMax(1.0f, g.Style.FramePadding.x * 1.0f); // g.Style.ColumnsMinSpacing; // FIXME-TABLE
 
@@ -795,8 +795,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         else
             table->LeftMostEnabledColumn = (ImGuiTableColumnIdx)column_n;
         column->IndexWithinEnabledSet = table->ColumnsEnabledCount++;
-        table->EnabledMaskByIndex |= (ImU64)1 << column_n;
-        table->EnabledMaskByDisplayOrder |= (ImU64)1 << column->DisplayOrder;
+        table->EnabledMaskByIndex.SetBit(column_n);
+        table->EnabledMaskByDisplayOrder.SetBit(column->DisplayOrder);
         prev_visible_column_idx = column_n;
         IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
 
@@ -844,7 +844,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->LeftMostStretchedColumn = table->RightMostStretchedColumn = -1;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if (!(table->EnabledMaskByIndex & ((ImU64)1 << column_n)))
+        if (!table->EnabledMaskByIndex.TestBit(column_n))
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
@@ -860,7 +860,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
             if (column->AutoFitQueue != 0x00)
                 column->WidthRequest = width_auto;
-            else if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && !column_is_resizable && (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)))
+            else if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && !column_is_resizable && table->RequestOutputMaskByIndex.TestBit(column_n))
                 column->WidthRequest = width_auto;
 
             // FIXME-TABLE: Increase minimum size during init frame to avoid biasing auto-fitting widgets
@@ -908,7 +908,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->ColumnsGivenWidth = width_spacings + (table->CellPaddingX * 2.0f) * table->ColumnsEnabledCount;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if (!(table->EnabledMaskByIndex & ((ImU64)1 << column_n)))
+        if (!table->EnabledMaskByIndex.TestBit(column_n))
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
@@ -935,7 +935,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if (width_remaining_for_stretched_columns >= 1.0f && !(table->Flags & ImGuiTableFlags_PreciseWidths))
         for (int order_n = table->ColumnsCount - 1; stretch_sum_weights > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
         {
-            if (!(table->EnabledMaskByDisplayOrder & ((ImU64)1 << order_n)))
+            if (!table->EnabledMaskByDisplayOrder.TestBit(order_n))
                 continue;
             ImGuiTableColumn* column = &table->Columns[table->DisplayOrderToIndex[order_n]];
             if (!(column->Flags & ImGuiTableColumnFlags_WidthStretch))
@@ -966,8 +966,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
     //host_clip_rect.Max.x += table->CellPaddingX + table->CellSpacingX2;
-    table->VisibleMaskByIndex = 0x00;
-    table->RequestOutputMaskByIndex = 0x00;
+    table->VisibleMaskByIndex.ClearAllBits();
+    table->RequestOutputMaskByIndex.ClearAllBits();
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
@@ -984,7 +984,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Clear status flags
         column->Flags &= ~ImGuiTableColumnFlags_StatusMask_;
 
-        if ((table->EnabledMaskByDisplayOrder & ((ImU64)1 << order_n)) == 0)
+        if (!table->EnabledMaskByDisplayOrder.TestBit(order_n))
         {
             // Hidden column: clear a few fields and we are done with it for the remainder of the function.
             // We set a zero-width clip rect but set Min.y/Max.y properly to not interfere with the clipper.
@@ -1037,12 +1037,12 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->IsVisibleY = true; // (column->ClipRect.Max.y > column->ClipRect.Min.y);
         const bool is_visible = column->IsVisibleX; //&& column->IsVisibleY;
         if (is_visible)
-            table->VisibleMaskByIndex |= ((ImU64)1 << column_n);
+            table->VisibleMaskByIndex.SetBit(column_n);
 
         // Mark column as requesting output from user. Note that fixed + non-resizable sets are auto-fitting at all times and therefore always request output.
         column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
         if (column->IsRequestOutput)
-            table->RequestOutputMaskByIndex |= ((ImU64)1 << column_n);
+            table->RequestOutputMaskByIndex.SetBit(column_n);
 
         // Mark column as SkipItems (ignoring all items/layout)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
@@ -1169,7 +1169,7 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
 
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
-        if (!(table->EnabledMaskByDisplayOrder & ((ImU64)1 << order_n)))
+        if (!table->EnabledMaskByDisplayOrder.TestBit(order_n))
             continue;
 
         const int column_n = table->DisplayOrderToIndex[order_n];
@@ -1305,7 +1305,7 @@ void    ImGui::EndTable()
     float auto_fit_width_for_stretched = 0.0f;
     float auto_fit_width_for_stretched_min = 0.0f;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        if (table->EnabledMaskByIndex & ((ImU64)1 << column_n))
+        if (table->EnabledMaskByIndex.TestBit(column_n))
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
             float column_width_request = ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && !(column->Flags & ImGuiTableColumnFlags_NoResize)) ? column->WidthRequest : TableGetColumnWidthAuto(table, column);
@@ -1651,7 +1651,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
             return;
         if (column_n == -1)
             column_n = table->CurrentColumn;
-        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
+        if (!table->VisibleMaskByIndex.TestBit(column_n))
             return;
         if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
             table->RowCellDataCurrent++;
@@ -1926,7 +1926,7 @@ bool ImGui::TableSetColumnIndex(int column_n)
 
     // Return whether the column is visible. User may choose to skip submitting items based on this return value,
     // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
-    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    return table->RequestOutputMaskByIndex.TestBit(column_n);
 }
 
 // [Public] Append into the next column, wrap and create a new row when already on last column
@@ -1952,7 +1952,7 @@ bool ImGui::TableNextColumn()
     // Return whether the column is visible. User may choose to skip submitting items based on this return value,
     // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
     int column_n = table->CurrentColumn;
-    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    return table->RequestOutputMaskByIndex.TestBit(column_n);
 }
 
 
@@ -2292,7 +2292,7 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
     const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClip) ? 1 : table->ColumnsEnabledCount;
     const int channels_for_bg = 1 + 1 * freeze_row_multiplier;
-    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || table->VisibleMaskByIndex != table->EnabledMaskByIndex) ? +1 : 0;
+    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || !table->VisibleMaskByIndex.IsEqual(table->EnabledMaskByIndex)) ? +1 : 0;
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter->Split(table->InnerWindow->DrawList, channels_total);
     table->DummyDrawChannel = (ImGuiTableDrawChannelIdx)((channels_for_dummy > 0) ? channels_total - 1 : -1);
@@ -2378,7 +2378,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     // 1. Scan channels and take note of those which can be merged
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
+        if (!table->VisibleMaskByIndex.TestBit(column_n))
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
@@ -2542,7 +2542,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
-            if (!(table->EnabledMaskByDisplayOrder & ((ImU64)1 << order_n)))
+            if (!table->EnabledMaskByDisplayOrder.TestBit(order_n))
                 continue;
 
             const int column_n = table->DisplayOrderToIndex[order_n];
