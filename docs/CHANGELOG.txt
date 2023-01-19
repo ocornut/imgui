@@ -37,6 +37,8 @@ HOW TO UPDATE?
 
 All changes:
 
+- Text: Fixed layouting of wrapped-text block skipping successive empty lines,
+  regression from the fix in 1.89.2. (#5720, #5919)
 - Text: Fix clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
   is scaled. Scaling wasn't taken into account, leading to ellipsis character straying
   slightly out of its expected boundaries. (#2775)
