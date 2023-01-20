@@ -178,8 +178,21 @@ Rectangles provided by Dear ImGui are defined as
 `(x1=left,y1=top,x2=right,y2=bottom)`
 and **NOT** as
 `(x1,y1,width,height)`.
-Refer to rendering backends in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder for references of how to handle the `ClipRect` field.
+Refer to rendering backends in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder for references of how to handle the `ClipRect` field.
+For example, the [DirectX11 backend](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp) does this:
+```cpp
+// Project scissor/clipping rectangles into framebuffer space
+ImVec2 clip_off = draw_data->DisplayPos;
+ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
+ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+    continue;
 
+// Apply scissor/clipping rectangle
+const D3D11_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
+ctx->RSSetScissorRects(1, &r);
+```
+    
 ##### [Return to Index](#index)
 
 ---
