@@ -555,6 +555,15 @@ void ImGui_ImplSDL2_NewFrame()
     static Uint64 frequency = SDL_GetPerformanceFrequency();
     Uint64 current_time = SDL_GetPerformanceCounter();
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
+#ifdef __EMSCRIPTEN__
+    // Workaround: under emscripten, consecutive calls to SDL_GetPerformanceCounter() might lead to the same result, which will result in IM_ASSERT(g.IO.DeltaTime > 0.0f) to fail later, inside ImGui::ErrorCheckNewFrameSanityChecks()
+    static float lastDeltaTime = 1.f / 60.f;
+    if (io.DeltaTime <= 0.f)
+        io.DeltaTime = lastDeltaTime;
+    else
+        lastDeltaTime = io.DeltaTime;
+#endif
+
     bd->Time = current_time;
 
     if (bd->PendingMouseLeaveFrame && bd->PendingMouseLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
