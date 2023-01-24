@@ -37,17 +37,20 @@ HOW TO UPDATE?
 
 All changes:
 
+- Window: Avoid rendering shapes for hidden resize grips.
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
 - Text: Fixed layouting of wrapped-text block skipping successive empty lines,
   regression from the fix in 1.89.2. (#5720, #5919)
-- Text: Fix clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
+- Text: Fixed clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
   is scaled. Scaling wasn't taken into account, leading to ellipsis character straying
   slightly out of its expected boundaries. (#2775)
 - Text: Tweaked rendering of three-dots "..." ellipsis variant. (#2775, #4269)
 - Menus: Fixed layout of MenuItem()/BeginMenu() when label contains a '\n'. (#6116) [@imkcy9]
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
+- ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
+  color alpha is zero.
 
 
 -----------------------------------------------------------------------
