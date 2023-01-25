@@ -49,6 +49,7 @@ All changes:
 - Text: Tweaked rendering of three-dots "..." ellipsis variant. (#2775, #4269)
 - InputText: Added support for Ctrl+Delete to delete up to end-of-word. (#6067) [@ajweeks]
   (Not adding Super+Delete to delete to up to end-of-line on OSX, as OSX doesn't have it)
+- InputText: On OSX, inhibit usage of Alt key to toggle menu when active (used for work skip).
 - Menus: Fixed layout of MenuItem()/BeginMenu() when label contains a '\n'. (#6116) [@imkcy9]
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 - ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
