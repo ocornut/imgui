@@ -54,6 +54,7 @@ All changes:
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 - ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
   color alpha is zero.
+- Misc: Most text functions treat "%s" as a shortcut to no-formatting. (#3466)
 - Misc: Tolerate zero delta-time under Emscripten as backends are imprecise in their
   values for io.DeltaTime, and browser features such as "privacy.resistFingerprinting=true"
   can exacerbate that. (#6114, #3644)
