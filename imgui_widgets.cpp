@@ -3637,22 +3637,31 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* ob
 }
 
 // When ImGuiInputTextFlags_Password is set, we don't want actions such as CTRL+Arrow to leak the fact that underlying data are blanks or separators.
-static bool is_separator(unsigned int c)                                        { return ImCharIsBlankW(c) || c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|' || c=='\n' || c=='\r' || c == '.'; }
+static bool is_separator(unsigned int c)
+{
+    return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|' || c=='\n' || c=='\r' || c=='.' || c=='!';
+}
 static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
 {
     if ((obj->Flags & ImGuiInputTextFlags_Password) || idx <= 0) return 0;
-    // Skip through whitespace blocks
-    if (ImCharIsBlankW(obj->TextW[idx])) return !ImCharIsBlankW(obj->TextW[idx - 1]);
-    // Stop at all other separators
-    return is_separator(obj->TextW[idx - 1]) || is_separator(obj->TextW[idx]);
+
+    bool prev_white = ImCharIsBlankW(obj->TextW[idx - 1]);
+    bool prev_separ = is_separator(obj->TextW[idx - 1]);
+    bool curr_white = ImCharIsBlankW(obj->TextW[idx]);
+    bool curr_separ = is_separator(obj->TextW[idx]);
+
+    return ((prev_white || prev_separ) && !(curr_separ || curr_white)) || (curr_separ && !prev_separ);
 }
 static int is_word_boundary_from_left(ImGuiInputTextState* obj, int idx)
 {
     if ((obj->Flags & ImGuiInputTextFlags_Password) || idx <= 0) return 0;
-    // Skip through whitespace blocks
-    if (ImCharIsBlankW(obj->TextW[idx - 1])) return !ImCharIsBlankW(obj->TextW[idx]);
-    // Stop at all other separators
-    return is_separator(obj->TextW[idx - 1]) || is_separator(obj->TextW[idx]);
+
+    bool prev_white = ImCharIsBlankW(obj->TextW[idx]);
+    bool prev_separ = is_separator(obj->TextW[idx]);
+    bool curr_white = ImCharIsBlankW(obj->TextW[idx - 1]);
+    bool curr_separ = is_separator(obj->TextW[idx - 1]);
+
+    return ((prev_white) && !(curr_separ || curr_white)) || (curr_separ && !prev_separ);
 }
 static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(ImGuiInputTextState* obj, int idx)   { idx--; while (idx >= 0 && !is_word_boundary_from_right(obj, idx)) idx--; return idx < 0 ? 0 : idx; }
 static int  STB_TEXTEDIT_MOVEWORDRIGHT_MAC(ImGuiInputTextState* obj, int idx)   { idx++; int len = obj->CurLenW; while (idx < len && !is_word_boundary_from_left(obj, idx)) idx++; return idx > len ? len : idx; }
