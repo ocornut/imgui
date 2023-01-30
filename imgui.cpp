@@ -13170,7 +13170,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     }
     if (TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
     {
-        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 tint_col = ImGui::GetStyleColorVec4(ImGuiCol_Text); //tint - style text colour
         ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
         Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
         TreePop();
