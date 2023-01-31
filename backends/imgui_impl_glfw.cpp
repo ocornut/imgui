@@ -358,6 +358,10 @@ void ImGui_ImplGlfw_CursorPosCallback(GLFWwindow* window, double x, double y)
         return;
 
     ImGuiIO& io = ImGui::GetIO();
+    int w, h;
+    glfwGetWindowSize(bd->Window, &w, &h);
+    x *= io.DisplaySize.x / w;
+    y *= io.DisplaySize.y / h;
     io.AddMousePosEvent((float)x, (float)y);
     bd->LastValidMousePos = ImVec2((float)x, (float)y);
 }
@@ -561,6 +565,10 @@ static void ImGui_ImplGlfw_UpdateMouseData()
         {
             double mouse_x, mouse_y;
             glfwGetCursorPos(bd->Window, &mouse_x, &mouse_y);
+            int w, h;
+            glfwGetWindowSize(bd->Window, &w, &h);
+            mouse_x *= io.DisplaySize.x / w;
+            mouse_y *= io.DisplaySize.y / h;
             io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
             bd->LastValidMousePos = ImVec2((float)mouse_x, (float)mouse_y);
         }
@@ -649,13 +657,12 @@ void ImGui_ImplGlfw_NewFrame()
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplGlfw_InitForXXX()?");
 
     // Setup display size (every frame to accommodate for window resizing)
-    int w, h;
     int display_w, display_h;
-    glfwGetWindowSize(bd->Window, &w, &h);
+    float scalex, scaley;
+    glfwGetWindowContentScale(bd->Window, &scalex, &scaley);
     glfwGetFramebufferSize(bd->Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)w, (float)h);
-    if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / (float)w, (float)display_h / (float)h);
+    io.DisplaySize = ImVec2(display_w/scalex, display_h/scaley);
+    io.DisplayFramebufferScale = ImVec2(scalex, scaley);
 
     // Setup time step
     double current_time = glfwGetTime();

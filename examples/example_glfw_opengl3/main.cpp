@@ -56,6 +56,7 @@ int main(int, char**)
 #endif
 
     // Create window with graphics context
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
     if (window == NULL)
         return 1;

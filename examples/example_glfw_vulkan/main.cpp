@@ -359,6 +359,7 @@ int main(int, char**)
     if (!glfwInit())
         return 1;
 
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
 
