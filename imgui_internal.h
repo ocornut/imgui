@@ -1,10 +1,12 @@
 // dear imgui, v1.89.3 WIP
 // (internal structures/api)
 
-// You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
-// Set:
-//   #define IMGUI_DEFINE_MATH_OPERATORS
-// To implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
+// You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
+// To implement maths operators for ImVec2 (disabled by default to not conflict with using IM_VEC2_CLASS_EXTRA with your own math types+operators), use:
+/*
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui_internal.h"
+*/
 
 /*
 

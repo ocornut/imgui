@@ -3573,19 +3573,17 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         while (y + line_height < clip_rect.y && s < text_end)
         {
             const char* line_end = (const char*)memchr(s, '\n', text_end - s);
-            if (!line_end)
-                line_end = text_end;
             if (word_wrap_enabled)
             {
                 // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPositionA().
                 // If the specs for CalcWordWrapPositionA() were reworked to optionally return on \n we could combine both.
                 // However it is still better than nothing performing the fast-forward!
-                s = CalcWordWrapPositionA(scale, s, line_end, wrap_width);
+                s = CalcWordWrapPositionA(scale, s, line_end ? line_end : text_end, wrap_width);
                 s = CalcWordWrapNextLineStartA(s, text_end);
             }
             else
             {
-                s = line_end + 1;
+                s = line_end ? line_end + 1 : text_end;
             }
             y += line_height;
         }
