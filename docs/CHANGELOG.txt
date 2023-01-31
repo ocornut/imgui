@@ -64,6 +64,8 @@ All changes:
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
+- Examples: SDL+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
+  Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931). 
 
 
 -----------------------------------------------------------------------
