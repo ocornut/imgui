@@ -1,5 +1,5 @@
 #
-# Makefile to use with emscripten
+# Makefile to use with SDL+emscripten
 # See https://emscripten.org/docs/getting_started/downloads.html
 # for installation instructions.
 #

@@ -59,6 +59,8 @@ All changes:
 - Misc: Tolerate zero delta-time under Emscripten as backends are imprecise in their
   values for io.DeltaTime, and browser features such as "privacy.resistFingerprinting=true"
   can exacerbate that. (#6114, #3644)
+- Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
+  hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
 - Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
