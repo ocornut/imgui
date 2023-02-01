@@ -102,18 +102,69 @@ Other changes:
  VERSION 1.89.3 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+- Inputs, Scrolling: Made horizontal scroll wheel and horizontal scroll direction consistent
+  accross backends/os. (#4019, #6096, #1463) [@PathogenDavid, @ocornut, @rokups]
+  - Clarified that 'wheel_y > 0.0f' scrolls Up, 'wheel_y > 0.0f' scrolls Down.
+  - Clarified that 'wheel_x > 0.0f' scrolls Left, 'wheel_x > 0.0f' scrolls Right.
+  - Backends: Win32: flipping WM_MOUSEHWHEEL value to match other backends and
+    offer consistent horizontal scrolling direction. (#4019)
+  - Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
+    offer consistent horizontal scrolling direction. (#4019)
+  - Backends: GLFW+Emscripten: flipping both wheels axises + scaling magnitude down when
+    running on Emscripten's GLFW emulation. (#6096) [@topolarity]
+  - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
+    (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
+  - If you use a custom-backend, you should verify that:
+    - Wheel up (*) emit wheel_y > 0.0f values and scrolls up.
+    - Wheel down (*) emit wheel_y < 0.0f values and scrolls down.
+    - Wheel left (*) or mod+wheel up emit wheel_x > 0.0f values and scroll Left.
+    - Wheel right (*) or mod+wheel down emits wheel_x < 0.0f values and scroll Right.
+    - (*) both axises flipped on OSX for mouse and touchpad when 'Natural Scrolling' is on.
+    - (*) both axises flipped On Windows for touchpad only when 'Settings->Touchpad->Down motion scrolls up' is set.
+    - You can use 'Demo->Tools->Debug Log->IO" to visualize values submitted to Dear ImGui.
+  - Known issues remaining with Emscripten:
+    - The magnitude of wheeling values on Emscripten setups is still mostly wrong. (#6096)
+    - When running the Emscripten app on a Mac with a mouse, SHIFT+WheelY doesn't turn into WheelX.
+      This is because we don't know that we are running on Mac and apply our own Shift+swapping
+      on top of OSX' own swapping, so wheel axises are swapped twice. Emscripten apps may need
+      to find a way to detect this and set io.ConfigMacOSXBehaviors manually (if you know a way
+      let us know!), or offer the "OSX-style behavior" option to their user.
+
 All changes:
 
+- Window: Avoid rendering shapes for hidden resize grips.
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
 - Text: Fixed layouting of wrapped-text block skipping successive empty lines,
   regression from the fix in 1.89.2. (#5720, #5919)
-- Text: Fix clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
+- Text: Fixed clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
   is scaled. Scaling wasn't taken into account, leading to ellipsis character straying
   slightly out of its expected boundaries. (#2775)
 - Text: Tweaked rendering of three-dots "..." ellipsis variant. (#2775, #4269)
+- InputText: Added support for Ctrl+Delete to delete up to end-of-word. (#6067) [@ajweeks]
+  (Not adding Super+Delete to delete to up to end-of-line on OSX, as OSX doesn't have it)
+- InputText: On OSX, inhibit usage of Alt key to toggle menu when active (used for work skip).
+- Menus: Fixed layout of MenuItem()/BeginMenu() when label contains a '\n'. (#6116) [@imkcy9]
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
+- Combo: Allow SetNextWindowSize() to alter combo popup size. (#6130)
+- ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
+  color alpha is zero.
+- Misc: Most text functions treat "%s" as a shortcut to no-formatting. (#3466)
+- Misc: Tolerate zero delta-time under Emscripten as backends are imprecise in their
+  values for io.DeltaTime, and browser features such as "privacy.resistFingerprinting=true"
+  can exacerbate that. (#6114, #3644)
+- Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
+  hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
+- Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
+  (#6117, #4116, #3632) [@tonygrue, @bfierz]
+- Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
+  DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
+  when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
+- Examples: SDL+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
+  Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931). 
 
 Docking+Viewports Branch:
 

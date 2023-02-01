@@ -1,5 +1,5 @@
 #
-# Makefile to use with SDL+emscripten
+# Makefile to use with GLFW+emscripten
 # See https://emscripten.org/docs/getting_started/downloads.html
 # for installation instructions.
 #
@@ -20,7 +20,7 @@ EXE = $(WEB_DIR)/index.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 CPPFLAGS =
@@ -32,7 +32,7 @@ EMS =
 ##---------------------------------------------------------------------
 
 # ("EMS" options gets added to both CPPFLAGS and LDFLAGS, whereas some options are for linker only)
-EMS += -s USE_SDL=2
+EMS += -s USE_GLFW=3
 EMS += -s DISABLE_EXCEPTION_CATCHING=1
 LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
 

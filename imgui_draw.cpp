@@ -714,7 +714,7 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, ImDrawFlags flags, float thickness)
 {
-    if (points_count < 2)
+    if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
 
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
@@ -972,7 +972,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 // - Filled shapes must always use clockwise winding order. The anti-aliasing fringe depends on it. Counter-clockwise shapes will have "inward" anti-aliasing.
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
-    if (points_count < 3)
+    if (points_count < 3 || (col & IM_COL32_A_MASK) == 0)
         return;
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
@@ -3581,19 +3581,17 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         while (y + line_height < clip_rect.y && s < text_end)
         {
             const char* line_end = (const char*)memchr(s, '\n', text_end - s);
-            if (!line_end)
-                line_end = text_end;
             if (word_wrap_enabled)
             {
                 // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPositionA().
                 // If the specs for CalcWordWrapPositionA() were reworked to optionally return on \n we could combine both.
                 // However it is still better than nothing performing the fast-forward!
-                s = CalcWordWrapPositionA(scale, s, line_end, wrap_width);
+                s = CalcWordWrapPositionA(scale, s, line_end ? line_end : text_end, wrap_width);
                 s = CalcWordWrapNextLineStartA(s, text_end);
             }
             else
             {
-                s = line_end + 1;
+                s = line_end ? line_end + 1 : text_end;
             }
             y += line_height;
         }
