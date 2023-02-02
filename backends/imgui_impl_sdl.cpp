@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-02-02: Avoid calling SDL_SetCursor() when cursor has not changed, as the function is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version).
 //  2023-02-02: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data for smooth scrolling + Scaling X value on Emscripten (bug?). (#4019, #6096)
 //  2023-02-02: Removed SDL_MOUSEWHEEL value clamping, as values seem correct in latest Emscripten. (#4019)
 //  2023-02-01: Flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and offer consistent horizontal scrolling direction. (#4019, #6096, #1463)
@@ -91,6 +92,7 @@ struct ImGui_ImplSDL2_Data
     Uint64          Time;
     int             MouseButtonsDown;
     SDL_Cursor*     MouseCursors[ImGuiMouseCursor_COUNT];
+    SDL_Cursor*     LastMouseCursor;
     int             PendingMouseLeaveFrame;
     char*           ClipboardTextData;
     bool            MouseCanUseGlobalState;
@@ -439,6 +441,7 @@ void ImGui_ImplSDL2_Shutdown()
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_FreeCursor(bd->MouseCursors[cursor_n]);
+    bd->LastMouseCursor = NULL;
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -492,7 +495,12 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
     else
     {
         // Show OS mouse cursor
-        SDL_SetCursor(bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow]);
+        SDL_Cursor* expected_cursor = bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow];
+        if (bd->LastMouseCursor != expected_cursor)
+        {
+            SDL_SetCursor(expected_cursor); // SDL function doesn't have an early out (see #6113)
+            bd->LastMouseCursor = expected_cursor;
+        }
         SDL_ShowCursor(SDL_TRUE);
     }
 }
