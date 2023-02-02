@@ -90,13 +90,16 @@ All changes:
 - Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
 - Backends: SDL: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
-  Latest Emscripten seems to emit correct values.
+- Backends: SDL: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data
+  for smooth scrolling as reported by SDL. (#4019, #6096)
 - Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: refactord all examples to use a "MainLoopStep()" function. This is in order
   to be able to trivially make some compile with Emscripten. (#2492, #3699)
   While not all examples are expected to compile on Emscripten, we try to keep all of them
   as close as possible to each others.
+- Examples: Emscripten: The main SDL+GL and GLFW+GL examples now supports Emscripten.
+  (the dedicated example_emscripten_opengl3/ has been removed) (#2492, #2494, #3699, #3705)
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
