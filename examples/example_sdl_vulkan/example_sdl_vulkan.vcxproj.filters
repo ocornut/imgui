@@ -32,7 +32,7 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\imgui_tables.cpp">
-      <Filter>sources</Filter>
+      <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
