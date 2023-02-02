@@ -1907,6 +1907,11 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
     return ~crc;
 }
 
+ImGuiID ImHashAdd(ImGuiID seed, int i)
+{
+    return ImHashData(&i, sizeof(int), seed);
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 //-----------------------------------------------------------------------------

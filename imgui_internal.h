@@ -321,6 +321,9 @@ namespace ImStb
 IMGUI_API ImGuiID       ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
 IMGUI_API ImGuiID       ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
 
+IMGUI_API ImGuiID       ImHashAdd(ImGuiID seed, int i);
+
+
 // Helpers: Sorting
 #ifndef ImQsort
 static inline void      ImQsort(void* base, size_t count, size_t size_of_element, int(IMGUI_CDECL *compare_func)(void const*, void const*)) { if (count > 1) qsort(base, count, size_of_element, compare_func); }

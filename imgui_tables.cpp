@@ -333,7 +333,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
     const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
-    const ImGuiID instance_id = id + instance_no;
+    const ImGuiID instance_id = ImHashAdd(id, instance_no);
     const ImGuiTableFlags table_last_flags = table->Flags;
     if (instance_no > 0)
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
@@ -1348,7 +1348,7 @@ void    ImGui::EndTable()
     }
 
     // Pop from id stack
-    IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table->ID + table->InstanceCurrent, "Mismatching PushID/PopID!");
+    IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == ImHashAdd(table->ID, table->InstanceCurrent), "Mismatching PushID/PopID!");
     IM_ASSERT_USER_ERROR(outer_window->DC.ItemWidthStack.Size >= temp_data->HostBackupItemWidthStackSize, "Too many PopItemWidth!");
     PopID();
 
