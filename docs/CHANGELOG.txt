@@ -45,8 +45,6 @@ Breaking changes:
     offer consistent horizontal scrolling direction. (#4019)
   - Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
     offer consistent horizontal scrolling direction. (#4019)
-  - Backends: GLFW+Emscripten: flipping both wheels axises when running on Emscripten's
-    GLFW emulation. (#6096) [@topolarity]
   - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
     (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
   - If you use a custom-backend, you should verify that:
