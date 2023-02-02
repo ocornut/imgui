@@ -45,8 +45,8 @@ Breaking changes:
     offer consistent horizontal scrolling direction. (#4019)
   - Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
     offer consistent horizontal scrolling direction. (#4019)
-  - Backends: GLFW+Emscripten: flipping both wheels axises + scaling magnitude down when
-    running on Emscripten's GLFW emulation. (#6096) [@topolarity]
+  - Backends: GLFW+Emscripten: flipping both wheels axises when running on Emscripten's
+    GLFW emulation. (#6096) [@topolarity]
   - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
     (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
   - If you use a custom-backend, you should verify that:
@@ -58,7 +58,7 @@ Breaking changes:
     - (*) both axises flipped On Windows for touchpad only when 'Settings->Touchpad->Down motion scrolls up' is set.
     - You can use 'Demo->Tools->Debug Log->IO" to visualize values submitted to Dear ImGui.
   - Known issues remaining with Emscripten:
-    - The magnitude of wheeling values on Emscripten setups is still mostly wrong. (#6096)
+    - The magnitude of wheeling values on Emscripten setups is still not great. (#6096)
     - When running the Emscripten app on a Mac with a mouse, SHIFT+WheelY doesn't turn into WheelX.
       This is because we don't know that we are running on Mac and apply our own Shift+swapping
       on top of OSX' own swapping, so wheel axises are swapped twice. Emscripten apps may need

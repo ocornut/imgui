@@ -287,8 +287,8 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
 #if defined(__EMSCRIPTEN__)
     // Emscripten's GLFW emulation reports grossly mis-scaled and flipped scroll events.
     // The scale is still currently incorrect, see #4019 #6096 for details.
-    xoffset /= -120.0f;
-    yoffset /= -120.0f;
+    xoffset = -xoffset;
+    yoffset = -yoffset;
 #endif
 
     ImGuiIO& io = ImGui::GetIO();
