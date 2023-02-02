@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
-    <title>Dear ImGui GLFW+Emscripten example</title>
+    <title>Dear ImGui Emscripten example</title>
     <style>
         body { margin: 0; background-color: black }
-        /*.emscripten {
+        /* FIXME: with our GLFW example this block seems to break resizing and io.DisplaySize gets stuck */
+        .emscripten {
             position: absolute;
             top: 0px;
             left: 0px;
@@ -24,8 +25,7 @@
             image-rendering: crisp-edges;
             image-rendering: pixelated;
             -ms-interpolation-mode: nearest-neighbor;
-        }*/
-        .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+        }
     </style>
   </head>
   <body>

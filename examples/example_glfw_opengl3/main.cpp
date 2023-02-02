@@ -3,6 +3,8 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+// This example can also compile and run with Emscripten. See Makefile.emscripten for details.
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -25,6 +27,11 @@ static GLFWwindow* g_AppWindow = NULL;
 
 // Forward declarations of helper functions
 void MainLoopStep();
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+void MainLoopForEmscripten(void*) { MainLoopStep(); }
+#endif
+
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -91,6 +98,7 @@ int main(int, char**)
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
     //io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
@@ -100,8 +108,17 @@ int main(int, char**)
     //IM_ASSERT(font != NULL);
 
     // Main loop
+#ifndef __EMSCRIPTEN__
+    // Desktop Build
     while (!glfwWindowShouldClose(window))
         MainLoopStep();
+#else
+    // Emscripten Build
+    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
+    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
+    io.IniFilename = NULL;
+    emscripten_set_main_loop_arg(MainLoopForEmscripten, NULL, 0, true);
+#endif
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
