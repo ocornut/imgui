@@ -91,6 +91,8 @@ All changes:
   can exacerbate that. (#6114, #3644)
 - Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
+- Backends: SDL: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
+  Latest Emscripten seems to emit correct values.
 - Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
