@@ -112,8 +112,6 @@ Breaking changes:
     offer consistent horizontal scrolling direction. (#4019)
   - Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
     offer consistent horizontal scrolling direction. (#4019)
-  - Backends: GLFW+Emscripten: flipping both wheels axises + scaling magnitude down when
-    running on Emscripten's GLFW emulation. (#6096) [@topolarity]
   - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
     (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
   - If you use a custom-backend, you should verify that:
@@ -125,7 +123,7 @@ Breaking changes:
     - (*) both axises flipped On Windows for touchpad only when 'Settings->Touchpad->Down motion scrolls up' is set.
     - You can use 'Demo->Tools->Debug Log->IO" to visualize values submitted to Dear ImGui.
   - Known issues remaining with Emscripten:
-    - The magnitude of wheeling values on Emscripten setups is still mostly wrong. (#6096)
+    - The magnitude of wheeling values on Emscripten setups is still not great. (#6096)
     - When running the Emscripten app on a Mac with a mouse, SHIFT+WheelY doesn't turn into WheelX.
       This is because we don't know that we are running on Mac and apply our own Shift+swapping
       on top of OSX' own swapping, so wheel axises are swapped twice. Emscripten apps may need
@@ -158,8 +156,14 @@ All changes:
   can exacerbate that. (#6114, #3644)
 - Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
+- Backends: SDL: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
+  Latest Emscripten seems to emit correct values.
 - Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
+- Examples: refactord all examples to use a "MainLoopStep()" function. This is in order
+  to be able to trivially make some compile with Emscripten. (#2492, #3699)
+  While not all examples are expected to compile on Emscripten, we try to keep all of them
+  as close as possible to each others.
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
