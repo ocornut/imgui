@@ -102,40 +102,32 @@ Other changes:
  VERSION 1.89.3 (In Progress)
 -----------------------------------------------------------------------
 
-Breaking changes:
+All changes:
 
 - Inputs, Scrolling: Made horizontal scroll wheel and horizontal scroll direction consistent
   accross backends/os. (#4019, #6096, #1463) [@PathogenDavid, @ocornut, @rokups]
   - Clarified that 'wheel_y > 0.0f' scrolls Up, 'wheel_y > 0.0f' scrolls Down.
-  - Clarified that 'wheel_x > 0.0f' scrolls Left, 'wheel_x > 0.0f' scrolls Right.
-  - Backends: Win32: flipping WM_MOUSEHWHEEL value to match other backends and
-    offer consistent horizontal scrolling direction. (#4019)
-  - Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
-    offer consistent horizontal scrolling direction. (#4019)
+    Clarified that 'wheel_x > 0.0f' scrolls Left, 'wheel_x > 0.0f' scrolls Right.
+  - Backends: Fixed horizontal scroll direction for Win32 and SDL backends. (#4019)
   - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
     (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
-  - If you use a custom-backend, you should verify that:
-    - Wheel up (*) emit wheel_y > 0.0f values and scrolls up.
-    - Wheel down (*) emit wheel_y < 0.0f values and scrolls down.
-    - Wheel left (*) or mod+wheel up emit wheel_x > 0.0f values and scroll Left.
-    - Wheel right (*) or mod+wheel down emits wheel_x < 0.0f values and scroll Right.
-    - (*) both axises flipped on OSX for mouse and touchpad when 'Natural Scrolling' is on.
-    - (*) both axises flipped On Windows for touchpad only when 'Settings->Touchpad->Down motion scrolls up' is set.
+  - If you use a custom-backend, you should verify horizontal wheel direction.
+    - Axises are flipped by OSX for mouse & touchpad when 'Natural Scrolling' is on.
+    - Axises are flipped by Windows for touchpad when 'Settings->Touchpad->Down motion scrolls up' is on.
     - You can use 'Demo->Tools->Debug Log->IO" to visualize values submitted to Dear ImGui.
   - Known issues remaining with Emscripten:
-    - The magnitude of wheeling values on Emscripten setups is still not great. (#6096)
+    - The magnitude of wheeling values on Emscripten was improved but isn't perfect. (#6096)
     - When running the Emscripten app on a Mac with a mouse, SHIFT+WheelY doesn't turn into WheelX.
       This is because we don't know that we are running on Mac and apply our own Shift+swapping
       on top of OSX' own swapping, so wheel axises are swapped twice. Emscripten apps may need
       to find a way to detect this and set io.ConfigMacOSXBehaviors manually (if you know a way
       let us know!), or offer the "OSX-style behavior" option to their user.
-
-All changes:
-
 - Window: Avoid rendering shapes for hidden resize grips.
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
+- Tables: Solved an ID conflict issue with multiple-instances of a same table,
+  due to how unique table instance id was generated. (#6140) [@ocornut, @rodrigorc]
 - Text: Fixed layouting of wrapped-text block skipping successive empty lines,
   regression from the fix in 1.89.2. (#5720, #5919)
 - Text: Fixed clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
@@ -156,22 +148,30 @@ All changes:
   can exacerbate that. (#6114, #3644)
 - Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
+- Backends: Win32: flipping WM_MOUSEHWHEEL value to match other backends and
+  offer consistent horizontal scrolling direction. (#4019)
+- Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
+  offer consistent horizontal scrolling direction. (#4019)
 - Backends: SDL: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
 - Backends: SDL: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data
   for smooth scrolling as reported by SDL. (#4019, #6096)
-- Backend: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
+- Backends: SDL: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
+  is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+- Backends: GLFW: Registering custom low-level mouse wheel handler to get more accurate
+  scrolling impulses on Emscripten. (#4019, #6096) [@ocornut, @wolfpld, @tolopolarity]
+- Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
+  to chain callbacks even for secondary viewports/windows. User callbacks may need to test
+  the 'window' parameter. (#6142)
+- Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
-- Examples: refactord all examples to use a "MainLoopStep()" function. This is in order
-  to be able to trivially make some compile with Emscripten. (#2492, #3699)
-  While not all examples are expected to compile on Emscripten, we try to keep all of them
-  as close as possible to each others.
-- Examples: Emscripten: The main SDL+GL and GLFW+GL examples now supports Emscripten.
-  (the dedicated example_emscripten_opengl3/ has been removed) (#2492, #2494, #3699, #3705)
+- Examples: refactored SDL+GL and GLFW+GL examples to compile with Emscripten.
+  (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
+  The dedicated example_emscripten_opengl3/ has been removed.
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
 - Examples: SDL+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
-  Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931). 
+  Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931).
 
 Docking+Viewports Branch:
 
