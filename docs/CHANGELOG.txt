@@ -90,6 +90,9 @@ All changes:
   is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
 - Backends: GLFW: Registering custom low-level mouse wheel handler to get more accurate
   scrolling impulses on Emscripten. (#4019, #6096) [@ocornut, @wolfpld, @tolopolarity]
+- Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
+  to chain callbacks even for secondary viewports/windows. User callbacks may need to test
+  the 'window' parameter. (#6142)
 - Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: refactord all examples to use a "MainLoopStep()" function. This is in order
