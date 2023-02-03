@@ -366,9 +366,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
         if (table->InstanceDataExtra.Size < instance_no)
             table->InstanceDataExtra.push_back(ImGuiTableInstanceData());
-        char instance_desc[12];
-        int instance_desc_len = ImFormatString(instance_desc, IM_ARRAYSIZE(instance_desc), "##Instance%d", instance_no);
-        instance_id = GetIDWithSeed(instance_desc, instance_desc + instance_desc_len, id);
+        instance_id = GetIDWithSeed(instance_no, GetIDWithSeed("##Instances", NULL, id)); // Push "##Instance" followed by (int)instance_no in ID stack.
     }
     else
     {
