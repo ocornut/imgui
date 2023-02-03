@@ -59,6 +59,8 @@ All changes:
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
+- Tables: Solved an ID conflict issue with multiple-instances of a same table,
+  due to how unique table instance id was generated. (#6140) [@ocornut, @rodrigorc]
 - Text: Fixed layouting of wrapped-text block skipping successive empty lines,
   regression from the fix in 1.89.2. (#5720, #5919)
 - Text: Fixed clipping of single-character "..." ellipsis (U+2026 or U+0085) when font

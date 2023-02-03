@@ -332,11 +332,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
-    const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
-    const ImGuiID instance_id = id + instance_no;
     const ImGuiTableFlags table_last_flags = table->Flags;
-    if (instance_no > 0)
-        IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
 
     // Acquire temporary buffers
     const int table_idx = g.Tables.GetIndex(table);
@@ -352,17 +348,34 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     flags = TableFixFlags(flags, outer_window);
 
     // Initialize
+    const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     table->ID = id;
     table->Flags = flags;
-    table->InstanceCurrent = (ImS16)instance_no;
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
     temp_data->UserOuterSize = outer_size;
-    if (instance_no > 0 && table->InstanceDataExtra.Size < instance_no)
-        table->InstanceDataExtra.push_back(ImGuiTableInstanceData());
+
+    // Instance data (for instance 0, TableID == TableInstanceID)
+    ImGuiID instance_id;
+    table->InstanceCurrent = (ImS16)instance_no;
+    if (instance_no > 0)
+    {
+        IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
+        if (table->InstanceDataExtra.Size < instance_no)
+            table->InstanceDataExtra.push_back(ImGuiTableInstanceData());
+        char instance_desc[12];
+        int instance_desc_len = ImFormatString(instance_desc, IM_ARRAYSIZE(instance_desc), "##Instance%d", instance_no);
+        instance_id = GetIDWithSeed(instance_desc, instance_desc + instance_desc_len, id);
+    }
+    else
+    {
+        instance_id = id;
+    }
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    table_instance->TableInstanceID = instance_id;
 
     // When not using a child window, WorkRect.Max will grow as we append contents.
     if (use_child_window)
@@ -412,7 +425,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
-    PushOverrideID(instance_id);
+    PushOverrideID(id);
+    if (instance_no > 0)
+        PushOverrideID(instance_id); // FIXME: Somehow this is not resolved by stack-tool, even tho GetIDWithSeed() submitted the symbol.
 
     // Backup a copy of host window members we will modify
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -1348,8 +1363,10 @@ void    ImGui::EndTable()
     }
 
     // Pop from id stack
-    IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table->ID + table->InstanceCurrent, "Mismatching PushID/PopID!");
+    IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table_instance->TableInstanceID, "Mismatching PushID/PopID!");
     IM_ASSERT_USER_ERROR(outer_window->DC.ItemWidthStack.Size >= temp_data->HostBackupItemWidthStackSize, "Too many PopItemWidth!");
+    if (table->InstanceCurrent > 0)
+        PopID();
     PopID();
 
     // Restore window data that we modified
@@ -1619,11 +1636,11 @@ ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
 }
 
 // Return the resizing ID for the right-side of the given column.
-ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no)
+ImGuiID ImGui::TableGetColumnResizeID(ImGuiTable* table, int column_n, int instance_no)
 {
     IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
-    ImGuiID id = table->ID + 1 + (instance_no * table->ColumnsCount) + column_n;
-    return id;
+    ImGuiID instance_id = TableGetInstanceID(table, instance_no);
+    return instance_id + 1 + column_n; // FIXME: #6140: still not ideal
 }
 
 // Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
@@ -2878,10 +2895,9 @@ void ImGui::TableHeadersRow()
             continue;
 
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
-        // - in your own code you may omit the PushID/PopID all-together, provided you know they won't collide
-        // - table->InstanceCurrent is only >0 when we use multiple BeginTable/EndTable calls with same identifier.
+        // In your own code you may omit the PushID/PopID all-together, provided you know they won't collide.
         const char* name = (TableGetColumnFlags(column_n) & ImGuiTableColumnFlags_NoHeaderLabel) ? "" : TableGetColumnName(column_n);
-        PushID(table->InstanceCurrent * table->ColumnsCount + column_n);
+        PushID(column_n);
         TableHeader(name);
         PopID();
     }
