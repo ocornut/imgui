@@ -98,7 +98,8 @@ All changes:
 - Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: refactored SDL+GL and GLFW+GL examples to compile with Emscripten.
-  (the dedicated example_emscripten_opengl3/ has been removed) (#2492, #2494, #3699, #3705)
+  (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
+  The dedicated example_emscripten_opengl3/ has been removed.
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
