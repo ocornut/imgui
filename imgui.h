@@ -249,6 +249,7 @@ typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
+// (in order to scale and position your widgets in a DPI independent way, you can use ImGui::EmVec2(x, y))
 IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImVec2
 {
@@ -309,6 +310,10 @@ namespace ImGui
     IMGUI_API void          ShowFontSelector(const char* label);        // add font selector block (not a window), essentially a combo listing the loaded fonts.
     IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as an end-user (mouse/keyboard controls).
     IMGUI_API const char*   GetVersion();                               // get the compiled version string e.g. "1.80 WIP" (essentially the value for IMGUI_VERSION from the compiled version of imgui.cpp)
+
+    // DPI aware sizing and positioning, by using the standard "em" typography unit (see https://en.wikipedia.org/wiki/Em_(typography) )
+    IMGUI_API ImVec2        EmVec2(float x, float y);                   // Returns a ImVec2 whose values are computed in multiples of ImGui::GetFontSize()
+    IMGUI_API float         EmSize(float v = 1.f);                      // Returns ImGui::GetFontSize() * v
 
     // Styles
     IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);    // new, recommended style (default)
