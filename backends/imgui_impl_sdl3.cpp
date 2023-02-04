@@ -18,7 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2022-04-02: Translated from SDL2 to SDL3
+//  2023-04-02: Translated from SDL2 to SDL3
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
