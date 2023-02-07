@@ -98,6 +98,9 @@ All changes:
   for smooth scrolling as reported by SDL. (#4019, #6096)
 - Backends: SDL2: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
   is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+- Backends: SDL2: Implement IME handler to call SDL_SetTextInputRect()/SDL_StartTextInput().
+  It will only works with SDL 2.0.18+ if your code calls 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1")'
+  prior to calling SDL_CreateWindow(). Updated all examples accordingly. (#6071, #1953)
 - Backends: SDL3: Added experimental imgui_impl_sdl3.cpp backend. (#6146) [@dovker, @ocornut]
   SDL 3.0.0 has not yet been released, so it is possible that its specs/api will change before
   release. This backend is provided as a convenience for early adopters etc. We don't recommend
