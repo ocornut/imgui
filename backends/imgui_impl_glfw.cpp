@@ -556,6 +556,8 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     main_viewport->PlatformHandleRaw = glfwGetWin32Window(bd->Window);
 #elif defined(__APPLE__)
     main_viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(bd->Window);
+#else
+    IM_UNUSED(main_viewport);
 #endif
 
     bd->ClientApi = client_api;
