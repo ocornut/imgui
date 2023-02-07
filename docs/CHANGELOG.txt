@@ -98,6 +98,10 @@ All changes:
   for smooth scrolling as reported by SDL. (#4019, #6096)
 - Backends: SDL2: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
   is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+- Backends: SDL3: Added experimental imgui_impl_sdl3.cpp backend. (#6146) [@dovker, @ocornut]
+  SDL 3.0.0 has not yet been released, so it is possible that its specs/api will change before
+  release. This backend is provided as a convenience for early adopters etc. We don't recommend
+  switching to SDL3 before it is released.
 - Backends: GLFW: Registering custom low-level mouse wheel handler to get more accurate
   scrolling impulses on Emscripten. (#4019, #6096) [@ocornut, @wolfpld, @tolopolarity]
 - Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
@@ -108,6 +112,7 @@ All changes:
 - Examples: refactored SDL2+GL and GLFW+GL examples to compile with Emscripten.
   (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
   The dedicated example_emscripten_opengl3/ has been removed.
+- Examples: Added SDL3+GL experimental example. (#6146)
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
