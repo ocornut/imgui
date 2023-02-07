@@ -107,7 +107,7 @@ OSX + OpenGL2 example. <BR>
 [example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
 Emcripten + GLFW + WebGPU example. <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
-Note that the 'example_glfw_opengl3' and 'example_sdl_opengl3' examples also supports Emscripten!
+Note that the 'example_glfw_opengl3' and 'example_sdl2_opengl3' examples also supports Emscripten!
 
 [example_glfw_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_metal/) <BR>
 GLFW (Mac) + Metal example. <BR>
@@ -146,40 +146,40 @@ Null example, compile and link imgui, create context, run headless with no input
 This is used to quickly test compilation of core imgui files in as many setups as possible.
 Because this application doesn't create a window nor a graphic context, there's no graphics output.
 
-[example_sdl_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_directx11/) <BR>
+[example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
 SDL2 + DirectX11 example, Windows only. <BR>
-= main.cpp + imgui_impl_sdl.cpp + imgui_impl_dx11.cpp <BR>
-This to demonstrate usage of DirectX with SDL.
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_dx11.cpp <BR>
+This to demonstrate usage of DirectX with SDL2.
 
-[example_sdl_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_metal/) <BR>
-SDL2 (Mac) + Metal example. <BR>
-= main.mm + imgui_impl_sdl.cpp + imgui_impl_metal.mm
+[example_sdl2_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_metal/) <BR>
+SDL2 + Metal example, Mac only. <BR>
+= main.mm + imgui_impl_sdl2.cpp + imgui_impl_metal.mm
 
-[example_sdl_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl2/) <BR>
+[example_sdl2_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_opengl2/) <BR>
 SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline). <BR>
-= main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp <BR>
 **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING GL OR WEBGL (SHADERS, VBO, VAO, etc.)** <BR>
 This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
 If your code is using GL3+ context or any semi modern GL calls, using this renderer is likely to
 make things more complicated, will require your code to reset many GL attributes to their initial
 state, and might confuse your GPU driver. One star, not recommended.
 
-[example_sdl_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/) <BR>
+[example_sdl2_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_opengl3/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
-= main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders. <BR>
 This support building with Emscripten and targetting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
-[example_sdl_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_sdlrenderer/) <BR>
+[example_sdl2_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer (most graphics backends are supported underneath) <BR>
-= main.cpp + imgui_impl_sdl.cpp + imgui_impl_sdlrenderer.cpp <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer.cpp <BR>
 This requires SDL 2.0.18+ (released November 2021) <BR>
 We do not really recommend using SDL_Renderer as it is a rather primitive API.
 
-[example_sdl_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl_vulkan/) <BR>
+[example_sdl2_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
-= main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_vulkan.cpp <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 

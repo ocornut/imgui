@@ -41,7 +41,7 @@ examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
 examples/example_glfw_opengl3/web/*
-examples/example_sdl_opengl3/web/*
+examples/example_sdl2_opengl3/web/*
 examples/example_emscripten_wgpu/web/*
 
 ## JetBrains IDE artifacts
@@ -54,7 +54,7 @@ examples/example_glfw_opengl2/example_glfw_opengl2
 examples/example_glfw_opengl3/example_glfw_opengl3
 examples/example_glut_opengl2/example_glut_opengl2
 examples/example_null/example_null
-examples/example_sdl_metal/example_sdl_metal
-examples/example_sdl_opengl2/example_sdl_opengl2
-examples/example_sdl_opengl3/example_sdl_opengl3
-examples/example_sdl_sdlrenderer/example_sdl_sdlrenderer
+examples/example_sdl2_metal/example_sdl2_metal
+examples/example_sdl2_opengl2/example_sdl2_opengl2
+examples/example_sdl2_opengl3/example_sdl2_opengl3
+examples/example_sdl2_sdlrenderer/example_sdl2_sdlrenderer
