@@ -1838,6 +1838,57 @@ void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end,
     }
 }
 
+#ifdef IMGUI_USE_HASH64
+
+// FNV1a 64-bit hash algorithm, about 25%-50% faster than CRC32.
+const ImGuiID FNV_64_PRIME = 0x100000001b3ULL;
+
+// Known size hash
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
+{
+    unsigned char *data = (unsigned char*)data_p;
+    unsigned char *data_end = data + data_size;
+
+    while (data < data_end)
+    {
+	seed ^= (ImGuiID)*data++;
+	seed *= FNV_64_PRIME;
+    }
+
+    return seed;
+}
+
+// Zero-terminated string hash, with support for ### to reset back to seed value
+ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
+{
+    ImGuiID hval = seed;
+
+    if (data_size != 0)
+    {
+        while (data_size-- != 0)
+        {
+            char c = *data_p++;
+            if (c == '#' && data_size >= 2 && data_p[0] == '#' && data_p[1] == '#')
+                hval = seed;
+            hval ^= (ImGuiID)c;
+            hval *= FNV_64_PRIME;
+        }
+    }
+    else
+    {
+        while (char c = *data_p++)
+        {
+            if (c == '#' && data_p[0] == '#' && data_p[1] == '#')
+                hval = seed;
+            hval ^= (ImGuiID)c;
+            hval *= FNV_64_PRIME;
+        }
+    }
+    return hval;
+}
+
+#else
+
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
 // - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
@@ -1863,8 +1914,7 @@ static const ImU32 GCrc32LookupTable[256] =
 
 // Known size hash
 // It is ok to call ImHashData on a string with known length but the ### operator won't be supported.
-// FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 {
     ImU32 crc = ~seed;
     const unsigned char* data = (const unsigned char*)data_p;
@@ -1879,8 +1929,7 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
 // Because this syntax is rarely used we are optimizing for the common case.
 // - If we reach ### in the string we discard the hash so far and reset to the seed.
 // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller/faster (measured ~10% diff in Debug build)
-// FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
+ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
 {
     seed = ~seed;
     ImU32 crc = seed;
@@ -1907,6 +1956,7 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
     }
     return ~crc;
 }
+#endif // IMGUI_USE_HASH64
 
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
@@ -3739,7 +3789,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
     if (g.ActiveIdIsJustActivated)
     {
-        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() old:0x%08X (window \"%s\") -> new:0x%08X (window \"%s\")\n", g.ActiveId, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "", id, window ? window->Name : "");
+        IMGUI_DEBUG_LOG_ACTIVEID("SetActiveID() old:0x" IMGUI_HASH_FMT " (window \"%s\") -> new:0x" IMGUI_HASH_FMT " (window \"%s\")\n", g.ActiveId, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "", id, window ? window->Name : "");
         g.ActiveIdTimer = 0.0f;
         g.ActiveIdHasBeenPressedBefore = false;
         g.ActiveIdHasBeenEditedBefore = false;
@@ -5188,9 +5238,9 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
     const char* temp_window_name;
     if (name)
-        ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s_%08X", parent_window->Name, name, id);
+        ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s_" IMGUI_HASH_FMT, parent_window->Name, name, id);
     else
-        ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%08X", parent_window->Name, id);
+        ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/" IMGUI_HASH_FMT, parent_window->Name, id);
 
     const float backup_border_size = g.Style.ChildBorderSize;
     if (!border)
@@ -9963,7 +10013,7 @@ void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->GetID(str_id);
-    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%s\" -> 0x%08X\n", str_id, id);
+    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%s\" -> 0x" IMGUI_HASH_FMT "\n", str_id, id);
     OpenPopupEx(id, popup_flags);
 }
 
@@ -9983,7 +10033,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     const int current_stack_size = g.BeginPopupStack.Size;
 
     if (popup_flags & ImGuiPopupFlags_NoOpenOverExistingPopup)
-        if (IsPopupOpen(0u, ImGuiPopupFlags_AnyPopupId))
+        if (IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopupId))
             return;
 
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
@@ -9995,7 +10045,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     popup_ref.OpenPopupPos = NavCalcPreferredRefPos();
     popup_ref.OpenMousePos = IsMousePosValid(&g.IO.MousePos) ? g.IO.MousePos : popup_ref.OpenPopupPos;
 
-    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopupEx(0x%08X)\n", id);
+    IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopupEx(0x" IMGUI_HASH_FMT ")\n", id);
     if (g.OpenPopupStack.Size < current_stack_size + 1)
     {
         g.OpenPopupStack.push_back(popup_ref);
@@ -10157,7 +10207,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags)
     if (flags & ImGuiWindowFlags_ChildMenu)
         ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.BeginMenuCount); // Recycle windows based on depth
     else
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // Not recycling, so we can close/open during the same frame
+        ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_" IMGUI_HASH_FMT, id); // Not recycling, so we can close/open during the same frame
 
     flags |= ImGuiWindowFlags_Popup;
     bool is_open = Begin(name, NULL, flags);
@@ -11166,7 +11216,7 @@ void ImGui::NavInitRequestApplyResult()
 
     // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
     // FIXME-NAV: On _NavFlattened windows, g.NavWindow will only be updated during subsequent frame. Not a problem currently.
-    IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: ApplyResult: NavID 0x%08X in Layer %d Window \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
+    IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: ApplyResult: NavID 0x" IMGUI_HASH_FMT " in Layer %d Window \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
     SetNavID(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
     g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
     if (g.NavInitRequestFromMove)
@@ -11376,7 +11426,7 @@ void ImGui::NavMoveRequestApplyResult()
     }
 
     // Focus
-    IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
+    IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x" IMGUI_HASH_FMT " in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
 
     // Tabbing: Activates Inputable or Focus non-Inputable
@@ -13324,7 +13374,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (table == NULL || table->LastFrameActive < g.FrameCount - 1 || (table->OuterWindow != g.NavWindow && table->InnerWindow != g.NavWindow))
                     continue;
 
-                BulletText("Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
+                BulletText("Table 0x" IMGUI_HASH_FMT " (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
                 if (IsItemHovered())
                     GetForegroundDrawList()->AddRect(table->OuterRect.Min - ImVec2(1, 1), table->OuterRect.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
                 Indent();
@@ -13420,7 +13470,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             // As it's difficult to interact with tree nodes while popups are open, we display everything inline.
             const ImGuiPopupData* popup_data = &g.OpenPopupStack[i];
             ImGuiWindow* window = popup_data->Window;
-            BulletText("PopupID: %08x, Window: '%s' (%s%s), BackupNavWindow '%s', ParentWindow '%s'",
+            BulletText("PopupID: " IMGUI_HASH_FMT ", Window: '%s' (%s%s), BackupNavWindow '%s', ParentWindow '%s'",
                 popup_data->PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? "Child;" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? "Menu;" : "",
                 popup_data->BackupNavWindow ? popup_data->BackupNavWindow->Name : "NULL", window && window->ParentWindow ? window->ParentWindow->Name : "NULL");
         }
@@ -13578,7 +13628,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(key);
                     if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
                         continue;
-                    Text("%s: 0x%08X%s", GetKeyName(key), owner_data->OwnerCurr,
+                    Text("%s: 0x" IMGUI_HASH_FMT "%s", GetKeyName(key), owner_data->OwnerCurr,
                         owner_data->LockUntilRelease ? " LockUntilRelease" : owner_data->LockThisFrame ? " LockThisFrame" : "");
                     DebugLocateItemOnHover(owner_data->OwnerCurr);
                 }
@@ -13599,7 +13649,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         char key_chord_name[64];
                         ImGuiKeyRoutingData* routing_data = &rt->Entries[idx];
                         GetKeyChordName(key | routing_data->Mods, key_chord_name, IM_ARRAYSIZE(key_chord_name));
-                        Text("%s: 0x%08X", key_chord_name, routing_data->RoutingCurr);
+                        Text("%s: 0x" IMGUI_HASH_FMT, key_chord_name, routing_data->RoutingCurr);
                         DebugLocateItemOnHover(routing_data->RoutingCurr);
                         idx = routing_data->NextEntryIndex;
                     }
@@ -13624,27 +13674,27 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         Text("ITEMS");
         Indent();
-        Text("ActiveId: 0x%08X/0x%08X (%.2f sec), AllowOverlap: %d, Source: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, g.ActiveIdAllowOverlap, GetInputSourceName(g.ActiveIdSource));
+        Text("ActiveId: 0x" IMGUI_HASH_FMT "/0x" IMGUI_HASH_FMT " (%.2f sec), AllowOverlap: %d, Source: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, g.ActiveIdAllowOverlap, GetInputSourceName(g.ActiveIdSource));
         DebugLocateItemOnHover(g.ActiveId);
         Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
         Text("ActiveIdUsing: AllKeyboardKeys: %d, NavDirMask: %X", g.ActiveIdUsingAllKeyboardKeys, g.ActiveIdUsingNavDirMask);
-        Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
-        Text("HoverDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
-        Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
+        Text("HoveredId: 0x" IMGUI_HASH_FMT " (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
+        Text("HoverDelayId: 0x" IMGUI_HASH_FMT ", Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
+        Text("DragDrop: %d, SourceId = 0x" IMGUI_HASH_FMT ", Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
         DebugLocateItemOnHover(g.DragDropPayload.SourceId);
         Unindent();
 
         Text("NAV,FOCUS");
         Indent();
         Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
-        Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
+        Text("NavId: 0x" IMGUI_HASH_FMT ", NavLayer: %d", g.NavId, g.NavLayer);
         DebugLocateItemOnHover(g.NavId);
         Text("NavInputSource: %s", GetInputSourceName(g.NavInputSource));
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
-        Text("NavActivateId/DownId/PressedId/InputId: %08X/%08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId, g.NavActivateInputId);
+        Text("NavActivateId/DownId/PressedId/InputId: " IMGUI_HASH_FMT "/" IMGUI_HASH_FMT "/" IMGUI_HASH_FMT "/" IMGUI_HASH_FMT, g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId, g.NavActivateInputId);
         Text("NavActivateFlags: %04X", g.NavActivateFlags);
         Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
-        Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
+        Text("NavFocusScopeId = 0x" IMGUI_HASH_FMT, g.NavFocusScopeId);
         Text("NavWindowingTarget: '%s'", g.NavWindowingTarget ? g.NavWindowingTarget->Name : "NULL");
         Unindent();
 
@@ -13716,7 +13766,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 // [DEBUG] Display contents of Columns
 void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
 {
-    if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
+    if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x" IMGUI_HASH_FMT ", Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
         return;
     BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->OffMaxX - columns->OffMinX, columns->OffMinX, columns->OffMaxX);
     for (int column_n = 0; column_n < columns->Columns.Size; column_n++)
@@ -13958,7 +14008,7 @@ void ImGui::DebugNodeStorage(ImGuiStorage* storage, const char* label)
     for (int n = 0; n < storage->Data.Size; n++)
     {
         const ImGuiStorage::ImGuiStoragePair& p = storage->Data[n];
-        BulletText("Key 0x%08X Value { i: %d }", p.key, p.val_i); // Important: we currently don't store a type, real value may not be integer.
+        BulletText("Key 0x" IMGUI_HASH_FMT " Value { i: %d }", p.key, p.val_i); // Important: we currently don't store a type, real value may not be integer.
     }
     TreePop();
 }
@@ -13971,7 +14021,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
     char* p = buf;
     const char* buf_end = buf + IM_ARRAYSIZE(buf);
     const bool is_active = (tab_bar->PrevFrameVisible >= GetFrameCount() - 2);
-    p += ImFormatString(p, buf_end - p, "%s 0x%08X (%d tabs)%s", label, tab_bar->ID, tab_bar->Tabs.Size, is_active ? "" : " *Inactive*");
+    p += ImFormatString(p, buf_end - p, "%s 0x" IMGUI_HASH_FMT " (%d tabs)%s", label, tab_bar->ID, tab_bar->Tabs.Size, is_active ? "" : " *Inactive*");
     p += ImFormatString(p, buf_end - p, "  { ");
     for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
     {
@@ -13998,7 +14048,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
             PushID(tab);
             if (SmallButton("<")) { TabBarQueueReorder(tab_bar, tab, -1); } SameLine(0, 2);
             if (SmallButton(">")) { TabBarQueueReorder(tab_bar, tab, +1); } SameLine();
-            Text("%02d%c Tab 0x%08X '%s' Offset: %.2f, Width: %.2f/%.2f",
+            Text("%02d%c Tab 0x" IMGUI_HASH_FMT " '%s' Offset: %.2f, Width: %.2f/%.2f",
                 tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->NameOffset != -1) ? TabBarGetTabName(tab_bar, tab) : "???", tab->Offset, tab->Width, tab->ContentWidth);
             PopID();
         }
@@ -14062,9 +14112,9 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
     {
         ImRect r = window->NavRectRel[layer];
         if (r.Min.x >= r.Max.y && r.Min.y >= r.Max.y)
-            BulletText("NavLastIds[%d]: 0x%08X", layer, window->NavLastIds[layer]);
+            BulletText("NavLastIds[%d]: 0x" IMGUI_HASH_FMT, layer, window->NavLastIds[layer]);
         else
-            BulletText("NavLastIds[%d]: 0x%08X at +(%.1f,%.1f)(%.1f,%.1f)", layer, window->NavLastIds[layer], r.Min.x, r.Min.y, r.Max.x, r.Max.y);
+            BulletText("NavLastIds[%d]: 0x" IMGUI_HASH_FMT " at +(%.1f,%.1f)(%.1f,%.1f)", layer, window->NavLastIds[layer], r.Min.x, r.Min.y, r.Max.x, r.Max.y);
         DebugLocateItemOnHover(window->NavLastIds[layer]);
     }
     BulletText("NavLayersActiveMask: %X, NavLastChildNavWindow: %s", window->DC.NavLayersActiveMask, window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
@@ -14083,7 +14133,7 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
 
 void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings* settings)
 {
-    Text("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
+    Text("0x" IMGUI_HASH_FMT " \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
         settings->ID, settings->GetName(), settings->Pos.x, settings->Pos.y, settings->Size.x, settings->Size.y, settings->Collapsed);
 }
 
@@ -14185,7 +14235,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
                 for (const char* p = line_begin; p < line_end - 10; p++)
                 {
                     ImGuiID id = 0;
-                    if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1)
+                    if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, IMGUI_HASH_FMT, &id) != 1)
                         continue;
                     ImVec2 p0 = CalcTextSize(line_begin, p);
                     ImVec2 p1 = CalcTextSize(p, p + 10);
@@ -14261,7 +14311,7 @@ void ImGui::UpdateDebugToolItemPicker()
             g.DebugItemPickerMouseButton = (ImU8)mouse_button;
     SetNextWindowBgAlpha(0.70f);
     BeginTooltip();
-    Text("HoveredId: 0x%08X", hovered_id);
+    Text("HoveredId: 0x" IMGUI_HASH_FMT, hovered_id);
     Text("Press ESC to abort picking.");
     const char* mouse_button_names[] = { "Left", "Right", "Middle" };
     if (change_mapping)
@@ -14350,7 +14400,7 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     case ImGuiDataType_ID:
         if (info->Desc[0] != 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
             return;
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
+        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x" IMGUI_HASH_FMT " [override]", id);
         break;
     default:
         IM_ASSERT(0);
@@ -14393,9 +14443,9 @@ void ImGui::ShowStackToolWindow(bool* p_open)
     const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
     const ImGuiID active_id = g.ActiveId;
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    Text("HoveredId: 0x%08X (\"%s\"), ActiveId:  0x%08X (\"%s\")", hovered_id, hovered_id ? ImGuiTestEngine_FindItemDebugLabel(&g, hovered_id) : "", active_id, active_id ? ImGuiTestEngine_FindItemDebugLabel(&g, active_id) : "");
+    Text("HoveredId: 0x" IMGUI_HASH_FMT " (\"%s\"), ActiveId:  0x" IMGUI_HASH_FMT " (\"%s\")", hovered_id, hovered_id ? ImGuiTestEngine_FindItemDebugLabel(&g, hovered_id) : "", active_id, active_id ? ImGuiTestEngine_FindItemDebugLabel(&g, active_id) : "");
 #else
-    Text("HoveredId: 0x%08X, ActiveId:  0x%08X", hovered_id, active_id);
+    Text("HoveredId: 0x" IMGUI_HASH_FMT ", ActiveId:  0x" IMGUI_HASH_FMT, hovered_id, active_id);
 #endif
     SameLine();
     MetricsHelpMarker("Hover an item with the mouse to display elements of the ID Stack leading to the item's final ID.\nEach level of the stack correspond to a PushID() call.\nAll levels of the stack are hashed together to make the final ID of a widget (ID displayed at the bottom level of the stack).\nRead FAQ entry about the ID stack for details.");
@@ -14430,7 +14480,11 @@ void ImGui::ShowStackToolWindow(bool* p_open)
     tool->LastActiveFrame = g.FrameCount;
     if (tool->Results.Size > 0 && BeginTable("##table", 3, ImGuiTableFlags_Borders))
     {
+#ifdef IMGUI_USE_HASH64
+        const float id_width = CalcTextSize("0xDDDDDDDDDDDDDDDD").x;
+#else
         const float id_width = CalcTextSize("0xDDDDDDDD").x;
+#endif
         TableSetupColumn("Seed", ImGuiTableColumnFlags_WidthFixed, id_width);
         TableSetupColumn("PushID", ImGuiTableColumnFlags_WidthStretch);
         TableSetupColumn("Result", ImGuiTableColumnFlags_WidthFixed, id_width);
@@ -14439,12 +14493,12 @@ void ImGui::ShowStackToolWindow(bool* p_open)
         {
             ImGuiStackLevelInfo* info = &tool->Results[n];
             TableNextColumn();
-            Text("0x%08X", (n > 0) ? tool->Results[n - 1].ID : 0);
+            Text("0x" IMGUI_HASH_FMT, (n > 0) ? tool->Results[n - 1].ID : 0);
             TableNextColumn();
             StackToolFormatLevelInfo(tool, n, true, g.TempBuffer.Data, g.TempBuffer.Size);
             TextUnformatted(g.TempBuffer.Data);
             TableNextColumn();
-            Text("0x%08X", info->ID);
+            Text("0x" IMGUI_HASH_FMT, info->ID);
             if (n == tool->Results.Size - 1)
                 TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_Header));
         }
