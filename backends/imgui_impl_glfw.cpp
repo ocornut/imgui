@@ -1,7 +1,7 @@
 // dear imgui: Platform Backend for GLFW
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan, WebGPU..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
-// (Requires: GLFW 3.1+. Prefer GLFW 3.3+ for full feature support.)
+// (Requires: GLFW 3.1+. Prefer GLFW 3.3+ or GLFW 3.4+ for full feature support.)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
@@ -600,7 +600,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     ImGui_ImplGlfw_UpdateMonitors();
     glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
 
-    // Our mouse update function expect PlatformHandle to be filled for the main viewport
+    // Set platform dependent data in viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)bd->Window;
 #ifdef _WIN32

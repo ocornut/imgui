@@ -7800,7 +7800,9 @@ const char* ImGui::TabBarGetTabName(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
 {
     if (tab->Window)
         return tab->Window->Name;
-    IM_ASSERT(tab->NameOffset != -1 && tab->NameOffset < tab_bar->TabsNames.Buf.Size);
+    if (tab->NameOffset == -1)
+        return "N/A";
+    IM_ASSERT(tab->NameOffset < tab_bar->TabsNames.Buf.Size);
     return tab_bar->TabsNames.Buf.Data + tab->NameOffset;
 }
 

@@ -102,6 +102,14 @@ Other changes:
  VERSION 1.89.3 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Backends+Examples: SDL2: renamed all unnumbered references to "sdl" to "sdl2".
+  This is in prevision for the future release of SDL3 (#6146)
+  - imgui_impl_sdl.cpp -> imgui_impl_sdl2.cpp
+  - imgui_impl_sdl.h   -> imgui_impl_sdl2.h
+  - example_sdl_xxxx/  -> example_sdl2_xxxx/ (folders and projects)
+
 All changes:
 
 - Inputs, Scrolling: Made horizontal scroll wheel and horizontal scroll direction consistent
@@ -150,13 +158,17 @@ All changes:
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
 - Backends: Win32: flipping WM_MOUSEHWHEEL value to match other backends and
   offer consistent horizontal scrolling direction. (#4019)
-- Backends: SDL: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
+- Backends: SDL2: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
   offer consistent horizontal scrolling direction. (#4019)
-- Backends: SDL: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
-- Backends: SDL: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data
+- Backends: SDL2: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
+- Backends: SDL2: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data
   for smooth scrolling as reported by SDL. (#4019, #6096)
-- Backends: SDL: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
+- Backends: SDL2: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
   is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+- Backends: SDL3: Added experimental imgui_impl_sdl3.cpp backend. (#6146) [@dovker, @ocornut]
+  SDL 3.0.0 has not yet been released, so it is possible that its specs/api will change before
+  release. This backend is provided as a convenience for early adopters etc. We don't recommend
+  switching to SDL3 before it is released.
 - Backends: GLFW: Registering custom low-level mouse wheel handler to get more accurate
   scrolling impulses on Emscripten. (#4019, #6096) [@ocornut, @wolfpld, @tolopolarity]
 - Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
@@ -164,13 +176,14 @@ All changes:
   the 'window' parameter. (#6142)
 - Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
-- Examples: refactored SDL+GL and GLFW+GL examples to compile with Emscripten.
+- Examples: refactored SDL2+GL and GLFW+GL examples to compile with Emscripten.
   (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
   The dedicated example_emscripten_opengl3/ has been removed.
+- Examples: Added SDL3+GL experimental example. (#6146)
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
-- Examples: SDL+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
+- Examples: SDL2+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
   Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931).
 
 Docking+Viewports Branch:
