@@ -91,6 +91,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Window*     Window;
     SDL_Renderer*   Renderer;
     Uint64          Time;
+    Uint32          MouseWindowID;
     int             MouseButtonsDown;
     SDL_Cursor*     MouseCursors[ImGuiMouseCursor_COUNT];
     SDL_Cursor*     LastMouseCursor;
@@ -261,7 +262,8 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     {
         case SDL_MOUSEMOTION:
         {
-            io.AddMousePosEvent((float)event->motion.x, (float)event->motion.y);
+            ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
+            io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
             return true;
         }
         case SDL_MOUSEWHEEL:
@@ -318,7 +320,10 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             //   we delay process the SDL_WINDOWEVENT_LEAVE events by one frame. See issue #5012 for details.
             Uint8 window_event = event->window.event;
             if (window_event == SDL_WINDOWEVENT_ENTER)
+            {
+                bd->MouseWindowID = event->window.windowID;
                 bd->PendingMouseLeaveFrame = 0;
+            }
             if (window_event == SDL_WINDOWEVENT_LEAVE)
                 bd->PendingMouseLeaveFrame = ImGui::GetFrameCount() + 1;
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
@@ -374,14 +379,19 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer)
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
 
     // Set platform dependent data in viewport
-#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+    // Our mouse update function expect PlatformHandle to be filled for the main viewport
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandleRaw = nullptr;
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
     if (SDL_GetWindowWMInfo(window, &info))
-        ImGui::GetMainViewport()->PlatformHandleRaw = (void*)info.info.win.window;
-#else
-    (void)window;
+    {
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+        main_viewport->PlatformHandleRaw = (void*)info.info.win.window;
+#elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
+        main_viewport->PlatformHandleRaw = (void*)info.info.cocoa.window;
 #endif
+    }
 
     // From 2.0.5: Set SDL hint to receive mouse click events on window focus, otherwise SDL doesn't emit the event.
     // Without this, when clicking to gain focus, our widgets wouldn't activate even though they showed as hovered.
@@ -457,7 +467,7 @@ static void ImGui_ImplSDL2_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
-    SDL_CaptureMouse((bd->MouseButtonsDown != 0 && ImGui::GetDragDropPayload() == nullptr) ? SDL_TRUE : SDL_FALSE);
+    SDL_CaptureMouse((bd->MouseButtonsDown != 0) ? SDL_TRUE : SDL_FALSE);
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (bd->Window == focused_window);
 #else
@@ -580,8 +590,9 @@ void ImGui_ImplSDL2_NewFrame()
 
     if (bd->PendingMouseLeaveFrame && bd->PendingMouseLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
     {
-        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+        bd->MouseWindowID = 0;
         bd->PendingMouseLeaveFrame = 0;
+        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
     }
 
     ImGui_ImplSDL2_UpdateMouseData();
