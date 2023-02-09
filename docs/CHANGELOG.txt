@@ -116,7 +116,8 @@ All changes:
 - Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
   to chain callbacks even for secondary viewports/windows. User callbacks may need to test
   the 'window' parameter. (#6142)
-- Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
+- Backends: OpenGL3: Fixed GL loader compatibility with 2.x profiles. (#6154, #4445, #3530) [@grauw]
+- Backends: WebGPU: Fixed building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: refactored SDL2+GL and GLFW+GL examples to compile with Emscripten.
   (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
