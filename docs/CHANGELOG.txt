@@ -64,6 +64,9 @@ All changes:
       to find a way to detect this and set io.ConfigMacOSXBehaviors manually (if you know a way
       let us know!), or offer the "OSX-style behavior" option to their user.
 - Window: Avoid rendering shapes for hidden resize grips.
+- SeparatorText(): Added SeparatorText() widget. (#1643) [@phed, @ocornut]
+  - Added to style: float  SeparatorTextBorderSize.
+  - Added to style: ImVec2 SeparatorTextAlign, SeparatorTextPadding.
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
