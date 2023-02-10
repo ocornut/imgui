@@ -389,6 +389,9 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     // From 2.0.22: Disable auto-capture, this is preventing drag and drop across multiple windows (see #5710)
     SDL_SetHint(SDL_HINT_MOUSE_AUTO_CAPTURE, "0");
 
+    // SDL 3.x : see https://github.com/libsdl-org/SDL/issues/6659
+    SDL_SetHint("SDL_BORDERLESS_WINDOWED_STYLE", "0");
+
     // Update monitors
     ImGui_ImplSDL3_UpdateMonitors();
 
@@ -609,9 +612,8 @@ static void ImGui_ImplSDL3_UpdateMonitors()
         monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
         // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
         //  DpiScale to cocoa_window.backingScaleFactor here.
-        float dpi = 0.0f;
-        if (!SDL_GetDisplayPhysicalDPI(display_id, &dpi, nullptr, nullptr))
-            monitor.DpiScale = dpi / 96.0f;
+        const SDL_DisplayMode* display_mode = SDL_GetCurrentDisplayMode(display_id);
+        monitor.DpiScale = display_mode->display_scale;
         platform_io.Monitors.push_back(monitor);
     }
 }
