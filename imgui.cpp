@@ -12467,8 +12467,9 @@ void ImGui::LogButtons()
 // - SaveIniSettingsToMemory()
 //-----------------------------------------------------------------------------
 // - CreateNewWindowSettings() [Internal]
-// - FindWindowSettingsByName() [Internal]
+// - FindWindowSettingsByID() [Internal]
 // - FindWindowSettingsByWindow() [Internal]
+// - ClearWindowSettings() [Internal]
 // - WindowSettingsHandler_***() [Internal]
 //-----------------------------------------------------------------------------
 
@@ -12686,11 +12687,11 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     return settings;
 }
 
+// We don't provide a FindWindowSettingsByName() because Docking system doesn't always hold on names.
 // This is called once per window .ini entry + once per newly instantiated window.
-ImGuiWindowSettings* ImGui::FindWindowSettingsByName(const char* name)
+ImGuiWindowSettings* ImGui::FindWindowSettingsByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiID id = ImHashStr(name);
     for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
         if (settings->ID == id)
             return settings;
@@ -12703,7 +12704,7 @@ ImGuiWindowSettings* ImGui::FindWindowSettingsByWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     if (window->SettingsOffset != -1)
         return g.SettingsWindows.ptr_from_offset(window->SettingsOffset);
-    return FindWindowSettingsByName(window->Name); // Actual search executed once, so at this point we don't mind the redundant hashing.
+    return FindWindowSettingsByID(window->ID);
 }
 
 // This will revert window to its initial state, including enabling the ImGuiCond_FirstUseEver/ImGuiCond_Once conditions once more.
@@ -12716,7 +12717,7 @@ void ImGui::ClearWindowSettings(const char* name)
         window->Flags |= ImGuiWindowFlags_NoSavedSettings;
         InitOrLoadWindowSettings(window, NULL);
     }
-    if (ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByName(name))
+    if (ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByID(ImHashStr(name)))
         settings->WantDelete = true;
 }
 
@@ -12731,7 +12732,7 @@ static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandl
 static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiID id = ImHashStr(name);
-    ImGuiWindowSettings* settings = ImGui::FindWindowSettingsByName(name);
+    ImGuiWindowSettings* settings = ImGui::FindWindowSettingsByID(id);
     if (settings)
         *settings = ImGuiWindowSettings(); // Clear existing if recycling previous entry
     else
