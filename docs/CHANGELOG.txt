@@ -131,6 +131,9 @@ All changes:
       to find a way to detect this and set io.ConfigMacOSXBehaviors manually (if you know a way
       let us know!), or offer the "OSX-style behavior" option to their user.
 - Window: Avoid rendering shapes for hidden resize grips.
+- SeparatorText(): Added SeparatorText() widget. (#1643) [@phed, @ocornut]
+  - Added to style: float  SeparatorTextBorderSize.
+  - Added to style: ImVec2 SeparatorTextAlign, SeparatorTextPadding.
 - Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
   The previous limit was due to using 64-bit integers but we moved to bits-array
   and tweaked the system enough to ensure no performance loss.
@@ -165,6 +168,9 @@ All changes:
   for smooth scrolling as reported by SDL. (#4019, #6096)
 - Backends: SDL2: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
   is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+- Backends: SDL2: Implement IME handler to call SDL_SetTextInputRect()/SDL_StartTextInput().
+  It will only works with SDL 2.0.18+ if your code calls 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1")'
+  prior to calling SDL_CreateWindow(). Updated all examples accordingly. (#6071, #1953)
 - Backends: SDL3: Added experimental imgui_impl_sdl3.cpp backend. (#6146) [@dovker, @ocornut]
   SDL 3.0.0 has not yet been released, so it is possible that its specs/api will change before
   release. This backend is provided as a convenience for early adopters etc. We don't recommend

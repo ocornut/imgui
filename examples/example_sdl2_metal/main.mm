@@ -63,6 +63,9 @@ int main(int, char**)
     // Inform SDL that we will be using metal for rendering. Without this hint initialization of metal renderer may fail.
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
 
+    // Enable native IME.
+    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL)
     {
