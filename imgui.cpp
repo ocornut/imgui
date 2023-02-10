@@ -13382,11 +13382,14 @@ ImGuiWindowSettings* ImGui::FindWindowSettingsByWindow(ImGuiWindow* window)
 void ImGui::ClearWindowSettings(const char* name)
 {
     //IMGUI_DEBUG_LOG("ClearWindowSettings('%s')\n", name);
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = FindWindowByName(name);
     if (window != NULL)
     {
         window->Flags |= ImGuiWindowFlags_NoSavedSettings;
         InitOrLoadWindowSettings(window, NULL);
+        if (window->DockId != 0)
+            DockContextProcessUndockWindow(&g, window, true);
     }
     if (ImGuiWindowSettings* settings = window ? FindWindowSettingsByWindow(window) : FindWindowSettingsByID(ImHashStr(name)))
         settings->WantDelete = true;
@@ -14623,8 +14626,6 @@ namespace ImGui
     static void             DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node, bool merge_sibling_into_parent_node);
     static void             DockContextQueueNotifyRemovedNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
-    static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref = true);
-    static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx);
     static ImGuiDockNode*   DockContextBindNodeToWindow(ImGuiContext* ctx, ImGuiWindow* window);
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
