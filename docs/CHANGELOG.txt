@@ -99,29 +99,39 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.3 (In Progress)
+ VERSION 1.89.3 (Released 2023-02-14)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.3
 
 Breaking Changes:
 
 - Backends+Examples: SDL2: renamed all unnumbered references to "sdl" to "sdl2".
-  This is in prevision for the future release of SDL3 (#6146)
+  This is in prevision for the future release of SDL3 and its associated backend. (#6146)
   - imgui_impl_sdl.cpp -> imgui_impl_sdl2.cpp
   - imgui_impl_sdl.h   -> imgui_impl_sdl2.h
   - example_sdl_xxxx/  -> example_sdl2_xxxx/ (folders and projects)
 
 All changes:
 
+- SeparatorText(): Added SeparatorText() widget. (#1643) [@phed, @ocornut]
+  - Added to style: float  SeparatorTextBorderSize.
+  - Added to style: ImVec2 SeparatorTextAlign, SeparatorTextPadding.
+- Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
+  The previous limit was due to using 64-bit integers but we moved to bits-array
+  and tweaked the system enough to ensure no performance loss.
+- Tables: Solved an ID conflict issue with multiple-instances of a same table,
+  due to how unique table instance id was generated. (#6140) [@ocornut, @rodrigorc]
 - Inputs, Scrolling: Made horizontal scroll wheel and horizontal scroll direction consistent
-  accross backends/os. (#4019, #6096, #1463) [@PathogenDavid, @ocornut, @rokups]
+  across backends/os. (#4019, #6096, #1463) [@PathogenDavid, @ocornut, @rokups]
   - Clarified that 'wheel_y > 0.0f' scrolls Up, 'wheel_y > 0.0f' scrolls Down.
     Clarified that 'wheel_x > 0.0f' scrolls Left, 'wheel_x > 0.0f' scrolls Right.
   - Backends: Fixed horizontal scroll direction for Win32 and SDL backends. (#4019)
   - Shift+WheelY support on non-OSX machines was already correct. (#2424, #1463)
-    (whereaas on OSX machines Shift+WheelY turns into WheelX at the OS level).
-  - If you use a custom-backend, you should verify horizontal wheel direction.
-    - Axises are flipped by OSX for mouse & touchpad when 'Natural Scrolling' is on.
-    - Axises are flipped by Windows for touchpad when 'Settings->Touchpad->Down motion scrolls up' is on.
+    (whereas on OSX machines Shift+WheelY turns into WheelX at the OS level).
+  - If you use a custom backend, you should verify horizontal wheel direction.
+    - Axises are flipped by OSX for mouse & touch-pad when 'Natural Scrolling' is on.
+    - Axises are flipped by Windows for touch-pad when 'Settings->Touchpad->Down motion scrolls up' is on.
     - You can use 'Demo->Tools->Debug Log->IO" to visualize values submitted to Dear ImGui.
   - Known issues remaining with Emscripten:
     - The magnitude of wheeling values on Emscripten was improved but isn't perfect. (#6096)
@@ -131,14 +141,6 @@ All changes:
       to find a way to detect this and set io.ConfigMacOSXBehaviors manually (if you know a way
       let us know!), or offer the "OSX-style behavior" option to their user.
 - Window: Avoid rendering shapes for hidden resize grips.
-- SeparatorText(): Added SeparatorText() widget. (#1643) [@phed, @ocornut]
-  - Added to style: float  SeparatorTextBorderSize.
-  - Added to style: ImVec2 SeparatorTextAlign, SeparatorTextPadding.
-- Tables: Raised max Columns count from 64 to 512. (#6094, #5305, #4876, #3572)
-  The previous limit was due to using 64-bit integers but we moved to bits-array
-  and tweaked the system enough to ensure no performance loss.
-- Tables: Solved an ID conflict issue with multiple-instances of a same table,
-  due to how unique table instance id was generated. (#6140) [@ocornut, @rodrigorc]
 - Text: Fixed layouting of wrapped-text block skipping successive empty lines,
   regression from the fix in 1.89.2. (#5720, #5919)
 - Text: Fixed clipping of single-character "..." ellipsis (U+2026 or U+0085) when font
@@ -149,8 +151,11 @@ All changes:
   (Not adding Super+Delete to delete to up to end-of-line on OSX, as OSX doesn't have it)
 - InputText: On OSX, inhibit usage of Alt key to toggle menu when active (used for work skip).
 - Menus: Fixed layout of MenuItem()/BeginMenu() when label contains a '\n'. (#6116) [@imkcy9]
+- ColorEdit, ColorPicker: Fixed hue/saturation preservation logic from interfering with
+  the displayed value (but not stored value) of others widgets instances. (#6155)
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 - Combo: Allow SetNextWindowSize() to alter combo popup size. (#6130)
+- Fonts: Assert that in each GlyphRanges[] pairs first is <= second.
 - ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
   color alpha is zero.
 - Misc: Most text functions treat "%s" as a shortcut to no-formatting. (#3466)
@@ -159,15 +164,15 @@ All changes:
   can exacerbate that. (#6114, #3644)
 - Backends: OSX: Fixed scroll/wheel scaling for devices emitting events with
   hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
-- Backends: Win32: flipping WM_MOUSEHWHEEL value to match other backends and
+- Backends: Win32: flipping WM_MOUSEHWHEEL horizontal value to match other backends and
   offer consistent horizontal scrolling direction. (#4019)
-- Backends: SDL2: flipping SDL_MOUSEWHEEL 'wheel.x' value to match other backends and
+- Backends: SDL2: flipping SDL_MOUSEWHEEL horizontal value to match other backends and
   offer consistent horizontal scrolling direction. (#4019)
 - Backends: SDL2: Removed SDL_MOUSEWHEEL value clamping. (#4019, #6096, #6081)
 - Backends: SDL2: Added support for SDL 2.0.18+ preciseX/preciseY mouse wheel data
   for smooth scrolling as reported by SDL. (#4019, #6096)
 - Backends: SDL2: Avoid calling SDL_SetCursor() when cursor has not changed, as the function
-  is surprisingly costly on Mac with latest SDL (may be fixed in next SDL version). (#6113)
+  is surprisingly costly on Mac with latest SDL (already fixed in SDL latest trunk). (#6113)
 - Backends: SDL2: Implement IME handler to call SDL_SetTextInputRect()/SDL_StartTextInput().
   It will only works with SDL 2.0.18+ if your code calls 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1")'
   prior to calling SDL_CreateWindow(). Updated all examples accordingly. (#6071, #1953)
@@ -180,7 +185,8 @@ All changes:
 - Backends: GLFW: Added ImGui_ImplGlfw_SetCallbacksChainForAllWindows() to instruct backend
   to chain callbacks even for secondary viewports/windows. User callbacks may need to test
   the 'window' parameter. (#6142)
-- Backends: WebGPU: Fix building for latest WebGPU specs (remove implicit layout generation).
+- Backends: OpenGL3: Fixed GL loader compatibility with 2.x profiles. (#6154, #4445, #3530) [@grauw]
+- Backends: WebGPU: Fixed building for latest WebGPU specs (remove implicit layout generation).
   (#6117, #4116, #3632) [@tonygrue, @bfierz]
 - Examples: refactored SDL2+GL and GLFW+GL examples to compile with Emscripten.
   (#2492, #2494, #3699, #3705) [@ocornut, @nicolasnoble]
@@ -189,7 +195,7 @@ All changes:
 - Examples: Win32: Fixed examples using RegisterClassW() since 1.89 to also call
   DefWindowProcW() instead of DefWindowProc() so that title text are correctly converted
   when application is compiled without /DUNICODE. (#5725, #5961, #5975) [@markreidvfx]
-- Examples: SDL2+SDL_Renderer: Added call to SDL_RenderSetScale() to display is correct on a
+- Examples: SDL2+SDL_Renderer: Added call to SDL_RenderSetScale() to fix display on a
   Retina display (albeit lower-res as our other unmodified examples). (#6121, #6065, #5931).
 
 Docking+Viewports Branch:
