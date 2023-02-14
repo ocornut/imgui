@@ -84,6 +84,7 @@ All changes:
 - Menus: Fixed layout of MenuItem()/BeginMenu() when label contains a '\n'. (#6116) [@imkcy9]
 - PlotHistogram, PlotLines: Passing negative sizes honor alignment like other widgets.
 - Combo: Allow SetNextWindowSize() to alter combo popup size. (#6130)
+- Fonts: Assert that in each GlyphRanges[] pairs first is <= second.
 - ImDrawList: Added missing early-out in AddPolyline() and AddConvexPolyFilled() when
   color alpha is zero.
 - Misc: Most text functions treat "%s" as a shortcut to no-formatting. (#3466)
