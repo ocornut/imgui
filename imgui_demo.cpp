@@ -38,7 +38,7 @@
 // - We try to declare static variables in the local scope, as close as possible to the code using them.
 // - We never use any of the helpers/facilities used internally by Dear ImGui, unless available in the public API.
 // - We never use maths operators on ImVec2/ImVec4. For our other sources files we use them, and they are provided
-//   by imgui_internal.h using the IMGUI_DEFINE_MATH_OPERATORS define. For your own sources file they are optional
+//   by imgui.h using the IMGUI_DEFINE_MATH_OPERATORS define. For your own sources file they are optional
 //   and require you either enable those, either provide your own via IM_VEC2_CLASS_EXTRA in imconfig.h.
 //   Because we can't assume anything about your support of maths operators, we cannot use them in imgui_demo.cpp.
 
