@@ -99,6 +99,18 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.4 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other changes:
+
+- Backends: Win32: Use WM_NCMOUSEMOVE / WM_NCMOUSELEAVE to track mouse positions over
+  non-client area (e.g. OS decorations) when app is not focused. (#6045, #6162)
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.3 (Released 2023-02-14)
 -----------------------------------------------------------------------
 
@@ -112,7 +124,7 @@ Breaking Changes:
   - imgui_impl_sdl.h   -> imgui_impl_sdl2.h
   - example_sdl_xxxx/  -> example_sdl2_xxxx/ (folders and projects)
 
-All changes:
+Other changes:
 
 - SeparatorText(): Added SeparatorText() widget. (#1643) [@phed, @ocornut]
   - Added to style: float  SeparatorTextBorderSize.
