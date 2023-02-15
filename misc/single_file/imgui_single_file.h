@@ -7,6 +7,11 @@
 //    #define IMGUI_IMPLEMENTATION
 // Before you include this file in *one* C++ file to create the implementation.
 // Using this in your project will leak the contents of imgui_internal.h and ImVec2 operators in this compilation unit.
+
+#ifdef IMGUI_IMPLEMENTATION
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+
 #include "../../imgui.h"
 #ifdef IMGUI_ENABLE_FREETYPE
 #include "../../misc/freetype/imgui_freetype.h"
