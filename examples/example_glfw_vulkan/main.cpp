@@ -50,6 +50,7 @@ static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
+
 static void check_vk_result(VkResult err)
 {
     if (err == 0)
@@ -57,6 +58,33 @@ static void check_vk_result(VkResult err)
     fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
     if (err < 0)
         abort();
+}
+
+bool is_instance_extension_enabled(const char *extension_name)
+{
+    uint32_t extension_count = 0;
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+    if (result != VK_SUCCESS)
+    {
+        return false;
+    }
+
+    ImVector<VkExtensionProperties> extensions;
+    extensions.resize(extension_count);
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.Data);
+    if (result != VK_SUCCESS)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < extensions.Size; i++)
+    {
+        if (strcmp(extensions[i].extensionName, extension_name) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -68,7 +96,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, 
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
-static void SetupVulkan(const char** extensions, uint32_t extensions_count)
+static void SetupVulkan(ImVector<const char*> extensions)
 {
     VkResult err;
 
@@ -76,8 +104,12 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     {
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        create_info.enabledExtensionCount = extensions_count;
-        create_info.ppEnabledExtensionNames = extensions;
+        create_info.enabledExtensionCount = (uint32_t)extensions.size();
+        create_info.ppEnabledExtensionNames = extensions.Data;
+#ifdef __APPLE__
+        if (is_instance_extension_enabled(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+            create_info.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
         // Enabling validation layers
         const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -367,9 +399,16 @@ int main(int, char**)
         printf("GLFW: Vulkan Not Supported\n");
         return 1;
     }
+    ImVector<const char*> extensions;
     uint32_t extensions_count = 0;
-    const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
-    SetupVulkan(extensions, extensions_count);
+    const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
+    for (uint32_t i = 0; i < extensions_count; i++)
+        extensions.push_back(glfw_extensions[i]);
+#ifdef __APPLE__
+    if (is_instance_extension_enabled(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+        extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
+    SetupVulkan(extensions);
 
     // Create Window Surface
     VkSurfaceKHR surface;
