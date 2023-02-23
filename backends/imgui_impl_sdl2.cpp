@@ -612,6 +612,17 @@ void ImGui_ImplSDL2_NewFrame()
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     static Uint64 frequency = SDL_GetPerformanceFrequency();
     Uint64 current_time = SDL_GetPerformanceCounter();
+
+    // If SDL_GetPerformanceCounter doesn't return a monotonically increasing value,
+    // "fake" the time this frame.
+    //
+    // This bizzare edge-case bug seems to happen when using the SDL backend in a VirtualBox
+    // VM, it also seems to happen in emscripten backends (#6114, #3644) - might be related to
+    // a Spectre mitigation?
+    if (current_time <= bd->Time)
+    {
+        current_time = bd->Time + 1;
+    }
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
