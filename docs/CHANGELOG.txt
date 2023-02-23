@@ -90,7 +90,7 @@ Other changes:
   (#6315) [@PathogenDavid]
 - Backends: OSX: Added support for io.AddMouseSourceEvent() to discriminate Mouse/Pen.
   (#6314) [@PathogenDavid]
-- Backends: WebGPU: Align buffers. (#6188) [@eliemichel]
+- Backends: WebGPU: Align buffers. Use WGSL shaders instead of SPIR-V. Add gamma uniform. (#6188) [@eliemichel]
 - Backends: WebGPU: Reorganized to store data in io.BackendRendererUserData like other backends.
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.

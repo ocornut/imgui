@@ -13,7 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2023-04-11: Align buffer sizes.
+//  2023-04-11: Align buffer sizes. Use WGSL shaders instead of precompiled SPIR-V.
 //  2023-04-11: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2023-01-25: Revert automatic pipeline layout generation (see https://github.com/gpuweb/gpuweb/issues/2470)
 //  2022-11-24: Fixed validation error with default depth buffer settings.
@@ -62,6 +62,7 @@ struct FrameResources
 struct Uniforms
 {
     float MVP[4][4];
+    float Gamma;
 };
 
 struct ImGui_ImplWGPU_Data
@@ -89,113 +90,59 @@ static ImGui_ImplWGPU_Data* ImGui_ImplWGPU_GetBackendData()
 // SHADERS
 //-----------------------------------------------------------------------------
 
-// glsl_shader.vert, compiled with:
-// # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
-/*
-#version 450 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aUV;
-layout(location = 2) in vec4 aColor;
-layout(set=0, binding = 0) uniform transform { mat4 mvp; };
-
-out gl_PerVertex { vec4 gl_Position; };
-layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
-
-void main()
-{
-    Out.Color = aColor;
-    Out.UV = aUV;
-    gl_Position = mvp * vec4(aPos, 0, 1);
-}
-*/
-static uint32_t __glsl_shader_vert_spv[] =
-{
-    0x07230203,0x00010000,0x00080007,0x0000002c,0x00000000,0x00020011,0x00000001,0x0006000b,
-    0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
-    0x000a000f,0x00000000,0x00000004,0x6e69616d,0x00000000,0x0000000b,0x0000000f,0x00000015,
-    0x0000001b,0x00000023,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
-    0x00000000,0x00030005,0x00000009,0x00000000,0x00050006,0x00000009,0x00000000,0x6f6c6f43,
-    0x00000072,0x00040006,0x00000009,0x00000001,0x00005655,0x00030005,0x0000000b,0x0074754f,
-    0x00040005,0x0000000f,0x6c6f4361,0x0000726f,0x00030005,0x00000015,0x00565561,0x00060005,
-    0x00000019,0x505f6c67,0x65567265,0x78657472,0x00000000,0x00060006,0x00000019,0x00000000,
-    0x505f6c67,0x7469736f,0x006e6f69,0x00030005,0x0000001b,0x00000000,0x00050005,0x0000001d,
-    0x6e617274,0x726f6673,0x0000006d,0x00040006,0x0000001d,0x00000000,0x0070766d,0x00030005,
-    0x0000001f,0x00000000,0x00040005,0x00000023,0x736f5061,0x00000000,0x00040047,0x0000000b,
-    0x0000001e,0x00000000,0x00040047,0x0000000f,0x0000001e,0x00000002,0x00040047,0x00000015,
-    0x0000001e,0x00000001,0x00050048,0x00000019,0x00000000,0x0000000b,0x00000000,0x00030047,
-    0x00000019,0x00000002,0x00040048,0x0000001d,0x00000000,0x00000005,0x00050048,0x0000001d,
-    0x00000000,0x00000023,0x00000000,0x00050048,0x0000001d,0x00000000,0x00000007,0x00000010,
-    0x00030047,0x0000001d,0x00000002,0x00040047,0x0000001f,0x00000022,0x00000000,0x00040047,
-    0x0000001f,0x00000021,0x00000000,0x00040047,0x00000023,0x0000001e,0x00000000,0x00020013,
-    0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,0x00040017,
-    0x00000007,0x00000006,0x00000004,0x00040017,0x00000008,0x00000006,0x00000002,0x0004001e,
-    0x00000009,0x00000007,0x00000008,0x00040020,0x0000000a,0x00000003,0x00000009,0x0004003b,
-    0x0000000a,0x0000000b,0x00000003,0x00040015,0x0000000c,0x00000020,0x00000001,0x0004002b,
-    0x0000000c,0x0000000d,0x00000000,0x00040020,0x0000000e,0x00000001,0x00000007,0x0004003b,
-    0x0000000e,0x0000000f,0x00000001,0x00040020,0x00000011,0x00000003,0x00000007,0x0004002b,
-    0x0000000c,0x00000013,0x00000001,0x00040020,0x00000014,0x00000001,0x00000008,0x0004003b,
-    0x00000014,0x00000015,0x00000001,0x00040020,0x00000017,0x00000003,0x00000008,0x0003001e,
-    0x00000019,0x00000007,0x00040020,0x0000001a,0x00000003,0x00000019,0x0004003b,0x0000001a,
-    0x0000001b,0x00000003,0x00040018,0x0000001c,0x00000007,0x00000004,0x0003001e,0x0000001d,
-    0x0000001c,0x00040020,0x0000001e,0x00000002,0x0000001d,0x0004003b,0x0000001e,0x0000001f,
-    0x00000002,0x00040020,0x00000020,0x00000002,0x0000001c,0x0004003b,0x00000014,0x00000023,
-    0x00000001,0x0004002b,0x00000006,0x00000025,0x00000000,0x0004002b,0x00000006,0x00000026,
-    0x3f800000,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,0x000200f8,0x00000005,
-    0x0004003d,0x00000007,0x00000010,0x0000000f,0x00050041,0x00000011,0x00000012,0x0000000b,
-    0x0000000d,0x0003003e,0x00000012,0x00000010,0x0004003d,0x00000008,0x00000016,0x00000015,
-    0x00050041,0x00000017,0x00000018,0x0000000b,0x00000013,0x0003003e,0x00000018,0x00000016,
-    0x00050041,0x00000020,0x00000021,0x0000001f,0x0000000d,0x0004003d,0x0000001c,0x00000022,
-    0x00000021,0x0004003d,0x00000008,0x00000024,0x00000023,0x00050051,0x00000006,0x00000027,
-    0x00000024,0x00000000,0x00050051,0x00000006,0x00000028,0x00000024,0x00000001,0x00070050,
-    0x00000007,0x00000029,0x00000027,0x00000028,0x00000025,0x00000026,0x00050091,0x00000007,
-    0x0000002a,0x00000022,0x00000029,0x00050041,0x00000011,0x0000002b,0x0000001b,0x0000000d,
-    0x0003003e,0x0000002b,0x0000002a,0x000100fd,0x00010038
+static const char __shader_vert_wgsl[] = R"(
+struct VertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) color: vec4<f32>,
 };
 
-// glsl_shader.frag, compiled with:
-// # glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
-/*
-#version 450 core
-layout(location = 0) out vec4 fColor;
-layout(set=0, binding=1) uniform sampler s;
-layout(set=1, binding=0) uniform texture2D t;
-layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
-void main()
-{
-    fColor = In.Color * texture(sampler2D(t, s), In.UV.st);
-}
-*/
-static uint32_t __glsl_shader_frag_spv[] =
-{
-    0x07230203,0x00010000,0x00080007,0x00000023,0x00000000,0x00020011,0x00000001,0x0006000b,
-    0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
-    0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000009,0x0000000d,0x00030010,
-    0x00000004,0x00000007,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
-    0x00000000,0x00040005,0x00000009,0x6c6f4366,0x0000726f,0x00030005,0x0000000b,0x00000000,
-    0x00050006,0x0000000b,0x00000000,0x6f6c6f43,0x00000072,0x00040006,0x0000000b,0x00000001,
-    0x00005655,0x00030005,0x0000000d,0x00006e49,0x00030005,0x00000015,0x00000074,0x00030005,
-    0x00000019,0x00000073,0x00040047,0x00000009,0x0000001e,0x00000000,0x00040047,0x0000000d,
-    0x0000001e,0x00000000,0x00040047,0x00000015,0x00000022,0x00000001,0x00040047,0x00000015,
-    0x00000021,0x00000000,0x00040047,0x00000019,0x00000022,0x00000000,0x00040047,0x00000019,
-    0x00000021,0x00000001,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,
-    0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,
-    0x00000003,0x00000007,0x0004003b,0x00000008,0x00000009,0x00000003,0x00040017,0x0000000a,
-    0x00000006,0x00000002,0x0004001e,0x0000000b,0x00000007,0x0000000a,0x00040020,0x0000000c,
-    0x00000001,0x0000000b,0x0004003b,0x0000000c,0x0000000d,0x00000001,0x00040015,0x0000000e,
-    0x00000020,0x00000001,0x0004002b,0x0000000e,0x0000000f,0x00000000,0x00040020,0x00000010,
-    0x00000001,0x00000007,0x00090019,0x00000013,0x00000006,0x00000001,0x00000000,0x00000000,
-    0x00000000,0x00000001,0x00000000,0x00040020,0x00000014,0x00000000,0x00000013,0x0004003b,
-    0x00000014,0x00000015,0x00000000,0x0002001a,0x00000017,0x00040020,0x00000018,0x00000000,
-    0x00000017,0x0004003b,0x00000018,0x00000019,0x00000000,0x0003001b,0x0000001b,0x00000013,
-    0x0004002b,0x0000000e,0x0000001d,0x00000001,0x00040020,0x0000001e,0x00000001,0x0000000a,
-    0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,0x000200f8,0x00000005,0x00050041,
-    0x00000010,0x00000011,0x0000000d,0x0000000f,0x0004003d,0x00000007,0x00000012,0x00000011,
-    0x0004003d,0x00000013,0x00000016,0x00000015,0x0004003d,0x00000017,0x0000001a,0x00000019,
-    0x00050056,0x0000001b,0x0000001c,0x00000016,0x0000001a,0x00050041,0x0000001e,0x0000001f,
-    0x0000000d,0x0000001d,0x0004003d,0x0000000a,0x00000020,0x0000001f,0x00050057,0x00000007,
-    0x00000021,0x0000001c,0x00000020,0x00050085,0x00000007,0x00000022,0x00000012,0x00000021,
-    0x0003003e,0x00000009,0x00000022,0x000100fd,0x00010038
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+    @location(1) uv: vec2<f32>,
 };
+
+struct Uniforms {
+    mvp: mat4x4<f32>,
+    gamma: f32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+@vertex
+fn main(in: VertexInput) -> VertexOutput {
+    var out: VertexOutput;
+    out.position = uniforms.mvp * vec4<f32>(in.position, 0.0, 1.0);
+    out.color = in.color;
+    out.uv = in.uv;
+    return out;
+}
+)";
+
+static const char __shader_frag_wgsl[] = R"(
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+    @location(1) uv: vec2<f32>,
+};
+
+struct Uniforms {
+    mvp: mat4x4<f32>,
+    gamma: f32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var s: sampler;
+@group(1) @binding(0) var t: texture_2d<f32>;
+
+@fragment
+fn main(in: VertexOutput) -> @location(0) vec4<f32> {
+    let color = in.color * textureSample(t, s, in.uv);
+    let corrected_color = pow(color.rgb, vec3<f32>(uniforms.gamma));
+    return vec4<f32>(corrected_color, color.a);
+}
+)";
 
 static void SafeRelease(ImDrawIdx*& res)
 {
@@ -277,17 +224,16 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBufferHost);
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(uint32_t* binary_data, uint32_t binary_data_size)
+static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
-    WGPUShaderModuleSPIRVDescriptor spirv_desc = {};
-    spirv_desc.chain.sType = WGPUSType_ShaderModuleSPIRVDescriptor;
-    spirv_desc.codeSize = binary_data_size;
-    spirv_desc.code = binary_data;
+    WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
+    wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+    wgsl_desc.source = wgsl_source;
 
     WGPUShaderModuleDescriptor desc = {};
-    desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&spirv_desc);
+    desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
 
     WGPUProgrammableStageDescriptor stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
@@ -325,7 +271,38 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
-        wgpuQueueWriteBuffer(bd->defaultQueue, bd->renderResources.Uniforms, 0, mvp, sizeof(mvp));
+        wgpuQueueWriteBuffer(bd->defaultQueue, bd->renderResources.Uniforms, offsetof(Uniforms, MVP), mvp, sizeof(Uniforms::MVP));
+        float gamma;
+        switch (bd->renderTargetFormat)
+        {
+        case WGPUTextureFormat_ASTC10x10UnormSrgb:
+        case WGPUTextureFormat_ASTC10x5UnormSrgb:
+        case WGPUTextureFormat_ASTC10x6UnormSrgb:
+        case WGPUTextureFormat_ASTC10x8UnormSrgb:
+        case WGPUTextureFormat_ASTC12x10UnormSrgb:
+        case WGPUTextureFormat_ASTC12x12UnormSrgb:
+        case WGPUTextureFormat_ASTC4x4UnormSrgb:
+        case WGPUTextureFormat_ASTC5x5UnormSrgb:
+        case WGPUTextureFormat_ASTC6x5UnormSrgb:
+        case WGPUTextureFormat_ASTC6x6UnormSrgb:
+        case WGPUTextureFormat_ASTC8x5UnormSrgb:
+        case WGPUTextureFormat_ASTC8x6UnormSrgb:
+        case WGPUTextureFormat_ASTC8x8UnormSrgb:
+        case WGPUTextureFormat_BC1RGBAUnormSrgb:
+        case WGPUTextureFormat_BC2RGBAUnormSrgb:
+        case WGPUTextureFormat_BC3RGBAUnormSrgb:
+        case WGPUTextureFormat_BC7RGBAUnormSrgb:
+        case WGPUTextureFormat_BGRA8UnormSrgb:
+        case WGPUTextureFormat_ETC2RGB8A1UnormSrgb:
+        case WGPUTextureFormat_ETC2RGB8UnormSrgb:
+        case WGPUTextureFormat_ETC2RGBA8UnormSrgb:
+        case WGPUTextureFormat_RGBA8UnormSrgb:
+            gamma = 2.2f;
+            break;
+        default:
+            gamma = 1.0f;
+        }
+        wgpuQueueWriteBuffer(bd->defaultQueue, bd->renderResources.Uniforms, offsetof(Uniforms, Gamma), &gamma, sizeof(Uniforms::Gamma));
     }
 
     // Setup viewport
@@ -555,7 +532,7 @@ static void ImGui_ImplWGPU_CreateUniformBuffer()
         nullptr,
         "Dear ImGui Uniform buffer",
         WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
-        MEMALIGN(sizeof(Uniforms), 4),
+        MEMALIGN(sizeof(Uniforms), 16),
         false
     };
     bd->renderResources.Uniforms = wgpuDeviceCreateBuffer(bd->wgpuDevice, &ub_desc);
@@ -582,7 +559,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Bind group layouts
     WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};
     common_bg_layout_entries[0].binding = 0;
-    common_bg_layout_entries[0].visibility = WGPUShaderStage_Vertex;
+    common_bg_layout_entries[0].visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment;
     common_bg_layout_entries[0].buffer.type = WGPUBufferBindingType_Uniform;
     common_bg_layout_entries[1].binding = 1;
     common_bg_layout_entries[1].visibility = WGPUShaderStage_Fragment;
@@ -612,7 +589,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(bd->wgpuDevice, &layout_desc);
 
     // Create the vertex shader
-    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv) / sizeof(uint32_t));
+    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
     graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
     graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
 
@@ -634,7 +611,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
-    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__glsl_shader_frag_spv, sizeof(__glsl_shader_frag_spv) / sizeof(uint32_t));
+    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
 
     // Create the blending setup
     WGPUBlendState blend_state = {};
@@ -677,7 +654,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Create resource bind group
     WGPUBindGroupEntry common_bg_entries[] =
     {
-        { nullptr, 0, bd->renderResources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
+        { nullptr, 0, bd->renderResources.Uniforms, 0, MEMALIGN(sizeof(Uniforms), 16), 0, 0 },
         { nullptr, 1, 0, 0, 0, bd->renderResources.Sampler, 0 },
     };
 
