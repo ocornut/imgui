@@ -53,6 +53,8 @@ Other changes:
   avoid inteferences. (#5817, #6183) [@DimaKoltun]
 - Backends: Win32: Use WM_NCMOUSEMOVE / WM_NCMOUSELEAVE to track mouse positions over
   non-client area (e.g. OS decorations) when app is not focused. (#6045, #6162)
+- Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
+  increasing value. (#6189, #6114, #3644) [@adamkewley]
 
 
 -----------------------------------------------------------------------
