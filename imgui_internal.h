@@ -1205,6 +1205,7 @@ struct ImGuiPtrOrIndex
 // [SECTION] Inputs support
 //-----------------------------------------------------------------------------
 
+// Bit array for named keys
 typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitArrayForNamedKeys;
 
 // [Internal] Key ranges

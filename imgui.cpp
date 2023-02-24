@@ -7660,18 +7660,14 @@ ImGuiKeyData* ImGui::GetKeyData(ImGuiKey key)
     if (key & ImGuiMod_Mask_)
         key = ConvertSingleModFlagToKey(key);
 
-    int index;
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     IM_ASSERT(key >= ImGuiKey_LegacyNativeKey_BEGIN && key < ImGuiKey_NamedKey_END);
-    if (IsLegacyKey(key))
-        index = (g.IO.KeyMap[key] != -1) ? g.IO.KeyMap[key] : key; // Remap native->imgui or imgui->native
-    else
-        index = key;
+    if (IsLegacyKey(key) && g.IO.KeyMap[key] != -1)
+        key = (ImGuiKey)g.IO.KeyMap[key];  // Remap native->imgui or imgui->native
 #else
     IM_ASSERT(IsNamedKey(key) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend & user code.");
-    index = key - ImGuiKey_NamedKey_BEGIN;
 #endif
-    return &g.IO.KeysData[index];
+    return &g.IO.KeysData[key - ImGuiKey_KeysData_OFFSET];
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -13584,7 +13580,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("KEYBOARD/GAMEPAD/MOUSE KEYS");
         {
             // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
-            // User code should never have to go through such hoops: old code may use native keycodes, new code may use ImGuiKey codes.
+            // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
             Indent();
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
             struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
