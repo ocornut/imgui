@@ -25,15 +25,17 @@
 
 static void glfw_error_callback(int error, const char* description)
 {
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+// Main code
 int main(int, char**)
 {
-    // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
+
+    // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL2 example", NULL, NULL);
     if (window == NULL)
         return 1;
@@ -167,6 +169,7 @@ int main(int, char**)
             glfwMakeContextCurrent(backup_current_context);
         }
 
+        glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
     }
 

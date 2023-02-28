@@ -21,11 +21,72 @@ static char                 g_LogTag[] = "ImGuiExample";
 static std::string          g_IniFilename = "";
 
 // Forward declarations of helper functions
+static void Init(struct android_app* app);
+static void Shutdown();
+static void MainLoopStep();
 static int ShowSoftKeyboardInput();
 static int PollUnicodeChars();
 static int GetAssetData(const char* filename, void** out_data);
 
-void init(struct android_app* app)
+// Main code
+static void handleAppCmd(struct android_app* app, int32_t appCmd)
+{
+    switch (appCmd)
+    {
+    case APP_CMD_SAVE_STATE:
+        break;
+    case APP_CMD_INIT_WINDOW:
+        Init(app);
+        break;
+    case APP_CMD_TERM_WINDOW:
+        Shutdown();
+        break;
+    case APP_CMD_GAINED_FOCUS:
+    case APP_CMD_LOST_FOCUS:
+        break;
+    }
+}
+
+static int32_t handleInputEvent(struct android_app* app, AInputEvent* inputEvent)
+{
+    return ImGui_ImplAndroid_HandleInputEvent(inputEvent);
+}
+
+void android_main(struct android_app* app)
+{
+    app->onAppCmd = handleAppCmd;
+    app->onInputEvent = handleInputEvent;
+
+    while (true)
+    {
+        int out_events;
+        struct android_poll_source* out_data;
+
+        // Poll all events. If the app is not visible, this loop blocks until g_Initialized == true.
+        while (ALooper_pollAll(g_Initialized ? 0 : -1, NULL, &out_events, (void**)&out_data) >= 0)
+        {
+            // Process one event
+            if (out_data != NULL)
+                out_data->process(app, out_data);
+
+            // Exit the app by returning from within the infinite loop
+            if (app->destroyRequested != 0)
+            {
+                // shutdown() should have been called already while processing the
+                // app command APP_CMD_TERM_WINDOW. But we play save here
+                if (!g_Initialized)
+                    Shutdown();
+
+                return;
+            }
+        }
+
+        // Initiate a new frame
+        MainLoopStep();
+    }
+}
+
+void Init(struct android_app* app)
 {
     if (g_Initialized)
         return;
@@ -125,13 +186,14 @@ void init(struct android_app* app)
     g_Initialized = true;
 }
 
-void tick()
+void MainLoopStep()
 {
     ImGuiIO& io = ImGui::GetIO();
     if (g_EglDisplay == EGL_NO_DISPLAY)
         return;
 
     // Our state
+    // (we use static, which essentially makes the variable globals, as a convenience to keep the example code easy to follow)
     static bool show_demo_window = true;
     static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -197,7 +259,7 @@ void tick()
     eglSwapBuffers(g_EglDisplay, g_EglSurface);
 }
 
-void shutdown()
+void Shutdown()
 {
     if (!g_Initialized)
         return;
@@ -228,63 +290,7 @@ void shutdown()
     g_Initialized = false;
 }
 
-static void handleAppCmd(struct android_app* app, int32_t appCmd)
-{
-    switch (appCmd)
-    {
-    case APP_CMD_SAVE_STATE:
-        break;
-    case APP_CMD_INIT_WINDOW:
-        init(app);
-        break;
-    case APP_CMD_TERM_WINDOW:
-        shutdown();
-        break;
-    case APP_CMD_GAINED_FOCUS:
-        break;
-    case APP_CMD_LOST_FOCUS:
-        break;
-    }
-}
-
-static int32_t handleInputEvent(struct android_app* app, AInputEvent* inputEvent)
-{
-    return ImGui_ImplAndroid_HandleInputEvent(inputEvent);
-}
-
-void android_main(struct android_app* app)
-{
-    app->onAppCmd = handleAppCmd;
-    app->onInputEvent = handleInputEvent;
-
-    while (true)
-    {
-        int out_events;
-        struct android_poll_source* out_data;
-
-        // Poll all events. If the app is not visible, this loop blocks until g_Initialized == true.
-        while (ALooper_pollAll(g_Initialized ? 0 : -1, NULL, &out_events, (void**)&out_data) >= 0)
-        {
-            // Process one event
-            if (out_data != NULL)
-                out_data->process(app, out_data);
-
-            // Exit the app by returning from within the infinite loop
-            if (app->destroyRequested != 0)
-            {
-                // shutdown() should have been called already while processing the
-                // app command APP_CMD_TERM_WINDOW. But we play save here
-                if (!g_Initialized)
-                    shutdown();
-
-                return;
-            }
-        }
-
-        // Initiate a new frame
-        tick();
-    }
-}
+// Helper functions
 
 // Unfortunately, there is no way to show the on-screen input from native code.
 // Therefore, we call ShowSoftKeyboardInput() of the main activity implemented in MainActivity.kt via JNI.
