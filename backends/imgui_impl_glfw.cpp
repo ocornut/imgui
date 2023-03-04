@@ -282,7 +282,7 @@ static bool ImGui_ImplGlfw_ShouldChainCallback(GLFWwindow* window)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (!bd)
-        return;
+        return false;
     return bd->CallbacksChainForAllWindows ? true : (window == bd->Window);
 }
 
