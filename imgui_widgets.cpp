@@ -498,8 +498,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = window;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
+    // Alternate registration spot, for when caller didn't use ItemAdd()
     if (id != 0 && g.LastItemData.ID != id)
-        IMGUI_TEST_ENGINE_ITEM_ADD(bb, id);
+        IMGUI_TEST_ENGINE_ITEM_ADD(id, bb, NULL);
 #endif
 
     bool pressed = false;
