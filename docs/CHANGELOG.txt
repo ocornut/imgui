@@ -104,11 +104,26 @@ Other changes:
 
 Breaking Changes:
 
+- Moved the optional "courtesy maths operators" implementation from imgui_internal.h in imgui.h.
+  Even though we encourage using your own maths types and operators by setting up IM_VEC2_CLASS_EXTRA,
+  it has been frequently requested by people to use our own. We had an opt-in define which was
+  previously fulfilled in imgui_internal.h. It is now fulfilled in imgui.h. (#6164, #6137, #5966, #2832)
+   OK:     #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui.h" / #include "imgui_internal.h"
+   Error:  #include "imgui.h" / #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui_internal.h"
+  Added a dedicated compile-time check message to help diagnose this.
+
 Other changes:
 
+- Drag and Drop: Fixed handling of overlapping targets when smaller one is submitted
+  before and can accept the same data type. (#6183).
+- Drag and Drop: Clear drag and drop state as soon as delivery is accepted in order to
+  avoid inteferences. (#5817, #6183) [@DimaKoltun]
+- Backends: OpenGL3: Fixed restoration of a potentially deleted OpenGL program. If an active
+  program was pending deletion, attempting to restore it would error. (#6220, #6224) [@Cyphall]
 - Backends: Win32: Use WM_NCMOUSEMOVE / WM_NCMOUSELEAVE to track mouse positions over
   non-client area (e.g. OS decorations) when app is not focused. (#6045, #6162)
-
+- Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
+  increasing value. (#6189, #6114, #3644) [@adamkewley]
 
 -----------------------------------------------------------------------
  VERSION 1.89.3 (Released 2023-02-14)
@@ -461,6 +476,10 @@ Other Changes:
   asserts with 16-bits ImDrawVtx). (#5720)
 - Fonts: Added GetGlyphRangesGreek() helper for Greek & Coptic glyph range. (#5676, #5727) [@azonenberg]
 - ImDrawList: Not using alloca() anymore, lift single polygon size limits. (#5704, #1811)
+  - Note: now using a temporary buffer stored in ImDrawListSharedData.
+    This change made it more visible than you cannot append to multiple ImDrawList from multiple
+    threads if they share the same ImDrawListSharedData. Previously it was a little more likely
+    for this to "accidentally" work, but was already incorrect. (#6167)
 - Platform IME: [Windows] Removed call to ImmAssociateContextEx() leading to freeze on some setups.
   (#2589, #5535, #5264, #4972)
 - Misc: better error reporting for PopStyleColor()/PopStyleVar() + easier to recover. (#1651)
