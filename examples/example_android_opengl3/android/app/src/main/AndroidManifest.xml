@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="imgui.example.android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:label="ImGuiExample"
@@ -11,7 +10,8 @@
         <activity
             android:name="imgui.example.android.MainActivity"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-            android:configChanges="orientation|keyboardHidden|screenSize">
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:exported="false">
             <meta-data android:name="android.app.lib_name"
                 android:value="ImGuiExample" />
 
