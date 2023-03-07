@@ -504,4 +504,4 @@ jobs:
     - name: Build example_android_opengl3
       run: |
         cd examples/example_android_opengl3/android
-        gradle assembleDebug
+        gradle assembleDebug --stacktrace
