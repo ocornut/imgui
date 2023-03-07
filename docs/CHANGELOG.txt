@@ -47,6 +47,10 @@ Breaking Changes:
 
 Other changes:
 
+- Nav: Made Enter key submit the same type of Activation event as Space key,
+  allowing to press buttons with Enter. (#5606)
+  (Enter emulates a "prefer text input" activation vs.
+   Space emulates a "prefer tweak" activation which is to closer to gamepad controls).
 - Drag and Drop: Fixed handling of overlapping targets when smaller one is submitted
   before and can accept the same data type. (#6183).
 - Drag and Drop: Clear drag and drop state as soon as delivery is accepted in order to

@@ -46,7 +46,7 @@ DOCUMENTATION
   - GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
   - HOW A SIMPLE APPLICATION MAY LOOK LIKE
   - HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
-  - USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
+  - USING KEYBOARD/GAMEPAD NAVIGATION CONTROLS
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ)
   - Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
@@ -344,13 +344,14 @@ CODE
     }
 
 
- USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
+ USING KEYBOARD/GAMEPAD NAVIGATION CONTROLS
  ------------------------------------------
- - The gamepad/keyboard navigation is fairly functional and keeps being improved.
+ - The keyboard/gamepad navigation is fairly functional and keeps being improved.
  - Gamepad support is particularly useful to use Dear ImGui on a console system (e.g. PlayStation, Switch, Xbox) without a mouse!
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Keyboard:
     - Application: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable.
+    - Arrow keys to move. Space or Enter to activate (on a slider/drag: Space will tweak with arrow, Enter will input text).
     - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard),
       the io.WantCaptureKeyboard flag will be set. For more advanced uses, you may want to read from:
        - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
@@ -3765,7 +3766,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = id;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavActivateInputId == id || g.NavJustMovedToId == id) ? (ImGuiInputSource)ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavJustMovedToId == id) ? (ImGuiInputSource)ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
     }
 
     // Clear declaration of inputs claimed by the widget
@@ -11074,7 +11075,7 @@ static void ImGui::NavUpdate()
     NavUpdateCancelRequest();
 
     // Process manual activation request
-    g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavActivateInputId = 0;
+    g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = 0;
     g.NavActivateFlags = ImGuiActivateFlags_None;
     if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
@@ -11089,12 +11090,12 @@ static void ImGui::NavUpdate()
         }
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && input_pressed)
         {
-            g.NavActivateInputId = g.NavId;
+            g.NavActivateId = g.NavId;
             g.NavActivateFlags = ImGuiActivateFlags_PreferInput;
         }
-        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_down)
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && (activate_down || input_down))
             g.NavActivateDownId = g.NavId;
-        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_pressed)
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && (activate_pressed || input_pressed))
             g.NavActivatePressedId = g.NavId;
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
@@ -11106,10 +11107,7 @@ static void ImGui::NavUpdate()
     // FIXME-NAV: Those should eventually be queued (unlike focus they don't cancel each others)
     if (g.NavNextActivateId != 0)
     {
-        if (g.NavNextActivateFlags & ImGuiActivateFlags_PreferInput)
-            g.NavActivateInputId = g.NavNextActivateId;
-        else
-            g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavNextActivateId;
+        g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavNextActivateId;
         g.NavActivateFlags = g.NavNextActivateFlags;
     }
     g.NavNextActivateId = 0;
@@ -13693,7 +13691,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         DebugLocateItemOnHover(g.NavId);
         Text("NavInputSource: %s", GetInputSourceName(g.NavInputSource));
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
-        Text("NavActivateId/DownId/PressedId/InputId: %08X/%08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId, g.NavActivateInputId);
+        Text("NavActivateId/DownId/PressedId: %08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId);
         Text("NavActivateFlags: %04X", g.NavActivateFlags);
         Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
         Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
