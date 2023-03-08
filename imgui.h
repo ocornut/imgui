@@ -2345,6 +2345,7 @@ struct ImGuiTextFilter
         bool            empty() const                   { return b == e; }
         IMGUI_API void  split(char separator, ImVector<ImGuiTextRange>* out) const;
     };
+    ImGuiContext*           Ctx;            // Parent UI context (needs to be set explicitly by caller).
     char                    InputBuf[256];
     ImVector<ImGuiTextRange>Filters;
     int                     CountGrep;
@@ -2453,7 +2454,7 @@ struct ImGuiListClipper
 
     // items_count: Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step)
     // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
-    IMGUI_API ImGuiListClipper();
+    IMGUI_API ImGuiListClipper(ImGuiContext* ctx = NULL);
     IMGUI_API ~ImGuiListClipper();
     IMGUI_API void  Begin(int items_count, float items_height = -1.0f);
     IMGUI_API void  End();             // Automatically called on the last call of Step() that returns false.
