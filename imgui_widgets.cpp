@@ -3843,7 +3843,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
             return;
 
         // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
-        ImGuiContext& g = *GImGui;
+        ImGuiContext& g = *Ctx;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
         IM_ASSERT(Buf == edit_state->TextA.Data);
@@ -3947,8 +3947,9 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     // Custom callback filter
     if (flags & ImGuiInputTextFlags_CallbackCharFilter)
     {
+        ImGuiContext& g = *GImGui;
         ImGuiInputTextCallbackData callback_data;
-        memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
+        callback_data.Ctx = &g;
         callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
         callback_data.EventChar = (ImWchar)c;
         callback_data.Flags = flags;
@@ -4588,7 +4589,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 if (event_flag)
                 {
                     ImGuiInputTextCallbackData callback_data;
-                    memset(&callback_data, 0, sizeof(ImGuiInputTextCallbackData));
+                    callback_data.Ctx = &g;
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
                     callback_data.UserData = callback_user_data;
@@ -4651,6 +4652,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_resizable)
         {
             ImGuiInputTextCallbackData callback_data;
+            callback_data.Ctx = &g;
             callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
             callback_data.Flags = flags;
             callback_data.Buf = buf;

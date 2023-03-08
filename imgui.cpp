@@ -2709,6 +2709,8 @@ static void ImGuiListClipper_SeekCursorForItem(ImGuiListClipper* clipper, int it
 ImGuiListClipper::ImGuiListClipper()
 {
     memset(this, 0, sizeof(*this));
+    Ctx = ImGui::GetCurrentContext();
+    IM_ASSERT(Ctx != NULL);
     ItemsCount = -1;
 }
 
@@ -2719,7 +2721,7 @@ ImGuiListClipper::~ImGuiListClipper()
 
 void ImGuiListClipper::Begin(int items_count, float items_height)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     ImGuiWindow* window = g.CurrentWindow;
     IMGUI_DEBUG_LOG_CLIPPER("Clipper: Begin(%d,%.2f) in '%s'\n", items_count, items_height, window->Name);
 
@@ -2744,7 +2746,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
     {
         // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
@@ -2776,7 +2778,7 @@ void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
 
 static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *clipper->Ctx;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiListClipperData* data = (ImGuiListClipperData*)clipper->TempData;
     IM_ASSERT(data != NULL && "Called ImGuiListClipper::Step() too many times, or before ImGuiListClipper::Begin() ?");
@@ -2899,7 +2901,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
 
 bool ImGuiListClipper::Step()
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     bool need_items_height = (ItemsHeight <= 0.0f);
     bool ret = ImGuiListClipper_StepInternal(this);
     if (ret && (DisplayStart == DisplayEnd))
@@ -3618,9 +3620,10 @@ void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 //-----------------------------------------------------------------------------
 
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
-ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) : DrawListInst(NULL)
+ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NULL)
 {
     memset(this, 0, sizeof(*this));
+    Ctx = ctx;
     Name = ImStrdup(name);
     NameBufLen = (int)strlen(name) + 1;
     ID = ImHashStr(name);
@@ -3637,7 +3640,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) : DrawListInst
     FontWindowScale = 1.0f;
     SettingsOffset = -1;
     DrawList = &DrawListInst;
-    DrawList->_Data = &context->DrawListSharedData;
+    DrawList->_Data = &Ctx->DrawListSharedData;
     DrawList->_OwnerName = Name;
 }
 
@@ -3652,7 +3655,7 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     if (g.DebugHookIdInfo == id)
         ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
     return id;
@@ -3662,7 +3665,7 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     if (g.DebugHookIdInfo == id)
         ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
     return id;
@@ -3672,7 +3675,7 @@ ImGuiID ImGuiWindow::GetID(int n)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *Ctx;
     if (g.DebugHookIdInfo == id)
         ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
     return id;
@@ -6084,7 +6087,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     ImGuiWindowStackData window_stack_data;
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
-    window_stack_data.StackSizesOnBegin.SetToCurrentState();
+    window_stack_data.StackSizesOnBegin.SetToContextState(&g);
     g.CurrentWindowStack.push_back(window_stack_data);
     if (flags & ImGuiWindowFlags_ChildMenu)
         g.BeginMenuCount++;
@@ -6744,7 +6747,7 @@ void ImGui::End()
         g.BeginMenuCount--;
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithCurrentState();
+    g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithContextState(&g);
     g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
@@ -9064,9 +9067,9 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
 }
 
 // Save current stack sizes for later compare
-void ImGuiStackSizes::SetToCurrentState()
+void ImGuiStackSizes::SetToContextState(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     SizeOfIDStack = (short)window->IDStack.Size;
     SizeOfColorStack = (short)g.ColorStack.Size;
@@ -9080,9 +9083,9 @@ void ImGuiStackSizes::SetToCurrentState()
 }
 
 // Compare to detect usage errors
-void ImGuiStackSizes::CompareWithCurrentState()
+void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     IM_UNUSED(window);
 

@@ -2079,6 +2079,7 @@ struct ImGuiIO
 // - ImGuiInputTextFlags_CallbackResize:      Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow.
 struct ImGuiInputTextCallbackData
 {
+    ImGuiContext*       Ctx;            // Parent UI context
     ImGuiInputTextFlags EventFlag;      // One ImGuiInputTextFlags_Callback*    // Read-only
     ImGuiInputTextFlags Flags;          // What user passed to InputText()      // Read-only
     void*               UserData;       // What user passed to InputText()      // Read-only
@@ -2303,6 +2304,7 @@ struct ImGuiStorage
 // - The clipper also handles various subtleties related to keyboard/gamepad navigation, wrapping etc.
 struct ImGuiListClipper
 {
+    ImGuiContext*   Ctx;                // Parent UI context
     int             DisplayStart;       // First item to display, updated by each call to Step()
     int             DisplayEnd;         // End of items to display (exclusive)
     int             ItemsCount;         // [Internal] Number of items
