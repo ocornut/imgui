@@ -53,6 +53,10 @@ Breaking Changes:
 
 Other changes:
 
+- Nav: Tabbing now cycles through all items when ImGuiConfigFlags_NavEnableKeyboard is set.
+  (#3092, #5759, #787)
+- Nav: Tabbing/Shift-Tabbing can more reliably be used to step out of an item that is not
+  tab-stoppable. (#3092, #5759, #787)
 - Nav: Made Enter key submit the same type of Activation event as Space key,
   allowing to press buttons with Enter. (#5606)
   (Enter emulates a "prefer text input" activation vs.
