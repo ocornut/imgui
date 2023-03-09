@@ -1501,6 +1501,7 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_NavNoCaptureKeyboard   = 1 << 3,   // Instruct navigation to not set the io.WantCaptureKeyboard flag when io.NavActive is set.
     ImGuiConfigFlags_NoMouse                = 1 << 4,   // Instruct imgui to clear mouse position/buttons in NewFrame(). This allows ignoring the mouse information set by the backend.
     ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct backend to not alter mouse cursor shape and visibility. Use if the backend cursor changes are interfering with yours and you don't want to use SetMouseCursor() to change mouse cursor. You may want to honor requests from imgui by reading GetMouseCursor() yourself instead.
+    ImGuiConfigFlags_NoKerning              = 1 << 6,   // Instruct imgui to ignore kerning when drawing all text.
 
     // User storage (to allow your backend/engine to communicate to code that may be shared between multiple projects. Those flags are NOT used by core Dear ImGui)
     ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware.
@@ -2879,21 +2880,44 @@ struct ImFontAtlas
     //typedef ImFontGlyphRangesBuilder GlyphRangesBuilder; // OBSOLETED in 1.67+
 };
 
+// Kerning information between two glyphs
+struct ImFontKerningPair
+{
+    ImWchar Left;              // Glyph that comes to the left of the kerning pair.
+    ImWchar Right;             // Glyph that comes to the right of the kerning pair.
+    float AdvanceXAdjustment;  // Adjustment to advance width in pixel unit.
+};
+
+struct ImFontGlyphHotData
+{
+    float AdvanceX;
+    float OccupiedWidth;
+    unsigned int KerningPairUseBisect : 1;
+    unsigned int KerningPairOffset : 19;
+    unsigned int KerningPairCount : 12;
+};
+
+static constexpr int ImFont_FrequentKerningPairs_MaxCodepoint = 128;
+
 // Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Hot ~20/24 bytes (for CalcTextSize)
-    ImVector<float>             IndexAdvanceX;      // 12-16 // out //            // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
-    float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
+    // Members: Hot ~28/36 bytes (for CalcTextSize)
+    ImVector<ImFontGlyphHotData>IndexedHotData;     // 12-16 // out //            // Sparse. Various glyph information in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
+    ImVector<float>             FrequentKerningPairs;//12-16 // out //            // Kerning pairs between characters in ASCII range.
     float                       FontSize;           // 4     // in  //            // Height of characters/line, set during loading (don't change after loading)
 
-    // Members: Hot ~28/40 bytes (for CalcTextSize + render loop)
+    // Members: Hot ~32/48 bytes (for CalcTextSize + render loop)
     ImVector<ImWchar>           IndexLookup;        // 12-16 // out //            // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
     const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
+    const ImFontGlyphHotData*   FallbackHotData;    // 4-8   // out // = &IndexedHotData[FontFallbackChar]
 
-    // Members: Cold ~32/40 bytes
+    // Members: Semi-hot 12/16 bytes (for CalcTextSize, RenderText, and GetDistanceAdjustmentForPair/Between)
+    ImVector<ImFontKerningPair> KerningPairs;       // 12-16 // out //            // All kerning pairs, in order of ascending right first and left second.
+
+    // Members: Cold ~32/40 bytes + sizeof Used4kPagesMap
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out //            // What we has been loaded into
     const ImFontConfig*         ConfigData;         // 4-8   // in  //            // Pointer within ContainerAtlas->ConfigData
     short                       ConfigDataCount;    // 2     // in  // ~ 1        // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
@@ -2913,7 +2937,8 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
     IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
-    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexAdvanceX.Size) ? IndexAdvanceX[(int)c] : FallbackAdvanceX; }
+    IMGUI_API float             GetDistanceAdjustmentForPair(ImWchar left_c, ImWchar right_c) const;
+    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexedHotData.Size) ? IndexedHotData[(int)c].AdvanceX : FallbackHotData->AdvanceX; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
     const char*                 GetDebugName() const                { return ConfigData ? ConfigData->Name : "<unknown>"; }
 
@@ -2932,6 +2957,8 @@ struct ImFont
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
+    IMGUI_API void              AddKerningPair(ImWchar left_c, ImWchar right_c, float distance_adjustment);
+    IMGUI_API float             GetDistanceAdjustmentForPairFromHotData(ImWchar left_c, ImWchar right_c, const ImFontGlyphHotData* right_c_info) const;
 };
 
 //-----------------------------------------------------------------------------

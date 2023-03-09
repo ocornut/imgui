@@ -340,6 +340,8 @@ IMGUI_API ImU32         ImAlphaBlendColors(ImU32 col_a, ImU32 col_b);
 static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
 static inline bool      ImIsPowerOfTwo(ImU64 v)         { return v != 0 && (v & (v - 1)) == 0; }
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+static inline unsigned short ImReadU16BE(const void* p) { return ((const char*)p)[0] * 256 + ((const char*)p)[1]; }
+static inline unsigned short ImReadS16BE(const void* p) { return ((const char*)p)[0] * 256 + ((const char*)p)[1]; }
 
 // Helpers: String
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
@@ -3227,6 +3229,7 @@ IMGUI_API void      ImFontAtlasBuildRender8bppRectFromString(ImFontAtlas* atlas,
 IMGUI_API void      ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned int in_marker_pixel_value);
 IMGUI_API void      ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void      ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
+IMGUI_API void      ImFontAtlasBuildParseKernTable(const unsigned char* kern, const ImVector<int>& glyph_index_to_codepoint_map, float font_scale, ImFont* dst_font);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Test Engine specific hooks (imgui_test_engine)

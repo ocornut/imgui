@@ -3636,6 +3636,7 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
 {
     ImGuiContext& g = *ctx;
     ImFont* font = g.Font;
+    const bool use_kerning = !(g.IO.ConfigFlags & ImGuiConfigFlags_NoKerning) && font->KerningPairs.Size;
     const float line_height = g.FontSize;
     const float scale = line_height / font->FontSize;
 
@@ -3643,11 +3644,14 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
     float line_width = 0.0f;
 
     const ImWchar* s = text_begin;
+    unsigned int prev_c = 0;
     while (s < text_end)
     {
         unsigned int c = (unsigned int)(*s++);
         if (c == '\n')
         {
+            prev_c = 0;
+
             text_size.x = ImMax(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0.0f;
@@ -3655,10 +3659,17 @@ static ImVec2 InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begi
                 break;
             continue;
         }
+
+        // We only care about \n; ignore \r.
         if (c == '\r')
             continue;
 
-        const float char_width = font->GetCharAdvance((ImWchar)c) * scale;
+        const ImFontGlyphHotData* c_info = (int)c >= font->IndexedHotData.Size ? font->FallbackHotData : &font->IndexedHotData.Data[c];
+        const float char_width = c_info->AdvanceX * scale;
+        if (use_kerning)
+            line_width += font->GetDistanceAdjustmentForPairFromHotData((ImWchar)prev_c, (ImWchar)c, c_info) * scale;
+
+        prev_c = c;
         line_width += char_width;
     }
 
@@ -3683,7 +3694,7 @@ namespace ImStb
 
 static int     STB_TEXTEDIT_STRINGLEN(const ImGuiInputTextState* obj)                             { return obj->CurLenW; }
 static ImWchar STB_TEXTEDIT_GETCHAR(const ImGuiInputTextState* obj, int idx)                      { return obj->TextW[idx]; }
-static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->TextW[line_start_idx + char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance(c) * (g.FontSize / g.Font->FontSize); }
+static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->TextW[line_start_idx + char_idx]; ImWchar prev_c = line_start_idx + char_idx == 0 ? 0 : obj->TextW[line_start_idx + char_idx - 1]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return (g.Font->GetCharAdvance(c) + g.Font->GetDistanceAdjustmentForPair(prev_c, c)) * (g.FontSize / g.Font->FontSize); }
 static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x200000 ? 0 : key; }
 static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* obj, int line_start_idx)
@@ -4020,6 +4031,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
+    ImFont* font = g.Font;
+    const float line_height = g.FontSize;
+    const float scale = line_height / font->FontSize;
 
     const bool RENDER_SELECTION_WHEN_INACTIVE = false;
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
@@ -4222,7 +4236,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
     {
-        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
+        const char password_char = '*';
+        const ImFontGlyph* glyph = g.Font->FindGlyph(password_char);
         ImFont* password_font = &g.InputTextPasswordFont;
         password_font->FontSize = g.Font->FontSize;
         password_font->Scale = g.Font->Scale;
@@ -4230,8 +4245,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         password_font->Descent = g.Font->Descent;
         password_font->ContainerAtlas = g.Font->ContainerAtlas;
         password_font->FallbackGlyph = glyph;
-        password_font->FallbackAdvanceX = glyph->AdvanceX;
-        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexAdvanceX.empty() && password_font->IndexLookup.empty());
+        password_font->FallbackHotData = password_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[(int)password_char] : g.Font->FallbackHotData;
+        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexedHotData.empty() && password_font->IndexLookup.empty());
         PushFont(password_font);
     }
 
@@ -4760,6 +4775,21 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 select_start_offset.x = InputTextCalcTextSizeW(&g, ImStrbolW(searches_input_ptr[1], text_begin), searches_input_ptr[1]).x;
                 select_start_offset.y = searches_result_line_no[1] * g.FontSize;
+
+                if (searches_input_ptr[0] != text_begin)
+                {
+                    // It will snap the left border of the selection box to the left border of the first glyph selected when drawing selection.
+                    // Taking account of the above, snap the cursor too, if cursor is at the left border of the selection box.
+                    if (searches_result_line_no[0] == searches_result_line_no[1])
+                        cursor_offset.x += g.Font->GetDistanceAdjustmentForPair(*(searches_input_ptr[1] - 1), *searches_input_ptr[1]) * scale;
+                }
+            }
+
+            // Set the cursor position between after advance width and after bounding width of the previous character.
+            if (const ImWchar prev_char = searches_input_ptr[0] != text_begin ? *(searches_input_ptr[0] - 1) : 0)
+            {
+                const ImFontGlyphHotData* glyph = (int)prev_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[prev_char] : g.Font->FallbackHotData;
+                cursor_offset.x += (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
             }
 
             // Store text height (note that we haven't calculated text width at all, see GitHub issues #383, #1224)
@@ -4827,9 +4857,30 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 }
                 else
                 {
+                    float left_adjustment = 0.0f;
+                    float right_adjustment = 0.0f;
+                    float kern_adjustment = 0.0f;
+
+                    if (const ImWchar prev_char = text_begin != p ? *(p - 1) : 0)
+                    {
+                        const ImFontGlyphHotData* glyph = (int)prev_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[prev_char] : g.Font->FallbackHotData;
+                        left_adjustment = (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
+                        kern_adjustment = g.Font->GetDistanceAdjustmentForPair(prev_char, *p);
+                    }
+
                     ImVec2 rect_size = InputTextCalcTextSizeW(&g, p, text_selected_end, &p, NULL, true);
                     if (rect_size.x <= 0.0f) rect_size.x = IM_FLOOR(g.Font->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
-                    ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x, bg_offy_dn));
+
+                    if (const ImWchar last_char = text_begin != p ? *(p - 1) : 0)
+                    {
+                        const ImFontGlyphHotData* glyph = (int)last_char < g.Font->IndexedHotData.Size ? &g.Font->IndexedHotData.Data[last_char] : g.Font->FallbackHotData;
+                        right_adjustment += (glyph->OccupiedWidth - glyph->AdvanceX) / 2;
+                    }
+
+                    left_adjustment = (left_adjustment + kern_adjustment) * scale;
+                    right_adjustment = (right_adjustment + kern_adjustment) * scale;
+
+                    ImRect rect(rect_pos + ImVec2(left_adjustment, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x + right_adjustment, bg_offy_dn));
                     rect.ClipWith(clip_rect);
                     if (rect.Overlaps(clip_rect))
                         draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);

@@ -41,6 +41,7 @@
 #include FT_MODULE_H            // <freetype/ftmodapi.h>
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
+#include FT_TRUETYPE_TABLES_H   // <freetype/tttables.h>
 
 #ifdef _MSC_VER
 #pragma warning (push)
@@ -633,6 +634,8 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
     bool tex_use_colors = false;
+    ImVector<int> glyph_index_to_codepoint_map;
+    glyph_index_to_codepoint_map.reserve(0x10000);
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
@@ -703,6 +706,28 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         }
 
         src_tmp.Rects = NULL;
+
+        FT_ULong kern_table_size = 0;
+        if (0 != FT_Load_Sfnt_Table(src_tmp.Font.Face, FT_MAKE_TAG('k', 'e', 'r', 'n'), 0, NULL, &kern_table_size))
+            continue;
+        
+        ImVector<FT_Byte> kern_table;
+        kern_table.resize(kern_table_size);
+        if (0 != FT_Load_Sfnt_Table(src_tmp.Font.Face, FT_MAKE_TAG('k', 'e', 'r', 'n'), 0, kern_table.Data, &kern_table_size))
+            continue;
+
+        glyph_index_to_codepoint_map.clear();
+        glyph_index_to_codepoint_map.resize(0x10000, -1);
+        for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.size(); glyph_i++)
+        {
+            const int codepoint = src_tmp.GlyphsList[glyph_i].Codepoint;
+            uint32_t glyph_index = FT_Get_Char_Index(src_tmp.Font.Face, codepoint);
+            IM_ASSERT(glyph_index < (uint32_t)glyph_index_to_codepoint_map.size());
+            glyph_index_to_codepoint_map[glyph_index] = codepoint;
+        }
+
+        float font_scale = (float) src_tmp.Font.Info.PixelHeight / src_tmp.Font.Face->max_advance_height;
+        ImFontAtlasBuildParseKernTable(kern_table.Data, glyph_index_to_codepoint_map, font_scale, dst_font);
     }
     atlas->TexPixelsUseColors = tex_use_colors;
 

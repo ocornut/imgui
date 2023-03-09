@@ -14012,6 +14012,26 @@ void ImGui::DebugNodeFont(ImFont* font)
         }
         TreePop();
     }
+
+    if (TreeNode("KerningPairs", "KerningPairs (%d)", font->KerningPairs.Size))
+    {
+        for (int c = 0; c < font->IndexedHotData.Size; c++)
+        {
+            const ImFontGlyphHotData* c_info = &font->IndexedHotData.Data[c];
+            for (int i = c_info->KerningPairOffset, i_max = i + c_info->KerningPairCount; i < i_max; i++)
+            {
+                const ImFontKerningPair& pair = font->KerningPairs.Data[i];
+                char utf8_l[5], utf8_r[5];
+                ImTextCharToUtf8(utf8_l, pair.Left);
+                ImTextCharToUtf8(utf8_r, pair.Right);
+                BulletText("%s", utf8_l); // Disable kerning by splitting into two calls
+                SameLine(0.0f, 0.0f);
+                Text("%s -> %s%s (%.4f)", utf8_r, utf8_l, utf8_r, pair.AdvanceXAdjustment);
+            }
+        }
+        TreePop();
+    }
+
     TreePop();
 }
 
