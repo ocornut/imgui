@@ -387,6 +387,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2023/03/09 (1.89.4) - renamed PushAllowKeyboardFocus()/PopAllowKeyboardFocus() to PushTabStop()/PopTabStop(). Kept inline redirection functions (will obsolete).
  - 2023/03/09 (1.89.4) - tooltips: Added 'bool' return value to BeginTooltip() for API consistency. Please only submit contents and call EndTooltip() if BeginTooltip() returns true. In reality the function will _currently_ always return true, but further changes down the line may change this, best to clarify API sooner.
  - 2023/02/15 (1.89.4) - moved the optional "courtesy maths operators" implementation from imgui_internal.h in imgui.h.
                          Even though we encourage using your own maths types and operators by setting up IM_VEC2_CLASS_EXTRA,
@@ -7008,13 +7009,12 @@ void ImGui::EndDisabled()
         g.Style.Alpha = g.DisabledAlphaBackup; //PopStyleVar();
 }
 
-// FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
-void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+void ImGui::PushTabStop(bool tab_stop)
 {
-    PushItemFlag(ImGuiItemFlags_NoTabStop, !allow_keyboard_focus);
+    PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
 }
 
-void ImGui::PopAllowKeyboardFocus()
+void ImGui::PopTabStop()
 {
     PopItemFlag();
 }
@@ -12471,10 +12471,10 @@ void ImGui::LogButtons()
 #endif
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
-    PushAllowKeyboardFocus(false);
+    PushTabStop(false);
     SetNextItemWidth(80.0f);
     SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
-    PopAllowKeyboardFocus();
+    PopTabStop();
     PopID();
 
     // Start logging at the end of the function so that the buttons don't appear in the log
