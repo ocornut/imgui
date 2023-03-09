@@ -44,6 +44,10 @@ Breaking Changes:
    OK:     #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui.h" / #include "imgui_internal.h"
    Error:  #include "imgui.h" / #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui_internal.h"
   Added a dedicated compile-time check message to help diagnose this.
+- Tooltips: Added 'bool' return value to BeginTooltip() for API consistency.
+  Please only submit contents and call EndTooltip() if BeginTooltip() returns true.
+  In reality the function will _currently_ always return true, but further changes down the
+  line may change this, best to clarify API sooner. Updated demo code accordingly.
 
 Other changes:
 
@@ -66,6 +70,7 @@ Other changes:
 - Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
   increasing value. (#6189, #6114, #3644) [@adamkewley]
 - Examples: Android: Fixed example build for Gradle 8. (#6229, #6227) [@duddel]
+- Demo: Updated to test return value of BeginTooltip().
 
 
 -----------------------------------------------------------------------
