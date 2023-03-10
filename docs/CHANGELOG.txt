@@ -78,6 +78,8 @@ Other changes:
 - Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
   increasing value. (#6189, #6114, #3644) [@adamkewley]
 - Examples: Android: Fixed example build for Gradle 8. (#6229, #6227) [@duddel]
+- Examples: Updated all examples application to enable ImGuiConfigFlags_NavEnableKeyboard
+  and ImGuiConfigFlags_NavEnableGamepad by default. (#787)
 - Demo: Updated to test return value of BeginTooltip().
 
 
