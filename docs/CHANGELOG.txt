@@ -104,6 +104,8 @@ Other changes:
 
 Breaking Changes:
 
+- Renamed PushAllowKeyboardFocus()/PopAllowKeyboardFocus() to PushTabStop()/PopTabStop().
+  Kept inline redirection functions (will obsolete).
 - Moved the optional "courtesy maths operators" implementation from imgui_internal.h in imgui.h.
   Even though we encourage using your own maths types and operators by setting up IM_VEC2_CLASS_EXTRA,
   it has been frequently requested by people to use our own. We had an opt-in define which was
@@ -111,9 +113,17 @@ Breaking Changes:
    OK:     #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui.h" / #include "imgui_internal.h"
    Error:  #include "imgui.h" / #define IMGUI_DEFINE_MATH_OPERATORS / #include "imgui_internal.h"
   Added a dedicated compile-time check message to help diagnose this.
+- Tooltips: Added 'bool' return value to BeginTooltip() for API consistency.
+  Please only submit contents and call EndTooltip() if BeginTooltip() returns true.
+  In reality the function will _currently_ always return true, but further changes down the
+  line may change this, best to clarify API sooner. Updated demo code accordingly.
 
 Other changes:
 
+- Nav: Tabbing now cycles through all items when ImGuiConfigFlags_NavEnableKeyboard is set.
+  (#3092, #5759, #787)
+- Nav: Tabbing/Shift-Tabbing can more reliably be used to step out of an item that is not
+  tab-stoppable. (#3092, #5759, #787)
 - Nav: Made Enter key submit the same type of Activation event as Space key,
   allowing to press buttons with Enter. (#5606)
   (Enter emulates a "prefer text input" activation vs.
@@ -122,6 +132,8 @@ Other changes:
   frame time > repeat rate. Triggering a new move request on the same frame as a move
   result lead to an incorrect calculation and loss of navigation id. (#6171)
 - IO: Lifted constraint to call io.AddEventXXX functions from current context. (#4921, #5856, #6199)
+- InputText: Fixed not being able to use CTRL+Tab while an InputText() using Tab
+  for completion or textinput is active (regresion from 1.89).
 - Drag and Drop: Fixed handling of overlapping targets when smaller one is submitted
   before and can accept the same data type. (#6183).
 - Drag and Drop: Clear drag and drop state as soon as delivery is accepted in order to
@@ -133,6 +145,9 @@ Other changes:
 - Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
   increasing value. (#6189, #6114, #3644) [@adamkewley]
 - Examples: Android: Fixed example build for Gradle 8. (#6229, #6227) [@duddel]
+- Examples: Updated all examples application to enable ImGuiConfigFlags_NavEnableKeyboard
+  and ImGuiConfigFlags_NavEnableGamepad by default. (#787)
+- Demo: Updated to test return value of BeginTooltip().
 
 -----------------------------------------------------------------------
  VERSION 1.89.3 (Released 2023-02-14)

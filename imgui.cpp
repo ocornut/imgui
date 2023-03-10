@@ -39,14 +39,13 @@ Index of this file:
 DOCUMENTATION
 
 - MISSION STATEMENT
-- END-USER GUIDE
+- CONTROLS GUIDE
 - PROGRAMMER GUIDE
   - READ FIRST
   - HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
   - GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
   - HOW A SIMPLE APPLICATION MAY LOOK LIKE
   - HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
-  - USING KEYBOARD/GAMEPAD NAVIGATION CONTROLS
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ)
   - Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
@@ -115,27 +114,73 @@ CODE
  - Limited layout features, intricate layouts are typically crafted in code.
 
 
- END-USER GUIDE
+ CONTROLS GUIDE
  ==============
 
- - Double-click on title bar to collapse window.
- - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin().
- - Click and drag on lower right corner to resize window (double-click to auto fit window to its contents).
- - Click and drag on any empty space to move window.
- - TAB/SHIFT+TAB to cycle through keyboard editable fields.
- - CTRL+Click on a slider or drag box to input value as text.
- - Use mouse wheel to scroll.
- - Text editor:
-   - Hold SHIFT or use mouse to select text.
-   - CTRL+Left/Right to word jump.
-   - CTRL+Shift+Left/Right to select words.
-   - CTRL+A or Double-Click to select all.
-   - CTRL+X,CTRL+C,CTRL+V to use OS clipboard/
-   - CTRL+Z,CTRL+Y to undo/redo.
-   - ESCAPE to revert text to its original value.
-   - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
- - General Keyboard controls: enable with ImGuiConfigFlags_NavEnableKeyboard.
- - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. Download controller mapping PNG/PSD at http://dearimgui.org/controls_sheets
+ - MOUSE CONTROLS
+   - Mouse wheel:                   Scroll vertically.
+   - SHIFT+Mouse wheel:             Scroll horizontally.
+   - Click [X]:                     Close a window, available when 'bool* p_open' is passed to ImGui::Begin().
+   - Click ^, Double-Click title:   Collapse window.
+   - Drag on corner/border:         Resize window (double-click to auto fit window to its contents).
+   - Drag on any empty space:       Move window (unless io.ConfigWindowsMoveFromTitleBarOnly = true).
+   - Left-click outside popup:      Close popup stack (right-click over underlying popup: Partially close popup stack).
+
+ - TEXT EDITOR
+   - Hold SHIFT or Drag Mouse:      Select text.
+   - CTRL+Left/Right:               Word jump.
+   - CTRL+Shift+Left/Right:         Select words.
+   - CTRL+A or Double-Click:        Select All.
+   - CTRL+X, CTRL+C, CTRL+V:        Use OS clipboard.
+   - CTRL+Z, CTRL+Y:                Undo, Redo.
+   - ESCAPE:                        Revert text to its original value.
+   - On OSX, controls are automatically adjusted to match standard OSX text editing shortcuts and behaviors.
+
+ - KEYBOARD CONTROLS
+   - Basic:
+     - Tab, SHIFT+Tab               Cycle through text editable fields.
+     - CTRL+Tab, CTRL+Shift+Tab     Cycle through windows.
+     - CTRL+Click                   Input text into a Slider or Drag widget.
+   - Extended features with `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard`:
+     - Tab, SHIFT+Tab:              Cycle through every items.
+     - Arrow keys                   Move through items using directional navigation. Tweak value.
+     - Arrow keys + Alt, Shift      Tweak slower, tweak faster (when using arrow keys).
+     - Enter                        Activate item (prefer text input when possible).
+     - Space                        Activate item (prefer tweaking with arrows when possible).
+     - Escape                       Deactivate item, leave child window, close popup.
+     - Page Up, Page Down           Previous page, next page.
+     - Home, End                    Scroll to top, scroll to bottom.
+     - Alt                          Toggle between scrolling layer and menu layer.
+     - CTRL+Tab then Ctrl+Arrows    Move window. Hold SHIFT to resize instead of moving.
+   - Output when ImGuiConfigFlags_NavEnableKeyboard set,
+     - io.WantCaptureKeyboard flag is set when keyboard is claimed.
+     - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
+     - io.NavVisible: true when the navigation cursor is visible (usually goes to back false when mouse is used).
+
+ - GAMEPAD CONTROLS
+   - Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
+   - Particularly useful to use Dear ImGui on a console system (e.g. PlayStation, Switch, Xbox) without a mouse!
+   - Download controller mapping PNG/PSD at http://dearimgui.org/controls_sheets
+   - Backend support: backend needs to:
+      - Set 'io.BackendFlags |= ImGuiBackendFlags_HasGamepad' + call io.AddKeyEvent/AddKeyAnalogEvent() with ImGuiKey_Gamepad_XXX keys.
+      - For analog values (0.0f to 1.0f), backend is responsible to handling a dead-zone and rescaling inputs accordingly.
+        Backend code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, etc.).
+      - BEFORE 1.87, BACKENDS USED TO WRITE TO io.NavInputs[]. This is now obsolete. Please call io functions instead!
+   - If you need to share inputs between your game and the Dear ImGui interface, the easiest approach is to go all-or-nothing,
+     with a buttons combo to toggle the target. Please reach out if you think the game vs navigation input sharing could be improved.
+
+ - REMOTE INPUTS SHARING & MOUSE EMULATION
+   - PS4/PS5 users: Consider emulating a mouse cursor with DualShock touch pad or a spare analog stick as a mouse-emulation fallback.
+   - Consoles/Tablet/Phone users: Consider using a Synergy 1.x server (on your PC) + run examples/libs/synergy/uSynergy.c (on your console/tablet/phone app)
+     in order to share your PC mouse/keyboard.
+   - See https://github.com/ocornut/imgui/wiki/Useful-Extensions#remoting for other remoting solutions.
+   - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiConfigFlags_NavEnableSetMousePos flag.
+     Enabling ImGuiConfigFlags_NavEnableSetMousePos + ImGuiBackendFlags_HasSetMousePos instructs Dear ImGui to move your mouse cursor along with navigation movements.
+     When enabled, the NewFrame() function may alter 'io.MousePos' and set 'io.WantSetMousePos' to notify you that it wants the mouse cursor to be moved.
+     When that happens your backend NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the backends in examples/ do that.
+     (If you set the NavEnableSetMousePos flag but don't honor 'io.WantSetMousePos' properly, Dear ImGui will misbehave as it will see your mouse moving back & forth!)
+     (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
+     to set a boolean to ignore your other external mouse positions until the external source is moved again.)
 
 
  PROGRAMMER GUIDE
@@ -345,41 +390,6 @@ CODE
     }
 
 
- USING KEYBOARD/GAMEPAD NAVIGATION CONTROLS
- ------------------------------------------
- - The keyboard/gamepad navigation is fairly functional and keeps being improved.
- - Gamepad support is particularly useful to use Dear ImGui on a console system (e.g. PlayStation, Switch, Xbox) without a mouse!
- - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
- - Keyboard:
-    - Application: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable.
-    - Arrow keys to move. Space or Enter to activate (on a slider/drag: Space will tweak with arrow, Enter will input text).
-    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard),
-      the io.WantCaptureKeyboard flag will be set. For more advanced uses, you may want to read from:
-       - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
-       - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
-       - or query focus information with e.g. IsWindowFocused(ImGuiFocusedFlags_AnyWindow), IsItemFocused() etc. functions.
-      Please reach out if you think the game vs navigation input sharing could be improved.
- - Gamepad:
-    - Application: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable.
-    - Backend: Set io.BackendFlags |= ImGuiBackendFlags_HasGamepad + call io.AddKeyEvent/AddKeyAnalogEvent() with ImGuiKey_Gamepad_XXX keys.
-      For analog values (0.0f to 1.0f), backend is responsible to handling a dead-zone and rescaling inputs accordingly.
-      Backend code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, etc.).
-    - BEFORE 1.87, BACKENDS USED TO WRITE TO io.NavInputs[]. This is now obsolete. Please call io functions instead!
-    - You can download PNG/PSD files depicting the gamepad controls for common controllers at: http://dearimgui.org/controls_sheets
-    - If you need to share inputs between your game and the Dear ImGui interface, the easiest approach is to go all-or-nothing,
-      with a buttons combo to toggle the target. Please reach out if you think the game vs navigation input sharing could be improved.
- - Mouse:
-    - PS4/PS5 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
-    - Consoles/Tablet/Phone users: Consider using a Synergy 1.x server (on your PC) + uSynergy.c (on your console/tablet/phone app) to share your PC mouse/keyboard.
-    - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiConfigFlags_NavEnableSetMousePos flag.
-      Enabling ImGuiConfigFlags_NavEnableSetMousePos + ImGuiBackendFlags_HasSetMousePos instructs dear imgui to move your mouse cursor along with navigation movements.
-      When enabled, the NewFrame() function may alter 'io.MousePos' and set 'io.WantSetMousePos' to notify you that it wants the mouse cursor to be moved.
-      When that happens your backend NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the backends in examples/ do that.
-      (If you set the NavEnableSetMousePos flag but don't honor 'io.WantSetMousePos' properly, imgui will misbehave as it will see your mouse moving back and forth!)
-      (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
-       to set a boolean to ignore your other external mouse positions until the external source is moved again.)
-
-
  API BREAKING CHANGES
  ====================
 
@@ -395,6 +405,8 @@ CODE
                         - likewise io.MousePos and GetMousePos() will use OS coordinates.
                           If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2023/03/09 (1.89.4) - renamed PushAllowKeyboardFocus()/PopAllowKeyboardFocus() to PushTabStop()/PopTabStop(). Kept inline redirection functions (will obsolete).
+ - 2023/03/09 (1.89.4) - tooltips: Added 'bool' return value to BeginTooltip() for API consistency. Please only submit contents and call EndTooltip() if BeginTooltip() returns true. In reality the function will _currently_ always return true, but further changes down the line may change this, best to clarify API sooner.
  - 2023/02/15 (1.89.4) - moved the optional "courtesy maths operators" implementation from imgui_internal.h in imgui.h.
                          Even though we encourage using your own maths types and operators by setting up IM_VEC2_CLASS_EXTRA,
                          it has been frequently requested by people to use our own. We had an opt-in define which was
@@ -1023,7 +1035,7 @@ static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavItemData* result);
 static void             NavApplyItemToResult(ImGuiNavItemData* result);
 static void             NavProcessItem();
-static void             NavProcessItemForTabbingRequest(ImGuiID id);
+static void             NavProcessItemForTabbingRequest(ImGuiID id, ImGuiItemFlags item_flags, ImGuiNavMoveFlags move_flags);
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
@@ -7552,13 +7564,12 @@ void ImGui::EndDisabled()
         g.Style.Alpha = g.DisabledAlphaBackup; //PopStyleVar();
 }
 
-// FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
-void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+void ImGui::PushTabStop(bool tab_stop)
 {
-    PushItemFlag(ImGuiItemFlags_NoTabStop, !allow_keyboard_focus);
+    PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
 }
 
-void ImGui::PopAllowKeyboardFocus()
+void ImGui::PopTabStop()
 {
     PopItemFlag();
 }
@@ -7841,6 +7852,12 @@ void ImGui::SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const I
     IM_ASSERT(window->HitTestHoleSize.x == 0);     // We don't support multiple holes/hit test filters
     window->HitTestHoleSize = ImVec2ih(size);
     window->HitTestHoleOffset = ImVec2ih(pos - window->Pos);
+}
+
+void ImGui::SetWindowHiddendAndSkipItemsForCurrentFrame(ImGuiWindow* window)
+{
+    window->Hidden = window->SkipItems = true;
+    window->HiddenFramesCanSkipItems = 1;
 }
 
 void ImGui::SetWindowCollapsed(bool collapsed, ImGuiCond cond)
@@ -10524,12 +10541,12 @@ void ImGui::SetScrollHereY(float center_y_ratio)
 // [SECTION] TOOLTIPS
 //-----------------------------------------------------------------------------
 
-void ImGui::BeginTooltip()
+bool ImGui::BeginTooltip()
 {
-    BeginTooltipEx(ImGuiTooltipFlags_None, ImGuiWindowFlags_None);
+    return BeginTooltipEx(ImGuiTooltipFlags_None, ImGuiWindowFlags_None);
 }
 
-void ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags extra_window_flags)
+bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags extra_window_flags)
 {
     ImGuiContext& g = *GImGui;
 
@@ -10553,12 +10570,17 @@ void ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags ext
             if (window->Active)
             {
                 // Hide previous tooltip from being displayed. We can't easily "reset" the content of a window so we create a new one.
-                window->Hidden = true;
-                window->HiddenFramesCanSkipItems = 1; // FIXME: This may not be necessary?
+                SetWindowHiddendAndSkipItemsForCurrentFrame(window);
                 ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", ++g.TooltipOverrideCount);
             }
     ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking;
     Begin(window_name, NULL, flags | extra_window_flags);
+    // 2023-03-09: Added bool return value to the API, but currently always returning true.
+    // If this ever returns false we need to update BeginDragDropSource() accordingly.
+    //if (!ret)
+    //    End();
+    //return ret;
+    return true;
 }
 
 void ImGui::EndTooltip()
@@ -11394,30 +11416,25 @@ static void ImGui::NavProcessItem()
 
     // Process Move Request (scoring for navigation)
     // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRect + scoring from a rect wrapped according to current wrapping policy)
-    if (g.NavMoveScoringItems)
+    if (g.NavMoveScoringItems && (item_flags & ImGuiItemFlags_Disabled) == 0)
     {
-        const bool is_tab_stop = (item_flags & ImGuiItemFlags_Inputable) && (item_flags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
         const bool is_tabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) != 0;
         if (is_tabbing)
         {
-            if (is_tab_stop || (g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi))
-                NavProcessItemForTabbingRequest(id);
+            NavProcessItemForTabbingRequest(id, item_flags, g.NavMoveFlags);
         }
-        else if ((g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & ImGuiItemFlags_Disabled))
+        else if (g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId))
         {
             ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-            if (!is_tabbing)
-            {
-                if (NavScoreItem(result))
-                    NavApplyItemToResult(result);
+            if (NavScoreItem(result))
+                NavApplyItemToResult(result);
 
-                // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
-                const float VISIBLE_RATIO = 0.70f;
-                if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
-                    if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
-                        if (NavScoreItem(&g.NavMoveResultLocalVisible))
-                            NavApplyItemToResult(&g.NavMoveResultLocalVisible);
-            }
+            // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
+            const float VISIBLE_RATIO = 0.70f;
+            if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
+                if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
+                    if (NavScoreItem(&g.NavMoveResultLocalVisible))
+                        NavApplyItemToResult(&g.NavMoveResultLocalVisible);
         }
     }
 
@@ -11440,18 +11457,31 @@ static void ImGui::NavProcessItem()
 // - Case 3: tab forward wrap:    set result to first eligible item (preemptively), on ref id set counter, on next frame if counter hasn't elapsed store result. // FIXME-TABBING: Could be done as a next-frame forwarded request
 // - Case 4: tab backward:        store all results, on ref id pick prev, stop storing
 // - Case 5: tab backward wrap:   store all results, on ref id if no result keep storing until last // FIXME-TABBING: Could be done as next-frame forwarded requested
-void ImGui::NavProcessItemForTabbingRequest(ImGuiID id)
+void ImGui::NavProcessItemForTabbingRequest(ImGuiID id, ImGuiItemFlags item_flags, ImGuiNavMoveFlags move_flags)
 {
     ImGuiContext& g = *GImGui;
+
+    if ((move_flags & ImGuiNavMoveFlags_FocusApi) == 0)
+        if (g.NavLayer != g.CurrentWindow->DC.NavLayerCurrent)
+            return;
+
+    // - Can always land on an item when using API call.
+    // - Tabbing with _NavEnableKeyboard (space/enter/arrows): goes through every item.
+    // - Tabbing without _NavEnableKeyboard: goes through inputable items only.
+    bool can_stop;
+    if (move_flags & ImGuiNavMoveFlags_FocusApi)
+        can_stop = true;
+    else
+        can_stop = (item_flags & ImGuiItemFlags_NoTabStop) == 0 && ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) || (item_flags & ImGuiItemFlags_Inputable));
 
     // Always store in NavMoveResultLocal (unlike directional request which uses NavMoveResultOther on sibling/flattened windows)
     ImGuiNavItemData* result = &g.NavMoveResultLocal;
     if (g.NavTabbingDir == +1)
     {
         // Tab Forward or SetKeyboardFocusHere() with >= 0
-        if (g.NavTabbingResultFirst.ID == 0)
+        if (can_stop && g.NavTabbingResultFirst.ID == 0)
             NavApplyItemToResult(&g.NavTabbingResultFirst);
-        if (--g.NavTabbingCounter == 0)
+        if (can_stop && g.NavTabbingCounter > 0 && --g.NavTabbingCounter == 0)
             NavMoveRequestResolveWithLastItem(result);
         else if (g.NavId == id)
             g.NavTabbingCounter = 1;
@@ -11467,16 +11497,18 @@ void ImGui::NavProcessItemForTabbingRequest(ImGuiID id)
                 NavUpdateAnyRequestFlag();
             }
         }
-        else
+        else if (can_stop)
         {
+            // Keep applying until reaching NavId
             NavApplyItemToResult(result);
         }
     }
     else if (g.NavTabbingDir == 0)
     {
-        // Tab Init
-        if (g.NavTabbingResultFirst.ID == 0)
-            NavMoveRequestResolveWithLastItem(&g.NavTabbingResultFirst);
+        if (can_stop && g.NavId == id)
+            NavMoveRequestResolveWithLastItem(result);
+        if (can_stop && g.NavTabbingResultFirst.ID == 0) // Tab init
+            NavApplyItemToResult(&g.NavTabbingResultFirst);
     }
 }
 
@@ -12003,8 +12035,11 @@ void ImGui::NavUpdateCreateTabbingRequest()
     // (this is ALWAYS ENABLED, regardless of ImGuiConfigFlags_NavEnableKeyboard flag!)
     // Initially this was designed to use counters and modulo arithmetic, but that could not work with unsubmitted items (list clipper). Instead we use a strategy close to other move requests.
     // See NavProcessItemForTabbingRequest() for a description of the various forward/backward tabbing cases with and without wrapping.
-    //// FIXME: We use (g.ActiveId == 0) but (g.NavDisableHighlight == false) might be righter once we can tab through anything
-    g.NavTabbingDir = g.IO.KeyShift ? -1 : (g.ActiveId == 0) ? 0 : +1;
+    const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    if (nav_keyboard_active)
+        g.NavTabbingDir = g.IO.KeyShift ? -1 : (g.NavDisableHighlight == true && g.ActiveId == 0) ? 0 : +1;
+    else
+        g.NavTabbingDir = g.IO.KeyShift ? -1 : (g.ActiveId == 0) ? 0 : +1;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
     ImGuiDir clip_dir = (g.NavTabbingDir < 0) ? ImGuiDir_Up : ImGuiDir_Down;
     NavMoveRequestSubmit(ImGuiDir_None, clip_dir, ImGuiNavMoveFlags_Tabbing, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
@@ -12024,7 +12059,7 @@ void ImGui::NavMoveRequestApplyResult()
     ImGuiNavItemData* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : (g.NavMoveResultOther.ID != 0) ? &g.NavMoveResultOther : NULL;
 
     // Tabbing forward wrap
-    if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) && result == NULL)
         if ((g.NavTabbingCounter == 1 || g.NavTabbingDir == 0) && g.NavTabbingResultFirst.ID)
             result = &g.NavTabbingResultFirst;
 
@@ -12702,13 +12737,12 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
         {
             // Target can request the Source to not display its tooltip (we use a dedicated flag to make this request explicit)
             // We unfortunately can't just modify the source flags and skip the call to BeginTooltip, as caller may be emitting contents.
-            BeginTooltip();
+            bool ret = BeginTooltip();
+            IM_ASSERT(ret); // FIXME-NEWBEGIN: If this ever becomes false, we need to Begin("##Hidden", NULL, ImGuiWindowFlags_NoSavedSettings) + SetWindowHiddendAndSkipItemsForCurrentFrame().
+            IM_UNUSED(ret);
+
             if (g.DragDropAcceptIdPrev && (g.DragDropAcceptFlags & ImGuiDragDropFlags_AcceptNoPreviewTooltip))
-            {
-                ImGuiWindow* tooltip_window = g.CurrentWindow;
-                tooltip_window->Hidden = tooltip_window->SkipItems = true;
-                tooltip_window->HiddenFramesCanSkipItems = 1;
-            }
+                SetWindowHiddendAndSkipItemsForCurrentFrame(g.CurrentWindow);
         }
 
         if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover) && !(flags & ImGuiDragDropFlags_SourceExtern))
@@ -13135,10 +13169,10 @@ void ImGui::LogButtons()
 #endif
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
-    PushAllowKeyboardFocus(false);
+    PushTabStop(false);
     SetNextItemWidth(80.0f);
     SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
-    PopAllowKeyboardFocus();
+    PopTabStop();
     PopID();
 
     // Start logging at the end of the function so that the buttons don't appear in the log
@@ -18741,9 +18775,8 @@ void ImGui::DebugTextEncoding(const char* str)
 static void MetricsHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip())
     {
-        ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(desc);
         ImGui::PopTextWrapPos();
@@ -19679,9 +19712,8 @@ void ImGui::DebugNodeFont(ImFont* font)
                 if (!glyph)
                     continue;
                 font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
-                if (IsMouseHoveringRect(cell_p1, cell_p2))
+                if (IsMouseHoveringRect(cell_p1, cell_p2) && BeginTooltip())
                 {
-                    BeginTooltip();
                     DebugNodeFontGlyph(font, glyph);
                     EndTooltip();
                 }
@@ -20040,7 +20072,8 @@ void ImGui::UpdateDebugToolItemPicker()
         if (change_mapping && IsMouseClicked(mouse_button))
             g.DebugItemPickerMouseButton = (ImU8)mouse_button;
     SetNextWindowBgAlpha(0.70f);
-    BeginTooltip();
+    if (!BeginTooltip())
+        return;
     Text("HoveredId: 0x%08X", hovered_id);
     Text("Press ESC to abort picking.");
     const char* mouse_button_names[] = { "Left", "Right", "Middle" };
