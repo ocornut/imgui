@@ -55,6 +55,12 @@ Other changes:
 
 - Nav: Tabbing now cycles through all items when ImGuiConfigFlags_NavEnableKeyboard is set.
   (#3092, #5759, #787)
+  While this was generally desired and requested by many, note that its addition means
+  that some types of UI may become more fastidious to use TAB key with, if the navigation
+  cursor cycles through too many items. You can mark items items as not tab-spottable:
+   - Public API: PushTabStop(false) / PopTabStop()
+   - Internal: PushItemFlag(ImGuiItemFlags_NoTabStop, true);
+   - Internal: Directly pass ImGuiItemFlags_NoTabStop to ItemAdd() for custom widgets.
 - Nav: Tabbing/Shift-Tabbing can more reliably be used to step out of an item that is not
   tab-stoppable. (#3092, #5759, #787)
 - Nav: Made Enter key submit the same type of Activation event as Space key,
@@ -66,6 +72,8 @@ Other changes:
   result lead to an incorrect calculation and loss of navigation id. (#6171)
 - Nav: Fixed SetItemDefaultFocus() from not scrolling when item is partially visible.
   (#2814, #2812) [@DomGries]
+- Tables: Fixed an issue where user's Y cursor movement within a hidden column would
+  have side-effects.
 - IO: Lifted constraint to call io.AddEventXXX functions from current context. (#4921, #5856, #6199)
 - InputText: Fixed not being able to use CTRL+Tab while an InputText() using Tab
   for completion or textinput is active (regresion from 1.89).
