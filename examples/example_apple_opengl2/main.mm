@@ -72,6 +72,7 @@
 -(void)updateAndDrawDemoView
 {
     // Start the Dear ImGui frame
+    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL2_NewFrame();
     ImGui_ImplOSX_NewFrame(self);
     ImGui::NewFrame();

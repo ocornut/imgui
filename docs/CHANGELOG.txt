@@ -87,8 +87,10 @@ Other changes:
   program was pending deletion, attempting to restore it would error. (#6220, #6224) [@Cyphall]
 - Backends: Win32: Use WM_NCMOUSEMOVE / WM_NCMOUSELEAVE to track mouse positions over
   non-client area (e.g. OS decorations) when app is not focused. (#6045, #6162)
-- Backends: SDL2, SDL3:  Accept SDL_GetPerformanceCounter() not returning a monotonically
+- Backends: SDL2, SDL3: Accept SDL_GetPerformanceCounter() not returning a monotonically
   increasing value. (#6189, #6114, #3644) [@adamkewley]
+- Backends: GLFW: Avoid using glfwGetError() and glfwGetGamepadState() on Emscripten, which
+  recently updated its GLFW emulation layer to GLFW 3.3 without supporting those. (#6240)
 - Examples: Android: Fixed example build for Gradle 8. (#6229, #6227) [@duddel]
 - Examples: Updated all examples application to enable ImGuiConfigFlags_NavEnableKeyboard
   and ImGuiConfigFlags_NavEnableGamepad by default. (#787)
