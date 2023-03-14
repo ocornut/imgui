@@ -1,4 +1,4 @@
-// dear imgui, v1.89.4 WIP
+// dear imgui, v1.89.4
 // (tables and columns code)
 
 /*
@@ -1999,10 +1999,6 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->WorkRect.Max.x = column->WorkMaxX;
     window->DC.ItemWidth = column->ItemWidth;
 
-    // To allow ImGuiListClipper to function we propagate our row height
-    if (!column->IsEnabled)
-        window->DC.CursorPos.y = ImMax(window->DC.CursorPos.y, table->RowPosY2);
-
     window->SkipItems = column->IsSkipItems;
     if (column->IsSkipItems)
     {
@@ -2049,7 +2045,8 @@ void ImGui::TableEndCell(ImGuiTable* table)
     else
         p_max_pos_x = table->IsUnfrozenRows ? &column->ContentMaxXUnfrozen : &column->ContentMaxXFrozen;
     *p_max_pos_x = ImMax(*p_max_pos_x, window->DC.CursorMaxPos.x);
-    table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->CellPaddingY);
+    if (column->IsEnabled)
+        table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->CellPaddingY);
     column->ItemWidth = window->DC.ItemWidth;
 
     // Propagate text baseline for the entire row

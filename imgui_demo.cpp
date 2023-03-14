@@ -1,4 +1,4 @@
-// dear imgui, v1.89.4 WIP
+// dear imgui, v1.89.4
 // (demo code)
 
 // Help:
@@ -517,6 +517,15 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Checkbox("io.ConfigWindowsMoveFromTitleBarOnly", &io.ConfigWindowsMoveFromTitleBarOnly);
             ImGui::Checkbox("io.ConfigMacOSXBehaviors", &io.ConfigMacOSXBehaviors);
             ImGui::Text("Also see Style->Rendering for rendering options.");
+
+            ImGui::SeparatorText("Debug");
+            ImGui::BeginDisabled();
+            ImGui::Checkbox("io.ConfigDebugBeginReturnValueOnce", &io.ConfigDebugBeginReturnValueOnce); // .
+            ImGui::EndDisabled();
+            ImGui::SameLine(); HelpMarker("First calls to Begin()/BeginChild() will return false.\n\nTHIS OPTION IS DISABLED because it needs to be set at application boot-time to make sense. Showing the disabled option is a way to make this feature easier to discover");
+            ImGui::Checkbox("io.ConfigDebugBeginReturnValueLoop", &io.ConfigDebugBeginReturnValueLoop);
+            ImGui::SameLine(); HelpMarker("Some calls to Begin()/BeginChild() will return false.\n\nWill cycle through window depths then repeat. Windows should be flickering while running.");
+
             ImGui::TreePop();
             ImGui::Spacing();
         }

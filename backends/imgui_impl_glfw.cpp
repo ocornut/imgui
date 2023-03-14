@@ -21,6 +21,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-03-14: Emscripten: Avoid using glfwGetError() and glfwGetGamepadState() which are not correctly implemented in Emscripten emulation. (#6240)
 //  2023-02-03: Emscripten: Registering custom low-level mouse wheel handler to get more accurate scrolling impulses on Emscripten. (#4019, #6096)
 //  2023-01-18: Handle unsupported glfwGetVideoMode() call on e.g. Emscripten.
 //  2023-01-04: Inputs: Fixed mods state on Linux when using Alt-GR text input (e.g. German keyboard layout), could lead to broken text input. Revert a 2022/01/17 change were we resumed using mods provided by GLFW, turns out they were faulty.
@@ -115,6 +116,7 @@
 #endif
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
+#define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 
 // GLFW data
 enum GlfwClientApi
@@ -353,7 +355,7 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     const char* key_name = glfwGetKeyName(key, scancode);
     glfwSetErrorCallback(prev_error_callback);
-#if (GLFW_VERSION_COMBINED >= 3300) // Eat errors (see #5908)
+#if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
     (void)glfwGetError(NULL);
 #endif
     if (key_name && key_name[0] != 0 && key_name[1] == 0)
@@ -582,7 +584,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
     glfwSetErrorCallback(prev_error_callback);
-#if (GLFW_VERSION_COMBINED >= 3300) // Eat errors (see #5785)
+#if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
     (void)glfwGetError(NULL);
 #endif
 
@@ -763,7 +765,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         return;
 
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-#if GLFW_HAS_GAMEPAD_API
+#if GLFW_HAS_GAMEPAD_API && !defined(__EMSCRIPTEN__)
     GLFWgamepadstate gamepad;
     if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))
         return;

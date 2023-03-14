@@ -127,6 +127,8 @@ static bool InitWGPU()
 
 static void MainLoopStep(void* window)
 {
+    ImGuiIO& io = ImGui::GetIO();
+
     glfwPollEvents();
 
     int width, height;

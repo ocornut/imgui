@@ -1,4 +1,4 @@
-// dear imgui, v1.89.4 WIP
+// dear imgui, v1.89.4
 // (main code and documentation)
 
 // Help:
@@ -399,12 +399,17 @@ CODE
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
 (Docking/Viewport Branch)
- - 2023/XX/XX (1.XX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
-                        - reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are probably not what you want anymore.
-                          you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
-                        - likewise io.MousePos and GetMousePos() will use OS coordinates.
-                          If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
+ - 2023/XX/XX (1.XXXX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
+                          - reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are probably not what you want anymore.
+                            you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
+                          - likewise io.MousePos and GetMousePos() will use OS coordinates.
+                            If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2023/03/14 (1.89.4) - commented out redirecting enums/functions names that were marked obsolete two years ago:
+                           - ImGuiSliderFlags_ClampOnInput        -> use ImGuiSliderFlags_AlwaysClamp
+                           - ImGuiInputTextFlags_AlwaysInsertMode -> use ImGuiInputTextFlags_AlwaysOverwrite
+                           - ImDrawList::AddBezierCurve()         -> use ImDrawList::AddBezierCubic()
+                           - ImDrawList::PathBezierCurveTo()      -> use ImDrawList::PathBezierCubicCurveTo()
  - 2023/03/09 (1.89.4) - renamed PushAllowKeyboardFocus()/PopAllowKeyboardFocus() to PushTabStop()/PopTabStop(). Kept inline redirection functions (will obsolete).
  - 2023/03/09 (1.89.4) - tooltips: Added 'bool' return value to BeginTooltip() for API consistency. Please only submit contents and call EndTooltip() if BeginTooltip() returns true. In reality the function will _currently_ always return true, but further changes down the line may change this, best to clarify API sooner.
  - 2023/02/15 (1.89.4) - moved the optional "courtesy maths operators" implementation from imgui_internal.h in imgui.h.
@@ -1266,6 +1271,8 @@ ImGuiIO::ImGuiIO()
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigMemoryCompactTimer = 60.0f;
+    ConfigDebugBeginReturnValueOnce = false;
+    ConfigDebugBeginReturnValueLoop = false;
 
     // Platform Functions
     // Note: Initialize() will setup default clipboard/ime handlers.
@@ -4791,6 +4798,13 @@ void ImGui::NewFrame()
     Begin("Debug##Default");
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
+    // [DEBUG] When io.ConfigDebugBeginReturnValue is set, we make Begin()/BeginChild() return false at different level of the window-stack,
+    // allowing to validate correct Begin/End behavior in user code.
+    if (g.IO.ConfigDebugBeginReturnValueLoop)
+        g.DebugBeginReturnValueCullDepth = (g.DebugBeginReturnValueCullDepth == -1) ? 0 : ((g.DebugBeginReturnValueCullDepth + ((g.FrameCount % 4) == 0 ? 1 : 0)) % 10);
+    else
+        g.DebugBeginReturnValueCullDepth = -1;
+
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
 
@@ -7260,6 +7274,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             IM_ASSERT(window->Appearing == false); // Please report on GitHub if this triggers: https://github.com/ocornut/imgui/issues/4177
     }
 
+    // [DEBUG] io.ConfigDebugBeginReturnValue override return value to test Begin/End and BeginChild/EndChild behaviors.
+    // (The implicit fallback window is NOT automatically ended allowing it to always be able to receive commands without crashing)
+    if (!window->IsFallbackWindow && ((g.IO.ConfigDebugBeginReturnValueOnce && window_just_created) || (g.IO.ConfigDebugBeginReturnValueLoop && g.DebugBeginReturnValueCullDepth == g.CurrentWindowStack.Size)))
+    {
+        if (window->AutoFitFramesX > 0) { window->AutoFitFramesX++; }
+        if (window->AutoFitFramesY > 0) { window->AutoFitFramesY++; }
+        return false;
+    }
+
     return !window->SkipItems;
 }
 
@@ -8104,7 +8127,7 @@ void ImGui::SetItemDefaultFocus()
     NavUpdateAnyRequestFlag();
 
     // Scroll could be done in NavInitRequestApplyResult() via an opt-in flag (we however don't want regular init requests to scroll)
-    if (!IsItemVisible())
+    if (!window->ClipRect.Contains(g.LastItemData.Rect))
         ScrollToRectEx(window, g.LastItemData.Rect, ImGuiScrollFlags_None);
 }
 
@@ -9643,7 +9666,9 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     {
         if (g.CurrentWindowStack.Size > 1)
         {
+            ImGuiWindow* window = g.CurrentWindowStack.back().Window; // <-- This window was not Ended!
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you forget to call End/EndChild?");
+            IM_UNUSED(window);
             while (g.CurrentWindowStack.Size > 1)
                 End();
         }
@@ -10591,7 +10616,8 @@ void ImGui::EndTooltip()
 
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
-    BeginTooltipEx(ImGuiTooltipFlags_OverridePreviousTooltip, ImGuiWindowFlags_None);
+    if (!BeginTooltipEx(ImGuiTooltipFlags_OverridePreviousTooltip, ImGuiWindowFlags_None))
+        return;
     TextV(fmt, args);
     EndTooltip();
 }
@@ -18971,6 +18997,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 Unindent();
             }
         }
+
+        Checkbox("Debug Begin/BeginChild return value", &io.ConfigDebugBeginReturnValueLoop);
+        SameLine();
+        MetricsHelpMarker("Some calls to Begin()/BeginChild() will return false.\n\nWill cycle through window depths then repeat. Windows should be flickering while running.");
 
         TreePop();
     }
