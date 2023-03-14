@@ -1996,6 +1996,7 @@ struct ImGuiContext
     ImGuiTextIndex          DebugLogIndex;
     ImU8                    DebugLogClipperAutoDisableFrames;
     ImU8                    DebugLocateFrames;                  // For DebugLocateItemOnHover(). This is used together with DebugLocateId which is in a hot/cached spot above.
+    ImS8                    DebugBeginReturnValueCullDepth;     // Cycle between 0..9 then wrap around.
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
     ImU8                    DebugItemPickerMouseButton;
     ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
@@ -2169,6 +2170,7 @@ struct ImGuiContext
         DebugLocateId = 0;
         DebugLogClipperAutoDisableFrames = 0;
         DebugLocateFrames = 0;
+        DebugBeginReturnValueCullDepth = -1;
         DebugItemPickerActive = false;
         DebugItemPickerMouseButton = ImGuiMouseButton_Left;
         DebugItemPickerBreakId = 0;

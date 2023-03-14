@@ -1230,6 +1230,8 @@ ImGuiIO::ImGuiIO()
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigMemoryCompactTimer = 60.0f;
+    ConfigDebugBeginReturnValueOnce = false;
+    ConfigDebugBeginReturnValueLoop = false;
 
     // Platform Functions
     // Note: Initialize() will setup default clipboard/ime handlers.
@@ -4601,6 +4603,13 @@ void ImGui::NewFrame()
     Begin("Debug##Default");
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
+    // [DEBUG] When io.ConfigDebugBeginReturnValue is set, we make Begin()/BeginChild() return false at different level of the window-stack,
+    // allowing to validate correct Begin/End behavior in user code.
+    if (g.IO.ConfigDebugBeginReturnValueLoop)
+        g.DebugBeginReturnValueCullDepth = (g.DebugBeginReturnValueCullDepth == -1) ? 0 : ((g.DebugBeginReturnValueCullDepth + ((g.FrameCount % 4) == 0 ? 1 : 0)) % 10);
+    else
+        g.DebugBeginReturnValueCullDepth = -1;
+
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
 
@@ -6733,6 +6742,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
                 skip_items = true;
         window->SkipItems = skip_items;
+    }
+
+    // [DEBUG] io.ConfigDebugBeginReturnValue override return value to test Begin/End and BeginChild/EndChild behaviors.
+    // (The implicit fallback window is NOT automatically ended allowing it to always be able to receive commands without crashing)
+    if (!window->IsFallbackWindow && ((g.IO.ConfigDebugBeginReturnValueOnce && window_just_created) || (g.IO.ConfigDebugBeginReturnValueLoop && g.DebugBeginReturnValueCullDepth == g.CurrentWindowStack.Size)))
+    {
+        if (window->AutoFitFramesX > 0) { window->AutoFitFramesX++; }
+        if (window->AutoFitFramesY > 0) { window->AutoFitFramesY++; }
+        return false;
     }
 
     return !window->SkipItems;
@@ -8994,7 +9012,9 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     {
         if (g.CurrentWindowStack.Size > 1)
         {
+            ImGuiWindow* window = g.CurrentWindowStack.back().Window; // <-- This window was not Ended!
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you forget to call End/EndChild?");
+            IM_UNUSED(window);
             while (g.CurrentWindowStack.Size > 1)
                 End();
         }
@@ -13459,6 +13479,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 Unindent();
             }
         }
+
+        Checkbox("Debug Begin/BeginChild return value", &io.ConfigDebugBeginReturnValueLoop);
+        SameLine();
+        MetricsHelpMarker("Some calls to Begin()/BeginChild() will return false.\n\nWill cycle through window depths then repeat. Windows should be flickering while running.");
 
         TreePop();
     }

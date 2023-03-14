@@ -81,6 +81,8 @@ Other changes:
   before and can accept the same data type. (#6183).
 - Drag and Drop: Clear drag and drop state as soon as delivery is accepted in order to
   avoid inteferences. (#5817, #6183) [@DimaKoltun]
+- Debug Tools: Added io.ConfigDebugBeginReturnValueOnce / io.ConfigDebugBeginReturnValueLoop
+  options to simulate Begin/BeginChild returning false to facilitate debugging user behavior.
 - Backends: OpenGL3: Fixed restoration of a potentially deleted OpenGL program. If an active
   program was pending deletion, attempting to restore it would error. (#6220, #6224) [@Cyphall]
 - Backends: Win32: Use WM_NCMOUSEMOVE / WM_NCMOUSELEAVE to track mouse positions over
