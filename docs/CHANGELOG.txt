@@ -99,6 +99,19 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.5 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+Docking+Viewports Branch:
+
+- Backends: GLFW: Fix Emscripten erroneously enabling multi-viewport support, leading to assert. (#5683)
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.4 (Released 2023-03-14)
 -----------------------------------------------------------------------
 
