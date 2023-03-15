@@ -39,6 +39,7 @@ Breaking Changes:
 
 Other changes:
 
+- Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 
 
 -----------------------------------------------------------------------
