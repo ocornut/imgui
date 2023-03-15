@@ -2,13 +2,13 @@
 
 ## Index
 
-- [Getting Started & General Advices](#getting-started--general-advices)
+- [Getting Started & General Advice](#getting-started--general-advice)
 - [Issues vs Discussions](#issues-vs-discussions)
 - [How to open an Issue](#how-to-open-an-issue)
 - [How to open a Pull Request](#how-to-open-a-pull-request)
 - [Copyright / Contributor License Agreement](#copyright--contributor-license-agreement)
 
-## Getting Started & General Advices
+## Getting Started & General Advice
 
 - Article: [How To Ask Good Questions](https://bit.ly/3nwRnx1).
 - Please browse the [Wiki](https://github.com/ocornut/imgui/wiki) to find code snippets, links and other resources (e.g. [Useful extensions](https://github.com/ocornut/imgui/wiki/Useful-Extensions)).
