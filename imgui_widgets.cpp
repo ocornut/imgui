@@ -622,7 +622,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
             pressed = true;
             SetActiveID(id, window);
-            g.ActiveIdSource = ImGuiInputSource_Nav;
+            g.ActiveIdSource = g.NavInputSource;
             if (!(flags & ImGuiButtonFlags_NoNavFocus))
                 SetFocusID(id, window);
         }
@@ -660,7 +660,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if (!(flags & ImGuiButtonFlags_NoNavFocus))
                 g.NavDisableHighlight = true;
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
+        else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
         {
             // When activated using Nav, we hold on the ActiveID until activation button is released
             if (g.NavActivateDownId != id)
@@ -2245,7 +2245,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
         if (g.IO.KeyShift)
             adjust_delta *= 10.0f;
     }
-    else if (g.ActiveIdSource == ImGuiInputSource_Nav)
+    else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
     {
         const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
         const bool tweak_slow = IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakSlow : ImGuiKey_NavKeyboardTweakSlow);
@@ -2352,7 +2352,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
         // Those are the things we can do easily outside the DragBehaviorT<> template, saves code generation.
         if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
             ClearActiveID();
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
+        else if ((g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad) && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
     }
     if (g.ActiveId != id)
@@ -2821,7 +2821,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 set_new_value = true;
             }
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
+        else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
         {
             if (g.ActiveIdIsJustActivated)
             {

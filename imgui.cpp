@@ -3791,7 +3791,8 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = id;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavJustMovedToId == id) ? (ImGuiInputSource)ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavJustMovedToId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
+        IM_ASSERT(g.ActiveIdSource != ImGuiInputSource_None);
     }
 
     // Clear declaration of inputs claimed by the widget
@@ -5275,7 +5276,7 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
         FocusWindow(child_window);
         NavInitWindow(child_window, false);
         SetActiveID(id + 1, child_window); // Steal ActiveId with another arbitrary id so that key-press won't activate child item
-        g.ActiveIdSource = ImGuiInputSource_Nav;
+        g.ActiveIdSource = g.NavInputSource;
     }
     return ret;
 }
@@ -8638,7 +8639,7 @@ void ImGui::SetNextFrameWantCaptureMouse(bool want_capture_mouse)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 static const char* GetInputSourceName(ImGuiInputSource source)
 {
-    const char* input_source_names[] = { "None", "Mouse", "Keyboard", "Gamepad", "Nav", "Clipboard" };
+    const char* input_source_names[] = { "None", "Mouse", "Keyboard", "Gamepad", "Clipboard" };
     IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT && source >= 0 && source < ImGuiInputSource_COUNT);
     return input_source_names[source];
 }
@@ -10572,7 +10573,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
     if (g.LastItemData.ID == id)
         window->NavRectRel[nav_layer] = WindowRectAbsToRel(window, g.LastItemData.NavRect);
 
-    if (g.ActiveIdSource == ImGuiInputSource_Nav)
+    if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
         g.NavDisableMouseHover = true;
     else
         g.NavDisableHighlight = true;
