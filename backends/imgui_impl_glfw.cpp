@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-03-16: Inputs: Fixed key modifiers handling on secondary viewports (docking branch). Broken on 2023/01/04. (#6248, #6034)
 //  2023-03-14: Emscripten: Avoid using glfwGetError() and glfwGetGamepadState() which are not correctly implemented in Emscripten emulation. (#6240)
 //  2023-02-03: Emscripten: Registering custom low-level mouse wheel handler to get more accurate scrolling impulses on Emscripten. (#4019, #6096)
 //  2023-01-04: Inputs: Fixed mods state on Linux when using Alt-GR text input (e.g. German keyboard layout), could lead to broken text input. Revert a 2022/01/17 change were we resumed using mods provided by GLFW, turns out they were faulty.
@@ -268,14 +269,13 @@ static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
 
 // X11 does not include current pressed/released modifier key in 'mods' flags submitted by GLFW
 // See https://github.com/ocornut/imgui/issues/6034 and https://github.com/glfw/glfw/issues/1630
-static void ImGui_ImplGlfw_UpdateKeyModifiers()
+static void ImGui_ImplGlfw_UpdateKeyModifiers(GLFWwindow* window)
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
-    io.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(bd->Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(bd->Window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(bd->Window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(bd->Window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(bd->Window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
+    io.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
+    io.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
+    io.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
+    io.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
 }
 
 static bool ImGui_ImplGlfw_ShouldChainCallback(GLFWwindow* window)
@@ -290,7 +290,7 @@ void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int acti
     if (bd->PrevUserCallbackMousebutton != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackMousebutton(window, button, action, mods);
 
-    ImGui_ImplGlfw_UpdateKeyModifiers();
+    ImGui_ImplGlfw_UpdateKeyModifiers(window);
 
     ImGuiIO& io = ImGui::GetIO();
     if (button >= 0 && button < ImGuiMouseButton_COUNT)
@@ -354,7 +354,7 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, i
     if (action != GLFW_PRESS && action != GLFW_RELEASE)
         return;
 
-    ImGui_ImplGlfw_UpdateKeyModifiers();
+    ImGui_ImplGlfw_UpdateKeyModifiers(window);
 
     keycode = ImGui_ImplGlfw_TranslateUntranslatedKey(keycode, scancode);
 
