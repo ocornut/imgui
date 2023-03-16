@@ -3450,7 +3450,12 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     flags |= ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoMarkEdited; // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
 
     bool value_changed = false;
-    if (p_step != NULL)
+    if (p_step == NULL)
+    {
+        if (InputText(label, buf, IM_ARRAYSIZE(buf), flags))
+            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format);
+    }
+    else
     {
         const float button_size = GetFrameHeight();
 
@@ -3492,11 +3497,6 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
 
         PopID();
         EndGroup();
-    }
-    else
-    {
-        if (InputText(label, buf, IM_ARRAYSIZE(buf), flags))
-            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format);
     }
     if (value_changed)
         MarkItemEdited(g.LastItemData.ID);
@@ -4104,7 +4104,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     float scroll_y = is_multiline ? draw_window->Scroll.y : FLT_MAX;
 
-    const bool init_changed_specs = (state != NULL && state->Stb.single_line != !is_multiline);
+    const bool init_changed_specs = (state != NULL && state->Stb.single_line != !is_multiline); // state != NULL means its our state.
     const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_tabbing);
     const bool init_state = (init_make_active || user_scroll_active);
     if ((init_state && g.ActiveId != id) || init_changed_specs)
