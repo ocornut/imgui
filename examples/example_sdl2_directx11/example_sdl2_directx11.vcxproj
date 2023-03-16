@@ -173,6 +173,7 @@
     <ClInclude Include="..\..\backends\imgui_impl_dx11.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\misc\debuggers\imgui.natstepfilter" />
     <None Include="..\..\misc\debuggers\imgui.natvis" />
     <None Include="..\README.txt" />
   </ItemGroup>

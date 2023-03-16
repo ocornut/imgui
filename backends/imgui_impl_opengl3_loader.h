@@ -118,7 +118,7 @@ extern "C" {
 ** included as <GL/glcorearb.h>.
 **
 ** glcorearb.h includes only APIs in the latest OpenGL core profile
-** implementation together with APIs in newer ARB extensions which 
+** implementation together with APIs in newer ARB extensions which
 ** can be supported by the core profile. It does not, and never will
 ** include functionality removed from the core profile, such as
 ** fixed-function vertex and fragment processing.
@@ -692,8 +692,8 @@ static int parse_version(void)
     if (version.major == 0 && version.minor == 0)
     {
         // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
-        const char* gl_version = (const char*)glGetString(GL_VERSION);
-        sscanf(gl_version, "%d.%d", &version.major, &version.minor);
+        if (const char* gl_version = (const char*)glGetString(GL_VERSION))
+            sscanf(gl_version, "%d.%d", &version.major, &version.minor);
     }
     if (version.major < 2)
         return GL3W_ERROR_OPENGL_VERSION;

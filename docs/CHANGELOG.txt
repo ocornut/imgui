@@ -99,15 +99,21 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.5 (In Progress)
+ VERSION 1.89.5 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
-Other Changes:
+Other changes:
+
+- Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
+- Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
+  now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
+- Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
 
 Docking+Viewports Branch:
 
+- Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Backends: GLFW: Fix Emscripten erroneously enabling multi-viewport support, leading to assert. (#5683)
 
 

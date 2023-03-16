@@ -1,4 +1,4 @@
-// dear imgui, v1.89.4
+// dear imgui, v1.89.5 WIP
 // (demo code)
 
 // Help:
@@ -7540,7 +7540,7 @@ static void ShowExampleAppFullscreen(bool* p_open)
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
 
     // We demonstrate using the full viewport area or the work area (without menu-bars, task-bars etc.)
-    // Based on your use case you may want one of the other.
+    // Based on your use case you may want one or the other.
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
     ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
