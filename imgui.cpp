@@ -1429,7 +1429,10 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
 
     // Filter duplicate (in particular: key mods and gamepad analog values are commonly spammed)
     const ImGuiInputEvent* latest_event = FindLatestInputEvent(g, ImGuiInputEventType_Key, (int)key);
+    ImGuiContext* prev_ctx = GImGui;
+    ImGui::SetCurrentContext(Ctx);
     const ImGuiKeyData* key_data = ImGui::GetKeyData(key);
+    ImGui::SetCurrentContext(prev_ctx);
     const bool latest_key_down = latest_event ? latest_event->Key.Down : key_data->Down;
     const float latest_key_analog = latest_event ? latest_event->Key.AnalogValue : key_data->AnalogValue;
     if (latest_key_down == down && latest_key_analog == analog_value)
