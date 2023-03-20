@@ -44,6 +44,8 @@ Other changes:
   retaining underlying data. While we don't really want to encourage user not retaining
   underlying data, in the absence of a "late commit" behavior/flag we understand it may
   be desirable to take advantage of this trick. (#4714)
+- Drag, Sliders: Fixed parsing of text input when '+' or '#' format flags are used
+  in the format string. (#6259) [@idbrii]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
