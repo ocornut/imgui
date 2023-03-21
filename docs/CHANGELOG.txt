@@ -106,6 +106,15 @@ Breaking Changes:
 
 Other changes:
 
+- InputText: Fixed a tricky edge case, ensuring value is always written back on the
+  frame where IsItemDeactivated() returns true, in order to allow usage without user
+  retaining underlying data. While we don't really want to encourage user not retaining
+  underlying data, in the absence of a "late commit" behavior/flag we understand it may
+  be desirable to take advantage of this trick. (#4714)
+- Drag, Sliders: Fixed parsing of text input when '+' or '#' format flags are used
+  in the format string. (#6259) [@idbrii]
+- IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly
+  advertised as supported in 1.89.4). (#6199, #6256, #5856) [@cfillion]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
@@ -4497,6 +4506,663 @@ Other Changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.38 (2015-04-20)
+-----------------------------------------------------------------------
 
-For older version, see https://github.com/ocornut/imgui/releases
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.38
+
+Breaking Changes:
+
+- Renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
+- Renamed ImDrawList::AddArc() to ImDrawList::AddArcFast().
+
+Other Changes:
+
+- Added DragFloat(), DragInt() widget, click and drag to adjust value with given step.
+  Hold SHIFT/ALT to speed-up/slow-down. Double-click or CTRL+click to input text.
+  Passing min >= max makes the widget unbounded.
+- Added DragFloat2(), DragFloat3(), DragFloat4(), DragInt2(), DragInt3(), DragInt4() helper variants.
+- Added ShowMetricsWindow() which is mainly useful to debug ImGui internals. Added IO.MetricsRenderVertices counter.
+- Added ResetMouseDragDelta() for iterative dragging operations.
+- Added ImFontAtlas::AddFontFromCompressedTTF() helper + binary_to_compressed_c.cpp tool to compress a file and create a .c array from it.
+- Added PushId() GetId() variants that takes string range to avoid user making unnecessary copies.
+- Added IsItemVisible().
+- Fixed IsRectClipped() incorrectly returning false when log is enabled.
+- Slider: visual fix in the unlikely that style.GrabMinSize is larger than a slider.
+- SliderFloat: removed support for unbound slider (using FLT_MAX), caused various inconsistency. Use InputFloat()/DragFloat().
+- ColorEdit4: hide components prefix if there's no space for them.
+- Combo: adding frame padding inside the combo box.
+- Columns: mouse dragging uses absolute mouse coordinates.Fixed dragging left-most column of an auto-resizable window. #125
+- Selectable: render highlight into AutoFitPadding region but do not extend it, fixing visual gap.
+- Focus: Allow SetWindowFocus(NULL) to remove focus.
+- Focus: Clicking on void (outside an ImGui windows) loses keyboard-focus so application can use TAB.
+- Popup: Fixed hovering over a popup's child (popups disable hovering on other windows but not their childs) #197
+- Fixed active widget not releasing its active state while being clipped.
+- Fixed user-facing version of IsItemHovered() ignoring overlapping windows.
+- Fixed label vertical alignment for InputInt2(), InputInt3(), InputInt4().
+- Fixed new collapsed auto-resizing window with saved .ini settings not calculating their initial width #176
+- Fixed Begin() returning true on collapsed windows that had loaded settings #176
+- Fixed style.DisplaySafeAreaPadding handling from being applied on window prior to them auto-fitting.
+- ShowTestWindow(): added examples for DragFloat, DragInt and only custom label embedded in format strings.
+- ShowTestWindow(): fixed "manipulating titles" example not doing the right thing, broken in ff35d24
+- Examples: OpenGL/GLFW: Fixed modifier key state setting in GLFW callbacks.
+- Examples: OpenGL/GLFW: Added glBindTexture(0) in OpenGL fixed pipeline examples. Save restore current program and texture in the OpenGL3 example.
+- Examples: DirectX11: Removed unnecessary vertices conversion and CUSTOMVERTEX types.
+- Comments, fixes, tweaks.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.37 (2015-03-26)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.37
+
+Other Changes:
+
+- Added a more convenient three parameters version of Begin() which covers the common uses better.
+- Added mouse cursor types handling (resize, move, text input cursors, etc.) that user can query with GetMouseCursor(). Added demo and instructions in ShowTestWindow().
+- Added embedded mouse cursor data for MouseDrawCursor software cursor rendering, for consoles/tablets/etc. (#155).
+- Added first version of BeginPopup/EndPopup() helper API to create popup menus. Popups automatically lock their position to the mouse cursor when first appearing. They close  automatically when clicking outside, and inhibit hovering items from other windows when active (to allow for clicking outside). (#126)
+- Added thickness parameter to ImDrawList::AddLine().
+- Added ImDrawList::PushClipRectFullScreen() helper.
+- Added style.DisplaySafeAreaPadding which was previously hard-coded (useful if you can't see the edges of your display, e.g. TV screens).
+- Added CalcItemRectClosestPoint() helper.
+- Added GetMouseDragDelta(), IsMouseDragging() helpers, given a mouse button and an optional "unlock" threshold. Added io.MouseDragThreshold setting. (#167)
+- IsItemHovered() return false if another widget is active, aka we can't use what we are hovering now.
+- Added IsItemHoveredRect() if old behavior of IsItemHovered() is needed (e.g. for implementing the drop side of a drag'n drop operation).
+- IsItemhovered() include space taken by label and behave consistently for all widgets (#145)
+- Auto-filling child window feed their content size to parent (#170)
+- InputText() removed the odd ~ characters when clipping.
+- InputText() update its width in case of resize initiated programmatically while the widget is active.
+- InputText() last active preserve scrolling position. Reset scroll if widget size becomes bigger than contents.
+- Selectable(): not specifying a width defaults to using max of label width and remaining width.
+- Selectable(const char*, bool) version has bool defaulting to false.
+- Selectable(): fixed misusage of GetContentRegionMax().x leaking into auto-fitting.
+- Windows starting Collapsed runs initial auto-fit to retrieve a width for their title bar (#175)
+- Fixed new window from having an incorrect content size on their first frame, if queried by user. Fixed SetWindowPos/SetNextWindowPos having a side-effect size computation (#175)
+- InputFloat(): fixed label alignment if total widget width forcefully bigger than space available.
+- Auto contents size aware of enforced vertical scrollbar if window is larger than display size.
+- Fixed new windows auto-fitting bigger than their .ini saved size. This was a bug but it may be a desirable effect sometimes, may reconsider it.
+- Fixed negative clipping rectangle when collapsing windows that could affect manual submission to ImDrawList and end-user rendering function if unhandled (#177)
+- Fixed bounding measurement of empty groups (fix #162)
+- Fixed assignment order in Begin() making auto-fit size effectively lag by one frame. Also disabling "clamp into view" while windows are auto-fitting so that auto-fitting window in corners don't get pushed away.
+- Fixed MouseClickedPos not updated on double-click update (#167)
+- Fixed MouseDrawCursor feature submitting an empty trailing command in the draw list. Fixed unmerged draw calls for software mouse cursor.
+- Fixed double-clicking on resize grip keeping the grip active if mouse button is kept held.
+- Bounding box tests exclude higher bound, so touching items (zero spacing) don't report double hover when cursor is on edge.
+- Setting io.LogFilename to NULL disable default LogToFile() (part of #175)
+- Tweak stb_textedit integration to be lenient if another piece of code are leaking their STB_TEXTEDIT definitions/symbols.
+- Shutdown() freeing a few extra vectors so they don't have to freed by destruction (#169)
+- Examples: OpenGL2/3 examples automatically hide the OS mouse cursor if software cursor rendering is used.
+- ShowTestWindow: Added Widgets Alignment demo under Layout section
+- ShowTestWindow: Added simple dragging widget example.
+- ShowTestWindow: Graph has checkbox under the label, also demo using BeginGroup/EndGroup().
+- ShowTestWindow: Using SetNextWindowSize() in examples to encourage its use.
+- Fixes, tweaks, comments.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.36 (2015-03-18)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.36
+
+Other Changes:
+
+- Added ImGui::GetVersion(), IMGUI_VERSION (#127)
+- Added BeginGroup()/EndGroup() layout tools (#160).
+- Added Indent() / Unindent().
+- Added InputInt2(), InputInt3(), InputInt4() for completeness.
+- Added GetItemRectSize().
+- Added VSliderFloat(), VSliderInt(), vertical sliders.
+- Added IsRootWindowFocused(), IsRootWindowOrAnyChildFocused().
+- Added io.KeyAlt + support in examples apps, in prevision for future usage of Alt modifier (was missing).
+- Added ImGuiStyleVar_GrabMinSize enum value for PushStyleVar().
+- Various fixes related to vertical alignment of text after widget of varied sizes. Allow for multiple blocks of multiple lines text on the same "line". Added demos.
+- Explicit size passed to Plot*(), Button() includes the frame padding.
+- Style: Changed default Border and Column border colors to be most subtle.
+- Renamed style.TreeNodeSpacing to style.IndentSpacing, ImGuiStyleVar_TreeNodeSpacing to ImGuiStyleVar_IndentSpacing.
+- Renamed GetWindowIsFocused() to IsWindowFocused(), kept inline redirection with old name (will obsolete).
+- Renamed GetItemRectMin()/GetItemRectMax() to GetItemRectMin()/GetItemRectMax(), kept inline redirection with old name (will obsolete).
+- Sliders: Fast-path when power=1.0f, also makes code easier to read.
+- Sliders: Fixed parsing of decimal precision back from format string when using %%.
+- Sliders: Fixed hovering bounding test excluding padding between outer frame and grab (there was a few pixels dead-zone).
+- Separator() logs itself as text when passing through text log.
+- Optimisation: TreeNodeV() early out if SkipItems is set without formatting.
+- Moved various static buffers into state. Increase the formatted string buffer from 1K to 3K.
+- Examples: Example console keeps focus on input box at all times.
+- Examples: Updated to GLFW 3.1. Moved to examples/libs/ folder.
+- Examples: Added 64-bit projects for MSVC.
+- Examples: Increase warning level from /W3 to /W4 for MSVC.
+- Examples: DirectX9: fixed duplicate creation of vertex buffer.
+- Renamed internal type ImGuiAabb to ImRect. Changed mentions of 'box' or 'aabb' to say 'rect'.
+- Tweaks, minor fixes and comments.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.35 (2015-03-09)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.35
+
+Other Changes:
+
+- Examples: refactored all examples application to make it easier to isolate and grab the code you need for OpenGL 2/3, DirectX 9/11, and toward a more sensible format for samples.
+- Scrollbar grab have a minimum size (style.GrabSizeMin), always visible even with huge scroll amount. (#150).
+- Scrollbar: Clicking inside the grab box doesn't modify scroll value. Subsequent movement always relative.
+- Added "###" labelling syntax to pass a label that isn't part of the hashed ID (#107), e.g. ("%d###static_id",rand()).
+- Added GetColumnIndex(), GetColumnsCount() (#154)
+- Added GetScrollPosY(), GetScrollMaxY().
+- Fixed the Chinese/Japanese glyph ranges; include missing punctuations (#156)
+- Fixed Combo() and ListBox() labels not included in declared size, for use with SameLine(), etc. (fix #149, #151).
+- Fixed ListBoxHeader() incorrect handling of SkipItems early out when window is collapsed.
+- Fixed using IsItemHovered() after EndChild() (#151)
+- Fixed malformed UTF-8 decoding errors leading to infinite loops (#158)
+- InputText() handles buffer limit correctly for multi-byte UTF-8 characters, won't insert an incomplete UTF-8 character when reaching buffer limit (fix #158)
+- Handle double-width space (0x3000) in various places the same as single-width spaces, for Chinese/Japanese users.
+- Collapse triangle uses text color (not border color).
+- Fixed font fallback glyph width.
+- Renamed style.ScrollBarWidth to style.ScrollbarWidth to be consistent with other casing.
+- Windows: setup a default handler for ImeSetInputScreenPosFn so the IME dialog (for Japanese/Chinese, etc.) is positioned correctly as you input text.
+- Windows: default clipboard handlers for Windows handle UTF-8.
+- Examples: Fixed DirectX 9/11 examples applications handling of Microsoft IME.
+- Examples: Allow DirectX 9/11 examples applications to resize the window.
+- ShowTestWindow: Fixed "undo" button of custom rendering applet.
+- ShowTestWindow: Added "Manipulating Window Title" example.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.34 (2015-03-02)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.34
+
+Other Changes:
+
+- Added Bullet() helper - equivalent to BulletText(""), SameLine().
+- Added SetWindowFocus(), SetWindowFocus(const char*), SetNextWindowFocus() (#146)
+- Added SetWindowPos(), SetWindowSize(), SetWindowCollaposed() given a window name.
+- Added SetNextTreeNodeOpened() with optional condition flag in replacement of OpenNextNode() and consistent with other API.
+- Renamed ImGuiSetCondition_* to ImGuiSetCond_* and ImGuiCondition_FirstUseThisSession to ImGuiCond_Once.
+- Added missing definition for ImGui::GetWindowCollapsed().
+- Fixed GetGlyphRangesJapanese() actually missing katakana ranges and a few useful extensions.
+- Fixed clicking on a widget in a child window not focusing the parent window (#147).
+- Fixed clicking on empty space of child window not setting keyboard focus for the child window (#147).
+- Fixed IsItemHovered() behaving differently on Combo() (#145)
+- Fixed ColumnOffsets storage not honoring SetStateStorage() (not very useful but consistent).
+- Examples: Removed dependency on Glew for OpenGL examples. Removed Glew binaries for Windows.
+- Examples: Fixed link warning for OpenGL windows examples.
+- Comments, tweaks.
+
+-----------------------------------------------------------------------
+ VERSION 1.33b (2015-02-23)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.33b
+
+Other Changes:
+
+- Fixed resizing columns.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.33 (2015-02-22)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.33
+
+Other Changes:
+
+- InputText: having a InputText widget active doesn't steal mouse inputs from clicking on a button before losing focus (relate to #134)
+- InputText: cursor/selection/undo stack persist when using other widgets and getting back to same (#134).
+- InputText: fix effective buffer size being smaller than necessary by 1 byte (so if you give 3 bytes you can input 2 ascii chars + zero terminator, which is correct).
+- Added IsAnyItemActive().
+- Child window explicitly inherit collapse state from parent (so if user keeps submitting items even thought Begin has returned 'false' the child items will be clipped faster).
+- BeginChild() return a bool the same way Begin() does. if true you can skip submitting content.
+- Removed extraneous (1,1) padding on child window (pointed out in #125)
+- Columns: doesn't bail out when SkipItems is set (fix #136)
+- Columns: Separator() within column correctly vertical offset all cells (pointed out in #125)
+- GetColumnOffset() / SetColumnOffset() handles padding values more correctly so matching columns can be lined up between a parent and a child window (cf. #125)
+- Fix ImFont::BuildLookupTable() potential dangling pointer dereference (fix #131)
+- Fix hovering of child window extending past their parent not taking account of parent clipping rectangle (fix #137)
+- Sliders: value text is clipped inside the frame when resizing sliders to be small.
+- ImGuITextFilter::Draw() use regular width call rather than computing its own arbitrary width.
+- ImGuiTextFilter: can take a default filter string during construction.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.32 (2015-02-11)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.32
+
+Other Changes:
+
+- Added Selectable() building block for various list boxes, combo boxes, etc.
+- Added ListBox() (#129).
+- Added ListBoxHeader(), ListBoxFooter() for customized list traversal and creating multi-selection boxes.
+- Fixed title bar text clipping issue (fix #128).
+- InputText: added ImGuiInputTextFlags_CallbackCharFilter system for filtering/replacement (#130). Callback now passed an "EventFlag" parameter.
+- InputText: Added ImGuiInputTextFlags_CharsUppercase and ImGuiInputTextFlags_CharsNoBlank stock filters.
+- PushItemWidth() can take negative value to right-align items.
+- Optimisation: Columns offsets cached to avoid unnecessary binary search.
+- Optimisation: Optimized CalcTextSize() function by about 25% (they are often the bottleneck when submitting thousands of clipped items).
+- Added ImGuiCol_ChildWindowBg, ImGuiStyleVar_ChildWindowRounding for completeness and flexibility.
+- Added BeginChild() variant that takes an ImGuiID.
+- Tweak default ImGuiCol_HeaderActive color to be less bright.
+- Calculate framerate for the user (IO.Framerate), as a purely luxurious feature and to reduce sample code size a little.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.31 (2015-02-08)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.31
+
+Other Changes:
+
+- Added ImGuiWindowFlags_NoCollapse flag.
+- Added a way to replace the internal state pointer so that we can optionally share it between modules (e.g. multiple DLLs).
+- Added tint_col parameter to ImageButton().
+- Added CalcListClipping() helper to perform faster/coarse clipping on user side (when manipulating lists with thousands of items).
+- Added GetCursorPosX() / GetCursorPosY() shortcuts.
+- Renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing().
+- Combo box always appears above other child windows of a same parent.
+- Combo/Label: label is properly clipped inside the frame (#23).
+- Added cpu-side text clipping functions which are used in some instances to avoid extra draw calls.
+- InputText: Filtering private Unicode range 0xE000-0xF8FF.
+- Fixed holding button over scrollbar creating a small feedback loop with calculation of contents size.
+- Calling SetCursorPos() automatically extends the contents size.
+- Track ownership of mouse clicks. Avoid requesting IO.WantCaptureMouse if initial click was outside of ImGui.
+- Removed the dependency on realloc().
+- Other fixes, tweaks and comments.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.30 (2015-02-01)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.30
+
+Breaking Changes:
+
+- Big update! Initialisation had to be changed. You don't need to load PNG data anymore. The new system gives you uncompressed texture data.
+  - This sequence:
+      const void* png_data;
+      unsigned int png_size;
+      ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
+      // <Copy to GPU>
+  - Became:
+      unsigned char* pixels;
+      int width, height;
+      // io.Fonts->AddFontFromFileTTF("myfontfile.ttf", 24.0f);  // Optionally load another font
+      io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+      // <Copy to GPU>
+      io.Fonts->TexID = (your_texture_identifier);
+  - PixelCenterOffset has been removed and isn't a necessary setting anymore. Offset your projection matrix by 0.5 if you have rendering problems.
+
+Other Changes:
+
+- Loading TTF files with stb_truetype.h.
+- We still embed a compressed pixel-perfect TTF version of ProggyClean for convenience.
+- Runtime font rendering is a little faster than previously.
+- You can load multiple fonts with multiple size inside the font atlas. Rendering with multiple fonts are still merged into a single draw call whenever possible.
+- The system handles UTF-8 and provide ranges to easily load e.g. characters for Japanese display.
+- Added PushFont() / PopFont().
+- Added Image() and ImageButton() to display your own texture data.
+- Added callback system in command-list. This can be used if you want to do your own rendering (e.g. render a 3D scene) inside ImGui widgets.
+- Added IsItemActive() to tell if last widget is being held / modified (as opposed to just being hovered). Useful for custom dragging behaviors.
+- Style: Added FrameRounding setting for a more rounded look (default to 0 for now).
+- Window: Fixed using multiple Begin/End pair on the same wnidow.
+- Window: Fixed style.WindowMinSize not being honored properly.
+- Window: Added SetCursorScreenPos() helper (WindowPos+CursorPos = ScreenPos).
+- ColorEdit3: clicking on color square change the edition. The toggle button is hidden by default.
+- Clipboard: Fixed logging to clipboard on architectures where va_list are passed by reference to vsnprintf.
+- Clipboard: Improve memory reserve policy for Clipboard / ImGuiTextBuffer.
+- Tooltip: Always auto-resize.
+- Tooltip: Fixed TooltigBg color not being honored properly.
+- Tooltip: Allow SetNextWindowPos() to be used on tooltips.
+- Added io.DisplayVisibleMin / io.DisplayVisibleMax to ease integration of virtual / scrolling display.
+- Added Set/GetVoidPtr in ImGuiStorage.
+- Added ColorConvertHSVtoRGB, ColorConvertRGBtoHSV, ColorConvertFloat4ToU32 helpers.
+- Added ImColor() inline helper to easily convert colors to packed 4x1 byte or 4x1 float formats.
+- Added io.MouseDrawCursor option to draw a mouse cursor for now (on systems that don't have one)
+- Examples: Added custom drawing app example for using ImDrawList api.
+- Lots of others fixes, tweaks and comments!
+
+
+-----------------------------------------------------------------------
+ VERSION 1.20 (2015-01-07)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.20
+
+- Fixed InputInt() InputFloat() label not declaring their width, breaking usage of SameLine().
+- Fixed hovering of combo boxes that extend beyond the parent window limits.
+- Fixed text input of Unicode character in the 128-255 range.
+- Fixed clipboard pasting into an InputText box not filtering the characters according to contents semantic.
+- Dragging outside area of a widget while it is active doesn't trigger hover on other widgets.
+- Activating widget bring parent window to front if not already.
+- Checkbox and Radio buttons activate on click-release to be consistent with other widgets and most UI.
+- InputText() nows consume input characters immediately so they cannot be reused if ImGui::Update is called again with a call to ImGui::Render(). (fixes #105)
+- Examples: Console: added support for History callbacks + some cleanup.
+- Various small optimisations.
+- Cleanup and other fixes.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.19 (2014-12-30)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.19
+
+- Tightening default style a little.
+- Added ImGuiStyleVar_WindowRounding enum for PushStyleVar() API.
+- Added SliderInt2(), SliderInt3(), SliderInt4() for consistency.
+- Widgets more consistently handle empty labels (starting with ## mark) for their size calculation.
+- Fixed crashing with zero sized frame-buffer.
+- Fixed ImGui::Combo() not registering its size properly when clipped out of screen.
+- Renamed second parameter to Begin() to 'bool* p_opened' to be a little more self-explanatory. Added more comments on the use of Begin().
+- Logging: Added LogText() to pass text straight to the log output (tty/clipboard/file) without rendering it.
+- Logging: Added LogFinish() to stop logging at an arbitrary point.
+- Logging: Log depth padding relative to start depth.
+- Logging: Tree nodes and headers looking better when logged to text.
+- Logging: Log outputs \r\n under Windows to play it nicely with \n unaware tools such as Notepad.
+- Style editor: added a button to output colors to clipboard/tty.
+- OpenGL3 example: fix growing of VBO.
+- Cleanup and other minor fixes.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.18 (2014-12-11)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.18
+
+- Added ImGuiWindowFlags_NoScrollWithMouse, disable mouse wheel scrolling on a window.
+- Added ImGuiWindowFlags_NoSavedSettings, disable loading/saving window state to .ini file.
+- Added SetNextWindowPos(), SetNextWindowSize(), SetNextWindowCollapsed() API along with SetWindowPos(), SetWindowSize(), SetWindowCollapsed(). All functions include an optional second parameter to easily set current value vs session default value vs persistent default value.
+- Removed rarely useful SetNewWindowDefaultPos() in favor of new API.
+- Fixed hovering of lower-right resize grip when it is above a child window.
+- Fixed InputInt() writing to output when it doesn't need to.
+- Added IMGUI_INCLUDE_IMGUI_USER_H define to include user file at the bottom of imgui.h without modifying the vanilla distribution.
+- ImGuiStorage helper can store float + added helpers to get pointer to stored data.
+- Setup Travis CI integration. Builds the OpenGL examples on Linux with GCC and Clang.
+- Examples: Added a "Fixed overlay" example in ShowTestWindow().
+- Examples: Re-added OpenGL 3 programmable-pipeline example (along with the existing fixed pipeline example).
+- Examples: OpenGL examples can now resize the application window.
+- Other minor fixes and comments.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.17 (2014-12-03)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.17
+
+- Added ImGuiWindowFlags_AlwaysAutoResize + example app.
+- Calling ImGui::SetWindowSize(0,0) force an autofit without zero-sizing first.
+- ImGui::InputText() support for completion/history/custom callback + added fancy completion example in the console demo app.
+- Not word-wrapping on apostrophes.
+- Increased visibility of check box and radio button with smaller size.
+- Smooth mouse scrolling on OSX (uses floating point scroll/wheel input).
+- New version of IMGUI_ONCE_UPON_A_FRAME helper macro that works with all compilers.
+- Moved IO.Font*** options to inside the IO.Font-> structure.. Added IO.FontGlobalScale setting (in addition to Font->Scale per individual font).
+- Fixed more Clang -Weverything warnings.
+- Examples: Added DirectX11 example application.
+- Examples: Created single .sln solution for all example projects.
+- Examples: Fixed DirectX9 example window initially showing an hourglass cursor.
+- Examples: Removed Microsoft IME handler in examples, too niche/confusing. Moved equivalent code to imgui.cpp instruction block.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.16b (2014-11-21)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.16b
+
+- Fix broken PopStyleVar() crashing.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.16 (2014-11-21)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.16
+
+- General fixing of Columns API to allow filling a cell with multiple widgets before switching to the next column.
+- Added documentation INDEX to top of imgui.cpp.
+- Fixed unaligned memory access for Emscripten compatibility.
+- Various pedantic warning fixes (now testing with Clang).
+- Added extra asserts to catch incorrect usage.
+- PushStyleColor() / PushStyleVar() can be used outside the scope of a window (namely to change variables that are used within the Begin() call).
+- PushTextWrapPos() defaults to 0.0 (right-end of current drawing region).
+- Fixed compatibility with std::vector if user decide to #define ImVector.
+- MouseWheel input is now normalized.
+- Added IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT compile-time option to redefine the vertex layout.
+- Style editor: colors listed inside a scrolling region.
+- Examples: tweaks and fixes.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.15 (2014-11-07)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.15
+
+- Renamed IsHovered() to IsItemHovered().
+- Added word-wrapping API: TextWrapped(), PushTextWrapPos(), PopTextWrapPos().
+- Added IsItemFocused() to tell if last widget is being focused for keyboard input.
+- Added overloads of ImGui::PlotLines() and ImGui::PlotHistogram() taking a function pointer to get values.
+- Added SetWindowSize().
+- Added GetContentRegionMax() supporting columns. Some bug fixes with using columns.
+- Added PushStyleVar(),PopStyleVar() helpers to modify style from user code.
+- Added dummy IMGUI_API definition in front of all entry-points for silly DLL action.
+- Allowing BeginChild() allows to specify negative sizes to specify "use remaining minus xx".
+- Windows with the NoResize flag can still use auto-fitting.
+- Added a simple example console into the demo window.
+- Comments and fixes.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.14 (2014-10-25)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.14
+
+- Comments and fixes.
+- Added SetKeyboardFocusHere() to set input focus from code.
+- Added GetWindowFont(), GetWindowFontSize() for users of the low-level ImDrawList API.
+- Added a UserData void *pointer so that the callback functions can access user state "Just in case a project has adverse reactions to adding globals or statics in their own code."
+- Renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL
+
+
+----------------------------------------------------------------------
+ VERSION 1.13 (2014-09-30)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.13
+
+- Added support for UTF-8 for international text display and text edition/input (if the font supports it).
+- Added sample "M+ font" by Coji Morishita in extra_fonts/ to display Japanese text.
+- Added IO.ImeSetInputScreenPosFn callback for positioning OS IME input.
+- Added IO.FontFallbackGlyph (default to '?').
+- OpenGL example: added commented code to load custom font from file-system.
+- OpenGL example: shared makefile for Linux and MacOSX.
+
+
+----------------------------------------------------------------------
+ VERSION 1.12 (2014-09-24)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.12
+
+- Added IO.FontBaseScale value for easy scaling of all windows.
+- Added IsMouseHoveringWindow(), IsMouseHoveringAnyWindow(), IsPosHoveringAnyWindow() helpers.
+- Added va_list variations of all functions taking ellipsis (...) parameters.
+- Added section in documentation to explicitly document cases of API breaking changes (e.g. renamed IM_MALLOC below).
+- Moved IM_MALLOC / IM_FREE defines. to IO structure members that can be set at runtime (also allowing precompiled ImGui to cover more use cases).
+- Fixed OpenGL samples for Retina display.
+- Comments and minor fixes.
+
+
+----------------------------------------------------------------------
+ VERSION 1.11 (2014-09-10)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.11
+
+- Added more comments in the code.
+- Made radio buttons render ascii when logged into tty/file/clipboard.
+- Added ImGuiInputTextFlags_EnterReturnsTrue flag to InputText() and variants.
+- Added #define IMGUI_INCLUDE_IMGUI_USER_CPP to optionally include imgui_user.cpp from the end of imgui.cpp
+- Fixed file-descriptor leak if ImBitmapFont::LoadFromFile() calls to fseek/ftell fails.
+
+
+----------------------------------------------------------------------
+ VERSION 1.10 (2014-08-31)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.10
+
+- User can override memory allocators by #define-ing IM_MALLOC, IM_FREE, IM_REALLOC,
+- Added SetCursorPosX(), SetCursorPosY() shortcuts.
+- Checkbox() returns true when pressed.
+- Added optional external fonts data in extra_fonts/ for reference.
+- Removed the need to setup IO.FontHeight when using a custom font.
+- Added comments on external fonts usage.
+
+
+----------------------------------------------------------------------
+ VERSION 1.09 (2014-08-28)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.09
+
+Breaking Changes:
+
+- The behaviour of PixelCenterOffset changed! You may need to change your value if you had set it to non-default in your code and/or offset your projection matrix by 0.5 pixels. It is likely that the default PixelCenterOffset value of 0.0 is now suitable unless your rendering uses some form of multisampling.
+
+Other Changes:
+
+- Various minor render tweaks and fixes. Better support for renderers using multisampling.
+- Moved IMGUI_FONT_TEX_UV_FOR_WHITE #define to a variable in the IO structure so font can be changed at runtime.
+- Minor other fixes, tweaks, comments.
+
+
+----------------------------------------------------------------------
+ VERSION 1.08 (2014-08-25)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.09
+
+- Fixed ImGuiTextFilter trimming of leading/trailing blanks.
+- Fixed file descriptor leak on LoadSettings() failure.
+- Fix type conversion compiler warnings.
+- Added basic sizes edition in the style editor.
+- Added CalcTextSize(), GetCursorScreenPos() functions.
+- Disable client state in OpenGL example after rendering.
+- Converted all Tabs to Spaces in sources.
+
+
+----------------------------------------------------------------------
+ VERSION 1.07 (2014-08-18)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.07
+
+- Added InputFloat4(), SliderFloat4() helpers.
+- Added global Alpha in ImGuiStyle structure. When Alpha=0.0, ImGui skips most of logic and all rendering processing.
+- Fix clipping of title bar text.
+- Fix to allow the user to call NewFrame() multiple times without calling Render().
+- Reduce inner window clipping to take account for the extend of CollapsingHeader() - share same clipping rectangle.
+- Fix for child windows with inverted clip rectangles (when scrolled and out of screen, Etc.).
+- Minor fixes, tweaks, comments.
+
+
+----------------------------------------------------------------------
+ VERSION 1.06 (2014-08-15)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.06
+
+- Added BeginTooltip()/EndTooltip() helpers to create tooltips with custom contents.
+- Added TextColored() helper.
+- Added a 'stride' parameter to PlotLines() / PlotHistogram().
+- Fixed PlotLines() / PlotHistogram() from occasionally wrapping back to the most-left value.
+- TreeNode() / CollapsingHeader() ignore clicks when CTRL or SHIFT are held.
+- Slowed down mouse wheel scrolling inside combo boxes.
+- Minor tweaks.
+- Fixed trailing '\n' in text strings reporting extra line height.
+- Fixed tooltip position needlessly leaking into .ini file.
+- Fixed invalid .ini file data persistently being saved back into the file.
+
+
+----------------------------------------------------------------------
+ VERSION 1.05 (2014-08-14)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.05
+
+- Added default clipboard functions for Windows + "private" clipboard on other systems (user can still override).
+- Fixed logarithmic sliders and HSV conversions on Mac/Linux.
+- Tidying up example applications so it looks easier to just grab code.
+- Added GetItemBoxMin(), GetItemBoxMax().
+- Tweaks, more consistent #define names.
+- Fix for doing multiple Begin()/End() during the same frame.
+
+
+----------------------------------------------------------------------
+ VERSION 1.04 (2014-08-13)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.04
+
+- Fixes (v1.03 introduced a bug with combo box & scissoring bug OpenGL sample).
+- Added ImGui::InputFloat2() and ImGui::SliderFloat2() functions.
+
+
+----------------------------------------------------------------------
+ VERSION 1.03 (2014-08-13)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.03
+
+- OpenGL example now use the fixed function-pipeline + cleanups, down by 150 lines.
+- Added quick & dirty Makefiles for MacOSX and Linux.
+- Simplified the DrawList system, ImDrawCmd include the clipping rectangle + some optimisations.
+- Fixed warnings for more stringent compilation settings.
+
+
+----------------------------------------------------------------------
+ VERSION 1.02 (2014-08-12)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.02
+
+- Comments.
+- Portability fixes.
+- Fixing and tidying up sample applications.
+- Checkboxes and radio buttons can be clicked on their labels as well as their icon.
+- Checkboxes and radio buttons display in a different color when hovered.
+
+
+----------------------------------------------------------------------
+ VERSION 1.01 (2014-08-11)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.01
+
+- Added PixelCenterOffset for OpenGL/DirectX compatibility.
+- Commented and tweaked samples.
+- Added Git ignore list.
+
+
+----------------------------------------------------------------------
+ VERSION 1.00 (2014-08-10)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.00
+
+- Initial release.
 
