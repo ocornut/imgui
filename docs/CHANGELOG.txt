@@ -44,6 +44,9 @@ Other changes:
   retaining underlying data. While we don't really want to encourage user not retaining
   underlying data, in the absence of a "late commit" behavior/flag we understand it may
   be desirable to take advantage of this trick. (#4714)
+- InputText: Reworked prev/next-word behavior to more closely match Visual Studio
+  text editor. Include '.' as a delimiter and alter varying subtle behavior with how
+  blanks and separators are treated when skipping words. (#6067) [@ajweeks]
 - Drag, Sliders: Fixed parsing of text input when '+' or '#' format flags are used
   in the format string. (#6259) [@idbrii]
 - Nav: Made Ctrl+Tab/Ctrl+Shift+Tab windowing register ownership to held modifier so
