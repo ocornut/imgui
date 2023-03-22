@@ -46,6 +46,8 @@ Other changes:
   be desirable to take advantage of this trick. (#4714)
 - Drag, Sliders: Fixed parsing of text input when '+' or '#' format flags are used
   in the format string. (#6259) [@idbrii]
+- Nav: Made Ctrl+Tab/Ctrl+Shift+Tab windowing register ownership to held modifier so
+  it doesn't interfere with other code when remapping those actions. (#4828, #3255, #5641)
 - ColorEdit: Fixed shading of S/V triangle in Hue Wheel mode. (#5200, #6254) [@jamesthomasgriffin]
 - Rendering: Using adaptative tesselation for: RadioButton, ColorEdit preview circles,
   Windows Close and Collapse Buttons.
