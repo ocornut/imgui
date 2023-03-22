@@ -122,6 +122,7 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking: Fixed using GetItemXXX() or IsItemXXX() functions after a DockSpace(). (#6217)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Backends: GLFW: Fixed Emscripten erroneously enabling multi-viewport support, leading to assert. (#5683)
 - Backends: SDL3: Fixed for compilation with multi-viewports. (#6255) [@P3RK4N]

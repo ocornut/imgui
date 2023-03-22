@@ -17494,7 +17494,13 @@ ImGuiID ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags 
     DockNodeUpdate(node);
 
     End();
+
+    ImRect bb(node->Pos, node->Pos + size);
     ItemSize(size);
+    ItemAdd(bb, id, NULL, ImGuiItemFlags_NoNav); // Not a nav point (could be, would need to draw the nav rect and replicate/refactor activation from BeginChild(), but seems like CTRL+Tab works better here?)
+    if ((g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredRect) && IsWindowChildOf(g.HoveredWindow, host_window, false, true)) // To fullfill IsItemHovered(), similar to EndChild()
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
+
     return id;
 }
 
