@@ -24,6 +24,12 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 
+// Clang warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
+#endif
+
 // SDL
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_syswm.h>
@@ -565,3 +571,8 @@ void ImGui_ImplSDL3_NewFrame()
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL3_UpdateGamepads();
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
