@@ -57,6 +57,8 @@ Other changes:
 - IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly
   advertised as supported in 1.89.4). (#6199, #6256, #5856) [@cfillion]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
+- Backends: OpenGL3: Properly restoring "no shader program bound" if it was the case prior to
+  running the rendering function. (#6267, #6220, #6224) [@BrunoLevy]
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
