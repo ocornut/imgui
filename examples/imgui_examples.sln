@@ -17,15 +17,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_opengl3", "exa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_vulkan", "example_glfw_vulkan\example_glfw_vulkan.vcxproj", "{57E2DF5A-6FC8-45BB-99DD-91A18C646E80}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_directx11", "example_sdl_directx11\example_sdl_directx11.vcxproj", "{9E1987E3-1F19-45CA-B9C9-D31E791836D8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_directx11", "example_sdl2_directx11\example_sdl2_directx11.vcxproj", "{9E1987E3-1F19-45CA-B9C9-D31E791836D8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_opengl2", "example_sdl_opengl2\example_sdl_opengl2.vcxproj", "{2AE17FDE-F7F3-4CAC-ADAB-0710EDA4F741}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_opengl2", "example_sdl2_opengl2\example_sdl2_opengl2.vcxproj", "{2AE17FDE-F7F3-4CAC-ADAB-0710EDA4F741}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_opengl3", "example_sdl_opengl3\example_sdl_opengl3.vcxproj", "{BBAEB705-1669-40F3-8567-04CF6A991F4C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_opengl3", "example_sdl2_opengl3\example_sdl2_opengl3.vcxproj", "{BBAEB705-1669-40F3-8567-04CF6A991F4C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_sdlrenderer", "example_sdl_sdlrenderer\example_sdl_sdlrenderer.vcxproj", "{0C0B2BEA-311F-473C-9652-87923EF639E3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_sdlrenderer", "example_sdl2_sdlrenderer\example_sdl2_sdlrenderer.vcxproj", "{0C0B2BEA-311F-473C-9652-87923EF639E3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_vulkan", "example_sdl_vulkan\example_sdl_vulkan.vcxproj", "{BAE3D0B5-9695-4EB1-AD0F-75890EB4A3B3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_vulkan", "example_sdl2_vulkan\example_sdl2_vulkan.vcxproj", "{BAE3D0B5-9695-4EB1-AD0F-75890EB4A3B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

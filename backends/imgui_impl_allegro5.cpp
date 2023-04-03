@@ -275,7 +275,7 @@ void ImGui_ImplAllegro5_InvalidateDeviceObjects()
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     if (bd->Texture)
     {
-        io.Fonts->SetTexID(nullptr);
+        io.Fonts->SetTexID(0);
         al_destroy_bitmap(bd->Texture);
         bd->Texture = nullptr;
     }

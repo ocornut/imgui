@@ -118,7 +118,7 @@ extern "C" {
 ** included as <GL/glcorearb.h>.
 **
 ** glcorearb.h includes only APIs in the latest OpenGL core profile
-** implementation together with APIs in newer ARB extensions which 
+** implementation together with APIs in newer ARB extensions which
 ** can be supported by the core profile. It does not, and never will
 ** include functionality removed from the core profile, such as
 ** fixed-function vertex and fragment processing.
@@ -309,6 +309,7 @@ typedef void (APIENTRYP PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSi
 typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const GLchar *name);
 typedef void (APIENTRYP PFNGLGETVERTEXATTRIBIVPROC) (GLuint index, GLenum pname, GLint *params);
 typedef void (APIENTRYP PFNGLGETVERTEXATTRIBPOINTERVPROC) (GLuint index, GLenum pname, void **pointer);
+typedef GLboolean (APIENTRYP PFNGLISPROGRAMPROC) (GLuint program);
 typedef void (APIENTRYP PFNGLLINKPROGRAMPROC) (GLuint program);
 typedef void (APIENTRYP PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
 typedef void (APIENTRYP PFNGLUSEPROGRAMPROC) (GLuint program);
@@ -334,6 +335,7 @@ GLAPI void APIENTRY glGetShaderInfoLog (GLuint shader, GLsizei bufSize, GLsizei 
 GLAPI GLint APIENTRY glGetUniformLocation (GLuint program, const GLchar *name);
 GLAPI void APIENTRY glGetVertexAttribiv (GLuint index, GLenum pname, GLint *params);
 GLAPI void APIENTRY glGetVertexAttribPointerv (GLuint index, GLenum pname, void **pointer);
+GLAPI GLboolean APIENTRY glIsProgram (GLuint program);
 GLAPI void APIENTRY glLinkProgram (GLuint program);
 GLAPI void APIENTRY glShaderSource (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
 GLAPI void APIENTRY glUseProgram (GLuint program);
@@ -462,7 +464,7 @@ GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
 union GL3WProcs {
-    GL3WglProc ptr[58];
+    GL3WglProc ptr[59];
     struct {
         PFNGLACTIVETEXTUREPROC            ActiveTexture;
         PFNGLATTACHSHADERPROC             AttachShader;
@@ -509,6 +511,7 @@ union GL3WProcs {
         PFNGLGETVERTEXATTRIBPOINTERVPROC  GetVertexAttribPointerv;
         PFNGLGETVERTEXATTRIBIVPROC        GetVertexAttribiv;
         PFNGLISENABLEDPROC                IsEnabled;
+        PFNGLISPROGRAMPROC                IsProgram;
         PFNGLLINKPROGRAMPROC              LinkProgram;
         PFNGLPIXELSTOREIPROC              PixelStorei;
         PFNGLPOLYGONMODEPROC              PolygonMode;
@@ -573,6 +576,7 @@ GL3W_API extern union GL3WProcs imgl3wProcs;
 #define glGetVertexAttribPointerv         imgl3wProcs.gl.GetVertexAttribPointerv
 #define glGetVertexAttribiv               imgl3wProcs.gl.GetVertexAttribiv
 #define glIsEnabled                       imgl3wProcs.gl.IsEnabled
+#define glIsProgram                       imgl3wProcs.gl.IsProgram
 #define glLinkProgram                     imgl3wProcs.gl.LinkProgram
 #define glPixelStorei                     imgl3wProcs.gl.PixelStorei
 #define glPolygonMode                     imgl3wProcs.gl.PolygonMode
@@ -685,7 +689,13 @@ static int parse_version(void)
         return GL3W_ERROR_INIT;
     glGetIntegerv(GL_MAJOR_VERSION, &version.major);
     glGetIntegerv(GL_MINOR_VERSION, &version.minor);
-    if (version.major < 3)
+    if (version.major == 0 && version.minor == 0)
+    {
+        // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+        if (const char* gl_version = (const char*)glGetString(GL_VERSION))
+            sscanf(gl_version, "%d.%d", &version.major, &version.minor);
+    }
+    if (version.major < 2)
         return GL3W_ERROR_OPENGL_VERSION;
     return GL3W_OK;
 }
@@ -709,7 +719,7 @@ int imgl3wInit2(GL3WGetProcAddressProc proc)
 
 int imgl3wIsSupported(int major, int minor)
 {
-    if (major < 3)
+    if (major < 2)
         return 0;
     if (version.major == major)
         return version.minor >= minor;
@@ -764,6 +774,7 @@ static const char *proc_names[] = {
     "glGetVertexAttribPointerv",
     "glGetVertexAttribiv",
     "glIsEnabled",
+    "glIsProgram",
     "glLinkProgram",
     "glPixelStorei",
     "glPolygonMode",

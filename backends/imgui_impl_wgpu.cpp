@@ -4,7 +4,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'WGPUTextureView' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-01-25: Revert automatic pipeline layout generation (see https://github.com/gpuweb/gpuweb/issues/2470)
 //  2022-11-24: Fixed validation error with default depth buffer settings.
 //  2022-11-10: Fixed rendering when a depth buffer is enabled. Added 'WGPUTextureFormat depth_format' parameter to ImGui_ImplWGPU_Init().
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
@@ -554,7 +555,38 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.multisample.count = 1;
     graphics_pipeline_desc.multisample.mask = UINT_MAX;
     graphics_pipeline_desc.multisample.alphaToCoverageEnabled = false;
-    graphics_pipeline_desc.layout = nullptr; // Use automatic layout generation
+
+    // Bind group layouts
+    WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};
+    common_bg_layout_entries[0].binding = 0;
+    common_bg_layout_entries[0].visibility = WGPUShaderStage_Vertex;
+    common_bg_layout_entries[0].buffer.type = WGPUBufferBindingType_Uniform;
+    common_bg_layout_entries[1].binding = 1;
+    common_bg_layout_entries[1].visibility = WGPUShaderStage_Fragment;
+    common_bg_layout_entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
+
+    WGPUBindGroupLayoutEntry image_bg_layout_entries[1] = {};
+    image_bg_layout_entries[0].binding = 0;
+    image_bg_layout_entries[0].visibility = WGPUShaderStage_Fragment;
+    image_bg_layout_entries[0].texture.sampleType = WGPUTextureSampleType_Float;
+    image_bg_layout_entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+
+    WGPUBindGroupLayoutDescriptor common_bg_layout_desc = {};
+    common_bg_layout_desc.entryCount = 2;
+    common_bg_layout_desc.entries = common_bg_layout_entries;
+
+    WGPUBindGroupLayoutDescriptor image_bg_layout_desc = {};
+    image_bg_layout_desc.entryCount = 1;
+    image_bg_layout_desc.entries = image_bg_layout_entries;
+
+    WGPUBindGroupLayout bg_layouts[2];
+    bg_layouts[0] = wgpuDeviceCreateBindGroupLayout(g_wgpuDevice, &common_bg_layout_desc);
+    bg_layouts[1] = wgpuDeviceCreateBindGroupLayout(g_wgpuDevice, &image_bg_layout_desc);
+
+    WGPUPipelineLayoutDescriptor layout_desc = {};
+    layout_desc.bindGroupLayoutCount = 2;
+    layout_desc.bindGroupLayouts = bg_layouts;
+    graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(g_wgpuDevice, &layout_desc);
 
     // Create the vertex shader
     WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__glsl_shader_vert_spv, sizeof(__glsl_shader_vert_spv) / sizeof(uint32_t));
@@ -620,10 +652,6 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     ImGui_ImplWGPU_CreateUniformBuffer();
 
     // Create resource bind group
-    WGPUBindGroupLayout bg_layouts[2];
-    bg_layouts[0] = wgpuRenderPipelineGetBindGroupLayout(g_pipelineState, 0);
-    bg_layouts[1] = wgpuRenderPipelineGetBindGroupLayout(g_pipelineState, 1);
-
     WGPUBindGroupEntry common_bg_entries[] =
     {
         { nullptr, 0, g_resources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
@@ -657,7 +685,7 @@ void ImGui_ImplWGPU_InvalidateDeviceObjects()
     SafeRelease(g_resources);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->SetTexID(nullptr); // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    io.Fonts->SetTexID(0); // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 
     for (unsigned int i = 0; i < g_numFramesInFlight; i++)
         SafeRelease(g_pFrameResources[i]);

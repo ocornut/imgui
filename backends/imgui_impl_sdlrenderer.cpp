@@ -10,8 +10,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
-// Missing features:
+//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
@@ -30,6 +29,12 @@
 #include <stddef.h>     // intptr_t
 #else
 #include <stdint.h>     // intptr_t
+#endif
+
+// Clang warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
 #endif
 
 // SDL
@@ -249,3 +254,7 @@ void ImGui_ImplSDLRenderer_DestroyDeviceObjects()
 {
     ImGui_ImplSDLRenderer_DestroyFontsTexture();
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

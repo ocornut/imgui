@@ -24,6 +24,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-02-01: Fixed scroll wheel scaling for devices emitting events with hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
 //  2022-11-02: Fixed mouse coordinates before clicking the host window.
 //  2022-10-06: Fixed mouse inputs on flipped views.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
@@ -65,22 +66,22 @@
 // Data
 struct ImGui_ImplOSX_Data
 {
-    CFTimeInterval          Time;
-    NSCursor*               MouseCursors[ImGuiMouseCursor_COUNT];
-    bool                    MouseCursorHidden;
-    ImGuiObserver*          Observer;
-    KeyEventResponder*      KeyEventResponder;
-    NSTextInputContext*     InputContext;
-    id                      Monitor;
+    CFTimeInterval              Time;
+    NSCursor*                   MouseCursors[ImGuiMouseCursor_COUNT];
+    bool                        MouseCursorHidden;
+    ImGuiObserver*              Observer;
+    KeyEventResponder*          KeyEventResponder;
+    NSTextInputContext*         InputContext;
+    id                          Monitor;
 
-    ImGui_ImplOSX_Data()    { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
 };
 
-static ImGui_ImplOSX_Data*  ImGui_ImplOSX_CreateBackendData()  { return IM_NEW(ImGui_ImplOSX_Data)(); }
-static ImGui_ImplOSX_Data*  ImGui_ImplOSX_GetBackendData()     { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
-static void                 ImGui_ImplOSX_DestroyBackendData() { IM_DELETE(ImGui_ImplOSX_GetBackendData()); }
+static ImGui_ImplOSX_Data*      ImGui_ImplOSX_CreateBackendData()   { return IM_NEW(ImGui_ImplOSX_Data)(); }
+static ImGui_ImplOSX_Data*      ImGui_ImplOSX_GetBackendData()      { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
+static void                     ImGui_ImplOSX_DestroyBackendData()  { IM_DELETE(ImGui_ImplOSX_GetBackendData()); }
 
-static inline CFTimeInterval GetMachAbsoluteTimeInSeconds()    { return static_cast<CFTimeInterval>(static_cast<double>(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e9); }
+static inline CFTimeInterval    GetMachAbsoluteTimeInSeconds()      { return (CFTimeInterval)(double)(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1e9); }
 
 // Forward Declarations
 static void ImGui_ImplOSX_AddTrackingArea(NSView* _Nonnull view);
@@ -390,8 +391,6 @@ bool ImGui_ImplOSX_Init(NSView* view)
     // Setup backend capabilities flags
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-    //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
-    //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
 
     bd->Observer = [ImGuiObserver new];
@@ -475,11 +474,11 @@ bool ImGui_ImplOSX_Init(NSView* view)
 void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    bd->Observer = NULL;
-    if (bd->Monitor != NULL)
+    bd->Observer = nullptr;
+    if (bd->Monitor != nullptr)
     {
         [NSEvent removeMonitor:bd->Monitor];
-        bd->Monitor = NULL;
+        bd->Monitor = nullptr;
     }
     ImGui_ImplOSX_DestroyBackendData();
 }
@@ -671,18 +670,18 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dy = [event scrollingDeltaY];
             if ([event hasPreciseScrollingDeltas])
             {
-                wheel_dx *= 0.1;
-                wheel_dy *= 0.1;
+                wheel_dx *= 0.01;
+                wheel_dy *= 0.01;
             }
         }
         else
         #endif // MAC_OS_X_VERSION_MAX_ALLOWED
         {
-            wheel_dx = [event deltaX];
-            wheel_dy = [event deltaY];
+            wheel_dx = [event deltaX] * 0.1;
+            wheel_dy = [event deltaY] * 0.1;
         }
         if (wheel_dx != 0.0 || wheel_dy != 0.0)
-            io.AddMouseWheelEvent((float)wheel_dx * 0.1f, (float)wheel_dy * 0.1f);
+            io.AddMouseWheelEvent((float)wheel_dx, (float)wheel_dy);
 
         return io.WantCaptureMouse;
     }
