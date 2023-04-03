@@ -10,7 +10,7 @@ integrating Dear ImGui in your own application/game/engine.
 **Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
 
 You can find Windows binaries for some of those example applications at:
-  http://www.dearimgui.org/binaries
+  http://www.dearimgui.com/binaries
 
 
 ### Getting Started
@@ -74,7 +74,7 @@ ImGui::DestroyContext();
 
 Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 Please read the comments and instruction at the top of each file.
-Please read FAQ at http://www.dearimgui.org/faq
+Please read FAQ at http://www.dearimgui.com/faq
 
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual

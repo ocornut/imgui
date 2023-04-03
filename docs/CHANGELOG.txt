@@ -8,8 +8,8 @@ Changes to backends are also included within the individual .cpp files of each b
 RELEASE NOTES:          https://github.com/ocornut/imgui/releases
 REPORT ISSUES:          https://github.com/ocornut/imgui/issues
 DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
-FAQ                     https://www.dearimgui.org/faq/
 WIKI                    https://github.com/ocornut/imgui/wiki
+FAQ                     https://www.dearimgui.com/faq/
 
 WHEN TO UPDATE?
 
@@ -804,7 +804,7 @@ Other Changes:
 - Added an assertion for the common user mistake of using "" as an identifier at the root level of a window
   instead of using "##something". Empty identifiers are valid and useful in a very small amount of cases,
   but 99.9% of the time if you need an empty label you should use "##something". (#1414, #2562, #2807, #4008,
-  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.org/faq
+  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.com/faq
 - Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
   (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
   but it allows testing for triple clicks and more).
@@ -2007,7 +2007,7 @@ Other Changes:
   default implementation of ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Moved misc/fonts/README.txt to docs/FONTS.txt.
-- Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
+- Docs: Added permanent redirect from https://www.dearimgui.com/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 - Metrics: Show wire-frame mesh and approximate surface area when hovering ImDrawCmd. [@ShironekoBen]
 - Metrics: Expose basic details of each window key/value state storage.
