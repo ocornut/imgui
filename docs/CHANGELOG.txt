@@ -65,6 +65,11 @@ Other changes:
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Backends: OpenGL3: Properly restoring "no shader program bound" if it was the case prior to
   running the rendering function. (#6267, #6220, #6224) [@BrunoLevy]
+- Backends: Win32: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen. (#2334, #2702)
+- Backends: SDL2/SDL3: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen.
+  This is relying on SDL passing SDL_TOUCH_MOUSEID in the event's 'which' field. (#2334, #2702)
+- Backends: GLFW: Added support on Win32 only for io.AddMouseSourceEvent() to discriminate
+  Mouse/TouchScreen/Pen. (#2334, #2702)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
