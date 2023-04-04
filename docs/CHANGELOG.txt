@@ -58,6 +58,16 @@ Other changes:
   Windows Close and Collapse Buttons.
 - Misc: Fixed ImVec2 operator[] violating aliasing rules causing issue with Intel C++
   compiler. (#6272) [@BayesBug]
+- IO: Input queue trickling adjustment for touch screens. (#2702, #4921)
+  This fixes single-tapping to move simulated mouse and immediately click on a widget
+  that is using the ImGuiButtonFlags_AllowItemOverlap policy.
+  - This only works if the backend can distinguish TouchScreen vs Mouse.
+    See 'Demo->Tools->Metrics->Inputs->Mouse Source' to verify.
+  - Fixed tapping on BeginTabItem() on a touch-screen. (#2702)
+  - Fixed tapping on CollapsingHeader() with a close button on a touch-screen.
+  - Fixed tapping on TreeNode() using ImGuiTreeNodeFlags_AllowItemOverlap on a touch-screen.
+  - Fixed tapping on Selectable() using ImGuiSelectableFlags_AllowItemOverlap on a touch-screen.
+  - Fixed tapping on TableHeader() on a touch-screen.
 - IO: Added io.AddMouseSourceEvent() and ImGuiMouseSource enum. This is to allow backend to
   specify actual event source between Mouse/TouchScreen/Pen. (#2702, #2334, #2372, #3453, #5693)
 - IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly

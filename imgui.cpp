@@ -8733,6 +8733,8 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT);
             if (trickle_fast_inputs && ((mouse_button_changed & (1 << button)) || mouse_wheeled))
                 break;
+            if (trickle_fast_inputs && e->MouseButton.MouseSource == ImGuiMouseSource_TouchScreen && mouse_moved) // #2702: TouchScreen have no initial hover.
+                break;
             io.MouseDown[button] = e->MouseButton.Down;
             io.MouseSource = e->MouseButton.MouseSource;
             mouse_button_changed |= (1 << button);
