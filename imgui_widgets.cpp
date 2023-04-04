@@ -638,7 +638,12 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
 
             const int mouse_button = g.ActiveIdMouseButton;
-            if (IsMouseDown(mouse_button, test_owner_id))
+            if (mouse_button == -1)
+            {
+                // Fallback for the rare situation were g.ActiveId was set programmatically or from another widget (e.g. #6304).
+                ClearActiveID();
+            }
+            else if (IsMouseDown(mouse_button, test_owner_id))
             {
                 held = true;
             }

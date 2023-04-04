@@ -56,6 +56,8 @@ Other changes:
   horizontal mouse-wheel (or Shift + WheelY). (#2702)
 - Rendering: Using adaptative tesselation for: RadioButton, ColorEdit preview circles,
   Windows Close and Collapse Buttons.
+- ButtonBehavior: Fixed an edge case where changing widget type/behavior while active
+  and using same id could lead to an assert. (#6304)
 - Misc: Fixed ImVec2 operator[] violating aliasing rules causing issue with Intel C++
   compiler. (#6272) [@BayesBug]
 - IO: Input queue trickling adjustment for touch screens. (#2702, #4921)
