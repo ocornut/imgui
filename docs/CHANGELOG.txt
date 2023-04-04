@@ -58,6 +58,8 @@ Other changes:
   Windows Close and Collapse Buttons.
 - Misc: Fixed ImVec2 operator[] violating aliasing rules causing issue with Intel C++
   compiler. (#6272) [@BayesBug]
+- IO: Added io.AddMouseSourceEvent() and ImGuiMouseSource enum. This is to allow backend to
+  specify actual event source between Mouse/TouchScreen/Pen. (#2702, #2334, #2372, #3453, #5693)
 - IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly
   advertised as supported in 1.89.4). (#6199, #6256, #5856) [@cfillion]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
