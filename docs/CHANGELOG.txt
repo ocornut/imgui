@@ -8,8 +8,8 @@ Changes to backends are also included within the individual .cpp files of each b
 RELEASE NOTES:          https://github.com/ocornut/imgui/releases
 REPORT ISSUES:          https://github.com/ocornut/imgui/issues
 DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
-FAQ                     https://www.dearimgui.org/faq/
 WIKI                    https://github.com/ocornut/imgui/wiki
+FAQ                     https://www.dearimgui.com/faq/
 
 WHEN TO UPDATE?
 
@@ -125,11 +125,28 @@ Other changes:
   Windows Close and Collapse Buttons.
 - Misc: Fixed ImVec2 operator[] violating aliasing rules causing issue with Intel C++
   compiler. (#6272) [@BayesBug]
+- IO: Input queue trickling adjustment for touch screens. (#2702, #4921)
+  This fixes single-tapping to move simulated mouse and immediately click on a widget
+  that is using the ImGuiButtonFlags_AllowItemOverlap policy.
+  - This only works if the backend can distinguish TouchScreen vs Mouse.
+    See 'Demo->Tools->Metrics->Inputs->Mouse Source' to verify.
+  - Fixed tapping on BeginTabItem() on a touch-screen. (#2702)
+  - Fixed tapping on CollapsingHeader() with a close button on a touch-screen.
+  - Fixed tapping on TreeNode() using ImGuiTreeNodeFlags_AllowItemOverlap on a touch-screen.
+  - Fixed tapping on Selectable() using ImGuiSelectableFlags_AllowItemOverlap on a touch-screen.
+  - Fixed tapping on TableHeader() on a touch-screen.
+- IO: Added io.AddMouseSourceEvent() and ImGuiMouseSource enum. This is to allow backend to
+  specify actual event source between Mouse/TouchScreen/Pen. (#2702, #2334, #2372, #3453, #5693)
 - IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly
   advertised as supported in 1.89.4). (#6199, #6256, #5856) [@cfillion]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Backends: OpenGL3: Properly restoring "no shader program bound" if it was the case prior to
   running the rendering function. (#6267, #6220, #6224) [@BrunoLevy]
+- Backends: Win32: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen. (#2334, #2702)
+- Backends: SDL2/SDL3: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen.
+  This is relying on SDL passing SDL_TOUCH_MOUSEID in the event's 'which' field. (#2334, #2702)
+- Backends: GLFW: Added support on Win32 only for io.AddMouseSourceEvent() to discriminate
+  Mouse/TouchScreen/Pen. (#2334, #2702)
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
 - Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
@@ -958,7 +975,7 @@ Other Changes:
 - Added an assertion for the common user mistake of using "" as an identifier at the root level of a window
   instead of using "##something". Empty identifiers are valid and useful in a very small amount of cases,
   but 99.9% of the time if you need an empty label you should use "##something". (#1414, #2562, #2807, #4008,
-  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.org/faq
+  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.com/faq
 - Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
   (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
   but it allows testing for triple clicks and more).
@@ -2339,7 +2356,7 @@ Other Changes:
   default implementation of ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Moved misc/fonts/README.txt to docs/FONTS.txt.
-- Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
+- Docs: Added permanent redirect from https://www.dearimgui.com/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 - Metrics: Show wire-frame mesh and approximate surface area when hovering ImDrawCmd. [@ShironekoBen]
 - Metrics: Expose basic details of each window key/value state storage.

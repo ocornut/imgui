@@ -4042,7 +4042,7 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
         return;
     g.InputTextDeactivatedState.ID = state->ID;
     g.InputTextDeactivatedState.TextA.resize(state->CurLenA + 1);
-    memcpy(g.InputTextDeactivatedState.TextA.Data, state->TextA.Data, state->CurLenA + 1);
+    memcpy(g.InputTextDeactivatedState.TextA.Data, state->TextA.Data ? state->TextA.Data : "", state->CurLenA + 1);
 }
 
 // Edit a string of text
