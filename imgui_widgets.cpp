@@ -7088,7 +7088,7 @@ void ImGui::EndMainMenuBar()
     // FIXME: With this strategy we won't be able to restore a NULL focus.
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == ImGuiNavLayer_Main && !g.NavAnyRequest)
-        FocusTopMostWindowUnderOne(g.NavWindow, NULL);
+        FocusTopMostWindowUnderOne(g.NavWindow, NULL, NULL);
 
     End();
 }

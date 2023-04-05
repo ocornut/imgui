@@ -153,6 +153,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Viewports: Setting focus from Platform/OS (e.g. via decoration, or Alt-Tab) sets corresponding
+  focus at Dear ImGui level (generally last focused window in the viewport). (#6299)
 - Docking: Fixed using GetItemXXX() or IsItemXXX() functions after a DockSpace(). (#6217)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
 - Backends: GLFW: Fixed Emscripten erroneously enabling multi-viewport support, leading to assert. (#5683)
@@ -423,7 +425,7 @@ Other changes:
 
 Docking+Viewports Branch:
 
-- Viewport: Fixed collapsed windows setting ImGuiViewportFlags_NoRendererClear without
+- Viewports: Fixed collapsed windows setting ImGuiViewportFlags_NoRendererClear without
   making title bar color opaque, leading to potential texture/fb garbage being visible.
   Right now as we don't fully support transparent viewports (#2766), so we turn that
   'TitleBgCollapsed' color opaque just lke we do for 'WindowBG' on uncollapsed windows.

@@ -4799,7 +4799,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        FocusTopMostWindowUnderOne(NULL, NULL);
+        FocusTopMostWindowUnderOne(NULL, NULL, NULL);
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -7495,7 +7495,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         BringWindowToDisplayFront(display_front_window);
 }
 
-void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window)
+void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window, ImGuiViewport* filter_viewport)
 {
     ImGuiContext& g = *GImGui;
     int start_idx = g.WindowsFocusOrder.Size - 1;
@@ -7515,17 +7515,20 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
         // We may later decide to test for different NoXXXInputs based on the active navigation input (mouse vs nav) but that may feel more confusing to the user.
         ImGuiWindow* window = g.WindowsFocusOrder[i];
         IM_ASSERT(window == window->RootWindow);
-        if (window != ignore_window && window->WasActive)
-            if ((window->Flags & (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs)) != (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs))
-            {
-                // FIXME-DOCK: This is failing (lagging by one frame) for docked windows.
-                // If A and B are docked into window and B disappear, at the NewFrame() call site window->NavLastChildNavWindow will still point to B.
-                // We might leverage the tab order implicitly stored in window->DockNodeAsHost->TabBar (essentially the 'most_recently_selected_tab' code in tab bar will do that but on next update)
-                // to tell which is the "previous" window. Or we may leverage 'LastFrameFocused/LastFrameJustFocused' and have this function handle child window itself?
-                ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(window);
-                FocusWindow(focus_window);
-                return;
-            }
+        if (window == ignore_window || !window->WasActive)
+            continue;
+        if (filter_viewport != NULL && window->Viewport != filter_viewport)
+            continue;
+        if ((window->Flags & (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs)) != (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs))
+        {
+            // FIXME-DOCK: This is failing (lagging by one frame) for docked windows.
+            // If A and B are docked into window and B disappear, at the NewFrame() call site window->NavLastChildNavWindow will still point to B.
+            // We might leverage the tab order implicitly stored in window->DockNodeAsHost->TabBar (essentially the 'most_recently_selected_tab' code in tab bar will do that but on next update)
+            // to tell which is the "previous" window. Or we may leverage 'LastFrameFocused/LastFrameJustFocused' and have this function handle child window itself?
+            ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(window);
+            FocusWindow(focus_window);
+            return;
+        }
     }
     FocusWindow(NULL);
 }
@@ -10895,7 +10898,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
         if (focus_window && !focus_window->WasActive && popup_window)
         {
             // Fallback
-            FocusTopMostWindowUnderOne(popup_window, NULL);
+            FocusTopMostWindowUnderOne(popup_window, NULL, NULL);
         }
         else
         {
@@ -12596,6 +12599,8 @@ static void ImGui::NavUpdateWindowing()
     // Apply final focus
     if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
     {
+        // FIXME: Many actions here could be part of a higher-level/reused function. Why aren't they in FocusWindow()
+        // Investigate for each of them: ClearActiveID(), NavRestoreHighlightAfterMove(), NavRestoreLastChildNavWindow(), ClosePopupsOverWindow(), NavInitWindow()
         ImGuiViewport* previous_viewport = g.NavWindow ? g.NavWindow->Viewport : NULL;
         ClearActiveID();
         NavRestoreHighlightAfterMove();
@@ -14490,6 +14495,10 @@ void ImGui::UpdatePlatformWindows()
             if (focused_viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
                 focused_viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
             g.PlatformLastFocusedViewportId = focused_viewport->ID;
+            if (focused_viewport->Window != NULL)
+                FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
+            else
+                FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport);
         }
     }
 }
@@ -19151,11 +19160,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             memcpy(viewports.Data, g.Viewports.Data, g.Viewports.size_in_bytes());
             if (viewports.Size > 1)
                 ImQsort(viewports.Data, viewports.Size, sizeof(ImGuiViewport*), ViewportComparerByFrontMostStampCount);
-            for (int i = 0; i < viewports.Size; i++)
-                BulletText("Viewport #%d, ID: 0x%08X, FrontMostStampCount = %08d, Window: \"%s\"", viewports[i]->Idx, viewports[i]->ID, viewports[i]->LastFrontMostStampCount, viewports[i]->Window ? viewports[i]->Window->Name : "N/A");
+            for (ImGuiViewportP* viewport : viewports)
+                BulletText("Viewport #%d, ID: 0x%08X, FrontMostStampCount = %08d, PlatformFocused = %s, Window: \"%s\"",
+                    viewport->Idx, viewport->ID, viewport->LastFrontMostStampCount,
+                    (g.PlatformIO.Platform_GetWindowFocus && viewport->PlatformWindowCreated) ? (g.PlatformIO.Platform_GetWindowFocus(viewport) ? "1" : "0") : "N/A",
+                    viewport->Window ? viewport->Window->Name : "N/A");
             TreePop();
         }
-
         for (int i = 0; i < g.Viewports.Size; i++)
             DebugNodeViewport(g.Viewports[i]);
         TreePop();
