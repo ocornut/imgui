@@ -13,6 +13,7 @@ static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
 static IDXGISwapChain*          g_pSwapChain = NULL;
 static ID3D11RenderTargetView*  g_mainRenderTargetView = NULL;
+static bool                     g_wndMinimized = false;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
@@ -94,6 +95,13 @@ int main(int, char**)
         }
         if (done)
             break;
+
+        // Don't render if the window is minimized
+        if (g_wndMinimized)
+        {
+            Sleep(1); // Let the processor sleep a bit
+            continue;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplDX11_NewFrame();
@@ -238,6 +246,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
         }
+        g_wndMinimized = (wParam == SIZE_MINIMIZED);
         return 0;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
