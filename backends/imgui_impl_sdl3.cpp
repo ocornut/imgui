@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-04-06: Inputs: Avoid callng SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
 //  2023-02-23: Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. (#6189, #6114, #3644)
 //  2023-02-07: Forked "imgui_impl_sdl2" into "imgui_impl_sdl3". Removed version checks for old feature. Refer to imgui_impl_sdl2.cpp for older changelog.
@@ -96,11 +97,6 @@ static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeDa
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
-        SDL_StartTextInput();
-    }
-    else
-    {
-        SDL_StopTextInput();
     }
 }
 
