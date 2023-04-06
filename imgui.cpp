@@ -13874,21 +13874,54 @@ static void ImGui::UpdateViewportsNewFrame()
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
+    // Update Focused status
     const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
     if (viewports_enabled)
     {
+        ImGuiViewportP* focused_viewport = NULL;
         for (int n = 0; n < g.Viewports.Size; n++)
         {
             ImGuiViewportP* viewport = g.Viewports[n];
             const bool platform_funcs_available = viewport->PlatformWindowCreated;
             if (g.PlatformIO.Platform_GetWindowMinimized && platform_funcs_available)
             {
-                bool minimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
-                if (minimized)
+                bool is_minimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
+                if (is_minimized)
                     viewport->Flags |= ImGuiViewportFlags_IsMinimized;
                 else
                     viewport->Flags &= ~ImGuiViewportFlags_IsMinimized;
             }
+
+            // Update our implicit z-order knowledge of platform windows, which is used when the backend cannot provide io.MouseHoveredViewport.
+            // When setting Platform_GetWindowFocus, it is expected that the platform backend can handle calls without crashing if it doesn't have data stored.
+            if (g.PlatformIO.Platform_GetWindowFocus && platform_funcs_available)
+            {
+                bool is_focused = g.PlatformIO.Platform_GetWindowFocus(viewport);
+                if (is_focused)
+                    viewport->Flags |= ImGuiViewportFlags_IsFocused;
+                else
+                    viewport->Flags &= ~ImGuiViewportFlags_IsFocused;
+                if (is_focused)
+                    focused_viewport = viewport;
+            }
+        }
+
+        // Focused viewport has changed?
+        if (focused_viewport && g.PlatformLastFocusedViewportId != focused_viewport->ID)
+        {
+            // Store a tag so we can infer z-order easily from all our windows
+            // We compare PlatformLastFocusedViewportId so newly created viewports with _NoFocusOnAppearing flag
+            // will keep the front most stamp instead of losing it back to their parent viewport.
+            if (focused_viewport->LastFocusedStampCount != g.ViewportFocusedStampCount)
+                focused_viewport->LastFocusedStampCount = ++g.ViewportFocusedStampCount;
+            g.PlatformLastFocusedViewportId = focused_viewport->ID;
+
+            // Focus associated dear imgui window (#6299)
+            // FIXME: perhaps 'FocusTopMostWindowUnderOne()' can handle both cases?
+            if (focused_viewport->Window != NULL)
+                FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
+            else
+                FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport);
         }
     }
 
@@ -14088,7 +14121,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
             viewport->Pos = pos;
         if (!viewport->PlatformRequestResize || viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID)
             viewport->Size = size;
-        viewport->Flags = flags | (viewport->Flags & ImGuiViewportFlags_IsMinimized); // Preserve existing flags
+        viewport->Flags = flags | (viewport->Flags & (ImGuiViewportFlags_IsMinimized | ImGuiViewportFlags_IsFocused)); // Preserve existing flags
     }
     else
     {
@@ -14471,38 +14504,6 @@ void ImGui::UpdatePlatformWindows()
 
         // Clear request flags
         viewport->ClearRequestFlags();
-    }
-
-    // Update our implicit z-order knowledge of platform windows, which is used when the backend cannot provide io.MouseHoveredViewport.
-    // When setting Platform_GetWindowFocus, it is expected that the platform backend can handle calls without crashing if it doesn't have data stored.
-    // FIXME-VIEWPORT: We should use this information to also set dear imgui-side focus, allowing us to handle os-level alt+tab.
-    if (g.PlatformIO.Platform_GetWindowFocus != NULL)
-    {
-        ImGuiViewportP* focused_viewport = NULL;
-        for (int n = 0; n < g.Viewports.Size && focused_viewport == NULL; n++)
-        {
-            ImGuiViewportP* viewport = g.Viewports[n];
-            if (viewport->PlatformWindowCreated)
-                if (g.PlatformIO.Platform_GetWindowFocus(viewport))
-                    focused_viewport = viewport;
-        }
-
-        // Focused viewport has changed?
-        if (focused_viewport && g.PlatformLastFocusedViewportId != focused_viewport->ID)
-        {
-            // Store a tag so we can infer z-order easily from all our windows
-            // We compare PlatformLastFocusedViewportId so newly created viewports with _NoFocusOnAppearing flag
-            // will keep the front most stamp instead of losing it back to their parent viewport.
-            if (focused_viewport->LastFocusedStampCount != g.ViewportFocusedStampCount)
-                focused_viewport->LastFocusedStampCount = ++g.ViewportFocusedStampCount;
-            g.PlatformLastFocusedViewportId = focused_viewport->ID;
-
-            // Focus associated dear imgui window (#6299)
-            if (focused_viewport->Window != NULL)
-                FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
-            else
-                FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport);
-        }
     }
 }
 
@@ -19915,9 +19916,11 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
             viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
         if (viewport->Idx > 0) { SameLine(); if (SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200, 200); viewport->UpdateWorkRect(); if (viewport->Window) viewport->Window->Pos = viewport->Pos; } }
-        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
+        BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s%s%s%s%s%s%s", viewport->Flags,
             //(flags & ImGuiViewportFlags_IsPlatformWindow) ? " IsPlatformWindow" : "", // Omitting because it is the standard
             (flags & ImGuiViewportFlags_IsPlatformMonitor) ? " IsPlatformMonitor" : "",
+            (flags & ImGuiViewportFlags_IsMinimized) ? " IsMinimized" : "",
+            (flags & ImGuiViewportFlags_IsFocused) ? " IsFocused" : "",
             (flags & ImGuiViewportFlags_OwnedByApp) ? " OwnedByApp" : "",
             (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
             (flags & ImGuiViewportFlags_NoTaskBarIcon) ? " NoTaskBarIcon" : "",
@@ -19925,9 +19928,8 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             (flags & ImGuiViewportFlags_NoFocusOnClick) ? " NoFocusOnClick" : "",
             (flags & ImGuiViewportFlags_NoInputs) ? " NoInputs" : "",
             (flags & ImGuiViewportFlags_NoRendererClear) ? " NoRendererClear" : "",
-            (flags & ImGuiViewportFlags_TopMost) ? " TopMost" : "",
-            (flags & ImGuiViewportFlags_IsMinimized) ? " IsMinimized" : "",
             (flags & ImGuiViewportFlags_NoAutoMerge) ? " NoAutoMerge" : "",
+            (flags & ImGuiViewportFlags_TopMost) ? " TopMost" : "",
             (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "");
         for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
             for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
