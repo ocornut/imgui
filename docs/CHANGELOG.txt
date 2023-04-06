@@ -123,6 +123,8 @@ Other changes:
   horizontal mouse-wheel (or Shift + WheelY). (#2702)
 - Rendering: Using adaptative tesselation for: RadioButton, ColorEdit preview circles,
   Windows Close and Collapse Buttons.
+- ButtonBehavior: Fixed an edge case where changing widget type/behavior while active
+  and using same id could lead to an assert. (#6304)
 - Misc: Fixed ImVec2 operator[] violating aliasing rules causing issue with Intel C++
   compiler. (#6272) [@BayesBug]
 - IO: Input queue trickling adjustment for touch screens. (#2702, #4921)
@@ -145,6 +147,9 @@ Other changes:
 - Backends: Win32: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen. (#2334, #2702)
 - Backends: SDL2/SDL3: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen.
   This is relying on SDL passing SDL_TOUCH_MOUSEID in the event's 'which' field. (#2334, #2702)
+- Backends: SDL2/SDL3: Avoid callng SDL_StartTextInput()/SDL_StopTextInput() as they actually
+  block text input input and don't only pertain to IME. It's unclear exactly what their relation
+  is to other IME function such as SDL_SetTextInputRect(). (#6306, #6071, #1953)
 - Backends: GLFW: Added support on Win32 only for io.AddMouseSourceEvent() to discriminate
   Mouse/TouchScreen/Pen. (#2334, #2702)
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
