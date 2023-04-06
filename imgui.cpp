@@ -12840,7 +12840,7 @@ ImGuiWindowSettings* ImGui::FindWindowSettingsByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
-        if (settings->ID == id)
+        if (settings->ID == id && !settings->WantDelete)
             return settings;
     return NULL;
 }
