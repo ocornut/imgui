@@ -13916,13 +13916,21 @@ static void ImGui::UpdateViewportsNewFrame()
                 focused_viewport->LastFocusedStampCount = ++g.ViewportFocusedStampCount;
             g.PlatformLastFocusedViewportId = focused_viewport->ID;
 
-            // Focus associated dear imgui window (#6299)
-            // FIXME: perhaps 'FocusTopMostWindowUnderOne()' can handle both cases?
-            if (focused_viewport->Window != NULL)
-                FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
-            else
-                FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport);
+            // Focus associated dear imgui window if focus didn't happen with a click within imgui boundaries (#6299)
+            // e.g. Clicking platform title bar.
+            // FIXME: perhaps 'FocusTopMostWindowUnderOne()' can handle the 'focused_window->Window != NULL' case as well.
+            if (!IsAnyMouseDown())
+            {
+                if (focused_viewport->Window != NULL)
+                    FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
+                else if (focused_viewport->LastFocusedHadNavWindow)
+                    FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport);
+                else
+                    FocusWindow(NULL);
+            }
         }
+        if (focused_viewport)
+            focused_viewport->LastFocusedHadNavWindow = (g.NavWindow != NULL) && (g.NavWindow->Viewport == focused_viewport);
     }
 
     // Create/update main viewport with current platform position.
