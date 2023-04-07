@@ -188,7 +188,7 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
         return false;
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
+    if (imgui_cursor == ImGuiMouseCursor_None || !io.MouseDrawCursor)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         ::SetCursor(nullptr);
@@ -361,7 +361,7 @@ void    ImGui_ImplWin32_NewFrame()
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
 
     // Update OS mouse cursor with the cursor requested by imgui
-    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGui::GetMouseCursor() : ImGuiMouseCursor_None;
     if (bd->LastMouseCursor != mouse_cursor)
     {
         bd->LastMouseCursor = mouse_cursor;

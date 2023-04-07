@@ -533,7 +533,7 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+    if (!io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         SDL_ShowCursor(SDL_FALSE);

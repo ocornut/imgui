@@ -695,7 +695,7 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
         GLFWwindow* window = bd->Window;
-        if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
+        if (imgui_cursor == ImGuiMouseCursor_None || !io.MouseDrawCursor)
         {
             // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
