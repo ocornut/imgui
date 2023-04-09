@@ -228,6 +228,7 @@
     UITouch *anyTouch = event.allTouches.anyObject;
     CGPoint touchLocation = [anyTouch locationInView:self.view];
     ImGuiIO &io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
     io.AddMousePosEvent(touchLocation.x, touchLocation.y);
 
     BOOL hasActiveTouch = NO;
