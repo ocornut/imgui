@@ -86,6 +86,7 @@ Other changes:
 - Backends: GLFW: Added support on Win32 only for io.AddMouseSourceEvent() to discriminate
   Mouse/TouchScreen/Pen. (#2334, #2702)
 - Backends: GLFW: Fixed key modifiers handling on secondary viewports. (#6248, #6034) [@aiekick]
+- Backends: Android: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen. [@PathogenDavid]
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
 - Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
