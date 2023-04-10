@@ -18,7 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2023-04-06: Inputs: Avoid callng SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
+//  2023-04-06: Inputs: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
 //  2023-02-23: Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. (#6189, #6114, #3644)
 //  2023-02-07: Implement IME handler (io.SetPlatformImeDataFn will call SDL_SetTextInputRect()/SDL_StartTextInput()).
@@ -141,11 +141,7 @@ static void ImGui_ImplSDL2_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeDa
 {
     if (data->WantVisible)
     {
-        SDL_Rect r;
-        r.x = (int)data->InputPos.x;
-        r.y = (int)data->InputPos.y;
-        r.w = 1;
-        r.h = (int)data->InputLineHeight;
+        SDL_Rect r{ (int)data->InputPos.x, (int)data->InputPos.y, 1, (int)data->InputLineHeight };
         SDL_SetTextInputRect(&r);
     }
 }
@@ -312,13 +308,13 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_MOUSEBUTTONUP:
         {
             int mouse_button = -1;
-            if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
-            if (event->button.button == SDL_BUTTON_RIGHT) { mouse_button = 1; }
-            if (event->button.button == SDL_BUTTON_MIDDLE) { mouse_button = 2; }
-            if (event->button.button == SDL_BUTTON_X1) { mouse_button = 3; }
-            if (event->button.button == SDL_BUTTON_X2) { mouse_button = 4; }
-            if (mouse_button == -1)
-                break;
+            Uint8 button_event = event->button.button;
+            if (button_event == SDL_BUTTON_LEFT) { mouse_button = 0; }
+            else if (button_event == SDL_BUTTON_RIGHT) { mouse_button = 1; }
+            else if (button_event == SDL_BUTTON_MIDDLE) { mouse_button = 2; }
+            else if (button_event == SDL_BUTTON_X1) { mouse_button = 3; }
+            else if (button_event == SDL_BUTTON_X2) { mouse_button = 4; }
+            else break;
             io.AddMouseSourceEvent(event->button.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMouseButtonEvent(mouse_button, (event->type == SDL_MOUSEBUTTONDOWN));
             bd->MouseButtonsDown = (event->type == SDL_MOUSEBUTTONDOWN) ? (bd->MouseButtonsDown | (1 << mouse_button)) : (bd->MouseButtonsDown & ~(1 << mouse_button));
@@ -351,11 +347,11 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
                 bd->MouseWindowID = event->window.windowID;
                 bd->PendingMouseLeaveFrame = 0;
             }
-            if (window_event == SDL_WINDOWEVENT_LEAVE)
+            else if (window_event == SDL_WINDOWEVENT_LEAVE)
                 bd->PendingMouseLeaveFrame = ImGui::GetFrameCount() + 1;
-            if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
+            else if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
-            else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+            else if (window_event == SDL_WINDOWEVENT_FOCUS_LOST)
                 io.AddFocusEvent(false);
             return true;
         }
