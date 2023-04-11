@@ -147,11 +147,17 @@ Other changes:
 - Backends: Win32: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen. (#2334, #2702)
 - Backends: SDL2/SDL3: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen.
   This is relying on SDL passing SDL_TOUCH_MOUSEID in the event's 'which' field. (#2334, #2702)
-- Backends: SDL2/SDL3: Avoid callng SDL_StartTextInput()/SDL_StopTextInput() as they actually
+- Backends: SDL2/SDL3: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they actually
   block text input input and don't only pertain to IME. It's unclear exactly what their relation
   is to other IME function such as SDL_SetTextInputRect(). (#6306, #6071, #1953)
 - Backends: GLFW: Added support on Win32 only for io.AddMouseSourceEvent() to discriminate
   Mouse/TouchScreen/Pen. (#2334, #2702)
+- Backends: Android: Added support for io.AddMouseSourceEvent() to discriminate Mouse/TouchScreen/Pen.
+  (#6315) [@PathogenDavid]
+- Backends: OSX: Added support for io.AddMouseSourceEvent() to discriminate Mouse/Pen.
+  (#6314) [@PathogenDavid]
+- Backends: WebGPU: Align buffers. Use WGSL shaders instead of SPIR-V. Add gamma uniform. (#6188) [@eliemichel]
+- Backends: WebGPU: Reorganized to store data in io.BackendRendererUserData like other backends.
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
 - Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
