@@ -7138,6 +7138,9 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     g.MultiSelectEnabledWindow = window;
     g.MultiSelectFlags = flags;
 
+    // Report focus
+    ms->In.IsFocused = ms->Out.IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
+
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
     g.MultiSelectKeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
 
@@ -7157,16 +7160,23 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
             ms->In.RequestClear = true;
     }
 
-    // Select All helper shortcut
-    // Note: we are comparing FocusScope so we don't need to be testing for IsWindowFocused()
-    if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-        if (ms->FocusScopeId == g.NavFocusScopeId && g.ActiveId == 0)
-            if (g.IO.KeyCtrl && IsKeyPressed(GetKeyIndex(ImGuiKey_A)))
+    // Shortcuts
+    if (ms->In.IsFocused)
+    {
+        // Select All helper shortcut (CTRL+A)
+        // Note: we are comparing FocusScope so we don't need to be testing for IsWindowFocused()
+        if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
                 ms->In.RequestSelectAll = true;
 
+        if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
+            if (Shortcut(ImGuiKey_Escape))
+                ms->In.RequestClear = true;
+    }
+
 #ifdef IMGUI_DEBUG_MULTISELECT
-    if (ms->In.RequestClear)     printf("[%05d] BeginMultiSelect: RequestClear\n", g.FrameCount);
-    if (ms->In.RequestSelectAll) printf("[%05d] BeginMultiSelect: RequestSelectAll\n", g.FrameCount);
+    if (ms->In.RequestClear)     IMGUI_DEBUG_LOG("BeginMultiSelect: RequestClear\n");
+    if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG("BeginMultiSelect: RequestSelectAll\n");
 #endif
 
     return &ms->In;
@@ -7186,9 +7196,9 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
     g.MultiSelectFlags = ImGuiMultiSelectFlags_None;
 
 #ifdef IMGUI_DEBUG_MULTISELECT
-    if (ms->Out.RequestClear)     printf("[%05d] EndMultiSelect: RequestClear\n", g.FrameCount);
-    if (ms->Out.RequestSelectAll) printf("[%05d] EndMultiSelect: RequestSelectAll\n", g.FrameCount);
-    if (ms->Out.RequestSetRange)  printf("[%05d] EndMultiSelect: RequestSetRange %p..%p = %d\n", g.FrameCount, ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue);
+    if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG("EndMultiSelect: RequestClear\n");
+    if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG("EndMultiSelect: RequestSelectAll\n");
+    if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG("EndMultiSelect: RequestSetRange %p..%p = %d\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue);
 #endif
 
     return &ms->Out;

@@ -2862,7 +2862,8 @@ static void ShowDemoWindowMultiSelect()
             ImGui::Text("Selection size: %d", selection.GetSelectionSize());
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
                 if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
 
@@ -2876,7 +2877,7 @@ static void ShowDemoWindowMultiSelect()
                     sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
 
                     bool item_is_selected = selection.GetSelected(n);
-                    ImGui::SetNextItemSelectionData((void*)(intptr_t)n);
+                    ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                     if (ImGui::IsItemToggledSelection())
                         selection.SetSelected(n, !item_is_selected);
