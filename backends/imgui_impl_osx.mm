@@ -424,11 +424,11 @@ bool ImGui_ImplOSX_Init(NSView* view)
         NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
         NSString* available = [pasteboard availableTypeFromArray: [NSArray arrayWithObject:NSPasteboardTypeString]];
         if (![available isEqualToString:NSPasteboardTypeString])
-            return NULL;
+            return nullptr;
 
         NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
         if (string == nil)
-            return NULL;
+            return nullptr;
 
         const char* string_c = (const char*)[string UTF8String];
         size_t string_len = strlen(string_c);

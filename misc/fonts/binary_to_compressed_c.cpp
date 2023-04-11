@@ -349,9 +349,9 @@ static int stb_compress_inner(stb_uchar *input, stb_uint length)
 
     stb_uchar **chash;
     chash = (stb_uchar**) malloc(stb__hashsize * sizeof(stb_uchar*));
-    if (chash == NULL) return 0; // failure
+    if (chash == nullptr) return 0; // failure
     for (i=0; i < stb__hashsize; ++i)
-        chash[i] = NULL;
+        chash[i] = nullptr;
 
     // stream signature
     stb_out(0x57); stb_out(0xbc);
@@ -380,7 +380,7 @@ static int stb_compress_inner(stb_uchar *input, stb_uint length)
 stb_uint stb_compress(stb_uchar *out, stb_uchar *input, stb_uint length)
 {
     stb__out = out;
-    stb__outfile = NULL;
+    stb__outfile = nullptr;
 
     stb_compress_inner(input, length);
 

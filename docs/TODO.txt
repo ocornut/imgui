@@ -74,7 +74,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text: expose CursorPos in char filter event (#816)
  - input text: try usage idiom of using InputText with data only exposed through get/set accessors, without extraneous copy/alloc. (#3009)
- - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active (available in internals)
+ - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return nullptr if not active (available in internals)
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: hover tooltip could show unclamped text
  - input text: support for INSERT key to toggle overwrite mode. currently disabled because stb_textedit behavior is unsatisfactory on multi-line. (#2863)
@@ -318,7 +318,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/menus: allow pressing Menu to leave a sub-menu.
  - nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB) or last focused window menu bar?
  - nav/menus: when using the main menu bar, even though we restore focus after, the underlying window loses its title bar highlight during menu manipulation. could we prevent it?
- - nav/menus: main menu bar currently cannot restore a NULL focus. Could save NavWindow at the time of being focused, similarly to what popup do?
+ - nav/menus: main menu bar currently cannot restore a nullptr focus. Could save NavWindow at the time of being focused, similarly to what popup do?
  - nav/menus: Alt,Up could open the first menu (e.g. "File") currently it tends to nav into the window/collapse menu. Do do that we would need custom transition?
  - nav/windowing: configure fade-in/fade-out delay on Ctrl+Tab?
  - nav/windowing: when CTRL+Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
