@@ -1720,6 +1720,7 @@ struct IMGUI_API ImGuiMultiSelectState
     ImGuiMultiSelectData    Out;                    // The Out requests are finalized and returned by EndMultiSelect()
     bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.
     bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
+    //ImRect                Rect;                   // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectState() { Clear(); }
     void Clear()            { FocusScopeId = 0; In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }

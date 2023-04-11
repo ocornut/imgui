@@ -2900,41 +2900,63 @@ static void ShowDemoWindowMultiSelect()
         // - Showcase clipping.
         // - Showcase basic drag and drop.
         // - Showcase TreeNode variant (note that tree node don't expand in the demo: supporting expanding tree nodes + clipping a separate thing).
+        // - Showcase having multiple multi-selection scopes in the same window.
         // - Showcase using inside a table.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (full, advanced)");
         ImGui::SetNextItemOpen(true, ImGuiCond_Once);
         if (ImGui::TreeNode("Multiple Selection (full, advanced)"))
         {
-            // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
-            static ExampleSelection selections_data[1];
-            ExampleSelection* selection = &selections_data[0];
-
             // Options
             enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
             static bool use_table = false;
             static bool use_drag_drop = true;
+            static bool multiple_selection_scopes = false;
             static WidgetType widget_type = WidgetType_TreeNode;
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
             ImGui::SameLine();
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
             ImGui::Checkbox("Use table", &use_table);
             ImGui::Checkbox("Use drag & drop", &use_drag_drop);
+            ImGui::Checkbox("Distinct selection scopes in same window", &multiple_selection_scopes);
 
-            // (spare brace to add a loop here later)
+            // When 'multiple_selection_scopes' is set we show 3 selection scopes in the host window instead of 1 in a scrolling window.
+            static ExampleSelection selections_data[3];
+            const int selection_scope_count = multiple_selection_scopes ? 3 : 1;
+            for (int selection_scope_n = 0; selection_scope_n < selection_scope_count; selection_scope_n++)
             {
-                ImGui::Text("Selection size: %d", selection->GetSelectionSize());
+                ExampleSelection* selection = &selections_data[selection_scope_n];
+
+                const int ITEMS_COUNT = multiple_selection_scopes ? 12 : 1000;
+                ImGui::PushID(selection_scope_n);
 
                 // Open a scrolling region
-                const int ITEMS_COUNT = 1000;
-                if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
+                bool draw_selection = true;
+                if (multiple_selection_scopes)
+                {
+                    ImGui::SeparatorText("Selection scope");
+                }
+                else
+                {
+                    ImGui::Text("Selection size: %d", selection->GetSelectionSize());
+                    draw_selection = ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20));
+                }
+                if (draw_selection)
                 {
                     ImVec2 color_button_sz(ImGui::GetFontSize(), ImGui::GetFontSize());
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
-                    ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
+                    ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+                    if (multiple_selection_scopes)
+                        ;// flags |= ImGuiMultiSelectFlags_ClearOnClickRectVoid;
+                    else
+                        flags |= ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
+                    ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
                     if (multi_select_data->RequestClear)     { selection->Clear(); }
                     if (multi_select_data->RequestSelectAll) { selection->SelectAll(ITEMS_COUNT); }
+
+                    if (multiple_selection_scopes)
+                        ImGui::Text("Selection size: %d", selection->GetSelectionSize());   // Draw counter below Separator and after BeginMultiSelect()
 
                     if (use_table)
                     {
@@ -3037,15 +3059,12 @@ static void ShowDemoWindowMultiSelect()
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PopStyleVar();
 
-                    ImGui::EndListBox();
+                    if (multiple_selection_scopes == false)
+                        ImGui::EndListBox();
                 }
+                ImGui::PopID(); // ImGui::PushID(selection_scope_n);
+            } // for each selection scope (1 or 3)
 
-                if (use_table)
-                {
-                    ImGui::EndTable();
-                    ImGui::PopStyleVar();
-                }
-            }
             ImGui::TreePop();
         }
         ImGui::TreePop();

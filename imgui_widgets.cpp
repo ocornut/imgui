@@ -7188,6 +7188,17 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
     ImGuiMultiSelectState* ms = &g.MultiSelectState;
     IM_ASSERT(g.MultiSelectState.FocusScopeId == g.CurrentFocusScopeId);
 
+    // Clear selection when clicking void?
+    // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
+    if (g.MultiSelectFlags & ImGuiMultiSelectFlags_ClearOnClickWindowVoid)
+        if (IsWindowHovered() && g.HoveredId == 0)
+            if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
+            {
+                ms->Out.RequestClear = true;
+                ms->Out.RequestSelectAll = ms->Out.RequestSetRange = false;
+            }
+
+    // Unwind
     if (g.MultiSelectFlags & ImGuiMultiSelectFlags_NoUnselect)
         ms->Out.RangeValue = true;
     g.MultiSelectState.FocusScopeId = 0;

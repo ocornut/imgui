@@ -2731,11 +2731,13 @@ struct ImColor
 // you can handle single-selection in a simpler manner by just calling Selectable() and reacting on clicks yourself.
 enum ImGuiMultiSelectFlags_
 {
-    ImGuiMultiSelectFlags_None              = 0,
-    ImGuiMultiSelectFlags_NoMultiSelect     = 1 << 0,
-    ImGuiMultiSelectFlags_NoUnselect        = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
-    ImGuiMultiSelectFlags_NoSelectAll       = 1 << 2,   // Disable CTRL+A shortcut to set RequestSelectAll
-    ImGuiMultiSelectFlags_ClearOnEscape     = 1 << 3,   // Enable ESC shortcut to clear selection
+    ImGuiMultiSelectFlags_None                  = 0,
+    ImGuiMultiSelectFlags_NoMultiSelect         = 1 << 0,
+    ImGuiMultiSelectFlags_NoUnselect            = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
+    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 2,   // Disable CTRL+A shortcut to set RequestSelectAll
+    ImGuiMultiSelectFlags_ClearOnClickWindowVoid= 1 << 3,   // Clear selection when clicking on empty location within host window (use if BeginMultiSelect() covers a whole window)
+    //ImGuiMultiSelectFlags_ClearOnClickRectVoid= 1 << 4,   // Clear selection when clicking on empty location within rectangle covered by selection scope (use if multiple BeginMultiSelect() are used in the same host window)
+    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 5,   // Clear selection when pressing Escape while scope is focused.
 };
 
 // Abstract:
