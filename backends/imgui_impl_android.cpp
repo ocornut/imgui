@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy AKEYCODE_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
+//  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen.
 // Missing features:
 //  [ ] Platform: Clipboard support.
 //  [ ] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
@@ -196,6 +197,22 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         int32_t event_action = AMotionEvent_getAction(input_event);
         int32_t event_pointer_index = (event_action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
         event_action &= AMOTION_EVENT_ACTION_MASK;
+
+        switch (AMotionEvent_getToolType(input_event, event_pointer_index))
+        {
+        case AMOTION_EVENT_TOOL_TYPE_MOUSE:
+            io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+            break;
+        case AMOTION_EVENT_TOOL_TYPE_STYLUS:
+        case AMOTION_EVENT_TOOL_TYPE_ERASER:
+            io.AddMouseSourceEvent(ImGuiMouseSource_Pen);
+            break;
+        case AMOTION_EVENT_TOOL_TYPE_FINGER:
+        default:
+            io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+            break;
+        }
+
         switch (event_action)
         {
         case AMOTION_EVENT_ACTION_DOWN:
