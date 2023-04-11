@@ -411,7 +411,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     viewport->RendererUserData = data;
 
     // PlatformHandleRaw should always be a NSWindow*, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
-    // Some back-ends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the NSWindow*.
+    // Some back-ends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the NSWindow*.
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     IM_ASSERT(handle != nullptr);
 
@@ -434,7 +434,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplMetal_DestroyWindow(ImGuiViewport* viewport)
 {
-    // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
+    // The main viewport (owned by the application) will always have RendererUserData == 0 since we didn't create the data for it.
     if (ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData)
         IM_DELETE(data);
     viewport->RendererUserData = nullptr;

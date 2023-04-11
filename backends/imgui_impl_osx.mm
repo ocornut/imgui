@@ -904,7 +904,7 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
         data->Window = nil;
         IM_DELETE(data);
     }
-    viewport->PlatformUserData = viewport->PlatformHandle = viewport->PlatformHandleRaw = NULL;
+    viewport->PlatformUserData = viewport->PlatformHandle = viewport->PlatformHandleRaw = nullptr;
 }
 
 static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
@@ -1080,17 +1080,17 @@ static void ImGui_ImplOSX_ShutdownPlatformInterface()
     [NSNotificationCenter.defaultCenter removeObserver:bd->Observer
                                                   name:NSApplicationDidChangeScreenParametersNotification
                                                 object:nil];
-    bd->Observer = NULL;
-    bd->Window = NULL;
-    if (bd->Monitor != NULL)
+    bd->Observer = nullptr;
+    bd->Window = nullptr;
+    if (bd->Monitor != nullptr)
     {
         [NSEvent removeMonitor:bd->Monitor];
-        bd->Monitor = NULL;
+        bd->Monitor = nullptr;
     }
 
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)main_viewport->PlatformUserData;
     IM_DELETE(data);
-    main_viewport->PlatformUserData = NULL;
+    main_viewport->PlatformUserData = nullptr;
     ImGui::DestroyPlatformWindows();
 }
