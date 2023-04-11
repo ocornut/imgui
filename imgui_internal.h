@@ -1715,7 +1715,7 @@ struct ImGuiOldColumns
 
 struct IMGUI_API ImGuiMultiSelectState
 {
-    ImGuiID                 FocusScopeId;           // Same as CurrentWindow->DC.FocusScopeIdCurrent (unless another selection scope was pushed manually)
+    ImGuiID                 FocusScopeId;           // Same as g.CurrentFocusScopeId (unless another selection scope was pushed manually)
     ImGuiMultiSelectData    In;                     // The In requests are set and returned by BeginMultiSelect()
     ImGuiMultiSelectData    Out;                    // The Out requests are finalized and returned by EndMultiSelect()
     bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.

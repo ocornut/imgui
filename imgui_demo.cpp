@@ -2817,8 +2817,8 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (Simplified)");
-        if (ImGui::TreeNode("Multiple Selection (Simplified)"))
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (simplfied, manual)");
+        if (ImGui::TreeNode("Multiple Selection (simplified, manual)"))
         {
             HelpMarker("Hold CTRL and click to select multiple items.");
             static bool selection[5] = { false, false, false, false, false };
@@ -2836,33 +2836,88 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (Full)");
+        const char* random_names[] =
+        {
+            "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
+            "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
+            "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
+        };
+
+        // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
+        // SHIFT+Click w/ CTRL and other standard features are supported.
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (full)");
         //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-        if (ImGui::TreeNode("Multiple Selection (Full)"))
+        if (ImGui::TreeNode("Multiple Selection (full)"))
+        {
+            static ExampleSelection selection;
+
+            ImGui::Text("Supported features:");
+            ImGui::BulletText("Keyboard navigation (arrows, page up/down, home/end, space).");
+            ImGui::BulletText("Ctrl modifier to preserve and toggle selection.");
+            ImGui::BulletText("Shift modifier for range selection.");
+            ImGui::BulletText("CTRL+A to select all.");
+
+            // The BeginListBox() has no actual purpose for selection logic (other that offering a scrolling regions).
+            const int ITEMS_COUNT = 50;
+            ImGui::Text("Selection size: %d", selection.GetSelectionSize());
+            if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
+            {
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
+
+                for (int n = 0; n < ITEMS_COUNT; n++)
+                {
+                    // FIXME-MULTISELECT: This should not be needed but currently is because coarse clipping break the auto-setup.
+                    if (n > selection.RangeRef)
+                        multi_select_data->RangeSrcPassedBy = true;
+
+                    char label[64];
+                    sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+
+                    bool item_is_selected = selection.GetSelected(n);
+                    ImGui::SetNextItemSelectionData((void*)(intptr_t)n);
+                    ImGui::Selectable(label, item_is_selected);
+                    if (ImGui::IsItemToggledSelection())
+                        selection.SetSelected(n, !item_is_selected);
+                }
+
+                // Apply multi-select requests
+                multi_select_data = ImGui::EndMultiSelect();
+                selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
+                if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+
+                ImGui::EndListBox();
+            }
+
+            ImGui::TreePop();
+        }
+
+        // Advanced demonstration of BeginMultiSelect()
+        // - Showcase clipping.
+        // - Showcase basic drag and drop.
+        // - Showcase TreeNode variant (note that tree node don't expand in the demo: supporting expanding tree nodes + clipping a separate thing).
+        // - Showcase using inside a table.
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (full, advanced)");
+        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+        if (ImGui::TreeNode("Multiple Selection (full, advanced)"))
         {
             // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
             static ExampleSelection selection;
-            const char* random_names[] =
-            {
-                "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
-                "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
-                "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
-            };
 
             // Test both Selectable() and TreeNode() widgets
             enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
-            static bool use_columns = false;
+            static bool use_table = false;
             static bool use_drag_drop = true;
             static WidgetType widget_type = WidgetType_TreeNode;
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
             ImGui::SameLine();
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
-            ImGui::SameLine();
-            ImGui::Checkbox("Use 2 columns", &use_columns);
-            ImGui::SameLine();
+            ImGui::Checkbox("Use table", &use_table);
             ImGui::Checkbox("Use drag & drop", &use_drag_drop);
-            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", &ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
-            ImGui::SameLine(); HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
+
             ImGui::Text("Selection size: %d", selection.GetSelectionSize());
 
             // Open a scrolling region
@@ -2874,23 +2929,31 @@ static void ShowDemoWindowMultiSelect()
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
                 ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
-                if (multi_select_data->RequestClear) { selection.Clear(); }
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
 
-                if (use_columns)
+                if (use_table)
                 {
-                    ImGui::Columns(2);
-                    //ImGui::PushStyleVar(ImGuiStyleVar_FrtemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
+                    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+                    ImGui::BeginTable("##Split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX);
+                    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.70f);
+                    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.30f);
+                    //ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
                 }
 
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
                 while (clipper.Step())
                 {
+                    // IF clipping is used you need to set 'RangeSrcPassedBy = true' if RangeRef was passed over.
                     if (clipper.DisplayStart > selection.RangeRef)
                         multi_select_data->RangeSrcPassedBy = true;
+
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
+                        if (use_table)
+                            ImGui::TableNextColumn();
+
                         ImGui::PushID(n);
                         const char* category = random_names[n % IM_ARRAYSIZE(random_names)];
                         char label[64];
@@ -2899,7 +2962,7 @@ static void ShowDemoWindowMultiSelect()
 
                         // Emit a color button, to test that Shift+LeftArrow landing on an item that is not part
                         // of the selection scope doesn't erroneously alter our selection (FIXME-TESTS: Add a test for that!).
-                        ImU32 dummy_col = (ImU32)ImGui::GetID(label);
+                        ImU32 dummy_col = (ImU32)((unsigned int)n * 0xC250B74B) | IM_COL32_A_MASK;
                         ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
                         ImGui::SameLine();
 
@@ -2941,35 +3004,38 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::EndPopup();
                         }
 
-                        if (use_columns)
+                        if (use_table)
                         {
-                            ImGui::NextColumn();
+                            ImGui::TableNextColumn();
                             ImGui::SetNextItemWidth(-FLT_MIN);
                             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
                             ImGui::InputText("###NoLabel", (char*)(void*)category, strlen(category), ImGuiInputTextFlags_ReadOnly);
                             ImGui::PopStyleVar();
-                            ImGui::NextColumn();
                         }
 
                         ImGui::PopID();
                     }
                 }
 
-                if (use_columns)
-                    ImGui::Columns(1);
+                if (use_table)
+                {
+                    ImGui::EndTable();
+                    ImGui::PopStyleVar();
+                }
 
                 // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
                 selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                if (multi_select_data->RequestClear) { selection.Clear(); }
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
-                if (multi_select_data->RequestSetRange) { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+                if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
 
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PopStyleVar();
 
                 ImGui::EndListBox();
             }
+
             ImGui::TreePop();
         }
         ImGui::TreePop();

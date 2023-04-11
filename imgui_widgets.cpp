@@ -7229,7 +7229,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
 
     const bool is_range_src = (ms->In.RangeSrc == item_data);
     if (is_range_src)
-        ms->In.RangeSrcPassedBy = true;
+        ms->In.RangeSrcPassedBy = true; // FIXME-MULTISELECT: The promise that this would be automatically done is not because of ItemAdd() clipping.
 
     // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
     // For this to work, IF the user is clipping items, they need to set RangeSrcPassedBy = true to notify the system.
