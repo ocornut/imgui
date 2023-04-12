@@ -1286,8 +1286,10 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
     wd->ImageCount = 0;
     if (wd->RenderPass)
         vkDestroyRenderPass(device, wd->RenderPass, allocator);
-    if (wd->Pipeline)
+    if (wd->Pipeline) {
         vkDestroyPipeline(device, wd->Pipeline, allocator);
+        wd->Pipeline = nullptr;
+    }
 
     // If min image count was not specified, request different count of images dependent on selected present mode
     if (min_image_count == 0)
