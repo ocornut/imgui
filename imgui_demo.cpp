@@ -608,6 +608,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 static void ShowDemoWindowWidgets()
 {
     IMGUI_DEMO_MARKER("Widgets");
+    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (!ImGui::CollapsingHeader("Widgets"))
         return;
 
@@ -1353,6 +1354,7 @@ static void ShowDemoWindowWidgets()
     }
 
     IMGUI_DEMO_MARKER("Widgets/Selectables");
+    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (ImGui::TreeNode("Selectables"))
     {
         // Selectable() has 2 overloads:
@@ -2759,26 +2761,28 @@ static void ShowDemoWindowWidgets()
     }
 }
 
-// [Advanced] Helper class to simulate storage of a multi-selection state, used by the advanced multi-selection demos.
+// [Advanced] Helper class to simulate storage of a multi-selection state, used by the BeginMultiSelect() demos.
 // We use ImGuiStorage (simple key->value storage) to avoid external dependencies but it's probably not optimal.
 // To store a single-selection:
 // - You only need a single variable and don't need any of this!
 // To store a multi-selection, in your real application you could:
 // - Use intrusively stored selection (e.g. 'bool IsSelected' inside your object). This is by far the simplest
 //   way to store your selection data, but it means you cannot have multiple simultaneous views over your objects.
-//   This is what may of the simpler demos in this file are using (so they are not using this class).
-// - Otherwise, any externally stored unordered_set/set/hash/map/interval trees (storing indices, objects id, etc.)
+//   This is what many of the simpler demos in this file are using (so they are not using this class).
+// - Use external storage: e.g. unordered_set/set/hash/map/interval trees (storing indices, objects id, etc.)
 //   are generally appropriate. Even a large array of bool might work for you...
 // - If you need to handle extremely large selections, it might be advantageous to support a "negative" mode in
-//   your storage, so "Select All" becomes "Negative=1, Clear" and then sparse unselect can add to the storage.
+//   your storage, so "Select All" becomes "Negative=1 + Clear" and then sparse unselect can add to the storage.
 // About RefItem:
-// - The MultiSelect API requires you to store information about the reference/pivot item (generally the last clicked item).
+// - The BeginMultiSelect() API requires you to store information about the reference/pivot item (generally the last clicked item).
 struct ExampleSelection
 {
-    ImGuiStorage                        Storage;
+    // Data
+    ImGuiStorage                        Storage;        // Selection set
     int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class)
     int                                 RangeRef;       // Reference/pivot item (generally last clicked item)
 
+    // Functions
     ExampleSelection()                  { RangeRef = 0; Clear(); }
     void Clear()                        { Storage.Clear(); SelectionSize = 0; }
     bool GetSelected(int n) const       { return Storage.GetInt((ImGuiID)n, 0) != 0; }
@@ -2791,10 +2795,19 @@ struct ExampleSelection
     // you will need a way to iterate from one object to another given the ID you use.
     // You are likely to need some kind of data structure to convert 'view index' <> 'object ID'.
     // FIXME-MULTISELECT: Would be worth providing a demo of doing this.
-    // FIXME-MULTISELECT: SetRange() is currently very inefficient since it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
-    void SetRange(int n1, int n2, bool v)   { if (n2 < n1) { int tmp = n2; n2 = n1; n1 = tmp; } for (int n = n1; n <= n2; n++) SetSelected(n, v); }
-    void SelectAll(int count)               { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
+    // FIXME-MULTISELECT: This implementation of SetRange() is inefficient because it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
+    void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
+    void SelectAll(int count)           { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
+
+    // Apply requests coming from BeginMultiSelect() and EndMultiSelect(). Must be done in this order! Order->SelectAll->SetRange.
+    void ApplyRequests(ImGuiMultiSelectData* ms_data, int items_count)
+    {
+        if (ms_data->RequestClear)      { Clear(); }
+        if (ms_data->RequestSelectAll)  { SelectAll(items_count); }
+        if (ms_data->RequestSetRange)   { SetRange((int)(intptr_t)ms_data->RangeSrc, (int)(intptr_t)ms_data->RangeDst, ms_data->RangeValue ? 1 : 0); }
+    }
 };
+
 
 static void ShowDemoWindowMultiSelect()
 {
@@ -2864,8 +2877,7 @@ static void ShowDemoWindowMultiSelect()
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
                 ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
-                if (multi_select_data->RequestClear)     { selection.Clear(); }
-                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
+                selection.ApplyRequests(multi_select_data, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -2886,9 +2898,7 @@ static void ShowDemoWindowMultiSelect()
                 // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
                 selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                if (multi_select_data->RequestClear)     { selection.Clear(); }
-                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
-                if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+                selection.ApplyRequests(multi_select_data, ITEMS_COUNT);
 
                 ImGui::EndListBox();
             }
@@ -2903,7 +2913,7 @@ static void ShowDemoWindowMultiSelect()
         // - Showcase having multiple multi-selection scopes in the same window.
         // - Showcase using inside a table.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (full, advanced)");
-        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+        //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
         if (ImGui::TreeNode("Multiple Selection (full, advanced)"))
         {
             // Options
@@ -2952,8 +2962,7 @@ static void ShowDemoWindowMultiSelect()
                     else
                         flags |= ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
                     ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
-                    if (multi_select_data->RequestClear)     { selection->Clear(); }
-                    if (multi_select_data->RequestSelectAll) { selection->SelectAll(ITEMS_COUNT); }
+                    selection->ApplyRequests(multi_select_data, ITEMS_COUNT);
 
                     if (multiple_selection_scopes)
                         ImGui::Text("Selection size: %d", selection->GetSelectionSize());   // Draw counter below Separator and after BeginMultiSelect()
@@ -2971,8 +2980,8 @@ static void ShowDemoWindowMultiSelect()
                     clipper.Begin(ITEMS_COUNT);
                     while (clipper.Step())
                     {
-                        // IF clipping is used you need to set 'RangeSrcPassedBy = true' if RangeRef was passed over.
-                        if (clipper.DisplayStart > selection->RangeRef)
+                        // IF clipping is used you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
+                        if ((int)(intptr_t)multi_select_data->RangeSrc <= clipper.DisplayStart)
                             multi_select_data->RangeSrcPassedBy = true;
 
                         for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
@@ -3052,9 +3061,7 @@ static void ShowDemoWindowMultiSelect()
                     // Apply multi-select requests
                     multi_select_data = ImGui::EndMultiSelect();
                     selection->RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                    if (multi_select_data->RequestClear)     { selection->Clear(); }
-                    if (multi_select_data->RequestSelectAll) { selection->SelectAll(ITEMS_COUNT); }
-                    if (multi_select_data->RequestSetRange)  { selection->SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+                    selection->ApplyRequests(multi_select_data, ITEMS_COUNT);
 
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PopStyleVar();

@@ -6464,7 +6464,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
     const bool was_selected = selected;
 
     // Multi-selection support (header)
-    const bool is_multi_select = (g.MultiSelectEnabledWindow == window);
+    const bool is_multi_select = (g.MultiSelectState.Window == window);
     if (is_multi_select)
     {
         MultiSelectItemHeader(id, &selected);
@@ -6816,7 +6816,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if ((flags & ImGuiSelectableFlags_AllowOverlap) || (g.LastItemData.InFlags & ImGuiItemFlags_AllowOverlap)) { button_flags |= ImGuiButtonFlags_AllowOverlap; }
 
     // Multi-selection support (header)
-    const bool is_multi_select = (g.MultiSelectEnabledWindow == window);
+    const bool is_multi_select = (g.MultiSelectState.Window == window);
     const bool was_selected = selected;
     if (is_multi_select)
     {
@@ -7126,23 +7126,19 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    IM_ASSERT(g.MultiSelectEnabledWindow == NULL);   // No recursion allowed yet (we could allow it if we deem it useful)
-    IM_ASSERT(g.MultiSelectFlags == 0);
-    IM_ASSERT(g.MultiSelectState.FocusScopeId == 0);
+    ImGuiMultiSelectState* ms = &g.MultiSelectState;
+    IM_ASSERT(ms->Window == NULL && ms->Flags == 0 && ms->FocusScopeId == 0);   // No recursion allowed yet (we could allow it if we deem it useful)
 
     // FIXME: BeginFocusScope()
-    ImGuiMultiSelectState* ms = &g.MultiSelectState;
     ms->Clear();
     ms->FocusScopeId = window->IDStack.back();
+    ms->Flags = flags;
+    ms->Window = window;
+    ms->IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
     PushFocusScope(ms->FocusScopeId);
-    g.MultiSelectEnabledWindow = window;
-    g.MultiSelectFlags = flags;
-
-    // Report focus
-    ms->In.IsFocused = ms->Out.IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
-    g.MultiSelectKeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
+    ms->KeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
 
     if ((flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0)
     {
@@ -7154,14 +7150,14 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     // FIXME: Polling key mods after the fact (frame following the move request) is incorrect, but latching it would requires non-trivial change in MultiSelectItemFooter()
     if (g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == ms->FocusScopeId && g.NavJustMovedToHasSelectionData)
     {
-        if (g.MultiSelectKeyMods & ImGuiMod_Shift)
+        if (ms->KeyMods & ImGuiMod_Shift)
             ms->InRequestSetRangeNav = true;
-        if ((g.MultiSelectKeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
+        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             ms->In.RequestClear = true;
     }
 
     // Shortcuts
-    if (ms->In.IsFocused)
+    if (ms->IsFocused)
     {
         // Select All helper shortcut (CTRL+A)
         // Note: we are comparing FocusScope so we don't need to be testing for IsWindowFocused()
@@ -7174,10 +7170,8 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
                 ms->In.RequestClear = true;
     }
 
-#ifdef IMGUI_DEBUG_MULTISELECT
-    if (ms->In.RequestClear)     IMGUI_DEBUG_LOG("BeginMultiSelect: RequestClear\n");
-    if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG("BeginMultiSelect: RequestSelectAll\n");
-#endif
+    //if (ms->In.RequestClear)     IMGUI_DEBUG_LOG("BeginMultiSelect: RequestClear\n");
+    //if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG("BeginMultiSelect: RequestSelectAll\n");
 
     return &ms->In;
 }
@@ -7190,7 +7184,7 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
-    if (g.MultiSelectFlags & ImGuiMultiSelectFlags_ClearOnClickWindowVoid)
+    if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickWindowVoid)
         if (IsWindowHovered() && g.HoveredId == 0)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
@@ -7199,18 +7193,16 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
             }
 
     // Unwind
-    if (g.MultiSelectFlags & ImGuiMultiSelectFlags_NoUnselect)
+    if (ms->Flags & ImGuiMultiSelectFlags_NoUnselect)
         ms->Out.RangeValue = true;
-    g.MultiSelectState.FocusScopeId = 0;
+    ms->FocusScopeId = 0;
+    ms->Window = NULL;
+    ms->Flags = ImGuiMultiSelectFlags_None;
     PopFocusScope();
-    g.MultiSelectEnabledWindow = NULL;
-    g.MultiSelectFlags = ImGuiMultiSelectFlags_None;
 
-#ifdef IMGUI_DEBUG_MULTISELECT
-    if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG("EndMultiSelect: RequestClear\n");
-    if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG("EndMultiSelect: RequestSelectAll\n");
-    if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG("EndMultiSelect: RequestSetRange %p..%p = %d\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue);
-#endif
+    //if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG("EndMultiSelect: RequestClear\n");
+    //if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG("EndMultiSelect: RequestSelectAll\n");
+    //if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG("EndMultiSelect: RequestSetRange %p..%p = %d\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue);
 
     return &ms->Out;
 }
@@ -7257,13 +7249,13 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     if (ms->InRequestSetRangeNav)
     {
         IM_ASSERT(id != 0);
-        IM_ASSERT((g.MultiSelectKeyMods & ImGuiMod_Shift) != 0);
+        IM_ASSERT((ms->KeyMods & ImGuiMod_Shift) != 0);
         const bool is_range_dst = !ms->InRangeDstPassedBy && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
         if (is_range_dst)
             ms->InRangeDstPassedBy = true;
         if (is_range_src || is_range_dst || ms->In.RangeSrcPassedBy != ms->InRangeDstPassedBy)
             selected = ms->In.RangeValue;
-        else if ((g.MultiSelectKeyMods & ImGuiMod_Ctrl) == 0)
+        else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0)
             selected = false;
     }
 
@@ -7278,11 +7270,11 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     void* item_data = (void*)g.NextItemData.SelectionUserData;
 
+    const bool is_multiselect = (ms->Flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0;
     bool selected = *p_selected;
     bool pressed = *p_pressed;
-    const bool is_multiselect = (g.MultiSelectFlags & ImGuiMultiSelectFlags_NoMultiSelect) == 0;
-    bool is_ctrl = (g.MultiSelectKeyMods & ImGuiMod_Ctrl) != 0;
-    bool is_shift = (g.MultiSelectKeyMods & ImGuiMod_Shift) != 0;
+    bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
+    bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
 
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
@@ -7334,7 +7326,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         }
         else
         {
-            selected = (!is_ctrl || (g.MultiSelectFlags & ImGuiMultiSelectFlags_NoUnselect)) ? true : !selected;
+            selected = (!is_ctrl || (ms->Flags & ImGuiMultiSelectFlags_NoUnselect)) ? true : !selected;
             ms->Out.RangeSrc = ms->Out.RangeDst = item_data;
             ms->Out.RangeValue = selected;
         }
@@ -7371,7 +7363,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
-    if (ms->Out.RangeSrc == item_data && is_ctrl && is_shift && is_multiselect && !(g.MultiSelectFlags & ImGuiMultiSelectFlags_NoUnselect))
+    if (ms->Out.RangeSrc == item_data && is_ctrl && is_shift && is_multiselect && !(ms->Flags & ImGuiMultiSelectFlags_NoUnselect))
         ms->Out.RangeValue = selected;
 
     *p_selected = selected;

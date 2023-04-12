@@ -2754,6 +2754,7 @@ enum ImGuiMultiSelectFlags_
 //   you may as well not bother with clipping, as the cost should be negligible (as least on Dear ImGui side).
 //   If you are not sure, always start without clipping and you can work your way to the more optimized version afterwards.
 // - The void* RangeSrc/RangeDst value represent a selectable object. They are the values you pass to SetNextItemSelectionUserData().
+//   Most likely you will want to store an index here.
 //   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points and you will need to interpolate
 //   between them to honor range selection. But the code never assume that sortable integers are used (you may store pointers to your object,
 //   and then from the pointer have your own way of iterating from RangeSrc to RangeDst).
@@ -2761,35 +2762,36 @@ enum ImGuiMultiSelectFlags_
 //   e.g. instructive selection (store a bool inside each object), external array (store an array aside from your objects),
 //   hash/map/set (store only selected items in a hash/map/set), or other structures (store indices in an interval tree), etc.
 // Usage flow:
-//   1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection state.
-//      It is because you need to pass its selection state (and you own selection) that we don't store this value in Dear ImGui.
-//      (For the initial frame or when resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*).
-//   2) Honor Clear/SelectAll requests by updating your selection data. [Only required if you are using a clipper in step 4]
-//   3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item. [Only required if you are using a clipper in step 4]
-//      This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
-//      If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
-//   4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
-//      Call IsItemToggledSelection() to query if the selection state has been toggled, if you need the info immediately for your display (before EndMultiSelect()).
-//      When cannot return a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggle" event instead.
-//   5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
-//   6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
+//   Begin
+//     1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection state.
+//        It is because you need to pass its selection state (and you own selection) that we don't store this value in Dear ImGui.
+//        (For the initial frame or when resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*).
+//     2) Honor Clear/SelectAll requests by updating your selection data. Only required if you are using a clipper in step 4: but you can use same code as step 6 anyway.
+//   Loop
+//     3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item. [Only required if you are using a clipper in step 4]
+//        This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
+//        If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
+//     4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
+//        Call IsItemToggledSelection() to query if the selection state has been toggled, if you need the info immediately for your display (before EndMultiSelect()).
+//        When cannot return a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggle" event instead.
+//   End
+//     5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
+//     6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
 // If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
 struct ImGuiMultiSelectData
 {
-    bool    IsFocused;              // Begin        // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
-    bool    RequestClear;           // Begin, End   // Request user to clear selection
-    bool    RequestSelectAll;       // Begin, End   // Request user to select all
-    bool    RequestSetRange;        // End          // Request user to set or clear selection in the [RangeSrc..RangeDst] range
-    bool    RangeSrcPassedBy;       // In loop      // (If clipping) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
-    bool    RangeValue;             // End          // End: parameter from RequestSetRange request. True = Select Range, False = Unselect range.
-    void*   RangeSrc;               // Begin, End   // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
-    void*   RangeDst;               // End          // End: parameter from RequestSetRange request.
-    int     RangeDirection;         // End          // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values.
+    bool    RequestClear;           // Begin, End  // 1. Request user to clear selection
+    bool    RequestSelectAll;       // Begin, End  // 2. Request user to select all
+    bool    RequestSetRange;        //        End  // 3. Request user to set or clear selection in the [RangeSrc..RangeDst] range
+    bool    RangeSrcPassedBy;       //    Loop     // (If clipping) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
+    bool    RangeValue;             //        End  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
+    void*   RangeSrc;               // Begin, End  // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
+    void*   RangeDst;               //        End  // End: parameter from RequestSetRange request.
+    int     RangeDirection;         //        End  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values.
 
     ImGuiMultiSelectData()  { Clear(); }
     void Clear()
     {
-        IsFocused = false;
         RequestClear = RequestSelectAll = RequestSetRange = RangeSrcPassedBy = RangeValue = false;
         RangeSrc = RangeDst = NULL;
         RangeDirection = 0;
