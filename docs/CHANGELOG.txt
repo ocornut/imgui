@@ -83,6 +83,9 @@ Docking+Viewports Branch:
 
 - Docking: when io.ConfigDockingWithShift is enabled, fixed help tooltip erroneously
   reading SetNextWindowXXX() data. (#6709, #4643, #7491) [@ocornut, @cfillion]
+- Backends: Vulkan: create a custom pipeline for secondary viewports. Fixes issues
+  when user created main viewport uses a different renderpass. (#6325, #6305, #7398,
+  #3459, #3253, #3522) [@skaman, @FunMiles]
 
 
 -----------------------------------------------------------------------
