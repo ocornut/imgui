@@ -7218,6 +7218,10 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
         g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData;
     g.NextItemData.SelectionUserData = selection_user_data;
     g.NextItemData.FocusScopeId = g.CurrentFocusScopeId;
+
+    // Auto updating RangeSrcPassedBy for cases were clipped is not used.
+    if (g.MultiSelectState.In.RangeSrc == (void*)selection_user_data)
+        g.MultiSelectState.In.RangeSrcPassedBy = true;
 }
 
 void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
@@ -7240,16 +7244,13 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     else if (ms->In.RequestSelectAll)
         selected = true;
 
-    const bool is_range_src = (ms->In.RangeSrc == item_data);
-    if (is_range_src)
-        ms->In.RangeSrcPassedBy = true; // FIXME-MULTISELECT: The promise that this would be automatically done is not because of ItemAdd() clipping.
-
     // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
     // For this to work, IF the user is clipping items, they need to set RangeSrcPassedBy = true to notify the system.
     if (ms->InRequestSetRangeNav)
     {
         IM_ASSERT(id != 0);
         IM_ASSERT((ms->KeyMods & ImGuiMod_Shift) != 0);
+        const bool is_range_src = (ms->In.RangeSrc == item_data);
         const bool is_range_dst = !ms->InRangeDstPassedBy && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
         if (is_range_dst)
             ms->InRangeDstPassedBy = true;
