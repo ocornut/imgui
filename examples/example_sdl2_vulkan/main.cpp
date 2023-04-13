@@ -87,7 +87,8 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
         if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             return device;
     }
-    return VK_NULL_HANDLE;
+
+    return gpus[0];
 }
 
 static void SetupVulkan(ImVector<const char*> instance_extensions)
