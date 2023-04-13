@@ -94,6 +94,9 @@ Other changes:
   (#6314) [@PathogenDavid]
 - Backends: WebGPU: Align buffers. Use WGSL shaders instead of SPIR-V. Add gamma uniform. (#6188) [@eliemichel]
 - Backends: WebGPU: Reorganized to store data in io.BackendRendererUserData like other backends.
+- Examples: Vulkan: Fixed validation errors with newer VulkanSDK by explicitely querying and enabling
+  "VK_KHR_get_physical_device_properties2", "VK_KHR_portability_enumeration", and
+  VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR. (#6109, #6172, #6101)
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
 - Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
