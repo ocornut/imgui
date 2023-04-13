@@ -738,7 +738,6 @@ void ImGui_ImplVulkan_DestroyFontsTexture()
 
     ImGui_ImplVulkan_DestroyFontObjects();
 
-    io.Fonts->Clear();
     io.Fonts->SetTexID(nullptr);
 }
 
