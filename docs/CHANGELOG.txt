@@ -99,29 +99,29 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.5 WIP (In Progress)
+ VERSION 1.89.5 (Released 2023-04-13)
 -----------------------------------------------------------------------
-
-Breaking Changes:
 
 Other changes:
 
+- InputText: Reworked prev/next-word behavior to more closely match Visual Studio
+  text editor. Include '.' as a delimiter and alter varying subtle behavior with how
+  blanks and separators are treated when skipping words. (#6067) [@ajweeks]
 - InputText: Fixed a tricky edge case, ensuring value is always written back on the
   frame where IsItemDeactivated() returns true, in order to allow usage without user
   retaining underlying data. While we don't really want to encourage user not retaining
   underlying data, in the absence of a "late commit" behavior/flag we understand it may
   be desirable to take advantage of this trick. (#4714)
-- InputText: Reworked prev/next-word behavior to more closely match Visual Studio
-  text editor. Include '.' as a delimiter and alter varying subtle behavior with how
-  blanks and separators are treated when skipping words. (#6067) [@ajweeks]
 - Drag, Sliders: Fixed parsing of text input when '+' or '#' format flags are used
   in the format string. (#6259) [@idbrii]
 - Nav: Made Ctrl+Tab/Ctrl+Shift+Tab windowing register ownership to held modifier so
   it doesn't interfere with other code when remapping those actions. (#4828, #3255, #5641)
+- Nav: Made PageUp/PageDown/Home/End navigation also scroll parent windows when
+  necessary to make the target location fully visible (same as e.g. arrow keys).
 - ColorEdit: Fixed shading of S/V triangle in Hue Wheel mode. (#5200, #6254) [@jamesthomasgriffin]
 - TabBar: Tab-bars with ImGuiTabBarFlags_FittingPolicyScroll can be scrolled with
   horizontal mouse-wheel (or Shift + WheelY). (#2702)
-- Rendering: Using adaptative tesselation for: RadioButton, ColorEdit preview circles,
+- Rendering: Using adaptive tessellation for RadioButton, ColorEdit preview circles,
   Windows Close and Collapse Buttons.
 - ButtonBehavior: Fixed an edge case where changing widget type/behavior while active
   and using same id could lead to an assert. (#6304)
@@ -139,7 +139,7 @@ Other changes:
   - Fixed tapping on TableHeader() on a touch-screen.
 - IO: Added io.AddMouseSourceEvent() and ImGuiMouseSource enum. This is to allow backend to
   specify actual event source between Mouse/TouchScreen/Pen. (#2702, #2334, #2372, #3453, #5693)
-- IO: Fixed support for calling io.AddXXXX functions fron inactive context (wrongly
+- IO: Fixed support for calling io.AddXXXX functions from inactive context (wrongly
   advertised as supported in 1.89.4). (#6199, #6256, #5856) [@cfillion]
 - Backends: OpenGL3: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 - Backends: OpenGL3: Properly restoring "no shader program bound" if it was the case prior to
@@ -158,9 +158,14 @@ Other changes:
   (#6314) [@PathogenDavid]
 - Backends: WebGPU: Align buffers. Use WGSL shaders instead of SPIR-V. Add gamma uniform. (#6188) [@eliemichel]
 - Backends: WebGPU: Reorganized to store data in io.BackendRendererUserData like other backends.
+- Examples: Vulkan: Fixed validation errors with newer VulkanSDK by explicitly querying and enabling
+  "VK_KHR_get_physical_device_properties2", "VK_KHR_portability_enumeration", and
+  VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR. (#6109, #6172, #6101)
 - Examples: Windows: Added 'misc/debuggers/imgui.natstepfilter' file to all Visual Studio projects,
   now that VS 2022 17.6 Preview 2 support adding Debug Step Filter spec files into projects.
 - Examples: SDL3: Updated for latest WIP SDL3 branch. (#6243)
+- TestSuite: Added variety of new regression tests and improved/amended existing ones
+  in imgui_test_engine/ repo. [@PathogenDavid, @ocornut]
 
 Docking+Viewports Branch:
 

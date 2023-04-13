@@ -1,4 +1,4 @@
-// dear imgui, v1.89.5 WIP
+// dear imgui, v1.89.5
 // (main code and documentation)
 
 // Help:
@@ -12182,16 +12182,14 @@ void ImGui::NavMoveRequestApplyResult()
     // Scroll to keep newly navigated item fully into view.
     if (g.NavLayer == ImGuiNavLayer_Main)
     {
+        ImRect rect_abs = WindowRectRelToAbs(result->Window, result->RectRel);
+        ScrollToRectEx(result->Window, rect_abs, g.NavMoveScrollFlags);
+
         if (g.NavMoveFlags & ImGuiNavMoveFlags_ScrollToEdgeY)
         {
-            // FIXME: Should remove this
+            // FIXME: Should remove this? Or make more precise: use ScrollToRectEx() with edge?
             float scroll_target = (g.NavMoveDir == ImGuiDir_Up) ? result->Window->ScrollMax.y : 0.0f;
             SetScrollY(result->Window, scroll_target);
-        }
-        else
-        {
-            ImRect rect_abs = WindowRectRelToAbs(result->Window, result->RectRel);
-            ScrollToRectEx(result->Window, rect_abs, g.NavMoveScrollFlags);
         }
     }
 
@@ -20094,14 +20092,13 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
         return;
     }
 
-    AlignTextToFramePadding();
-    Text("Log events:");
-    SameLine(); CheckboxFlags("All", &g.DebugLogFlags, ImGuiDebugLogFlags_EventMask_);
+    CheckboxFlags("All", &g.DebugLogFlags, ImGuiDebugLogFlags_EventMask_);
     SameLine(); CheckboxFlags("ActiveId", &g.DebugLogFlags, ImGuiDebugLogFlags_EventActiveId);
     SameLine(); CheckboxFlags("Focus", &g.DebugLogFlags, ImGuiDebugLogFlags_EventFocus);
     SameLine(); CheckboxFlags("Popup", &g.DebugLogFlags, ImGuiDebugLogFlags_EventPopup);
     SameLine(); CheckboxFlags("Nav", &g.DebugLogFlags, ImGuiDebugLogFlags_EventNav);
     SameLine(); if (CheckboxFlags("Clipper", &g.DebugLogFlags, ImGuiDebugLogFlags_EventClipper)) { g.DebugLogClipperAutoDisableFrames = 2; } if (IsItemHovered()) SetTooltip("Clipper log auto-disabled after 2 frames");
+    //SameLine(); CheckboxFlags("Selection", &g.DebugLogFlags, ImGuiDebugLogFlags_EventSelection);
     SameLine(); CheckboxFlags("IO", &g.DebugLogFlags, ImGuiDebugLogFlags_EventIO);
     SameLine(); CheckboxFlags("Docking", &g.DebugLogFlags, ImGuiDebugLogFlags_EventDocking);
     SameLine(); CheckboxFlags("Viewport", &g.DebugLogFlags, ImGuiDebugLogFlags_EventViewport);
