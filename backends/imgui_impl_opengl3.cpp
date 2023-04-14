@@ -613,8 +613,24 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 #endif
 
 #ifdef IMGUI_IMPL_HAS_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+// Desktop OpenGL 3.0 and OpenGL 3.1 had separate polygon draw modes for front-facing and back-facing faces of polygons
+#if defined(GL_FRONT) && defined(GL_BACK) // possibly Desktop OpenGL 3.0, 3.1 or 3.2+ compatibility profile
+#ifdef GL_CONTEXT_PROFILE_MASK // Desktop OpenGL 3.2+
+    GLint profile_mask;
+    glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile_mask);
+    if (profile_mask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT)
+#else
+    if (bd->GlVersion <= 310)
 #endif
+    {
+        glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]);
+        glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
+    }
+    else
+#endif // GL_FRONT & GL_BACK
+    glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+#endif // IMGUI_IMPL_HAS_POLYGON_MODE
+
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
     (void)bd; // Not all compilation paths use this
