@@ -355,6 +355,7 @@ void    ImGui_ImplOpenGL3_Shutdown()
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
     IM_DELETE(bd);
 }
 

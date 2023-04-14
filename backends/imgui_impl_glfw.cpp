@@ -643,6 +643,8 @@ void ImGui_ImplGlfw_Shutdown()
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
+    io.BackendFlags &= ~ImGuiBackendFlags_HasSetMousePos;
     IM_DELETE(bd);
 }
 
