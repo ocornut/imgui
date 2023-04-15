@@ -202,9 +202,6 @@ void ImGui_ImplGLUT_NewFrame()
         delta_time_ms = 1;
     io.DeltaTime = delta_time_ms / 1000.0f;
     g_Time = current_time;
-
-    // Start the frame
-    ImGui::NewFrame();
 }
 
 static void ImGui_ImplGLUT_UpdateKeyModifiers()
