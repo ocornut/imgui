@@ -37,7 +37,11 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
+  It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
+
 Other changes:
+
 
 
 -----------------------------------------------------------------------
