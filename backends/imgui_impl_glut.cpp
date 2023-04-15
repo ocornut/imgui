@@ -190,7 +190,7 @@ void ImGui_ImplGLUT_InstallFuncs()
 
 void ImGui_ImplGLUT_Shutdown()
 {
-    IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "No platform backend to shutdown, or already shutdown?");
+    IM_ASSERT(ImGui::GetCurrentContext() != nullptr && "No platform backend to shutdown");
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = nullptr;
 }
