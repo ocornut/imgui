@@ -136,7 +136,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 void ImGui_ImplMetal_Shutdown()
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererUserData = nullptr;
     io.BackendRendererName = nullptr;
