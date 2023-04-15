@@ -464,6 +464,7 @@ void ImGui_ImplAllegro5_Shutdown()
 
     io.BackendPlatformUserData = nullptr;
     io.BackendPlatformName = io.BackendRendererName = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
     IM_DELETE(bd);
 }
 

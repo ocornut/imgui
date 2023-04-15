@@ -178,6 +178,7 @@ void    ImGui_ImplWin32_Shutdown()
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos);
     IM_DELETE(bd);
 }
 
