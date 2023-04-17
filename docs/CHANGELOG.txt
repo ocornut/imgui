@@ -42,6 +42,9 @@ Breaking changes:
 
 Other changes:
 
+- Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
+  Potentially this would facilitate switching runtime backend mid-session.
+
 
 
 -----------------------------------------------------------------------

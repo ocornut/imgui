@@ -191,6 +191,8 @@ void ImGui_ImplGLUT_InstallFuncs()
 
 void ImGui_ImplGLUT_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = nullptr;
 }
 
 void ImGui_ImplGLUT_NewFrame()

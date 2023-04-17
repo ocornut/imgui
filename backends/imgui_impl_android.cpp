@@ -269,6 +269,8 @@ bool ImGui_ImplAndroid_Init(ANativeWindow* window)
 
 void ImGui_ImplAndroid_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = nullptr;
 }
 
 void ImGui_ImplAndroid_NewFrame()
