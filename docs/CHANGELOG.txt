@@ -48,6 +48,8 @@ Other changes:
   (#6341) [@lukaasm]
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
   Potentially this would facilitate switching runtime backend mid-session.
+- Backends: OpenGL3: Restore front and back polygon mode separately when supported
+  by context (Desktop 3.0, 3.1, or 3.2+ with compat bit). (#6333) [@GereonV]
 
 
 
