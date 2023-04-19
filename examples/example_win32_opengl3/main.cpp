@@ -29,8 +29,10 @@ void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-
-static void Win32_CreateWindow(ImGuiViewport* viewport)
+// Support function for multi-viewports
+// Unlike most other backend combination, we need specific hooks to combine Win32+OpenGL.
+// We could in theory decide to support Win32-specific code in OpenGL backend via e.g. an hypothetical ImGui_ImplOpenGL3_InitForRawWin32().
+static void Hook_Renderer_CreateWindow(ImGuiViewport* viewport)
 {
     assert(viewport->RendererUserData == NULL);
 
@@ -39,7 +41,7 @@ static void Win32_CreateWindow(ImGuiViewport* viewport)
     viewport->RendererUserData = data;
 }
 
-static void Win32_DestroyWindow(ImGuiViewport* viewport)
+static void Hook_Renderer_DestroyWindow(ImGuiViewport* viewport)
 {
     if (viewport->RendererUserData != NULL)
     {
@@ -50,25 +52,17 @@ static void Win32_DestroyWindow(ImGuiViewport* viewport)
     }
 }
 
-static void Win32_RenderWindow(ImGuiViewport* viewport, void*)
+static void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
 {
-    WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
-
-    if (data)
-    {
-        // Activate the platform window DC in the OpenGL rendering context
+    // Activate the platform window DC in the OpenGL rendering context
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
         wglMakeCurrent(data->hDC, g_hRC);
-    }
 }
 
-static void Win32_SwapBuffers(ImGuiViewport* viewport, void*)
+static void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
-
-    if (data)
-    {
-        SwapBuffers(data->hDC);
-    }
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
+        ::SwapBuffers(data->hDC);
 }
 
 // Main code
@@ -119,22 +113,20 @@ int main(int, char**)
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
 
+    // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-
-        // Store the hdc for this new window
-        assert(platform_io.Renderer_CreateWindow == NULL);
-        platform_io.Renderer_CreateWindow = Win32_CreateWindow;
-        assert(platform_io.Renderer_DestroyWindow == NULL);
-        platform_io.Renderer_DestroyWindow = Win32_DestroyWindow;
-        assert(platform_io.Renderer_SwapBuffers == NULL);
-        platform_io.Renderer_SwapBuffers = Win32_SwapBuffers;
-
-        // We need to activate the context before drawing
-        assert(platform_io.Platform_RenderWindow == NULL);
-        platform_io.Platform_RenderWindow = Win32_RenderWindow;
+        IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
+        IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
+        IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
+        IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
+        platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
+        platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
+        platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
+        platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
     }
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -227,6 +219,7 @@ int main(int, char**)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
+
             // Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
             wglMakeCurrent(g_MainWindow.hDC, g_hRC);
         }

@@ -1165,11 +1165,11 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static void ImGui_ImplWin32_InitPlatformInterface(bool platformHasOwnDC)
+static void ImGui_ImplWin32_InitPlatformInterface(bool platform_has_own_dc)
 {
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW | (platformHasOwnDC ? CS_OWNDC : 0);
+    wcex.style = CS_HREDRAW | CS_VREDRAW | (platform_has_own_dc ? CS_OWNDC : 0);
     wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
