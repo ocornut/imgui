@@ -29,6 +29,48 @@ void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+
+static void Win32_CreateWindow(ImGuiViewport* viewport)
+{
+    assert(viewport->RendererUserData == NULL);
+
+    WGL_WindowData* data = IM_NEW(WGL_WindowData);
+    CreateDeviceWGL((HWND)viewport->PlatformHandle, data);
+    viewport->RendererUserData = data;
+}
+
+static void Win32_DestroyWindow(ImGuiViewport* viewport)
+{
+    if (viewport->RendererUserData != NULL)
+    {
+        WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
+        CleanupDeviceWGL((HWND)viewport->PlatformHandle, data);
+        IM_DELETE(data);
+        viewport->RendererUserData = NULL;
+    }
+}
+
+static void Win32_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
+
+    if (data)
+    {
+        // Activate the platform window DC in the OpenGL rendering context
+        wglMakeCurrent(data->hDC, g_hRC);
+    }
+}
+
+static void Win32_SwapBuffers(ImGuiViewport* viewport, void*)
+{
+    WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
+
+    if (data)
+    {
+        SwapBuffers(data->hDC);
+    }
+}
+
 // Main code
 int main(int, char**)
 {
@@ -58,15 +100,41 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
 
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+
+        // Store the hdc for this new window
+        assert(platform_io.Renderer_CreateWindow == NULL);
+        platform_io.Renderer_CreateWindow = Win32_CreateWindow;
+        assert(platform_io.Renderer_DestroyWindow == NULL);
+        platform_io.Renderer_DestroyWindow = Win32_DestroyWindow;
+        assert(platform_io.Renderer_SwapBuffers == NULL);
+        platform_io.Renderer_SwapBuffers = Win32_SwapBuffers;
+
+        // We need to activate the context before drawing
+        assert(platform_io.Platform_RenderWindow == NULL);
+        platform_io.Platform_RenderWindow = Win32_RenderWindow;
+    }
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -153,6 +221,15 @@ int main(int, char**)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            // Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
+            wglMakeCurrent(g_MainWindow.hDC, g_hRC);
+        }
 
         // Present
         ::SwapBuffers(g_MainWindow.hDC);
