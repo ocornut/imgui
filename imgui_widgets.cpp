@@ -1,4 +1,4 @@
-// dear imgui, v1.89.5
+// dear imgui, v1.89.6 WIP
 // (widgets code)
 
 /*
@@ -4302,7 +4302,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
-        g.WantTextInputNextFrame = 1;
 
         // Edit in progress
         const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + state->ScrollX;
@@ -4741,8 +4740,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
-    if (clear_active_id && g.ActiveId == id)
+    // Otherwise request text input ahead for next frame.
+    if (g.ActiveId == id && clear_active_id)
         ClearActiveID();
+    else if (g.ActiveId == id)
+        g.WantTextInputNextFrame = 1;
 
     // Render frame
     if (!is_multiline)

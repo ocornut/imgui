@@ -494,7 +494,21 @@ bool ImGui_ImplOSX_Init(NSView* view)
 
 void ImGui_ImplOSX_Shutdown()
 {
+    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+    IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGui_ImplOSX_ShutdownPlatformInterface();
+
+    bd->Observer = nullptr;
+    if (bd->Monitor != nullptr)
+    {
+        [NSEvent removeMonitor:bd->Monitor];
+        bd->Monitor = nullptr;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = nullptr;
+    io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasGamepad);
     ImGui_ImplOSX_DestroyBackendData();
 }
 

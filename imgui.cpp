@@ -1,4 +1,4 @@
-// dear imgui, v1.89.5
+// dear imgui, v1.89.6 WIP
 // (main code and documentation)
 
 // Help:
@@ -11402,25 +11402,28 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
     }
 
 #if IMGUI_DEBUG_NAV_SCORING
-    char buf[128];
-    if (IsMouseHoveringRect(cand.Min, cand.Max))
-    {
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "dbox (%.2f,%.2f->%.4f)\ndcen (%.2f,%.2f->%.4f)\nd (%.2f,%.2f->%.4f)\nnav %c, quadrant %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
-        ImDrawList* draw_list = GetForegroundDrawList(window);
-        draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255,200,0,100));
-        draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
-        draw_list->AddRectFilled(cand.Max - ImVec2(4, 4), cand.Max + CalcTextSize(buf) + ImVec2(4, 4), IM_COL32(40,0,0,150));
-        draw_list->AddText(cand.Max, ~0U, buf);
-    }
-    else if (g.IO.KeyCtrl) // Hold to preview score in matching quadrant. Press C to rotate.
+    char buf[200];
+    if (g.IO.KeyCtrl) // Hold CTRL to preview score in matching quadrant. CTRL+Arrow to rotate.
     {
         if (quadrant == g.NavMoveDir)
         {
             ImFormatString(buf, IM_ARRAYSIZE(buf), "%.0f/%.0f", dist_box, dist_center);
             ImDrawList* draw_list = GetForegroundDrawList(window);
-            draw_list->AddRectFilled(cand.Min, cand.Max, IM_COL32(255, 0, 0, 200));
+            draw_list->AddRectFilled(cand.Min, cand.Max, IM_COL32(255, 0, 0, 80));
+            draw_list->AddRectFilled(cand.Min, cand.Min + CalcTextSize(buf), IM_COL32(255, 0, 0, 200));
             draw_list->AddText(cand.Min, IM_COL32(255, 255, 255, 255), buf);
         }
+    }
+    if (IsMouseHoveringRect(cand.Min, cand.Max))
+    {
+        ImFormatString(buf, IM_ARRAYSIZE(buf),
+            "d-box    (%7.3f,%7.3f) -> %7.3f\nd-center (%7.3f,%7.3f) -> %7.3f\nd-axial  (%7.3f,%7.3f) -> %7.3f\nnav %c, quadrant %c",
+            dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
+        ImDrawList* draw_list = GetForegroundDrawList(window);
+        draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255,200,0,100));
+        draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
+        draw_list->AddRectFilled(cand.Max - ImVec2(4, 4), cand.Max + CalcTextSize(buf) + ImVec2(4, 4), IM_COL32(40,0,0,200));
+        draw_list->AddText(cand.Max, ~0U, buf);
     }
 #endif
 
@@ -12045,13 +12048,14 @@ void ImGui::NavUpdateCreateMoveRequest()
         g.NavScoringNoClipRect.TranslateY(scoring_rect_offset_y);
     }
 
-    // [DEBUG] Always send a request
+    // [DEBUG] Always send a request when holding CTRL. Hold CTRL + Arrow change the direction.
 #if IMGUI_DEBUG_NAV_SCORING
-    if (io.KeyCtrl && IsKeyPressed(ImGuiKey_C))
-        g.NavMoveDirForDebug = (ImGuiDir)((g.NavMoveDirForDebug + 1) & 3);
-    if (io.KeyCtrl && g.NavMoveDir == ImGuiDir_None)
+    //if (io.KeyCtrl && IsKeyPressed(ImGuiKey_C))
+    //    g.NavMoveDirForDebug = (ImGuiDir)((g.NavMoveDirForDebug + 1) & 3);
+    if (io.KeyCtrl)
     {
-        g.NavMoveDir = g.NavMoveDirForDebug;
+        if (g.NavMoveDir == ImGuiDir_None)
+            g.NavMoveDir = g.NavMoveDirForDebug;
         g.NavMoveFlags |= ImGuiNavMoveFlags_DebugNoResult;
     }
 #endif

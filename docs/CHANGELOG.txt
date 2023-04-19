@@ -99,6 +99,31 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.6 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+- Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
+  It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
+
+Other changes:
+
+- Tables: Fixed a small miscalculation in TableHeader() leading to an empty tooltip
+  showing when a sorting column has no visible name. (#6342) [@lukaasm]
+- InputText: Avoid setting io.WantTextInputNextFrame during the deactivation frame.
+  (#6341) [@lukaasm]
+- Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
+  Potentially this would facilitate switching runtime backend mid-session.
+- Backends: Win32: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw
+  Win32/Winapi with OpenGL. (#3218)
+- Backends: OpenGL3: Restore front and back polygon mode separately when supported
+  by context (Desktop 3.0, 3.1, or 3.2+ with compat bit). (#6333) [@GereonV]
+- Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
+  provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.5 (Released 2023-04-13)
 -----------------------------------------------------------------------
 

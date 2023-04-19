@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-04-17: BREAKING: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame(). Needs to be called from the main application loop, like with every other backends.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
@@ -190,6 +191,8 @@ void ImGui_ImplGLUT_InstallFuncs()
 
 void ImGui_ImplGLUT_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = nullptr;
 }
 
 void ImGui_ImplGLUT_NewFrame()
@@ -202,9 +205,6 @@ void ImGui_ImplGLUT_NewFrame()
         delta_time_ms = 1;
     io.DeltaTime = delta_time_ms / 1000.0f;
     g_Time = current_time;
-
-    // Start the frame
-    ImGui::NewFrame();
 }
 
 static void ImGui_ImplGLUT_UpdateKeyModifiers()

@@ -16,6 +16,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-04-18: OpenGL: Restore front and back polygon mode separately when supported by context. (#6333)
 //  2023-03-23: OpenGL: Properly restoring "no shader program bound" if it was the case prior to running the rendering function. (#6267, #6220, #6224)
 //  2023-03-15: OpenGL: Fixed GL loader crash when GL_VERSION returns NULL. (#6154, #4445, #3530)
 //  2023-03-06: OpenGL: Fixed restoration of a potentially deleted OpenGL program, by calling glIsProgram(). (#6220, #6224)
@@ -206,6 +207,8 @@ struct ImGui_ImplOpenGL3_Data
 {
     GLuint          GlVersion;               // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
     char            GlslVersionString[32];   // Specified by user or detected based on compile time GL settings.
+    bool            GlProfileIsCompat;
+    GLint           GlProfileMask;
     GLuint          FontTexture;
     GLuint          ShaderHandle;
     GLint           AttribLocationTex;       // Uniforms location
@@ -290,6 +293,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         sscanf(gl_version, "%d.%d", &major, &minor);
     }
     bd->GlVersion = (GLuint)(major * 100 + minor * 10);
+#if defined(GL_CONTEXT_PROFILE_MASK)
+    glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &bd->GlProfileMask);
+    bd->GlProfileIsCompat = (bd->GlProfileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
+#endif
 
     bd->UseBufferSubData = false;
     /*
@@ -366,6 +373,7 @@ void    ImGui_ImplOpenGL3_Shutdown()
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
     IM_DELETE(bd);
 }
 
@@ -623,8 +631,18 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 #endif
 
 #ifdef IMGUI_IMPL_HAS_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
-#endif
+    // Desktop OpenGL 3.0 and OpenGL 3.1 had separate polygon draw modes for front-facing and back-facing faces of polygons
+    if (bd->GlVersion <= 310 || bd->GlProfileIsCompat)
+    {
+        glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]);
+        glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
+    }
+    else
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+    }
+#endif // IMGUI_IMPL_HAS_POLYGON_MODE
+
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
     (void)bd; // Not all compilation paths use this
