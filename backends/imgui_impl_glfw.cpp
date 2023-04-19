@@ -999,6 +999,14 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     }
 }
 
+void ImGui_ImplGlfw_MakeMainViewTheParent(ImGuiViewport* viewport)
+{
+#ifdef _WIN32
+    ImGuiViewport* mainview = ImGui::GetMainViewport();
+    ::SetWindowLongPtr((HWND)viewport->PlatformHandleRaw, GWLP_HWNDPARENT, (LONG_PTR)mainview->PlatformHandleRaw);
+#endif
+}
+
 static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
@@ -1022,6 +1030,8 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformHandle = (void*)vd->Window;
 #ifdef _WIN32
     viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
+	if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon)
+        ImGui_ImplGlfw_MakeMainViewTheParent(viewport);
 #elif defined(__APPLE__)
     viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(vd->Window);
 #endif
