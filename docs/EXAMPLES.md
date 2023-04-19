@@ -200,6 +200,10 @@ DirectX12 example, Windows only. <BR>
 = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp <BR>
 This is quite long and tedious, because: DirectX12.
 
+[example_win32_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_opengl3/) <BR>
+Raw Windows + OpenGL3 + example (modern, programmable pipeline) <BR>
+= main.cpp + imgui_impl_win32.cpp + imgui_impl_opengl3.cpp <BR>
+
 
 ### Miscellaneous
 
