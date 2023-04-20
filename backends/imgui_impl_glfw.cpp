@@ -1001,9 +1001,7 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
 
 static ImGuiViewport* ImGui_ImplGlfw_GetParentViewport(ImGuiViewport const& viewport)
 {
-    if (!viewport.ParentViewportId)
-        return nullptr;
-    return ImGui::FindViewportByID(viewport.ParentViewportId);
+    return viewport.ParentViewportId ? ImGui::FindViewportByID(viewport.ParentViewportId) : nullptr;
 }
 
 static void ImGui_ImplGlfw_AddParentToView(ImGuiViewport const&viewport, ImGuiViewport const&parent_viewport)
@@ -1041,8 +1039,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 #endif
     glfwSetWindowPos(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
-    auto* parent_viewport = ImGui_ImplGlfw_GetParentViewport(*viewport);
-    if (parent_viewport)
+    if (ImGuiViewport* parent_viewport = ImGui_ImplGlfw_GetParentViewport(*viewport))
         ImGui_ImplGlfw_AddParentToView(*viewport, *parent_viewport);
 
     // Install GLFW callbacks for secondary viewports
