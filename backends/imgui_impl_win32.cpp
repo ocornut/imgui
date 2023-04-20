@@ -899,7 +899,47 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
 
+//---------------------------------------------------------------------------------------------------------
+// Transparency related helpers (optional)
 //--------------------------------------------------------------------------------------------------------
+
+#if defined(_MSC_VER)
+#pragma comment(lib, "dwmapi")  // Link with dwmapi.lib. MinGW will require linking with '-ldwmapi'
+#endif
+
+// [experimental]
+// Borrowed from GLFW's function updateFramebufferTransparency() in src/win32_window.c
+// (the Dwm* functions are Vista era functions but we are borrowing logic from GLFW)
+void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
+{
+    if (!_IsWindowsVistaOrGreater())
+        return;
+
+    BOOL composition;
+    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition)
+        return;
+
+    BOOL opaque;
+    DWORD color;
+    if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque))
+    {
+        HRGN region = ::CreateRectRgn(0, 0, -1, -1);
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+        bb.hRgnBlur = region;
+        bb.fEnable = TRUE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+        ::DeleteObject(region);
+    }
+    else
+    {
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
@@ -1217,46 +1257,6 @@ static void ImGui_ImplWin32_ShutdownPlatformInterface()
 {
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(nullptr));
     ImGui::DestroyPlatformWindows();
-}
-
-//---------------------------------------------------------------------------------------------------------
-// Transparency related helpers (optional)
-//--------------------------------------------------------------------------------------------------------
-
-#if defined(_MSC_VER)
-#pragma comment(lib, "dwmapi")  // Link with dwmapi.lib. MinGW will require linking with '-ldwmapi'
-#endif
-
-// [experimental]
-// Borrowed from GLFW's function updateFramebufferTransparency() in src/win32_window.c
-// (the Dwm* functions are Vista era functions but we are borrowing logic from GLFW)
-void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
-{
-    if (!_IsWindowsVistaOrGreater())
-        return;
-
-    BOOL composition;
-    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition)
-        return;
-
-    BOOL opaque;
-    DWORD color;
-    if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque))
-    {
-        HRGN region = ::CreateRectRgn(0, 0, -1, -1);
-        DWM_BLURBEHIND bb = {};
-        bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-        bb.hRgnBlur = region;
-        bb.fEnable = TRUE;
-        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
-        ::DeleteObject(region);
-    }
-    else
-    {
-        DWM_BLURBEHIND bb = {};
-        bb.dwFlags = DWM_BB_ENABLE;
-        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
-    }
 }
 
 //---------------------------------------------------------------------------------------------------------
