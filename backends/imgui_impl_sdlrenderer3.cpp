@@ -1,5 +1,5 @@
 // dear imgui: Renderer Backend for SDL_Renderer
-// (Requires: SDL 2.0.17+)
+// (Requires: SDL 3.0.0+)
 
 // Important to understand: SDL_Renderer is an _optional_ component of SDL.
 // For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
@@ -17,11 +17,6 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // CHANGELOG
-//  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
-//  2021-12-21: Update SDL_RenderGeometryRaw() format to work with SDL 2.0.19.
-//  2021-12-03: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
-//  2021-10-06: Backup and restore modified ClipRect/Viewport.
-//  2021-09-21: Initial version.
 
 #include "imgui.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -39,8 +34,8 @@
 
 // SDL
 #include <SDL3/SDL.h>
-#if !SDL_VERSION_ATLEAST(2,0,17)
-#error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
+#if !SDL_VERSION_ATLEAST(3,0,0)
+#error This backend requires SDL 3.0.0+
 #endif
 
 // SDL_Renderer data
