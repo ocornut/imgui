@@ -817,3 +817,45 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
     HMONITOR monitor = ::MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
+
+//---------------------------------------------------------------------------------------------------------
+// Transparency related helpers (optional)
+//--------------------------------------------------------------------------------------------------------
+
+#if defined(_MSC_VER)
+#pragma comment(lib, "dwmapi")  // Link with dwmapi.lib. MinGW will require linking with '-ldwmapi'
+#endif
+
+// [experimental]
+// Borrowed from GLFW's function updateFramebufferTransparency() in src/win32_window.c
+// (the Dwm* functions are Vista era functions but we are borrowing logic from GLFW)
+void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
+{
+    if (!_IsWindowsVistaOrGreater())
+        return;
+
+    BOOL composition;
+    if (FAILED(::DwmIsCompositionEnabled(&composition)) || !composition)
+        return;
+
+    BOOL opaque;
+    DWORD color;
+    if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque))
+    {
+        HRGN region = ::CreateRectRgn(0, 0, -1, -1);
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+        bb.hRgnBlur = region;
+        bb.fEnable = TRUE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+        ::DeleteObject(region);
+    }
+    else
+    {
+        DWM_BLURBEHIND bb = {};
+        bb.dwFlags = DWM_BB_ENABLE;
+        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------
