@@ -12,7 +12,7 @@
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // Issues:
-//  [ ] Platform: Multi-viewport support: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
+//  [ ] Platform: Multi-viewport support: ParentViewportID is only honored on Windows, thus io.ConfigViewportsNoDefaultParent has no effect on other platforms (minor).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -999,11 +999,17 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     }
 }
 
-void ImGui_ImplGlfw_MakeMainViewTheParent(ImGuiViewport* viewport)
+static ImGuiViewport* ImGui_ImplGlfw_GetParentViewport(ImGuiViewport const& viewport)
+{
+    if (!viewport.ParentViewportId)
+        return nullptr;
+    return ImGui::FindViewportByID(viewport.ParentViewportId);
+}
+
+static void ImGui_ImplGlfw_AddParentToView(ImGuiViewport const&viewport, ImGuiViewport const&parent_viewport)
 {
 #ifdef _WIN32
-    ImGuiViewport* mainview = ImGui::GetMainViewport();
-    ::SetWindowLongPtr((HWND)viewport->PlatformHandleRaw, GWLP_HWNDPARENT, (LONG_PTR)mainview->PlatformHandleRaw);
+    ::SetWindowLongPtr((HWND)viewport.PlatformHandleRaw, GWLP_HWNDPARENT, (LONG_PTR)parent_viewport.PlatformHandleRaw);
 #endif
 }
 
@@ -1030,12 +1036,14 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformHandle = (void*)vd->Window;
 #ifdef _WIN32
     viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
-	if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon)
-        ImGui_ImplGlfw_MakeMainViewTheParent(viewport);
 #elif defined(__APPLE__)
     viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(vd->Window);
 #endif
     glfwSetWindowPos(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+
+    auto* parent_viewport = ImGui_ImplGlfw_GetParentViewport(*viewport);
+    if (parent_viewport)
+        ImGui_ImplGlfw_AddParentToView(*viewport, *parent_viewport);
 
     // Install GLFW callbacks for secondary viewports
     glfwSetWindowFocusCallback(vd->Window, ImGui_ImplGlfw_WindowFocusCallback);
