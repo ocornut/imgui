@@ -3743,7 +3743,10 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentWindow = window;
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
     if (window)
+    {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
+        ImGui::NavUpdateCurrentWindowIsScrollPushableX();
+    }
 }
 
 void ImGui::GcCompactTransientMiscBuffers()
@@ -6670,6 +6673,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
         window->DC.NavLayersActiveMask = window->DC.NavLayersActiveMaskNext;
         window->DC.NavLayersActiveMaskNext = 0x00;
+        window->DC.NavIsScrollPushableX = true;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavWindowHasScrollY = (window->ScrollMax.y > 0.0f);
 
@@ -10825,6 +10829,15 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result)
     result->RectRel = WindowRectAbsToRel(window, g.LastItemData.NavRect);
 }
 
+// True when current work location may be scrolled horizontally when moving left / right.
+// This is generally always true UNLESS within a column. We don't have a vertical equivalent.
+void ImGui::NavUpdateCurrentWindowIsScrollPushableX()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DC.NavIsScrollPushableX = (g.CurrentTable == NULL && window->DC.CurrentColumns == NULL);
+}
+
 // We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
 // This is called after LastItemData is set.
 static void ImGui::NavProcessItem()
@@ -10832,8 +10845,15 @@ static void ImGui::NavProcessItem()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     const ImGuiID id = g.LastItemData.ID;
-    const ImRect nav_bb = g.LastItemData.NavRect;
     const ImGuiItemFlags item_flags = g.LastItemData.InFlags;
+
+    // When inside a container that isn't scrollable with Left<>Right, clip NavRect accordingly (#2221)
+    if (window->DC.NavIsScrollPushableX == false)
+    {
+        g.LastItemData.NavRect.Min.x = ImClamp(g.LastItemData.NavRect.Min.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
+        g.LastItemData.NavRect.Max.x = ImClamp(g.LastItemData.NavRect.Max.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
+    }
+    const ImRect nav_bb = g.LastItemData.NavRect;
 
     // Process Init Request
     if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent && (item_flags & ImGuiItemFlags_Disabled) == 0)
@@ -10876,7 +10896,7 @@ static void ImGui::NavProcessItem()
         }
     }
 
-    // Update window-relative bounding box of navigated item
+    // Update information for currently focused/navigated item
     if (g.NavId == id)
     {
         if (g.NavWindow != window)
@@ -10884,7 +10904,7 @@ static void ImGui::NavProcessItem()
         g.NavLayer = window->DC.NavLayerCurrent;
         g.NavFocusScopeId = g.CurrentFocusScopeId;
         g.NavIdIsAlive = true;
-        window->NavRectRel[window->DC.NavLayerCurrent] = WindowRectAbsToRel(window, nav_bb);    // Store item bounding box (relative to window position)
+        window->NavRectRel[window->DC.NavLayerCurrent] = WindowRectAbsToRel(window, nav_bb); // Store item bounding box (relative to window position)
     }
 }
 
