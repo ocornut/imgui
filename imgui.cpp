@@ -14390,7 +14390,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
             TextUnformatted(line_begin, line_end);
             ImRect text_rect = g.LastItemData.Rect;
             if (IsItemHovered())
-                for (const char* p = line_begin; p < line_end - 10; p++)
+                for (const char* p = line_begin; p <= line_end - 10; p++)
                 {
                     ImGuiID id = 0;
                     if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1)

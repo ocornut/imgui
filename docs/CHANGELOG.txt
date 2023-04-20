@@ -46,6 +46,8 @@ Other changes:
   showing when a sorting column has no visible name. (#6342) [@lukaasm]
 - InputText: Avoid setting io.WantTextInputNextFrame during the deactivation frame.
   (#6341) [@lukaasm]
+- Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
+  hover hover when the identifier is at the end of the line. (#5855)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
   Potentially this would facilitate switching runtime backend mid-session.
 - Backends: Win32: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw
