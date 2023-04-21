@@ -906,6 +906,7 @@ static void ImGui_ImplGlfw_UpdateMonitors()
         glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
         monitor.DpiScale = x_scale;
 #endif
+        monitor.PlatformHandle = (void*)glfw_monitors[n]; // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
         platform_io.Monitors.push_back(monitor);
     }
 }

@@ -1048,6 +1048,7 @@ static void ImGui_ImplOSX_UpdateMonitors()
         imgui_monitor.WorkPos = ImVec2(visibleFrame.origin.x, visibleFrame.origin.y);
         imgui_monitor.WorkSize = ImVec2(visibleFrame.size.width, visibleFrame.size.height);
         imgui_monitor.DpiScale = screen.backingScaleFactor;
+        imgui_monitor.PlatformHandle = (__bridge_retained void*)screen;
 
         platform_io.Monitors.push_back(imgui_monitor);
     }

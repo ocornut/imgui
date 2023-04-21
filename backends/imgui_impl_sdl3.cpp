@@ -643,6 +643,7 @@ static void ImGui_ImplSDL3_UpdateMonitors()
         //  DpiScale to cocoa_window.backingScaleFactor here.
         const SDL_DisplayMode* display_mode = SDL_GetCurrentDisplayMode(display_id);
         monitor.DpiScale = display_mode->display_scale;
+        monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
 }

@@ -718,6 +718,7 @@ static void ImGui_ImplSDL2_UpdateMonitors()
         if (!SDL_GetDisplayDPI(n, &dpi, nullptr, nullptr))
             monitor.DpiScale = dpi / 96.0f;
 #endif
+        monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
 }

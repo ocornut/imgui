@@ -122,6 +122,11 @@ Other changes:
 - Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
   provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
 
+Docking+Viewports Branch:
+
+- Viewports: added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
+  for usage by user code.
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.5 (Released 2023-04-13)

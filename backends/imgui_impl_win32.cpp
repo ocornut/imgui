@@ -404,6 +404,7 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
     imgui_monitor.WorkPos = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
     imgui_monitor.WorkSize = ImVec2((float)(info.rcWork.right - info.rcWork.left), (float)(info.rcWork.bottom - info.rcWork.top));
     imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
+    imgui_monitor.PlatformHandle = (void*)monitor;
     ImGuiPlatformIO& io = ImGui::GetPlatformIO();
     if (info.dwFlags & MONITORINFOF_PRIMARY)
         io.Monitors.push_front(imgui_monitor);
