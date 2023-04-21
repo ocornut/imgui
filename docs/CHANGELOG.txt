@@ -128,7 +128,9 @@ Other changes:
 
 Docking+Viewports Branch:
 
-- Viewports: added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
+- Viewports: Fixed platform-side focus (e.g. Alt+Tab) from leading to accidental
+  closure of Modal windows. Regression from 1.89.5. (#6357, #6299)
+- Viewports: Added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
   for usage by user code.
 - Backends: SDL2: Update monitor list when receiving a display event. (#6348)
   Note however that SDL2 currently doesn't have an event for a DPI/Scaling change,

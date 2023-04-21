@@ -13957,12 +13957,13 @@ static void ImGui::UpdateViewportsNewFrame()
             // FIXME: perhaps 'FocusTopMostWindowUnderOne()' can handle the 'focused_window->Window != NULL' case as well.
             if (!IsAnyMouseDown())
             {
+                ImGuiFocusRequestFlags focus_request_flags = ImGuiFocusRequestFlags_UnlessBelowModal | ImGuiFocusRequestFlags_RestoreFocusedChild;
                 if (focused_viewport->Window != NULL)
-                    FocusWindow(NavRestoreLastChildNavWindow(focused_viewport->Window));
+                    FocusWindow(focused_viewport->Window, focus_request_flags);
                 else if (focused_viewport->LastFocusedHadNavWindow)
-                    FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport, ImGuiFocusRequestFlags_None);
+                    FocusTopMostWindowUnderOne(NULL, NULL, focused_viewport, focus_request_flags); // Focus top most in viewport
                 else
-                    FocusWindow(NULL);
+                    FocusWindow(NULL, focus_request_flags); // No window had focus last time viewport was focused
             }
         }
         if (focused_viewport)
