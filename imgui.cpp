@@ -1573,7 +1573,7 @@ void ImGuiIO::AddMouseViewportEvent(ImGuiID viewport_id)
 {
     IM_ASSERT(Ctx != NULL);
     ImGuiContext& g = *Ctx;
-    IM_ASSERT(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport);
+    //IM_ASSERT(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport);
     if (!AppAcceptingEvents)
         return;
 
