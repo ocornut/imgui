@@ -6076,6 +6076,9 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
 //      - Window        //                  .. returns Modal2
 //          - Window    //                  .. returns Modal2
 //          - Modal2    //                  .. returns Modal2
+// Notes:
+// - FindBlockingModal(NULL) == NULL is generally equivalent to GetTopMostPopupModal() == NULL.
+//   Only difference is here we check for ->Active/WasActive but it may be unecessary.
 ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -6466,22 +6469,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 want_focus = true;
             else if ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
                 want_focus = true;
-
-            ImGuiWindow* modal = GetTopMostPopupModal();
-            if (modal != NULL && !IsWindowWithinBeginStackOf(window, modal))
-            {
-                // Avoid focusing a window that is created outside of active modal. This will prevent active modal from being closed.
-                // Since window is not focused it would reappear at the same display position like the last time it was visible.
-                // In case of completely new windows it would go to the top (over current modal), but input to such window would still be blocked by modal.
-                // Position window behind a modal that is not a begin-parent of this window.
-                want_focus = false;
-                if (window == window->RootWindow)
-                {
-                    ImGuiWindow* blocking_modal = FindBlockingModal(window);
-                    IM_ASSERT(blocking_modal != NULL);
-                    BringWindowToDisplayBehind(window, blocking_modal);
-                }
-            }
         }
 
         // [Test Engine] Register whole window in the item system (before submitting further decorations)
@@ -6699,11 +6686,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->AutoFitFramesY--;
 
         // Apply focus (we need to call FocusWindow() AFTER setting DC.CursorStartPos so our initial navigation reference rectangle can start around there)
+        // We ImGuiFocusRequestFlags_UnlessBelowModal to:
+        // - Avoid focusing a window that is created outside of a modal. This will prevent active modal from being closed.
+        // - Position window behind the modal that is not a begin-parent of this window.
         if (want_focus)
-        {
-            FocusWindow(window);
+            FocusWindow(window, ImGuiFocusRequestFlags_UnlessBelowModal);
+        if (want_focus && window == g.NavWindow)
             NavInitWindow(window, false); // <-- this is in the way for us to be able to defer and sort reappearing FocusWindow() calls
-        }
 
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
@@ -6938,6 +6927,8 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
         if (ImGuiWindow* blocking_modal = FindBlockingModal(window))
         {
             IMGUI_DEBUG_LOG_FOCUS("[focus] FocusWindow(\"%s\", UnlessBelowModal): prevented by \"%s\".\n", window ? window->Name : "<NULL>", blocking_modal->Name);
+            if (window && window == window->RootWindow && (window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
+                BringWindowToDisplayBehind(window, blocking_modal); // Still bring to right below modal.
             return;
         }
 
@@ -10114,7 +10105,7 @@ bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags popup_flags)
     return IsPopupOpen(id, popup_flags);
 }
 
-// FIXME: In principle we should converge toward replacing calls to GetTopMostPopupModal() + IsWindowWithinBeginStackOf() with calls to FindBlockingModal()
+// Also see FindBlockingModal(NULL)
 ImGuiWindow* ImGui::GetTopMostPopupModal()
 {
     ImGuiContext& g = *GImGui;
@@ -10125,6 +10116,7 @@ ImGuiWindow* ImGui::GetTopMostPopupModal()
     return NULL;
 }
 
+// See Demo->Stacked Modal to confirm what this is for.
 ImGuiWindow* ImGui::GetTopMostAndVisiblePopupModal()
 {
     ImGuiContext& g = *GImGui;
@@ -10253,7 +10245,7 @@ void ImGui::ClosePopupsExceptModals()
     for (popup_count_to_keep = g.OpenPopupStack.Size; popup_count_to_keep > 0; popup_count_to_keep--)
     {
         ImGuiWindow* window = g.OpenPopupStack[popup_count_to_keep - 1].Window;
-        if (!window || window->Flags & ImGuiWindowFlags_Modal)
+        if (!window || (window->Flags & ImGuiWindowFlags_Modal))
             break;
     }
     if (popup_count_to_keep < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
