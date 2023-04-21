@@ -12737,7 +12737,8 @@ void ImGui::ClearIniSettings()
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 {
     size_t file_data_size = 0;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
+    int padding_bytes = 1;
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size, padding_bytes);
     if (!file_data)
         return;
     if (file_data_size > 0)
