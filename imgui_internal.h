@@ -913,7 +913,8 @@ enum ImGuiSeparatorFlags_
 enum ImGuiFocusRequestFlags_
 {
     ImGuiFocusRequestFlags_None                 = 0,
-    ImGuiFocusRequestFlags_UnlessBelowModal     = 1 << 0,   // Do not set focus if the window is below a modal.
+    ImGuiFocusRequestFlags_RestoreFocusedChild  = 1 << 0,   // Find last focused child (if any) and focus it instead.
+    ImGuiFocusRequestFlags_UnlessBelowModal     = 1 << 1,   // Do not set focus if the window is below a modal.
 };
 
 enum ImGuiTextFlags_
