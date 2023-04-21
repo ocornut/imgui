@@ -4624,7 +4624,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        FocusTopMostWindowUnderOne(NULL, NULL);
+        FocusTopMostWindowUnderOne(NULL, NULL, NULL);
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -6968,9 +6968,10 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         BringWindowToDisplayFront(display_front_window);
 }
 
-void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window)
+void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWindow* ignore_window, ImGuiViewport* filter_viewport)
 {
     ImGuiContext& g = *GImGui;
+    IM_UNUSED(filter_viewport); // Unused in master branch.
     int start_idx = g.WindowsFocusOrder.Size - 1;
     if (under_this_window != NULL)
     {
@@ -6988,13 +6989,14 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
         // We may later decide to test for different NoXXXInputs based on the active navigation input (mouse vs nav) but that may feel more confusing to the user.
         ImGuiWindow* window = g.WindowsFocusOrder[i];
         IM_ASSERT(window == window->RootWindow);
-        if (window != ignore_window && window->WasActive)
-            if ((window->Flags & (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs)) != (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs))
-            {
-                ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(window);
-                FocusWindow(focus_window);
-                return;
-            }
+        if (window == ignore_window || !window->WasActive)
+            continue;
+        if ((window->Flags & (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs)) != (ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs))
+        {
+            ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(window);
+            FocusWindow(focus_window);
+            return;
+        }
     }
     FocusWindow(NULL);
 }
@@ -10261,7 +10263,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
         if (focus_window && !focus_window->WasActive && popup_window)
         {
             // Fallback
-            FocusTopMostWindowUnderOne(popup_window, NULL);
+            FocusTopMostWindowUnderOne(popup_window, NULL, NULL);
         }
         else
         {
