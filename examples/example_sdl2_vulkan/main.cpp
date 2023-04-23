@@ -87,6 +87,11 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
         if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             return device;
     }
+
+    // Discrete GPU is not present, use first one.
+    if(!gpus.empty()){
+        return gpus[0];
+    }
     return VK_NULL_HANDLE;
 }
 
