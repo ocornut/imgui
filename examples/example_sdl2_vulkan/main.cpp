@@ -48,6 +48,57 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
+typedef void (*CommandBufferCallback)(VkCommandBuffer);
+
+// Creates a temporary command buffer, records commands using a callback, and waits for it to be executed
+static void ExecuteImmediately(VkCommandPool command_pool, CommandBufferCallback callback)
+{
+    VkResult result = {};
+
+    // Allocate a command buffer from the pool
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+    result = vkAllocateCommandBuffers(g_Device, &command_buffer_allocate_info, &command_buffer);
+    check_vk_result(result);
+
+    // Begin the single use command buffer
+    {
+        VkCommandBufferBeginInfo command_buffer_begin_info = {};
+        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+        check_vk_result(result);
+    }
+
+    // Invoke the user callback, and subsequently end the command buffer recording
+    callback(command_buffer);
+
+    result = vkEndCommandBuffer(command_buffer);
+    check_vk_result(result);
+
+    // Submit command buffer and wait for it to finish executing
+    {
+      VkSubmitInfo submit_info = {};
+      submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submit_info.commandBufferCount = 1;
+      submit_info.pCommandBuffers = &command_buffer;
+
+      result = vkQueueSubmit(g_Queue, 1, &submit_info, VK_NULL_HANDLE);
+      check_vk_result(result);
+
+      result = vkQueueWaitIdle(g_Queue);
+      check_vk_result(result);
+    }
+
+    vkFreeCommandBuffers(g_Device, command_pool, 1, &command_buffer);
+}
+
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
@@ -87,7 +138,8 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
         if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             return device;
     }
-    return VK_NULL_HANDLE;
+
+    return gpus[0];
 }
 
 static void SetupVulkan(ImVector<const char*> instance_extensions)
@@ -96,8 +148,17 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 
     // Create Vulkan Instance
     {
+        VkApplicationInfo application_info = {};
+        application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        application_info.pApplicationName = "ImGui SDL2/Vulkan example";
+        application_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
+        application_info.pEngineName = "None";
+        application_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
+        application_info.apiVersion = VK_API_VERSION_1_2;
+
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        create_info.pApplicationInfo = &application_info;
 
         // Enumerate available extensions
         uint32_t properties_count;
@@ -176,10 +237,10 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         vkEnumerateDeviceExtensionProperties(g_PhysicalDevice, nullptr, &properties_count, nullptr);
         properties.resize(properties_count);
         vkEnumerateDeviceExtensionProperties(g_PhysicalDevice, nullptr, &properties_count, properties.Data);
-#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-        if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
-            device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-#endif
+
+        const char* portability_subset_extension = "VK_KHR_portability_subset";
+        if (IsExtensionAvailable(properties, portability_subset_extension))
+            device_extensions.push_back(portability_subset_extension);
 
         const float queue_priority[] = { 1.0f };
         VkDeviceQueueCreateInfo queue_info[1] = {};
@@ -367,6 +428,37 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 
+static void ReloadFonts()
+{
+    // printf("Reloading fonts...\n");
+
+    ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
+    ImGuiIO& io = ImGui::GetIO();
+
+    io.Fonts->Clear();
+    io.Fonts->AddFontDefault();
+
+    // Uncomment the following line for proper font scaling, but the default font might end up too small on Retina screens
+    // io.FontGlobalScale = 1.0f / io.DisplayFramebufferScale.x;
+
+    io.Fonts->Build();
+
+    // It is actually not necessary to explicitly destroy the fonts texture before
+    // calling ImGui_ImplVulkan_CreateFontsTexture. But if you do, make sure to wait for the queue
+    // to finish executing commands that may reference the font descriptor set.
+    vkQueueWaitIdle(g_Queue);
+    ImGui_ImplVulkan_DestroyFontsTexture();
+
+    VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+    ExecuteImmediately(command_pool, [](VkCommandBuffer command_buffer) {
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+    });
+
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+    ImGui::GetStyle().ScaleAllSizes(1.0f);
+}
+
 // Main code
 int main(int, char**)
 {
@@ -486,7 +578,9 @@ int main(int, char**)
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
+    bool reload_fonts = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec2 last_framebuffer_scale = ImVec2(0, 0);
 
     // Main loop
     bool done = false;
@@ -549,6 +643,9 @@ int main(int, char**)
             ImGui::SameLine();
             ImGui::Text("counter = %d", counter);
 
+            if (ImGui::Button("Reload fonts"))
+              reload_fonts = true;
+
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
         }
@@ -575,6 +672,15 @@ int main(int, char**)
             wd->ClearValue.color.float32[3] = clear_color.w;
             FrameRender(wd, draw_data);
             FramePresent(wd);
+        }
+
+        if (last_framebuffer_scale.x != io.DisplayFramebufferScale.x ||
+            last_framebuffer_scale.y != io.DisplayFramebufferScale.y ||
+            reload_fonts) {
+            ReloadFonts();
+
+            last_framebuffer_scale = io.DisplayFramebufferScale;
+            reload_fonts = false;
         }
     }
 
