@@ -237,6 +237,9 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_MOTION:
         {
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
+            SDL_GetRenderScale(bd->Renderer, &scaleX, &scaleY);
+               mouse_pos.x *= scaleX;
+               mouse_pos.y *= scaleY;
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
             return true;
