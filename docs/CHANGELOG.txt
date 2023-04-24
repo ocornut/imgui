@@ -48,6 +48,8 @@ Other changes:
   (#6341) [@lukaasm]
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
+- Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags
+  erroneously initializing default nav layer to menu layer.
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
