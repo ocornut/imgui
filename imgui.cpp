@@ -6923,7 +6923,7 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
     ImGuiContext& g = *GImGui;
 
     // Modal check?
-    if (flags & ImGuiFocusRequestFlags_UnlessBelowModal)
+    if ((flags & ImGuiFocusRequestFlags_UnlessBelowModal) && (g.NavWindow != window)) // Early out in common case.
         if (ImGuiWindow* blocking_modal = FindBlockingModal(window))
         {
             IMGUI_DEBUG_LOG_FOCUS("[focus] FocusWindow(\"%s\", UnlessBelowModal): prevented by \"%s\".\n", window ? window->Name : "<NULL>", blocking_modal->Name);
@@ -11842,7 +11842,7 @@ static void ImGui::NavUpdateWindowing()
     bool apply_toggle_layer = false;
 
     ImGuiWindow* modal_window = GetTopMostPopupModal();
-    bool allow_windowing = (modal_window == NULL); // FIXME: This prevent CTRL+TAB from being usable with windows over a popup
+    bool allow_windowing = (modal_window == NULL); // FIXME: This prevent CTRL+TAB from being usable with windows that are inside the Begin-stack of that modal.
     if (!allow_windowing)
         g.NavWindowingTarget = NULL;
 
@@ -12746,6 +12746,7 @@ void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
+// Set ini_size==0 to let us use strlen(ini_data). Do not call this function with a 0 if your buffer is actually empty!
 void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 {
     ImGuiContext& g = *GImGui;
