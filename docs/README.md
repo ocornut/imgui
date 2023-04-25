@@ -43,7 +43,7 @@ Dear ImGui is particularly suited to integration in game engines (for tooling), 
 
 **Backends for a variety of graphics API and rendering platforms** are provided in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder, along with example applications in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder. See the [Integration](#integration) section of this document for details. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
 
-After Dear ImGui is set up in your application, you can use it from \_anywhere\_ in your program loop:
+After Dear ImGui is set up in your application, you can use it from _anywhere_ in your program loop:
 ```cpp
 ImGui::Text("Hello, world %d", 123);
 if (ImGui::Button("Save"))
