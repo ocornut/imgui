@@ -50,6 +50,8 @@ Other changes:
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
 - Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags
   erroneously initializing default nav layer to menu layer.
+- Menus: Fixed an issue when opening a menu hierarchy in a given menu-bar would allow
+  opening another via simple hovering. (#3496, #4797)
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]

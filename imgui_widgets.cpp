@@ -7098,9 +7098,9 @@ static bool IsRootOfOpenMenuSet()
 
     // Initially we used 'upper_popup->OpenParentId == window->IDStack.back()' to differentiate multiple menu sets from each others
     // (e.g. inside menu bar vs loose menu items) based on parent ID.
-    // This would however prevent the use of e.g. PuhsID() user code submitting menus.
+    // This would however prevent the use of e.g. PushID() user code submitting menus.
     // Previously this worked between popup and a first child menu because the first child menu always had the _ChildWindow flag,
-    // making  hovering on parent popup possible while first child menu was focused - but this was generally a bug with other side effects.
+    // making hovering on parent popup possible while first child menu was focused - but this was generally a bug with other side effects.
     // Instead we don't treat Popup specifically (in order to consistently support menu features in them), maybe the first child menu of a Popup
     // doesn't have the _ChildWindow flag, and we rely on this IsRootOfOpenMenuSet() check to allow hovering between root window/popup and first child menu.
     // In the end, lack of ID check made it so we could no longer differentiate between separate menu sets. To compensate for that, we at least check parent window nav layer.
@@ -7108,7 +7108,9 @@ static bool IsRootOfOpenMenuSet()
     // open on hover, but that should be a lesser problem, because if such menus are close in proximity in window content then it won't feel weird and if they are far apart
     // it likely won't be a problem anyone runs into.
     const ImGuiPopupData* upper_popup = &g.OpenPopupStack[g.BeginPopupStack.Size];
-    return (window->DC.NavLayerCurrent == upper_popup->ParentNavLayer && upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu));
+    if (window->DC.NavLayerCurrent != upper_popup->ParentNavLayer)
+        return false;
+    return upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu) && ImGui::IsWindowChildOf(upper_popup->Window, window, true);
 }
 
 bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
