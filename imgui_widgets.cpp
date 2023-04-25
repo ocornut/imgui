@@ -7121,7 +7121,7 @@ static bool IsRootOfOpenMenuSet()
     const ImGuiPopupData* upper_popup = &g.OpenPopupStack[g.BeginPopupStack.Size];
     if (window->DC.NavLayerCurrent != upper_popup->ParentNavLayer)
         return false;
-    return upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu) && ImGui::IsWindowChildOf(upper_popup->Window, window, true);
+    return upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu) && ImGui::IsWindowChildOf(upper_popup->Window, window, true, false);
 }
 
 bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
