@@ -115,6 +115,10 @@ Other changes:
   (#6341) [@lukaasm]
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
+- Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags
+  erroneously initializing default nav layer to menu layer.
+- Menus: Fixed an issue when opening a menu hierarchy in a given menu-bar would allow
+  opening another via simple hovering. (#3496, #4797)
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
@@ -125,6 +129,7 @@ Other changes:
   by context (Desktop 3.0, 3.1, or 3.2+ with compat bit). (#6333) [@GereonV]
 - Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
   provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
+- Examples: Vulkan: Use integrated GPU if nothing else is available. (#6359) [@kimidaisuki22]
 
 Docking+Viewports Branch:
 

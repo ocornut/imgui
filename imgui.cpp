@@ -5642,6 +5642,10 @@ void ImGui::EndChild()
         {
             // Not navigable into
             ItemAdd(bb, 0);
+
+            // But when flattened we directly reach items, adjust active layer mask accordingly
+            if (window->Flags & ImGuiWindowFlags_NavFlattened)
+                parent_window->DC.NavLayersActiveMaskNext |= window->DC.NavLayersActiveMaskNext;
         }
         if (g.HoveredWindow == window)
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
@@ -7456,7 +7460,7 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
     ImGuiContext& g = *GImGui;
 
     // Modal check?
-    if (flags & ImGuiFocusRequestFlags_UnlessBelowModal)
+    if ((flags & ImGuiFocusRequestFlags_UnlessBelowModal) && (g.NavWindow != window)) // Early out in common case.
         if (ImGuiWindow* blocking_modal = FindBlockingModal(window))
         {
             IMGUI_DEBUG_LOG_FOCUS("[focus] FocusWindow(\"%s\", UnlessBelowModal): prevented by \"%s\".\n", window ? window->Name : "<NULL>", blocking_modal->Name);
@@ -11330,20 +11334,6 @@ static float inline NavScoreItemDistInterval(float cand_min, float cand_max, flo
     return 0.0f;
 }
 
-static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect)
-{
-    if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
-    {
-        r.Min.y = ImClamp(r.Min.y, clip_rect.Min.y, clip_rect.Max.y);
-        r.Max.y = ImClamp(r.Max.y, clip_rect.Min.y, clip_rect.Max.y);
-    }
-    else // FIXME: PageUp/PageDown are leaving move_dir == None
-    {
-        r.Min.x = ImClamp(r.Min.x, clip_rect.Min.x, clip_rect.Max.x);
-        r.Max.x = ImClamp(r.Max.x, clip_rect.Min.x, clip_rect.Max.x);
-    }
-}
-
 // Scoring function for gamepad/keyboard directional navigation. Based on https://gist.github.com/rygorous/6981057
 static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
 {
@@ -11365,10 +11355,6 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
             return false;
         cand.ClipWithFull(window->ClipRect); // This allows the scored item to not overlap other candidates in the parent window
     }
-
-    // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
-    // For example, this ensures that items in one column are not reached when moving vertically from items in another column.
-    NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
 
     // Compute distance between boxes
     // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
@@ -11697,10 +11683,11 @@ void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNav
 void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags wrap_flags)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(wrap_flags != 0); // Call with _WrapX, _WrapY, _LoopX, _LoopY
+    IM_ASSERT((wrap_flags & ImGuiNavMoveFlags_WrapMask_ ) != 0 && (wrap_flags & ~ImGuiNavMoveFlags_WrapMask_) == 0); // Call with _WrapX, _WrapY, _LoopX, _LoopY
+
     // In theory we should test for NavMoveRequestButNoResultYet() but there's no point doing it, NavEndFrame() will do the same test
     if (g.NavWindow == window && g.NavMoveScoringItems && g.NavLayer == ImGuiNavLayer_Main)
-        g.NavMoveFlags |= wrap_flags;
+        g.NavMoveFlags = (g.NavMoveFlags & ~ImGuiNavMoveFlags_WrapMask_) | wrap_flags;
 }
 
 // FIXME: This could be replaced by updating a frame number in each window when (window == NavWindow) and (NavLayer == 0).
@@ -12398,8 +12385,7 @@ static void ImGui::NavEndFrame()
     // Perform wrap-around in menus
     // FIXME-NAV: Wrap may need to apply a weight bias on the other axis. e.g. 4x4 grid with 2 last items missing on last item won't handle LoopY/WrapY correctly.
     // FIXME-NAV: Wrap (not Loop) support could be handled by the scoring function and then WrapX would function without an extra frame.
-    const ImGuiNavMoveFlags wanted_flags = ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX | ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY;
-    if (g.NavWindow && NavMoveRequestButNoResultYet() && (g.NavMoveFlags & wanted_flags) && (g.NavMoveFlags & ImGuiNavMoveFlags_Forwarded) == 0)
+    if (g.NavWindow && NavMoveRequestButNoResultYet() && (g.NavMoveFlags & ImGuiNavMoveFlags_WrapMask_) && (g.NavMoveFlags & ImGuiNavMoveFlags_Forwarded) == 0)
         NavUpdateCreateWrappingRequest();
 }
 
@@ -12508,7 +12494,7 @@ static void ImGui::NavUpdateWindowing()
     bool apply_toggle_layer = false;
 
     ImGuiWindow* modal_window = GetTopMostPopupModal();
-    bool allow_windowing = (modal_window == NULL); // FIXME: This prevent CTRL+TAB from being usable with windows over a popup
+    bool allow_windowing = (modal_window == NULL); // FIXME: This prevent CTRL+TAB from being usable with windows that are inside the Begin-stack of that modal.
     if (!allow_windowing)
         g.NavWindowingTarget = NULL;
 
@@ -13422,6 +13408,7 @@ void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
+// Set ini_size==0 to let us use strlen(ini_data). Do not call this function with a 0 if your buffer is actually empty!
 void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 {
     ImGuiContext& g = *GImGui;
