@@ -6599,8 +6599,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 // - We disable this when the parent window has zero vertices, which is a common pattern leading to laying out multiple overlapping childs
                 ImGuiWindow* previous_child = parent_window->DC.ChildWindows.Size >= 2 ? parent_window->DC.ChildWindows[parent_window->DC.ChildWindows.Size - 2] : NULL;
                 bool previous_child_overlapping = previous_child ? previous_child->Rect().Overlaps(window->Rect()) : false;
-                bool parent_is_empty = parent_window->DrawList->VtxBuffer.Size > 0;
-                if (window->DrawList->CmdBuffer.back().ElemCount == 0 && parent_is_empty && !previous_child_overlapping)
+                bool parent_is_empty = (parent_window->DrawList->VtxBuffer.Size == 0);
+                if (window->DrawList->CmdBuffer.back().ElemCount == 0 && !parent_is_empty && !previous_child_overlapping)
                     render_decorations_in_parent = true;
             }
             if (render_decorations_in_parent)

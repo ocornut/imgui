@@ -557,7 +557,7 @@ backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
-io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT (Windows only)
+io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size); // CORRECT (Windows only)
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
