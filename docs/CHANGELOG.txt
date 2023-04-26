@@ -51,6 +51,10 @@ Other changes:
 - Drag, Sliders: if the format string doesn't contain any %, CTRL+Click to input text will
   use the default format specifier for the type. Allow display/input of raw value when using
   "enums" patterns (display label instead of value) + allow using when value is hidden. (#6405)
+- Nav: Record/restore preferred position on each given axis after a movement on that axis,
+  then score movement on the other axis using this as a bias. This allows going up and down
+  between e.g. a large header spanning horizontal space and three-ways-columns, landing
+  on the same column as before.
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
 - Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags

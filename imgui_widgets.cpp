@@ -6219,11 +6219,13 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Left && is_open)
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right && !is_open) // If there's something upcoming on the line we may want to give it the priority?
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
 
