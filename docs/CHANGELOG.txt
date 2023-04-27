@@ -64,6 +64,8 @@ Other changes:
 - Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
   provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
 - Examples: Vulkan: Use integrated GPU if nothing else is available. (#6359) [@kimidaisuki22]
+- Examples: DX9, DX10, DX11: Queue framebuffer resize instead of processing in WM_SIZE,
+  as some drivers tends to only cleanup after existing the native resize modal loop. (#6374)
 
 
 -----------------------------------------------------------------------
