@@ -44,6 +44,8 @@ Other changes:
 
 - Tables: Fixed a small miscalculation in TableHeader() leading to an empty tooltip
   showing when a sorting column has no visible name. (#6342) [@lukaasm]
+- Tables: Fixed command merging when compiling with VS2013 (one array on stack was not
+  initialized on VS2013. Unsure if due to a bug or UB/standard conformance). (#6377)
 - InputText: Avoid setting io.WantTextInputNextFrame during the deactivation frame.
   (#6341) [@lukaasm]
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
