@@ -63,6 +63,7 @@ Other changes:
   Win32/Winapi with OpenGL. (#3218)
 - Backends: OpenGL3: Restore front and back polygon mode separately when supported
   by context (Desktop 3.0, 3.1, or 3.2+ with compat bit). (#6333) [@GereonV]
+- Backends: SDL3: Fixed build on Emscripten/iOS/Android. (#6391) [@jo-codegirl]
 - Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
   provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
 - Examples: Vulkan: Use integrated GPU if nothing else is available. (#6359) [@kimidaisuki22]
