@@ -3038,6 +3038,17 @@ void ImGui::PopStyleColor(int count)
     }
 }
 
+void ImGui::PopAllStyleColors()
+{
+    ImGuiContext& g = *GImGui;
+    while (!g.ColorStack.empty())
+    {
+        ImGuiColorMod& backup = g.ColorStack.back();
+        g.Style.Colors[backup.Col] = backup.BackupValue;
+        g.ColorStack.pop_back();
+    }
+}
+
 static const ImGuiDataVarInfo GStyleVarInfo[] =
 {
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },               // ImGuiStyleVar_Alpha
