@@ -31,6 +31,17 @@ IMGUI_IMPL_API void     ImGui_ImplSDL2_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL2_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
 
+// Disable mouse capture
+// If the debugger breaks while ImGui captures the mouse, it might become hard to interact with the IDE.
+// Only use this function while debugging, and only if there are no alternatives.
+// It will interact with the normal ImGui mouse capture and tracking.
+//
+// In some cases, it is possible to use a the following hook in ~/.gdbinit instead:
+// def release_mouse(event):
+//     gdb.execute("call SDL_CaptureMouse(0)")
+// gdb.events.stop.connect(release_mouse)
+IMGUI_IMPL_API void     ImGui_ImplSDL2_SetMouseCanCapture(const bool can_capture);
+
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 static inline void ImGui_ImplSDL2_NewFrame(SDL_Window*) { ImGui_ImplSDL2_NewFrame(); } // 1.84: removed unnecessary parameter
 #endif
