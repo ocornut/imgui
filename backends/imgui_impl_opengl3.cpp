@@ -205,6 +205,8 @@ struct ImGui_ImplOpenGL3_Data
 {
     GLuint          GlVersion;               // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
     char            GlslVersionString[32];   // Specified by user or detected based on compile time GL settings.
+    bool            GlProfileIsES2;
+    bool            GlProfileIsES3;
     bool            GlProfileIsCompat;
     GLint           GlProfileMask;
     GLuint          FontTexture;
@@ -301,8 +303,12 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
             bd->UseBufferSubData = true;
 #endif
     */
-#else
+#elif defined(IMGUI_IMPL_OPENGL_ES2)
     bd->GlVersion = 200; // GLES 2
+    bd->GlProfileIsES2 = true;
+#elif defined(IMGUI_IMPL_OPENGL_ES3)
+    bd->GlVersion = 200; // Don't raise version as it is intended as a desktop version check for now.
+    bd->GlProfileIsES3 = true;
 #endif
 
 #ifdef IMGUI_IMPL_OPENGL_DEBUG
