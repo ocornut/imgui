@@ -631,7 +631,7 @@ static void ShowDemoWindowWidgets()
             ImGui::Text("Tooltips:");
 
             ImGui::SameLine();
-            ImGui::SmallButton("Button");
+            ImGui::SmallButton("Basic");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("I am a tooltip");
 
@@ -744,7 +744,7 @@ static void ShowDemoWindowWidgets()
             static int elem = Element_Fire;
             const char* elems_names[Element_COUNT] = { "Fire", "Earth", "Air", "Water" };
             const char* elem_name = (elem >= 0 && elem < Element_COUNT) ? elems_names[elem] : "Unknown";
-            ImGui::SliderInt("slider enum", &elem, 0, Element_COUNT - 1, elem_name);
+            ImGui::SliderInt("slider enum", &elem, 0, Element_COUNT - 1, elem_name); // Use ImGuiSliderFlags_NoInput flag to disable CTRL+Click here.
             ImGui::SameLine(); HelpMarker("Using the format string parameter to display a name instead of the underlying integer.");
         }
 

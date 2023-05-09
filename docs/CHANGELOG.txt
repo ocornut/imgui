@@ -48,6 +48,9 @@ Other changes:
   initialized on VS2013. Unsure if due to a bug or UB/standard conformance). (#6377)
 - InputText: Avoid setting io.WantTextInputNextFrame during the deactivation frame.
   (#6341) [@lukaasm]
+- Drag, Sliders: if the format string doesn't contain any %, CTRL+Click to input text will
+  use the default format specifier for the type. Allow display/input of raw value when using
+  "enums" patterns (display label instead of value) + allow using when value is hidden. (#6405)
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
 - Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags
