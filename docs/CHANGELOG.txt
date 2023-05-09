@@ -64,6 +64,9 @@ Other changes:
 - Misc: Added ImVec2 unary minus operator. (#6368) [@Koostosh]
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
+- Debug Tools: Added 'io.ConfigDebugIgnoreFocusLoss' option to disable 'io.AddFocusEvent(false)'
+  handling. May facilitate interactions with a debugger when focus loss leads to clearing
+  inputs data. (#4388, #4921)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
   Potentially this would facilitate switching runtime backend mid-session.
 - Backends: Win32: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw

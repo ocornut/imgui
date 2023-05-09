@@ -1540,7 +1540,7 @@ void ImGuiIO::AddFocusEvent(bool focused)
     // Filter duplicate
     const ImGuiInputEvent* latest_event = FindLatestInputEvent(&g, ImGuiInputEventType_Focus);
     const bool latest_focused = latest_event ? latest_event->AppFocused.Focused : !g.IO.AppFocusLost;
-    if (latest_focused == focused)
+    if (latest_focused == focused || (ConfigDebugIgnoreFocusLoss && !focused))
         return;
 
     ImGuiInputEvent e;
