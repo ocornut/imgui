@@ -13394,7 +13394,7 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 void ImGui::DebugTextEncoding(const char* str)
 {
     Text("Text: \"%s\"", str);
-    if (!BeginTable("list", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+    if (!BeginTable("##DebugTextEncoding", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable))
         return;
     TableSetupColumn("Offset");
     TableSetupColumn("UTF-8");
