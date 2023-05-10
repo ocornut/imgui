@@ -23,7 +23,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM > 12345')
 #define IMGUI_VERSION               "1.89.6 WIP"
-#define IMGUI_VERSION_NUM           18954
+#define IMGUI_VERSION_NUM           18956
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -2039,11 +2039,15 @@ struct ImGuiIO
 
     // Debug options
     // - tools to test correct Begin/End and BeginChild/EndChild behaviors.
-    // - presently Begn()/End() and BeginChild()EndChild() needs to ALWAYS be called in tandem, regardless of return value of BeginXXX()
+    // - presently Begin()/End() and BeginChild()/EndChild() needs to ALWAYS be called in tandem, regardless of return value of BeginXXX()
     //   this is inconsistent with other BeginXXX functions and create confusion for many users.
-    // - we expect to update the API eventually. In the meanwhile we provided tools to facilitate checking user-code behavior.
-    bool        ConfigDebugBeginReturnValueOnce; // = false         // First-time calls to Begin()/BeginChild() will return false. NEEDS TO BE SET AT APPLICATION BOOT TIME if you don't want to miss windows.
-    bool        ConfigDebugBeginReturnValueLoop; // = false         // Some calls to Begin()/BeginChild() will return false. Will cycle through window depths then repeat. Suggested use: add "io.ConfigDebugBeginReturnValue = io.KeyShift" in your main loop then occasionally press SHIFT. Windows should be flickering while running.
+    // - we expect to update the API eventually. In the meanwhile we provide tools to facilitate checking user-code behavior.
+    bool        ConfigDebugBeginReturnValueOnce;// = false          // First-time calls to Begin()/BeginChild() will return false. NEEDS TO BE SET AT APPLICATION BOOT TIME if you don't want to miss windows.
+    bool        ConfigDebugBeginReturnValueLoop;// = false          // Some calls to Begin()/BeginChild() will return false. Will cycle through window depths then repeat. Suggested use: add "io.ConfigDebugBeginReturnValue = io.KeyShift" in your main loop then occasionally press SHIFT. Windows should be flickering while running.
+    // - option to deactivate io.AddFocusEvent(false) handling. May facilitate interactions with a debugger when focus loss leads to clearing inputs data.
+    // - backends may have other side-effects on focus loss, so this will reduce side-effects but not necessary remove all of them.
+    // - consider using e.g. Win32's IsDebuggerPresent() as an additional filter (or see ImOsIsDebuggerPresent() in imgui_test_engine/imgui_te_utils.cpp for a Unix compatible version).
+    bool        ConfigDebugIgnoreFocusLoss;     // = false          // Ignore io.AddFocusEvent(false), consequently not calling io.ClearInputKeys() in input processing.
 
     //------------------------------------------------------------------
     // Platform Functions
@@ -2463,7 +2467,6 @@ struct ImGuiListClipper
 // - It is important that we are keeping those disabled by default so they don't leak in user space.
 // - This is in order to allow user enabling implicit cast operators between ImVec2/ImVec4 and their own types (using IM_VEC2_CLASS_EXTRA in imconfig.h)
 // - You can use '#define IMGUI_DEFINE_MATH_OPERATORS' to import our operators, provided as a courtesy.
-// - We unfortunately don't have a unary- operator for ImVec2 because this would needs to be defined inside the class itself.
 #ifdef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS_IMPLEMENTED
 IM_MSVC_RUNTIME_CHECKS_OFF
@@ -2473,6 +2476,7 @@ static inline ImVec2  operator+(const ImVec2& lhs, const ImVec2& rhs)   { return
 static inline ImVec2  operator-(const ImVec2& lhs, const ImVec2& rhs)   { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
 static inline ImVec2  operator*(const ImVec2& lhs, const ImVec2& rhs)   { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 static inline ImVec2  operator/(const ImVec2& lhs, const ImVec2& rhs)   { return ImVec2(lhs.x / rhs.x, lhs.y / rhs.y); }
+static inline ImVec2  operator-(const ImVec2& lhs)                      { return ImVec2(-lhs.x, -lhs.y); }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)          { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)          { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
 static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)        { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
@@ -2940,7 +2944,8 @@ struct ImFontAtlas
     //-------------------------------------------
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    // NB: Make sure that your string are UTF-8 and NOT in your local code page. In C++11, you can create UTF-8 string literal using the u8"Hello world" syntax. See FAQ for details.
+    // NB: Make sure that your string are UTF-8 and NOT in your local code page.
+    // Read https://github.com/ocornut/imgui/blob/master/docs/FONTS.md/#about-utf-8-encoding for details.
     // NB: Consider using ImFontGlyphRangesBuilder to build glyph ranges from textual data.
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();                // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesGreek();                  // Default + Greek and Coptic

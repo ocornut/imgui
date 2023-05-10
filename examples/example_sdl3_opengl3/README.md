@@ -10,10 +10,10 @@ Use the provided project file (.vcxproj). Add to solution (imgui_examples.sln) i
 Use build_win32.bat or directly:
 ```
 set SDL2_DIR=path_to_your_sdl3_folder
-cl /Zi /MD /I.. /I..\.. /I%SDL2_DIR%\include main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp /FeDebug/example_sdl3_opengl3.exe /FoDebug/ /link /libpath:%SDL2_DIR%\lib\x86 SDL3.lib opengl32.lib /subsystem:console
-#          ^^ include paths     ^^ source files                                                                                    ^^ output exe                    ^^ output dir   ^^ libraries
+cl /Zi /MD /utf-8 /I.. /I..\.. /I%SDL2_DIR%\include main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp /FeDebug/example_sdl3_opengl3.exe /FoDebug/ /link /libpath:%SDL2_DIR%\lib\x86 SDL3.lib opengl32.lib /subsystem:console
+#                 ^^ include paths     ^^ source files                                                                                    ^^ output exe                    ^^ output dir   ^^ libraries
 # or for 64-bit:
-cl /Zi /MD /I.. /I..\.. /I%SDL2_DIR%\include main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp /FeDebug/example_sdl3_opengl3.exe /FoDebug/ /link /libpath:%SDL2_DIR%\lib\x64 SDL3.lib SDL2mainopengl32.lib /subsystem:console
+cl /Zi /MD /utf-8 /I.. /I..\.. /I%SDL2_DIR%\include main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp /FeDebug/example_sdl3_opengl3.exe /FoDebug/ /link /libpath:%SDL2_DIR%\lib\x64 SDL3.lib SDL2mainopengl32.lib /subsystem:console
 ```
 
 ## Linux and similar Unixes

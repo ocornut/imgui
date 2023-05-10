@@ -1597,7 +1597,7 @@ void ImGuiIO::AddFocusEvent(bool focused)
     // Filter duplicate
     const ImGuiInputEvent* latest_event = FindLatestInputEvent(&g, ImGuiInputEventType_Focus);
     const bool latest_focused = latest_event ? latest_event->AppFocused.Focused : !g.IO.AppFocusLost;
-    if (latest_focused == focused)
+    if (latest_focused == focused || (ConfigDebugIgnoreFocusLoss && !focused))
         return;
 
     ImGuiInputEvent e;
@@ -3772,6 +3772,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NUL
     DrawList = &DrawListInst;
     DrawList->_Data = &Ctx->DrawListSharedData;
     DrawList->_OwnerName = Name;
+    NavPreferredScoringPosRel[0] = NavPreferredScoringPosRel[1] = ImVec2(FLT_MAX, FLT_MAX);
     IM_PLACEMENT_NEW(&WindowClass) ImGuiWindowClass();
 }
 
@@ -7071,8 +7072,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 // - We disable this when the parent window has zero vertices, which is a common pattern leading to laying out multiple overlapping childs
                 ImGuiWindow* previous_child = parent_window->DC.ChildWindows.Size >= 2 ? parent_window->DC.ChildWindows[parent_window->DC.ChildWindows.Size - 2] : NULL;
                 bool previous_child_overlapping = previous_child ? previous_child->Rect().Overlaps(window->Rect()) : false;
-                bool parent_is_empty = parent_window->DrawList->VtxBuffer.Size > 0;
-                if (window->DrawList->CmdBuffer.back().ElemCount == 0 && parent_is_empty && !previous_child_overlapping)
+                bool parent_is_empty = (parent_window->DrawList->VtxBuffer.Size == 0);
+                if (window->DrawList->CmdBuffer.back().ElemCount == 0 && !parent_is_empty && !previous_child_overlapping)
                     render_decorations_in_parent = true;
             }
             if (render_decorations_in_parent)
@@ -11282,6 +11283,12 @@ void ImGui::SetNavWindow(ImGuiWindow* window)
     NavUpdateAnyRequestFlag();
 }
 
+void ImGui::NavClearPreferredPosForAxis(ImGuiAxis axis)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavWindow->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer][axis] = FLT_MAX;
+}
+
 void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
@@ -11292,6 +11299,10 @@ void ImGui::SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id
     g.NavFocusScopeId = focus_scope_id;
     g.NavWindow->NavLastIds[nav_layer] = id;
     g.NavWindow->NavRectRel[nav_layer] = rect_rel;
+
+    // Clear preferred scoring position (NavMoveRequestApplyResult() will tend to restore it)
+    NavClearPreferredPosForAxis(ImGuiAxis_X);
+    NavClearPreferredPosForAxis(ImGuiAxis_Y);
 }
 
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
@@ -11316,6 +11327,10 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
         g.NavDisableMouseHover = true;
     else
         g.NavDisableHighlight = true;
+
+    // Clear preferred scoring position (NavMoveRequestApplyResult() will tend to restore it)
+    NavClearPreferredPosForAxis(ImGuiAxis_X);
+    NavClearPreferredPosForAxis(ImGuiAxis_Y);
 }
 
 ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy)
@@ -11408,16 +11423,22 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
             draw_list->AddText(cand.Min, IM_COL32(255, 255, 255, 255), buf);
         }
     }
-    if (IsMouseHoveringRect(cand.Min, cand.Max))
+    const bool debug_hovering = IsMouseHoveringRect(cand.Min, cand.Max);
+    const bool debug_tty = (g.IO.KeyCtrl && IsKeyPressed(ImGuiKey_Space));
+    if (debug_hovering || debug_tty)
     {
         ImFormatString(buf, IM_ARRAYSIZE(buf),
             "d-box    (%7.3f,%7.3f) -> %7.3f\nd-center (%7.3f,%7.3f) -> %7.3f\nd-axial  (%7.3f,%7.3f) -> %7.3f\nnav %c, quadrant %c",
-            dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
-        ImDrawList* draw_list = GetForegroundDrawList(window);
-        draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255,200,0,100));
-        draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
-        draw_list->AddRectFilled(cand.Max - ImVec2(4, 4), cand.Max + CalcTextSize(buf) + ImVec2(4, 4), IM_COL32(40,0,0,200));
-        draw_list->AddText(cand.Max, ~0U, buf);
+            dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "-WENS"[move_dir+1], "-WENS"[quadrant+1]);
+        if (debug_hovering)
+        {
+            ImDrawList* draw_list = GetForegroundDrawList(window);
+            draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255, 200, 0, 100));
+            draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255, 255, 0, 200));
+            draw_list->AddRectFilled(cand.Max - ImVec2(4, 4), cand.Max + CalcTextSize(buf) + ImVec2(4, 4), IM_COL32(40, 0, 0, 200));
+            draw_list->AddText(cand.Max, ~0U, buf);
+        }
+        if (debug_tty) { IMGUI_DEBUG_LOG_NAV("id 0x%08X\n%s\n", g.LastItemData.ID, buf); }
     }
 #endif
 
@@ -11988,11 +12009,11 @@ static void ImGui::NavUpdate()
     // [DEBUG]
     g.NavScoringDebugCount = 0;
 #if IMGUI_DEBUG_NAV_RECTS
-    if (g.NavWindow)
+    if (ImGuiWindow* debug_window = g.NavWindow)
     {
-        ImDrawList* draw_list = GetForegroundDrawList(g.NavWindow);
-        if (1) { for (int layer = 0; layer < 2; layer++) { ImRect r = WindowRectRelToAbs(g.NavWindow, g.NavWindow->NavRectRel[layer]); draw_list->AddRect(r.Min, r.Max, IM_COL32(255,200,0,255)); } } // [DEBUG]
-        if (1) { ImU32 col = (!g.NavWindow->Hidden) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredRefPos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); draw_list->AddCircleFilled(p, 3.0f, col); draw_list->AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
+        ImDrawList* draw_list = GetForegroundDrawList(debug_window);
+        int layer = g.NavLayer; /* for (int layer = 0; layer < 2; layer++)*/ { ImRect r = WindowRectRelToAbs(debug_window, debug_window->NavRectRel[layer]); draw_list->AddRect(r.Min, r.Max, IM_COL32(255, 200, 0, 255)); }
+        //if (1) { ImU32 col = (!debug_window->Hidden) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredRefPos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); draw_list->AddCircleFilled(p, 3.0f, col); draw_list->AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
     }
 #endif
 }
@@ -12011,6 +12032,28 @@ void ImGui::NavInitRequestApplyResult()
     g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
     if (g.NavInitRequestFromMove)
         NavRestoreHighlightAfterMove();
+}
+
+// Bias scoring rect ahead of scoring + update preferred pos (if missing) using source position
+static void NavBiasScoringRect(ImRect& r, ImVec2& preferred_pos_rel, ImGuiDir move_dir)
+{
+    // Bias initial rect
+    ImGuiContext& g = *GImGui;
+    const ImVec2 rel_to_abs_offset = g.NavWindow->DC.CursorStartPos;
+
+    // Initialize bias on departure if we don't have any. So mouse-click + arrow will record bias.
+    // - We default to L/U bias, so moving down from a large source item into several columns will land on left-most column.
+    // - But each successful move sets new bias on one axis, only cleared when using mouse.
+    if (preferred_pos_rel.x == FLT_MAX)
+        preferred_pos_rel.x = ImMin(r.Min.x + 1.0f, r.Max.x) - rel_to_abs_offset.x;
+    if (preferred_pos_rel.y == FLT_MAX)
+        preferred_pos_rel.y = r.GetCenter().y - rel_to_abs_offset.y;
+
+    // Apply general bias on the other axis
+    if (move_dir == ImGuiDir_Up || move_dir == ImGuiDir_Down)
+        r.Min.x = r.Max.x = preferred_pos_rel.x + rel_to_abs_offset.x;
+    else
+        r.Min.y = r.Max.y = preferred_pos_rel.y + rel_to_abs_offset.y;
 }
 
 void ImGui::NavUpdateCreateMoveRequest()
@@ -12119,8 +12162,8 @@ void ImGui::NavUpdateCreateMoveRequest()
         ImRect nav_rect_rel = !window->NavRectRel[g.NavLayer].IsInverted() ? window->NavRectRel[g.NavLayer] : ImRect(0, 0, 0, 0);
         scoring_rect = WindowRectRelToAbs(window, nav_rect_rel);
         scoring_rect.TranslateY(scoring_rect_offset_y);
-        scoring_rect.Min.x = ImMin(scoring_rect.Min.x + 1.0f, scoring_rect.Max.x);
-        scoring_rect.Max.x = scoring_rect.Min.x;
+        if (g.NavMoveSubmitted)
+            NavBiasScoringRect(scoring_rect, window->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer], g.NavMoveDir);
         IM_ASSERT(!scoring_rect.IsInverted()); // Ensure if we have a finite, non-inverted bounding box here will allow us to remove extraneous ImFabs() calls in NavScoreItem().
         //GetForegroundDrawList()->AddRect(scoring_rect.Min, scoring_rect.Max, IM_COL32(255,200,0,255)); // [DEBUG]
         //if (!g.NavScoringNoClipRect.IsInverted()) { GetForegroundDrawList()->AddRect(g.NavScoringNoClipRect.Min, g.NavScoringNoClipRect.Max, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
@@ -12174,12 +12217,14 @@ void ImGui::NavMoveRequestApplyResult()
             result = &g.NavTabbingResultFirst;
 
     // In a situation when there are no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
+    const ImGuiAxis axis = (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) ? ImGuiAxis_Y : ImGuiAxis_X;
     if (result == NULL)
     {
         if (g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing)
             g.NavMoveFlags |= ImGuiNavMoveFlags_DontSetNavHighlight;
         if (g.NavId != 0 && (g.NavMoveFlags & ImGuiNavMoveFlags_DontSetNavHighlight) == 0)
             NavRestoreHighlightAfterMove();
+        NavClearPreferredPosForAxis(axis); // On a failed move, clear preferred pos for this axis.
         IMGUI_DEBUG_LOG_NAV("[nav] NavMoveSubmitted but not led to a result!\n");
         return;
     }
@@ -12224,9 +12269,18 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
     }
 
-    // Focus
+    // Apply new NavID/Focus
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
+    ImVec2 preferred_scoring_pos_rel = g.NavWindow->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer];
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+
+    // Restore last preferred position for current axis
+    // (storing in RootWindowForNav-> as the info is desirable at the beginning of a Move Request. In theory all storage should use RootWindowForNav..)
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) == 0)
+    {
+        preferred_scoring_pos_rel[axis] = result->RectRel.GetCenter()[axis];
+        g.NavWindow->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer] = preferred_scoring_pos_rel;
+    }
 
     // Tabbing: Activates Inputable or Focus non-Inputable
     if ((g.NavMoveFlags & ImGuiNavMoveFlags_Tabbing) && (result->InFlags & ImGuiItemFlags_Inputable))
@@ -12441,6 +12495,8 @@ static void ImGui::NavUpdateCreateWrappingRequest()
     if (!do_forward)
         return;
     window->NavRectRel[g.NavLayer] = bb_rel;
+    NavClearPreferredPosForAxis(ImGuiAxis_X);
+    NavClearPreferredPosForAxis(ImGuiAxis_Y);
     NavMoveRequestForward(g.NavMoveDir, clip_dir, move_flags, g.NavMoveScrollFlags);
 }
 
@@ -18878,7 +18934,7 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 void ImGui::DebugTextEncoding(const char* str)
 {
     Text("Text: \"%s\"", str);
-    if (!BeginTable("list", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+    if (!BeginTable("##DebugTextEncoding", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable))
         return;
     TableSetupColumn("Offset");
     TableSetupColumn("UTF-8");
@@ -20012,6 +20068,9 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
             BulletText("NavLastIds[%d]: 0x%08X at +(%.1f,%.1f)(%.1f,%.1f)", layer, window->NavLastIds[layer], r.Min.x, r.Min.y, r.Max.x, r.Max.y);
         DebugLocateItemOnHover(window->NavLastIds[layer]);
     }
+    const ImVec2* pr = window->NavPreferredScoringPosRel;
+    for (int layer = 0; layer < ImGuiNavLayer_COUNT; layer++)
+        BulletText("NavPreferredScoringPosRel[%d] = {%.1f,%.1f)", layer, (pr[layer].x == FLT_MAX ? -99999.0f : pr[layer].x), (pr[layer].y == FLT_MAX ? -99999.0f : pr[layer].y)); // Display as 99999.0f so it looks neater.
     BulletText("NavLayersActiveMask: %X, NavLastChildNavWindow: %s", window->DC.NavLayersActiveMask, window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
 
     BulletText("Viewport: %d%s, ViewportId: 0x%08X, ViewportPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportOwned ? " (Owned)" : "", window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);

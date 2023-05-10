@@ -557,7 +557,7 @@ backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
-io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT (Windows only)
+io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size); // CORRECT (Windows only)
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
@@ -628,10 +628,11 @@ builder.BuildRanges(&ranges);                          // Build the final result
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", 16.0f, nullptr, ranges.Data);
 ```
 
-All your strings need to use UTF-8 encoding. In C++11 you can encode a string literal in UTF-8
-by using the u8"hello" syntax. Specifying literal in your source code using a local code page
-(such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
-Otherwise, you can convert yourself to UTF-8 or load text data from a file already saved as UTF-8.
+All your strings need to use UTF-8 encoding.
+You need to tell your compiler to use UTF-8, or in C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax.
+Specifying literal in your source code using a local code page (such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
+See [About UTF-8 Encoding](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#about-utf-8-encoding) section
+of [FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) for details about UTF-8 Encoding.
 
 Text input: it is up to your application to pass the right character code by calling `io.AddInputCharacter()`.
 The applications in examples/ are doing that.

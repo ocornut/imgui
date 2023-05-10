@@ -496,7 +496,6 @@ void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
-    ImGui_ImplOSX_ShutdownPlatformInterface();
 
     bd->Observer = nullptr;
     if (bd->Monitor != nullptr)
@@ -505,11 +504,12 @@ void ImGui_ImplOSX_Shutdown()
         bd->Monitor = nullptr;
     }
 
+    ImGui_ImplOSX_ShutdownPlatformInterface();
+    ImGui_ImplOSX_DestroyBackendData();
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasGamepad | ImGuiBackendFlags_PlatformHasViewports);
-    ImGui_ImplOSX_DestroyBackendData();
 }
 
 static void ImGui_ImplOSX_UpdateMouseCursor()

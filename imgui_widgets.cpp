@@ -2096,7 +2096,8 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
     memcpy(&data_backup, p_data, type_info->Size);
 
     // Sanitize format
-    // For float/double we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in, so force them into %f and %lf
+    // - For float/double we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in, so force them into %f and %lf
+    // - In theory could treat empty format as using default, but this would only cover rare/bizarre case of using InputScalar() + integer + format string without %.
     char format_sanitized[32];
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
         format = type_info->ScanFmt;
@@ -3279,7 +3280,7 @@ const char* ImParseFormatFindEnd(const char* fmt)
 }
 
 // Extract the format out of a format string with leading or trailing decorations
-//  fmt = "blah blah"  -> return fmt
+//  fmt = "blah blah"  -> return ""
 //  fmt = "%.3f"       -> return fmt
 //  fmt = "hello %.3f" -> return fmt + 6
 //  fmt = "%.3f hello" -> return buf written with "%.3f"
@@ -3287,7 +3288,7 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_
 {
     const char* fmt_start = ImParseFormatFindStart(fmt);
     if (fmt_start[0] != '%')
-        return fmt;
+        return "";
     const char* fmt_end = ImParseFormatFindEnd(fmt_start);
     if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
@@ -3405,9 +3406,14 @@ static inline ImGuiInputTextFlags InputScalar_DefaultCharsFilter(ImGuiDataType d
 // However this may not be ideal for all uses, as some user code may break on out of bound values.
 bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min, const void* p_clamp_max)
 {
+    // FIXME: May need to clarify display behavior if format doesn't contain %.
+    // "%d" -> "%d" / "There are %d items" -> "%d" / "items" -> "%d" (fallback). Also see #6405
+    const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
     char fmt_buf[32];
     char data_buf[32];
     format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    if (format[0] == 0)
+        format = type_info->PrintFmt;
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, p_data, format);
     ImStrTrimBlanks(data_buf);
 
@@ -3418,7 +3424,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     if (TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags))
     {
         // Backup old value
-        size_t data_type_size = DataTypeGetInfo(data_type)->Size;
+        size_t data_type_size = type_info->Size;
         ImGuiDataTypeTempStorage data_backup;
         memcpy(&data_backup, p_data, data_type_size);
 
@@ -6220,11 +6226,13 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Left && is_open)
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right && !is_open) // If there's something upcoming on the line we may want to give it the priority?
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
 

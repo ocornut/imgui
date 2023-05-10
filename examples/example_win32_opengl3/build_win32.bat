@@ -5,4 +5,4 @@
 @set SOURCES=main.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\backends\imgui_impl_win32.cpp ..\..\imgui*.cpp
 @set LIBS=opengl32.lib
 mkdir %OUT_DIR%
-cl /nologo /Zi /MD %INCLUDES% /D UNICODE /D _UNICODE %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%
+cl /nologo /Zi /MD /utf-8 %INCLUDES% /D UNICODE /D _UNICODE %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%

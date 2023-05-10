@@ -111,25 +111,43 @@ Other changes:
 
 - Tables: Fixed a small miscalculation in TableHeader() leading to an empty tooltip
   showing when a sorting column has no visible name. (#6342) [@lukaasm]
+- Tables: Fixed command merging when compiling with VS2013 (one array on stack was not
+  initialized on VS2013. Unsure if due to a bug or UB/standard conformance). (#6377)
 - InputText: Avoid setting io.WantTextInputNextFrame during the deactivation frame.
   (#6341) [@lukaasm]
+- Drag, Sliders: if the format string doesn't contain any %, CTRL+Click to input text will
+  use the default format specifier for the type. Allow display/input of raw value when using
+  "enums" patterns (display label instead of value) + allow using when value is hidden. (#6405)
+- Nav: Record/restore preferred position on each given axis after a movement on that axis,
+  then score movement on the other axis using this as a bias. This allows going up and down
+  between e.g. a large header spanning horizontal space and three-ways-columns, landing
+  on the same column as before.
 - Nav: Fixed navigation within tables/columns where item boundaries goes beyond columns limits,
   unclipped bounding boxes would interfere with other columns. (#2221) [@zzzyap, @ocornut]
 - Nav: Fixed CTRL+Tab into a root window with only childs with _NavFlattened flags
   erroneously initializing default nav layer to menu layer.
 - Menus: Fixed an issue when opening a menu hierarchy in a given menu-bar would allow
   opening another via simple hovering. (#3496, #4797)
+- Misc: Added ImVec2 unary minus operator. (#6368) [@Koostosh]
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
+- Debug Tools: Added 'io.ConfigDebugIgnoreFocusLoss' option to disable 'io.AddFocusEvent(false)'
+  handling. May facilitate interactions with a debugger when focus loss leads to clearing
+  inputs data. (#4388, #4921)
 - Backends: Clear bits sets io.BackendFlags on backend Shutdown(). (#6334, #6335] [@GereonV]
   Potentially this would facilitate switching runtime backend mid-session.
 - Backends: Win32: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw
   Win32/Winapi with OpenGL. (#3218)
 - Backends: OpenGL3: Restore front and back polygon mode separately when supported
   by context (Desktop 3.0, 3.1, or 3.2+ with compat bit). (#6333) [@GereonV]
+- Backends: OpenGL3: Support for glBindSampler() backup/restore on ES3. (#6375) [@jsm174]
+- Backends: SDL3: Fixed build on Emscripten/iOS/Android. (#6391) [@jo-codegirl]
 - Examples: Added native Win32+OpenGL3 example. We don't recommend using this setup but we
   provide it for completeness. (#3218, #5170, #6086, #2772, #2600, #2359, #2022, #1553) [@learn-more]
 - Examples: Vulkan: Use integrated GPU if nothing else is available. (#6359) [@kimidaisuki22]
+- Examples: DX9, DX10, DX11: Queue framebuffer resize instead of processing in WM_SIZE,
+  as some drivers tends to only cleanup after existing the native resize modal loop. (#6374)
+- Examples: Updated all Visual Studio projects and batches to use /utf-8 argument.
 
 Docking+Viewports Branch:
 
