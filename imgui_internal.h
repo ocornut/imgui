@@ -479,7 +479,6 @@ IMGUI_API bool       ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, c
 IMGUI_API ImVec2     ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p);
 IMGUI_API void       ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w);
 inline float         ImTriangleArea(const ImVec2& a, const ImVec2& b, const ImVec2& c) { return ImFabs((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))) * 0.5f; }
-IMGUI_API ImGuiDir   ImGetDirQuadrantFromDelta(float dx, float dy);
 
 // Helper: ImVec1 (1D vector)
 // (this odd construct is used to facilitate the transition between 1D and 2D, and the maintenance of some branches/patches)
