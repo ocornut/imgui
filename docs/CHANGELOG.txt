@@ -38,9 +38,9 @@ HOW TO UPDATE?
 Breaking changes:
 
 - Clipper: Commented out obsolete redirection constructor which was marked obsolete in 1.79:
-   'ImGuiListClipper(int items_count, float items_height)' --> Use 'ImGuiListClipper() + clipper.Begin().clipper.Begin()'.
+   'ImGuiListClipper(int items_count, float items_height)' --> Use 'ImGuiListClipper() + clipper.Begin()'.
 - Clipper: Renamed ForceDisplayRangeByIndices() to IncludeRangeByIndices(), kept
-  inline redirection function (introduced in 1.86 andrarely used). (#6424, #3841)
+  inline redirection function (introduced in 1.86 and rarely used). (#6424, #3841)
 - Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
   It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
 
