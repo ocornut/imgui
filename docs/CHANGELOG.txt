@@ -37,6 +37,10 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Clipper: Commented out obsolete redirection constructor which was marked obsolete in 1.79:
+   'ImGuiListClipper(int items_count, float items_height)' --> Use 'ImGuiListClipper() + clipper.Begin().clipper.Begin()'.
+- Clipper: Renamed ForceDisplayRangeByIndices() to IncludeRangeByIndices(), kept
+  inline redirection function (introduced in 1.86 andrarely used). (#6424, #3841)
 - Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
   It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
 
@@ -928,7 +932,7 @@ Other Changes:
   Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
   still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
 - Clipper: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
-  during a clipping operation. (#3841) [@@GamingMinds-DanielC]
+  during a clipping operation. (#3841) [@GamingMinds-DanielC]
 - Clipper: rework so gamepad/keyboard navigation doesn't create spikes in number of items requested
   by the clipper to display. (#3841)
 - Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
