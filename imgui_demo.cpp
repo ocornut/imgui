@@ -6426,9 +6426,6 @@ void ImGui::ShowAboutWindow(bool* p_open)
 // - ShowStyleEditor()
 //-----------------------------------------------------------------------------
 
-// Forward declare ShowFontAtlas() which isn't worth putting in public API yet
-namespace ImGui { IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas); }
-
 // Demo helper function to select among loaded fonts.
 // Here we use the regular BeginCombo()/EndCombo() api which is the more flexible one.
 void ImGui::ShowFontSelector(const char* label)
