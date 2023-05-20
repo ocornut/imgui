@@ -153,6 +153,8 @@ Docking+Viewports Branch:
 
 - Viewports: Fixed platform-side focus (e.g. Alt+Tab) from leading to accidental
   closure of Modal windows. Regression from 1.89.5. (#6357, #6299)
+- Viewports: Fixed loss of imgui-side focus when dragging a secondary viewport back in
+  main viewport, due to platform-side handling changes. Regression from 1.89.5 (#6299)
 - Viewports: Added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
   for usage by user code.
 - Backends: SDL2: Update monitor list when receiving a display event. (#6348)
