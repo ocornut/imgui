@@ -2830,6 +2830,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
+        // Demonstrate implementation a most-basic form of multi-selection manually
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multiple Selection (simplfied, manual)");
         if (ImGui::TreeNode("Multiple Selection (simplified, manual)"))
         {
@@ -2841,9 +2842,9 @@ static void ShowDemoWindowMultiSelect()
                 sprintf(buf, "Object %d", n);
                 if (ImGui::Selectable(buf, selection[n]))
                 {
-                    if (!ImGui::GetIO().KeyCtrl)    // Clear selection when CTRL is not held
+                    if (!ImGui::GetIO().KeyCtrl) // Clear selection when CTRL is not held
                         memset(selection, 0, sizeof(selection));
-                    selection[n] ^= 1;
+                    selection[n] ^= 1; // Toggle current item
                 }
             }
             ImGui::TreePop();
@@ -2883,7 +2884,6 @@ static void ShowDemoWindowMultiSelect()
                 {
                     char label[64];
                     sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
-
                     bool item_is_selected = selection.GetSelected(n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
@@ -2916,28 +2916,36 @@ static void ShowDemoWindowMultiSelect()
             enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
             static bool use_table = false;
             static bool use_drag_drop = true;
-            static bool multiple_selection_scopes = false;
+            static bool use_multiple_scopes = false;
+            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
             static WidgetType widget_type = WidgetType_TreeNode;
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
             ImGui::SameLine();
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
             ImGui::Checkbox("Use table", &use_table);
             ImGui::Checkbox("Use drag & drop", &use_drag_drop);
-            ImGui::Checkbox("Distinct selection scopes in same window", &multiple_selection_scopes);
+            ImGui::Checkbox("Multiple selection scopes in same window", &use_multiple_scopes);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoMultiSelect", &flags, ImGuiMultiSelectFlags_NoMultiSelect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoUnselect", &flags, ImGuiMultiSelectFlags_NoUnselect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
+            ImGui::BeginDisabled(use_multiple_scopes);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickWindowVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickWindowVoid);
+            ImGui::EndDisabled();
 
-            // When 'multiple_selection_scopes' is set we show 3 selection scopes in the host window instead of 1 in a scrolling window.
+            // When 'use_multiple_scopes' is set we show 3 selection scopes in the host window instead of 1 in a scrolling window.
             static ExampleSelection selections_data[3];
-            const int selection_scope_count = multiple_selection_scopes ? 3 : 1;
+            const int selection_scope_count = use_multiple_scopes ? 3 : 1;
             for (int selection_scope_n = 0; selection_scope_n < selection_scope_count; selection_scope_n++)
             {
                 ExampleSelection* selection = &selections_data[selection_scope_n];
 
-                const int ITEMS_COUNT = multiple_selection_scopes ? 12 : 1000;
+                const int ITEMS_COUNT = use_multiple_scopes ? 12 : 1000; // Smaller count to make it easier to see multiple scopes in same screen.
                 ImGui::PushID(selection_scope_n);
 
                 // Open a scrolling region
                 bool draw_selection = true;
-                if (multiple_selection_scopes)
+                if (use_multiple_scopes)
                 {
                     ImGui::SeparatorText("Selection scope");
                 }
@@ -2952,15 +2960,13 @@ static void ShowDemoWindowMultiSelect()
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
-                    ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
-                    if (multiple_selection_scopes)
-                        ;// flags |= ImGuiMultiSelectFlags_ClearOnClickRectVoid;
-                    else
-                        flags |= ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
-                    ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
+                    ImGuiMultiSelectFlags local_flags = flags;
+                    if (use_multiple_scopes)
+                        local_flags &= ~ImGuiMultiSelectFlags_ClearOnClickWindowVoid; // local_flags |= ImGuiMultiSelectFlags_ClearOnClickRectVoid;
+                    ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(local_flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
                     selection->ApplyRequests(multi_select_data, ITEMS_COUNT);
 
-                    if (multiple_selection_scopes)
+                    if (use_multiple_scopes)
                         ImGui::Text("Selection size: %d", selection->GetSelectionSize());   // Draw counter below Separator and after BeginMultiSelect()
 
                     if (use_table)
@@ -3062,7 +3068,7 @@ static void ShowDemoWindowMultiSelect()
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PopStyleVar();
 
-                    if (multiple_selection_scopes == false)
+                    if (use_multiple_scopes == false)
                         ImGui::EndListBox();
                 }
                 ImGui::PopID(); // ImGui::PushID(selection_scope_n);

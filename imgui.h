@@ -2766,14 +2766,14 @@ enum ImGuiMultiSelectFlags_
 //     1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection state.
 //        It is because you need to pass its selection state (and you own selection) that we don't store this value in Dear ImGui.
 //        (For the initial frame or when resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*).
-//     2) Honor Clear/SelectAll requests by updating your selection data. Only required if you are using a clipper in step 4: but you can use same code as step 6 anyway.
+//     2) Honor Clear/SelectAll/SetRange requests by updating your selection data. (Only required if you are using a clipper in step 4: but you can use same code as step 6 anyway.)
 //   Loop
 //     3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item. [Only required if you are using a clipper in step 4]
 //        This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
 //        If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
 //     4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //        Call IsItemToggledSelection() to query if the selection state has been toggled, if you need the info immediately for your display (before EndMultiSelect()).
-//        When cannot return a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggle" event instead.
+//        When cannot provide a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggled" event instead.
 //   End
 //     5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
 //     6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
