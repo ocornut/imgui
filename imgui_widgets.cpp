@@ -1392,8 +1392,9 @@ void ImGui::AlignTextToFramePadding()
 }
 
 // Horizontal/vertical separating line
-// FIXME: Surprisingly, this seemingly simple widget is adjacent to MANY different legacy/tricky layout issues.
-void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
+// FIXME: Surprisingly, this seemingly trivial widget is a victim of many different legacy/tricky layout issues.
+// Note how thickness == 1.0f is handled specifically as not moving CursorPos by 'thickness', but other values are.
+void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -1401,8 +1402,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
 
     ImGuiContext& g = *GImGui;
     IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
+    IM_ASSERT(thickness > 0.0f);
 
-    const float thickness = 1.0f; // Cannot use g.Style.SeparatorTextSize yet for various reasons.
     if (flags & ImGuiSeparatorFlags_Vertical)
     {
         // Vertical separator, for menu bars (use current line height).
@@ -1436,6 +1437,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
             x2 = table->Columns[table->CurrentColumn].MaxX;
         }
 
+        // Before Tables API happened, we relied on Separator() to span all columns of a Columns() set.
+        // We currently don't need to provide the same feature for tables because tables naturally have border features.
         ImGuiOldColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
         if (columns)
             PushColumnsBackground();
@@ -1445,8 +1448,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         const float thickness_for_layout = (thickness == 1.0f) ? 0.0f : thickness; // FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not affect layout yet. Should change.
         const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y + thickness));
         ItemSize(ImVec2(0.0f, thickness_for_layout));
-        const bool item_visible = ItemAdd(bb, 0);
-        if (item_visible)
+
+        if (ItemAdd(bb, 0))
         {
             // Draw
             window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_Separator));
@@ -1469,10 +1472,11 @@ void ImGui::Separator()
     if (window->SkipItems)
         return;
 
-    // Those flags should eventually be overridable by the user
+    // Those flags should eventually be configurable by the user
+    // FIXME: We cannot g.Style.SeparatorTextBorderSize for thickness as it relates to SeparatorText() which is a decorated separator, not defaulting to 1.0f.
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     flags |= ImGuiSeparatorFlags_SpanAllColumns; // NB: this only applies to legacy Columns() api as they relied on Separator() a lot.
-    SeparatorEx(flags);
+    SeparatorEx(flags, 1.0f);
 }
 
 void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_w)
@@ -1532,8 +1536,8 @@ void ImGui::SeparatorText(const char* label)
         return;
 
     // The SeparatorText() vs SeparatorTextEx() distinction is designed to be considerate that we may want:
-    // - allow headers to be draggable items (would require a stable ID + a noticeable highlight)
-    // - this high-level entry point to allow formatting? (may require ID separate from formatted string)
+    // - allow separator-text to be draggable items (would require a stable ID + a noticeable highlight)
+    // - this high-level entry point to allow formatting? (which in turns may require ID separate from formatted string)
     // - because of this we probably can't turn 'const char* label' into 'const char* fmt, ...'
     // Otherwise, we can decide that users wanting to drag this would layout a dedicated drag-item,
     // and then we can turn this into a format function.
