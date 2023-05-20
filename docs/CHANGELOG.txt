@@ -91,6 +91,8 @@ Other changes:
  VERSION 1.89.5 (Released 2023-04-13)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.5
+
 Other changes:
 
 - InputText: Reworked prev/next-word behavior to more closely match Visual Studio
@@ -161,6 +163,8 @@ Other changes:
 -----------------------------------------------------------------------
  VERSION 1.89.4 (Released 2023-03-14)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.4
 
 Breaking Changes:
 
