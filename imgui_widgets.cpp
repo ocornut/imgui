@@ -7301,11 +7301,13 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         }
     }
 
-    // Unlike Space, Enter doesn't alter selection (but can still return a press)
+    // Unlike Space, Enter doesn't alter selection (but can still return a press) unless current item is not selected.
+    // The later, "unless current item is not select", may become optional? It seems like a better default if Enter doesn't necessarily open something
+    // (unlike e.g. Windows explorer). For use case where Enter always open something, we might decide to make this optional?
     const bool enter_pressed = pressed && (g.NavActivateId == id) && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput);
 
     // Alter selection
-    if (pressed && !enter_pressed)
+    if (pressed && (!enter_pressed || !selected))
     {
         //-------------------------------------------------------------------------------------------------------------------------------------------------
         // ACTION                           | Begin     | Item Old        | Item New                                                   | End
