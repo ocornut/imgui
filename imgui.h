@@ -21,9 +21,9 @@
 //   please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
 
 // Library Version
-// (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM > 12345')
-#define IMGUI_VERSION               "1.89.6 WIP"
-#define IMGUI_VERSION_NUM           18956
+// (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
+#define IMGUI_VERSION       "1.89.6 WIP"
+#define IMGUI_VERSION_NUM   18958
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -2455,11 +2455,13 @@ struct ImGuiListClipper
     IMGUI_API void  End();             // Automatically called on the last call of Step() that returns false.
     IMGUI_API bool  Step();            // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
 
-    // Call ForceDisplayRangeByIndices() before first call to Step() if you need a range of items to be displayed regardless of visibility.
-    IMGUI_API void  ForceDisplayRangeByIndices(int item_min, int item_max); // item_max is exclusive e.g. use (42, 42+1) to make item 42 always visible BUT due to alignment/padding of certain items it is likely that an extra item may be included on either end of the display range.
+    // Call IncludeRangeByIndices() *BEFORE* first call to Step() if you need a range of items to not be clipped, regardless of their visibility.
+    // (Due to alignment / padding of certain items it is possible that an extra item may be included on either end of the display range).
+    IMGUI_API void  IncludeRangeByIndices(int item_begin, int item_end); // item_end is exclusive e.g. use (42, 42+1) to make item 42 never clipped.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    inline ImGuiListClipper(int items_count, float items_height = -1.0f) { memset(this, 0, sizeof(*this)); ItemsCount = -1; Begin(items_count, items_height); } // [removed in 1.79]
+    inline void ForceDisplayRangeByIndices(int item_begin, int item_end) { IncludeRangeByIndices(item_begin, item_end); } // [renamed in 1.89.6]
+    //inline ImGuiListClipper(int items_count, float items_height = -1.0f) { memset(this, 0, sizeof(*this)); ItemsCount = -1; Begin(items_count, items_height); } // [removed in 1.79]
 #endif
 };
 
@@ -3299,12 +3301,12 @@ namespace ImGui
     IMGUI_API void      CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end); // Calculate coarse clipping for large list of evenly sized items. Prefer using ImGuiListClipper.
     // OBSOLETED in 1.85 (from August 2021)
     static inline float GetWindowContentRegionWidth()                                       { return GetWindowContentRegionMax().x - GetWindowContentRegionMin().x; }
-    // OBSOLETED in 1.81 (from February 2021)
-    IMGUI_API bool      ListBoxHeader(const char* label, int items_count, int height_in_items = -1); // Helper to calculate size from items_count and height_in_items
-    static inline bool  ListBoxHeader(const char* label, const ImVec2& size = ImVec2(0, 0)) { return BeginListBox(label, size); }
-    static inline void  ListBoxFooter()                                                     { EndListBox(); }
 
     // Some of the older obsolete names along with their replacement (commented out so they are not reported in IDE)
+    //-- OBSOLETED in 1.81 (from February 2021)
+    //static inline bool  ListBoxHeader(const char* label, const ImVec2& size = ImVec2(0, 0))         { return BeginListBox(label, size); }
+    //static inline bool  ListBoxHeader(const char* label, int items_count, int height_in_items = -1) { float height = GetTextLineHeightWithSpacing() * ((height_in_items < 0 ? ImMin(items_count, 7) : height_in_items) + 0.25f) + GetStyle().FramePadding.y * 2.0f; return BeginListBox(label, ImVec2(0.0f, height)); } // Helper to calculate size from items_count and height_in_items
+    //static inline void  ListBoxFooter()                                                             { EndListBox(); }
     //-- OBSOLETED in 1.79 (from August 2020)
     //static inline void  OpenPopupContextItem(const char* str_id = NULL, ImGuiMouseButton mb = 1)    { OpenPopupOnItemClick(str_id, mb); } // Bool return value removed. Use IsWindowAppearing() in BeginPopup() instead. Renamed in 1.77, renamed back in 1.79. Sorry!
     //-- OBSOLETED in 1.78 (from June 2020): Old drag/sliders functions that took a 'float power > 1.0f' argument instead of ImGuiSliderFlags_Logarithmic. See github.com/ocornut/imgui/issues/3361 for details.

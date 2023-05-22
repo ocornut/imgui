@@ -111,6 +111,7 @@ int main(int, char**)
         {
             g_d3dpp.BackBufferWidth = g_ResizeWidth;
             g_d3dpp.BackBufferHeight = g_ResizeHeight;
+            g_ResizeWidth = g_ResizeHeight = 0;
             ResetDevice();
         }
 

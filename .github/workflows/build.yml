@@ -479,8 +479,8 @@ jobs:
         wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
         tar -xvf master.tar.gz
         emsdk-master/emsdk update
-        emsdk-master/emsdk install latest
-        emsdk-master/emsdk activate latest
+        emsdk-master/emsdk install 3.1.37
+        emsdk-master/emsdk activate 3.1.37
 
     - name: Build example_sdl2_opengl3 with Emscripten
       run: |

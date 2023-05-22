@@ -405,6 +405,11 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2023/05/22 (1.86.6) - listbox: commented out obsolete/redirecting functions that were marked obsolete more than two years ago:
+                           - ListBoxHeader()  -> use BeginListBox() (note how two variants of ListBoxHeader() existed. Check commented versions in imgui.h for reference)
+                           - ListBoxFooter()  -> use EndListBox()
+ - 2023/05/15 (1.86.6) - clipper: commented out obsolete redirection constructor 'ImGuiListClipper(int items_count, float items_height = -1.0f)' that was marked obsolete in 1.79. Use default constructor + clipper.Begin().
+ - 2023/05/15 (1.89.6) - clipper: renamed ImGuiListClipper::ForceDisplayRangeByIndices() to ImGuiListClipper::IncludeRangeByIndices().
  - 2023/03/14 (1.89.4) - commented out redirecting enums/functions names that were marked obsolete two years ago:
                            - ImGuiSliderFlags_ClampOnInput        -> use ImGuiSliderFlags_AlwaysClamp
                            - ImGuiInputTextFlags_AlwaysInsertMode -> use ImGuiInputTextFlags_AlwaysOverwrite
@@ -2860,13 +2865,13 @@ void ImGuiListClipper::End()
     ItemsCount = -1;
 }
 
-void ImGuiListClipper::ForceDisplayRangeByIndices(int item_min, int item_max)
+void ImGuiListClipper::IncludeRangeByIndices(int item_begin, int item_end)
 {
     ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
     IM_ASSERT(DisplayStart < 0); // Only allowed after Begin() and if there has not been a specified range yet.
-    IM_ASSERT(item_min <= item_max);
-    if (item_min < item_max)
-        data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_min, item_max));
+    IM_ASSERT(item_begin <= item_end);
+    if (item_begin < item_end)
+        data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_begin, item_end));
 }
 
 static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
@@ -9849,6 +9854,11 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
         PopStyleVar();
     }
+    while (g.FontStack.Size > stack_sizes->SizeOfFontStack) //-V1044
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing PopFont() in '%s'", window->Name);
+        PopFont();
+    }
     while (g.FocusScopeStack.Size > stack_sizes->SizeOfFocusScopeStack + 1) //-V1044
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
@@ -11333,7 +11343,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
     NavClearPreferredPosForAxis(ImGuiAxis_Y);
 }
 
-ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy)
+static ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy)
 {
     if (ImFabs(dx) > ImFabs(dy))
         return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
@@ -11706,7 +11716,8 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags wra
     ImGuiContext& g = *GImGui;
     IM_ASSERT((wrap_flags & ImGuiNavMoveFlags_WrapMask_ ) != 0 && (wrap_flags & ~ImGuiNavMoveFlags_WrapMask_) == 0); // Call with _WrapX, _WrapY, _LoopX, _LoopY
 
-    // In theory we should test for NavMoveRequestButNoResultYet() but there's no point doing it, NavEndFrame() will do the same test
+    // In theory we should test for NavMoveRequestButNoResultYet() but there's no point doing it:
+    // as NavEndFrame() will do the same test. It will end up calling NavUpdateCreateWrappingRequest().
     if (g.NavWindow == window && g.NavMoveScoringItems && g.NavLayer == ImGuiNavLayer_Main)
         g.NavMoveFlags = (g.NavMoveFlags & ~ImGuiNavMoveFlags_WrapMask_) | wrap_flags;
 }
@@ -12035,7 +12046,7 @@ void ImGui::NavInitRequestApplyResult()
 }
 
 // Bias scoring rect ahead of scoring + update preferred pos (if missing) using source position
-static void NavBiasScoringRect(ImRect& r, ImVec2& preferred_pos_rel, ImGuiDir move_dir)
+static void NavBiasScoringRect(ImRect& r, ImVec2& preferred_pos_rel, ImGuiDir move_dir, ImGuiNavMoveFlags move_flags)
 {
     // Bias initial rect
     ImGuiContext& g = *GImGui;
@@ -12044,15 +12055,18 @@ static void NavBiasScoringRect(ImRect& r, ImVec2& preferred_pos_rel, ImGuiDir mo
     // Initialize bias on departure if we don't have any. So mouse-click + arrow will record bias.
     // - We default to L/U bias, so moving down from a large source item into several columns will land on left-most column.
     // - But each successful move sets new bias on one axis, only cleared when using mouse.
-    if (preferred_pos_rel.x == FLT_MAX)
-        preferred_pos_rel.x = ImMin(r.Min.x + 1.0f, r.Max.x) - rel_to_abs_offset.x;
-    if (preferred_pos_rel.y == FLT_MAX)
-        preferred_pos_rel.y = r.GetCenter().y - rel_to_abs_offset.y;
+    if ((move_flags & ImGuiNavMoveFlags_Forwarded) == 0)
+    {
+        if (preferred_pos_rel.x == FLT_MAX)
+            preferred_pos_rel.x = ImMin(r.Min.x + 1.0f, r.Max.x) - rel_to_abs_offset.x;
+        if (preferred_pos_rel.y == FLT_MAX)
+            preferred_pos_rel.y = r.GetCenter().y - rel_to_abs_offset.y;
+    }
 
     // Apply general bias on the other axis
-    if (move_dir == ImGuiDir_Up || move_dir == ImGuiDir_Down)
+    if ((move_dir == ImGuiDir_Up || move_dir == ImGuiDir_Down) && preferred_pos_rel.x != FLT_MAX)
         r.Min.x = r.Max.x = preferred_pos_rel.x + rel_to_abs_offset.x;
-    else
+    else if ((move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right) && preferred_pos_rel.y != FLT_MAX)
         r.Min.y = r.Max.y = preferred_pos_rel.y + rel_to_abs_offset.y;
 }
 
@@ -12163,7 +12177,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         scoring_rect = WindowRectRelToAbs(window, nav_rect_rel);
         scoring_rect.TranslateY(scoring_rect_offset_y);
         if (g.NavMoveSubmitted)
-            NavBiasScoringRect(scoring_rect, window->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer], g.NavMoveDir);
+            NavBiasScoringRect(scoring_rect, window->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer], g.NavMoveDir, g.NavMoveFlags);
         IM_ASSERT(!scoring_rect.IsInverted()); // Ensure if we have a finite, non-inverted bounding box here will allow us to remove extraneous ImFabs() calls in NavScoreItem().
         //GetForegroundDrawList()->AddRect(scoring_rect.Min, scoring_rect.Max, IM_COL32(255,200,0,255)); // [DEBUG]
         //if (!g.NavScoringNoClipRect.IsInverted()) { GetForegroundDrawList()->AddRect(g.NavScoringNoClipRect.Min, g.NavScoringNoClipRect.Max, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
@@ -12451,7 +12465,9 @@ static void ImGui::NavUpdateCreateWrappingRequest()
     bool do_forward = false;
     ImRect bb_rel = window->NavRectRel[g.NavLayer];
     ImGuiDir clip_dir = g.NavMoveDir;
+
     const ImGuiNavMoveFlags move_flags = g.NavMoveFlags;
+    //const ImGuiAxis move_axis = (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) ? ImGuiAxis_Y : ImGuiAxis_X;
     if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
     {
         bb_rel.Min.x = bb_rel.Max.x = window->ContentSize.x + window->WindowPadding.x;

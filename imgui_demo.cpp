@@ -415,23 +415,21 @@ void ImGui::ShowDemoWindow(bool* p_open)
     IMGUI_DEMO_MARKER("Help");
     if (ImGui::CollapsingHeader("Help"))
     {
-        ImGui::Text("ABOUT THIS DEMO:");
+        ImGui::SeparatorText("ABOUT THIS DEMO:");
         ImGui::BulletText("Sections below are demonstrating many aspects of the library.");
         ImGui::BulletText("The \"Examples\" menu above leads to more demo contents.");
         ImGui::BulletText("The \"Tools\" menu above gives access to: About Box, Style Editor,\n"
                           "and Metrics/Debugger (general purpose Dear ImGui debugging tool).");
-        ImGui::Separator();
 
-        ImGui::Text("PROGRAMMER GUIDE:");
+        ImGui::SeparatorText("PROGRAMMER GUIDE:");
         ImGui::BulletText("See the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
         ImGui::BulletText("See comments in imgui.cpp.");
         ImGui::BulletText("See example applications in the examples/ folder.");
         ImGui::BulletText("Read the FAQ at http://www.dearimgui.com/faq/");
         ImGui::BulletText("Set 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.");
         ImGui::BulletText("Set 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.");
-        ImGui::Separator();
 
-        ImGui::Text("USER GUIDE:");
+        ImGui::SeparatorText("USER GUIDE:");
         ImGui::ShowUserGuide();
     }
 
