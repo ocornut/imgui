@@ -6619,20 +6619,6 @@ bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
     return true;
 }
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-// OBSOLETED in 1.81 (from February 2021)
-bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_items)
-{
-    // If height_in_items == -1, default height is maximum 7.
-    ImGuiContext& g = *GImGui;
-    float height_in_items_f = (height_in_items < 0 ? ImMin(items_count, 7) : height_in_items) + 0.25f;
-    ImVec2 size;
-    size.x = 0.0f;
-    size.y = GetTextLineHeightWithSpacing() * height_in_items_f + g.Style.FramePadding.y * 2.0f;
-    return BeginListBox(label, size);
-}
-#endif
-
 void ImGui::EndListBox()
 {
     ImGuiContext& g = *GImGui;

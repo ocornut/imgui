@@ -41,6 +41,10 @@ Breaking changes:
    'ImGuiListClipper(int items_count, float items_height)' --> Use 'ImGuiListClipper() + clipper.Begin()'.
 - Clipper: Renamed ForceDisplayRangeByIndices() to IncludeRangeByIndices(), kept
   inline redirection function (introduced in 1.86 and rarely used). (#6424, #3841)
+- Commented out obsolete/redirecting functions that were marked obsolete more than two years ago:
+   - ListBoxHeader()  -> use BeginListBox()
+   - ListBoxFooter()  -> use EndListBox()
+   - Note how two variants of ListBoxHeader() existed. Check commented versions in imgui.h for refeence.
 - Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
   It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
 
