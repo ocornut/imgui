@@ -2732,7 +2732,7 @@ struct ImColor
 enum ImGuiMultiSelectFlags_
 {
     ImGuiMultiSelectFlags_None                  = 0,
-    ImGuiMultiSelectFlags_NoMultiSelect         = 1 << 0,
+    ImGuiMultiSelectFlags_NoMultiSelect         = 1 << 0,   // Disable selecting more than one item. This is not very useful at this kind of selection can be implemented without BeginMultiSelect(), but this is available for consistency.
     ImGuiMultiSelectFlags_NoUnselect            = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 2,   // Disable CTRL+A shortcut to set RequestSelectAll
     ImGuiMultiSelectFlags_ClearOnClickWindowVoid= 1 << 3,   // Clear selection when clicking on empty location within host window (use if BeginMultiSelect() covers a whole window)
@@ -2787,7 +2787,7 @@ struct ImGuiMultiSelectData
     bool    RangeValue;             //        End  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
     void*   RangeSrc;               // Begin, End  // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
     void*   RangeDst;               //        End  // End: parameter from RequestSetRange request.
-    int     RangeDirection;         //        End  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values.
+    int     RangeDirection;         //        End  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values. If your void* values are storing indices you will never need this.
 
     ImGuiMultiSelectData()  { Clear(); }
     void Clear()

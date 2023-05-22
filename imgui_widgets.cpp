@@ -7157,22 +7157,20 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
             ms->In.RequestClear = true;
     }
 
-    // Shortcuts
-    if (ms->IsFocused)
-    {
-        // Select All helper shortcut (CTRL+A)
-        // Note: we are comparing FocusScope so we don't need to be testing for IsWindowFocused()
-        if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
-                ms->In.RequestSelectAll = true;
+    // Shortcut: Select all (CTRL+A)
+    if (ms->IsFocused && !(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+        if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
+            ms->In.RequestSelectAll = true;
 
-        if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
-            if (Shortcut(ImGuiKey_Escape)) // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
-                ms->In.RequestClear = true;
-    }
+    // Shortcut: Clear selection (Escape)
+    // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
+    // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
+    if (ms->IsFocused && (flags & ImGuiMultiSelectFlags_ClearOnEscape))
+        if (Shortcut(ImGuiKey_Escape))
+            ms->In.RequestClear = true;
 
-    //if (ms->In.RequestClear)     IMGUI_DEBUG_LOG("BeginMultiSelect: RequestClear\n");
-    //if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG("BeginMultiSelect: RequestSelectAll\n");
+    //if (ms->In.RequestClear)     IMGUI_DEBUG_LOG_SELECTION("BeginMultiSelect: RequestClear\n");
+    //if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("BeginMultiSelect: RequestSelectAll\n");
 
     return &ms->In;
 }
@@ -7201,9 +7199,9 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
     ms->Flags = ImGuiMultiSelectFlags_None;
     PopFocusScope();
 
-    //if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG("EndMultiSelect: RequestClear\n");
-    //if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG("EndMultiSelect: RequestSelectAll\n");
-    //if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG("EndMultiSelect: RequestSetRange %p..%p = %d\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue);
+    //if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestClear\n");
+    //if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSelectAll\n");
+    //if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSetRange %p..%p = %d (dir %+d)\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue, ms->Out.RangeDirection);
 
     return &ms->Out;
 }
@@ -7220,7 +7218,7 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     g.NextItemData.SelectionUserData = selection_user_data;
     g.NextItemData.FocusScopeId = g.CurrentFocusScopeId;
 
-    // Auto updating RangeSrcPassedBy for cases were clipped is not used.
+    // Auto updating RangeSrcPassedBy for cases were clipper is not used.
     if (g.MultiSelectState.In.RangeSrc == (void*)selection_user_data)
         g.MultiSelectState.In.RangeSrcPassedBy = true;
 }
@@ -7322,6 +7320,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
         if (is_shift && is_multiselect)
         {
+            // Shift+Arrow always select, Ctrl+Shift+Arrow copy source selection state.
             ms->Out.RequestSetRange = true;
             ms->Out.RangeDst = item_data;
             if (!is_ctrl)
@@ -7330,7 +7329,8 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         }
         else
         {
-            selected = (!is_ctrl || (ms->Flags & ImGuiMultiSelectFlags_NoUnselect)) ? true : !selected;
+            // Ctrl inverts selection, otherwise always select
+            selected = (is_ctrl && (ms->Flags & ImGuiMultiSelectFlags_NoUnselect) == 0) ? !selected : true;
             ms->Out.RangeSrc = ms->Out.RangeDst = item_data;
             ms->Out.RangeValue = selected;
         }
@@ -7338,13 +7338,12 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
         {
             // Mouse click without CTRL clears the selection, unless the clicked item is already selected
-            bool preserve_existing_selection = g.DragDropActive;
-            if (is_multiselect && !is_ctrl && !preserve_existing_selection)
+            if (is_multiselect && !is_ctrl)
                 ms->Out.RequestClear = true;
-            if (is_multiselect && !is_shift && !preserve_existing_selection && ms->Out.RequestClear)
+            if (is_multiselect && !is_shift && ms->Out.RequestClear)
             {
                 // For toggle selection unless there is a Clear request, we can handle it completely locally without sending a RangeSet request.
-                IM_ASSERT(ms->Out.RangeSrc == ms->Out.RangeDst); // Setup by block above
+                IM_ASSERT(ms->Out.RangeSrc == ms->Out.RangeDst); // Setup by else block above
                 ms->Out.RequestSetRange = true;
                 ms->Out.RangeValue = selected;
                 ms->Out.RangeDirection = +1;
