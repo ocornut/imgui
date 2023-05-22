@@ -26,6 +26,9 @@ ipch
 *.VC.db
 *.VC.VC.opendb
 
+## Getting files created in JSON/Schemas/Catalog/ from a VS2022 update
+JSON/
+
 ## Commonly used CMake directories
 /build*/
 
@@ -37,7 +40,8 @@ xcuserdata
 examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
-examples/example_emscripten_opengl3/web/*
+examples/example_glfw_opengl3/web/*
+examples/example_sdl2_opengl3/web/*
 examples/example_emscripten_wgpu/web/*
 
 ## JetBrains IDE artifacts
@@ -45,9 +49,12 @@ examples/example_emscripten_wgpu/web/*
 cmake-build-*
 
 ## Unix executables from our example Makefiles
+examples/example_glfw_metal/example_glfw_metal
 examples/example_glfw_opengl2/example_glfw_opengl2
 examples/example_glfw_opengl3/example_glfw_opengl3
 examples/example_glut_opengl2/example_glut_opengl2
 examples/example_null/example_null
-examples/example_sdl_opengl2/example_sdl_opengl2
-examples/example_sdl_opengl3/example_sdl_opengl3
+examples/example_sdl2_metal/example_sdl2_metal
+examples/example_sdl2_opengl2/example_sdl2_opengl2
+examples/example_sdl2_opengl3/example_sdl2_opengl3
+examples/example_sdl2_sdlrenderer/example_sdl2_sdlrenderer

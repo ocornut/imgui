@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05E31B59274EF0700083FCB6 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05E31B57274EF0360083FCB6 /* GameController.framework */; };
 		07A82EDB213941D00078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82EDA213941D00078D120 /* imgui_widgets.cpp */; };
 		4080A99820B02D340036BA46 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4080A98A20B02CD90036BA46 /* main.mm */; };
 		4080A9A220B034280036BA46 /* imgui_impl_opengl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4080A99E20B034280036BA46 /* imgui_impl_opengl2.cpp */; };
@@ -32,6 +33,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		05E31B57274EF0360083FCB6 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		07A82EDA213941D00078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
 		4080A96B20B029B00036BA46 /* example_osx_opengl2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = example_osx_opengl2; sourceTree = BUILT_PRODUCTS_DIR; };
 		4080A98A20B02CD90036BA46 /* main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = SOURCE_ROOT; };
@@ -57,6 +59,7 @@
 			files = (
 				4080A9B520B034EA0036BA46 /* OpenGL.framework in Frameworks */,
 				4080A9B320B034E40036BA46 /* Cocoa.framework in Frameworks */,
+				05E31B59274EF0700083FCB6 /* GameController.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,6 +98,7 @@
 		4080A9B120B034E40036BA46 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				05E31B57274EF0360083FCB6 /* GameController.framework */,
 				4080A9B420B034EA0036BA46 /* OpenGL.framework */,
 				4080A9B220B034E40036BA46 /* Cocoa.framework */,
 			);
