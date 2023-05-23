@@ -69,6 +69,7 @@ Other changes:
   erroneously initializing default nav layer to menu layer.
 - Menus: Fixed an issue when opening a menu hierarchy in a given menu-bar would allow
   opening another via simple hovering. (#3496, #4797)
+- Fonts: Fixed crash when merging fonts and the first font has no valid glyph. (#6446) [@JaedanC]
 - Misc: Added ImVec2 unary minus operator. (#6368) [@Koostosh]
 - Debug Tools: Debug Log: Fixed not parsing 0xXXXXXXXX values for geo-locating on mouse
   hover hover when the identifier is at the end of the line. (#5855)
