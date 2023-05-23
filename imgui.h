@@ -2747,6 +2747,10 @@ enum ImGuiMultiSelectFlags_
 //   Note however that if you don't need SHIFT+Click/Arrow range-select + clipping, you can handle a simpler form of multi-selection
 //   yourself, by reacting to click/presses on Selectable() items and checking keyboard modifiers.
 //   The unusual complexity of this system is mostly caused by supporting SHIFT+Click/Arrow range-select with clipped elements.
+// - In the spirit of Dear ImGui design, your code owns the selection data.
+//   So this is designed to handle all kind of selection data: e.g. instructive selection (store a bool inside each object),
+//   external array (store an array aside from your objects), hash/map/set (store only selected items in a hash/map/set),
+//   or other structures (store indices in an interval tree), etc.
 // - TreeNode() and Selectable() are supported.
 // - The work involved to deal with multi-selection differs whether you want to only submit visible items (and clip others) or submit all items
 //   regardless of their visibility. Clipping items is more efficient and will allow you to deal with large lists (1k~100k items) with near zero
@@ -2758,9 +2762,6 @@ enum ImGuiMultiSelectFlags_
 //   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points and you will need to interpolate
 //   between them to honor range selection. But the code never assume that sortable integers are used (you may store pointers to your object,
 //   and then from the pointer have your own way of iterating from RangeSrc to RangeDst).
-// - In the spirit of Dear ImGui design, your code own the selection data. So this is designed to handle all kind of selection data:
-//   e.g. instructive selection (store a bool inside each object), external array (store an array aside from your objects),
-//   hash/map/set (store only selected items in a hash/map/set), or other structures (store indices in an interval tree), etc.
 // Usage flow:
 //   Begin
 //     1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection state.

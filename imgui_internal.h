@@ -134,7 +134,7 @@ struct ImGuiInputTextDeactivateData;// Short term storage to backup text of a de
 struct ImGuiLastItemData;           // Status storage for last submitted items
 struct ImGuiLocEntry;               // A localization entry.
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
-struct ImGuiMultiSelectState;       // Multi-selection state
+struct ImGuiMultiSelectTempData;    // Multi-selection temporary state (while traversing).
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
 struct ImGuiMetricsConfig;          // Storage for ShowMetricsWindow() and DebugNodeXXX() functions
 struct ImGuiNextWindowData;         // Storage for SetNextWindow** functions
@@ -1713,7 +1713,7 @@ struct ImGuiOldColumns
 
 #ifdef IMGUI_HAS_MULTI_SELECT
 
-struct IMGUI_API ImGuiMultiSelectState
+struct IMGUI_API ImGuiMultiSelectTempData
 {
     ImGuiID                 FocusScopeId;           // Copied from g.CurrentFocusScopeId (unless another selection scope was pushed manually)
     ImGuiMultiSelectFlags   Flags;
@@ -1726,7 +1726,7 @@ struct IMGUI_API ImGuiMultiSelectState
     bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
     //ImRect                Rect;                   // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
-    ImGuiMultiSelectState() { Clear(); }
+    ImGuiMultiSelectTempData() { Clear(); }
     void Clear()            { FocusScopeId = 0; Flags = ImGuiMultiSelectFlags_None; KeyMods = ImGuiMod_None; Window = NULL; In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }
 };
 
@@ -2167,7 +2167,8 @@ struct ImGuiContext
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Multi-Select state
-    ImGuiMultiSelectState           MultiSelectState;           // FIXME-MULTISELECT: We currently don't support recursing/stacking multi-select
+    ImGuiMultiSelectTempData*       CurrentMultiSelect;         // FIXME-MULTISELECT: We currently don't support recursing/stacking multi-select
+    ImGuiMultiSelectTempData        MultiSelectTempData[1];
 
     // Hover Delay system
     ImGuiID                 HoverItemDelayId;
@@ -2409,6 +2410,7 @@ struct ImGuiContext
         CurrentTable = NULL;
         TablesTempDataStacked = 0;
         CurrentTabBar = NULL;
+        CurrentMultiSelect = NULL;
 
         HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = HoverWindowUnlockedStationaryId = 0;
         HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;

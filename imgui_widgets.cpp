@@ -7122,13 +7122,21 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
 // - MultiSelectItemFooter() [Internal]
 //-------------------------------------------------------------------------
 
+static void DebugLogMultiSelectRequests(const ImGuiMultiSelectData* data)
+{
+    ImGuiContext& g = *GImGui;
+    if (data->RequestClear)     IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestClear\n");
+    if (data->RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSelectAll\n");
+    if (data->RequestSetRange)  IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSetRange %p..%p = %d (dir %+d)\n", data->RangeSrc, data->RangeDst, data->RangeValue, data->RangeDirection);
+}
+
 ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-
-    ImGuiMultiSelectState* ms = &g.MultiSelectState;
-    IM_ASSERT(ms->Window == NULL && ms->Flags == 0 && ms->FocusScopeId == 0);   // No recursion allowed yet (we could allow it if we deem it useful)
+    ImGuiMultiSelectTempData* ms = &g.MultiSelectTempData[0];;
+    IM_ASSERT(g.CurrentMultiSelect == NULL); // No recursion allowed yet (we could allow it if we deem it useful)
+    g.CurrentMultiSelect = ms;
 
     // FIXME: BeginFocusScope()
     ms->Clear();
@@ -7169,8 +7177,8 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
         if (Shortcut(ImGuiKey_Escape))
             ms->In.RequestClear = true;
 
-    //if (ms->In.RequestClear)     IMGUI_DEBUG_LOG_SELECTION("BeginMultiSelect: RequestClear\n");
-    //if (ms->In.RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("BeginMultiSelect: RequestSelectAll\n");
+    if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
+        DebugLogMultiSelectRequests(&ms->In);
 
     return &ms->In;
 }
@@ -7178,8 +7186,9 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
 ImGuiMultiSelectData* ImGui::EndMultiSelect()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiMultiSelectState* ms = &g.MultiSelectState;
-    IM_ASSERT(g.MultiSelectState.FocusScopeId == g.CurrentFocusScopeId);
+    ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
+    IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
+    IM_ASSERT(g.CurrentMultiSelect != NULL && g.CurrentMultiSelect->Window == g.CurrentWindow);
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
@@ -7198,10 +7207,10 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
     ms->Window = NULL;
     ms->Flags = ImGuiMultiSelectFlags_None;
     PopFocusScope();
+    g.CurrentMultiSelect = NULL;
 
-    //if (ms->Out.RequestClear)     IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestClear\n");
-    //if (ms->Out.RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSelectAll\n");
-    //if (ms->Out.RequestSetRange)  IMGUI_DEBUG_LOG_SELECTION("EndMultiSelect: RequestSetRange %p..%p = %d (dir %+d)\n", ms->Out.RangeSrc, ms->Out.RangeDst, ms->Out.RangeValue, ms->Out.RangeDirection);
+    if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
+        DebugLogMultiSelectRequests(&ms->Out);
 
     return &ms->Out;
 }
@@ -7218,16 +7227,17 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     g.NextItemData.SelectionUserData = selection_user_data;
     g.NextItemData.FocusScopeId = g.CurrentFocusScopeId;
 
-    // Auto updating RangeSrcPassedBy for cases were clipper is not used.
-    if (g.MultiSelectState.In.RangeSrc == (void*)selection_user_data)
-        g.MultiSelectState.In.RangeSrcPassedBy = true;
+    // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
+    if (ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect)
+        if (ms->In.RangeSrc == (void*)selection_user_data)
+            ms->In.RangeSrcPassedBy = true;
 }
 
 void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiMultiSelectState* ms = &g.MultiSelectState;
+    ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
 
     IM_UNUSED(window);
     IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
@@ -7266,7 +7276,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiMultiSelectState* ms = &g.MultiSelectState;
+    ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
 
     void* item_data = (void*)g.NextItemData.SelectionUserData;
 

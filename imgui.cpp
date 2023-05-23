@@ -15799,7 +15799,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     ShowDebugLogFlag("IO", ImGuiDebugLogFlags_EventIO);
     ShowDebugLogFlag("Nav", ImGuiDebugLogFlags_EventNav);
     ShowDebugLogFlag("Popup", ImGuiDebugLogFlags_EventPopup);
-    //ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
+    ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
     ShowDebugLogFlag("InputRouting", ImGuiDebugLogFlags_EventInputRouting);
 
     if (SmallButton("Clear"))
