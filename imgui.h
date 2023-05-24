@@ -175,7 +175,7 @@ struct ImGuiIO;                     // Main configuration and I/O between your a
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiKeyData;                // Storage for ImGuiIO and IsKeyDown(), IsKeyPressed() etc functions.
 struct ImGuiListClipper;            // Helper to manually clip large list of items
-struct ImGuiMultiSelectData;        // State for a BeginMultiSelect() block
+struct ImGuiMultiSelectIO;          // Structure to interact with a BeginMultiSelect()/EndMultiSelect() block
 struct ImGuiOnceUponAFrame;         // Helper for running a block of code not more than once a frame
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiPlatformImeData;        // Platform IME data for io.PlatformSetImeDataFn() function.
@@ -670,10 +670,10 @@ namespace ImGui
 
     // Multi-selection system for Selectable() and TreeNode() functions.
     // This enables standard multi-selection/range-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow items to be fully clipped (= not submitted at all) when not visible.
-    // Read comments near ImGuiMultiSelectData for details.
+    // Read comments near ImGuiMultiSelectIO for details.
     // When enabled, Selectable() and TreeNode() functions will return true when selection needs toggling.
-    IMGUI_API ImGuiMultiSelectData* BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected);
-    IMGUI_API ImGuiMultiSelectData* EndMultiSelect();
+    IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected);
+    IMGUI_API ImGuiMultiSelectIO*   EndMultiSelect();
     IMGUI_API void                  SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
 
     // Widgets: List Boxes
@@ -2779,18 +2779,22 @@ enum ImGuiMultiSelectFlags_
 //     5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
 //     6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
 // If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
-struct ImGuiMultiSelectData
+struct ImGuiMultiSelectIO
 {
+    // Output (return by BeginMultiSelect()/EndMultiSelect()
+    // - Always process requests in their structure order.
     bool    RequestClear;           // Begin, End  // 1. Request user to clear selection
     bool    RequestSelectAll;       // Begin, End  // 2. Request user to select all
     bool    RequestSetRange;        //        End  // 3. Request user to set or clear selection in the [RangeSrc..RangeDst] range
-    bool    RangeSrcPassedBy;       //    Loop     // (If clipping) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
     bool    RangeValue;             //        End  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
     void*   RangeSrc;               // Begin, End  // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
     void*   RangeDst;               //        End  // End: parameter from RequestSetRange request.
     int     RangeDirection;         //        End  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values. If your void* values are storing indices you will never need this.
 
-    ImGuiMultiSelectData()  { Clear(); }
+    // Input (written by user between BeginMultiSelect()/EndMultiSelect()
+    bool    RangeSrcPassedBy;       //    Loop     // (If using a clipper) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
+
+    ImGuiMultiSelectIO()  { Clear(); }
     void Clear()
     {
         RequestClear = RequestSelectAll = RequestSetRange = RangeSrcPassedBy = RangeValue = false;

@@ -2800,11 +2800,11 @@ struct ExampleSelection
     void SelectAll(int count)           { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
 
     // Apply requests coming from BeginMultiSelect() and EndMultiSelect(). Must be done in this order! Order->SelectAll->SetRange.
-    void ApplyRequests(ImGuiMultiSelectData* ms_data, int items_count)
+    void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count)
     {
-        if (ms_data->RequestClear)      { Clear(); }
-        if (ms_data->RequestSelectAll)  { SelectAll(items_count); }
-        if (ms_data->RequestSetRange)   { SetRange((int)(intptr_t)ms_data->RangeSrc, (int)(intptr_t)ms_data->RangeDst, ms_data->RangeValue ? 1 : 0); }
+        if (ms_io->RequestClear)        { Clear(); }
+        if (ms_io->RequestSelectAll)    { SelectAll(items_count); }
+        if (ms_io->RequestSetRange)     { SetRange((int)(intptr_t)ms_io->RangeSrc, (int)(intptr_t)ms_io->RangeDst, ms_io->RangeValue ? 1 : 0); }
     }
 };
 
@@ -2876,8 +2876,8 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
-                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
-                selection.ApplyRequests(multi_select_data, ITEMS_COUNT);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -2891,9 +2891,9 @@ static void ShowDemoWindowMultiSelect()
                 }
 
                 // Apply multi-select requests
-                multi_select_data = ImGui::EndMultiSelect();
-                selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                selection.ApplyRequests(multi_select_data, ITEMS_COUNT);
+                ms_io = ImGui::EndMultiSelect();
+                selection.RangeRef = (int)(intptr_t)ms_io->RangeSrc;
+                selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
                 ImGui::EndListBox();
             }
@@ -2963,8 +2963,8 @@ static void ShowDemoWindowMultiSelect()
                     ImGuiMultiSelectFlags local_flags = flags;
                     if (use_multiple_scopes)
                         local_flags &= ~ImGuiMultiSelectFlags_ClearOnClickWindowVoid; // local_flags |= ImGuiMultiSelectFlags_ClearOnClickRectVoid;
-                    ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(local_flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
-                    selection->ApplyRequests(multi_select_data, ITEMS_COUNT);
+                    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(local_flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
+                    selection->ApplyRequests(ms_io, ITEMS_COUNT);
 
                     if (use_multiple_scopes)
                         ImGui::Text("Selection size: %d", selection->GetSize());   // Draw counter below Separator and after BeginMultiSelect()
@@ -2983,8 +2983,8 @@ static void ShowDemoWindowMultiSelect()
                     while (clipper.Step())
                     {
                         // IF clipping is used you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
-                        if ((int)(intptr_t)multi_select_data->RangeSrc <= clipper.DisplayStart)
-                            multi_select_data->RangeSrcPassedBy = true;
+                        if ((int)(intptr_t)ms_io->RangeSrc <= clipper.DisplayStart)
+                            ms_io->RangeSrcPassedBy = true;
 
                         for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                         {
@@ -3062,9 +3062,9 @@ static void ShowDemoWindowMultiSelect()
                     }
 
                     // Apply multi-select requests
-                    multi_select_data = ImGui::EndMultiSelect();
-                    selection->RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
-                    selection->ApplyRequests(multi_select_data, ITEMS_COUNT);
+                    ms_io = ImGui::EndMultiSelect();
+                    selection->RangeRef = (int)(intptr_t)ms_io->RangeSrc;
+                    selection->ApplyRequests(ms_io, ITEMS_COUNT);
 
                     if (widget_type == WidgetType_TreeNode)
                         ImGui::PopStyleVar();

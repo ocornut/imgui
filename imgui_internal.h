@@ -1719,8 +1719,8 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImGuiMultiSelectFlags   Flags;
     ImGuiKeyChord           KeyMods;
     ImGuiWindow*            Window;
-    ImGuiMultiSelectData    In;                     // The In requests are set and returned by BeginMultiSelect()
-    ImGuiMultiSelectData    Out;                    // The Out requests are finalized and returned by EndMultiSelect()
+    ImGuiMultiSelectIO      In;                     // The In requests are set and returned by BeginMultiSelect()
+    ImGuiMultiSelectIO      Out;                    // The Out requests are finalized and returned by EndMultiSelect()
     bool                    IsFocused;              // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
     bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.
     bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
