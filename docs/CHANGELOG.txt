@@ -50,6 +50,7 @@ Breaking changes:
 
 Other changes:
 
+- Window: Fixed resizing from upper border when io.ConfigWindowsMoveFromTitleBarOnly is set. (#6390)
 - Tables: Fixed a small miscalculation in TableHeader() leading to an empty tooltip
   showing when a sorting column has no visible name. (#6342) [@lukaasm]
 - Tables: Fixed command merging when compiling with VS2013 (one array on stack was not
