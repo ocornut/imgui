@@ -877,10 +877,14 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    bd->WantUpdateMonitors = false;
+
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
+    if (monitors_count) // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
+        return;
+
     platform_io.Monitors.resize(0);
-    bd->WantUpdateMonitors = false;
     for (int n = 0; n < monitors_count; n++)
     {
         ImGuiPlatformMonitor monitor;

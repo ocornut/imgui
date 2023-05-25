@@ -165,6 +165,8 @@ Docking+Viewports Branch:
   main viewport, due to platform-side handling changes. Regression from 1.89.5 (#6299)
 - Viewports: Added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
   for usage by user code.
+- Backends: GLFW: Preserve monitor list when there are no monitor, may briefly
+  happen when recovering from macOS sleeping mode. (#5683) [@Guistac]
 - Backends: SDL2: Update monitor list when receiving a display event. (#6348)
   Note however that SDL2 currently doesn't have an event for a DPI/Scaling change,
   so monitor data won't be updated in this situation.
