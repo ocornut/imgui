@@ -881,7 +881,7 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    if (monitors_count) // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
+    if (monitors_count == 0) // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
         return;
 
     platform_io.Monitors.resize(0);
