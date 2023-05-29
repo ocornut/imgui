@@ -104,6 +104,8 @@
 #define GLFW_HAS_PER_MONITOR_DPI        (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetMonitorContentScale
 #ifdef __EMSCRIPTEN__                   // no Vulkan support in Emscripten's GLFW
 #define GLFW_HAS_VULKAN                 (0)
+#elif defined(__SWITCH__)               // no Vulkan support in homebrew Nintendo Switch's GLFW
+#define GLFW_HAS_VULKAN                 (0)
 #else
 #define GLFW_HAS_VULKAN                 (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwCreateWindowSurface
 #endif
