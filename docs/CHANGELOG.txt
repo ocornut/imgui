@@ -163,6 +163,8 @@ Docking+Viewports Branch:
   closure of Modal windows. Regression from 1.89.5. (#6357, #6299)
 - Viewports: Fixed loss of imgui-side focus when dragging a secondary viewport back in
   main viewport, due to platform-side handling changes. Regression from 1.89.5 (#6299)
+- Viewports: Avoid applying imgui-side focus when focus change is due to a viewport
+  destruction. Fixes erroneous popup closure on closing a previous popup. (#6462, #6299)
 - Viewports: Added void* ImGuiPlatformMonitor::PlatformHandle field (backend-dependant),
   for usage by user code.
 - Backends: GLFW: Preserve monitor list when there are no monitor, may briefly
