@@ -44,29 +44,29 @@
 #endif
 
 // SDL_Renderer data
-struct ImGui_ImplSDLRenderer_Data
+struct ImGui_ImplSDLRenderer2_Data
 {
     SDL_Renderer*   SDLRenderer;
     SDL_Texture*    FontTexture;
-    ImGui_ImplSDLRenderer_Data() { memset((void*)this, 0, sizeof(*this)); }
+    ImGui_ImplSDLRenderer2_Data() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
-static ImGui_ImplSDLRenderer_Data* ImGui_ImplSDLRenderer_GetBackendData()
+static ImGui_ImplSDLRenderer2_Data* ImGui_ImplSDLRenderer2_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
+    return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer2_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
 // Functions
-bool ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
+bool ImGui_ImplSDLRenderer2_Init(SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
     IM_ASSERT(renderer != nullptr && "SDL_Renderer not initialized!");
 
     // Setup backend capabilities flags
-    ImGui_ImplSDLRenderer_Data* bd = IM_NEW(ImGui_ImplSDLRenderer_Data)();
+    ImGui_ImplSDLRenderer2_Data* bd = IM_NEW(ImGui_ImplSDLRenderer2_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_sdlrenderer2";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
@@ -76,13 +76,13 @@ bool ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer)
     return true;
 }
 
-void ImGui_ImplSDLRenderer_Shutdown()
+void ImGui_ImplSDLRenderer2_Shutdown()
 {
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui_ImplSDLRenderer_DestroyDeviceObjects();
+    ImGui_ImplSDLRenderer2_DestroyDeviceObjects();
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
@@ -90,9 +90,9 @@ void ImGui_ImplSDLRenderer_Shutdown()
     IM_DELETE(bd);
 }
 
-static void ImGui_ImplSDLRenderer_SetupRenderState()
+static void ImGui_ImplSDLRenderer2_SetupRenderState()
 {
-	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+	ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
 
 	// Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
@@ -100,18 +100,18 @@ static void ImGui_ImplSDLRenderer_SetupRenderState()
 	SDL_RenderSetClipRect(bd->SDLRenderer, nullptr);
 }
 
-void ImGui_ImplSDLRenderer_NewFrame()
+void ImGui_ImplSDLRenderer2_NewFrame()
 {
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
-    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplSDLRenderer_Init()?");
+    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplSDLRenderer2_Init()?");
 
     if (!bd->FontTexture)
-        ImGui_ImplSDLRenderer_CreateDeviceObjects();
+        ImGui_ImplSDLRenderer2_CreateDeviceObjects();
 }
 
-void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data)
 {
-	ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+	ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
 
 	// If there's a scale factor set by the user, use that instead
     // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
@@ -146,7 +146,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 	ImVec2 clip_scale = render_scale;
 
     // Render command lists
-    ImGui_ImplSDLRenderer_SetupRenderState();
+    ImGui_ImplSDLRenderer2_SetupRenderState();
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -161,7 +161,7 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplSDLRenderer_SetupRenderState();
+                    ImGui_ImplSDLRenderer2_SetupRenderState();
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }
@@ -206,10 +206,10 @@ void ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data)
 }
 
 // Called by Init/NewFrame/Shutdown
-bool ImGui_ImplSDLRenderer_CreateFontsTexture()
+bool ImGui_ImplSDLRenderer2_CreateFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
 
     // Build texture atlas
     unsigned char* pixels;
@@ -234,10 +234,10 @@ bool ImGui_ImplSDLRenderer_CreateFontsTexture()
     return true;
 }
 
-void ImGui_ImplSDLRenderer_DestroyFontsTexture()
+void ImGui_ImplSDLRenderer2_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer_Data* bd = ImGui_ImplSDLRenderer_GetBackendData();
+    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
     if (bd->FontTexture)
     {
         io.Fonts->SetTexID(0);
@@ -246,14 +246,14 @@ void ImGui_ImplSDLRenderer_DestroyFontsTexture()
     }
 }
 
-bool ImGui_ImplSDLRenderer_CreateDeviceObjects()
+bool ImGui_ImplSDLRenderer2_CreateDeviceObjects()
 {
-    return ImGui_ImplSDLRenderer_CreateFontsTexture();
+    return ImGui_ImplSDLRenderer2_CreateFontsTexture();
 }
 
-void ImGui_ImplSDLRenderer_DestroyDeviceObjects()
+void ImGui_ImplSDLRenderer2_DestroyDeviceObjects()
 {
-    ImGui_ImplSDLRenderer_DestroyFontsTexture();
+    ImGui_ImplSDLRenderer2_DestroyFontsTexture();
 }
 
 #if defined(__clang__)
