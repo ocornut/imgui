@@ -1,12 +1,11 @@
-// dear imgui: Renderer Backend for SDL_Renderer
-// (Requires: SDL 2.0.17+)
+// dear imgui: Renderer Backend for SDL_Renderer for SDL3
+// (Requires: SDL 3.0.0+)
 
-// Important to understand: SDL_Renderer is an _optional_ component of SDL.
+// Note how SDL_Renderer is an _optional_ component of SDL3.
 // For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
 // If your application will want to render any non trivial amount of graphics other than UI,
-// please be aware that SDL_Renderer offers a limited graphic API to the end-user and it might
-// be difficult to step out of those boundaries.
-// However, we understand it is a convenient choice to get an app started easily.
+// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user and
+// it might be difficult to step out of those boundaries.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
@@ -17,13 +16,13 @@
 
 struct SDL_Renderer;
 
-IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer_Init(SDL_Renderer* renderer);
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer);
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_NewFrame();
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer_CreateFontsTexture();
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_DestroyFontsTexture();
-IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer_CreateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer_DestroyDeviceObjects();
+IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_CreateFontsTexture();
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_DestroyDeviceObjects();

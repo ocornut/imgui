@@ -120,7 +120,7 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 
 Officially maintained backends/bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, SDL_Renderer, Vulkan, WebGPU.
-- Platforms: GLFW, SDL2, Win32, Glut, OSX, Android.
+- Platforms: GLFW, SDL2/SDL3, Win32, Glut, OSX, Android.
 - Frameworks: Allegro5, Emscripten.
 
 [Third-party backends/bindings](https://github.com/ocornut/imgui/wiki/Bindings) wiki page:
