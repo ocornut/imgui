@@ -45,6 +45,8 @@ Breaking changes:
    - ListBoxHeader()  -> use BeginListBox()
    - ListBoxFooter()  -> use EndListBox()
    - Note how two variants of ListBoxHeader() existed. Check commented versions in imgui.h for refeence.
+- Backends: SDL_Renderer: Renamed 'imgui_impl_sdlrenderer.h/cpp' to 'imgui_impl_sdlrenderer2.h/cpp',
+  in order to accomodate for upcoming SDL3 and change in its SDL_Renderer API. (#6286)
 - Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
   It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
 

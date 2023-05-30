@@ -1,12 +1,11 @@
-// dear imgui: Renderer Backend for SDL_Renderer
+// dear imgui: Renderer Backend for SDL_Renderer for SDL2
 // (Requires: SDL 2.0.17+)
 
-// Important to understand: SDL_Renderer is an _optional_ component of SDL.
+// Note how SDL_Renderer is an _optional_ component of SDL2.
 // For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
 // If your application will want to render any non trivial amount of graphics other than UI,
-// please be aware that SDL_Renderer offers a limited graphic API to the end-user and it might
-// be difficult to step out of those boundaries.
-// However, we understand it is a convenient choice to get an app started easily.
+// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user and
+// it might be difficult to step out of those boundaries.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
