@@ -1,3 +1,7 @@
+
+# IMPORTANT: SDL3 IS IN DEVELOPMENT, AS OF 2023-05-30, EMSCRIPTEN DOESN'T SUPPORT SDL3 YET.
+# WE ARE LEAVING THIS MAKEFILE AROUND FOR THE DAY IT WILL SUPPORT IT.
+
 #
 # Makefile to use with SDL+emscripten
 # See https://emscripten.org/docs/getting_started/downloads.html
