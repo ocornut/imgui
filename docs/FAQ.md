@@ -1,7 +1,7 @@
 # FAQ (Frequently Asked Questions)
 
 You may link to this document using short form:
-  https://www.dearimgui.org/faq
+  https://www.dearimgui.com/faq
 or its real address:
   https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
 or view this file with any Markdown viewer.
@@ -140,7 +140,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
 - The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
 - Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
 - Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting backend).
-- See [Control Sheets for Gamepads](http://www.dearimgui.org/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
+- See [Control Sheets for Gamepads](http://www.dearimgui.com/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
 - See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
 
 ##### [Return to Index](#index)
@@ -557,7 +557,7 @@ backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
-io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT (Windows only)
+io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size); // CORRECT (Windows only)
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
@@ -604,7 +604,7 @@ ImFontConfig config;
 config.MergeMode = true;
 io.Fonts->AddFontDefault();
 io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
+io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, nullptr, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
 ```
 
 ##### [Return to Index](#index)
@@ -616,7 +616,7 @@ When loading a font, pass custom Unicode ranges to specify the glyphs to load.
 
 ```cpp
 // Add default Japanese ranges
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, nullptr, io.Fonts->GetGlyphRangesJapanese());
 
 // Or create your own custom ranges (e.g. for a game you can feed your entire game script and only build the characters the game need)
 ImVector<ImWchar> ranges;
@@ -625,13 +625,14 @@ builder.AddText("Hello world");                        // Add a string (here "He
 builder.AddChar(0x7262);                               // Add a specific character
 builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
 builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", 16.0f, NULL, ranges.Data);
+io.Fonts->AddFontFromFileTTF("myfontfile.ttf", 16.0f, nullptr, ranges.Data);
 ```
 
-All your strings need to use UTF-8 encoding. In C++11 you can encode a string literal in UTF-8
-by using the u8"hello" syntax. Specifying literal in your source code using a local code page
-(such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
-Otherwise, you can convert yourself to UTF-8 or load text data from a file already saved as UTF-8.
+All your strings need to use UTF-8 encoding.
+You need to tell your compiler to use UTF-8, or in C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax.
+Specifying literal in your source code using a local code page (such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
+See [About UTF-8 Encoding](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#about-utf-8-encoding) section
+of [FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) for details about UTF-8 Encoding.
 
 Text input: it is up to your application to pass the right character code by calling `io.AddInputCharacter()`.
 The applications in examples/ are doing that.
@@ -653,7 +654,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors)
-- [Gallery](https://github.com/ocornut/imgui/issues/5886)
+- [Gallery](https://github.com/ocornut/imgui/issues/6478)
 
 ##### [Return to Index](#index)
 
@@ -665,7 +666,7 @@ Yes. People have written game editors, data browsers, debuggers, profilers, and 
 
 Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient, and powerful.
 
-Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm.
+Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization than the more typical RMGUI paradigm.
 
 ##### [Return to Index](#index)
 
@@ -673,7 +674,7 @@ Dear ImGui is built to be efficient and scalable toward the needs for AAA-qualit
 
 ### Q: Can you reskin the look of Dear ImGui?
 
-Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, and fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create a user interface for games, although with ingenious use of the low-level API you can do it.
+Somewhat. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, and fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create a user interface for games, although with ingenious use of the low-level API you can do it.
 
 A reasonably skinned application may look like (screenshot from [#2529](https://github.com/ocornut/imgui/issues/2529#issuecomment-524281119)):
 ![minipars](https://user-images.githubusercontent.com/314805/63589441-d9794f00-c5b1-11e9-8d96-cfc1b93702f7.png)
@@ -699,7 +700,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.
-You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/5886). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
+You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/6478). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)

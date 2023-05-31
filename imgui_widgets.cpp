@@ -1,4 +1,4 @@
-// dear imgui, v1.89.5 WIP
+// dear imgui, v1.89.6
 // (widgets code)
 
 /*
@@ -638,7 +638,12 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
 
             const int mouse_button = g.ActiveIdMouseButton;
-            if (IsMouseDown(mouse_button, test_owner_id))
+            if (mouse_button == -1)
+            {
+                // Fallback for the rare situation were g.ActiveId was set programmatically or from another widget (e.g. #6304).
+                ClearActiveID();
+            }
+            else if (IsMouseDown(mouse_button, test_owner_id))
             {
                 held = true;
             }
@@ -1387,8 +1392,9 @@ void ImGui::AlignTextToFramePadding()
 }
 
 // Horizontal/vertical separating line
-// FIXME: Surprisingly, this seemingly simple widget is adjacent to MANY different legacy/tricky layout issues.
-void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
+// FIXME: Surprisingly, this seemingly trivial widget is a victim of many different legacy/tricky layout issues.
+// Note how thickness == 1.0f is handled specifically as not moving CursorPos by 'thickness', but other values are.
+void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -1396,8 +1402,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
 
     ImGuiContext& g = *GImGui;
     IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
+    IM_ASSERT(thickness > 0.0f);
 
-    const float thickness = 1.0f; // Cannot use g.Style.SeparatorTextSize yet for various reasons.
     if (flags & ImGuiSeparatorFlags_Vertical)
     {
         // Vertical separator, for menu bars (use current line height).
@@ -1431,6 +1437,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
             x2 = table->Columns[table->CurrentColumn].MaxX;
         }
 
+        // Before Tables API happened, we relied on Separator() to span all columns of a Columns() set.
+        // We currently don't need to provide the same feature for tables because tables naturally have border features.
         ImGuiOldColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
         if (columns)
             PushColumnsBackground();
@@ -1440,8 +1448,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         const float thickness_for_layout = (thickness == 1.0f) ? 0.0f : thickness; // FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not affect layout yet. Should change.
         const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y + thickness));
         ItemSize(ImVec2(0.0f, thickness_for_layout));
-        const bool item_visible = ItemAdd(bb, 0);
-        if (item_visible)
+
+        if (ItemAdd(bb, 0))
         {
             // Draw
             window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_Separator));
@@ -1464,10 +1472,11 @@ void ImGui::Separator()
     if (window->SkipItems)
         return;
 
-    // Those flags should eventually be overridable by the user
+    // Those flags should eventually be configurable by the user
+    // FIXME: We cannot g.Style.SeparatorTextBorderSize for thickness as it relates to SeparatorText() which is a decorated separator, not defaulting to 1.0f.
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     flags |= ImGuiSeparatorFlags_SpanAllColumns; // NB: this only applies to legacy Columns() api as they relied on Separator() a lot.
-    SeparatorEx(flags);
+    SeparatorEx(flags, 1.0f);
 }
 
 void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_w)
@@ -1527,8 +1536,8 @@ void ImGui::SeparatorText(const char* label)
         return;
 
     // The SeparatorText() vs SeparatorTextEx() distinction is designed to be considerate that we may want:
-    // - allow headers to be draggable items (would require a stable ID + a noticeable highlight)
-    // - this high-level entry point to allow formatting? (may require ID separate from formatted string)
+    // - allow separator-text to be draggable items (would require a stable ID + a noticeable highlight)
+    // - this high-level entry point to allow formatting? (which in turns may require ID separate from formatted string)
     // - because of this we probably can't turn 'const char* label' into 'const char* fmt, ...'
     // Otherwise, we can decide that users wanting to drag this would layout a dedicated drag-item,
     // and then we can turn this into a format function.
@@ -2085,7 +2094,8 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
     memcpy(&data_backup, p_data, type_info->Size);
 
     // Sanitize format
-    // For float/double we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in, so force them into %f and %lf
+    // - For float/double we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in, so force them into %f and %lf
+    // - In theory could treat empty format as using default, but this would only cover rare/bizarre case of using InputScalar() + integer + format string without %.
     char format_sanitized[32];
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
         format = type_info->ScanFmt;
@@ -3268,7 +3278,7 @@ const char* ImParseFormatFindEnd(const char* fmt)
 }
 
 // Extract the format out of a format string with leading or trailing decorations
-//  fmt = "blah blah"  -> return fmt
+//  fmt = "blah blah"  -> return ""
 //  fmt = "%.3f"       -> return fmt
 //  fmt = "hello %.3f" -> return fmt + 6
 //  fmt = "%.3f hello" -> return buf written with "%.3f"
@@ -3276,7 +3286,7 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_
 {
     const char* fmt_start = ImParseFormatFindStart(fmt);
     if (fmt_start[0] != '%')
-        return fmt;
+        return "";
     const char* fmt_end = ImParseFormatFindEnd(fmt_start);
     if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
@@ -3394,9 +3404,14 @@ static inline ImGuiInputTextFlags InputScalar_DefaultCharsFilter(ImGuiDataType d
 // However this may not be ideal for all uses, as some user code may break on out of bound values.
 bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min, const void* p_clamp_max)
 {
+    // FIXME: May need to clarify display behavior if format doesn't contain %.
+    // "%d" -> "%d" / "There are %d items" -> "%d" / "items" -> "%d" (fallback). Also see #6405
+    const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
     char fmt_buf[32];
     char data_buf[32];
     format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    if (format[0] == 0)
+        format = type_info->PrintFmt;
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, p_data, format);
     ImStrTrimBlanks(data_buf);
 
@@ -3407,7 +3422,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     if (TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags))
     {
         // Backup old value
-        size_t data_type_size = DataTypeGetInfo(data_type)->Size;
+        size_t data_type_size = type_info->Size;
         ImGuiDataTypeTempStorage data_backup;
         memcpy(&data_backup, p_data, data_type_size);
 
@@ -4291,7 +4306,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
-        g.WantTextInputNextFrame = 1;
 
         // Edit in progress
         const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + state->ScrollX;
@@ -4730,8 +4744,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
-    if (clear_active_id && g.ActiveId == id)
+    // Otherwise request text input ahead for next frame.
+    if (g.ActiveId == id && clear_active_id)
         ClearActiveID();
+    else if (g.ActiveId == id)
+        g.WantTextInputNextFrame = 1;
 
     // Render frame
     if (!is_multiline)
@@ -6206,11 +6223,13 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Left && is_open)
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right && !is_open) // If there's something upcoming on the line we may want to give it the priority?
         {
             toggled = true;
+            NavClearPreferredPosForAxis(ImGuiAxis_X);
             NavMoveRequestCancel();
         }
 
@@ -6599,20 +6618,6 @@ bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
     BeginChildFrame(id, frame_bb.GetSize());
     return true;
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-// OBSOLETED in 1.81 (from February 2021)
-bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_items)
-{
-    // If height_in_items == -1, default height is maximum 7.
-    ImGuiContext& g = *GImGui;
-    float height_in_items_f = (height_in_items < 0 ? ImMin(items_count, 7) : height_in_items) + 0.25f;
-    ImVec2 size;
-    size.x = 0.0f;
-    size.y = GetTextLineHeightWithSpacing() * height_in_items_f + g.Style.FramePadding.y * 2.0f;
-    return BeginListBox(label, size);
-}
-#endif
 
 void ImGui::EndListBox()
 {
@@ -7077,7 +7082,7 @@ void ImGui::EndMainMenuBar()
     // FIXME: With this strategy we won't be able to restore a NULL focus.
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == ImGuiNavLayer_Main && !g.NavAnyRequest)
-        FocusTopMostWindowUnderOne(g.NavWindow, NULL);
+        FocusTopMostWindowUnderOne(g.NavWindow, NULL, NULL, ImGuiFocusRequestFlags_UnlessBelowModal | ImGuiFocusRequestFlags_RestoreFocusedChild);
 
     End();
 }
@@ -7091,9 +7096,9 @@ static bool IsRootOfOpenMenuSet()
 
     // Initially we used 'upper_popup->OpenParentId == window->IDStack.back()' to differentiate multiple menu sets from each others
     // (e.g. inside menu bar vs loose menu items) based on parent ID.
-    // This would however prevent the use of e.g. PuhsID() user code submitting menus.
+    // This would however prevent the use of e.g. PushID() user code submitting menus.
     // Previously this worked between popup and a first child menu because the first child menu always had the _ChildWindow flag,
-    // making  hovering on parent popup possible while first child menu was focused - but this was generally a bug with other side effects.
+    // making hovering on parent popup possible while first child menu was focused - but this was generally a bug with other side effects.
     // Instead we don't treat Popup specifically (in order to consistently support menu features in them), maybe the first child menu of a Popup
     // doesn't have the _ChildWindow flag, and we rely on this IsRootOfOpenMenuSet() check to allow hovering between root window/popup and first child menu.
     // In the end, lack of ID check made it so we could no longer differentiate between separate menu sets. To compensate for that, we at least check parent window nav layer.
@@ -7101,7 +7106,9 @@ static bool IsRootOfOpenMenuSet()
     // open on hover, but that should be a lesser problem, because if such menus are close in proximity in window content then it won't feel weird and if they are far apart
     // it likely won't be a problem anyone runs into.
     const ImGuiPopupData* upper_popup = &g.OpenPopupStack[g.BeginPopupStack.Size];
-    return (window->DC.NavLayerCurrent == upper_popup->ParentNavLayer && upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu));
+    if (window->DC.NavLayerCurrent != upper_popup->ParentNavLayer)
+        return false;
+    return upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu) && ImGui::IsWindowChildOf(upper_popup->Window, window, true);
 }
 
 bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)

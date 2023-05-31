@@ -40,7 +40,7 @@ namespace ImGuiFreeType
 
     // Override allocators. By default ImGuiFreeType will use IM_ALLOC()/IM_FREE()
     // However, as FreeType does lots of allocations we provide a way for the user to redirect it to a separate memory heap if desired.
-    IMGUI_API void                      SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data = NULL);
+    IMGUI_API void                      SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data = nullptr);
 
     // Obsolete names (will be removed soon)
     // Prefer using '#define IMGUI_ENABLE_FREETYPE'

@@ -32,5 +32,5 @@ vcpkg integrate install						    ; register include / libs in Visual Studio
 Build:
 ```
 set ALLEGRODIR=path_to_your_allegro5_folder
-cl /Zi /MD /I %ALLEGRODIR%\include /DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" /I .. /I ..\.. /I ..\..\backends main.cpp ..\..\backends\imgui_impl_allegro5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
+cl /Zi /MD /utf-8 /I %ALLEGRODIR%\include /DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" /I .. /I ..\.. /I ..\..\backends main.cpp ..\..\backends\imgui_impl_allegro5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
 ```
