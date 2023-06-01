@@ -1393,8 +1393,8 @@ static void ShowDemoWindowWidgets()
                 // Modify character input by altering 'data->Eventchar' (ImGuiInputTextFlags_CallbackCharFilter callback)
                 static int FilterCasingSwap(ImGuiInputTextCallbackData* data)
                 {
-                    if (data->EventChar >= 'a' && data->EventChar <= 'z')       { data->EventChar = data->EventChar - 'A' - 'a'; } // Lowercase becomes uppercase
-                    else if (data->EventChar >= 'A' && data->EventChar <= 'Z')  { data->EventChar = data->EventChar + 'a' - 'A'; } // Uppercase becomes lowercase
+                    if (data->EventChar >= 'a' && data->EventChar <= 'z')       { data->EventChar -= 'a' - 'A'; } // Lowercase becomes uppercase
+                    else if (data->EventChar >= 'A' && data->EventChar <= 'Z')  { data->EventChar += 'a' - 'A'; } // Uppercase becomes lowercase
                     return 0;
                 }
 
