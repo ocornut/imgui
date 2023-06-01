@@ -306,7 +306,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_DISPLAY_CONNECTED:
         case SDL_EVENT_DISPLAY_DISCONNECTED:
         case SDL_EVENT_DISPLAY_MOVED:
-        case SDL_EVENT_DISPLAY_SCALE_CHANGED:
+        case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
         {
             bd->WantUpdateMonitors = true;
             return true;
@@ -651,8 +651,7 @@ static void ImGui_ImplSDL3_UpdateMonitors()
         monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
         // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
         //  DpiScale to cocoa_window.backingScaleFactor here.
-        const SDL_DisplayMode* display_mode = SDL_GetCurrentDisplayMode(display_id);
-        monitor.DpiScale = display_mode->display_scale;
+        monitor.DpiScale = SDL_GetDisplayContentScale(display_id);
         monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
