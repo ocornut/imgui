@@ -2781,26 +2781,20 @@ enum ImGuiMultiSelectFlags_
 // If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
 struct ImGuiMultiSelectIO
 {
-    // Output (return by BeginMultiSelect()/EndMultiSelect()
-    // - Always process requests in their structure order.
-    bool    RequestClear;           // Begin, End  // 1. Request user to clear selection
-    bool    RequestSelectAll;       // Begin, End  // 2. Request user to select all
-    bool    RequestSetRange;        //        End  // 3. Request user to set or clear selection in the [RangeSrc..RangeDst] range
-    bool    RangeValue;             //        End  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
-    void*   RangeSrc;               // Begin, End  // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
-    void*   RangeDst;               //        End  // End: parameter from RequestSetRange request.
-    int     RangeDirection;         //        End  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values. If your void* values are storing indices you will never need this.
+    // - Always process requests in this order: Clear, SelectAll, SetRange.
+    // - Below: who reads/writes each fields? 'r'=read, 'w'=write, 'ms'=multi-select code, 'app'=application/user code.
+    //                          // BEGIN         / LOOP          / END
+    bool    RequestClear;       //  ms:w, app:r  /               /  ms:w, app:r  // 1. Request user to clear selection (processed by app code)
+    bool    RequestSelectAll;   //  ms:w, app:r  /               /  ms:w, app:r  // 2. Request user to select all (processed by app code)
+    bool    RequestSetRange;    //               /               /  ms:w, app:r  // 3. Request user to alter selection in the [RangeSrc..RangeDst] range using RangeValue. In practice, only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
+    void*   RangeSrc;           //  ms:w         /        app:r  /  ms:w, app:r  // Begin: Last known RangeSrc value. End: parameter from RequestSetRange request.
+    void*   RangeDst;           //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request.
+    ImS8    RangeDirection;     //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values. If your void* values are storing indices you will never need this.
+    bool    RangeValue;         //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
+    bool    RangeSrcPassedBy;   //               /  ms:rw app:w  /  ms:r         // (If using a clipper) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
 
-    // Input (written by user between BeginMultiSelect()/EndMultiSelect()
-    bool    RangeSrcPassedBy;       //    Loop     // (If using a clipper) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
-
-    ImGuiMultiSelectIO()  { Clear(); }
-    void Clear()
-    {
-        RequestClear = RequestSelectAll = RequestSetRange = RangeSrcPassedBy = RangeValue = false;
-        RangeSrc = RangeDst = NULL;
-        RangeDirection = 0;
-    }
+    ImGuiMultiSelectIO()    { Clear(); }
+    void Clear()            { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------

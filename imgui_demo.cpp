@@ -2779,7 +2779,7 @@ struct ExampleSelection
 {
     // Data
     ImGuiStorage                        Storage;        // Selection set
-    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class)
+    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class) // FIXME-RANGESELECT: Imply more difficult to track with intrusive selection schemes?
     int                                 RangeRef;       // Reference/pivot item (generally last clicked item)
 
     // Functions

@@ -1713,21 +1713,22 @@ struct ImGuiOldColumns
 
 #ifdef IMGUI_HAS_MULTI_SELECT
 
+// Temporary storage for multi-select
 struct IMGUI_API ImGuiMultiSelectTempData
 {
     ImGuiID                 FocusScopeId;           // Copied from g.CurrentFocusScopeId (unless another selection scope was pushed manually)
     ImGuiMultiSelectFlags   Flags;
     ImGuiKeyChord           KeyMods;
     ImGuiWindow*            Window;
-    ImGuiMultiSelectIO      In;                     // The In requests are set and returned by BeginMultiSelect()
-    ImGuiMultiSelectIO      Out;                    // The Out requests are finalized and returned by EndMultiSelect()
+    ImGuiMultiSelectIO      BeginIO;                // Requests are set and returned by BeginMultiSelect(), written to by user during the loop.
+    ImGuiMultiSelectIO      EndIO;                  // Requests are set during the loop and returned by EndMultiSelect().
     bool                    IsFocused;              // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
-    bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.
-    bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
+    bool                    IsSetRange;             // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
+    bool                    SetRangeDstPassedBy;    // Set by the the item that matches NavJustMovedToId when IsSetRange is set.
     //ImRect                Rect;                   // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
-    ImGuiMultiSelectTempData() { Clear(); }
-    void Clear()            { FocusScopeId = 0; Flags = ImGuiMultiSelectFlags_None; KeyMods = ImGuiMod_None; Window = NULL; In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }
+    ImGuiMultiSelectTempData()  { Clear(); }
+    void Clear()                { memset(this, 0, sizeof(*this)); }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
