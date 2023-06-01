@@ -1,4 +1,4 @@
-// dear imgui, v1.89.6
+// dear imgui, v1.89.7 WIP
 // (headers)
 
 // Help:
@@ -22,8 +22,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.89.6"
-#define IMGUI_VERSION_NUM   18960
+#define IMGUI_VERSION       "1.89.7 WIP"
+#define IMGUI_VERSION_NUM   18961
 #define IMGUI_HAS_TABLE
 
 /*
