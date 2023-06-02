@@ -7132,7 +7132,7 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
 }
 
 // Return ImGuiMultiSelectIO structure. Lifetime: valid until corresponding call to EndMultiSelect().
-ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected)
+ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7141,21 +7141,38 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* r
     g.CurrentMultiSelect = ms;
 
     // FIXME: BeginFocusScope()
+    const ImGuiID id = window->IDStack.back();
     ms->Clear();
-    ms->FocusScopeId = window->IDStack.back();
+    ms->FocusScopeId = id;
     ms->Flags = flags;
-    ms->Window = window;
     ms->IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
     PushFocusScope(ms->FocusScopeId);
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
     ms->KeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
 
+    // Bind storage
+    ImGuiMultiSelectState* storage = g.MultiSelectStorage.GetOrAddByKey(id);
+    storage->ID = id;
+    storage->LastFrameActive = g.FrameCount;
+    storage->Window = window;
+    ms->Storage = storage;
+
+    // FIXME-MULTISELECT: Set for the purpose of user calling RangeSrcPassedBy
+    // FIXME-MULTISELECT: Index vs Pointers.
+    ms->BeginIO.RangeSrcItem = storage->RangeSrcItem;
+    ms->BeginIO.NavIdItem = storage->NavIdItem;
+
+    if (!ms->IsFocused)
+        return &ms->BeginIO; // This is cleared at this point.
+
+    /*
     if ((flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0)
     {
         ms->BeginIO.RangeSrcItem = ms->EndIO.RangeSrcItem = range_ref;
         ms->BeginIO.RangeSelected = ms->EndIO.RangeSelected = range_ref_is_selected;
     }
+    */
 
     // Auto clear when using Navigation to move within the selection
     // (we compare FocusScopeId so it possible to use multiple selections inside a same window)
@@ -7163,19 +7180,21 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* r
     {
         if (ms->KeyMods & ImGuiMod_Shift)
             ms->IsSetRange = true;
+        if (ms->IsSetRange)
+            IM_ASSERT(storage->RangeSrcItem != (void*)-1); // Not ready -> could clear?
         if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             ms->BeginIO.RequestClear = true;
     }
 
     // Shortcut: Select all (CTRL+A)
-    if (ms->IsFocused && !(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+    if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
         if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
             ms->BeginIO.RequestSelectAll = true;
 
     // Shortcut: Clear selection (Escape)
     // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
     // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
-    if (ms->IsFocused && (flags & ImGuiMultiSelectFlags_ClearOnEscape))
+    if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
         if (Shortcut(ImGuiKey_Escape))
             ms->BeginIO.RequestClear = true;
 
@@ -7191,7 +7210,21 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
     IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
-    IM_ASSERT(g.CurrentMultiSelect != NULL && g.CurrentMultiSelect->Window == g.CurrentWindow);
+    IM_ASSERT(g.CurrentMultiSelect != NULL && ms->Storage->Window == g.CurrentWindow);
+
+    if (ms->IsFocused)
+    {
+        if (ms->BeginIO.RangeSrcReset || (ms->BeginIO.RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != (void*)-1))
+        {
+            IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset RangeSrc.\n"); // Will set be to NavId.
+            ms->Storage->RangeSrcItem = (void*)-1;
+        }
+        if (ms->NavIdPassedBy == false && ms->Storage->NavIdItem != (void*)-1)
+        {
+            IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset NavIdData.\n");
+            ms->Storage->NavIdItem = (void*)-1;
+        }
+    }
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
@@ -7205,7 +7238,6 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     // Unwind
     ms->FocusScopeId = 0;
-    ms->Window = NULL;
     ms->Flags = ImGuiMultiSelectFlags_None;
     ms->BeginIO.Clear(); // Invalidate contents of BeginMultiSelect() to enforce scope.
     PopFocusScope();
@@ -7222,28 +7254,31 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     // Note that flags will be cleared by ItemAdd(), so it's only useful for Navigation code!
     // This designed so widgets can also cheaply set this before calling ItemAdd(), so we are not tied to MultiSelect api.
     ImGuiContext& g = *GImGui;
-    if (g.MultiSelectState.FocusScopeId != 0)
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
-    else
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData;
     g.NextItemData.SelectionUserData = selection_user_data;
     g.NextItemData.FocusScopeId = g.CurrentFocusScopeId;
 
-    // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
     if (ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect)
+    {
+        // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
+        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
         if (ms->BeginIO.RangeSrcItem == (void*)selection_user_data)
             ms->BeginIO.RangeSrcPassedBy = true;
+    }
+    else
+    {
+        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData;
+    }
 }
 
 void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
+    if (!ms->IsFocused)
+        return;
+    ImGuiMultiSelectState* storage = ms->Storage;
 
-    IM_UNUSED(window);
     IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
-    IM_ASSERT((g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid) && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
     void* item_data = (void*)g.NextItemData.SelectionUserData;
 
     // Apply Clear/SelectAll requests requested by BeginMultiSelect().
@@ -7260,12 +7295,22 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     if (ms->IsSetRange)
     {
         IM_ASSERT(id != 0 && (ms->KeyMods & ImGuiMod_Shift) != 0);
-        const bool is_range_src = (ms->BeginIO.RangeSrcItem == item_data);
-        const bool is_range_dst = !ms->RangeDstPassedBy && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
+        const bool is_range_dst = (ms->RangeDstPassedBy == false) && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
         if (is_range_dst)
+        {
             ms->RangeDstPassedBy = true;
+            if (storage->RangeSrcItem == (void*)-1) // If we don't have RangeSrc, assign RangeSrc = RangeDst
+            {
+                storage->RangeSrcItem = item_data;
+                storage->RangeSelected = selected ? 1 : 0;
+            }
+        }
+        const bool is_range_src = storage->RangeSrcItem == item_data;
         if (is_range_src || is_range_dst || ms->BeginIO.RangeSrcPassedBy != ms->RangeDstPassedBy)
-            selected = ms->BeginIO.RangeSelected;
+        {
+            IM_ASSERT(storage->RangeSrcItem != (void*)-1 && storage->RangeSelected != -1);
+            selected = (storage->RangeSelected != 0);
+        }
         else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0)
             selected = false;
     }
@@ -7277,15 +7322,35 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+
+    bool selected = *p_selected;
+    bool pressed = *p_pressed;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
+    ImGuiMultiSelectState* storage = ms->Storage;
+    if (pressed)
+    {
+        ms->IsFocused = true;
+        //if (storage->Id != ms->FocusScopeId)
+        //    storage->Init(ms->FocusScopeId);
+    }
+    if (!ms->IsFocused)
+        return;
 
     void* item_data = (void*)g.NextItemData.SelectionUserData;
 
     const bool is_multiselect = (ms->Flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0;
-    bool selected = *p_selected;
-    bool pressed = *p_pressed;
     bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
     bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
+
+    if (g.NavId == id)
+        storage->NavIdItem = item_data;
+    if (g.NavId == id && storage->RangeSrcItem == (void*)-1)
+    {
+        storage->RangeSrcItem = item_data;
+        storage->RangeSelected = selected; // Will be updated at the end of this function anyway.
+    }
+    if (storage->NavIdItem == item_data)
+        ms->NavIdPassedBy = true;
 
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
@@ -7343,15 +7408,16 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         {
             // Shift+Arrow always select
             // Ctrl+Shift+Arrow copy source selection state (alrady stored by BeginMultiSelect() in RangeSelected)
-            if (!is_ctrl)
-                ms->EndIO.RangeSelected = true;
+            //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
+            ms->EndIO.RangeSrcItem = (storage->RangeSrcItem != (void*)-1) ? storage->RangeSrcItem : item_data;
+            ms->EndIO.RangeSelected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
             ms->EndIO.RangeDirection = ms->BeginIO.RangeSrcPassedBy ? +1 : -1;
         }
         else
         {
             // Ctrl inverts selection, otherwise always select
             selected = is_ctrl ? !selected : true;
-            ms->EndIO.RangeSrcItem = item_data;
+            ms->EndIO.RangeSrcItem = storage->RangeSrcItem = item_data;
             ms->EndIO.RangeSelected = selected;
             ms->EndIO.RangeDirection = +1;
         }
@@ -7371,11 +7437,35 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
+    if (storage->RangeSrcItem == item_data)
+        storage->RangeSelected = selected ? 1 : 0;
     if (ms->EndIO.RangeSrcItem == item_data && is_ctrl && is_shift && is_multiselect)
+    {
+        if (ms->EndIO.RequestSetRange)
+            IM_ASSERT(storage->RangeSrcItem == ms->EndIO.RangeSrcItem);
         ms->EndIO.RangeSelected = selected;
+    }
 
     *p_selected = selected;
     *p_pressed = pressed;
+}
+
+void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
+{
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    const bool is_active = (storage->LastFrameActive >= GetFrameCount() - 2); // Note that fully clipped early out scrolling tables will appear as inactive here.
+    if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
+    bool open = TreeNode((void*)(intptr_t)storage->ID, "MultiSelect 0x%08X%s", storage->ID, is_active ? "" : " *Inactive*");
+    if (!is_active) { PopStyleColor(); }
+    if (!open)
+        return;
+    Text("ID = 0x%08X", storage->ID);
+    Text("RangeSrcItem = %p, RangeSelected = %d", storage->RangeSrcItem, storage->RangeSelected);
+    Text("NavIdItem = %p", storage->NavIdItem);
+    TreePop();
+#else
+    IM_UNUSED(storage);
+#endif
 }
 
 //-------------------------------------------------------------------------

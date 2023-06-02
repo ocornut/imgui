@@ -669,10 +669,9 @@ namespace ImGui
     IMGUI_API bool          Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0));      // "bool* p_selected" point to the selection state (read-write), as a convenient helper.
 
     // Multi-selection system for Selectable() and TreeNode() functions.
-    // This enables standard multi-selection/range-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow items to be fully clipped (= not submitted at all) when not visible.
-    // Read comments near ImGuiMultiSelectIO for details.
-    // When enabled, Selectable() and TreeNode() functions will return true when selection needs toggling.
-    IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected);
+    // - This enables standard multi-selection/range-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc.) in a way that also allow a clipper to be used.
+    // - Read comments near ImGuiMultiSelectIO for details.
+    IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags);
     IMGUI_API ImGuiMultiSelectIO*   EndMultiSelect();
     IMGUI_API void                  SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
 
@@ -908,7 +907,7 @@ namespace ImGui
     IMGUI_API bool          IsItemDeactivated();                                                // was the last item just made inactive (item was previously active). Useful for Undo/Redo patterns with widgets that require continuous editing.
     IMGUI_API bool          IsItemDeactivatedAfterEdit();                                       // was the last item just made inactive and made a value change when it was active? (e.g. Slider/Drag moved). Useful for Undo/Redo patterns with widgets that require continuous editing. Note that you may get false positives (some widgets such as Combo()/ListBox()/Selectable() will return true even when clicking an already selected item).
     IMGUI_API bool          IsItemToggledOpen();                                                // was the last item open state toggled? set by TreeNode().
-    IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection state toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
+    IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection state toggled? (after Selectable(), TreeNode() etc.) We only returns toggle _event_ in order to handle clipping correctly.
     IMGUI_API bool          IsAnyItemHovered();                                                 // is any item hovered?
     IMGUI_API bool          IsAnyItemActive();                                                  // is any item active?
     IMGUI_API bool          IsAnyItemFocused();                                                 // is any item focused?
@@ -2725,10 +2724,8 @@ struct ImColor
 #define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
 
 // Flags for BeginMultiSelect().
-// This system is designed to allow mouse/keyboard multi-selection, including support for range-selection (SHIFT+click and SHIFT+keyboard),
-// which is difficult to re-implement manually. If you disable multi-selection with ImGuiMultiSelectFlags_NoMultiSelect
-// (which is provided for consistency and flexibility), the whole BeginMultiSelect() system becomes largely overkill as
-// you can handle single-selection in a simpler manner by just calling Selectable() and reacting on clicks yourself.
+// (we provide 'ImGuiMultiSelectFlags_NoMultiSelect' for consistency and flexiblity, but it essentially disable the main purpose of BeginMultiSelect().
+//  If you use 'ImGuiMultiSelectFlags_NoMultiSelect' you can handle single-selection in a simpler way by just calling Selectable()/TreeNode() and reacting on clicks).
 enum ImGuiMultiSelectFlags_
 {
     ImGuiMultiSelectFlags_None                  = 0,
@@ -2739,12 +2736,11 @@ enum ImGuiMultiSelectFlags_
     //ImGuiMultiSelectFlags_ClearOnClickRectVoid= 1 << 4,   // Clear selection when clicking on empty location within rectangle covered by selection scope (use if multiple BeginMultiSelect() are used in the same host window)
 };
 
-// Abstract:
-// - This system helps you implements standard multi-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow
-//   selectable items to be fully clipped (= not submitted at all) when not visible. Clipping is typically provided by ImGuiListClipper.
-//   Handling all of this in a single pass imgui is a little tricky, and this is why we provide those functionalities.
-//   Note however that if you don't need SHIFT+Click/Arrow range-select + clipping, you can handle a simpler form of multi-selection
-//   yourself, by reacting to click/presses on Selectable() items and checking keyboard modifiers.
+// Multi-selection system
+// - This system implements standard multi-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc) in a way that
+//   allow a clipper to be used (so most non-visible items won't be submitted). Handling this correctly is tricky, this is why
+//   we provide the functionality. Note however that if you don't need SHIFT+Mouse/Keyboard range-select + clipping, you could use
+//   a simpler form of multi-selection yourself, by reacting to click/presses on Selectable() items and checking keyboard modifiers.
 //   The unusual complexity of this system is mostly caused by supporting SHIFT+Click/Arrow range-select with clipped elements.
 // - In the spirit of Dear ImGui design, your code owns the selection data.
 //   So this is designed to handle all kind of selection data: e.g. instructive selection (store a bool inside each object),
@@ -2762,36 +2758,33 @@ enum ImGuiMultiSelectFlags_
 //   between them to honor range selection. But the code never assume that sortable integers are used (you may store pointers to your object,
 //   and then from the pointer have your own way of iterating from RangeSrcItem to RangeDstItem).
 // Usage flow:
-//   Begin
-//     1) Call BeginMultiSelect() with the last saved value of ->RangeSrcItem and its selection state.
-//        It is because you need to pass its selection state (and you own selection) that we don't store this value in Dear ImGui.
-//        (For the initial frame or when resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*).
-//     2) Honor Clear/SelectAll/SetRange requests by updating your selection data. (Only required if you are using a clipper in step 4: but you can use same code as step 6 anyway.)
-//   Loop
-//     3) Set RangeSrcPassedBy=true if the RangeSrcItem item is part of the items clipped before the first submitted/visible item. [Only required if you are using a clipper in step 4]
-//        This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
-//        If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
-//     4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
-//        (You may optionally call IsItemToggledSelection() to query if the selection state has been toggled for a given item, if you need that info immediately for your display (before EndMultiSelect()).)
-//        (When cannot provide a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggled" event instead.)
-//   End
-//     5) Call EndMultiSelect(). Save the value of ->RangeSrcItem for the next frame (you may convert the value in a format that is safe for persistance)
-//     6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
-// If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
+//   BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
+//         - (2) [If using a clipper] Honor Clear/SelectAll/SetRange requests by updating your selection data. Can use same code as Step 6.
+//   LOOP  - (3) [If using a clipper] Set RangeSrcPassedBy=true if the RangeSrcItem item is part of the items clipped before the first submitted/visible item.
+//               This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
+//               If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
+//         - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
+//               (optionally call IsItemToggledSelection() to query if the selection state has been toggled for a given visible item, if you need that info immediately for your display, before EndMultiSelect())
+//   END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
+//         - (6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously). Can use same code as Step 2.
+// If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
 struct ImGuiMultiSelectIO
 {
     // - Always process requests in this order: Clear, SelectAll, SetRange.
+    // - Some fields are only necessary if your list is dynamic and allows deletion (getting "post-deletion" state right is exhibited in the demo)
     // - Below: who reads/writes each fields? 'r'=read, 'w'=write, 'ms'=multi-select code, 'app'=application/user code, 'BEGIN'=BeginMultiSelect() and after, 'END'=EndMultiSelect() and after.
     // REQUESTS ----------------// BEGIN         / LOOP          / END
     bool    RequestClear;       //  ms:w, app:r  /               /  ms:w, app:r  // 1. Request app/user to clear selection.
     bool    RequestSelectAll;   //  ms:w, app:r  /               /  ms:w, app:r  // 2. Request app/user to select all.
     bool    RequestSetRange;    //               /               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeSrcItem..RangeDstItem] items, based on RangeSelected. In practice, only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
     // STATE/ARGUMENTS ---------// BEGIN         / LOOP          / END
-    void*   RangeSrcItem;       //  ms:w         /        app:r  /  ms:w, app:r  // Begin: Last known SetNextItemSelectionData() value for RangeSrcItem. End: parameter from RequestSetRange request.
+    void*   RangeSrcItem;       //  ms:w         /        app:r  /  ms:w, app:r  // Begin: Last known SetNextItemSelectionUserData() value for RangeSrcItem. End: parameter from RequestSetRange request.
     void*   RangeDstItem;       //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request.
     ImS8    RangeDirection;     //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request. +1 if RangeSrcItem came before RangeDstItem, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values. If your void* values are storing indices you will never need this.
     bool    RangeSelected;      //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request. true = Select Range, false = Unselect Range.
     bool    RangeSrcPassedBy;   //               /  ms:rw app:w  /  ms:r         // (If using clipper) Need to be set by app/user if RangeSrcItem was part of the clipped set before submitting the visible items. Ignore if not clipping.
+    bool    RangeSrcReset;      //               /        app:w  /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
+    void*   NavIdItem;          //  ms:w, app:r  /               /  ms:w  app:r  // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items)
 
     ImGuiMultiSelectIO()    { Clear(); }
     void Clear()            { memset(this, 0, sizeof(*this)); }

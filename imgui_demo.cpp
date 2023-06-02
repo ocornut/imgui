@@ -2773,17 +2773,14 @@ static void ShowDemoWindowWidgets()
 //   are generally appropriate. Even a large array of bool might work for you...
 // - If you need to handle extremely large selections, it might be advantageous to support a "negative" mode in
 //   your storage, so "Select All" becomes "Negative=1 + Clear" and then sparse unselect can add to the storage.
-// About RefItem:
-// - The BeginMultiSelect() API requires you to store information about the reference/pivot item (generally the last clicked item).
 struct ExampleSelection
 {
     // Data
     ImGuiStorage                        Storage;        // Selection set
     int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class). // FIXME-MULTISELECT: Imply more difficult to track with intrusive selection schemes?
-    int                                 RangeRef;       // Reference/pivot item (generally last clicked item)
 
     // Functions
-    ExampleSelection()                  { RangeRef = 0; Clear(); }
+    ExampleSelection()                  { Clear(); }
     void Clear()                        { Storage.Clear(); SelectionSize = 0; }
     bool GetSelected(int n) const       { return Storage.GetInt((ImGuiID)n, 0) != 0; }
     void SetSelected(int n, bool v)     { int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int == (int)v) return; if (v) SelectionSize++; else SelectionSize--; *p_int = (bool)v; }
@@ -2806,6 +2803,17 @@ struct ExampleSelection
         if (ms_io->RequestSetRange)     { SetRange((int)(intptr_t)ms_io->RangeSrcItem, (int)(intptr_t)ms_io->RangeDstItem, ms_io->RangeSelected ? 1 : 0); }
     }
 
+    void DebugTooltip()
+    {
+        if (ImGui::BeginTooltip())
+        {
+            for (auto& pair : Storage.Data)
+                if (pair.val_i)
+                    ImGui::Text("0x%03X (%d)", pair.key, pair.key);
+            ImGui::EndTooltip();
+        }
+    }
+
     // Call after BeginMultiSelect()
     // We cannot provide this logic in core Dear ImGui because we don't have access to selection data.
     // Essentially this would be a ms_io->RequestNextFocusBeforeDeletion
@@ -2813,13 +2821,17 @@ struct ExampleSelection
     template<typename ITEM_TYPE>
     int CalcNextFocusIdxForBeforeDeletion(ImGuiMultiSelectIO* ms_io, ImVector<ITEM_TYPE>& items)
     {
+        // FIXME-MULTISELECT: Need to avoid auto-select, aka SetKeyboardFocusHere() into public facing FocusItem() that doesn't activate.
+        if (!GetSelected((int)(intptr_t)ms_io->NavIdItem))
+            return (int)(intptr_t)ms_io->NavIdItem;
+
         // Return first unselected item after RangeSrcItem
         for (int n = (int)(intptr_t)ms_io->RangeSrcItem + 1; n < items.Size; n++)
             if (!GetSelected(n))
                 return n;
 
         // Otherwise return last unselected item
-        for (int n = (int)(intptr_t)ms_io->RangeSrcItem - 1; n >= 0; n--)
+        for (int n = IM_MIN((int)(intptr_t)ms_io->RangeSrcItem, items.Size) - 1; n >= 0; n--)
             if (!GetSelected(n))
                 return n;
         return -1;
@@ -2833,7 +2845,7 @@ struct ExampleSelection
         // This does two things:
         // - (1) Update Items List (delete items from it)
         // - (2) Convert the new focus index from old selection index (before deletion) to new selection index (after selection), and select it.
-        // FIXME: (2.3) if NavId is not selected, stay on same item -> facilitate persisting focus if ID change? (if ID is index-based) -> by setting focus again
+        //       If NavId was not selected, next_focus_idx_in_old_selection == -1 and we stay on same item.
         // You are expected to handle both of those in user-space because Dear ImGui rightfully doesn't own items data nor selection data.
         // This particular ExampleSelection case is designed to showcase maintaining selection-state separated from items-data.
         IM_UNUSED(ms_io);
@@ -2850,6 +2862,7 @@ struct ExampleSelection
         items.swap(new_items);
 
         // Update selection
+        //IMGUI_DEBUG_LOG("ApplyDeletion(): next_focus_idx_in_new_selection = %d\n", next_focus_idx_in_new_selection);
         Clear();
         if (next_focus_idx_in_new_selection != -1)
             SetSelected(next_focus_idx_in_new_selection, true);
@@ -2922,11 +2935,10 @@ static void ShowDemoWindowMultiSelect()
             // The BeginListBox() has no actual purpose for selection logic (other that offering a scrolling region).
             const int ITEMS_COUNT = 50;
             ImGui::Text("Selection size: %d", selection.GetSize());
-            ImGui::Text("RangeRef: %d", selection.RangeRef);
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
@@ -2940,7 +2952,6 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 ms_io = ImGui::EndMultiSelect();
-                selection.RangeRef = (int)(intptr_t)ms_io->RangeSrcItem;
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
                 ImGui::EndListBox();
@@ -2960,20 +2971,18 @@ static void ShowDemoWindowMultiSelect()
 
             ImGui::Text("Adding features:");
             ImGui::BulletText("Dynamic list with Delete key support.");
+            ImGui::Text("Selection size: %d/%d", selection.GetSize(), items.Size);
+            if (ImGui::IsItemHovered() && selection.GetSize() > 0)
+                selection.DebugTooltip();
 
             // Initialize default list with 50 items + button to add more.
             static int items_next_id = 0;
             if (items_next_id == 0)
                 for (int n = 0; n < 50; n++)
                     items.push_back(items_next_id++);
-            ImGui::Text("Selection: %d/%d", selection.GetSize(), items.Size);
+            if (ImGui::SmallButton("Add 20 items"))     { for (int n = 0; n < 20; n++) { items.push_back(items_next_id++); } }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Add 20 items"))
-                for (int n = 0; n < 20; n++)
-                    items.push_back(items_next_id++);
-
-            ImGui::Text("Selection size: %d/%d", selection.GetSize(), items.Size);
-            ImGui::Text("RangeRef: %d", selection.RangeRef);
+            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.SetSelected(items.Size - 1, false); items.pop_back(); } } // This is to test
 
             // Extra to support deletion: Submit scrolling range to avoid glitches on deletion
             const float items_height = ImGui::GetTextLineHeightWithSpacing();
@@ -2981,7 +2990,7 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, items.Size);
 
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to send a helper/optional "delete" signal.
@@ -2989,6 +2998,7 @@ static void ShowDemoWindowMultiSelect()
                 // FIXME-MULTISELECT: Test with intermediary modal dialog.
                 const bool want_delete = (selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
                 const int next_focus_item_idx = want_delete ? selection.CalcNextFocusIdxForBeforeDeletion(ms_io, items) : -1;
+                //if (want_delete) { IMGUI_DEBUG_LOG("next_focus_item_idx = %d\n", next_focus_item_idx); }
 
                 for (int n = 0; n < items.Size; n++)
                 {
@@ -2997,22 +3007,44 @@ static void ShowDemoWindowMultiSelect()
                     sprintf(label, "Object %05d: %s", item_id, random_names[item_id % IM_ARRAYSIZE(random_names)]);
 
                     bool item_is_selected = selection.GetSelected(n);
-                    ImGui::SetNextItemSelectionData((void*)(intptr_t)n);
+                    ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                     if (ImGui::IsItemToggledSelection())
                         selection.SetSelected(n, !item_is_selected);
 
                     // FIXME-MULTISELECT: turn into a ms_io->RequestFocusIdx
                     if (next_focus_item_idx == n)
-                        ImGui::SetKeyboardFocusHere(-1);
+                        ImGui::SetKeyboardFocusHere(-1); // FIXME-MULTISELECT: Need to avoid selection.
                 }
 
-                // Apply multi-select requests
+#if 0
+                bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdData);
+                if (want_delete && !nav_id_was_selected) // FIXME: would work without '&& !nav_id_was_selected' just take an extra frame to recover RangeSrc
+                    ms_io->RangeSrcReset = true;
                 ms_io = ImGui::EndMultiSelect();
-                selection.RangeRef = (int)(intptr_t)ms_io->RangeSrcItem;
                 selection.ApplyRequests(ms_io, items.Size);
                 if (want_delete)
-                    selection.ApplyDeletion(ms_io, items, next_focus_item_idx);
+                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
+#else
+                // Apply multi-select requests
+                if (want_delete)
+                {
+                    // When deleting: this handle details for scrolling/focus/selection to be updated correctly without any glitches.
+                    bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdItem);
+                    if (!nav_id_was_selected) // FIXME: would work without '&& !nav_id_was_selected' just take an extra frame to recover RangeSrc
+                        ms_io->RangeSrcReset = true;
+                    ms_io = ImGui::EndMultiSelect();
+                    selection.ApplyRequests(ms_io, items.Size);
+                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
+                }
+                else
+                {
+                    // Simple version
+                    ms_io = ImGui::EndMultiSelect();
+                    selection.ApplyRequests(ms_io, items.Size);
+                }
+#endif
+
 
                 ImGui::EndListBox();
             }
@@ -3035,7 +3067,7 @@ static void ShowDemoWindowMultiSelect()
                 ImGui::PushID(selection_scope_n);
 
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape; // | ImGuiMultiSelectFlags_ClearOnClickRectVoid
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection->RangeRef, selection->GetSelected(selection->RangeRef));
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection->ApplyRequests(ms_io, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
@@ -3049,7 +3081,6 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 ms_io = ImGui::EndMultiSelect();
-                selection->RangeRef = (int)(intptr_t)ms_io->RangeSrcItem;
                 selection->ApplyRequests(ms_io, ITEMS_COUNT);
                 ImGui::PopID();
             }
@@ -3105,7 +3136,7 @@ static void ShowDemoWindowMultiSelect()
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, items.Size);
 
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to send a helper/optional "delete" signal.
@@ -3113,6 +3144,7 @@ static void ShowDemoWindowMultiSelect()
                 // FIXME-MULTISELECT: Test with intermediary modal dialog.
                 const bool want_delete = (selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
                 const int next_focus_item_idx = want_delete ? selection.CalcNextFocusIdxForBeforeDeletion(ms_io, items) : -1;
+                //if (want_delete) { IMGUI_DEBUG_LOG("next_focus_item_idx = %d\n", next_focus_item_idx); }
 
                 if (show_in_table)
                 {
@@ -3126,14 +3158,18 @@ static void ShowDemoWindowMultiSelect()
 
                 ImGuiListClipper clipper;
                 if (use_clipper)
+                {
                     clipper.Begin(items.Size);
+                    if (next_focus_item_idx != -1)
+                        clipper.IncludeItemByIndex(next_focus_item_idx); // Ensure item to focus is not clipped
+                }
 
                 while (!use_clipper || clipper.Step())
                 {
-                    // IF clipping is used you need to set 'RangeSrcPassedBy = true' if RangeSrcItem was passed over.
-                    if (use_clipper)
-                        if ((int)(intptr_t)ms_io->RangeSrcItem <= clipper.DisplayStart)
-                            ms_io->RangeSrcPassedBy = true;
+                    // IF clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
+                    // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
+                    if (use_clipper && clipper.DisplayStart > (int)(intptr_t)ms_io->RangeSrcItem)
+                        ms_io->RangeSrcPassedBy = true;
 
                     const int item_begin = use_clipper ? clipper.DisplayStart : 0;
                     const int item_end = use_clipper ? clipper.DisplayEnd : items.Size;
@@ -3217,6 +3253,12 @@ static void ShowDemoWindowMultiSelect()
                         break;
                 }
 
+                // If clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
+                // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
+                // Here we essentially notify before EndMultiSelect() that RangeSrc is still present in our data set.
+                if (use_clipper && items.Size > (int)(intptr_t)ms_io->RangeSrcItem)
+                    ms_io->RangeSrcPassedBy = true;
+
                 if (show_in_table)
                 {
                     ImGui::EndTable();
@@ -3225,11 +3267,21 @@ static void ShowDemoWindowMultiSelect()
                 }
 
                 // Apply multi-select requests
+#if 1
+                // full correct
+                bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdItem);
+                if (want_delete && !nav_id_was_selected)
+                    ms_io->RangeSrcReset = true;
                 ms_io = ImGui::EndMultiSelect();
-                selection.RangeRef = (int)(intptr_t)ms_io->RangeSrcItem;
                 selection.ApplyRequests(ms_io, items.Size);
                 if (want_delete)
-                    selection.ApplyDeletion(ms_io, items, next_focus_item_idx);
+                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
+#else
+                ms_io = ImGui::EndMultiSelect();
+                selection.ApplyRequests(ms_io, items.Size);
+                if (want_delete)
+                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
+#endif
 
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PopStyleVar();

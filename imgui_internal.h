@@ -134,6 +134,7 @@ struct ImGuiInputTextDeactivateData;// Short term storage to backup text of a de
 struct ImGuiLastItemData;           // Status storage for last submitted items
 struct ImGuiLocEntry;               // A localization entry.
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
+struct ImGuiMultiSelectState;       // Multi-selection persistent state (for focused selection).
 struct ImGuiMultiSelectTempData;    // Multi-selection temporary state (while traversing).
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
 struct ImGuiMetricsConfig;          // Storage for ShowMetricsWindow() and DebugNodeXXX() functions
@@ -1716,19 +1717,34 @@ struct ImGuiOldColumns
 // Temporary storage for multi-select
 struct IMGUI_API ImGuiMultiSelectTempData
 {
-    ImGuiID                 FocusScopeId;           // Copied from g.CurrentFocusScopeId (unless another selection scope was pushed manually)
+    ImGuiMultiSelectState*  Storage;
+    ImGuiID                 FocusScopeId;       // Copied from g.CurrentFocusScopeId (unless another selection scope was pushed manually)
     ImGuiMultiSelectFlags   Flags;
     ImGuiKeyChord           KeyMods;
-    ImGuiWindow*            Window;
-    ImGuiMultiSelectIO      BeginIO;                // Requests are set and returned by BeginMultiSelect(), written to by user during the loop.
-    ImGuiMultiSelectIO      EndIO;                  // Requests are set during the loop and returned by EndMultiSelect().
-    bool                    IsFocused;              // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
-    bool                    IsSetRange;             // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
-    bool                    RangeDstPassedBy;       // Set by the item that matches NavJustMovedToId when IsSetRange is set.
-    //ImRect                Rect;                   // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
+    ImGuiMultiSelectIO      BeginIO;            // Requests are set and returned by BeginMultiSelect(), written to by user during the loop.
+    ImGuiMultiSelectIO      EndIO;              // Requests are set during the loop and returned by EndMultiSelect().
+    bool                    IsFocused;          // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
+    bool                    IsSetRange;         // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
+    bool                    NavIdPassedBy;
+    bool                    RangeDstPassedBy;   // Set by the the item that matches NavJustMovedToId when IsSetRange is set.
+    //ImRect                Rect;               // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()                { memset(this, 0, sizeof(*this)); }
+    void Clear()                { memset(this, 0, sizeof(*this)); BeginIO.RangeSrcItem = EndIO.RangeSrcItem = BeginIO.RangeDstItem = EndIO.RangeDstItem = BeginIO.NavIdItem = EndIO.NavIdItem = (void*)-1; }
+};
+
+// Persistent storage for multi-select (as long as selection is alive)
+struct IMGUI_API ImGuiMultiSelectState
+{
+    ImGuiWindow*            Window;
+    ImGuiID                 ID;
+    int                     LastFrameActive;    // Last used frame-count, for GC.
+    ImS8                    RangeSelected;      // -1 (don't have) or true/false
+    void*                   RangeSrcItem;       //
+    void*                   NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
+
+    ImGuiMultiSelectState() { Init(0); }
+    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = -1; RangeSrcItem = NavIdItem = (void*)-1; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
@@ -2170,6 +2186,7 @@ struct ImGuiContext
     // Multi-Select state
     ImGuiMultiSelectTempData*       CurrentMultiSelect;         // FIXME-MULTISELECT: We currently don't support recursing/stacking multi-select
     ImGuiMultiSelectTempData        MultiSelectTempData[1];
+    ImPool<ImGuiMultiSelectState>   MultiSelectStorage;
 
     // Hover Delay system
     ImGuiID                 HoverItemDelayId;
@@ -3568,6 +3585,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeTableSettings(ImGuiTableSettings* settings);
     IMGUI_API void          DebugNodeInputTextState(ImGuiInputTextState* state);
     IMGUI_API void          DebugNodeTypingSelectState(ImGuiTypingSelectState* state);
+    IMGUI_API void          DebugNodeMultiSelectState(ImGuiMultiSelectState* state);
     IMGUI_API void          DebugNodeWindow(ImGuiWindow* window, const char* label);
     IMGUI_API void          DebugNodeWindowSettings(ImGuiWindowSettings* settings);
     IMGUI_API void          DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label);
