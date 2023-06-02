@@ -1730,7 +1730,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     //ImRect                Rect;               // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()                { memset(this, 0, sizeof(*this)); BeginIO.RangeSrcItem = EndIO.RangeSrcItem = BeginIO.RangeDstItem = EndIO.RangeDstItem = BeginIO.NavIdItem = EndIO.NavIdItem = (void*)-1; }
+    void Clear()                { memset(this, 0, sizeof(*this)); BeginIO.Clear(); EndIO.Clear(); }
 };
 
 // Persistent storage for multi-select (as long as selection is alive)
