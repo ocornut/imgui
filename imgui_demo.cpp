@@ -605,6 +605,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::End();
 }
 
+
 static void ShowDemoWindowWidgets()
 {
     IMGUI_DEMO_MARKER("Widgets");
@@ -2804,7 +2805,7 @@ struct ExampleSelection
     {
         if (ms_io->RequestClear)        { Clear(); }
         if (ms_io->RequestSelectAll)    { SelectAll(items_count); }
-        if (ms_io->RequestSetRange)     { SetRange((int)(intptr_t)ms_io->RangeSrcItem, (int)(intptr_t)ms_io->RangeDstItem, ms_io->RangeValue ? 1 : 0); }
+        if (ms_io->RequestSetRange)     { SetRange((int)(intptr_t)ms_io->RangeSrcItem, (int)(intptr_t)ms_io->RangeDstItem, ms_io->RangeSelected ? 1 : 0); }
     }
 };
 
