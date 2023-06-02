@@ -2821,8 +2821,7 @@ struct ExampleSelection
     template<typename ITEM_TYPE>
     int CalcNextFocusIdxForBeforeDeletion(ImGuiMultiSelectIO* ms_io, ImVector<ITEM_TYPE>& items)
     {
-        // FIXME-MULTISELECT: Need to avoid auto-select, aka SetKeyboardFocusHere() into public facing FocusItem() that doesn't activate.
-        if (!GetSelected((int)(intptr_t)ms_io->NavIdItem))
+        if (ms_io->NavIdSelected == false)
             return (int)(intptr_t)ms_io->NavIdItem;
 
         // Return first unselected item after RangeSrcItem
@@ -2996,6 +2995,7 @@ static void ShowDemoWindowMultiSelect()
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to send a helper/optional "delete" signal.
                 // FIXME-MULTISELECT: may turn into 'ms_io->RequestDelete' -> need HasSelection passed.
                 // FIXME-MULTISELECT: Test with intermediary modal dialog.
+                // FIXME-MULTISELECT: If pressing Delete + another key we have slightly ambiguous behavior.
                 const bool want_delete = (selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
                 const int next_focus_item_idx = want_delete ? selection.CalcNextFocusIdxForBeforeDeletion(ms_io, items) : -1;
                 //if (want_delete) { IMGUI_DEBUG_LOG("next_focus_item_idx = %d\n", next_focus_item_idx); }
@@ -3017,34 +3017,13 @@ static void ShowDemoWindowMultiSelect()
                         ImGui::SetKeyboardFocusHere(-1); // FIXME-MULTISELECT: Need to avoid selection.
                 }
 
-#if 0
-                bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdData);
-                if (want_delete && !nav_id_was_selected) // FIXME: would work without '&& !nav_id_was_selected' just take an extra frame to recover RangeSrc
+                // Apply multi-select requests
+                if (want_delete && ms_io->NavIdSelected == false) // FIXME: would work without '&& !NavIdSelected' just take an extra frame to recover RangeSrc
                     ms_io->RangeSrcReset = true;
                 ms_io = ImGui::EndMultiSelect();
                 selection.ApplyRequests(ms_io, items.Size);
                 if (want_delete)
-                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
-#else
-                // Apply multi-select requests
-                if (want_delete)
-                {
-                    // When deleting: this handle details for scrolling/focus/selection to be updated correctly without any glitches.
-                    bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdItem);
-                    if (!nav_id_was_selected) // FIXME: would work without '&& !nav_id_was_selected' just take an extra frame to recover RangeSrc
-                        ms_io->RangeSrcReset = true;
-                    ms_io = ImGui::EndMultiSelect();
-                    selection.ApplyRequests(ms_io, items.Size);
-                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
-                }
-                else
-                {
-                    // Simple version
-                    ms_io = ImGui::EndMultiSelect();
-                    selection.ApplyRequests(ms_io, items.Size);
-                }
-#endif
-
+                    selection.ApplyDeletion(ms_io, items, ms_io->NavIdSelected ? next_focus_item_idx : -1);
 
                 ImGui::EndListBox();
             }
@@ -3267,21 +3246,12 @@ static void ShowDemoWindowMultiSelect()
                 }
 
                 // Apply multi-select requests
-#if 1
-                // full correct
-                bool nav_id_was_selected = selection.GetSelected((int)(intptr_t)ms_io->NavIdItem);
-                if (want_delete && !nav_id_was_selected)
+                if (want_delete && ms_io->NavIdSelected == false)
                     ms_io->RangeSrcReset = true;
                 ms_io = ImGui::EndMultiSelect();
                 selection.ApplyRequests(ms_io, items.Size);
                 if (want_delete)
-                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
-#else
-                ms_io = ImGui::EndMultiSelect();
-                selection.ApplyRequests(ms_io, items.Size);
-                if (want_delete)
-                    selection.ApplyDeletion(ms_io, items, nav_id_was_selected ? next_focus_item_idx : -1);
-#endif
+                    selection.ApplyDeletion(ms_io, items, ms_io->NavIdSelected ? next_focus_item_idx : -1);
 
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PopStyleVar();
