@@ -1014,8 +1014,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             dm_y *= AA_SIZE * 0.5f;
 
             // Add vertices
-            _VtxWritePtr[0].pos.x = (points[i1].x - dm_x); _VtxWritePtr[0].pos.y = (points[i1].y - dm_y); _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
-            _VtxWritePtr[1].pos.x = (points[i1].x + dm_x); _VtxWritePtr[1].pos.y = (points[i1].y + dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
+            _VtxWritePtr[0].pos.x = (points[i1].x + dm_x); _VtxWritePtr[0].pos.y = (points[i1].y + dm_y); _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;        // Inner
+            _VtxWritePtr[1].pos.x = (points[i1].x - dm_x); _VtxWritePtr[1].pos.y = (points[i1].y - dm_y); _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;  // Outer
             _VtxWritePtr += 2;
 
             // Add indexes for fringes
