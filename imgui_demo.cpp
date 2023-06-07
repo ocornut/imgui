@@ -2780,7 +2780,7 @@ struct ExampleSelection
 {
     // Data
     ImGuiStorage                        Storage;        // Selection set
-    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class) // FIXME-RANGESELECT: Imply more difficult to track with intrusive selection schemes?
+    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class). // FIXME-MULTISELECT: Imply more difficult to track with intrusive selection schemes?
     int                                 RangeRef;       // Reference/pivot item (generally last clicked item)
 
     // Functions
@@ -2790,13 +2790,12 @@ struct ExampleSelection
     void SetSelected(int n, bool v)     { int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int == (int)v) return; if (v) SelectionSize++; else SelectionSize--; *p_int = (bool)v; }
     int  GetSize() const                { return SelectionSize; }
 
-    // When using SelectAll() / SetRange() we assume that our objects ID are indices.
+    // When using SetRange() / SelectAll() we assume that our objects ID are indices.
     // In this demo we always store selection using indices and never in another manner (e.g. object ID or pointers).
     // If your selection system is storing selection using object ID and you want to support Shift+Click range-selection,
-    // you will need a way to iterate from one object to another given the ID you use.
-    // You are likely to need some kind of data structure to convert 'view index' <> 'object ID'.
-    // FIXME-MULTISELECT: Would be worth providing a demo of doing this.
-    // FIXME-MULTISELECT: This implementation of SetRange() is inefficient because it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
+    // you will need a way to iterate from one item to the other item given the ID you use.
+    // You are likely to need some kind of data structure to convert 'view index' <> 'object ID' (FIXME-MULTISELECT: Would be worth providing a demo of doing this).
+    // Note: This implementation of SetRange() is inefficient because it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
     void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
     void SelectAll(int count)           { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
 
