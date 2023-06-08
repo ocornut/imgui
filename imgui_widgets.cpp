@@ -7201,8 +7201,6 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
             }
 
     // Unwind
-    if (ms->Flags & ImGuiMultiSelectFlags_NoUnselect)
-        ms->EndIO.RangeSelected = true;
     ms->FocusScopeId = 0;
     ms->Window = NULL;
     ms->Flags = ImGuiMultiSelectFlags_None;
@@ -7340,7 +7338,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         else
         {
             // Ctrl inverts selection, otherwise always select
-            selected = (is_ctrl && (ms->Flags & ImGuiMultiSelectFlags_NoUnselect) == 0) ? !selected : true;
+            selected = is_ctrl ? !selected : true;
             ms->EndIO.RangeSrcItem = ms->EndIO.RangeDstItem = item_data;
             ms->EndIO.RangeSelected = selected;
         }
@@ -7376,7 +7374,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
-    if (ms->EndIO.RangeSrcItem == item_data && is_ctrl && is_shift && is_multiselect && !(ms->Flags & ImGuiMultiSelectFlags_NoUnselect))
+    if (ms->EndIO.RangeSrcItem == item_data && is_ctrl && is_shift && is_multiselect)
         ms->EndIO.RangeSelected = selected;
 
     *p_selected = selected;

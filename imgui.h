@@ -44,7 +44,7 @@ Index of this file:
 // [SECTION] ImGuiIO
 // [SECTION] Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, Math Operators, ImColor)
-// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectData)
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
@@ -2719,7 +2719,7 @@ struct ImColor
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectData)
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO)
 //-----------------------------------------------------------------------------
 
 #define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
@@ -2733,11 +2733,10 @@ enum ImGuiMultiSelectFlags_
 {
     ImGuiMultiSelectFlags_None                  = 0,
     ImGuiMultiSelectFlags_NoMultiSelect         = 1 << 0,   // Disable selecting more than one item. This is not very useful at this kind of selection can be implemented without BeginMultiSelect(), but this is available for consistency.
-    ImGuiMultiSelectFlags_NoUnselect            = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
-    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 2,   // Disable CTRL+A shortcut to set RequestSelectAll
+    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to set RequestSelectAll
+    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 2,   // Clear selection when pressing Escape while scope is focused.
     ImGuiMultiSelectFlags_ClearOnClickWindowVoid= 1 << 3,   // Clear selection when clicking on empty location within host window (use if BeginMultiSelect() covers a whole window)
     //ImGuiMultiSelectFlags_ClearOnClickRectVoid= 1 << 4,   // Clear selection when clicking on empty location within rectangle covered by selection scope (use if multiple BeginMultiSelect() are used in the same host window)
-    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 5,   // Clear selection when pressing Escape while scope is focused.
 };
 
 // Abstract:
