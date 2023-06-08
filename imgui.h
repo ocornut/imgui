@@ -2777,7 +2777,7 @@ struct ImGuiMultiSelectIO
     bool    RequestClear;       //  ms:w, app:r  /               /  ms:w, app:r  // 1. Request app/user to clear selection.
     bool    RequestSelectAll;   //  ms:w, app:r  /               /  ms:w, app:r  // 2. Request app/user to select all.
     bool    RequestSetRange;    //               /               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeSrcItem..RangeDstItem] items, based on RangeSelected. In practice, only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
-    void*   RequestFocusItem;   //        app:w  /        app:r  /        app:r  // (If using deletion) 4. Request user to focus item. This is actually only manipulated in user-space, but we provide storage to facilitate implemention of deletion idiom (see demo).
+    void*   RequestFocusItem;   //        app:w  /        app:r  /        app:r  // (If using deletion) 4. Request user to focus item. This is actually only manipulated in user-space, but we provide storage to facilitate implementing a deletion idiom (see demo).
     // STATE/ARGUMENTS ---------// BEGIN         / LOOP          / END
     void*   RangeSrcItem;       //  ms:w         /        app:r  /  ms:w, app:r  // Begin: Last known SetNextItemSelectionUserData() value for RangeSrcItem. End: parameter from RequestSetRange request.
     void*   RangeDstItem;       //               /               /  ms:w, app:r  // End: parameter from RequestSetRange request.

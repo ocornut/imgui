@@ -2818,7 +2818,7 @@ struct ExampleSelection
     // Call after BeginMultiSelect().
     // - Calculate and set ms_io->RequestFocusItem, which we will focus during the loop.
     // - We cannot provide this logic in core Dear ImGui because we don't have access to selection data.
-    // - Essentially this would be a ms_io->RequestNextFocusBeforeDeletion
+    // - Return value is stored into 'ms_io->RequestFocusItem' which is provided as a convenience for this idiom (but not used by core imgui)
     // - Important: This only works if the item ID are stable: aka not depend on their index, but on e.g. item id/ptr.
     template<typename ITEM_TYPE>
     int ApplyDeletionPreLoop(ImGuiMultiSelectIO* ms_io, ImVector<ITEM_TYPE>& items)
@@ -3132,7 +3132,6 @@ static void ShowDemoWindowMultiSelect()
 
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to send a helper/optional "delete" signal.
                 // FIXME-MULTISELECT: may turn into 'ms_io->RequestDelete' -> need HasSelection passed.
-                // FIXME-MULTISELECT: Test with intermediary modal dialog.
                 const bool want_delete = selection.QueueDeletion || ((selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
                 if (want_delete)
                     selection.ApplyDeletionPreLoop(ms_io, items);

@@ -7158,7 +7158,6 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     storage->Window = window;
     ms->Storage = storage;
 
-    // FIXME-MULTISELECT: Set for the purpose of user calling RangeSrcPassedBy
     // FIXME-MULTISELECT: Index vs Pointers.
     // We want EndIO's NavIdItem/NavIdSelected to match BeginIO's one, so the value never changes after EndMultiSelect()
     ms->BeginIO.RangeSrcItem = ms->EndIO.RangeSrcItem = storage->RangeSrcItem;
@@ -7167,14 +7166,6 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 
     if (!ms->IsFocused)
         return &ms->BeginIO; // This is cleared at this point.
-
-    /*
-    if ((flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0)
-    {
-        ms->BeginIO.RangeSrcItem = ms->EndIO.RangeSrcItem = range_ref;
-        ms->BeginIO.RangeSelected = ms->EndIO.RangeSelected = range_ref_is_selected;
-    }
-    */
 
     // Auto clear when using Navigation to move within the selection
     // (we compare FocusScopeId so it possible to use multiple selections inside a same window)
