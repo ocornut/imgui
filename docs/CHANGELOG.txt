@@ -34,6 +34,11 @@ HOW TO UPDATE?
  VERSION 1.89.7 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Other changes:
+
+- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
+  ScrollX or ScrollY flags from being impossible to resize. (#6503)
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.6 (Released 2023-05-31)
