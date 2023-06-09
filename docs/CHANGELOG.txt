@@ -30,6 +30,15 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.89.7 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other changes:
+
+- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
+  ScrollX or ScrollY flags from being impossible to resize. (#6503)
+
 
 -----------------------------------------------------------------------
  DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
