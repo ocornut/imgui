@@ -31,16 +31,6 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.89.7 WIP (In Progress)
------------------------------------------------------------------------
-
-Other changes:
-
-- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
-  ScrollX or ScrollY flags from being impossible to resize. (#6503)
-
-
------------------------------------------------------------------------
  DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
 -----------------------------------------------------------------------
 
@@ -105,6 +95,21 @@ Other changes:
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX9, DirectX10, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
 - Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.7 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other changes:
+
+- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
+  ScrollX or ScrollY flags from being impossible to resize. (#6503)
+
+Docking+Viewports Branch:
+
+- Docking: Fixed dragging from title-bar empty space (regression from 1.88 related to
+  keeping ID alive when calling low-level ButtonBehavior() directly). (#5181, #2645)
 
 
 -----------------------------------------------------------------------

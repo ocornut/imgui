@@ -16740,11 +16740,12 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     }
 
     // When clicking on the title bar outside of tabs, we still focus the selected tab for that node
-    // FIXME: TabItem use AllowItemOverlap so we manually perform a more specific test for now (hovered || held)
+    // FIXME: TabItems submitted earlier use AllowItemOverlap so we manually perform a more specific test for now (hovered || held) in order to not cover them.
     ImGuiID title_bar_id = host_window->GetID("#TITLEBAR");
     if (g.HoveredId == 0 || g.HoveredId == title_bar_id || g.ActiveId == title_bar_id)
     {
         bool held;
+        KeepAliveID(title_bar_id);
         ButtonBehavior(title_bar_rect, title_bar_id, NULL, &held, ImGuiButtonFlags_AllowItemOverlap);
         if (g.HoveredId == title_bar_id)
         {
