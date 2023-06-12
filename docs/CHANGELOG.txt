@@ -38,6 +38,7 @@ Other changes:
 
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
+- Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
 
 
 -----------------------------------------------------------------------
