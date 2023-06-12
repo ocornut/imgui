@@ -39,6 +39,9 @@ Other changes:
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
 - Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
+- Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
+  This seems to happens on some Windows setup when peripherals disconnect, and is likely
+  to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
 
 
 -----------------------------------------------------------------------
