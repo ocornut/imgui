@@ -10,7 +10,7 @@ integrating Dear ImGui in your own application/game/engine.
 **Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
 
 You can find Windows binaries for some of those example applications at:
-  http://www.dearimgui.org/binaries
+  http://www.dearimgui.com/binaries
 
 
 ### Getting Started
@@ -74,7 +74,7 @@ ImGui::DestroyContext();
 
 Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 Please read the comments and instruction at the top of each file.
-Please read FAQ at http://www.dearimgui.org/faq
+Please read FAQ at http://www.dearimgui.com/faq
 
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
@@ -171,11 +171,10 @@ This uses more modern GL calls and custom shaders. <BR>
 This support building with Emscripten and targetting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
-[example_sdl2_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer/) <BR>
-SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer (most graphics backends are supported underneath) <BR>
+[example_sdl2_sdlrenderer2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer2/) <BR>
+SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 (most graphics backends are supported underneath) <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer.cpp <BR>
 This requires SDL 2.0.18+ (released November 2021) <BR>
-We do not really recommend using SDL_Renderer as it is a rather primitive API.
 
 [example_sdl2_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
@@ -199,6 +198,10 @@ DirectX11 example, Windows only. <BR>
 DirectX12 example, Windows only. <BR>
 = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp <BR>
 This is quite long and tedious, because: DirectX12.
+
+[example_win32_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_opengl3/) <BR>
+Raw Windows + OpenGL3 + example (modern, programmable pipeline) <BR>
+= main.cpp + imgui_impl_win32.cpp + imgui_impl_opengl3.cpp <BR>
 
 
 ### Miscellaneous
