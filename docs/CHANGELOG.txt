@@ -41,6 +41,8 @@ Other changes:
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
+- Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
+  isn't covered as much. (Match offset for drag and drop tooltips)
 - Debug Tools: Added 'io.ConfigDebugIniSettings' option to save .ini data with extra
   comments. Currently mainly for inspecting Docking .ini data, but makes saving slower.
 - Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
