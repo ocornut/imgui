@@ -2750,9 +2750,6 @@ static void ImGuiListClipper_SeekCursorForItem(ImGuiListClipper* clipper, int it
 ImGuiListClipper::ImGuiListClipper()
 {
     memset(this, 0, sizeof(*this));
-    Ctx = ImGui::GetCurrentContext();
-    IM_ASSERT(Ctx != NULL);
-    ItemsCount = -1;
 }
 
 ImGuiListClipper::~ImGuiListClipper()
@@ -2762,6 +2759,9 @@ ImGuiListClipper::~ImGuiListClipper()
 
 void ImGuiListClipper::Begin(int items_count, float items_height)
 {
+    if (Ctx == NULL)
+        Ctx = ImGui::GetCurrentContext();
+
     ImGuiContext& g = *Ctx;
     ImGuiWindow* window = g.CurrentWindow;
     IMGUI_DEBUG_LOG_CLIPPER("Clipper: Begin(%d,%.2f) in '%s'\n", items_count, items_height, window->Name);
@@ -2787,10 +2787,10 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    ImGuiContext& g = *Ctx;
     if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
     {
         // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
+        ImGuiContext& g = *Ctx;
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: End() in '%s'\n", g.CurrentWindow->Name);
         if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
             ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
