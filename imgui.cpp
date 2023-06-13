@@ -17767,12 +17767,16 @@ ImGuiID ImGui::DockSpaceOverViewport(const ImGuiViewport* viewport, ImGuiDockNod
 void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
 {
     // We don't preserve relative order of multiple docked windows (by clearing DockOrder back to -1)
+    ImGuiContext& g = *GImGui; IM_UNUSED(g);
+    IMGUI_DEBUG_LOG_DOCKING("[docking] DockBuilderDockWindow '%s' to node 0x%08X\n", window_name, node_id);
     ImGuiID window_id = ImHashStr(window_name);
     if (ImGuiWindow* window = FindWindowByID(window_id))
     {
         // Apply to created window
+        ImGuiID prev_node_id = window->DockId;
         SetWindowDock(window, node_id, ImGuiCond_Always);
-        window->DockOrder = -1;
+        if (window->DockId != prev_node_id)
+            window->DockOrder = -1;
     }
     else
     {
@@ -17780,8 +17784,9 @@ void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
         ImGuiWindowSettings* settings = FindWindowSettingsByID(window_id);
         if (settings == NULL)
             settings = CreateNewWindowSettings(window_name);
+        if (settings->DockId != node_id)
+            settings->DockOrder = -1;
         settings->DockId = node_id;
-        settings->DockOrder = -1;
     }
 }
 
@@ -17819,22 +17824,24 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
 //   For various reason, the splitting code currently needs a base size otherwise space may not be allocated as precisely as you would expect.
 // - Use (id == 0) to let the system allocate a node identifier.
 // - Existing node with a same id will be removed.
-ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
+ImGuiID ImGui::DockBuilderAddNode(ImGuiID node_id, ImGuiDockNodeFlags flags)
 {
     ImGuiContext* ctx = GImGui;
+    ImGuiContext& g = *ctx; IM_UNUSED(g);
+    IMGUI_DEBUG_LOG_DOCKING("[docking] DockBuilderAddNode 0x%08X flags=%08X\n", node_id, flags);
 
-    if (id != 0)
-        DockBuilderRemoveNode(id);
+    if (node_id != 0)
+        DockBuilderRemoveNode(node_id);
 
     ImGuiDockNode* node = NULL;
     if (flags & ImGuiDockNodeFlags_DockSpace)
     {
-        DockSpace(id, ImVec2(0, 0), (flags & ~ImGuiDockNodeFlags_DockSpace) | ImGuiDockNodeFlags_KeepAliveOnly);
-        node = DockContextFindNodeByID(ctx, id);
+        DockSpace(node_id, ImVec2(0, 0), (flags & ~ImGuiDockNodeFlags_DockSpace) | ImGuiDockNodeFlags_KeepAliveOnly);
+        node = DockContextFindNodeByID(ctx, node_id);
     }
     else
     {
-        node = DockContextAddNode(ctx, id);
+        node = DockContextAddNode(ctx, node_id);
         node->SetLocalFlags(flags);
     }
     node->LastFrameAlive = ctx->FrameCount;   // Set this otherwise BeginDocked will undock during the same frame.
@@ -17844,6 +17851,9 @@ ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
 void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
 {
     ImGuiContext* ctx = GImGui;
+    ImGuiContext& g = *ctx; IM_UNUSED(g);
+    IMGUI_DEBUG_LOG_DOCKING("[docking] DockBuilderRemoveNode 0x%08X\n", node_id);
+
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
     if (node == NULL)
         return;
@@ -19439,7 +19449,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             Text("In SettingsWindows:");
             for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
                 if (settings->DockId != 0)
-                    BulletText("Window '%s' -> DockId %08X", settings->GetName(), settings->DockId);
+                    BulletText("Window '%s' -> DockId %08X DockOrder=%d", settings->GetName(), settings->DockId, settings->DockOrder);
             Text("In SettingsNodes:");
             for (int n = 0; n < dc->NodesSettings.Size; n++)
             {
