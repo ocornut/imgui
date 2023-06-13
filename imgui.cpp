@@ -991,7 +991,6 @@ CODE
 // Debug options
 #define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
 #define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
-#define IMGUI_DEBUG_INI_SETTINGS    0   // Save additional comments in .ini file (particularly helps for Docking, but makes saving slower)
 
 // When using CTRL+TAB (or Gamepad Square+L/R) we delay the visual a little in order to reduce visual noise doing a fast switch.
 static const float NAV_WINDOWING_HIGHLIGHT_DELAY            = 0.20f;    // Time before the highlight and screen dimming starts fading in
@@ -13623,12 +13622,13 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
 
-#if !IMGUI_DEBUG_INI_SETTINGS
-    // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-    // Preserve the full string when IMGUI_DEBUG_INI_SETTINGS is set to make .ini inspection easier.
-    if (const char* p = strstr(name, "###"))
-        name = p;
-#endif
+    if (g.IO.ConfigDebugIniSettings == false)
+    {
+        // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+        // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
+        if (const char* p = strstr(name, "###"))
+            name = p;
+    }
     const size_t name_len = strlen(name);
 
     // Allocate chunk
@@ -18673,24 +18673,24 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         if (node_settings->SelectedTabId)
             buf->appendf(" Selected=0x%08X", node_settings->SelectedTabId);
 
-#if IMGUI_DEBUG_INI_SETTINGS
-        // [DEBUG] Include comments in the .ini file to ease debugging
-        if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
-        {
-            buf->appendf("%*s", ImMax(2, (line_start_pos + 92) - buf->size()), "");     // Align everything
-            if (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow)
-                buf->appendf(" ; in '%s'", node->HostWindow->ParentWindow->Name);
-            // Iterate settings so we can give info about windows that didn't exist during the session.
-            int contains_window = 0;
-            for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
-                if (settings->DockId == node_settings->ID)
-                {
-                    if (contains_window++ == 0)
-                        buf->appendf(" ; contains ");
-                    buf->appendf("'%s' ", settings->GetName());
-                }
-        }
-#endif
+        // [DEBUG] Include comments in the .ini file to ease debugging (this makes saving slower!)
+        if (g.IO.ConfigDebugIniSettings)
+            if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
+            {
+                buf->appendf("%*s", ImMax(2, (line_start_pos + 92) - buf->size()), "");     // Align everything
+                if (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow)
+                    buf->appendf(" ; in '%s'", node->HostWindow->ParentWindow->Name);
+                // Iterate settings so we can give info about windows that didn't exist during the session.
+                int contains_window = 0;
+                for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+                    if (settings->DockId == node_settings->ID)
+                    {
+                        if (contains_window++ == 0)
+                            buf->appendf(" ; contains ");
+                        buf->appendf("'%s' ", settings->GetName());
+                    }
+            }
+
         buf->appendf("\n");
     }
     buf->appendf("\n");
@@ -19421,11 +19421,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             Text("\"%s\"", g.IO.IniFilename);
         else
             TextUnformatted("<NULL>");
+        Checkbox("io.ConfigDebugIniSettings", &io.ConfigDebugIniSettings);
         Text("SettingsDirtyTimer %.2f", g.SettingsDirtyTimer);
         if (TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
         {
             for (int n = 0; n < g.SettingsHandlers.Size; n++)
-                BulletText("%s", g.SettingsHandlers[n].TypeName);
+                BulletText("\"%s\"", g.SettingsHandlers[n].TypeName);
             TreePop();
         }
         if (TreeNode("SettingsWindows", "Settings packed data: Windows: %d bytes", g.SettingsWindows.size()))

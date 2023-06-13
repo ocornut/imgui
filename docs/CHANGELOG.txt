@@ -105,6 +105,8 @@ Other changes:
 
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
+- Debug Tools: Added 'io.ConfigDebugIniSettings' option to save .ini data with extra
+  comments. Currently mainly for inspecting Docking .ini data, but makes saving slower.
 
 Docking+Viewports Branch:
 
