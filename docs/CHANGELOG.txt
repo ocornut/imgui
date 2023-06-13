@@ -42,6 +42,8 @@ Other changes:
 - Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
   This seems to happens on some Windows setup when peripherals disconnect, and is likely
   to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
+- Examples: Win32+OpenGL3: Changed DefWindowProc() to DefWindowProcW() to match other examples
+  and support the example app being compiled without UNICODE. (#6516, #5725, #5961, #5975)
 
 
 -----------------------------------------------------------------------
