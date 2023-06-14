@@ -41,6 +41,8 @@ Other changes:
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
+- IsItemHovered: Tweaked default value of io.HoverDelayNormal from 0.30 to 0.35 (used when
+  using the ImGuiHoveredFlags_DelayNormal flag). (#1485)
 - Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
   isn't covered as much. (Match offset for drag and drop tooltips)
 - Debug Tools: Added 'io.ConfigDebugIniSettings' option to save .ini data with extra
@@ -50,7 +52,7 @@ Other changes:
   This seems to happens on some Windows setup when peripherals disconnect, and is likely
   to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
 - Examples: Win32+OpenGL3: Changed DefWindowProc() to DefWindowProcW() to match other examples
-  and support the example app being compiled without UNICODE. (#6516, #5725, #5961, #5975)
+  and support the example app being compiled without UNICODE. (#6516, #5725, #5961, #5975) [@yenixing]
 
 
 -----------------------------------------------------------------------

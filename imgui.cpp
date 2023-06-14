@@ -1218,7 +1218,7 @@ ImGuiIO::ImGuiIO()
 #endif
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
-    HoverDelayNormal = 0.30f;
+    HoverDelayNormal = 0.35f;
     HoverDelayShort = 0.10f;
     UserData = NULL;
 
@@ -4549,8 +4549,9 @@ void ImGui::NewFrame()
     else if (g.HoverDelayTimer > 0.0f)
     {
         // This gives a little bit of leeway before clearing the hover timer, allowing mouse to cross gaps
+        // We could expose 0.25f as io.HoverClearDelay but I am not sure of the logic yet, this is particularly subtle.
         g.HoverDelayClearTimer += g.IO.DeltaTime;
-        if (g.HoverDelayClearTimer >= ImMax(0.20f, g.IO.DeltaTime * 2.0f)) // ~6 frames at 30 Hz + allow for low framerate
+        if (g.HoverDelayClearTimer >= ImMax(0.25f, g.IO.DeltaTime * 2.0f)) // ~7 frames at 30 Hz + allow for low framerate
             g.HoverDelayTimer = g.HoverDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
     }
 
@@ -8529,7 +8530,8 @@ static void ImGui::UpdateMouseInputs()
         io.MouseDelta = ImVec2(0.0f, 0.0f);
 
     // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
-    if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
+    const bool is_stationary = (g.IO.MouseDelta.x == 0.0f && g.IO.MouseDelta.y == 0.0f);
+    if (!is_stationary)
         g.NavDisableMouseHover = false;
 
     io.MousePosPrev = io.MousePos;
