@@ -5940,10 +5940,11 @@ void ImGui::ShowAboutWindow(bool* p_open)
         return;
     }
     IMGUI_DEMO_MARKER("Tools/About Dear ImGui");
-    ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
+    ImGui::Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Separator();
     ImGui::Text("By Omar Cornut and all Dear ImGui contributors.");
     ImGui::Text("Dear ImGui is licensed under the MIT License, see LICENSE for more information.");
+    ImGui::Text("If your company uses this, please consider sponsoring the project!");
 
     static bool show_config_info = false;
     ImGui::Checkbox("Config/Build Information", &show_config_info);

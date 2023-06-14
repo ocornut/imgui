@@ -3512,6 +3512,7 @@ void ImGui::DestroyContext(ImGuiContext* ctx)
 // IMPORTANT: ###xxx suffixes must be same in ALL languages
 static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
 {
+    { ImGuiLocKey_VersionStr,           "Dear ImGui " IMGUI_VERSION " (" IM_STRINGIFY(IMGUI_VERSION_NUM) ")" },
     { ImGuiLocKey_TableSizeOne,         "Size column to fit###SizeOne"          },
     { ImGuiLocKey_TableSizeAllFit,      "Size all columns to fit###SizeAll"     },
     { ImGuiLocKey_TableSizeAllDefault,  "Size all columns to default###SizeAll" },
