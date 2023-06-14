@@ -6093,12 +6093,13 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
 // When a modal popup is open, newly created windows that want focus (i.e. are not popups and do not specify ImGuiWindowFlags_NoFocusOnAppearing)
 // should be positioned behind that modal window, unless the window was created inside the modal begin-stack.
 // In case of multiple stacked modals newly created window honors begin stack order and does not go below its own modal parent.
-// - Window             // FindBlockingModal() returns Modal1
-//   - Window           //                  .. returns Modal1
+// - WindowA            // FindBlockingModal() returns Modal1
+//   - WindowB          //                  .. returns Modal1
 //   - Modal1           //                  .. returns Modal2
-//      - Window        //                  .. returns Modal2
-//          - Window    //                  .. returns Modal2
+//      - WindowC       //                  .. returns Modal2
+//          - WindowD   //                  .. returns Modal2
 //          - Modal2    //                  .. returns Modal2
+//            - WindowE //                  .. returns NULL
 // Notes:
 // - FindBlockingModal(NULL) == NULL is generally equivalent to GetTopMostPopupModal() == NULL.
 //   Only difference is here we check for ->Active/WasActive but it may be unecessary.
@@ -6109,7 +6110,7 @@ ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
         return NULL;
 
     // Find a modal that has common parent with specified window. Specified window should be positioned behind that modal.
-    for (int i = g.OpenPopupStack.Size - 1; i >= 0; i--)
+    for (int i = 0; i < g.OpenPopupStack.Size; i++)
     {
         ImGuiWindow* popup_window = g.OpenPopupStack.Data[i].Window;
         if (popup_window == NULL || !(popup_window->Flags & ImGuiWindowFlags_Modal))
@@ -6118,11 +6119,9 @@ ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
             continue;
         if (window == NULL)                                         // FindBlockingModal(NULL) test for if FocusWindow(NULL) is naturally possible via a mouse click.
             return popup_window;
-        if (IsWindowWithinBeginStackOf(window, popup_window))       // Window is rendered over last modal, no render order change needed.
-            break;
-        for (ImGuiWindow* parent = popup_window->ParentWindowInBeginStack->RootWindow; parent != NULL; parent = parent->ParentWindowInBeginStack->RootWindow)
-            if (IsWindowWithinBeginStackOf(window, parent))
-                return popup_window;                                // Place window above its begin stack parent.
+        if (IsWindowWithinBeginStackOf(window, popup_window))       // Window may be over modal
+            continue;
+        return popup_window;                                        // Place window right below first block modal
     }
     return NULL;
 }

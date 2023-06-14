@@ -41,6 +41,8 @@ Other changes:
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
+- Modals: In the case of nested modal, made sure that focused or appearing windows are
+  moved below the lowest blocking modal (rather than the highest one). (#4317)
 - IsItemHovered: Tweaked default value of io.HoverDelayNormal from 0.30 to 0.35 (used when
   using the ImGuiHoveredFlags_DelayNormal flag). (#1485)
 - Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
