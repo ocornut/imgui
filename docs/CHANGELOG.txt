@@ -114,6 +114,7 @@ Docking+Viewports Branch:
   keeping ID alive when calling low-level ButtonBehavior() directly). (#5181, #2645)
 - Docking: [Internal] DockBuilderDockWindow() API calls don't clear docking order
   if the target node is same as existing one.
+- Backends: Win32: Added support for changing ParentViewportID after viewport creation.
 
 
 -----------------------------------------------------------------------
