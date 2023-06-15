@@ -665,7 +665,7 @@ namespace ImGui
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled = true);              // return true when activated + toggle (*p_selected) if p_selected != NULL
 
     // Tooltips
-    // - Tooltip are windows following the mouse. They do not take focus away.
+    // - Tooltips are windows following the mouse. They do not take focus away.
     IMGUI_API bool          BeginTooltip();                                                     // begin/append a tooltip window. to create full-featured tooltip (with any kind of items).
     IMGUI_API void          EndTooltip();                                                       // only call EndTooltip() if BeginTooltip() returns true!
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_FMTARGS(1);                     // set a text-only tooltip, typically use with ImGui::IsItemHovered(). override any previous call to SetTooltip().
@@ -1281,13 +1281,13 @@ enum ImGuiHoveredFlags_
     ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 7,   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
     ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 8,   // IsItemHovered() only: Return true even if the position is obstructed or overlapped by another window
     ImGuiHoveredFlags_AllowWhenDisabled             = 1 << 9,   // IsItemHovered() only: Return true even if the item is disabled
-    ImGuiHoveredFlags_NoNavOverride                 = 1 << 10,  // Disable using gamepad/keyboard navigation state when active, always query mouse.
+    ImGuiHoveredFlags_NoNavOverride                 = 1 << 10,  // IsItemHovered() only: Disable using gamepad/keyboard navigation state when active, always query mouse
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped,
     ImGuiHoveredFlags_RootAndChildWindows           = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows,
 
     // Mouse Hovering delays (for tooltips)
-    ImGuiHoveredFlags_DelayNormal                   = 1 << 11,  // IsItemHovered() only: Return true after io.HoverDelayNormal elapsed (~0.35 sec)
-    ImGuiHoveredFlags_DelayShort                    = 1 << 12,  // IsItemHovered() only: Return true after io.HoverDelayShort elapsed (~0.10 sec)
+    ImGuiHoveredFlags_DelayShort                    = 1 << 11,  // IsItemHovered() only: Return true after io.HoverDelayShort elapsed (~0.15 sec)
+    ImGuiHoveredFlags_DelayNormal                   = 1 << 12,  // IsItemHovered() only: Return true after io.HoverDelayNormal elapsed (~0.40 sec)
     ImGuiHoveredFlags_NoSharedDelay                 = 1 << 13,  // IsItemHovered() only: Disable shared delay system where moving from one item to the next keeps the previous timer for a short time (standard for tooltips with long delays)
 };
 
@@ -1929,8 +1929,8 @@ struct ImGuiIO
     float       MouseDragThreshold;             // = 6.0f           // Distance threshold before considering we are dragging.
     float       KeyRepeatDelay;                 // = 0.275f         // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float       KeyRepeatRate;                  // = 0.050f         // When holding a key/button, rate at which it repeats, in seconds.
-    float       HoverDelayNormal;               // = 0.35 sec       // Delay on hovering before IsItemHovered(ImGuiHoveredFlags_DelayNormal) returns true.
-    float       HoverDelayShort;                // = 0.10 sec       // Delay on hovering before IsItemHovered(ImGuiHoveredFlags_DelayShort) returns true.
+    float       HoverDelayShort;                // = 0.15 sec       // Delay before IsItemHovered(ImGuiHoveredFlags_DelayShort) returns true.
+    float       HoverDelayNormal;               // = 0.40 sec       // Delay before IsItemHovered(ImGuiHoveredFlags_DelayNormal) returns true.
     void*       UserData;                       // = NULL           // Store your own data.
 
     ImFontAtlas*Fonts;                          // <auto>           // Font atlas: load, rasterize and pack one or more fonts into a single texture.

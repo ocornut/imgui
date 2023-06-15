@@ -1218,8 +1218,8 @@ ImGuiIO::ImGuiIO()
 #endif
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
-    HoverDelayNormal = 0.35f;
-    HoverDelayShort = 0.10f;
+    HoverDelayShort = 0.15f;
+    HoverDelayNormal = 0.40f;
     UserData = NULL;
 
     Fonts = NULL;
@@ -3981,10 +3981,10 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     // Handle hover delay
     // (some ideas: https://www.nngroup.com/articles/timing-exposing-content)
     float delay;
-    if (flags & ImGuiHoveredFlags_DelayNormal)
-        delay = g.IO.HoverDelayNormal;
-    else if (flags & ImGuiHoveredFlags_DelayShort)
+    if (flags & ImGuiHoveredFlags_DelayShort)
         delay = g.IO.HoverDelayShort;
+    else if (flags & ImGuiHoveredFlags_DelayNormal)
+        delay = g.IO.HoverDelayNormal;
     else
         delay = 0.0f;
     if (delay > 0.0f)
@@ -10094,6 +10094,14 @@ void ImGui::EndTooltip()
     End();
 }
 
+void ImGui::SetTooltip(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    SetTooltipV(fmt, args);
+    va_end(args);
+}
+
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
     if (!BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
@@ -10102,13 +10110,6 @@ void ImGui::SetTooltipV(const char* fmt, va_list args)
     EndTooltip();
 }
 
-void ImGui::SetTooltip(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    SetTooltipV(fmt, args);
-    va_end(args);
-}
 
 //-----------------------------------------------------------------------------
 // [SECTION] POPUPS
@@ -13588,7 +13589,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             else if (rect_type == WRT_InnerRect)            { return window->InnerRect; }
             else if (rect_type == WRT_InnerClipRect)        { return window->InnerClipRect; }
             else if (rect_type == WRT_WorkRect)             { return window->WorkRect; }
-            else if (rect_type == WRT_Content)       { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSize); }
+            else if (rect_type == WRT_Content)              { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSize); }
             else if (rect_type == WRT_ContentIdeal)         { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSizeIdeal); }
             else if (rect_type == WRT_ContentRegionRect)    { return window->ContentRegionRect; }
             IM_ASSERT(0);
