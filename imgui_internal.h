@@ -1963,9 +1963,12 @@ struct ImGuiContext
     ImGuiID                 HoverItemDelayIdPreviousFrame;
     float                   HoverItemDelayTimer;                // Currently used by IsItemHovered()
     float                   HoverItemDelayClearTimer;           // Currently used by IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
+    ImGuiID                 HoverItemUnlockedStationaryId;
 
     // Mouse state
     ImGuiMouseCursor        MouseCursor;
+    int                     MouseMovingFrames;
+    float                   MouseStationaryTimer;
     ImVec2                  MouseLastValidPos;
 
     // Widget state
@@ -2164,10 +2167,12 @@ struct ImGuiContext
         TablesTempDataStacked = 0;
         CurrentTabBar = NULL;
 
-        HoverItemDelayId = HoverItemDelayIdPreviousFrame = 0;
+        HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = 0;
         HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
 
         MouseCursor = ImGuiMouseCursor_Arrow;
+        MouseMovingFrames = 0;
+        MouseStationaryTimer = 0.0f;
 
         TempInputId = 0;
         ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;

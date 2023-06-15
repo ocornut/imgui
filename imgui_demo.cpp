@@ -629,16 +629,16 @@ static void ShowDemoWindowWidgets()
         {
             // Tooltips
             IMGUI_DEMO_MARKER("Widgets/Basic/Tooltips");
-            //ImGui::AlignTextToFramePadding();
+            ImGui::AlignTextToFramePadding();
             ImGui::Text("Tooltips:");
 
             ImGui::SameLine();
-            ImGui::SmallButton("Basic");
+            ImGui::Button("Basic");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("I am a tooltip");
 
             ImGui::SameLine();
-            ImGui::SmallButton("Fancy");
+            ImGui::Button("Fancy");
             if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
             {
                 ImGui::Text("I am a fancy tooltip");
@@ -648,10 +648,21 @@ static void ShowDemoWindowWidgets()
                 ImGui::EndTooltip();
             }
 
+            // Showcase use of ImGuiHoveredFlags_ForTooltip which is an alias for ImGuiHoveredFlags_DelayNormal + ImGuiHoveredFlags_Stationary.
+            // - ImGuiHoveredFlags_DelayNormal requires an hovering delay (default to 0.40 sec)
+            // - ImGuiHoveredFlags_Stationary requires mouse to be stationary (default to 0.15 sec) at least once on a new item.
+            // We show two items to showcase how the main delay is by default shared between items,
+            // so once in "tooltip mode" moving to another tooltip only requires the stationary delay.
+
             ImGui::SameLine();
-            ImGui::SmallButton("Delayed");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) // With a delay
+            ImGui::Button("Delayed1");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
                 ImGui::SetTooltip("I am a tooltip with a delay.");
+
+            ImGui::SameLine();
+            ImGui::Button("Delayed2");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+                ImGui::SetTooltip("I am another tooltip with a delay.");
 
             ImGui::SameLine();
             HelpMarker(
@@ -2377,8 +2388,10 @@ static void ShowDemoWindowWidgets()
         if (item_type == 15){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
         bool hovered_delay_none = ImGui::IsItemHovered();
+        bool hovered_delay_stationary = ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary);
         bool hovered_delay_short = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort);
         bool hovered_delay_normal = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
+        bool hovered_delay_tooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip); // = Normal + Stationary
 
         // Display the values of IsItemHovered() and other common item state functions.
         // Note that the ImGuiHoveredFlags_XXX flags can be combined.
@@ -2425,7 +2438,13 @@ static void ShowDemoWindowWidgets()
             ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
         );
         ImGui::BulletText(
-            "w/ Hovering Delay: None = %d, Fast %d, Normal = %d", hovered_delay_none, hovered_delay_short, hovered_delay_normal);
+            "with Hovering Delay or Stationary test:\n"
+            "IsItemHovered() = = %d\n"
+            "IsItemHovered(_Stationary) = %d\n"
+            "IsItemHovered(_DelayShort) = %d\n"
+            "IsItemHovered(_DelayNormal) = %d\n"
+            "IsItemHovered(_Tooltip) = %d",
+            hovered_delay_none, hovered_delay_stationary, hovered_delay_short, hovered_delay_normal, hovered_delay_tooltip);
 
         if (item_disabled)
             ImGui::EndDisabled();
