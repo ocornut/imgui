@@ -1286,9 +1286,9 @@ enum ImGuiHoveredFlags_
     ImGuiHoveredFlags_RootAndChildWindows           = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows,
 
     // Mouse Hovering delays (for tooltips)
-    ImGuiHoveredFlags_DelayNormal                   = 1 << 11,  // Return true after io.HoverDelayNormal elapsed (~0.35 sec)
-    ImGuiHoveredFlags_DelayShort                    = 1 << 12,  // Return true after io.HoverDelayShort elapsed (~0.10 sec)
-    ImGuiHoveredFlags_NoSharedDelay                 = 1 << 13,  // Disable shared delay system where moving from one item to the next keeps the previous timer for a short time (standard for tooltips with long delays)
+    ImGuiHoveredFlags_DelayNormal                   = 1 << 11,  // IsItemHovered() only: Return true after io.HoverDelayNormal elapsed (~0.35 sec)
+    ImGuiHoveredFlags_DelayShort                    = 1 << 12,  // IsItemHovered() only: Return true after io.HoverDelayShort elapsed (~0.10 sec)
+    ImGuiHoveredFlags_NoSharedDelay                 = 1 << 13,  // IsItemHovered() only: Disable shared delay system where moving from one item to the next keeps the previous timer for a short time (standard for tooltips with long delays)
 };
 
 // Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()

@@ -1958,10 +1958,10 @@ struct ImGuiContext
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Hover Delay system
-    ImGuiID                 HoverDelayId;
-    ImGuiID                 HoverDelayIdPreviousFrame;
-    float                   HoverDelayTimer;                    // Currently used by IsItemHovered()
-    float                   HoverDelayClearTimer;               // Currently used by IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
+    ImGuiID                 HoverItemDelayId;
+    ImGuiID                 HoverItemDelayIdPreviousFrame;
+    float                   HoverItemDelayTimer;                // Currently used by IsItemHovered()
+    float                   HoverItemDelayClearTimer;           // Currently used by IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
 
     // Mouse state
     ImGuiMouseCursor        MouseCursor;
@@ -2163,8 +2163,8 @@ struct ImGuiContext
         TablesTempDataStacked = 0;
         CurrentTabBar = NULL;
 
-        HoverDelayId = HoverDelayIdPreviousFrame = 0;
-        HoverDelayTimer = HoverDelayClearTimer = 0.0f;
+        HoverItemDelayId = HoverItemDelayIdPreviousFrame = 0;
+        HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
 
         MouseCursor = ImGuiMouseCursor_Arrow;
 

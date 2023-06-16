@@ -3990,10 +3990,10 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     if (delay > 0.0f)
     {
         ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromRectangle(g.LastItemData.Rect);
-        if ((flags & ImGuiHoveredFlags_NoSharedDelay) && (g.HoverDelayIdPreviousFrame != hover_delay_id))
-            g.HoverDelayTimer = 0.0f;
-        g.HoverDelayId = hover_delay_id;
-        return g.HoverDelayTimer >= delay;
+        if ((flags & ImGuiHoveredFlags_NoSharedDelay) && (g.HoverItemDelayIdPreviousFrame != hover_delay_id))
+            g.HoverItemDelayTimer = 0.0f;
+        g.HoverItemDelayId = hover_delay_id;
+        return g.HoverItemDelayTimer >= delay;
     }
 
     return true;
@@ -4538,21 +4538,21 @@ void ImGui::NewFrame()
 #endif
 
     // Update hover delay for IsItemHovered() with delays and tooltips
-    g.HoverDelayIdPreviousFrame = g.HoverDelayId;
-    if (g.HoverDelayId != 0)
+    g.HoverItemDelayIdPreviousFrame = g.HoverItemDelayId;
+    if (g.HoverItemDelayId != 0)
     {
         //if (g.IO.MouseDelta.x == 0.0f && g.IO.MouseDelta.y == 0.0f) // Need design/flags
-        g.HoverDelayTimer += g.IO.DeltaTime;
-        g.HoverDelayClearTimer = 0.0f;
-        g.HoverDelayId = 0;
+        g.HoverItemDelayTimer += g.IO.DeltaTime;
+        g.HoverItemDelayClearTimer = 0.0f;
+        g.HoverItemDelayId = 0;
     }
-    else if (g.HoverDelayTimer > 0.0f)
+    else if (g.HoverItemDelayTimer > 0.0f)
     {
         // This gives a little bit of leeway before clearing the hover timer, allowing mouse to cross gaps
         // We could expose 0.25f as io.HoverClearDelay but I am not sure of the logic yet, this is particularly subtle.
-        g.HoverDelayClearTimer += g.IO.DeltaTime;
-        if (g.HoverDelayClearTimer >= ImMax(0.25f, g.IO.DeltaTime * 2.0f)) // ~7 frames at 30 Hz + allow for low framerate
-            g.HoverDelayTimer = g.HoverDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
+        g.HoverItemDelayClearTimer += g.IO.DeltaTime;
+        if (g.HoverItemDelayClearTimer >= ImMax(0.25f, g.IO.DeltaTime * 2.0f)) // ~7 frames at 30 Hz + allow for low framerate
+            g.HoverItemDelayTimer = g.HoverItemDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
     }
 
     // Drag and drop
@@ -13968,7 +13968,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
         Text("ActiveIdUsing: AllKeyboardKeys: %d, NavDirMask: %X", g.ActiveIdUsingAllKeyboardKeys, g.ActiveIdUsingNavDirMask);
         Text("HoveredId: 0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Not displaying g.HoveredId as it is update mid-frame
-        Text("HoverDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverDelayId, g.HoverDelayTimer, g.HoverDelayClearTimer);
+        Text("HoverItemDelayId: 0x%08X, Timer: %.2f, ClearTimer: %.2f", g.HoverItemDelayId, g.HoverItemDelayTimer, g.HoverItemDelayClearTimer);
         Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
         DebugLocateItemOnHover(g.DragDropPayload.SourceId);
         Unindent();
