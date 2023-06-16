@@ -2766,6 +2766,12 @@ static void ShowDemoWindowLayout()
         ImGui::Checkbox("Is", &c3); ImGui::SameLine();
         ImGui::Checkbox("Rich", &c4);
 
+        // Checkbox
+        static bool c5 = false;
+        ImGui::Text("Small"); ImGui::SameLine();
+        ImGui::SmallCheckbox("checkboxes", &c5); ImGui::SameLine();
+        ImGui::Text("exist too.");
+
         // Various
         static float f0 = 1.0f, f1 = 2.0f, f2 = 3.0f;
         ImGui::PushItemWidth(80);

@@ -420,6 +420,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - Checkbox()
 // - CheckboxFlagsT() [Internal]
 // - CheckboxFlags()
+// - SmallCheckbox()
 // - RadioButton()
 // - ProgressBar()
 // - Bullet()
@@ -1206,6 +1207,17 @@ bool ImGui::CheckboxFlags(const char* label, ImS64* flags, ImS64 flags_value)
 bool ImGui::CheckboxFlags(const char* label, ImU64* flags, ImU64 flags_value)
 {
     return CheckboxFlagsT(label, flags, flags_value);
+}
+
+// Like small buttons, small checkboxes fit within text without additional vertical spacing.
+bool ImGui::SmallCheckbox(const char* label, bool* v)
+{
+    ImGuiContext& g = *GImGui;
+    float backup_padding_y = g.Style.FramePadding.y;
+    g.Style.FramePadding.y = 0.0f;
+    bool pressed = Checkbox(label, v);
+    g.Style.FramePadding.y = backup_padding_y;
+    return pressed;
 }
 
 bool ImGui::RadioButton(const char* label, bool active)
