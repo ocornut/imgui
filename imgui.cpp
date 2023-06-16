@@ -10088,6 +10088,13 @@ bool ImGui::BeginTooltip()
     return BeginTooltipEx(ImGuiTooltipFlags_None, ImGuiWindowFlags_None);
 }
 
+bool ImGui::BeginItemTooltip()
+{
+    if (!IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+        return false;
+    return BeginTooltipEx(ImGuiTooltipFlags_None, ImGuiWindowFlags_None);
+}
+
 bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags extra_window_flags)
 {
     ImGuiContext& g = *GImGui;
@@ -10147,6 +10154,23 @@ void ImGui::SetTooltipV(const char* fmt, va_list args)
         return;
     TextV(fmt, args);
     EndTooltip();
+}
+
+// Shortcut to use 'style.HoverFlagsForTooltipMouse' or 'style.HoverFlagsForTooltipNav'.
+// Defaults to == ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort when using the mouse.
+void ImGui::SetItemTooltip(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    if (IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+        SetTooltipV(fmt, args);
+    va_end(args);
+}
+
+void ImGui::SetItemTooltipV(const char* fmt, va_list args)
+{
+    if (IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+        SetTooltipV(fmt, args);
 }
 
 
@@ -13533,7 +13557,7 @@ void ImGui::DebugTextEncoding(const char* str)
 static void MetricsHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip())
+    if (ImGui::BeginItemTooltip())
     {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(desc);
