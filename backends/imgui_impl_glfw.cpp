@@ -778,7 +778,7 @@ void ImGui_ImplGlfw_NewFrame()
     glfwGetFramebufferSize(bd->Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / (float)w, (float)display_h / (float)h);
+        io.DisplayFramebufferScale = ImVec2((double)display_w / (double)w, (double)display_h / (double)h);
 
     // Setup time step
     // (Accept glfwGetTime() not returning a monotonically increasing value. Seems to happens on disconnecting peripherals and probably on VMs and Emscripten, see #6491, #6189, #6114, #3644)
