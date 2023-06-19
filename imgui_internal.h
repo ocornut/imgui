@@ -1963,12 +1963,13 @@ struct ImGuiContext
     ImGuiID                 HoverItemDelayIdPreviousFrame;
     float                   HoverItemDelayTimer;                // Currently used by IsItemHovered()
     float                   HoverItemDelayClearTimer;           // Currently used by IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
-    ImGuiID                 HoverItemUnlockedStationaryId;
+    ImGuiID                 HoverItemUnlockedStationaryId;      // Mouse has once been stationary on this item. Only reset after departing the item.
+    ImGuiID                 HoverWindowUnlockedStationaryId;    // Mouse has once been stationary on this window. Only reset after departing the window.
 
     // Mouse state
     ImGuiMouseCursor        MouseCursor;
     int                     MouseMovingFrames;
-    float                   MouseStationaryTimer;
+    float                   MouseStationaryTimer;               // Time the mouse has been stationary (with some loose heuristic)
     ImVec2                  MouseLastValidPos;
 
     // Widget state
@@ -2167,7 +2168,7 @@ struct ImGuiContext
         TablesTempDataStacked = 0;
         CurrentTabBar = NULL;
 
-        HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = 0;
+        HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = HoverWindowUnlockedStationaryId = 0;
         HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
 
         MouseCursor = ImGuiMouseCursor_Arrow;

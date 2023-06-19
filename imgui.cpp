@@ -3933,6 +3933,16 @@ bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flag
     return true;
 }
 
+static inline float CalcDelayFromHoveredFlags(ImGuiHoveredFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (flags & ImGuiHoveredFlags_DelayShort)
+        return g.Style.HoverDelayShort;
+    if (flags & ImGuiHoveredFlags_DelayNormal)
+        return g.Style.HoverDelayNormal;
+    return 0.0f;
+}
+
 // This is roughly matching the behavior of internal-facing ItemHoverable()
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered()
 // - this should work even for non-interactive items that have no ID, so we cannot use LastItemId
@@ -3995,13 +4005,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 
     // Handle hover delay
     // (some ideas: https://www.nngroup.com/articles/timing-exposing-content)
-    float delay;
-    if (flags & ImGuiHoveredFlags_DelayShort)
-        delay = g.Style.HoverDelayShort;
-    else if (flags & ImGuiHoveredFlags_DelayNormal)
-        delay = g.Style.HoverDelayNormal;
-    else
-        delay = 0.0f;
+    const float delay = CalcDelayFromHoveredFlags(flags);
     if (delay > 0.0f || (flags & ImGuiHoveredFlags_Stationary))
     {
         ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromRectangle(g.LastItemData.Rect);
@@ -4567,6 +4571,10 @@ void ImGui::NewFrame()
         g.HoverItemUnlockedStationaryId = g.HoverItemDelayId;
     else if (g.HoverItemDelayId == 0)
         g.HoverItemUnlockedStationaryId = 0;
+    if (g.HoveredWindow != NULL && g.MouseStationaryTimer >= g.Style.HoverStationaryDelay)
+        g.HoverWindowUnlockedStationaryId = g.HoveredWindow->ID;
+    else if (g.HoveredWindow == NULL)
+        g.HoverWindowUnlockedStationaryId = 0;
 
     // Update hover delay for IsItemHovered() with delays and tooltips
     g.HoverItemDelayIdPreviousFrame = g.HoverItemDelayId;
@@ -7273,6 +7281,16 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     if (!(flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         if (g.ActiveId != 0 && !g.ActiveIdAllowOverlap && g.ActiveId != ref_window->MoveId)
             return false;
+
+    // When changing hovered window we requires a bit of stationary delay before activating hover timer.
+    // FIXME: We don't support delay other than stationary one for now, other delay would need a way
+    // to fullfill the possibility that multiple IsWindowHovered() with varying flag could return true
+    // for different windows of the hierarchy. Possibly need a Hash(Current+Flags) ==> (Timer) cache.
+    // We can implement this for _Stationary because the data is linked to HoveredWindow rather than CurrentWindow.
+    if (flags & ImGuiHoveredFlags_ForTooltip)
+        flags |= g.Style.HoverFlagsForTooltipMouse;
+    if ((flags & ImGuiHoveredFlags_Stationary) != 0 && g.HoverWindowUnlockedStationaryId != ref_window->ID)
+        return false;
 
     return true;
 }

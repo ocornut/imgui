@@ -2523,7 +2523,8 @@ static void ShowDemoWindowWidgets()
             "IsWindowHovered(_RootWindow) = %d\n"
             "IsWindowHovered(_RootWindow|_NoPopupHierarchy) = %d\n"
             "IsWindowHovered(_ChildWindows|_AllowWhenBlockedByPopup) = %d\n"
-            "IsWindowHovered(_AnyWindow) = %d\n",
+            "IsWindowHovered(_AnyWindow) = %d\n"
+            "IsWindowHovered(_Stationary) = %d\n",
             ImGui::IsWindowHovered(),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
@@ -2534,7 +2535,8 @@ static void ShowDemoWindowWidgets()
             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow),
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_Stationary));
 
         ImGui::BeginChild("child", ImVec2(0, 50), true);
         ImGui::Text("This is another child window for testing the _ChildWindows flag.");

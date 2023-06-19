@@ -63,6 +63,7 @@ Other changes:
     isn't covered as much. (Match offset for drag and drop tooltips)
   - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
     Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
+- IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
