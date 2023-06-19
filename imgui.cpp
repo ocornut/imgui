@@ -3950,6 +3950,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsItemHovered) == 0 && "Invalid flags for IsItemHovered()!");
 
     if (g.NavDisableMouseHover && !g.NavDisableHighlight && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
@@ -7253,7 +7254,8 @@ bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_b
 
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
-    IM_ASSERT((flags & (ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenDisabled)) == 0);   // Flags not supported by this function
+    IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsWindowHovered) == 0 && "Invalid flags for IsWindowHovered()!");
+
     ImGuiContext& g = *GImGui;
     ImGuiWindow* ref_window = g.HoveredWindow;
     ImGuiWindow* cur_window = g.CurrentWindow;
