@@ -76,6 +76,8 @@ Other changes:
   comments. Currently mainly for inspecting Docking .ini data, but makes saving slower.
 - Demo: Added more developed "Widgets->Tooltips" section. (#1485)
 - Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
+- Backends: OpenGL3: Fixed erroneous use glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts
+  lower than 3.2. (#6539, #6333) [@krumelmonster]
 - Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
   This seems to happens on some Windows setup when peripherals disconnect, and is likely
   to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
