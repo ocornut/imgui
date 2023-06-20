@@ -6224,6 +6224,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
             ImGui::SeparatorText("Misc");
             ImGui::SliderFloat2("DisplaySafeAreaPadding", (float*)&style.DisplaySafeAreaPadding, 0.0f, 30.0f, "%.0f"); ImGui::SameLine(); HelpMarker("Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");
+
             ImGui::EndTabItem();
         }
 
