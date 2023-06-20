@@ -278,6 +278,8 @@ namespace ImStb
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 #define IM_FLOOR(_VAL)                  ((float)(int)(_VAL))                                    // ImFloor() is not inlined in MSVC debug builds
 #define IM_ROUND(_VAL)                  ((float)(int)((_VAL) + 0.5f))                           //
+#define IM_STRINGIFY_HELPER(_X)         #_X
+#define IM_STRINGIFY(_X)                IM_STRINGIFY_HELPER(_X)                                 // Preprocessor idiom to stringify e.g. an integer.
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
@@ -841,6 +843,14 @@ enum ImGuiItemStatusFlags_
 #endif
 };
 
+// Extend ImGuiHoveredFlags_
+enum ImGuiHoveredFlagsPrivate_
+{
+    ImGuiHoveredFlags_DelayMask_                    = ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay,
+    ImGuiHoveredFlags_AllowedMaskForIsWindowHovered = ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_NoPopupHierarchy | ImGuiHoveredFlags_DockHierarchy | ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_Stationary,
+    ImGuiHoveredFlags_AllowedMaskForIsItemHovered   = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_NoNavOverride | ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayMask_,
+};
+
 // Extend ImGuiInputTextFlags_
 enum ImGuiInputTextFlagsPrivate_
 {
@@ -906,6 +916,7 @@ enum ImGuiSelectableFlagsPrivate_
 enum ImGuiTreeNodeFlagsPrivate_
 {
     ImGuiTreeNodeFlags_ClipLabelForTrailingButton = 1 << 20,
+    ImGuiTreeNodeFlags_UpsideDownArrow            = 1 << 21,// (FIXME-WIP) Turn Down arrow into an Up arrow, but reversed trees (#6517)
 };
 
 enum ImGuiSeparatorFlags_
@@ -935,7 +946,7 @@ enum ImGuiTextFlags_
 enum ImGuiTooltipFlags_
 {
     ImGuiTooltipFlags_None                      = 0,
-    ImGuiTooltipFlags_OverridePreviousTooltip   = 1 << 0,   // Override will clear/ignore previously submitted tooltip (defaults to append)
+    ImGuiTooltipFlags_OverridePrevious          = 1 << 1,   // Clear/ignore previously submitted tooltip (defaults to append)
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -1829,6 +1840,7 @@ struct ImGuiSettingsHandler
 // This is experimental and not officially supported, it'll probably fall short of features, if/when it does we may backtrack.
 enum ImGuiLocKey : int
 {
+    ImGuiLocKey_VersionStr,
     ImGuiLocKey_TableSizeOne,
     ImGuiLocKey_TableSizeAllFit,
     ImGuiLocKey_TableSizeAllDefault,
@@ -2106,7 +2118,6 @@ struct ImGuiContext
 
     // Render
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
-    ImGuiMouseCursor        MouseCursor;
 
     // Drag and Drop
     bool                    DragDropActive;
@@ -2146,13 +2157,20 @@ struct ImGuiContext
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Hover Delay system
-    ImGuiID                 HoverDelayId;
-    ImGuiID                 HoverDelayIdPreviousFrame;
-    float                   HoverDelayTimer;                    // Currently used IsItemHovered(), generally inferred from g.HoveredIdTimer but kept uncleared until clear timer elapse.
-    float                   HoverDelayClearTimer;               // Currently used IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
+    ImGuiID                 HoverItemDelayId;
+    ImGuiID                 HoverItemDelayIdPreviousFrame;
+    float                   HoverItemDelayTimer;                // Currently used by IsItemHovered()
+    float                   HoverItemDelayClearTimer;           // Currently used by IsItemHovered(): grace time before g.TooltipHoverTimer gets cleared.
+    ImGuiID                 HoverItemUnlockedStationaryId;      // Mouse has once been stationary on this item. Only reset after departing the item.
+    ImGuiID                 HoverWindowUnlockedStationaryId;    // Mouse has once been stationary on this window. Only reset after departing the window.
+
+    // Mouse state
+    ImGuiMouseCursor        MouseCursor;
+    int                     MouseMovingFrames;
+    float                   MouseStationaryTimer;               // Time the mouse has been stationary (with some loose heuristic)
+    ImVec2                  MouseLastValidPos;
 
     // Widget state
-    ImVec2                  MouseLastValidPos;
     ImGuiInputTextState     InputTextState;
     ImGuiInputTextDeactivatedState InputTextDeactivatedState;
     ImFont                  InputTextPasswordFont;
@@ -2343,7 +2361,6 @@ struct ImGuiContext
         NavWindowingToggleLayer = false;
 
         DimBgRatio = 0.0f;
-        MouseCursor = ImGuiMouseCursor_Arrow;
 
         DragDropActive = DragDropWithinSource = DragDropWithinTarget = false;
         DragDropSourceFlags = ImGuiDragDropFlags_None;
@@ -2363,8 +2380,12 @@ struct ImGuiContext
         TablesTempDataStacked = 0;
         CurrentTabBar = NULL;
 
-        HoverDelayId = HoverDelayIdPreviousFrame = 0;
-        HoverDelayTimer = HoverDelayClearTimer = 0.0f;
+        HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = HoverWindowUnlockedStationaryId = 0;
+        HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
+
+        MouseCursor = ImGuiMouseCursor_Arrow;
+        MouseMovingFrames = 0;
+        MouseStationaryTimer = 0.0f;
 
         TempInputId = 0;
         ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;

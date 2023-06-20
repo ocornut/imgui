@@ -101,12 +101,53 @@ Other changes:
  VERSION 1.89.7 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+- Moved io.HoverDelayShort/io.HoverDelayNormal to style.HoverDelayShort/style.HoverDelayNormal.
+  As the fields were added in 1.89 and expected to be left unchanged by most users, or only
+  tweaked once during app initialisation, we are exceptionally accepting the breakage.
+  Majority of users should not even notice.
+
 Other changes:
 
+- Tooltips/IsItemHovered() related changes:
+  - IsItemHovered: Added ImGuiHoveredFlags_Stationary to require mouse being
+    stationary when hovering a new item. Added style.HoverStationaryDelay (~0.15 sec).
+    Once the mouse has been stationary once the state is preserved for same item. (#1485)
+  - IsItemHovered: Added ImGuiHoveredFlags_ForTooltip as a shortcut for pulling flags
+    from style.HoverFlagsForTooltipMouse or style.HoverFlagsForTooltipNav. (#1485)
+    - style.HoverFlagsForTooltipMouse defaults to ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort
+    - style.HoverFlagsForTooltipNav defaults to ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal
+  - Tooltips: Added SetItemTooltip() and BeginItemTooltip() functions.
+    They are shortcuts for the common idiom of using IsItemHovered().
+    - SetItemTooltip("Hello")   == if (IsItemHovered(ImGuiHoveredFlags_Tooltip)) { SetTooltip("Hello"); }
+    - BeginItemTooltip()        == IsItemHovered(ImGuiHoveredFlags_Tooltip) && BeginTooltip()
+    The newly added ImGuiHoveredFlags_Tooltip is meant to standardize mouse hovering
+    delays and rules for a whole application.
+    The previously common idiom of using 'if (IsItemHovered()) { SetTooltip(...); }' won't
+    use delay or stationary test.
+  - Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
+    isn't covered as much. (Match offset for drag and drop tooltips)
+  - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
+    Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
+- IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
+- IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
+- Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
+  This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
+  where user may not be callinga constructor manually. (#5856)
+- Modals: In the case of nested modal, made sure that focused or appearing windows are
+  moved below the lowest blocking modal (rather than the highest one). (#4317)
 - Debug Tools: Added 'io.ConfigDebugIniSettings' option to save .ini data with extra
   comments. Currently mainly for inspecting Docking .ini data, but makes saving slower.
+- Demo: Added more developed "Widgets->Tooltips" section. (#1485)
+- Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
+- Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
+  This seems to happens on some Windows setup when peripherals disconnect, and is likely
+  to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
+- Examples: Win32+OpenGL3: Changed DefWindowProc() to DefWindowProcW() to match other examples
+  and support the example app being compiled without UNICODE. (#6516, #5725, #5961, #5975) [@yenixing]
 
 Docking+Viewports Branch:
 
@@ -662,7 +703,7 @@ Other Changes:
 - ColorEdit3: fixed id collision leading to an assertion. (#5707)
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
-  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
+  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayShort (default to 0.10f). (#1485)
 - IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between items,
   so moving from one item to a nearby one will requires delay to elapse again. (#1485)
 - Tables: activating an ID (e.g. clicking button inside) column doesn't prevent columns

@@ -289,7 +289,12 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     io.BackendRendererName = "imgui_impl_opengl3";
 
     // Query for GL version (e.g. 320 for GL 3.2)
-#if !defined(IMGUI_IMPL_OPENGL_ES2)
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+    // GLES 2
+    bd->GlVersion = 200;
+    bd->GlProfileIsES2 = true;
+#else
+    // Desktop or GLES 3
     GLint major = 0;
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -306,6 +311,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     bd->GlProfileIsCompat = (bd->GlProfileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
 #endif
 
+#if defined(IMGUI_IMPL_OPENGL_ES3)
+    bd->GlProfileIsES3 = true;
+#endif
+
     bd->UseBufferSubData = false;
     /*
     // Query vendor to enable glBufferSubData kludge
@@ -315,16 +324,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
             bd->UseBufferSubData = true;
 #endif
     */
-#elif defined(IMGUI_IMPL_OPENGL_ES2)
-    bd->GlVersion = 200; // GLES 2
-    bd->GlProfileIsES2 = true;
-#elif defined(IMGUI_IMPL_OPENGL_ES3)
-    bd->GlVersion = 200; // Don't raise version as it is intended as a desktop version check for now.
-    bd->GlProfileIsES3 = true;
 #endif
 
 #ifdef IMGUI_IMPL_OPENGL_DEBUG
-    printf("GL_MAJOR_VERSION = %d\nGL_MINOR_VERSION = %d\nGL_VENDOR = '%s'\nGL_RENDERER = '%s'\n", major, minor, (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER)); // [DEBUG]
+    printf("GlVersion = %d\nGlProfileIsCompat = %d\nGlProfileMask = 0x%X\nGlProfileIsES2 = %d, GlProfileIsES3 = %d\nGL_VENDOR = '%s'\nGL_RENDERER = '%s'\n", bd->GlVersion, bd->GlProfileIsCompat, bd->GlProfileMask, bd->GlProfileIsES2, bd->GlProfileIsES3, (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER)); // [DEBUG]
 #endif
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET

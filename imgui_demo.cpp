@@ -213,7 +213,7 @@ static void ShowDemoWindowInputs();
 static void HelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip())
+    if (ImGui::BeginItemTooltip())
     {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(desc);
@@ -685,37 +685,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine();
         ImGui::Text("%d", counter);
 
-        {
-            // Tooltips
-            IMGUI_DEMO_MARKER("Widgets/Basic/Tooltips");
-            //ImGui::AlignTextToFramePadding();
-            ImGui::Text("Tooltips:");
-
-            ImGui::SameLine();
-            ImGui::SmallButton("Basic");
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("I am a tooltip");
-
-            ImGui::SameLine();
-            ImGui::SmallButton("Fancy");
-            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-            {
-                ImGui::Text("I am a fancy tooltip");
-                static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
-                ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
-                ImGui::Text("Sin(time) = %f", sinf((float)ImGui::GetTime()));
-                ImGui::EndTooltip();
-            }
-
-            ImGui::SameLine();
-            ImGui::SmallButton("Delayed");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) // With a delay
-                ImGui::SetTooltip("I am a tooltip with a delay.");
-
-            ImGui::SameLine();
-            HelpMarker(
-                "Tooltip are created by using the IsItemHovered() function over any kind of item.");
-        }
+        ImGui::Button("Tooltip");
+        ImGui::SetItemTooltip("I am a tooltip");
 
         ImGui::LabelText("label", "Value");
 
@@ -846,6 +817,73 @@ static void ShowDemoWindowWidgets()
             ImGui::SameLine(); HelpMarker(
                 "Using the simplified one-liner ListBox API here.\nRefer to the \"List boxes\" section below for an explanation of how to use the more flexible and general BeginListBox/EndListBox API.");
         }
+
+        ImGui::TreePop();
+    }
+
+    IMGUI_DEMO_MARKER("Widgets/Tooltips");
+    if (ImGui::TreeNode("Tooltips"))
+    {
+        // Tooltips are windows following the mouse. They do not take focus away.
+        ImGui::SeparatorText("General");
+
+        // Typical use cases:
+        // - Short-form (text only):      SetItemTooltip("Hello");
+        // - Short-form (any contents):   if (BeginItemTooltip()) { Text("Hello"); EndTooltip(); }
+
+        // - Full-form (text only):       if (IsItemHovered(...)) { SetTooltip("Hello"); }
+        // - Full-form (any contents):    if (IsItemHovered(...) && BeginTooltip()) { Text("Hello"); EndTooltip(); }
+
+        HelpMarker(
+            "Tooltip are typically created by using the IsItemHovered() + SetTooltip() functions over any kind of item.\n\n"
+            "We provide a helper SetItemTooltip() function to perform the two with standards flags.");
+
+        ImVec2 sz = ImVec2(-FLT_MIN, 0.0f);
+
+        ImGui::Button("Basic", sz);
+        ImGui::SetItemTooltip("I am a tooltip");
+
+        ImGui::Button("Fancy", sz);
+        if (ImGui::BeginItemTooltip())
+        {
+            ImGui::Text("I am a fancy tooltip");
+            static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
+            ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
+            ImGui::Text("Sin(time) = %f", sinf((float)ImGui::GetTime()));
+            ImGui::EndTooltip();
+        }
+
+        ImGui::SeparatorText("Custom");
+
+        // Showcase NOT relying on a IsItemHovered() to emit a tooltip.
+        static bool always_on = false;
+        ImGui::Checkbox("Always On", &always_on);
+        if (always_on)
+            ImGui::SetTooltip("I am following you around.");
+
+        // The following examples are passed for documentation purpose but may not be useful to most users.
+        // Passing ImGuiHoveredFlags_Tooltip to IsItemHovered() will pull ImGuiHoveredFlags flags values from
+        // 'style.HoverFlagsForTooltipMouse' or 'style.HoverFlagsForTooltipNav' depending on whether mouse or gamepad/keyboard is being used.
+        // With default settings, ImGuiHoveredFlags_Tooltip is equivalent to ImGuiHoveredFlags_DelayShort + ImGuiHoveredFlags_Stationary.
+        ImGui::Button("Manual", sz);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("I am a manually emitted tooltip");
+
+        ImGui::Button("DelayNone", sz);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone))
+            ImGui::SetTooltip("I am a tooltip with no delay.");
+
+        ImGui::Button("DelayShort", sz);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_NoSharedDelay))
+            ImGui::SetTooltip("I am a tooltip with a short delay (%0.2f sec).", ImGui::GetStyle().HoverDelayShort);
+
+        ImGui::Button("DelayLong", sz);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay))
+            ImGui::SetTooltip("I am a tooltip with a long delay (%0.2f sec)", ImGui::GetStyle().HoverDelayNormal);
+
+        ImGui::Button("Stationary", sz);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary))
+            ImGui::SetTooltip("I am a tooltip requiring mouse to be stationary before activating.");
 
         ImGui::TreePop();
     }
@@ -1115,7 +1153,7 @@ static void ShowDemoWindowWidgets()
             ImVec4 tint_col = use_text_color_for_tint ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
             ImVec4 border_col = ImGui::GetStyleColorVec4(ImGuiCol_Border);
             ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, uv_max, tint_col, border_col);
-            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+            if (ImGui::BeginItemTooltip())
             {
                 float region_sz = 32.0f;
                 float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
@@ -2436,8 +2474,10 @@ static void ShowDemoWindowWidgets()
         if (item_type == 15){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
         bool hovered_delay_none = ImGui::IsItemHovered();
+        bool hovered_delay_stationary = ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary);
         bool hovered_delay_short = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort);
         bool hovered_delay_normal = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
+        bool hovered_delay_tooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip); // = Normal + Stationary
 
         // Display the values of IsItemHovered() and other common item state functions.
         // Note that the ImGuiHoveredFlags_XXX flags can be combined.
@@ -2484,7 +2524,13 @@ static void ShowDemoWindowWidgets()
             ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
         );
         ImGui::BulletText(
-            "w/ Hovering Delay: None = %d, Fast %d, Normal = %d", hovered_delay_none, hovered_delay_short, hovered_delay_normal);
+            "with Hovering Delay or Stationary test:\n"
+            "IsItemHovered() = = %d\n"
+            "IsItemHovered(_Stationary) = %d\n"
+            "IsItemHovered(_DelayShort) = %d\n"
+            "IsItemHovered(_DelayNormal) = %d\n"
+            "IsItemHovered(_Tooltip) = %d",
+            hovered_delay_none, hovered_delay_stationary, hovered_delay_short, hovered_delay_normal, hovered_delay_tooltip);
 
         if (item_disabled)
             ImGui::EndDisabled();
@@ -2545,7 +2591,8 @@ static void ShowDemoWindowWidgets()
             "IsWindowHovered(_RootWindow|_NoPopupHierarchy) = %d\n"
             "IsWindowHovered(_RootWindow|_DockHierarchy) = %d\n"
             "IsWindowHovered(_ChildWindows|_AllowWhenBlockedByPopup) = %d\n"
-            "IsWindowHovered(_AnyWindow) = %d\n",
+            "IsWindowHovered(_AnyWindow) = %d\n"
+            "IsWindowHovered(_Stationary) = %d\n",
             ImGui::IsWindowHovered(),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
@@ -2559,7 +2606,8 @@ static void ShowDemoWindowWidgets()
             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_DockHierarchy),
             ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow),
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_Stationary));
 
         ImGui::BeginChild("child", ImVec2(0, 50), true);
         ImGui::Text("This is another child window for testing the _ChildWindows flag.");
@@ -2860,7 +2908,7 @@ static void ShowDemoWindowLayout()
             ImGui::PushID(i);
             ImGui::ListBox("", &selection[i], items, IM_ARRAYSIZE(items));
             ImGui::PopID();
-            //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i);
+            //ImGui::SetItemTooltip("ListBox %d hovered", i);
         }
         ImGui::PopItemWidth();
 
@@ -2913,8 +2961,7 @@ static void ShowDemoWindowLayout()
             ImGui::SameLine();
             ImGui::Button("EEE");
             ImGui::EndGroup();
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("First group hovered");
+            ImGui::SetItemTooltip("First group hovered");
         }
         // Capture the group size and create widgets using the same size
         ImVec2 size = ImGui::GetItemRectSize();
@@ -3475,8 +3522,7 @@ static void ShowDemoWindowPopups()
 
             ImGui::Separator();
             ImGui::Text("Tooltip here");
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("I am a tooltip over a popup");
+            ImGui::SetItemTooltip("I am a tooltip over a popup");
 
             if (ImGui::Button("Stacked Popup"))
                 ImGui::OpenPopup("another popup");
@@ -3560,8 +3606,7 @@ static void ShowDemoWindowPopups()
                         ImGui::CloseCurrentPopup();
                     ImGui::EndPopup();
                 }
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Right-click to open popup");
+                ImGui::SetItemTooltip("Right-click to open popup");
             }
         }
 
@@ -3813,7 +3858,7 @@ static void EditTableSizingFlags(ImGuiTableFlags* p_flags)
     }
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+    if (ImGui::BeginItemTooltip())
     {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
         for (int m = 0; m < IM_ARRAYSIZE(policies); m++)
@@ -6014,10 +6059,11 @@ void ImGui::ShowAboutWindow(bool* p_open)
         return;
     }
     IMGUI_DEMO_MARKER("Tools/About Dear ImGui");
-    ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
+    ImGui::Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Separator();
     ImGui::Text("By Omar Cornut and all Dear ImGui contributors.");
     ImGui::Text("Dear ImGui is licensed under the MIT License, see LICENSE for more information.");
+    ImGui::Text("If your company uses this, please consider sponsoring the project!");
 
     static bool show_config_info = false;
     ImGui::Checkbox("Config/Build Information", &show_config_info);
@@ -6316,8 +6362,22 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat2("SeparatorTextPadding", (float*)&style.SeparatorTextPadding, 0.0f, 40.0f, "%0.f");
             ImGui::SliderFloat("LogSliderDeadzone", &style.LogSliderDeadzone, 0.0f, 12.0f, "%.0f");
 
+            ImGui::SeparatorText("Tooltips");
+            for (int n = 0; n < 2; n++)
+                if (ImGui::TreeNodeEx(n == 0 ? "HoverFlagsForTooltipMouse" : "HoverFlagsForTooltipNav"))
+                {
+                    ImGuiHoveredFlags* p = (n == 0) ? &style.HoverFlagsForTooltipMouse : &style.HoverFlagsForTooltipNav;
+                    ImGui::CheckboxFlags("ImGuiHoveredFlags_DelayNone", p, ImGuiHoveredFlags_DelayNone);
+                    ImGui::CheckboxFlags("ImGuiHoveredFlags_DelayShort", p, ImGuiHoveredFlags_DelayShort);
+                    ImGui::CheckboxFlags("ImGuiHoveredFlags_DelayNormal", p, ImGuiHoveredFlags_DelayNormal);
+                    ImGui::CheckboxFlags("ImGuiHoveredFlags_Stationary", p, ImGuiHoveredFlags_Stationary);
+                    ImGui::CheckboxFlags("ImGuiHoveredFlags_NoSharedDelay", p, ImGuiHoveredFlags_NoSharedDelay);
+                    ImGui::TreePop();
+                }
+
             ImGui::SeparatorText("Misc");
             ImGui::SliderFloat2("DisplaySafeAreaPadding", (float*)&style.DisplaySafeAreaPadding, 0.0f, 30.0f, "%.0f"); ImGui::SameLine(); HelpMarker("Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");
+
             ImGui::EndTabItem();
         }
 
