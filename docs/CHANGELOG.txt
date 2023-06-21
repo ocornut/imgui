@@ -151,6 +151,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Viewports: Closing a viewport via OS/platform means (e.g. OS close button or task-bar menu),
+  mark all windows in this viewport as closed.
 - Docking: Fixed dragging from title-bar empty space (regression from 1.88 related to
   keeping ID alive when calling low-level ButtonBehavior() directly). (#5181, #2645)
 - Docking: [Internal] DockBuilderDockWindow() API calls don't clear docking order
