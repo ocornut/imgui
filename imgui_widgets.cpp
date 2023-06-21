@@ -4573,6 +4573,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 // Clear input
                 apply_new_text = "";
                 apply_new_text_length = 0;
+                value_changed |= (buf[0] != 0);
                 STB_TEXTEDIT_CHARTYPE empty_string;
                 stb_textedit_replace(state, &state->Stb, &empty_string, 0);
             }
