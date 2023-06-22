@@ -7911,7 +7911,7 @@ const char* ImGui::GetKeyName(ImGuiKey key)
 {
     ImGuiContext& g = *GImGui;
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT((IsNamedKey(key) || key == ImGuiKey_None) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
+    IM_ASSERT((IsNamedKeyOrModKey(key) || key == ImGuiKey_None) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
 #else
     if (IsLegacyKey(key))
     {
