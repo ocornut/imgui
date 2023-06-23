@@ -4407,14 +4407,14 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
         ImGuiWindow* moving_window = g.MovingWindow->RootWindowDockTree;
 
         // When a window stop being submitted while being dragged, it may will its viewport until next Begin()
-        const bool window_disappared = ((!moving_window->WasActive && !moving_window->Active) || moving_window->Viewport == NULL);
+        const bool window_disappared = (!moving_window->WasActive && !moving_window->Active);
         if (g.IO.MouseDown[0] && IsMousePosValid(&g.IO.MousePos) && !window_disappared)
         {
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
             if (moving_window->Pos.x != pos.x || moving_window->Pos.y != pos.y)
             {
                 SetWindowPos(moving_window, pos, ImGuiCond_Always);
-                if (moving_window->ViewportOwned) // Synchronize viewport immediately because some overlays may relies on clipping rectangle before we Begin() into the window.
+                if (moving_window->Viewport && moving_window->ViewportOwned) // Synchronize viewport immediately because some overlays may relies on clipping rectangle before we Begin() into the window.
                 {
                     moving_window->Viewport->Pos = pos;
                     moving_window->Viewport->UpdateWorkRect();
@@ -4432,11 +4432,12 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
                     UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseViewport);
 
                 // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
-                if (!IsDragDropPayloadBeingAccepted())
+                if (moving_window->Viewport && !IsDragDropPayloadBeingAccepted())
                     g.MouseViewport = moving_window->Viewport;
 
                 // Clear the NoInput window flag set by the Viewport system
-                moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs; // FIXME-VIEWPORT: Test engine managed to crash here because Viewport was NULL.
+                if (moving_window->Viewport)
+                    moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs;
             }
 
             g.MovingWindow = NULL;
@@ -4971,6 +4972,7 @@ static void AddWindowToDrawData(ImGuiWindow* window, int layer)
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = window->Viewport;
+    IM_ASSERT(viewport != NULL);
     g.IO.MetricsRenderWindows++;
     if (window->Flags & ImGuiWindowFlags_DockNodeHost)
         window->DrawList->ChannelsMerge();
@@ -15889,6 +15891,16 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     if (window->ParentWindow)
         window->ParentWindow->DC.ChildWindows.find_erase(window);
     UpdateWindowParentAndRootLinks(window, window->Flags, NULL); // Update immediately
+
+    if (node->HostWindow && node->HostWindow->ViewportOwned)
+    {
+        // When undocking from a user interaction this will always run in NewFrame() and have not much effect.
+        // But mid-frame, if we clear viewport we need to mark window as hidden as well.
+        window->Viewport = NULL;
+        window->ViewportId = 0;
+        window->ViewportOwned = false;
+        window->Hidden = true;
+    }
 
     // Remove window
     bool erased = false;
