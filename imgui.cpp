@@ -14469,6 +14469,11 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
         // Code explicitly request a viewport
         window->Viewport = (ImGuiViewportP*)FindViewportByID(g.NextWindowData.ViewportId);
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
+        if (window->Viewport && (window->Flags & ImGuiWindowFlags_DockNodeHost) != 0 && window->Viewport->Window != NULL)
+        {
+            window->Viewport->Window = window;
+            window->Viewport->ID = window->ViewportId = window->ID; // Overwrite ID (always owned by node)
+        }
         lock_viewport = true;
     }
     else if ((flags & ImGuiWindowFlags_ChildWindow) || (flags & ImGuiWindowFlags_ChildMenu))
@@ -15919,14 +15924,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     if (node->Windows.Size == 1 && !node->IsCentralNode() && node->HostWindow)
     {
         ImGuiWindow* remaining_window = node->Windows[0];
-        if (node->HostWindow->ViewportOwned && node->IsRootNode())
-        {
-            // Transfer viewport back to the remaining loose window
-            IMGUI_DEBUG_LOG_VIEWPORT("[viewport] Node %08X transfer Viewport %08X=>%08X for Window '%s'\n", node->ID, node->HostWindow->Viewport->ID, remaining_window->ID, remaining_window->Name);
-            IM_ASSERT(node->HostWindow->Viewport->Window == node->HostWindow);
-            node->HostWindow->Viewport->Window = remaining_window;
-            node->HostWindow->Viewport->ID = remaining_window->ID;
-        }
+        // Note: we used to transport viewport ownership here.
         remaining_window->Collapsed = node->HostWindow->Collapsed;
     }
 
@@ -16262,6 +16260,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
                 single_window->ViewportId = node->HostWindow->ViewportId;
                 if (node->HostWindow->ViewportOwned)
                 {
+                    single_window->Viewport->ID = single_window->ID;
                     single_window->Viewport->Window = single_window;
                     single_window->ViewportOwned = true;
                 }
