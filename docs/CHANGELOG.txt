@@ -151,6 +151,11 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Viewports+Docking: Fixed extraneous viewport+platform-window recreation in various
+  combination of showing or hiding windows, docking with/without split, undocking.
+  While with some backends and without OS decorations, some extraneous window recreation
+  were visibly not noticeable, they would typically become noticeable when enabling
+  OS decorations on those windows (e.g. Windows title bar fade-in/animation).
 - Viewports: Closing a viewport via OS/platform means (e.g. OS close button or task-bar menu),
   mark all windows in this viewport as closed.
 - Docking: Fixed one-frame flickering on reappearing windows binding to a dock node
