@@ -15786,6 +15786,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     LastFocusedNodeId = 0;
     SelectedTabId = 0;
     WantCloseTabId = 0;
+    RefViewportId = 0;
     AuthorityForPos = AuthorityForSize = ImGuiDataAuthority_DockNode;
     AuthorityForViewport = ImGuiDataAuthority_Auto;
     IsVisible = true;
@@ -16277,6 +16278,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
                     single_window->ViewportOwned = true;
                 }
             }
+            node->RefViewportId = single_window->ViewportId;
         }
 
         DockNodeHideHostWindow(node);
@@ -16366,6 +16368,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             // Sync Viewport
             if (node->AuthorityForViewport == ImGuiDataAuthority_Window && ref_window)
                 SetNextWindowViewport(ref_window->ViewportId);
+            else if (node->AuthorityForViewport == ImGuiDataAuthority_Window && node->RefViewportId != 0)
+                SetNextWindowViewport(node->RefViewportId);
 
             SetNextWindowClass(&node->WindowClass);
 
@@ -16408,6 +16412,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (node->WantMouseMove && node->HostWindow)
             DockNodeStartMouseMovingWindow(node, node->HostWindow);
     }
+    node->RefViewportId = 0; // Clear when we have a host window
 
     // Update focused node (the one whose title bar is highlight) within a node tree
     if (node->IsSplitNode())
