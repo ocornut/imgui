@@ -67,7 +67,9 @@ Other changes:
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
-- InputText: Fixed not returning true when buffer is cleared by ImGuiInputTextFlags_EscapeClearsAll. (#5688, #2620)
+- CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
+- InputText: Fixed not returning true when buffer is cleared while using the
+  ImGuiInputTextFlags_EscapeClearsAll flag. (#5688, #2620)
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
