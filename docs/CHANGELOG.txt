@@ -40,6 +40,10 @@ Breaking changes:
   As the fields were added in 1.89 and expected to be left unchanged by most users, or only
   tweaked once during app initialisation, we are exceptionally accepting the breakage.
   Majority of users should not even notice.
+- Overlapping items: (#6512, #3909)
+  - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
+  - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
+  - Kept redirecting enums (will obsolete).
 
 Other changes:
 

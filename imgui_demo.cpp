@@ -5482,7 +5482,7 @@ static void ShowDemoWindowTables()
                         ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f));
                     else if (contents_type == CT_Selectable || contents_type == CT_SelectableSpanRow)
                     {
-                        ImGuiSelectableFlags selectable_flags = (contents_type == CT_SelectableSpanRow) ? ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap : ImGuiSelectableFlags_None;
+                        ImGuiSelectableFlags selectable_flags = (contents_type == CT_SelectableSpanRow) ? ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap : ImGuiSelectableFlags_None;
                         if (ImGui::Selectable(label, item_is_selected, selectable_flags, ImVec2(0, row_min_height)))
                         {
                             if (ImGui::GetIO().KeyCtrl)

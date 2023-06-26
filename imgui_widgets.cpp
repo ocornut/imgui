@@ -524,7 +524,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = backup_hovered_window;
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
-    if (hovered && (flags & ImGuiButtonFlags_AllowItemOverlap) && g.HoveredIdPreviousFrame != id)
+    if (hovered && (flags & ImGuiButtonFlags_AllowOverlap) && g.HoveredIdPreviousFrame != id)
         hovered = false;
 
     // Mouse handling
@@ -1552,7 +1552,7 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
     bool hovered, held;
     ImRect bb_interact = bb;
     bb_interact.Expand(axis == ImGuiAxis_Y ? ImVec2(0.0f, hover_extend) : ImVec2(hover_extend, 0.0f));
-    ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
+    ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowOverlap);
     if (hovered)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect; // for IsItemHovered(), because bb_interact is larger than bb
     if (g.ActiveId != id) // Because: we don't want to hover other while Active
@@ -6163,8 +6163,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
 
     ImGuiButtonFlags button_flags = ImGuiTreeNodeFlags_None;
-    if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
-        button_flags |= ImGuiButtonFlags_AllowItemOverlap;
+    if (flags & ImGuiTreeNodeFlags_AllowOverlap)
+        button_flags |= ImGuiButtonFlags_AllowOverlap;
     if (!is_leaf)
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
 
@@ -6237,7 +6237,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
         }
     }
-    if ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
+    if ((flags & ImGuiTreeNodeFlags_AllowOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     // In this branch, TreeNodeBehavior() cannot toggle the selection so this will never trigger.
@@ -6382,7 +6382,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
     ImGuiID id = window->GetID(label);
     flags |= ImGuiTreeNodeFlags_CollapsingHeader;
     if (p_visible)
-        flags |= ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_ClipLabelForTrailingButton;
+        flags |= ImGuiTreeNodeFlags_AllowOverlap | ImGuiTreeNodeFlags_ClipLabelForTrailingButton;
     bool is_open = TreeNodeBehavior(id, flags, label);
     if (p_visible != NULL)
     {
@@ -6411,7 +6411,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
 
 // Tip: pass a non-visible label (e.g. "##hello") then you can use the space to draw other text or image.
 // But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID or use ##unique_id.
-// With this scheme, ImGuiSelectableFlags_SpanAllColumns and ImGuiSelectableFlags_AllowItemOverlap are also frequently used flags.
+// With this scheme, ImGuiSelectableFlags_SpanAllColumns and ImGuiSelectableFlags_AllowOverlap are also frequently used flags.
 // FIXME: Selectable() with (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
 bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
@@ -6495,7 +6495,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_SelectOnClick)     { button_flags |= ImGuiButtonFlags_PressedOnClick; }
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
-    if (flags & ImGuiSelectableFlags_AllowItemOverlap)  { button_flags |= ImGuiButtonFlags_AllowItemOverlap; }
+    if (flags & ImGuiSelectableFlags_AllowOverlap)      { button_flags |= ImGuiButtonFlags_AllowOverlap; }
 
     const bool was_selected = selected;
     bool hovered, held;
@@ -6524,7 +6524,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (pressed)
         MarkItemEdited(id);
 
-    if ((flags & ImGuiSelectableFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
+    if ((flags & ImGuiSelectableFlags_AllowOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     // In this branch, Selectable() cannot toggle the selection so this will never trigger.
@@ -8395,7 +8395,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     }
 
     // Click to Select a tab
-    ImGuiButtonFlags button_flags = ((is_tab_button ? ImGuiButtonFlags_PressedOnClickRelease : ImGuiButtonFlags_PressedOnClick) | ImGuiButtonFlags_AllowItemOverlap);
+    ImGuiButtonFlags button_flags = ((is_tab_button ? ImGuiButtonFlags_PressedOnClickRelease : ImGuiButtonFlags_PressedOnClick) | ImGuiButtonFlags_AllowOverlap);
     if (g.DragDropActive)
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     bool hovered, held;

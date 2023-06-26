@@ -2959,9 +2959,9 @@ void ImGui::TableHeader(const char* label)
     //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
     //GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
 
-    // Using AllowItemOverlap mode because we cover the whole cell, and we want user to be able to submit subsequent items.
+    // Using AllowOverlap mode because we cover the whole cell, and we want user to be able to submit subsequent items.
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_AllowItemOverlap);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_AllowOverlap);
     if (g.ActiveId != id)
         SetItemAllowOverlap();
     if (held || hovered || selected)
