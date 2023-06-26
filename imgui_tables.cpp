@@ -2962,8 +2962,6 @@ void ImGui::TableHeader(const char* label)
     // Using AllowOverlap mode because we cover the whole cell, and we want user to be able to submit subsequent items.
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_AllowOverlap);
-    if (g.ActiveId != id)
-        SetItemAllowOverlap();
     if (held || hovered || selected)
     {
         const ImU32 col = GetColorU32(held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);

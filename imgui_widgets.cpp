@@ -496,6 +496,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     const ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
     if (item_flags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
+    if (item_flags & ImGuiItemflags_AllowOverlap)
+        flags |= ImGuiButtonFlags_AllowOverlap;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
     const bool flatten_hovered_children = (flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredWindow && g.HoveredWindow->RootWindow == window;
@@ -529,8 +531,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = backup_hovered_window;
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
-    if (hovered && (flags & ImGuiButtonFlags_AllowOverlap) && g.HoveredIdPreviousFrame != id)
-        hovered = false;
+    if (flags & ImGuiButtonFlags_AllowOverlap)
+    {
+        if (hovered && g.HoveredIdPreviousFrame != id)
+            hovered = false;
+        if (g.HoveredId == id) // FIXME: Added this to match legacy SetItemAllowOverlap(). Investigate precise side-effects of using (hovered==true) instead?
+            g.HoveredIdAllowOverlap = true;
+    }
 
     // Mouse handling
     const ImGuiID test_owner_id = (flags & ImGuiButtonFlags_NoTestKeyOwner) ? ImGuiKeyOwner_Any : id;
@@ -1546,14 +1553,20 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
     if (!ItemAdd(bb, id, NULL, ImGuiItemFlags_NoNav))
         return false;
 
+    // FIXME: AFAIK the only leftover reason for passing ImGuiButtonFlags_AllowOverlap here is
+    // to allow caller of SplitterBehavior() to call SetItemAllowOverlap() after the item.
+    // Nowadays we would instead want to use SetNextItemAllowOverlap() before the item.
+    ImGuiButtonFlags button_flags = ImGuiButtonFlags_FlattenChildren;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    button_flags |= ImGuiButtonFlags_AllowOverlap;
+#endif
+
     bool hovered, held;
     ImRect bb_interact = bb;
     bb_interact.Expand(axis == ImGuiAxis_Y ? ImVec2(0.0f, hover_extend) : ImVec2(hover_extend, 0.0f));
-    ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowOverlap);
+    ButtonBehavior(bb_interact, id, &hovered, &held, button_flags);
     if (hovered)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect; // for IsItemHovered(), because bb_interact is larger than bb
-    if (g.ActiveId != id) // Because: we don't want to hover other while Active
-        SetItemAllowOverlap();
 
     if (held || (hovered && g.HoveredIdPreviousFrame == id && g.HoveredIdTimer >= hover_visibility_delay))
         SetMouseCursor(axis == ImGuiAxis_Y ? ImGuiMouseCursor_ResizeNS : ImGuiMouseCursor_ResizeEW);
@@ -6158,7 +6171,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
 
     ImGuiButtonFlags button_flags = ImGuiTreeNodeFlags_None;
-    if (flags & ImGuiTreeNodeFlags_AllowOverlap)
+    if ((flags & ImGuiTreeNodeFlags_AllowOverlap) || (g.LastItemData.InFlags & ImGuiItemflags_AllowOverlap))
         button_flags |= ImGuiButtonFlags_AllowOverlap;
     if (!is_leaf)
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
@@ -6232,8 +6245,6 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
         }
     }
-    if ((flags & ImGuiTreeNodeFlags_AllowOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
-        SetItemAllowOverlap();
 
     // In this branch, TreeNodeBehavior() cannot toggle the selection so this will never trigger.
     if (selected != was_selected) //-V547
@@ -6490,7 +6501,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_SelectOnClick)     { button_flags |= ImGuiButtonFlags_PressedOnClick; }
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
-    if (flags & ImGuiSelectableFlags_AllowOverlap)      { button_flags |= ImGuiButtonFlags_AllowOverlap; }
+    if ((flags & ImGuiSelectableFlags_AllowOverlap) || (g.LastItemData.InFlags & ImGuiItemflags_AllowOverlap)) { button_flags |= ImGuiButtonFlags_AllowOverlap; }
 
     const bool was_selected = selected;
     bool hovered, held;
@@ -6518,9 +6529,6 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     }
     if (pressed)
         MarkItemEdited(id);
-
-    if ((flags & ImGuiSelectableFlags_AllowOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
-        SetItemAllowOverlap();
 
     // In this branch, Selectable() cannot toggle the selection so this will never trigger.
     if (selected != was_selected) //-V547
@@ -8390,6 +8398,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     }
 
     // Click to Select a tab
+    // Allow the close button to overlap
     ImGuiButtonFlags button_flags = ((is_tab_button ? ImGuiButtonFlags_PressedOnClickRelease : ImGuiButtonFlags_PressedOnClick) | ImGuiButtonFlags_AllowOverlap);
     if (g.DragDropActive)
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
@@ -8397,10 +8406,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     if (pressed && !is_tab_button)
         TabBarQueueFocus(tab_bar, tab);
-
-    // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs or collapse/close button to be hovered)
-    if (g.ActiveId != id) // Because: we don't want to hover other items while dragging active)
-        SetItemAllowOverlap();
 
     // Drag and drop: re-order tabs
     if (held && !tab_appearing && IsMouseDragging(0))

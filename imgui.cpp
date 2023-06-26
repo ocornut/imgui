@@ -397,6 +397,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2023/06/28 (1.89.7) - overlapping items: obsoleted 'SetItemAllowOverlap()' (called after item) in favor of calling 'SetNextItemAllowOverlap()' (called before item). 'SetItemAllowOverlap()' didn't and couldn't work reliably since 1.89 (2022-11-15).
  - 2023/06/28 (1.89.7) - overlapping items: renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap', 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'. Kept redirecting enums (will obsolete).
  - 2023/06/20 (1.89.7) - moved io.HoverDelayShort/io.HoverDelayNormal to style.HoverDelayShort/style.HoverDelayNormal. As the fields were added in 1.89 and expected to be left unchanged by most users, or only tweaked once during app initialization, we are exceptionally accepting the breakage.
  - 2023/05/30 (1.89.6) - backends: renamed "imgui_impl_sdlrenderer.cpp" to "imgui_impl_sdlrenderer2.cpp" and "imgui_impl_sdlrenderer.h" to "imgui_impl_sdlrenderer2.h". This is in prevision for the future release of SDL3.
@@ -5284,17 +5285,28 @@ bool ImGui::IsItemEdited()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Edited) != 0;
 }
 
+// Allow next item to be overlapped by subsequent items.
+// This works by requiring HoveredId to match for two subsequent frames,
+// so if a following items overwrite it our interactions will naturally be disabled.
+void ImGui::SetNextItemAllowOverlap()
+{
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.ItemFlags |= ImGuiItemflags_AllowOverlap;
+}
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
-// FIXME: Although this is exposed, its interaction and ideal idiom with using ImGuiButtonFlags_AllowOverlap flag are extremely confusing, need rework.
+// FIXME-LEGACY: Use SetNextItemAllowOverlap() *before* your item instead.
 void ImGui::SetItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.LastItemData.ID;
     if (g.HoveredId == id)
         g.HoveredIdAllowOverlap = true;
-    if (g.ActiveId == id)
+    if (g.ActiveId == id) // Before we made this obsolete, most calls to SetItemAllowOverlap() used to avoid this path by testing g.ActiveId != id.
         g.ActiveIdAllowOverlap = true;
 }
+#endif
 
 // FIXME: It might be undesirable that this will likely disable KeyOwner-aware shortcuts systems. Consider a more fine-tuned version for the two users of this function.
 void ImGui::SetActiveIdUsingAllKeyboardKeys()
