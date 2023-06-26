@@ -1559,7 +1559,7 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
     ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
     if (hovered)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect; // for IsItemHovered(), because bb_interact is larger than bb
-    if (g.ActiveId != id)
+    if (g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     if (held || (hovered && g.HoveredIdPreviousFrame == id && g.HoveredIdTimer >= hover_visibility_delay))
@@ -6241,7 +6241,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledOpen;
         }
     }
-    if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
+    if ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     // In this branch, TreeNodeBehavior() cannot toggle the selection so this will never trigger.
@@ -6528,7 +6528,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (pressed)
         MarkItemEdited(id);
 
-    if (flags & ImGuiSelectableFlags_AllowItemOverlap)
+    if ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     // In this branch, Selectable() cannot toggle the selection so this will never trigger.
@@ -8407,8 +8407,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     if (pressed && !is_tab_button)
         TabBarQueueFocus(tab_bar, tab);
 
-    // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs to be hovered)
-    if (g.ActiveId != id)
+    // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs or collapse/close button to be hovered)
+    if (g.ActiveId != id) // Because: we don't want to hover other items while dragging active)
         SetItemAllowOverlap();
 
     // Drag and drop: re-order tabs

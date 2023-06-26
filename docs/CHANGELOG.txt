@@ -65,6 +65,8 @@ Other changes:
     Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
+- Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+  and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
 - CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
