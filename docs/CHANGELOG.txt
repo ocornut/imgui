@@ -48,6 +48,8 @@ Breaking changes:
     and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
   - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
   - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
+  - IsItemHovered: Changed behavior to return false when querying an item using AllowOverlap mode
+    which is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem. (#6512, #3909, #517)
   - Kept redirecting enums (will obsolete).
 
 Other changes:
@@ -72,6 +74,9 @@ Other changes:
     isn't covered as much. (Match offset for drag and drop tooltips)
   - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
     Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
+  - IsItemHovered: Added _AllowWhenOverlappedByWindow to ignore window-overlap only.
+    Option ImGuiHoveredFlags_AllowWhenOverlapped now expand into a combination of both
+    _AllowWhenOverlappedByWindow + _AllowWhenOverlappedByItem, matching old behavior.
 - Overlapping items: (#6512, #3909, #517)
   - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
     and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
