@@ -4050,20 +4050,22 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     }
 
-    // Drag source doesn't report as hovered
-    if (g.DragDropActive && g.DragDropPayload.SourceId == id && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoDisableHover))
-        return false;
-
     // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
     // hover test in widgets code. We could also decide to split this function is two.
     if (id != 0)
+    {
+        // Drag source doesn't report as hovered
+        if (g.DragDropActive && g.DragDropPayload.SourceId == id && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoDisableHover))
+            return false;
+
         SetHoveredID(id);
+    }
 
     // When disabled we'll return false but still set HoveredId
     if (item_flags & ImGuiItemFlags_Disabled)
     {
         // Release active id if turning disabled
-        if (g.ActiveId == id)
+        if (g.ActiveId == id && id != 0)
             ClearActiveID();
         g.HoveredIdDisabled = true;
         return false;
