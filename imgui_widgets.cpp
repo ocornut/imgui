@@ -6528,7 +6528,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (pressed)
         MarkItemEdited(id);
 
-    if ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
+    if ((flags & ImGuiSelectableFlags_AllowItemOverlap) && g.ActiveId != id) // Because: we don't want to hover other while Active
         SetItemAllowOverlap();
 
     // In this branch, Selectable() cannot toggle the selection so this will never trigger.
