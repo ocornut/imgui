@@ -1167,8 +1167,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
 // Process hit-testing on resizing borders. Actual size change will be applied in EndTable()
 // - Set table->HoveredColumnBorder with a short delay/timer to reduce visual feedback noise.
-// - Submit ahead of table contents and header, use ImGuiButtonFlags_AllowItemOverlap to prioritize
-//   widgets overlapping the same area.
 void ImGui::TableUpdateBorders(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
