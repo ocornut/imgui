@@ -1248,7 +1248,7 @@ static void ShowDemoWindowWidgets()
         IMGUI_DEMO_MARKER("Widgets/Selectables/Basic");
         if (ImGui::TreeNode("Basic"))
         {
-            static bool selection[5] = { false, true, false, false, false };
+            static bool selection[6] = { false, true, false, false, false, false };
             ImGui::Selectable("1. I am selectable", &selection[0]);
             ImGui::Selectable("2. I am selectable", &selection[1]);
             ImGui::Text("(I am not selectable)");
@@ -1256,6 +1256,7 @@ static void ShowDemoWindowWidgets()
             if (ImGui::Selectable("5. I am double clickable", selection[4], ImGuiSelectableFlags_AllowDoubleClick))
                 if (ImGui::IsMouseDoubleClicked(0))
                     selection[4] = !selection[4];
+            ImGui::Selectable("6. I am left and right click selectable", &selection[5], ImGuiSelectableFlags_AllowRightClick);
             ImGui::TreePop();
         }
         IMGUI_DEMO_MARKER("Widgets/Selectables/Single Selection");
