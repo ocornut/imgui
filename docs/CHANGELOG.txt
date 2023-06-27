@@ -75,6 +75,9 @@ Other changes:
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
+- Drag and Drop: Apply default behavior of drag source not reporting itself as hovered
+  at lower-level, so DragXXX, SliderXXX, InputXXX, Plot widgets are fullfilling it.
+  (Behavior doesn't apply when ImGuiDragDropFlags_SourceNoDisableHover is set).
 - Modals: In the case of nested modal, made sure that focused or appearing windows are
   moved below the lowest blocking modal (rather than the highest one). (#4317)
 - GetKeyName(): Fixed assert with ImGuiMod_XXX values when IMGUI_DISABLE_OBSOLETE_KEYIO is set.
