@@ -976,7 +976,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table_instance->LastOuterHeight));
     const ImGuiID backup_active_id = g.ActiveId;
     g.ActiveId = 0;
-    const bool is_hovering_table = ItemHoverable(mouse_hit_rect, 0);
+    const bool is_hovering_table = ItemHoverable(mouse_hit_rect, 0, ImGuiItemFlags_None);
     g.ActiveId = backup_active_id;
 
     // [Part 6] Setup final position, offset, skip/clip states and clipping rectangles, detect hovered column

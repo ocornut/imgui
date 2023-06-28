@@ -4038,7 +4038,8 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 }
 
 // Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().
-bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
+// (this does not rely on LastItemData it can be called from a ButtonBehavior() call not following an ItemAdd() call)
+bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -4053,7 +4054,6 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
 
     // Done with rectangle culling so we can perform heavier checks now.
-    ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
     if (!(item_flags & ImGuiItemFlags_NoWindowHoverableCheck) && !IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
     {
         g.HoveredIdDisabled = true;
@@ -12360,7 +12360,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             // Rely on keeping other window->LastItemXXX fields intact.
             source_id = g.LastItemData.ID = window->GetIDFromRectangle(g.LastItemData.Rect);
             KeepAliveID(source_id);
-            bool is_hovered = ItemHoverable(g.LastItemData.Rect, source_id);
+            bool is_hovered = ItemHoverable(g.LastItemData.Rect, source_id, g.LastItemData.InFlags);
             if (is_hovered && g.IO.MouseClicked[mouse_button])
             {
                 SetActiveID(source_id, window);
