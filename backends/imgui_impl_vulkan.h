@@ -59,6 +59,8 @@ struct ImGui_ImplVulkan_InitInfo
     uint32_t                        MinImageCount;          // >= 2
     uint32_t                        ImageCount;             // >= MinImageCount
     VkSampleCountFlagBits           MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT (0 -> default to VK_SAMPLE_COUNT_1_BIT)
+    VkFormat                        ColorFormat;            // Only needed if render pass passed at initialization was VK_NULL_HANDLE
+    VkFormat                        DepthFormat;            // Only needed if render pass passed at initialization was VK_NULL_HANDLE
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
 };

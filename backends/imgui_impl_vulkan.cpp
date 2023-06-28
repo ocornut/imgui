@@ -838,8 +838,22 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
     info.pColorBlendState = &blend_info;
     info.pDynamicState = &dynamic_state;
     info.layout = bd->PipelineLayout;
-    info.renderPass = renderPass;
-    info.subpass = subpass;
+    if (renderPass != VK_NULL_HANDLE)
+    {
+        info.renderPass = renderPass;
+        info.subpass = subpass;
+    }
+    else
+    {
+        VkPipelineRenderingCreateInfoKHR pipeline_rendering_info {};
+        pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+        pipeline_rendering_info.colorAttachmentCount = 1;
+        pipeline_rendering_info.pColorAttachmentFormats = &bd->VulkanInitInfo.ColorFormat;
+        pipeline_rendering_info.depthAttachmentFormat = bd->VulkanInitInfo.DepthFormat;
+        pipeline_rendering_info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+        info.pNext = &pipeline_rendering_info;
+    }
     VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
     check_vk_result(err);
 }
@@ -980,7 +994,8 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
-    IM_ASSERT(render_pass != VK_NULL_HANDLE);
+    if (render_pass == VK_NULL_HANDLE)
+        IM_ASSERT(info->ColorFormat != VK_FORMAT_UNDEFINED);
 
     bd->VulkanInitInfo = *info;
     bd->RenderPass = render_pass;
