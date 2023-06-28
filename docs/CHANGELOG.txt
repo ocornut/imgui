@@ -107,6 +107,21 @@ Breaking changes:
   As the fields were added in 1.89 and expected to be left unchanged by most users, or only
   tweaked once during app initialisation, we are exceptionally accepting the breakage.
   Majority of users should not even notice.
+- Overlapping items: (#6512, #3909, #517)
+  - Added 'SetNextItemAllowOverlap()' (called before an item) as a replacement for using
+    'SetItemAllowOverlap()' (called after an item). This is roughly equivalent to using the
+    legacy 'SetItemAllowOverlap()' call (public API) + ImGuiButtonFlags_AllowOverlap (internal).
+  - Obsoleted 'SetItemAllowOverlap()': it didn't and couldn't work reliably since 1.89 (2022-11-15),
+    and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
+  - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
+  - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
+  - IsItemHovered: Changed behavior to return false when querying an item using AllowOverlap mode
+    which is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem. (#6512, #3909, #517)
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
+  - Most item types should now work with SetNextItemAllowOverlap(). (#6512, #3909, #517)
+  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
+  - Kept redirecting enums (will obsolete).
 
 Other changes:
 
@@ -130,14 +145,22 @@ Other changes:
     isn't covered as much. (Match offset for drag and drop tooltips)
   - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
     Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
+  - IsItemHovered: Added _AllowWhenOverlappedByWindow to ignore window-overlap only.
+    Option ImGuiHoveredFlags_AllowWhenOverlapped now expand into a combination of both
+    _AllowWhenOverlappedByWindow + _AllowWhenOverlappedByItem, matching old behavior.
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
   ScrollX or ScrollY flags from being impossible to resize. (#6503)
-- InputText: Fixed not returning true when buffer is cleared by ImGuiInputTextFlags_EscapeClearsAll. (#5688, #2620)
+- CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
+- InputText: Fixed not returning true when buffer is cleared while using the
+  ImGuiInputTextFlags_EscapeClearsAll flag. (#5688, #2620)
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
+- Drag and Drop: Apply default behavior of drag source not reporting itself as hovered
+  at lower-level, so DragXXX, SliderXXX, InputXXX, Plot widgets are fullfilling it.
+  (Behavior doesn't apply when ImGuiDragDropFlags_SourceNoDisableHover is set).
 - Modals: In the case of nested modal, made sure that focused or appearing windows are
   moved below the lowest blocking modal (rather than the highest one). (#4317)
 - GetKeyName(): Fixed assert with ImGuiMod_XXX values when IMGUI_DISABLE_OBSOLETE_KEYIO is set.
