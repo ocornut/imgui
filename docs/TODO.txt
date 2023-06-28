@@ -167,7 +167,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper.
- - combo: flag for BeginCombo to not return true when unchanged (#1182)
  - combo: a way/helper to customize the combo preview (#1658) -> experimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection (WIP range-select branch)

@@ -1926,7 +1926,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         const char* item_text;
         if (!items_getter(data, i, &item_text))
             item_text = "*Unknown item*";
-        if (Selectable(item_text, item_selected))
+        if (Selectable(item_text, item_selected) && *current_item != i)
         {
             value_changed = true;
             *current_item = i;
