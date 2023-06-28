@@ -50,6 +50,10 @@ Breaking changes:
   - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
   - IsItemHovered: Changed behavior to return false when querying an item using AllowOverlap mode
     which is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem. (#6512, #3909, #517)
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
+  - Most item types should now work with SetNextItemAllowOverlap(). (#6512, #3909, #517)
+  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
   - Kept redirecting enums (will obsolete).
 
 Other changes:
@@ -77,10 +81,6 @@ Other changes:
   - IsItemHovered: Added _AllowWhenOverlappedByWindow to ignore window-overlap only.
     Option ImGuiHoveredFlags_AllowWhenOverlapped now expand into a combination of both
     _AllowWhenOverlappedByWindow + _AllowWhenOverlappedByItem, matching old behavior.
-- Overlapping items: (#6512, #3909, #517)
-  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
-    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
-  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either

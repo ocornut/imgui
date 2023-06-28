@@ -531,15 +531,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (flatten_hovered_children)
         g.HoveredWindow = backup_hovered_window;
 
-    // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
-    if (item_flags & ImGuiItemflags_AllowOverlap)
-    {
-        if (hovered && g.HoveredIdPreviousFrame != id)
-            hovered = false;
-        if (g.HoveredId == id) // FIXME: Added this to match legacy SetItemAllowOverlap(). Investigate precise side-effects of using (hovered==true) instead?
-            g.HoveredIdAllowOverlap = true;
-    }
-
     // Mouse handling
     const ImGuiID test_owner_id = (flags & ImGuiButtonFlags_NoTestKeyOwner) ? ImGuiKeyOwner_Any : id;
     if (hovered)
