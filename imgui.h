@@ -2772,8 +2772,8 @@ enum ImGuiMultiSelectFlags_
 //        This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
 //        If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
 //     4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
-//        Call IsItemToggledSelection() to query if the selection state has been toggled, if you need the info immediately for your display (before EndMultiSelect()).
-//        When cannot provide a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggled" event instead.
+//        (You may optionally call IsItemToggledSelection() to query if the selection state has been toggled for a given item, if you need that info immediately for your display (before EndMultiSelect()).)
+//        (When cannot provide a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggled" event instead.)
 //   End
 //     5) Call EndMultiSelect(). Save the value of ->RangeSrcItem for the next frame (you may convert the value in a format that is safe for persistance)
 //     6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)

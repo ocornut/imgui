@@ -7156,7 +7156,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* r
         ms->BeginIO.RangeSelected = ms->EndIO.RangeSelected = range_ref_is_selected;
     }
 
-    // Auto clear when using Navigation to move within the selection (we compare SelectScopeId so it possible to use multiple lists inside a same window)
+    // Auto clear when using Navigation to move within the selection
+    // (we compare FocusScopeId so it possible to use multiple selections inside a same window)
     if (g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == ms->FocusScopeId && g.NavJustMovedToHasSelectionData)
     {
         if (ms->KeyMods & ImGuiMod_Shift)
@@ -7255,8 +7256,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     // For this to work, IF the user is clipping items, they need to set RangeSrcPassedBy = true to notify the system.
     if (ms->IsSetRange)
     {
-        IM_ASSERT(id != 0);
-        IM_ASSERT((ms->KeyMods & ImGuiMod_Shift) != 0);
+        IM_ASSERT(id != 0 && (ms->KeyMods & ImGuiMod_Shift) != 0);
         const bool is_range_src = (ms->BeginIO.RangeSrcItem == item_data);
         const bool is_range_dst = !ms->RangeDstPassedBy && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
         if (is_range_dst)
@@ -7315,15 +7315,22 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     // Alter selection
     if (pressed && (!enter_pressed || !selected))
     {
-        //-------------------------------------------------------------------------------------------------------------------------------------------------
-        // ACTION                           | Begin     | Item Old        | Item New                                                   | End
-        //-------------------------------------------------------------------------------------------------------------------------------------------------
-        // Keys Navigated, Ctrl=0, Shift=0  | In.Clear  | Clear -> Sel=0  | Src=item, Pressed -> Sel=1                                 |
-        // Keys Navigated, Ctrl=0, Shift=1  | n/a       | n/a             | Dst=item, Pressed -> Sel=1,   Out.Clear, Out.SetRange=1    | Clear + SetRange
-        // Keys Navigated, Ctrl=1, Shift=1  | n/a       | n/a             | Dst=item, Pressed -> Sel=Src, Out.Clear, Out.SetRange=Src  | Clear + SetRange
-        // Mouse Pressed, Ctrl=0, Shift=0   | n/a       | n/a (Sel=1)     | Src=item, Pressed -> Sel=1,   Out.Clear, Out.SetRange=1    | Clear + SetRange
-        // Mouse Pressed, Ctrl=0, Shift=1   | n/a       | n/a             | Dst=item, Pressed -> Sel=1,   Out.Clear, Out.SetRange=1    | Clear + SetRange
-        //-------------------------------------------------------------------------------------------------------------------------------------------------
+        //----------------------------------------------------------------------------------------
+        // ACTION                      | Begin  | Pressed/Activated  | End
+        //----------------------------------------------------------------------------------------
+        // Keys Navigated:             | Clear  | Src=item, Sel=1               SetRange 1
+        // Keys Navigated: Ctrl        | n/a    | n/a
+        // Keys Navigated:      Shift  | n/a    | Dst=item, Sel=1,   => Clear + SetRange 1
+        // Keys Navigated: Ctrl+Shift  | n/a    | Dst=item, Sel=Src  => Clear + SetRange Src-Dst
+        // Keys Activated:             | n/a    | Src=item, Sel=1    => Clear + SetRange 1
+        // Keys Activated: Ctrl        | n/a    | Src=item, Sel=!Sel =>         SetSange 1
+        // Keys Activated:      Shift  | n/a    | Dst=item, Sel=1    => Clear + SetSange 1
+        //----------------------------------------------------------------------------------------
+        // Mouse Pressed:              | n/a    | Src=item, Sel=1,   => Clear + SetRange 1
+        // Mouse Pressed:  Ctrl        | n/a    | Src=item, Sel=!Sel =>         SetRange 1
+        // Mouse Pressed:       Shift  | n/a    | Dst=item, Sel=1,   => Clear + SetRange 1
+        // Mouse Pressed:  Ctrl+Shift  | n/a    | Dst=item, Sel=!Sel =>         SetRange Src-Dst
+        //----------------------------------------------------------------------------------------
 
         ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
         if (is_shift && is_multiselect)
@@ -7341,6 +7348,8 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             selected = is_ctrl ? !selected : true;
             ms->EndIO.RangeSrcItem = ms->EndIO.RangeDstItem = item_data;
             ms->EndIO.RangeSelected = selected;
+            ms->EndIO.RequestSetRange = true;
+            ms->EndIO.RangeDirection = +1;
         }
 
         if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
