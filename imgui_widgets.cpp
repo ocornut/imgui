@@ -7294,6 +7294,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     }
 
     // Right-click handling: this could be moved at the Selectable() level.
+    // FIXME-MULTISELECT: See https://github.com/ocornut/imgui/pull/5816
     bool hovered = IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
     if (hovered && IsMouseClicked(1))
     {
@@ -7333,11 +7334,12 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         //----------------------------------------------------------------------------------------
 
         ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
+        ms->EndIO.RequestSetRange = true;
+        ms->EndIO.RangeDstItem = item_data;
         if (is_shift && is_multiselect)
         {
-            // Shift+Arrow always select, Ctrl+Shift+Arrow copy source selection state.
-            ms->EndIO.RequestSetRange = true;
-            ms->EndIO.RangeDstItem = item_data;
+            // Shift+Arrow always select
+            // Ctrl+Shift+Arrow copy source selection state (alrady stored by BeginMultiSelect() in RangeSelected)
             if (!is_ctrl)
                 ms->EndIO.RangeSelected = true;
             ms->EndIO.RangeDirection = ms->BeginIO.RangeSrcPassedBy ? +1 : -1;
@@ -7346,40 +7348,23 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         {
             // Ctrl inverts selection, otherwise always select
             selected = is_ctrl ? !selected : true;
-            ms->EndIO.RangeSrcItem = ms->EndIO.RangeDstItem = item_data;
+            ms->EndIO.RangeSrcItem = item_data;
             ms->EndIO.RangeSelected = selected;
-            ms->EndIO.RequestSetRange = true;
             ms->EndIO.RangeDirection = +1;
         }
 
         if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
         {
-            // Mouse click without CTRL clears the selection, unless the clicked item is already selected
             if (is_multiselect && !is_ctrl)
                 ms->EndIO.RequestClear = true;
-            if (is_multiselect && !is_shift && ms->EndIO.RequestClear)
-            {
-                // For toggle selection unless there is a Clear request, we can handle it completely locally without sending a RangeSet request.
-                IM_ASSERT(ms->EndIO.RangeSrcItem == ms->EndIO.RangeDstItem); // Setup by else block above
-                ms->EndIO.RequestSetRange = true;
-                ms->EndIO.RangeSelected = selected;
-                ms->EndIO.RangeDirection = +1;
-            }
-            if (!is_multiselect)
-            {
-                // Clear selection, set single item range
-                IM_ASSERT(ms->EndIO.RangeSrcItem == item_data && ms->EndIO.RangeDstItem == item_data); // Setup by block above
-                ms->EndIO.RequestClear = true;
-                ms->EndIO.RequestSetRange = true;
-            }
         }
         else if (input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad)
         {
-            if (is_multiselect && is_shift && !is_ctrl)
-                ms->EndIO.RequestClear = true;
-            else if (!is_multiselect)
+            if (is_multiselect && is_shift && !is_ctrl) // Without Shift the RequestClear was done in BeginIO, not necessary to do again.
                 ms->EndIO.RequestClear = true;
         }
+        else if (!is_multiselect)
+            ms->EndIO.RequestClear = true;
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
