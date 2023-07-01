@@ -3873,6 +3873,9 @@ void ImGuiInputTextCallbackData::DeleteChars(int pos, int bytes_count)
 
 void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
+    if (!new_text)
+        return;
+    
     const bool is_resizable = (Flags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)strlen(new_text);
     if (new_text_len + BufTextLen >= BufSize)
