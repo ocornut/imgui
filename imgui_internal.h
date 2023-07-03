@@ -1978,7 +1978,6 @@ struct ImGuiContext
 
     // Mouse state
     ImGuiMouseCursor        MouseCursor;
-    int                     MouseMovingFrames;
     float                   MouseStationaryTimer;               // Time the mouse has been stationary (with some loose heuristic)
     ImVec2                  MouseLastValidPos;
 
@@ -2182,7 +2181,6 @@ struct ImGuiContext
         HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
 
         MouseCursor = ImGuiMouseCursor_Arrow;
-        MouseMovingFrames = 0;
         MouseStationaryTimer = 0.0f;
 
         TempInputId = 0;
