@@ -107,6 +107,9 @@ Other changes:
 - Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
 - Backends: OpenGL3: Fixed erroneous use glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts
   lower than 3.2. (#6539, #6333) [@krumelmonster]
+- Backends: Vulkan: Added optional support for VK_KHR_dynamic_rendering (Vulkan 1.3+) in the
+  backend for applications using it. User needs to set 'init_info->UseDynamicRendering = true'
+  and 'init_info->ColorAttachmentFormat'. RenderPass becomes unused. (#5446, #5037) [@spnda, @cmarcelo]
 - Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
   This seems to happens on some Windows setup when peripherals disconnect, and is likely
   to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
