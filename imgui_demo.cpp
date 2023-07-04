@@ -1,10 +1,12 @@
-// dear imgui, v1.89.7 WIP
+// dear imgui, v1.89.7
 // (demo code)
 
 // Help:
 // - Read FAQ at http://dearimgui.com/faq
-// - Newcomers, read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 // - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp. All applications in examples/ are doing that.
+// - Need help integrating Dear ImGui in your codebase?
+//   - Read Getting Started https://github.com/ocornut/imgui/wiki/Getting-Started
+//   - Read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 // Read imgui.cpp for more details, documentation and comments.
 // Get the latest version at https://github.com/ocornut/imgui
 

@@ -1,4 +1,4 @@
-// dear imgui, v1.89.7 WIP
+// dear imgui, v1.89.7
 // (headers)
 
 // Help:
@@ -9,21 +9,23 @@
 
 // Resources:
 // - FAQ                   http://dearimgui.com/faq
-// - Homepage & latest     https://github.com/ocornut/imgui
+// - Homepage              https://github.com/ocornut/imgui
 // - Releases & changelog  https://github.com/ocornut/imgui/releases
 // - Gallery               https://github.com/ocornut/imgui/issues/6478 (please post your screenshots/video there!)
 // - Wiki                  https://github.com/ocornut/imgui/wiki (lots of good stuff there)
+// - Getting Started       https://github.com/ocornut/imgui/wiki/Getting-Started
 // - Glossary              https://github.com/ocornut/imgui/wiki/Glossary
 // - Issues & support      https://github.com/ocornut/imgui/issues
 
 // Getting Started?
-// - For first-time users having issues compiling/linking/running or issues loading fonts:
+// - Read https://github.com/ocornut/imgui/wiki/Getting-Started
+// - For first-time users having issues compiling/linking/running/loading fonts:
 //   please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.89.7 WIP"
-#define IMGUI_VERSION_NUM   18968
+#define IMGUI_VERSION       "1.89.7"
+#define IMGUI_VERSION_NUM   18970
 #define IMGUI_HAS_TABLE
 
 /*

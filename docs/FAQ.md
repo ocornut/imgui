@@ -50,7 +50,8 @@ or view this file with any Markdown viewer.
 
 **This library is poorly documented at the moment and expects the user to be acquainted with C/C++.**
 - The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
-- Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
+- Handy [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide to integrate Dear ImGui in an existing application.
+- 20+ standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
 - See documentation: [Backends](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md), [Examples](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md), [Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
