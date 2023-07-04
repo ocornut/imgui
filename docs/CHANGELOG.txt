@@ -50,39 +50,41 @@ Breaking changes:
     and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
   - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
   - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
-  - IsItemHovered: Changed behavior to return false when querying an item using AllowOverlap mode
-    which is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem. (#6512, #3909, #517)
-  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
-    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
-  - Most item types should now work with SetNextItemAllowOverlap(). (#6512, #3909, #517)
-  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
   - Kept redirecting enums (will obsolete).
 
 Other changes:
 
 - Tooltips/IsItemHovered() related changes:
-  - IsItemHovered: Added ImGuiHoveredFlags_Stationary to require mouse being
-    stationary when hovering a new item. Added style.HoverStationaryDelay (~0.15 sec).
-    Once the mouse has been stationary once the state is preserved for same item. (#1485)
-  - IsItemHovered: Added ImGuiHoveredFlags_ForTooltip as a shortcut for pulling flags
-    from style.HoverFlagsForTooltipMouse or style.HoverFlagsForTooltipNav. (#1485)
-    - style.HoverFlagsForTooltipMouse defaults to ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort
-    - style.HoverFlagsForTooltipNav defaults to ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal
   - Tooltips: Added SetItemTooltip() and BeginItemTooltip() functions.
     They are shortcuts for the common idiom of using IsItemHovered().
     - SetItemTooltip("Hello")   == if (IsItemHovered(ImGuiHoveredFlags_Tooltip)) { SetTooltip("Hello"); }
     - BeginItemTooltip()        == IsItemHovered(ImGuiHoveredFlags_Tooltip) && BeginTooltip()
-    The newly added ImGuiHoveredFlags_Tooltip is meant to standardize mouse hovering
-    delays and rules for a whole application.
-    The previously common idiom of using 'if (IsItemHovered()) { SetTooltip(...); }' won't
-    use delay or stationary test.
+    The newly added ImGuiHoveredFlags_Tooltip is meant to facilitate standardizing
+    mouse hovering delays and rules for a given application.
+    The previously common idiom of using 'if (IsItemHovered()) { SetTooltip(...); }'
+    won't use delay or stationary test.
+  - IsItemHovered: Added ImGuiHoveredFlags_Stationary to require mouse being
+    stationary when hovering a new item. Added style.HoverStationaryDelay (~0.15 sec).
+    Once the mouse has been stationary once the state is preserved for same item. (#1485)
+  - IsItemHovered: Added ImGuiHoveredFlags_ForTooltip as a shortcut for pulling flags
+    from style.HoverFlagsForTooltipMouse or style.HoverFlagsForTooltipNav depending
+    on active inputs (#1485)
+    - style.HoverFlagsForTooltipMouse defaults to 'ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort'
+    - style.HoverFlagsForTooltipNav defaults to 'ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal'.
   - Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
     isn't covered as much. (Match offset for drag and drop tooltips)
   - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
     Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
-  - IsItemHovered: Added _AllowWhenOverlappedByWindow to ignore window-overlap only.
+  - IsItemHovered: Added ImGuiHoveredFlags_AllowWhenOverlappedByWindow to ignore window-overlap only.
     Option ImGuiHoveredFlags_AllowWhenOverlapped now expand into a combination of both
     _AllowWhenOverlappedByWindow + _AllowWhenOverlappedByItem, matching old behavior.
+- Overlapping items: (#6512, #3909, #517)
+  - Most item types should now work with SetNextItemAllowOverlap(). (#6512, #3909, #517)
+  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
+  - IsItemHovered: Changed to return false when querying an item using AllowOverlap mode which
+    is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem to opt-out. (#6512, #3909, #517)
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
@@ -96,9 +98,9 @@ Other changes:
   This is consistent with other widgets. If you need something else, you can use BeginCombo(). (#1182)
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
-  where user may not be callinga constructor manually. (#5856)
+  where user may not be calling a constructor manually. (#5856)
 - Drag and Drop: Apply default behavior of drag source not reporting itself as hovered
-  at lower-level, so DragXXX, SliderXXX, InputXXX, Plot widgets are fullfilling it.
+  at lower-level, so DragXXX, SliderXXX, InputXXX, Plot widgets are fulfilling it.
   (Behavior doesn't apply when ImGuiDragDropFlags_SourceNoDisableHover is set).
 - Modals: In the case of nested modal, made sure that focused or appearing windows are
   moved below the lowest blocking modal (rather than the highest one). (#4317)
