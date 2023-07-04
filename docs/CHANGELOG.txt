@@ -98,8 +98,10 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.7 WIP (In Progress)
+ VERSION 1.89.7 (Released 2023-07-04)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.7
 
 Breaking changes:
 
@@ -155,6 +157,10 @@ Other changes:
 - CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
 - InputText: Fixed not returning true when buffer is cleared while using the
   ImGuiInputTextFlags_EscapeClearsAll flag. (#5688, #2620)
+- InputText: ImGuiInputTextCallbackData::InsertChars() accept (NULL,NULL) range, in order to conform
+  to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#6565, #6566, #3615)
+- Combo: Made simple/legacy Combo() function not returns true when picking already selected item.
+  This is consistent with other widgets. If you need something else, you can use BeginCombo(). (#1182)
 - Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
   This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
   where user may not be callinga constructor manually. (#5856)
@@ -170,6 +176,9 @@ Other changes:
 - Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
 - Backends: OpenGL3: Fixed erroneous use glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts
   lower than 3.2. (#6539, #6333) [@krumelmonster]
+- Backends: Vulkan: Added optional support for VK_KHR_dynamic_rendering (Vulkan 1.3+) in the
+  backend for applications using it. User needs to set 'init_info->UseDynamicRendering = true'
+  and 'init_info->ColorAttachmentFormat'. RenderPass becomes unused. (#5446, #5037) [@spnda, @cmarcelo]
 - Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
   This seems to happens on some Windows setup when peripherals disconnect, and is likely
   to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)

@@ -1,4 +1,4 @@
-// dear imgui, v1.89.7 WIP
+// dear imgui, v1.89.7
 // (widgets code)
 
 /*
@@ -1932,7 +1932,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         const char* item_text;
         if (!items_getter(data, i, &item_text))
             item_text = "*Unknown item*";
-        if (Selectable(item_text, item_selected))
+        if (Selectable(item_text, item_selected) && *current_item != i)
         {
             value_changed = true;
             *current_item = i;
@@ -3879,6 +3879,10 @@ void ImGuiInputTextCallbackData::DeleteChars(int pos, int bytes_count)
 
 void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
+    // Accept null ranges
+    if (new_text == new_text_end)
+        return;
+
     const bool is_resizable = (Flags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)strlen(new_text);
     if (new_text_len + BufTextLen >= BufSize)
