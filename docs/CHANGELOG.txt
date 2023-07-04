@@ -92,6 +92,7 @@ Other changes:
 - CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
 - InputText: Fixed not returning true when buffer is cleared while using the
   ImGuiInputTextFlags_EscapeClearsAll flag. (#5688, #2620)
+- InputText: Fixed a crash on deactivating a ReadOnly buffer. (#6570, #6292, #4714)
 - InputText: ImGuiInputTextCallbackData::InsertChars() accept (NULL,NULL) range, in order to conform
   to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#6565, #6566, #3615)
 - Combo: Made simple/legacy Combo() function not returns true when picking already selected item.
