@@ -38,6 +38,8 @@ Breaking changes:
 
 Other changes:
 
+- Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.7 (Released 2023-07-04)
