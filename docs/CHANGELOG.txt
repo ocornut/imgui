@@ -45,6 +45,8 @@ Other changes:
   a scrollbar when contents is over parent viewport size. (#7287, #7063) [@ZingBallyhoo]
 - Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
   a wrong viewport if none was initially set.
+- Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side
+  conversion. (#6575) [@Demonese]
 
 
 -----------------------------------------------------------------------
