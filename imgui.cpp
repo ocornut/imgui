@@ -939,6 +939,14 @@ CODE
 #endif
 #endif
 
+#if defined(_WIN32) && defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP) && !defined(IMGUI_DISABLE_UWP_DEFAULT_CLIPBOARD_FUNCTIONS)
+#include <wrl.h>
+#include <windows.applicationmodel.datatransfer.h>
+
+using namespace Microsoft::WRL;
+using namespace Microsoft::WRL::Wrappers;
+#endif
+
 // [Apple] OS specific includes
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -13339,6 +13347,101 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
         ::GlobalFree(wbuf_handle);
     ::CloseClipboard();
+}
+
+#elif defined(_WIN32) && defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP) && !defined(IMGUI_DISABLE_UWP_DEFAULT_CLIPBOARD_FUNCTIONS)
+
+// UWP clipboard implementation
+static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
+{
+    ImGuiContext& g = *(ImGuiContext*)user_data_ctx;
+    g.ClipboardHandlerData.clear();
+
+    ComPtr<ABI::Windows::ApplicationModel::DataTransfer::IClipboardStatics> clipboardStatics;
+    ComPtr<ABI::Windows::ApplicationModel::DataTransfer::IStandardDataFormatsStatics> standardDataFormats;
+    ComPtr<ABI::Windows::ApplicationModel::DataTransfer::IDataPackageView> dataPkgView;
+    Windows::Foundation::GetActivationFactory(HStringReference(RuntimeClass_Windows_ApplicationModel_DataTransfer_Clipboard).Get(), &clipboardStatics);
+    Windows::Foundation::GetActivationFactory(HStringReference(RuntimeClass_Windows_ApplicationModel_DataTransfer_StandardDataFormats).Get(), &standardDataFormats);
+
+    if (clipboardStatics->GetContent(&dataPkgView) != S_OK)
+        return NULL;
+
+    HString hstr;
+    boolean containsText;
+    standardDataFormats->get_Text(hstr.GetAddressOf());
+    dataPkgView->Contains(hstr.Get(), &containsText);
+    hstr.Release();
+
+    if (!containsText)
+        return NULL;
+
+    HString text;
+    ComPtr<ABI::Windows::Foundation::IAsyncOperation<HSTRING>> operation;
+
+    if (dataPkgView->GetTextAsync(operation.GetAddressOf()) != S_OK)
+        return NULL;
+
+    HRESULT hr;
+    Event opCompleted(CreateEventEx(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, WRITE_OWNER | EVENT_ALL_ACCESS));
+
+    ComPtr<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<HSTRING>> cb
+        = Callback<Implements<RuntimeClassFlags<ClassicCom>, ABI::Windows::Foundation::IAsyncOperationCompletedHandler<HSTRING>, FtmBase>>(
+            [&opCompleted](ABI::Windows::Foundation::IAsyncOperation<HSTRING>* asyncOperation, AsyncStatus status)->HRESULT
+            {
+                SetEvent(opCompleted.Get());
+                return S_OK;
+            });
+
+    operation->put_Completed(cb.Get());
+    WaitForSingleObject(opCompleted.Get(), INFINITE);
+    hr = operation->GetResults(text.GetAddressOf());
+
+    if (hr != S_OK)
+    {
+        text.Release();
+        return NULL;
+    }
+
+    if (const WCHAR* wbuf_global = (const WCHAR*)text.GetRawBuffer(NULL))
+    {
+        int buf_len = ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, NULL, 0, NULL, NULL);
+        g.ClipboardHandlerData.resize(buf_len);
+        ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, g.ClipboardHandlerData.Data, buf_len, NULL, NULL);
+    }
+
+    text.Release();
+
+    return g.ClipboardHandlerData.Data;
+}
+
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+{
+    ComPtr<ABI::Windows::ApplicationModel::DataTransfer::IDataPackage> dataPkg;
+    ComPtr<ABI::Windows::ApplicationModel::DataTransfer::IClipboardStatics> clipboardStatics;
+    Windows::Foundation::ActivateInstance(HStringReference(RuntimeClass_Windows_ApplicationModel_DataTransfer_DataPackage).Get(), &dataPkg);
+    Windows::Foundation::GetActivationFactory(HStringReference(RuntimeClass_Windows_ApplicationModel_DataTransfer_Clipboard).Get(), &clipboardStatics);
+
+    HRESULT hr = dataPkg->put_RequestedOperation(ABI::Windows::ApplicationModel::DataTransfer::DataPackageOperation_Copy);
+    if (hr != S_OK)
+        return;
+
+    const int wbuf_length = ::MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+    HGLOBAL wbuf_handle = ::GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(WCHAR));
+    if (wbuf_handle == NULL)
+        return;
+
+    WCHAR* wbuf_global = (WCHAR*)::GlobalLock(wbuf_handle);
+    ::MultiByteToWideChar(CP_UTF8, 0, text, -1, wbuf_global, wbuf_length);
+    ::GlobalUnlock(wbuf_handle);
+
+    if (dataPkg->SetText(HStringReference(wbuf_global).Get()) != S_OK)
+    {
+        ::GlobalFree(wbuf_handle);
+        return;
+    }
+
+    clipboardStatics->SetContent(dataPkg.Get());
+    ::GlobalFree(wbuf_handle);
 }
 
 #elif defined(__APPLE__) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
