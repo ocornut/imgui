@@ -308,6 +308,28 @@ void ImGui_ImplDX9_Shutdown()
     IM_DELETE(bd);
 }
 
+static bool ImGui_ImplDX9_CheckFormatSupport(IDirect3DDevice9* pDevice, D3DFORMAT format)
+{
+    bool support = false;
+    IDirect3D9* pd3d = nullptr;
+    D3DDEVICE_CREATION_PARAMETERS param;
+    D3DDISPLAYMODE mode;
+    ZeroMemory(&param, sizeof(param));
+    ZeroMemory(&mode, sizeof(mode));
+    if (D3D_OK != pDevice->GetDirect3D(&pd3d))
+        return false;
+    if (D3D_OK != pDevice->GetCreationParameters(&param) || D3D_OK != pDevice->GetDisplayMode(0, &mode))
+    {
+        pd3d->Release();
+        return false;
+    }
+    // Font texture should support linear filter, color blend and write to render-target
+    if (D3D_OK == pd3d->CheckDeviceFormat(param.AdapterOrdinal, param.DeviceType, mode.Format, D3DUSAGE_DYNAMIC | D3DUSAGE_QUERY_FILTER | D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3DRTYPE_TEXTURE, format))
+        support = true;
+    pd3d->Release();
+    return support;
+}
+
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
@@ -319,18 +341,21 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
 
     // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (io.Fonts->TexPixelsUseColors)
+    const bool rgba_support = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
+    if (!rgba_support && io.Fonts->TexPixelsUseColors)
     {
         ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
         for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + (size_t)width * height; dst < dst_end; src++, dst++)
             *dst = IMGUI_COL_TO_DX9_ARGB(*src);
         pixels = (unsigned char*)dst_start;
     }
+#else
+    const bool rgba_support = false;
 #endif
 
     // Upload texture to graphics system
     bd->FontTexture = nullptr;
-    if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
+    if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
         return false;
     D3DLOCKED_RECT tex_locked_rect;
     if (bd->FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
@@ -343,7 +368,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     io.Fonts->SetTexID((ImTextureID)bd->FontTexture);
 
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (io.Fonts->TexPixelsUseColors)
+    if (!rgba_support && io.Fonts->TexPixelsUseColors)
         ImGui::MemFree(pixels);
 #endif
 
