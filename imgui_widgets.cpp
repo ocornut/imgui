@@ -4493,7 +4493,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         {
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
-                if (state->CurLenA > 0)
+                if (buf[0] != 0)
                 {
                     revert_edit = true;
                 }
@@ -4581,9 +4581,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
                 // Clear input
+                IM_ASSERT(buf[0] != 0);
                 apply_new_text = "";
                 apply_new_text_length = 0;
-                value_changed |= (buf[0] != 0);
+                value_changed = true;
                 STB_TEXTEDIT_CHARTYPE empty_string;
                 stb_textedit_replace(state, &state->Stb, &empty_string, 0);
             }
@@ -4612,9 +4613,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             ImTextStrToUtf8(state->TextA.Data, state->TextA.Size, state->TextW.Data, NULL);
         }
 
-        // When using 'ImGuiInputTextFlags_EnterReturnsTrue' as a special case we reapply the live buffer back to the input buffer before clearing ActiveId, even though strictly speaking it wasn't modified on this frame.
+        // When using 'ImGuiInputTextFlags_EnterReturnsTrue' as a special case we reapply the live buffer back to the input buffer
+        // before clearing ActiveId, even though strictly speaking it wasn't modified on this frame.
         // If we didn't do that, code like InputInt() with ImGuiInputTextFlags_EnterReturnsTrue would fail.
-        // This also allows the user to use InputText() with ImGuiInputTextFlags_EnterReturnsTrue without maintaining any user-side storage (please note that if you use this property along ImGuiInputTextFlags_CallbackResize you can end up with your temporary string object unnecessarily allocating once a frame, either store your string data, either if you don't then don't use ImGuiInputTextFlags_CallbackResize).
+        // This also allows the user to use InputText() with ImGuiInputTextFlags_EnterReturnsTrue without maintaining any user-side storage
+        // (please note that if you use this property along ImGuiInputTextFlags_CallbackResize you can end up with your temporary string object
+        // unnecessarily allocating once a frame, either store your string data, either if you don't then don't use ImGuiInputTextFlags_CallbackResize).
         const bool apply_edit_back_to_user_buffer = !revert_edit || (validated && (flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0);
         if (apply_edit_back_to_user_buffer)
         {
