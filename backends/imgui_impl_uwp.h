@@ -1,4 +1,4 @@
-// dear imgui: Platform Backend for Universal Windows Platform (standard windows API for 32-bits AND 64-bits applications)
+// dear imgui: Platform Backend for Universal Windows Platform
 // This needs to be used along with a Renderer (e.g. DirectX11, DirectX12, SDL2..)
 
 // Implemented features:

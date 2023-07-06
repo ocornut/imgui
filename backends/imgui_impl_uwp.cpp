@@ -19,9 +19,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
 #include <tchar.h>
-#include <dwmapi.h>
 #include <wrl.h>
 
 
@@ -173,7 +171,9 @@ IMGUI_IMPL_API bool     ImGui_ImplUwp_InitForCurrentView()
     ComPtr<ABI::Windows::UI::Core::ICoreWindow> window;
 
     Windows::Foundation::GetActivationFactory(HStringReference(RuntimeClass_Windows_UI_Core_CoreWindow).Get(), &windowStatic);
-    windowStatic->GetForCurrentThread(&window);
+
+    if (windowStatic->GetForCurrentThread(&window) != S_OK || window == nullptr)
+        return false;
 
     return ImGui_ImplUwp_InitEx(window.Get(), true);
 }
@@ -226,24 +226,27 @@ static bool ImGui_ImplUwp_UpdateMouseCursor()
     else
     {
         // Show OS mouse cursor
-        ComPtr<ABI::Windows::UI::Core::ICoreCursorFactory> cursorFactory;
         ComPtr<ABI::Windows::UI::Core::ICoreCursor> cursor;
+        ComPtr<ABI::Windows::UI::Core::ICoreCursorFactory> cursorFactory;
         Windows::Foundation::GetActivationFactory(HStringReference(RuntimeClass_Windows_UI_Core_CoreCursor).Get(), &cursorFactory);
+
+        HRESULT result = 0;
 
         switch (imgui_cursor)
         {
-        case ImGuiMouseCursor_Arrow:        cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_Arrow, 0, &cursor); break;
-        case ImGuiMouseCursor_TextInput:    cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_IBeam, 0, &cursor); break;
-        case ImGuiMouseCursor_ResizeAll:    cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeAll, 0, &cursor); break;
-        case ImGuiMouseCursor_ResizeEW:     cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeWestEast, 0, &cursor); break;
-        case ImGuiMouseCursor_ResizeNS:     cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNorthSouth, 0, &cursor); break;
-        case ImGuiMouseCursor_ResizeNESW:   cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNortheastSouthwest, 0, &cursor); break;
-        case ImGuiMouseCursor_ResizeNWSE:   cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNorthwestSoutheast, 0, &cursor); break;
-        case ImGuiMouseCursor_Hand:         cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_Hand, 0, &cursor); break;
-        case ImGuiMouseCursor_NotAllowed:   cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_UniversalNo, 0, &cursor); break;
+        case ImGuiMouseCursor_Arrow:        result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_Arrow, 0, &cursor); break;
+        case ImGuiMouseCursor_TextInput:    result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_IBeam, 0, &cursor); break;
+        case ImGuiMouseCursor_ResizeAll:    result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeAll, 0, &cursor); break;
+        case ImGuiMouseCursor_ResizeEW:     result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeWestEast, 0, &cursor); break;
+        case ImGuiMouseCursor_ResizeNS:     result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNorthSouth, 0, &cursor); break;
+        case ImGuiMouseCursor_ResizeNESW:   result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNortheastSouthwest, 0, &cursor); break;
+        case ImGuiMouseCursor_ResizeNWSE:   result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_SizeNorthwestSoutheast, 0, &cursor); break;
+        case ImGuiMouseCursor_Hand:         result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_Hand, 0, &cursor); break;
+        case ImGuiMouseCursor_NotAllowed:   result = cursorFactory->CreateCursor(ABI::Windows::UI::Core::CoreCursorType_UniversalNo, 0, &cursor); break;
         }
 
-        bd->CoreWindow->put_PointerCursor(cursor.Get());
+        if (result == S_OK)
+            bd->CoreWindow->put_PointerCursor(cursor.Get());
     }
     return true;
 }
@@ -562,12 +565,16 @@ int PointerMoved(ABI::Windows::UI::Core::ICoreWindow* sender, ABI::Windows::UI::
 
     ImGuiIO& io = ImGui::GetIO();
 
+    ABI::Windows::Foundation::Point point;
     ComPtr<ABI::Windows::UI::Input::IPointerPoint> pointerPoint;
     ComPtr<ABI::Windows::Devices::Input::IPointerDevice> pointerDevice;
-    ABI::Windows::Foundation::Point point;
 
-    args->get_CurrentPoint(&pointerPoint);
-    pointerPoint->get_PointerDevice(&pointerDevice);
+    if (args->get_CurrentPoint(&pointerPoint) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_PointerDevice(&pointerDevice) != S_OK)
+        return 0;
+
     pointerPoint->get_Position(&point);
 
     ImGuiMouseSource mouse_source = GetMouseSourceFromDevice(pointerDevice.Get());
@@ -734,13 +741,17 @@ int PointerWheelChanged(ABI::Windows::UI::Core::ICoreWindow* sender, ABI::Window
 
     ImGuiIO& io = ImGui::GetIO();
 
+    INT32 mouseWheelDelta;
+    boolean isHorizontalMouseWheel;
     ComPtr<ABI::Windows::UI::Input::IPointerPoint> pointerPoint;
     ComPtr<ABI::Windows::UI::Input::IPointerPointProperties> pointerPointProps;
-    boolean isHorizontalMouseWheel;
-    INT32 mouseWheelDelta;
 
-    args->get_CurrentPoint(&pointerPoint);
-    pointerPoint->get_Properties(&pointerPointProps);
+    if (args->get_CurrentPoint(&pointerPoint) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_Properties(&pointerPointProps) != S_OK)
+        return 0;
+
     pointerPointProps->get_IsHorizontalMouseWheel(&isHorizontalMouseWheel);
     pointerPointProps->get_MouseWheelDelta(&mouseWheelDelta);
 
@@ -778,21 +789,29 @@ int PointerPressed(ABI::Windows::UI::Core::ICoreWindow* sender, ABI::Windows::UI
     ComPtr<ABI::Windows::UI::Input::IPointerPoint> pointerPoint;
     ComPtr<ABI::Windows::Devices::Input::IPointerDevice> pointerDevice;
     ComPtr<ABI::Windows::UI::Input::IPointerPointProperties> pointerPointProps;
+
     boolean lBtn;
     boolean rBtn;
     boolean mBtn;
     boolean x1Btn;
     boolean x2Btn;
-    int button = 0;
 
-    args->get_CurrentPoint(&pointerPoint);
-    pointerPoint->get_Properties(&pointerPointProps);
-    pointerPoint->get_PointerDevice(&pointerDevice);
+    if (args->get_CurrentPoint(&pointerPoint) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_Properties(&pointerPointProps) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_PointerDevice(&pointerDevice) != S_OK)
+        return 0;
+
     pointerPointProps->get_IsLeftButtonPressed(&lBtn);
     pointerPointProps->get_IsRightButtonPressed(&rBtn);
     pointerPointProps->get_IsMiddleButtonPressed(&mBtn);
     pointerPointProps->get_IsXButton1Pressed(&x1Btn);
     pointerPointProps->get_IsXButton2Pressed(&x2Btn);
+
+    int button = 0;
 
     if (x2Btn && (bd->MouseButtonsDown & (1 << 4)) == 0) button = 4;
     if (x1Btn && (bd->MouseButtonsDown & (1 << 3)) == 0) button = 3;
@@ -820,21 +839,29 @@ int PointerReleased(ABI::Windows::UI::Core::ICoreWindow* sender, ABI::Windows::U
     ComPtr<ABI::Windows::UI::Input::IPointerPoint> pointerPoint;
     ComPtr<ABI::Windows::Devices::Input::IPointerDevice> pointerDevice;
     ComPtr<ABI::Windows::UI::Input::IPointerPointProperties> pointerPointProps;
+
     boolean lBtn;
     boolean rBtn;
     boolean mBtn;
     boolean x1Btn;
     boolean x2Btn;
-    int button = 0;
 
-    args->get_CurrentPoint(&pointerPoint);
-    pointerPoint->get_Properties(&pointerPointProps);
-    pointerPoint->get_PointerDevice(&pointerDevice);
+    if (args->get_CurrentPoint(&pointerPoint) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_Properties(&pointerPointProps) != S_OK)
+        return 0;
+
+    if (pointerPoint->get_PointerDevice(&pointerDevice) != S_OK)
+        return 0;
+
     pointerPointProps->get_IsLeftButtonPressed(&lBtn);
     pointerPointProps->get_IsRightButtonPressed(&rBtn);
     pointerPointProps->get_IsMiddleButtonPressed(&mBtn);
     pointerPointProps->get_IsXButton1Pressed(&x1Btn);
     pointerPointProps->get_IsXButton2Pressed(&x2Btn);
+
+    int button = 0;
 
     if (!x2Btn && (bd->MouseButtonsDown & (1 << 4)) != 0) button = 4;
     if (!x1Btn && (bd->MouseButtonsDown & (1 << 3)) != 0) button = 3;
