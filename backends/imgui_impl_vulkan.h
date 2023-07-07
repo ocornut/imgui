@@ -38,12 +38,20 @@
 // (2) Call ImGui_ImplVulkan_LoadFunctions() before ImGui_ImplVulkan_Init() with your custom function.
 // If you have no idea what this is, leave it alone!
 //#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+// Alternatively provide a custom header file with prototype definitions. This is useful to avoid symbol collisions if
+// your loader defines vulkan function prototypes in the global scope with default names.
+// This definition must be visible in imgui_impl_vulkan.cpp as described above.
+//#define IMGUI_IMPL_VULKAN_CUSTOM_HEADER <my_prototype_definitions.h>
 
 // Vulkan includes
+#if defined(IMGUI_IMPL_VULKAN_CUSTOM_HEADER)
+#include IMGUI_IMPL_VULKAN_CUSTOM_HEADER
+#else
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
 #endif
-#include <Volk/volk.h>
+#include <vulkan/vulkan.h>
+#endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
