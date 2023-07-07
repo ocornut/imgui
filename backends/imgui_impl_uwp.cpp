@@ -331,7 +331,7 @@ static void ImGui_ImplUwp_UpdateMouseData()
 
             if (hr == S_OK)
             {
-                ABI::Windows::Foundation::Point pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+                ABI::Windows::Foundation::Point pos = { (int)io.MousePos.x / io.DisplayFramebufferScale.x, (int)io.MousePos.y / io.DisplayFramebufferScale.y };
                 coreWindow2->put_PointerPosition(pos);
             }
         }
@@ -404,7 +404,7 @@ void    ImGui_ImplUwp_NewFrame()
     // Setup display size (every frame to accommodate for window resizing)
     ABI::Windows::Foundation::Rect rect = { 0, 0, 0, 0 };
     bd->CoreWindow->get_Bounds(&rect);
-    io.DisplaySize = ImVec2(rect.Width, rect.Height);
+    io.DisplaySize = ImVec2(rect.Width * io.DisplayFramebufferScale.x, rect.Height * io.DisplayFramebufferScale.y);
 
     // Setup time step
     INT64 current_time = 0;
@@ -579,7 +579,7 @@ int PointerMoved(ABI::Windows::UI::Core::ICoreWindow* sender, ABI::Windows::UI::
 
     ImGuiMouseSource mouse_source = GetMouseSourceFromDevice(pointerDevice.Get());
     io.AddMouseSourceEvent(mouse_source);
-    io.AddMousePosEvent(point.X, point.Y);
+    io.AddMousePosEvent(point.X * io.DisplayFramebufferScale.x, point.Y * io.DisplayFramebufferScale.y);
 
     return 0;
 }

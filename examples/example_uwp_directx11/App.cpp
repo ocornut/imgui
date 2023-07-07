@@ -12,6 +12,7 @@ using namespace winrt;
 using namespace Windows;
 using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation::Numerics;
+using namespace Windows::Graphics::Display;
 using namespace Windows::UI;
 using namespace Windows::UI::Core;
 
@@ -60,6 +61,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
 
+        // High DPI scaling
+        DisplayInformation currentDisplayInformation = DisplayInformation::GetForCurrentView();
+        float dpi = currentDisplayInformation.LogicalDpi() / 96.0f;
+        io.DisplayFramebufferScale = { dpi, dpi };                // TODO: Handle DPI change
+
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
         //ImGui::StyleColorsLight();
@@ -79,11 +85,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             {
                 dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
 
-                // Handle window resize (we don't resize directly in the WM_SIZE handler)
+                // Handle window resize (we don't resize directly in the SizeChanged handler)
                 if (m_ResizeWidth != 0 && m_ResizeHeight != 0)
                 {
                     CleanupRenderTarget();
-                    m_pSwapChain->ResizeBuffers(2, lround(m_ResizeWidth), lround(m_ResizeHeight), DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+                    m_pSwapChain->ResizeBuffers(2, lround(m_ResizeWidth * io.DisplayFramebufferScale.x), lround(m_ResizeHeight * io.DisplayFramebufferScale.y), DXGI_FORMAT_B8G8R8A8_UNORM, 0);
                     m_ResizeWidth = m_ResizeHeight = 0;
                     CreateRenderTarget();
                 }
@@ -160,9 +166,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         window.SizeChanged({ this, &App::OnSizeChanged });
         window.VisibilityChanged({ this, &App::OnVisibiltyChanged });
 
-        m_ResizeWidth = window.Bounds().Width;
-        m_ResizeHeight = window.Bounds().Height;
-
         D3D_FEATURE_LEVEL featureLevels[] =
         {
             D3D_FEATURE_LEVEL_12_1,
@@ -211,8 +214,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
 
-        swapChainDesc.Width = lround(m_ResizeWidth);
-        swapChainDesc.Height = lround(m_ResizeHeight);
+        swapChainDesc.Width = 0;
+        swapChainDesc.Height = 0;
         swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
         swapChainDesc.Stereo = false;
         swapChainDesc.SampleDesc.Count = 1;
@@ -252,8 +255,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         );
 
         CreateRenderTarget();
-
-        m_ResizeWidth = m_ResizeHeight = 0;
     }
 
     void OnSizeChanged(IInspectable const &, WindowSizeChangedEventArgs const & args)
