@@ -31,16 +31,6 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.89.7 WIP (In Progress)
------------------------------------------------------------------------
-
-Other changes:
-
-- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
-  ScrollX or ScrollY flags from being impossible to resize. (#6503)
-
-
------------------------------------------------------------------------
  DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
 -----------------------------------------------------------------------
 
@@ -105,6 +95,115 @@ Other changes:
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX9, DirectX10, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
 - Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.7 (Released 2023-07-04)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.7
+
+Breaking changes:
+
+- Moved io.HoverDelayShort/io.HoverDelayNormal to style.HoverDelayShort/style.HoverDelayNormal.
+  As the fields were added in 1.89 and expected to be left unchanged by most users, or only
+  tweaked once during app initialisation, we are exceptionally accepting the breakage.
+  Majority of users should not even notice.
+- Overlapping items: (#6512, #3909, #517)
+  - Added 'SetNextItemAllowOverlap()' (called before an item) as a replacement for using
+    'SetItemAllowOverlap()' (called after an item). This is roughly equivalent to using the
+    legacy 'SetItemAllowOverlap()' call (public API) + ImGuiButtonFlags_AllowOverlap (internal).
+  - Obsoleted 'SetItemAllowOverlap()': it didn't and couldn't work reliably since 1.89 (2022-11-15),
+    and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
+  - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
+  - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
+  - Kept redirecting enums (will obsolete).
+
+Other changes:
+
+- Tooltips/IsItemHovered() related changes:
+  - Tooltips: Added SetItemTooltip() and BeginItemTooltip() functions.
+    They are shortcuts for the common idiom of using IsItemHovered().
+    - SetItemTooltip("Hello")   == if (IsItemHovered(ImGuiHoveredFlags_Tooltip)) { SetTooltip("Hello"); }
+    - BeginItemTooltip()        == IsItemHovered(ImGuiHoveredFlags_Tooltip) && BeginTooltip()
+    The newly added ImGuiHoveredFlags_Tooltip is meant to facilitate standardizing
+    mouse hovering delays and rules for a given application.
+    The previously common idiom of using 'if (IsItemHovered()) { SetTooltip(...); }'
+    won't use delay or stationary test.
+  - IsItemHovered: Added ImGuiHoveredFlags_Stationary to require mouse being
+    stationary when hovering a new item. Added style.HoverStationaryDelay (~0.15 sec).
+    Once the mouse has been stationary once the state is preserved for same item. (#1485)
+  - IsItemHovered: Added ImGuiHoveredFlags_ForTooltip as a shortcut for pulling flags
+    from style.HoverFlagsForTooltipMouse or style.HoverFlagsForTooltipNav depending
+    on active inputs (#1485)
+    - style.HoverFlagsForTooltipMouse defaults to 'ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort'
+    - style.HoverFlagsForTooltipNav defaults to 'ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal'.
+  - Tooltips: Tweak default offset for non-drag and drop tooltips so underlying items
+    isn't covered as much. (Match offset for drag and drop tooltips)
+  - IsItemHovered: Tweaked default value of style.HoverDelayNormal from 0.30 to 0.40,
+    Tweaked default value of style.HoverDelayShort from 0.10 to 0.15. (#1485)
+  - IsItemHovered: Added ImGuiHoveredFlags_AllowWhenOverlappedByWindow to ignore window-overlap only.
+    Option ImGuiHoveredFlags_AllowWhenOverlapped now expand into a combination of both
+    _AllowWhenOverlappedByWindow + _AllowWhenOverlappedByItem, matching old behavior.
+- Overlapping items: (#6512, #3909, #517)
+  - Most item types should now work with SetNextItemAllowOverlap(). (#6512, #3909, #517)
+  - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
+  - IsItemHovered: Changed to return false when querying an item using AllowOverlap mode which
+    is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem to opt-out. (#6512, #3909, #517)
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
+- IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
+- IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
+- Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
+  ScrollX or ScrollY flags from being impossible to resize. (#6503)
+- CollapsingHeader/TreeNode: Fixed text padding when using _Framed+_Leaf flags. (#6549) [@BobbyAnguelov]
+- InputText: Fixed not returning true when buffer is cleared while using the
+  ImGuiInputTextFlags_EscapeClearsAll flag. (#5688, #2620)
+- InputText: Fixed a crash on deactivating a ReadOnly buffer. (#6570, #6292, #4714)
+- InputText: ImGuiInputTextCallbackData::InsertChars() accept (NULL,NULL) range, in order to conform
+  to common idioms (e.g. passing .data(), .data() + .size() from a null string). (#6565, #6566, #3615)
+- Combo: Made simple/legacy Combo() function not returns true when picking already selected item.
+  This is consistent with other widgets. If you need something else, you can use BeginCombo(). (#1182)
+- Clipper: Rework inner logic to allow functioning with a zero-clear constructor.
+  This is order to facilitate usage for language bindings (e.g cimgui or dear_binding)
+  where user may not be calling a constructor manually. (#5856)
+- Drag and Drop: Apply default behavior of drag source not reporting itself as hovered
+  at lower-level, so DragXXX, SliderXXX, InputXXX, Plot widgets are fulfilling it.
+  (Behavior doesn't apply when ImGuiDragDropFlags_SourceNoDisableHover is set).
+- Modals: In the case of nested modal, made sure that focused or appearing windows are
+  moved below the lowest blocking modal (rather than the highest one). (#4317)
+- GetKeyName(): Fixed assert with ImGuiMod_XXX values when IMGUI_DISABLE_OBSOLETE_KEYIO is set.
+- Debug Tools: Added 'io.ConfigDebugIniSettings' option to save .ini data with extra
+  comments. Currently mainly for inspecting Docking .ini data, but makes saving slower.
+- Demo: Added more developed "Widgets->Tooltips" section. (#1485)
+- Backends: OpenGL3: Fixed support for glBindSampler() backup/restore on ES3. (#6375, #6508) [@jsm174]
+- Backends: OpenGL3: Fixed erroneous use glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts
+  lower than 3.2. (#6539, #6333) [@krumelmonster]
+- Backends: Vulkan: Added optional support for VK_KHR_dynamic_rendering (Vulkan 1.3+) in the
+  backend for applications using it. User needs to set 'init_info->UseDynamicRendering = true'
+  and 'init_info->ColorAttachmentFormat'. RenderPass becomes unused. (#5446, #5037) [@spnda, @cmarcelo]
+- Backends: GLFW: Accept glfwGetTime() not returning a monotonically increasing value.
+  This seems to happens on some Windows setup when peripherals disconnect, and is likely
+  to also happen on browser+Emscripten. Matches similar 1.89.4 fix in SDL backend. (#6491)
+- Examples: Win32+OpenGL3: Changed DefWindowProc() to DefWindowProcW() to match other examples
+  and support the example app being compiled without UNICODE. (#6516, #5725, #5961, #5975) [@yenixing]
+
+Docking+Viewports Branch:
+
+- Viewports+Docking: Fixed extraneous viewport+platform-window recreation in various
+  combination of showing or hiding windows, docking with/without split, undocking.
+  While with some backends and without OS decorations, some extraneous window recreation
+  were visibly not noticeable, they would typically become noticeable when enabling
+  OS decorations on those windows (e.g. Windows title bar fade-in/animation).
+- Viewports: Closing a viewport via OS/platform means (e.g. OS close button or task-bar menu),
+  mark all windows in this viewport as closed.
+- Docking: Fixed one-frame flickering on reappearing windows binding to a dock node
+  where a later-submitted window was already bound.
+- Docking: Fixed dragging from title-bar empty space (regression from 1.88 related to
+  keeping ID alive when calling low-level ButtonBehavior() directly). (#5181, #2645)
+- Docking: [Internal] DockBuilderDockWindow() API calls don't clear docking order
+  if the target node is same as existing one.
+- Backends: Win32: Added support for changing ParentViewportID after viewport creation.
 
 
 -----------------------------------------------------------------------
@@ -652,7 +751,7 @@ Other Changes:
 - ColorEdit3: fixed id collision leading to an assertion. (#5707)
 - IsItemHovered: Added ImGuiHoveredFlags_DelayNormal and ImGuiHoveredFlags_DelayShort flags,
   allowing to introduce a shared delay for tooltip idioms. The delays are respectively
-  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayFast (default to 0.10f). (#1485)
+  io.HoverDelayNormal (default to 0.30f) and io.HoverDelayShort (default to 0.10f). (#1485)
 - IsItemHovered: Added ImGuiHoveredFlags_NoSharedDelay to disable sharing delays between items,
   so moving from one item to a nearby one will requires delay to elapse again. (#1485)
 - Tables: activating an ID (e.g. clicking button inside) column doesn't prevent columns
