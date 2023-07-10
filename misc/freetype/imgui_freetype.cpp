@@ -260,6 +260,7 @@ namespace
         // Need an outline for this to work
         FT_GlyphSlot slot = Face->glyph;
 
+#if ((FREETYPE_MAJOR >= 2) && (FREETYPE_MINOR >= 12))
 #ifdef IMGUI_ENABLE_FREETYPE_LIBRSVG
         IM_ASSERT(
             slot->format == FT_GLYPH_FORMAT_OUTLINE ||
@@ -274,7 +275,10 @@ namespace
         );
 
         IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE || slot->format == FT_GLYPH_FORMAT_BITMAP);
-#endif
+#endif // IMGUI_ENABLE_FREETYPE_LIBRSVG
+#else
+        IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE || slot->format == FT_GLYPH_FORMAT_BITMAP);
+#endif // ((FREETYPE_MAJOR >= 2) && (FREETYPE_MINOR >= 12))
 
         // Apply convenience transform (this is not picking from real "Bold"/"Italic" fonts! Merely applying FreeType helper transform. Oblique == Slanting)
         if (UserFlags & ImGuiFreeTypeBuilderFlags_Bold)
@@ -801,6 +805,7 @@ static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas)
     FT_Add_Default_Modules(ft_library);
 
 #ifdef IMGUI_ENABLE_FREETYPE_LIBRSVG
+#if ((FREETYPE_MAJOR >= 2) && (FREETYPE_MINOR >= 12))
     // Install svg hooks for FreeType
     // https://freetype.org/freetype2/docs/reference/ft2-properties.html#svg-hooks
     // https://freetype.org/freetype2/docs/reference/ft2-svg_fonts.html#svg_fonts
@@ -812,7 +817,10 @@ static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas)
     };
 
     FT_Property_Set(ft_library, "ot-svg", "svg-hooks", &hooks);
-#endif
+#else
+    IM_ASSERT(!"IMGUI_ENABLE_FREETYPE_LIBRSVG requires FreeType version >= 2.12");
+#endif // ((FREETYPE_MAJOR >= 2) && (FREETYPE_MINOR >= 12))
+#endif // IMGUI_ENABLE_FREETYPE_LIBRSVG
 
     bool ret = ImFontAtlasBuildWithFreeTypeEx(ft_library, atlas, atlas->FontBuilderFlags);
     FT_Done_Library(ft_library);
@@ -1037,7 +1045,7 @@ ImGuiRsvgPortPresetSlot(FT_GlyphSlot  slot,
         goto CleanLibrsvg;
     }
 
-#if (defined(RSVG_VERSION_H) && (LIBRSVG_MAJOR_VERSION >= 2) && (LIBRSVG_MINOR_VERSION >= 46))
+#if LIBRSVG_CHECK_VERSION(2, 46, 0)
 
     RsvgLength         out_width;
     RsvgLength         out_height;
