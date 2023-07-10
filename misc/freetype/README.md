@@ -35,3 +35,17 @@ You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain color
 ["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
 
 ![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)
+
+
+### Using OpenType SVG fonts (SVGinOT)
+- *SVG in Open Type* is a standard by Adobe and Mozilla for color OpenType and Open Font Format fonts. It allows font creators to embed complete SVG files within a font enabling full color and even animations.
+- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT
+- You will need to add `#define IMGUI_ENABLE_FREETYPE_LIBRSVG` in your `imconfig.h` and install [librsvg](https://github.com/GNOME/librsvg).
+- Get latest librsvg binaries or build yourself. Under Windows you may use vcpkg with: `vcpkg install freetype --triplet=x64-windows` and add the following additional include directories:
+    ```
+    $(VcpkgRoot)\installed\$(VcpkgTriplet)\include\cairo;
+    $(VcpkgRoot)\installed\$(VcpkgTriplet)\include\glib-2.0;
+    $(VcpkgRoot)\installed\$(VcpkgTriplet)\include\gdk-pixbuf-2.0;
+    $(VcpkgRoot)\installed\$(VcpkgTriplet)\lib\glib-2.0\include;
+    ```
+- Note that the vcpkg version is extremely outdated (v2.40.20 from 2016) so you may want to build the latest version instead. Be aware that the vcpkg version will use `rsvg_handle_get_dimensions` instead of the more accurate `rsvg_handle_get_intrinsic_dimensions` function which is not available in v2.40, [see more](https://gnome.pages.gitlab.gnome.org/librsvg/Rsvg-2.0/method.Handle.get_dimensions.html).

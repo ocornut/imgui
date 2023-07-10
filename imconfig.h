@@ -79,6 +79,12 @@
 // The only purpose of this define is if you want force compilation of the stb_truetype backend ALONG with the FreeType backend.
 //#define IMGUI_ENABLE_STB_TRUETYPE
 
+//---- Use librsvg to render OpenType SVG fonts (SVGinOT)
+// Requires librsvg headers to be available in the include path. Requires program to be compiled with the librsvg library (not provided).
+// See https://github.com/ocornut/imgui/tree/master/misc/freetype
+// Only works in combination with IMGUI_ENABLE_FREETYPE.
+// #define IMGUI_ENABLE_FREETYPE_LIBRSVG
+
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 /*
