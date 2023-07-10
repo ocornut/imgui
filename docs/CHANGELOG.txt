@@ -42,6 +42,8 @@ Breaking changes:
 
 Other changes:
 
+- Fixed CTRL+Tab dimming background assert when target window has a callback
+  in the last ImDrawCmd. (#4857, #5937)
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
