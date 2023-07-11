@@ -1,4 +1,4 @@
-// dear imgui, v1.89.7
+// dear imgui, v1.89.8 WIP
 // (main code and documentation)
 
 // Help:
@@ -1379,13 +1379,15 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     }
 }
 
-// FIXME: Perhaps we could clear queued events as well?
-void ImGuiIO::ClearInputCharacters()
+// Clear all incoming events.
+void ImGuiIO::ClearEventsQueue()
 {
-    InputQueueCharacters.resize(0);
+    IM_ASSERT(Ctx != NULL);
+    ImGuiContext& g = *Ctx;
+    g.InputEventsQueue.clear();
 }
 
-// FIXME: Perhaps we could clear queued events as well?
+// Clear current keyboard/mouse/gamepad state + current frame text input buffer. Equivalent to releasing all keys/buttons.
 void ImGuiIO::ClearInputKeys()
 {
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -1406,7 +1408,17 @@ void ImGuiIO::ClearInputKeys()
         MouseDownDuration[n] = MouseDownDurationPrev[n] = -1.0f;
     }
     MouseWheel = MouseWheelH = 0.0f;
+    InputQueueCharacters.resize(0); // Behavior of old ClearInputCharacters().
 }
+
+// Removed this as it is ambiguous/misleading and generally incorrect to use with the existence of a higher-level input queue.
+// Current frame character buffer is now also cleared by ClearInputKeys().
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+void ImGuiIO::ClearInputCharacters()
+{
+    InputQueueCharacters.resize(0);
+}
+#endif
 
 static ImGuiInputEvent* FindLatestInputEvent(ImGuiContext* ctx, ImGuiInputEventType type, int arg = -1)
 {
@@ -5120,14 +5132,14 @@ static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32
         ImDrawList* draw_list = window->RootWindowDockTree->DrawList;
         if (draw_list->CmdBuffer.Size == 0)
             draw_list->AddDrawCmd();
-        draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // Ensure ImDrawCmd are not merged
+        draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // FIXME: Need to stricty ensure ImDrawCmd are not merged (ElemCount==6 checks below will verify that)
         draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
         ImDrawCmd cmd = draw_list->CmdBuffer.back();
         IM_ASSERT(cmd.ElemCount == 6);
         draw_list->CmdBuffer.pop_back();
         draw_list->CmdBuffer.push_front(cmd);
-        draw_list->PopClipRect();
         draw_list->AddDrawCmd(); // We need to create a command as CmdBuffer.back().IdxOffset won't be correct if we append to same command.
+        draw_list->PopClipRect();
     }
 
     // Draw over sibling docking nodes in a same docking tree
