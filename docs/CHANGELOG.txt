@@ -131,6 +131,7 @@ Docking+Viewports Branch:
 
 - Docking: added style.DockingSeparatorSize, ImGuiStyleVar_DockingSeparatorSize. Now
   also scaled by style.ScaleAllSizes(). (#3481, #4721, #2522) [@PossiblyAShrub, @wobbier]
+- Docking: fixed rendering of docked-window scrollbar above outer border. (#2522)
 
 
 -----------------------------------------------------------------------
