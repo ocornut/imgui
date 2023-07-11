@@ -129,6 +129,10 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking, Style: resizing separators use same colors as window borders (ImGuiCol_Border)
+  for consistency. With default styles it doesn't make a big difference. (#2522) [@rmitton]
+  In the future if we promote using thick value for inner/outer docking padding we may
+  need to introduce new colors for it.
 - Docking: added style.DockingSeparatorSize, ImGuiStyleVar_DockingSeparatorSize. Now
   also scaled by style.ScaleAllSizes(). (#3481, #4721, #2522) [@PossiblyAShrub, @wobbier]
 - Docking: fixed rendering of docked-window scrollbar above outer border. (#2522)
