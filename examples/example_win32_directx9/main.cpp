@@ -11,6 +11,7 @@
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = nullptr;
+static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static D3DPRESENT_PARAMETERS    g_d3dpp = {};
 
 // Forward declarations of helper functions
@@ -104,6 +105,15 @@ int main(int, char**)
         }
         if (done)
             break;
+
+        // Handle window resize (we don't resize directly in the WM_SIZE handler)
+        if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
+        {
+            g_d3dpp.BackBufferWidth = g_ResizeWidth;
+            g_d3dpp.BackBufferHeight = g_ResizeHeight;
+            g_ResizeWidth = g_ResizeHeight = 0;
+            ResetDevice();
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplDX9_NewFrame();
@@ -242,12 +252,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_SIZE:
-        if (g_pd3dDevice != nullptr && wParam != SIZE_MINIMIZED)
-        {
-            g_d3dpp.BackBufferWidth = LOWORD(lParam);
-            g_d3dpp.BackBufferHeight = HIWORD(lParam);
-            ResetDevice();
-        }
+        if (wParam == SIZE_MINIMIZED)
+            return 0;
+        g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
+        g_ResizeHeight = (UINT)HIWORD(lParam);
         return 0;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu

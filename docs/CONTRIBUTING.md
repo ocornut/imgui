@@ -11,7 +11,7 @@
 ## Getting Started & General Advice
 
 - Article: [How To Ask Good Questions](https://bit.ly/3nwRnx1).
-- Please browse the [Wiki](https://github.com/ocornut/imgui/wiki) to find code snippets, links and other resources (e.g. [Useful extensions](https://github.com/ocornut/imgui/wiki/Useful-Extensions)).
+- Please browse the [Wiki](https://github.com/ocornut/imgui/wiki) to find code snippets, links and other resources (e.g. [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started), [Useful extensions](https://github.com/ocornut/imgui/wiki/Useful-Extensions)).
 - Please read [docs/FAQ.md](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md).
 - Please read [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) if your question relates to fonts or text.
 - Please read one of the [examples/](https://github.com/ocornut/imgui/tree/master/examples) application if your question relates to setting up Dear ImGui.

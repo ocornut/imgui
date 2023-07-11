@@ -31,7 +31,7 @@
     <ClCompile Include="..\..\backends\imgui_impl_sdl2.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\backends\imgui_impl_sdlrenderer.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_sdlrenderer2.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -45,7 +45,7 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\backends\imgui_impl_sdlrenderer.h">
+    <ClInclude Include="..\..\backends\imgui_impl_sdlrenderer2.h">
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="..\..\backends\imgui_impl_sdl2.h">

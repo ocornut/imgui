@@ -99,6 +99,10 @@ static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
         if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             return device;
     }
+
+    // Use first GPU (Integrated) is a Discrete one is not available.
+    if (gpu_count > 0)
+        return gpus[0];
     return VK_NULL_HANDLE;
 }
 

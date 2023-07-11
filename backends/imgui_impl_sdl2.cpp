@@ -103,6 +103,7 @@
 #define SDL_HAS_USABLE_DISPLAY_BOUNDS       SDL_VERSION_ATLEAST(2,0,5)
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
+#define SDL_HAS_DISPLAY_EVENT               SDL_VERSION_ATLEAST(2,0,9)
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
@@ -122,6 +123,7 @@ struct ImGui_ImplSDL2_Data
     bool            MouseCanUseGlobalState;
     bool            MouseCanReportHoveredViewport;  // This is hard to use/unreliable on SDL so we'll set ImGuiBackendFlags_HasMouseHoveredViewport dynamically based on state.
     bool            UseVulkan;
+    bool            WantUpdateMonitors;
 
     ImGui_ImplSDL2_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -364,6 +366,15 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
+#if SDL_HAS_DISPLAY_EVENT
+        case SDL_DISPLAYEVENT:
+        {
+            // 2.0.26 has SDL_DISPLAYEVENT_CONNECTED/SDL_DISPLAYEVENT_DISCONNECTED/SDL_DISPLAYEVENT_ORIENTATION,
+            // so change of DPI/Scaling are not reflected in this event. (SDL3 has it)
+            bd->WantUpdateMonitors = true;
+            return true;
+        }
+#endif
         case SDL_WINDOWEVENT:
         {
             // - When capturing mouse, SDL will send a bunch of conflicting LEAVE/ENTER event on every mouse move, but the final ENTER tends to be right.
@@ -436,6 +447,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
 #else
     bd->MouseCanReportHoveredViewport = false;
 #endif
+    bd->WantUpdateMonitors = true;
 
     io.SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
@@ -489,9 +501,6 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
 #ifdef SDL_HINT_MOUSE_AUTO_CAPTURE
     SDL_SetHint(SDL_HINT_MOUSE_AUTO_CAPTURE, "0");
 #endif
-
-    // Update monitors
-    ImGui_ImplSDL2_UpdateMonitors();
 
     // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
     // We left the call to ImGui_ImplSDL2_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
@@ -692,11 +701,13 @@ static void ImGui_ImplSDL2_UpdateGamepads()
     #undef MAP_ANALOG
 }
 
-// FIXME-PLATFORM: SDL doesn't have an event to notify the application of display/monitor changes
+// FIXME: Note that doesn't update with DPI/Scaling change only as SDL2 doesn't have an event for it (SDL3 has).
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
     int display_count = SDL_GetNumVideoDisplays();
     for (int n = 0; n < display_count; n++)
     {
@@ -718,6 +729,7 @@ static void ImGui_ImplSDL2_UpdateMonitors()
         if (!SDL_GetDisplayDPI(n, &dpi, nullptr, nullptr))
             monitor.DpiScale = dpi / 96.0f;
 #endif
+        monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
 }
@@ -741,6 +753,10 @@ void ImGui_ImplSDL2_NewFrame()
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+
+    // Update monitors
+    if (bd->WantUpdateMonitors)
+        ImGui_ImplSDL2_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)

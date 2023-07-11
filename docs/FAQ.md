@@ -50,7 +50,8 @@ or view this file with any Markdown viewer.
 
 **This library is poorly documented at the moment and expects the user to be acquainted with C/C++.**
 - The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
-- Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
+- Handy [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide to integrate Dear ImGui in an existing application.
+- 20+ standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
 - See documentation: [Backends](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md), [Examples](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md), [Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
@@ -557,7 +558,7 @@ backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
-io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT (Windows only)
+io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size); // CORRECT (Windows only)
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
@@ -628,10 +629,11 @@ builder.BuildRanges(&ranges);                          // Build the final result
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", 16.0f, nullptr, ranges.Data);
 ```
 
-All your strings need to use UTF-8 encoding. In C++11 you can encode a string literal in UTF-8
-by using the u8"hello" syntax. Specifying literal in your source code using a local code page
-(such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
-Otherwise, you can convert yourself to UTF-8 or load text data from a file already saved as UTF-8.
+All your strings need to use UTF-8 encoding.
+You need to tell your compiler to use UTF-8, or in C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax.
+Specifying literal in your source code using a local code page (such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
+See [About UTF-8 Encoding](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#about-utf-8-encoding) section
+of [FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) for details about UTF-8 Encoding.
 
 Text input: it is up to your application to pass the right character code by calling `io.AddInputCharacter()`.
 The applications in examples/ are doing that.
@@ -653,7 +655,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors)
-- [Gallery](https://github.com/ocornut/imgui/issues/5886)
+- [Gallery](https://github.com/ocornut/imgui/issues/6478)
 
 ##### [Return to Index](#index)
 
@@ -699,7 +701,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.
-You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/5886). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
+You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/6478). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)

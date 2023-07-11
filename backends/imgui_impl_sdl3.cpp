@@ -22,6 +22,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-05-04: Fixed build on Emscripten/iOS/Android. (#6391)
 //  2023-04-06: Inputs: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
 //  2023-02-23: Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. (#6189, #6114, #3644)
@@ -64,6 +65,7 @@ struct ImGui_ImplSDL3_Data
     bool            MouseCanUseGlobalState;
     bool            MouseCanReportHoveredViewport;  // This is hard to use/unreliable on SDL so we'll set ImGuiBackendFlags_HasMouseHoveredViewport dynamically based on state.
     bool            UseVulkan;
+    bool            WantUpdateMonitors;
 
     ImGui_ImplSDL3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -300,6 +302,15 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
+        case SDL_EVENT_DISPLAY_ORIENTATION:
+        case SDL_EVENT_DISPLAY_CONNECTED:
+        case SDL_EVENT_DISPLAY_DISCONNECTED:
+        case SDL_EVENT_DISPLAY_MOVED:
+        case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+        {
+            bd->WantUpdateMonitors = true;
+            return true;
+        }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
             bd->MouseWindowID = event->window.windowID;
@@ -375,6 +386,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
 #else
     bd->MouseCanReportHoveredViewport = false;
 #endif
+    bd->WantUpdateMonitors = true;
 
     io.SetClipboardTextFn = ImGui_ImplSDL3_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL3_GetClipboardText;
@@ -419,9 +431,6 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
 
     // SDL 3.x : see https://github.com/libsdl-org/SDL/issues/6659
     SDL_SetHint("SDL_BORDERLESS_WINDOWED_STYLE", "0");
-
-    // Update monitors
-    ImGui_ImplSDL3_UpdateMonitors();
 
     // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
     // We left the call to ImGui_ImplSDL3_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
@@ -619,11 +628,12 @@ static void ImGui_ImplSDL3_UpdateGamepads()
     #undef MAP_ANALOG
 }
 
-// FIXME-PLATFORM: SDL doesn't have an event to notify the application of display/monitor changes
 static void ImGui_ImplSDL3_UpdateMonitors()
 {
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
 
     int display_count;
     SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
@@ -641,8 +651,8 @@ static void ImGui_ImplSDL3_UpdateMonitors()
         monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
         // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
         //  DpiScale to cocoa_window.backingScaleFactor here.
-        const SDL_DisplayMode* display_mode = SDL_GetCurrentDisplayMode(display_id);
-        monitor.DpiScale = display_mode->display_scale;
+        monitor.DpiScale = SDL_GetDisplayContentScale(display_id);
+        monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
 }
@@ -663,6 +673,10 @@ void ImGui_ImplSDL3_NewFrame()
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+
+    // Update monitors
+    if (bd->WantUpdateMonitors)
+        ImGui_ImplSDL3_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
@@ -738,7 +752,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
 #if !defined(_WIN32)
     // See SDL hack in ImGui_ImplSDL3_ShowWindow().
-    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_SKIP_TASKBAR : 0;
+    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
 #endif
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
@@ -787,7 +801,7 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
     // SDL hack: Hide icon from task bar
-    // Note: SDL 2.0.6+ has a SDL_WINDOW_SKIP_TASKBAR flag which is supported under Windows but the way it create the window breaks our seamless transition.
+    // Note: SDL 3.0.0+ has a SDL_WINDOW_UTILITY flag which is supported under Windows but the way it create the window breaks our seamless transition.
     if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon)
     {
         LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);

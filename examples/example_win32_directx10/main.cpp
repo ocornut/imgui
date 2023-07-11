@@ -12,6 +12,7 @@
 // Data
 static ID3D10Device*            g_pd3dDevice = nullptr;
 static IDXGISwapChain*          g_pSwapChain = nullptr;
+static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static ID3D10RenderTargetView*  g_mainRenderTargetView = nullptr;
 
 // Forward declarations of helper functions
@@ -106,6 +107,15 @@ int main(int, char**)
         }
         if (done)
             break;
+
+        // Handle window resize (we don't resize directly in the WM_SIZE handler)
+        if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
+        {
+            CleanupRenderTarget();
+            g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
+            g_ResizeWidth = g_ResizeHeight = 0;
+            CreateRenderTarget();
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplDX10_NewFrame();
@@ -246,12 +256,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_SIZE:
-        if (g_pd3dDevice != nullptr && wParam != SIZE_MINIMIZED)
-        {
-            CleanupRenderTarget();
-            g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
-            CreateRenderTarget();
-        }
+        if (wParam == SIZE_MINIMIZED)
+            return 0;
+        g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
+        g_ResizeHeight = (UINT)HIWORD(lParam);
         return 0;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
