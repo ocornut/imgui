@@ -1808,6 +1808,15 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
 // [SECTION] ImDrawData
 //-----------------------------------------------------------------------------
 
+void ImDrawData::Clear()
+{
+    Valid = false;
+    CmdListsCount = TotalIdxCount = TotalVtxCount = 0;
+    CmdLists.resize(0); // The ImDrawList are NOT owned by ImDrawData but e.g. by ImGuiContext, so we don't clear them.
+    DisplayPos = DisplaySize = FramebufferScale = ImVec2(0.0f, 0.0f);
+    OwnerViewport = NULL;
+}
+
 // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
 void ImDrawData::DeIndexAllBuffers()
 {
