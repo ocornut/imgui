@@ -5102,8 +5102,12 @@ void ImGui::Render()
         if (viewport->DrawLists[1] != NULL)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
+        // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
         ImDrawData* draw_data = &viewport->DrawDataP;
         IM_ASSERT(draw_data->CmdLists.Size == draw_data->CmdListsCount);
+        for (int draw_list_n = 0; draw_list_n < draw_data->CmdLists.Size; draw_list_n++)
+            draw_data->CmdLists[draw_list_n]->_PopUnusedDrawCmd();
+
         g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
         g.IO.MetricsRenderIndices += draw_data->TotalIdxCount;
     }
@@ -14904,7 +14908,7 @@ void ImGui::ShowStackToolWindow(bool* p_open)
 void ImGui::ShowMetricsWindow(bool*) {}
 void ImGui::ShowFontAtlas(ImFontAtlas*) {}
 void ImGui::DebugNodeColumns(ImGuiOldColumns*) {}
-void ImGui::DebugNodeDrawList(ImGuiWindow*, const ImDrawList*, const char*) {}
+void ImGui::DebugNodeDrawList(ImGuiWindow*, ImGuiViewportP*, const ImDrawList*, const char*) {}
 void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList*, const ImDrawList*, const ImDrawCmd*, bool, bool) {}
 void ImGui::DebugNodeFont(ImFont*) {}
 void ImGui::DebugNodeStorage(ImGuiStorage*, const char*) {}

@@ -1853,7 +1853,6 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
 
     // Add to output list + records state in ImDrawData
     out_list->push_back(draw_list);
-    draw_list->_PopUnusedDrawCmd();
     draw_data->CmdListsCount++;
     draw_data->TotalVtxCount += draw_list->VtxBuffer.Size;
     draw_data->TotalIdxCount += draw_list->IdxBuffer.Size;
@@ -1862,6 +1861,7 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
 void ImDrawData::AddDrawList(ImDrawList* draw_list)
 {
     IM_ASSERT(CmdLists.Size == CmdListsCount);
+    draw_list->_PopUnusedDrawCmd();
     ImGui::AddDrawListToDrawDataEx(this, &CmdLists, draw_list);
 }
 
