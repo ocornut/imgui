@@ -1012,7 +1012,6 @@ static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
-static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
 static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 // Settings
@@ -4784,47 +4783,12 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
     }
 }
 
-static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
-{
-    if (draw_list->CmdBuffer.Size == 0)
-        return;
-    if (draw_list->CmdBuffer.Size == 1 && draw_list->CmdBuffer[0].ElemCount == 0 && draw_list->CmdBuffer[0].UserCallback == NULL)
-        return;
-
-    // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
-    // May trigger for you if you are using PrimXXX functions incorrectly.
-    IM_ASSERT(draw_list->VtxBuffer.Size == 0 || draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
-    IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
-    if (!(draw_list->Flags & ImDrawListFlags_AllowVtxOffset))
-        IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);
-
-    // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
-    // If this assert triggers because you are drawing lots of stuff manually:
-    // - First, make sure you are coarse clipping yourself and not trying to draw many things outside visible bounds.
-    //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics/Debugger window to inspect draw list contents.
-    // - If you want large meshes with more than 64K vertices, you can either:
-    //   (A) Handle the ImDrawCmd::VtxOffset value in your renderer backend, and set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset'.
-    //       Most example backends already support this from 1.71. Pre-1.71 backends won't.
-    //       Some graphics API such as GL ES 1/2 don't have a way to offset the starting vertex so it is not supported for them.
-    //   (B) Or handle 32-bit indices in your renderer backend, and uncomment '#define ImDrawIdx unsigned int' line in imconfig.h.
-    //       Most example backends already support this. For example, the OpenGL example code detect index size at compile-time:
-    //         glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
-    //       Your own engine or render API may use different parameters or function calls to specify index sizes.
-    //       2 and 4 bytes indices are generally supported by most graphics API.
-    // - If for some reason neither of those solutions works for you, a workaround is to call BeginChild()/EndChild() before reaching
-    //   the 64K limit to split your draw commands in multiple draw lists.
-    if (sizeof(ImDrawIdx) == 2)
-        IM_ASSERT(draw_list->_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
-
-    out_list->push_back(draw_list);
-}
-
 static void AddWindowToDrawData(ImGuiWindow* window, int layer)
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = g.Viewports[0];
     g.IO.MetricsRenderWindows++;
-    AddDrawListToDrawData(viewport->DrawDataBuilder.Layers[layer], window->DrawList);
+    ImGui::AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[layer], window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
@@ -4844,42 +4808,41 @@ static inline void AddRootWindowToDrawData(ImGuiWindow* window)
     AddWindowToDrawData(window, GetWindowDisplayLayer(window));
 }
 
-void ImDrawDataBuilder::FlattenIntoSingleLayer()
+static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
 {
-    int n = Layers[0]->Size;
+    int n = builder->Layers[0]->Size;
     int full_size = n;
-    for (int i = 1; i < IM_ARRAYSIZE(Layers); i++)
-        full_size += Layers[i]->Size;
-    Layers[0]->resize(full_size);
-    for (int layer_n = 1; layer_n < IM_ARRAYSIZE(Layers); layer_n++)
+    for (int i = 1; i < IM_ARRAYSIZE(builder->Layers); i++)
+        full_size += builder->Layers[i]->Size;
+    builder->Layers[0]->resize(full_size);
+    for (int layer_n = 1; layer_n < IM_ARRAYSIZE(builder->Layers); layer_n++)
     {
-        ImVector<ImDrawList*>* layer = Layers[layer_n];
+        ImVector<ImDrawList*>* layer = builder->Layers[layer_n];
         if (layer->empty())
             continue;
-        memcpy(Layers[0]->Data + n, layer->Data, layer->Size * sizeof(ImDrawList*));
+        memcpy(builder->Layers[0]->Data + n, layer->Data, layer->Size * sizeof(ImDrawList*));
         n += layer->Size;
         layer->resize(0);
     }
 }
 
-static void SetupViewportDrawData(ImGuiViewportP* viewport)
+static void InitViewportDrawData(ImGuiViewportP* viewport)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImDrawData* draw_data = &viewport->DrawDataP;
+
+    viewport->DrawDataBuilder.Layers[0] = &draw_data->CmdLists;
+    viewport->DrawDataBuilder.Layers[1] = &viewport->DrawDataBuilder.LayerData1;
+    viewport->DrawDataBuilder.Layers[0]->resize(0);
+    viewport->DrawDataBuilder.Layers[1]->resize(0);
+
     draw_data->Valid = true;
-    draw_data->CmdListsCount = draw_data->CmdLists.Size;
+    draw_data->CmdListsCount = 0;
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = viewport->Size;
     draw_data->FramebufferScale = io.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
-    for (int n = 0; n < draw_data->CmdLists.Size; n++) // Similar to AddDrawList() but we are already added in the array
-    {
-        ImDrawList* draw_list = draw_data->CmdLists[n];
-        draw_list->_PopUnusedDrawCmd();
-        draw_data->TotalVtxCount += draw_list->VtxBuffer.Size;
-        draw_data->TotalIdxCount += draw_list->IdxBuffer.Size;
-    }
 }
 
 // Push a clipping rectangle for both ImGui logic (hit-testing etc.) and low-level ImDrawList rendering.
@@ -5100,9 +5063,9 @@ void ImGui::Render()
     for (int n = 0; n != g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
-        viewport->DrawDataBuilder.Setup(&viewport->DrawDataP);
+        InitViewportDrawData(viewport);
         if (viewport->DrawLists[0] != NULL)
-            AddDrawListToDrawData(viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
+            AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
     // Draw modal/window whitening backgrounds
@@ -5133,14 +5096,14 @@ void ImGui::Render()
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
-        viewport->DrawDataBuilder.FlattenIntoSingleLayer();
+        FlattenDrawDataIntoSingleLayer(&viewport->DrawDataBuilder);
 
         // Add foreground ImDrawList (for each active viewport)
         if (viewport->DrawLists[1] != NULL)
-            AddDrawListToDrawData(viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
+            AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
-        SetupViewportDrawData(viewport);
         ImDrawData* draw_data = &viewport->DrawDataP;
+        IM_ASSERT(draw_data->CmdLists.Size == draw_data->CmdListsCount);
         g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
         g.IO.MetricsRenderIndices += draw_data->TotalIdxCount;
     }
