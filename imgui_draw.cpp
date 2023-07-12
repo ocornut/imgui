@@ -1817,6 +1817,17 @@ void ImDrawData::Clear()
     OwnerViewport = NULL;
 }
 
+void ImDrawData::AddDrawList(ImDrawList* draw_list)
+{
+    IM_ASSERT(Valid);
+    IM_ASSERT(CmdLists.Size == CmdListsCount);
+    draw_list->_PopUnusedDrawCmd();
+    CmdLists.push_back(draw_list);
+    CmdListsCount++;
+    TotalVtxCount += draw_list->VtxBuffer.Size;
+    TotalIdxCount += draw_list->IdxBuffer.Size;
+}
+
 // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
 void ImDrawData::DeIndexAllBuffers()
 {

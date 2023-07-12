@@ -49,7 +49,7 @@ Other changes:
 - ImDrawData: CmdLists[] array is now an ImVector<> owned by ImDrawData rather
   than a pointer to internal state.
   - This makes it easier for user to create their own or append to an existing draw data.
-    (#6406, #4879, #1878)
+    Added a ImDrawData::AddDrawList() helper function to do that. (#6406, #4879, #1878)
   - This makes it easier to perform a deep-swap instead of a deep-copy, as array
     ownership is now clear. (#6597, #6475, #6167, #5776, #5109, #4763, #3515, #1860)
   - Syntax and allocation count are otherwise identical.

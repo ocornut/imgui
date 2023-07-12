@@ -4873,7 +4873,7 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport)
     draw_data->DisplaySize = viewport->Size;
     draw_data->FramebufferScale = io.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
-    for (int n = 0; n < draw_data->CmdLists.Size; n++)
+    for (int n = 0; n < draw_data->CmdLists.Size; n++) // Similar to AddDrawList() but we are already added in the array
     {
         ImDrawList* draw_list = draw_data->CmdLists[n];
         draw_list->_PopUnusedDrawCmd();
