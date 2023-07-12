@@ -98,6 +98,47 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.8 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+- IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
+  and often incorrect/misleading considering the existence of a higher-level
+  input queue. (#4921)
+
+Other changes:
+
+- Fixed CTRL+Tab dimming background assert when target window has a callback
+  in the last ImDrawCmd. (#4857, #5937)
+- InputText: Fixed a case where deactivation frame would write to underlying
+  buffer or call CallbackResize although unnecessary, in a frame where the
+  return value was false.
+- Scrollbar: layout needs to take account of window border size, so a border size
+  will slightly reduce scrollbar size. Generally we tried to make it that window
+  border size has no incidence on layout but this can't work with thick borders. (#2522)
+- IO: Added io.ClearEventsQueue() to clear incoming inputs events. (#4921)
+  May be useful in conjunction with io.ClearInputsKeys() if you need to clear
+  both current inputs state and queued events (e.g. when using blocking native
+  dialogs such as Windows's ::MessageBox() or ::GetOpenFileName()).
+- IO: Changed io.ClearInputsKeys() specs to also clear current frame character buffer
+  (what now obsoleted io.ClearInputCharacters() did), as this is effectively the
+  desirable behavior.
+- Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
+- Demo: Showcase a few more InputText() flags.
+
+Docking+Viewports Branch:
+
+- Docking, Style: resizing separators use same colors as window borders (ImGuiCol_Border)
+  for consistency. With default styles it doesn't make a big difference. (#2522) [@rmitton]
+  In the future if we promote using thick value for inner/outer docking padding we may
+  need to introduce new colors for it.
+- Docking: added style.DockingSeparatorSize, ImGuiStyleVar_DockingSeparatorSize. Now
+  also scaled by style.ScaleAllSizes(). (#3481, #4721, #2522) [@PossiblyAShrub, @wobbier]
+- Docking: fixed rendering of docked-window scrollbar above outer border. (#2522)
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.7 (Released 2023-07-04)
 -----------------------------------------------------------------------
 
