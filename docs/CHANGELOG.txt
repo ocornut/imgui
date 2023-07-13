@@ -5,30 +5,36 @@ This document holds the user-facing changelog that we also use in release notes.
 We generally fold multiple commits pertaining to the same topic as a single entry.
 Changes to backends are also included within the individual .cpp files of each backend.
 
-RELEASE NOTES:          https://github.com/ocornut/imgui/releases
-REPORT ISSUES:          https://github.com/ocornut/imgui/issues
-DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
-WIKI                    https://github.com/ocornut/imgui/wiki
 FAQ                     https://www.dearimgui.com/faq/
+RELEASE NOTES:          https://github.com/ocornut/imgui/releases
+WIKI                    https://github.com/ocornut/imgui/wiki
+GETTING STARTED         https://github.com/ocornut/imgui/wiki/Getting-Started
+GLOSSARY                https://github.com/ocornut/imgui/wiki/Glossary
+ISSUES & SUPPORT        https://github.com/ocornut/imgui/issues
 
 WHEN TO UPDATE?
 
 - Keeping your copy of Dear ImGui updated regularly is recommended.
-- It is generally safe to sync to the latest commit in master or docking branches
-  The library is fairly stable and regressions tends to be fixed fast when reported.
+- It is generally safe and recommended to sync to the latest commit in 'master' or 'docking'
+  branches. The library is fairly stable and regressions tends to be fixed fast when reported.
 
 HOW TO UPDATE?
 
-- Overwrite every file except imconfig.h (if you have modified it).
-- You may also locally branch to modify imconfig.h and merge latest into your branch.
+- Update submodule or copy/overwrite every file.
+- About imconfig.h:
+  - You may modify your copy of imconfig.h, in this case don't overwrite it.
+  - or you may locally branch to modify imconfig.h and merge/rebase latest.
+  - or you may '#define IMGUI_USER_CONFIG "my_config_file.h"' globally from your build system to
+    specify a custom path for your imconfig.h file and instead not have to modify the default one.
 - Read the `Breaking Changes` section (in imgui.cpp or here in the Changelog).
 - If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it.
-- If you are dropping this repository in your codebase, please leave the demo and text files in there, they will be useful.
+- If you are copying this repository in your codebase, please leave the demo and documentations files in there, they will be useful.
 - You may diff your previous Changelog with the one you just copied and read that diff.
 - You may enable `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in imconfig.h to forcefully disable legacy names and symbols.
   Doing it every once in a while is a good way to make sure you are not using obsolete symbols. Dear ImGui is in active development,
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.8 WIP (In Progress)
