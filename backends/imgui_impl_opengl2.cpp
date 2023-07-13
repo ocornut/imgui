@@ -37,6 +37,7 @@
 //  2016-09-05: OpenGL: Fixed save and restore of current scissor rectangle.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl2.h"
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
@@ -293,6 +294,10 @@ void    ImGui_ImplOpenGL2_DestroyDeviceObjects()
     ImGui_ImplOpenGL2_DestroyFontsTexture();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

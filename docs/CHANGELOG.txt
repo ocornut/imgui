@@ -39,12 +39,28 @@ Breaking changes:
 - IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
   and often incorrect/misleading considering the existence of a higher-level
   input queue. (#4921)
+- ImDrawData: CmdLists[] arra is now owned, changed from 'ImDrawList**' to
+  'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
+  cannot compare to NULL nor reassign manually anymore.
+  Instead use AddDrawList(). (#6406, #4879, #1878)
 
 Other changes:
 
+- ImDrawData: CmdLists[] array is now an ImVector<> owned by ImDrawData rather
+  than a pointer to internal state.
+  - This makes it easier for user to create their own or append to an existing draw data.
+    Added a ImDrawData::AddDrawList() helper function to do that. (#6406, #4879, #1878)
+  - This makes it easier to perform a deep-swap instead of a deep-copy, as array
+    ownership is now clear. (#6597, #6475, #6167, #5776, #5109, #4763, #3515, #1860)
+  - Syntax and allocation count are otherwise identical.
+- Fixed CTRL+Tab dimming background assert when target window has a callback
+  in the last ImDrawCmd. (#4857, #5937)
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
+- Scrollbar: layout needs to take account of window border size, so a border size
+  will slightly reduce scrollbar size. Generally we tried to make it that window
+  border size has no incidence on layout but this can't work with thick borders. (#2522)
 - IO: Added io.ClearEventsQueue() to clear incoming inputs events. (#4921)
   May be useful in conjunction with io.ClearInputsKeys() if you need to clear
   both current inputs state and queued events (e.g. when using blocking native
@@ -54,6 +70,7 @@ Other changes:
   desirable behavior.
 - Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
 - Demo: Showcase a few more InputText() flags.
+- Backends: Made all backends sources files support global IMGUI_DISABLE. (#6601)
 
 
 -----------------------------------------------------------------------

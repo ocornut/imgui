@@ -28,6 +28,7 @@
 //  2021-01-28: Initial version.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
 #include <webgpu/webgpu.h>
@@ -761,3 +762,7 @@ void ImGui_ImplWGPU_NewFrame()
     if (!bd->pipelineState)
         ImGui_ImplWGPU_CreateDeviceObjects();
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

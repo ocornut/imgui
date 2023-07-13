@@ -104,6 +104,7 @@
 #endif
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
@@ -933,9 +934,13 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
     ImGui_ImplOpenGL3_DestroyFontsTexture();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

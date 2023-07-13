@@ -34,6 +34,8 @@
 
 // FIXME: cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
 
+#include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_freetype.h"
 #include "imgui_internal.h"     // ImMin,ImMax,ImFontAtlasBuild*,
 #include <stdint.h>
@@ -1004,6 +1006,7 @@ FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_Pointer
     return state->err;
 }
 #endif // !IMGUI_ENABLE_FREETYPE_OTSVG
+//-----------------------------------------------------------------------------
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -1012,3 +1015,5 @@ FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_Pointer
 #ifdef _MSC_VER
 #pragma warning (pop)
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

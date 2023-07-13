@@ -13,6 +13,8 @@
 
 #pragma once
 #include "imgui.h"          // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
+
 #include <webgpu/webgpu.h>
 
 IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format, WGPUTextureFormat depth_format = WGPUTextureFormat_Undefined);
@@ -23,3 +25,5 @@ IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURen
 // Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API void ImGui_ImplWGPU_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool ImGui_ImplWGPU_CreateDeviceObjects();
+
+#endif // #ifndef IMGUI_DISABLE
