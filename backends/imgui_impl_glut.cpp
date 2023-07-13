@@ -32,6 +32,7 @@
 //  2018-03-22: Added GLUT Platform binding.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_glut.h"
 #define GL_SILENCE_DEPRECATION
 #ifdef __APPLE__
@@ -298,3 +299,7 @@ void ImGui_ImplGLUT_MotionFunc(int x, int y)
     ImGuiIO& io = ImGui::GetIO();
     io.AddMousePosEvent((float)x, (float)y);
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

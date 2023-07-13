@@ -39,6 +39,7 @@
 //  2018-02-22: Merged into master with all Win32 code synchronized to other examples.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_dx12.h"
 
 // DirectX
@@ -751,3 +752,7 @@ void ImGui_ImplDX12_NewFrame()
     if (!bd->pPipelineState)
         ImGui_ImplDX12_CreateDeviceObjects();
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

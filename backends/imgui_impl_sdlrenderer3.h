@@ -13,6 +13,7 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
 
 struct SDL_Renderer;
 
@@ -26,3 +27,5 @@ IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_CreateFontsTexture();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_DestroyFontsTexture();
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_DestroyDeviceObjects();
+
+#endif // #ifndef IMGUI_DISABLE

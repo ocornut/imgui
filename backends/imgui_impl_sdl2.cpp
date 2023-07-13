@@ -73,6 +73,7 @@
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_sdl2.h"
 
 // Clang warnings with -Weverything
@@ -641,6 +642,10 @@ void ImGui_ImplSDL2_NewFrame()
     ImGui_ImplSDL2_UpdateGamepads();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE
