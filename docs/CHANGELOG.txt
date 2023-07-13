@@ -77,6 +77,7 @@ Other changes:
 - Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
 - Demo: Showcase a few more InputText() flags.
 - Backends: Made all backends sources files support global IMGUI_DISABLE. (#6601)
+- Backends: WebGPU: Update for changes in Dawn. (#6602, #6188) [@williamhCode]
 
 
 -----------------------------------------------------------------------
