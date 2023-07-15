@@ -856,13 +856,19 @@ FT_Error ImGuiLunasvgPortRender(FT_GlyphSlot slot, FT_Pointer* _state)
 {
     PLunasvgPortState state = *(PLunasvgPortState*)_state;
 
+    // If there was an error while loading the svg in
+    // `ImGuiLunasvgPortPresetSlot`, the renderer hook
+    // still get called, so just returns the error.
+    if (state->err != FT_Err_Ok) return state->err;
+
     // rows is height, pitch (or stride) equals to width * sizeof(int32)
     lunasvg::Bitmap bitmap((uint8_t*)slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
 
     state->svg->setMatrix(state->svg->matrix().identity()); // Reset the svg matrix to the default value
     state->svg->render(bitmap, state->matrix);              // state->matrix is already scaled and translated
 
-    return FT_Err_Ok;
+    state->err = FT_Err_Ok;
+    return state->err;
 }
 
 FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_Pointer* _state)
@@ -871,6 +877,10 @@ FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_Pointer
     PLunasvgPortState state = *(PLunasvgPortState*)_state;
     FT_Size_Metrics&  metrics = document->metrics;
 
+    // This function is called twice, once in the `FT_Load_Glyph`
+    // and another right before `ImGuiLunasvgPortRender`.
+    // If it's the latter, don't do anything because it's
+    // already done in the former.
     if (cache) return state->err;
 
     state->svg = lunasvg::Document::loadFromData((const char*)document->svg_document, document->svg_document_length);
