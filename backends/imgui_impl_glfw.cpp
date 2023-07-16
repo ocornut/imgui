@@ -386,8 +386,6 @@ void ImGui_ImplGlfw_CursorPosCallback(GLFWwindow* window, double x, double y)
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (bd->PrevUserCallbackCursorPos != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackCursorPos(window, x, y);
-    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
-        return;
 
     ImGuiIO& io = ImGui::GetIO();
     io.AddMousePosEvent((float)x, (float)y);
@@ -401,8 +399,6 @@ void ImGui_ImplGlfw_CursorEnterCallback(GLFWwindow* window, int entered)
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (bd->PrevUserCallbackCursorEnter != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackCursorEnter(window, entered);
-    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
-        return;
 
     ImGuiIO& io = ImGui::GetIO();
     if (entered)
@@ -654,11 +650,6 @@ static void ImGui_ImplGlfw_UpdateMouseData()
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
 
-    if (glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
-    {
-        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
-        return;
-    }
 
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
