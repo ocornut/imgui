@@ -4444,7 +4444,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
         clear_hovered_windows = true;
 
     // Disabled mouse?
-    if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouse || io.BackendFlags & ImGuiBackendFlags_CursorDisabled)
         clear_hovered_windows = true;
 
     // We track click ownership. When clicked outside of a window the click is owned by the application and

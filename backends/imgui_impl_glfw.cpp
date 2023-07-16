@@ -121,7 +121,6 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
-    bool                    ClearNoMouse;
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     GLFWwindowfocusfun      PrevUserCallbackWindowFocus;
@@ -653,15 +652,11 @@ static void ImGui_ImplGlfw_UpdateMouseData()
 
     if (glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
     {
-        // Store whether we should clear the "NoMouse" flag when the cursor is set to normal again
-        bd->ClearNoMouse = !(io.ConfigFlags & ImGuiConfigFlags_NoMouse);
-        io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+        io.BackendFlags |= ImGuiBackendFlags_CursorDisabled;
     }
-    else if (bd->ClearNoMouse)
+    else
     {
-        // Cursor isn't disabled anymore and the user didn't set "NoMouse" manually. Clear the flag
-        io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
-        bd->ClearNoMouse = false;
+        io.BackendFlags &= ~ImGuiBackendFlags_CursorDisabled;
     }
 
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
