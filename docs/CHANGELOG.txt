@@ -45,7 +45,7 @@ Breaking changes:
 - IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
   and often incorrect/misleading considering the existence of a higher-level
   input queue. (#4921)
-- ImDrawData: CmdLists[] arra is now owned, changed from 'ImDrawList**' to
+- ImDrawData: CmdLists[] array is now owned, changed from 'ImDrawList**' to
   'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
   cannot compare to NULL nor reassign manually anymore.
   Instead use AddDrawList(). (#6406, #4879, #1878)
@@ -98,6 +98,11 @@ Breaking changes:
     legacy 'SetItemAllowOverlap()' call (public API) + ImGuiButtonFlags_AllowOverlap (internal).
   - Obsoleted 'SetItemAllowOverlap()': it didn't and couldn't work reliably since 1.89 (2022-11-15),
     and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
+    While this fixes a common small visual issue, it also means that calling IsItemHovered()
+    after a non-reactive elements - e.g. Text() - overlapping an active one may fail if you don't
+    use IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem). (#6610)
   - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
   - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
   - Kept redirecting enums (will obsolete).
@@ -133,8 +138,6 @@ Other changes:
   - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
   - IsItemHovered: Changed to return false when querying an item using AllowOverlap mode which
     is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem to opt-out. (#6512, #3909, #517)
-  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
-    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
