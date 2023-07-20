@@ -61,6 +61,8 @@ Other changes:
   - Syntax and allocation count are otherwise identical.
 - Fixed CTRL+Tab dimming background assert when target window has a callback
   in the last ImDrawCmd. (#4857, #5937)
+- IsItemHovered: Fixed ImGuiHoveredFlags_ForTooltip for Keyboard/Gamepad navigation,
+  got broken prior to 1.89.7 due to an unrelated change making flags conflict. (#6622, #1485)
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
