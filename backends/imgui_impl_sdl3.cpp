@@ -770,7 +770,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformHandle = (void*)vd->Window;
     viewport->PlatformHandleRaw = nullptr;
     SDL_SysWMinfo info;
-    if (SDL_GetWindowWMInfo(vd->Window, &info, SDL_SYSWM_CURRENT_VERSION))
+    if (SDL_GetWindowWMInfo(vd->Window, &info, SDL_SYSWM_CURRENT_VERSION) == 0)
     {
 #if defined(SDL_VIDEO_DRIVER_WINDOWS)
         viewport->PlatformHandleRaw = info.info.win.window;
