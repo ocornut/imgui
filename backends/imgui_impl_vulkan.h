@@ -25,6 +25,7 @@
 // Read comments in imgui_impl_vulkan.h.
 
 #pragma once
+#ifndef IMGUI_DISABLE
 #include "imgui.h"      // IMGUI_IMPL_API
 
 // [Configuration] in order to use a custom Vulkan function loader:
@@ -163,3 +164,4 @@ struct ImGui_ImplVulkanH_Window
     }
 };
 
+#endif // #ifndef IMGUI_DISABLE

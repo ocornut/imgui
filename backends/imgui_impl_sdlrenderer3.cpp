@@ -21,12 +21,9 @@
 //  2023-05-30: Initial version.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_sdlrenderer3.h"
-#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
-#include <stddef.h>     // intptr_t
-#else
 #include <stdint.h>     // intptr_t
-#endif
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -253,6 +250,10 @@ void ImGui_ImplSDLRenderer3_DestroyDeviceObjects()
     ImGui_ImplSDLRenderer3_DestroyFontsTexture();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

@@ -12,6 +12,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"      // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
 
 //-----------------------------------------------------------------------------
 // ObjC API
@@ -63,3 +64,7 @@ IMGUI_IMPL_API void ImGui_ImplMetal_DestroyDeviceObjects();
 
 #endif
 #endif
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

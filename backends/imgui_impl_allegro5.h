@@ -17,6 +17,7 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
 
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
@@ -30,3 +31,5 @@ IMGUI_IMPL_API bool     ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* event);
 // Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API bool     ImGui_ImplAllegro5_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplAllegro5_InvalidateDeviceObjects();
+
+#endif // #ifndef IMGUI_DISABLE

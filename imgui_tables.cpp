@@ -198,11 +198,7 @@ Index of this file:
 #include "imgui_internal.h"
 
 // System includes
-#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
-#include <stddef.h>     // intptr_t
-#else
 #include <stdint.h>     // intptr_t
-#endif
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -414,7 +410,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
             table->HasScrollbarYPrev = table->HasScrollbarYCurr;
             table->HasScrollbarYCurr = false;
         }
-        table->HasScrollbarYCurr |= (table->InnerWindow->ScrollMax.y > 0.0f);
+        table->HasScrollbarYCurr |= table->InnerWindow->ScrollbarY;
     }
     else
     {
@@ -971,6 +967,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     //   clear ActiveId, which is equivalent to the change provided by _AllowWhenBLockedByActiveItem).
     // - This allows columns to be marked as hovered when e.g. clicking a button inside the column, or using drag and drop.
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    table_instance->HoveredRowLast = table_instance->HoveredRowNext;
+    table_instance->HoveredRowNext = -1;
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
     const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table_instance->LastOuterHeight));
@@ -1127,6 +1125,14 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->InnerWindow->ParentWorkRect = table->WorkRect;
     table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
     table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
+
+    // Setup window's WorkRect.Max.y for GetContentRegionAvail(). Other values will be updated in each TableBeginCell() call.
+    float window_content_max_y;
+    if (table->Flags & ImGuiTableFlags_NoHostExtendY)
+        window_content_max_y = table->OuterRect.Max.y;
+    else
+        window_content_max_y = ImMax(table->InnerWindow->ContentRegionRect.Max.y, (table->Flags & ImGuiTableFlags_ScrollY) ? 0.0f : table->OuterRect.Max.y);
+    table->InnerWindow->WorkRect.Max.y = ImClamp(window_content_max_y - g.Style.CellPadding.y, table->InnerWindow->WorkRect.Min.y, table->InnerWindow->WorkRect.Max.y);
 
     // [Part 9] Allocate draw channels and setup background cliprect
     TableSetupDrawChannels(table);
@@ -1547,6 +1553,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
 // - TableGetCellBgRect() [Internal]
 // - TableGetColumnResizeID() [Internal]
 // - TableGetHoveredColumn() [Internal]
+// - TableGetHoveredRow() [Internal]
 // - TableSetBgColor()
 //-----------------------------------------------------------------------------
 
@@ -1649,6 +1656,19 @@ int ImGui::TableGetHoveredColumn()
     if (!table)
         return -1;
     return (int)table->HoveredColumnBody;
+}
+
+// Return -1 when table is not hovered. Return maxrow+1 if in table but below last submitted row.
+// *IMPORTANT* Unlike TableGetHoveredColumn(), this has a one frame latency in updating the value.
+// This difference with is the reason why this is not public yet.
+int ImGui::TableGetHoveredRow()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return -1;
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    return (int)table_instance->HoveredRowLast;
 }
 
 void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n)
@@ -1802,6 +1822,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
     const bool is_visible = (bg_y2 >= table->InnerClipRect.Min.y && bg_y1 <= table->InnerClipRect.Max.y);
     if (is_visible)
     {
+        // Update data for TableGetHoveredRow()
+        if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2)
+            TableGetInstanceData(table, table->InstanceCurrent)->HoveredRowNext = table->CurrentRow;
+
         // Decide of background color for the row
         ImU32 bg_col0 = 0;
         ImU32 bg_col1 = 0;
@@ -1995,6 +2019,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
     window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
 
+    // Note how WorkRect.Max.y is only set once during layout
     window->WorkRect.Min.y = window->DC.CursorPos.y;
     window->WorkRect.Min.x = column->WorkMinX;
     window->WorkRect.Max.x = column->WorkMaxX;
@@ -3595,6 +3620,11 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     BulletText("CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
     BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
     BulletText("ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
+    for (int n = 0; n < table->InstanceCurrent + 1; n++)
+    {
+        ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
+        BulletText("Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
+    }
     //BulletText("BgDrawChannels: %d/%d", 0, table->BgDrawChannelUnfrozen);
     float sum_weights = 0.0f;
     for (int n = 0; n < table->ColumnsCount; n++)
@@ -3953,6 +3983,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
     window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
     window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
+    window->WorkRect.Max.y = window->ContentRegionRect.Max.y;
 }
 
 void ImGui::NextColumn()

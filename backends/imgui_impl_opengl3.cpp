@@ -106,13 +106,10 @@
 #endif
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
-#include <stddef.h>     // intptr_t
-#else
 #include <stdint.h>     // intptr_t
-#endif
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
@@ -972,9 +969,13 @@ static void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
     ImGui::DestroyPlatformWindows();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

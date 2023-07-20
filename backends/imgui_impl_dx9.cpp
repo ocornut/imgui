@@ -34,6 +34,7 @@
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_dx9.h"
 
 // DirectX
@@ -540,3 +541,7 @@ static void ImGui_ImplDX9_InvalidateDeviceObjectsForPlatformWindows()
         if (platform_io.Viewports[i]->RendererUserData)
             ImGui_ImplDX9_DestroyWindow(platform_io.Viewports[i]);
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE
