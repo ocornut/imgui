@@ -64,6 +64,9 @@ Other changes:
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
+- Tables: fixed calculation of multi-instance shared decoration/scrollbar width of
+  scrolling tables, to avoid flickering width variation when resizing down a table
+  hosting a child window. (#5920, #6619)
 - Scrollbar: layout needs to take account of window border size, so a border size
   will slightly reduce scrollbar size. Generally we tried to make it that window
   border size has no incidence on layout but this can't work with thick borders. (#2522)
