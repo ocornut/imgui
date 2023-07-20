@@ -64,6 +64,10 @@ Other changes:
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
+- Tables: fixed GetContentRegionAvail().y report not taking account of lower cell
+  padding or of using ImGuiTableFlags_NoHostExtendY. Not taking it into account
+  would make the idiom of creating vertically bottom-aligned content (e.g. a child
+  window) inside a table make the parent window erroneously have a scrollbar. (#6619)
 - Tables: fixed calculation of multi-instance shared decoration/scrollbar width of
   scrolling tables, to avoid flickering width variation when resizing down a table
   hosting a child window. (#5920, #6619)
