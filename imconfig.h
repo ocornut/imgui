@@ -68,6 +68,7 @@
 
 //---- Use stb_sprintf.h for a faster implementation of vsnprintf instead of the one from libc (unless IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS is defined)
 // Compatibility checks of arguments and formats done by clang and GCC will be disabled in order to support the extra formats provided by stb_sprintf.h.
+//#define IMGUI_DISABLE_STB_SPRINTF_IMPLEMENTATION
 //#define IMGUI_USE_STB_SPRINTF
 
 //---- Use FreeType to build and rasterize the font atlas (instead of stb_truetype which is embedded by default in Dear ImGui)
