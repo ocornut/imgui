@@ -95,6 +95,7 @@ Other changes:
 - Backends: GLFW: Revert ignoring mouse data on GLFW_CURSOR_DISABLED as it can be used
   differently. User may set ImGuiConfigFLags_NoMouse if desired. (#5625, #6609) [@scorpion-26]
 - Backends: WebGPU: Update for changes in Dawn. (#6602, #6188) [@williamhCode]
+- Examples: Vulkan: Creating minimal descriptor pools to fit only what is needed by example. (#6642) [@SaschaWillem]
 
 
 -----------------------------------------------------------------------
