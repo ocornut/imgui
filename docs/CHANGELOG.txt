@@ -85,6 +85,8 @@ Other changes:
   desirable behavior.
 - Misc: Added IMGUI_DISABLE_STB_SPRINTF_IMPLEMENTATION config macro to disable
   stb_sprintf implementation when using IMGUI_USE_STB_SPRINTF. (#6626) [@septag]
+- Misc: Avoid stb_textedit.h reincluding string.h while in a namespace, which
+  messes up with building with Clang Modules. (#6653, #4791) [@JohelEGP]
 - Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
 - Demo: Showcase a few more InputText() flags.
 - Backends: Made all backends sources files support global IMGUI_DISABLE. (#6601)
