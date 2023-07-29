@@ -1961,7 +1961,7 @@ ImFontConfig::ImFontConfig()
 {
     memset(this, 0, sizeof(*this));
     FontDataOwnedByAtlas = true;
-    OversampleH = 3; // FIXME: 2 may be a better default?
+    OversampleH = 2;
     OversampleV = 1;
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;

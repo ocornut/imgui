@@ -52,6 +52,8 @@ Breaking changes:
 
 Other changes:
 
+- Fonts: ImFontConfig::OversampleH now defaults to 2 instead of 3, since the
+  quality increase is largely minimal.
 - ImDrawData: CmdLists[] array is now an ImVector<> owned by ImDrawData rather
   than a pointer to internal state.
   - This makes it easier for user to create their own or append to an existing draw data.
