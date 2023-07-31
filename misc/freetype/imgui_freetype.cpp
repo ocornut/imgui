@@ -917,8 +917,8 @@ FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_Pointer
     // Calculate the bitmap size
     slot->bitmap_left = FT_Int(box.x);
     slot->bitmap_top = FT_Int(-box.y);
-    slot->bitmap.rows = unsigned int(ceil(box.h));
-    slot->bitmap.width = unsigned int(ceil(box.w));
+    slot->bitmap.rows = (unsigned int)(ceil(box.h));
+    slot->bitmap.width = (unsigned int)(ceil(box.w));
     slot->bitmap.pitch = slot->bitmap.width * 4;
     slot->bitmap.pixel_mode = FT_PIXEL_MODE_BGRA;
 
