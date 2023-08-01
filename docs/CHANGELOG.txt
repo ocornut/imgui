@@ -54,6 +54,9 @@ Other changes:
 
 - Fonts: ImFontConfig::OversampleH now defaults to 2 instead of 3, since the
   quality increase is largely minimal.
+- Fonts, imgui_freetype: Added support to render OpenType SVG fonts using lunasvg.
+  Requires enabling IMGUI_ENABLE_FREETYPE_LUNASVG along with IMGUI_ENABLE_FREETYPE,
+  and providing headers/libraries for lunasvg. (#6591, #6607) [@sakiodre]
 - ImDrawData: CmdLists[] array is now an ImVector<> owned by ImDrawData rather
   than a pointer to internal state.
   - This makes it easier for user to create their own or append to an existing draw data.
