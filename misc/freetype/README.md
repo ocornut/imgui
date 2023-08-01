@@ -35,3 +35,11 @@ You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain color
 ["Using Colorful Glyphs/Emojis"](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md#using-colorful-glyphsemojis) section of FONTS.md.
 
 ![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)
+
+
+### Using OpenType SVG fonts (SVGinOT)
+- *SVG in Open Type* is a standard by Adobe and Mozilla for color OpenType and Open Font Format fonts. It allows font creators to embed complete SVG files within a font enabling full color and even animations.
+- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT
+- Requires: [lunasvg](https://github.com/sammycage/lunasvg) v2.3.2 and above
+    1. Add `#define IMGUI_ENABLE_FREETYPE_OTSVG` in your `imconfig.h`.
+    2. Get latest lunasvg binaries or build yourself. Under Windows you may use vcpkg with: `vcpkg install lunasvg --triplet=x64-windows`.

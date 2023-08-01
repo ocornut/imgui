@@ -80,6 +80,14 @@
 // The only purpose of this define is if you want force compilation of the stb_truetype backend ALONG with the FreeType backend.
 //#define IMGUI_ENABLE_STB_TRUETYPE
 
+//---- Use lunasvg library to render OpenType SVG fonts (SVGinOT)
+// Requires lunasvg headers to be available in the include path. Requires program to be compiled with the lunasvg library (not provided).
+// See https://github.com/ocornut/imgui/tree/master/misc/freetype
+// Only works in combination with IMGUI_ENABLE_FREETYPE.
+// The implementation is based on the demo https://gitlab.freedesktop.org/freetype/freetype-demos/-/blob/master/src/rsvg-port.c
+// which is licensed under CeCILL-C Free Software License Agreement
+//#define IMGUI_ENABLE_FREETYPE_LUNASVG
+
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 /*
