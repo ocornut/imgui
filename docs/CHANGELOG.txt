@@ -44,6 +44,9 @@ Breaking changes:
 
 Other changes:
 
+- Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
+  v_max=INT_MAX (#6675, #6679) [@jbarthelmes]
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.8 (Released 2023-08-01)
