@@ -1,4 +1,4 @@
-// dear imgui, v1.89.8
+// dear imgui, v1.89.9 WIP
 // (main code and documentation)
 
 // Help:
@@ -4048,7 +4048,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
             return false;
 
         // Test if using AllowOverlap and overlapped
-        if ((g.LastItemData.InFlags & ImGuiItemflags_AllowOverlap) && id != 0)
+        if ((g.LastItemData.InFlags & ImGuiItemFlags_AllowOverlap) && id != 0)
             if ((flags & ImGuiHoveredFlags_AllowWhenOverlappedByItem) == 0)
                 if (g.HoveredIdPreviousFrame != g.LastItemData.ID)
                     return false;
@@ -4116,7 +4116,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
 
         // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match.
         // This allows using patterns where a later submitted widget overlaps a previous one. Generally perceived as a front-to-back hit-test.
-        if (item_flags & ImGuiItemflags_AllowOverlap)
+        if (item_flags & ImGuiItemFlags_AllowOverlap)
         {
             g.HoveredIdAllowOverlap = true;
             if (g.HoveredIdPreviousFrame != id)
@@ -5320,7 +5320,7 @@ bool ImGui::IsItemEdited()
 void ImGui::SetNextItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
-    g.NextItemData.ItemFlags |= ImGuiItemflags_AllowOverlap;
+    g.NextItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap;
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
