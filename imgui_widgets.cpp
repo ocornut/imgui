@@ -7180,7 +7180,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     }
 
     // Shortcut: Select all (CTRL+A)
-    if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+    if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
         if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
             ms->BeginIO.RequestSelectAll = true;
 
@@ -7332,7 +7332,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     void* item_data = (void*)g.NextItemData.SelectionUserData;
 
-    const bool is_multiselect = (ms->Flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0;
+    const bool is_multiselect = (ms->Flags & ImGuiMultiSelectFlags_SingleSelect) == 0;
     bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
     bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
 
@@ -7411,18 +7411,20 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             ms->EndIO.RangeDirection = +1;
         }
 
-        if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
+        if (!is_multiselect)
         {
-            if (is_multiselect && !is_ctrl)
+            ms->EndIO.RequestClear = true;
+        }
+        else if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
+        {
+            if (!is_ctrl)
                 ms->EndIO.RequestClear = true;
         }
         else if (input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad)
         {
-            if (is_multiselect && is_shift && !is_ctrl) // Without Shift the RequestClear was done in BeginIO, not necessary to do again.
+            if (is_shift && !is_ctrl) // Without Shift the RequestClear was done in BeginIO, not necessary to do again.
                 ms->EndIO.RequestClear = true;
         }
-        else if (!is_multiselect)
-            ms->EndIO.RequestClear = true;
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)

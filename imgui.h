@@ -2724,12 +2724,12 @@ struct ImColor
 #define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
 
 // Flags for BeginMultiSelect().
-// (we provide 'ImGuiMultiSelectFlags_NoMultiSelect' for consistency and flexiblity, but it essentially disable the main purpose of BeginMultiSelect().
-//  If you use 'ImGuiMultiSelectFlags_NoMultiSelect' you can handle single-selection in a simpler way by just calling Selectable()/TreeNode() and reacting on clicks).
+// (we provide 'ImGuiMultiSelectFlags_SingleSelect' for consistency and flexiblity to allow a single-selection to use same code/logic, but it essentially disable the biggest purpose of BeginMultiSelect().
+//  If you use 'ImGuiMultiSelectFlags_SingleSelect' you can handle single-selection in a simpler way by just calling Selectable()/TreeNode() and reacting on clicks).
 enum ImGuiMultiSelectFlags_
 {
     ImGuiMultiSelectFlags_None                  = 0,
-    ImGuiMultiSelectFlags_NoMultiSelect         = 1 << 0,   // Disable selecting more than one item. This is not very useful at this kind of selection can be implemented without BeginMultiSelect(), but this is available for consistency.
+    ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to use same code/logic is desired, but may not be very useful.
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to set RequestSelectAll
     ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 2,   // Clear selection when pressing Escape while scope is focused.
     ImGuiMultiSelectFlags_ClearOnClickWindowVoid= 1 << 3,   // Clear selection when clicking on empty location within host window (use if BeginMultiSelect() covers a whole window)

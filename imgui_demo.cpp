@@ -3106,7 +3106,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::Checkbox("Enable drag & drop", &use_drag_drop);
             ImGui::Checkbox("Show in a table", &show_in_table);
             ImGui::Checkbox("Show color button", &show_color_button);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoMultiSelect", &flags, ImGuiMultiSelectFlags_NoMultiSelect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickWindowVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickWindowVoid);
