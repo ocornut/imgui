@@ -4566,10 +4566,7 @@ void ImGui::NewFrame()
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (int n = 0; n < g.Viewports.Size; n++)
-    {
-        ImGuiViewportP* viewport = g.Viewports[n];
-        viewport->DrawDataP.Clear();
-    }
+        g.Viewports[n]->DrawDataP.Valid = false;
 
     // Drag and drop keep the source ID alive so even if the source disappear our state is consistent
     if (g.DragDropActive && g.DragDropPayload.SourceId == g.ActiveId)
