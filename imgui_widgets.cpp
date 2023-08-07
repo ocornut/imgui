@@ -6390,8 +6390,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
     }
 
     // Compute open and multi-select states before ItemAdd() as it clear NextItem data.
+    const bool is_multi_select = (g.NextItemData.ItemFlags & ImGuiItemFlags_IsMultiSelect) != 0; // Before ItemAdd()
     bool is_open = TreeNodeUpdateNextOpen(storage_id, flags);
-    const bool is_multi_select = (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasSelectionData) != 0; // Before ItemAdd()
     bool item_add = ItemAdd(interact_bb, id);
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
     g.LastItemData.DisplayRect = frame_bb;
@@ -6780,7 +6780,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     }
 
     const bool disabled_item = (flags & ImGuiSelectableFlags_Disabled) != 0;
-    const bool is_multi_select = (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasSelectionData) != 0; // Before ItemAdd()
+    const bool is_multi_select = (g.NextItemData.ItemFlags & ImGuiItemFlags_IsMultiSelect) != 0; // Before ItemAdd()
     const bool item_add = ItemAdd(bb, id, NULL, disabled_item ? (ImGuiItemFlags)ImGuiItemFlags_Disabled : ImGuiItemFlags_None);
 
     if (span_all_columns)
