@@ -94,14 +94,8 @@ Index of this file:
 #include <stdio.h>          // vsnprintf, sscanf, printf
 #include <stdlib.h>         // NULL, malloc, free, atoi
 #include <stdint.h>         // intptr_t
-
-// Format specifiers for 64-bit values (hasn't been decently standardized since VS2013)
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
-#include <inttypes.h>
-#elif !defined(PRId64)
-#define PRId64 "I64d"
-#define PRIu64 "I64u"
-#define PRIX64 "I64X"
+#include <inttypes.h>       // PRId64/PRIu64, not avail in some MinGW headers.
 #endif
 
 // Visual Studio warnings
@@ -149,6 +143,15 @@ Index of this file:
 #endif
 #if defined(_MSC_VER) && !defined(vsnprintf)
 #define vsnprintf   _vsnprintf
+#endif
+
+// Format specifiers for 64-bit values (hasn't been decently standardized before VS2013)
+#if !defined(PRId64) && defined(_MSC_VER)
+#define PRId64 "I64d"
+#define PRIu64 "I64u"
+#elif !defined(PRId64)
+#define PRId64 "lld"
+#define PRIu64 "llu"
 #endif
 
 // Helpers macros
