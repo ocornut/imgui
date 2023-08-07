@@ -1741,11 +1741,11 @@ struct IMGUI_API ImGuiMultiSelectState
     int                     LastFrameActive;    // Last used frame-count, for GC.
     ImS8                    RangeSelected;      // -1 (don't have) or true/false
     ImS8                    NavIdSelected;      // -1 (don't have) or true/false
-    void*                   RangeSrcItem;       //
-    void*                   NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
+    ImGuiSelectionUserData  RangeSrcItem;       //
+    ImGuiSelectionUserData  NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
 
     ImGuiMultiSelectState() { Init(0); }
-    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = (void*)-1; }
+    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT

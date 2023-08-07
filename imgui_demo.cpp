@@ -2802,7 +2802,7 @@ struct ExampleSelection
     {
         if (ms_io->RequestClear)        { Clear(); }
         if (ms_io->RequestSelectAll)    { SelectAll(items_count); }
-        if (ms_io->RequestSetRange)     { SetRange((int)(intptr_t)ms_io->RangeSrcItem, (int)(intptr_t)ms_io->RangeDstItem, ms_io->RangeSelected ? 1 : 0); }
+        if (ms_io->RequestSetRange)     { SetRange((int)ms_io->RangeSrcItem, (int)ms_io->RangeDstItem, ms_io->RangeSelected ? 1 : 0); }
     }
 
     void DebugTooltip()
@@ -2827,19 +2827,19 @@ struct ExampleSelection
         QueueDeletion = false;
 
         // If current item is not selected.
-        if (ms_io->NavIdSelected == false)          // Here 'NavIdSelected' should be == to 'GetSelected(ms_io->NavIdData)'
+        if (ms_io->NavIdSelected == false)      // Here 'NavIdSelected' should be == to 'GetSelected(ms_io->NavIdData)'
         {
-            ms_io->RangeSrcReset = true;            // Request to recover RangeSrc from NavId next frame. Would be ok to reset even without the !NavIdSelected test but it would take an extra frame to recover RangeSrc when deleting a selected item.
-            return (int)(intptr_t)ms_io->NavIdItem; // Request to land on same item after deletion.
+            ms_io->RangeSrcReset = true;        // Request to recover RangeSrc from NavId next frame. Would be ok to reset even without the !NavIdSelected test but it would take an extra frame to recover RangeSrc when deleting a selected item.
+            return (int)ms_io->NavIdItem;       // Request to land on same item after deletion.
         }
 
         // If current item is selected: land on first unselected item after RangeSrc.
-        for (int n = (int)(intptr_t)ms_io->RangeSrcItem + 1; n < items.Size; n++)
+        for (int n = (int)ms_io->RangeSrcItem + 1; n < items.Size; n++)
             if (!GetSelected(n))
                 return n;
 
         // If current item is selected: otherwise return last unselected item.
-        for (int n = IM_MIN((int)(intptr_t)ms_io->RangeSrcItem, items.Size) - 1; n >= 0; n--)
+        for (int n = IM_MIN((int)ms_io->RangeSrcItem, items.Size) - 1; n >= 0; n--)
             if (!GetSelected(n))
                 return n;
 
@@ -2860,7 +2860,7 @@ struct ExampleSelection
         IM_UNUSED(ms_io);
         ImVector<ITEM_TYPE> new_items;
         new_items.reserve(items.Size - SelectionSize);
-        int next_focus_idx_in_old_selection = (int)(intptr_t)ms_io->RequestFocusItem;
+        int next_focus_idx_in_old_selection = (int)ms_io->RequestFocusItem;
         int next_focus_idx_in_new_selection = -1;
         for (int n = 0; n < items.Size; n++)
         {
@@ -3016,8 +3016,8 @@ static void ShowDemoWindowMultiSelect()
                 // FIXME-MULTISELECT: If pressing Delete + another key we have ambiguous behavior.
                 const bool want_delete = (selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
                 if (want_delete)
-                    ms_io->RequestFocusItem = (void*)(intptr_t)selection.ApplyDeletionPreLoop(ms_io, items);
-                const int next_focus_item_idx = (int)(intptr_t)ms_io->RequestFocusItem;
+                    ms_io->RequestFocusItem = selection.ApplyDeletionPreLoop(ms_io, items);
+                const int next_focus_item_idx = (int)ms_io->RequestFocusItem;
 
                 for (int n = 0; n < items.Size; n++)
                 {
@@ -3138,7 +3138,7 @@ static void ShowDemoWindowMultiSelect()
                 const bool want_delete = selection.QueueDeletion || ((selection.GetSize() > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
                 if (want_delete)
                     selection.ApplyDeletionPreLoop(ms_io, items);
-                const int next_focus_item_idx = (int)(intptr_t)ms_io->RequestFocusItem;
+                const int next_focus_item_idx = (int)ms_io->RequestFocusItem;
 
                 if (show_in_table)
                 {
@@ -3162,7 +3162,7 @@ static void ShowDemoWindowMultiSelect()
                 {
                     // IF clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
                     // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
-                    if (use_clipper && clipper.DisplayStart > (int)(intptr_t)ms_io->RangeSrcItem)
+                    if (use_clipper && !ms_io->RangeSrcPassedBy && clipper.DisplayStart > ms_io->RangeSrcItem)
                         ms_io->RangeSrcPassedBy = true;
 
                     const int item_begin = use_clipper ? clipper.DisplayStart : 0;
@@ -3254,7 +3254,7 @@ static void ShowDemoWindowMultiSelect()
                 // If clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
                 // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
                 // Here we essentially notify before EndMultiSelect() that RangeSrc is still present in our data set.
-                if (use_clipper && items.Size > (int)(intptr_t)ms_io->RangeSrcItem)
+                if (use_clipper && !ms_io->RangeSrcPassedBy && items.Size > ms_io->RangeSrcItem)
                     ms_io->RangeSrcPassedBy = true;
 
                 if (show_in_table)
