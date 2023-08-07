@@ -7455,11 +7455,10 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     const bool is_active = (storage->LastFrameActive >= GetFrameCount() - 2); // Note that fully clipped early out scrolling tables will appear as inactive here.
     if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
-    bool open = TreeNode((void*)(intptr_t)storage->ID, "MultiSelect 0x%08X%s", storage->ID, is_active ? "" : " *Inactive*");
+    bool open = TreeNode((void*)(intptr_t)storage->ID, "MultiSelect 0x%08X in '%s'%s", storage->ID, storage->Window ? storage->Window->Name : "N/A", is_active ? "" : " *Inactive*");
     if (!is_active) { PopStyleColor(); }
     if (!open)
         return;
-    Text("ID = 0x%08X", storage->ID);
     Text("RangeSrcItem = %p, RangeSelected = %d", storage->RangeSrcItem, storage->RangeSelected);
     Text("NavIdData = %p, NavIdSelected = %d", storage->NavIdItem, storage->NavIdSelected);
     TreePop();

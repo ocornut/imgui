@@ -2796,7 +2796,8 @@ struct ExampleSelection
     void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
     void SelectAll(int count)           { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
 
-    // Apply requests coming from BeginMultiSelect() and EndMultiSelect(). Must be done in this order! Order->SelectAll->SetRange.
+    // Apply requests coming from BeginMultiSelect() and EndMultiSelect(). Must be done in this order! Clear->SelectAll->SetRange.
+    // Enable 'Debug Log->Selection' to see selection requests as they happen.
     void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count)
     {
         if (ms_io->RequestClear)        { Clear(); }
@@ -2933,6 +2934,8 @@ static void ShowDemoWindowMultiSelect()
         if (ImGui::TreeNode("Multiple Selection (full)"))
         {
             static ExampleSelection selection;
+
+            ImGui::Text("Tips: Use 'Debug Log->Selection' to see selection requests as they happen.");
 
             ImGui::Text("Supported features:");
             ImGui::BulletText("Keyboard navigation (arrows, page up/down, home/end, space).");
