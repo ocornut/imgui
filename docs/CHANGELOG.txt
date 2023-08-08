@@ -37,6 +37,25 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.89.9 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Nav, TreeNode: Pressing Left with ImGuiTreeNodeFlags_NavLeftJumpsBackHere now goes
+  through proper navigation logic: honor scrolling and selection. (#1079, #1131)
+- Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
+  v_max=INT_MAX (#6675, #6679) [@jbarthelmes]
+- ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
+  large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
+- Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
+  appearing empty (regression in 1.89.8).
+- Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
+
+
+-----------------------------------------------------------------------
  VERSION 1.89.8 (Released 2023-08-01)
 -----------------------------------------------------------------------
 
