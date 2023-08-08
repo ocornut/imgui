@@ -6155,18 +6155,29 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if (!display_frame && (flags & (ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_SpanFullWidth)) == 0)
         interact_bb.Max.x = frame_bb.Min.x + text_width + style.ItemSpacing.x * 2.0f;
 
-    // Store a flag for the current depth to tell if we will allow closing this node when navigating one of its child.
-    // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
-    // This is currently only support 32 level deep and we are fine with (1 << Depth) overflowing into a zero.
-    const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
+    // Compute open and multi-select states before ItemAdd() as it clear NextItem data.
     bool is_open = TreeNodeUpdateNextOpen(id, flags);
-    if (is_open && !g.NavIdIsAlive && (flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
-        window->DC.TreeJumpToParentOnPopMask |= (1 << window->DC.TreeDepth);
-
     bool item_add = ItemAdd(interact_bb, id);
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
     g.LastItemData.DisplayRect = frame_bb;
 
+    // If a NavLeft request is happening and ImGuiTreeNodeFlags_NavLeftJumpsBackHere enabled:
+    // Store data for the current depth to allow returning to this node from any child item.
+    // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
+    // It will become tempting to enable ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default or move it to ImGuiStyle.
+    // Currently only supports 32 level deep and we are fine with (1 << Depth) overflowing into a zero, easy to increase.
+    if (is_open && !g.NavIdIsAlive && (flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+        if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
+        {
+            g.NavTreeNodeStack.resize(g.NavTreeNodeStack.Size + 1);
+            ImGuiNavTreeNodeData* nav_tree_node_data = &g.NavTreeNodeStack.back();
+            nav_tree_node_data->ID = id;
+            nav_tree_node_data->InFlags = g.LastItemData.InFlags;
+            nav_tree_node_data->NavRect = g.LastItemData.NavRect;
+            window->DC.TreeJumpToParentOnPopMask |= (1 << window->DC.TreeDepth);
+        }
+
+    const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
     if (!item_add)
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
@@ -6336,12 +6347,14 @@ void ImGui::TreePop()
     ImU32 tree_depth_mask = (1 << window->DC.TreeDepth);
 
     // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsBackHere is enabled)
-    if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
-        if (g.NavIdIsAlive && (window->DC.TreeJumpToParentOnPopMask & tree_depth_mask))
-        {
-            SetNavID(window->IDStack.back(), g.NavLayer, 0, ImRect());
-            NavMoveRequestCancel();
-        }
+    if (window->DC.TreeJumpToParentOnPopMask & tree_depth_mask) // Only set during request
+    {
+        ImGuiNavTreeNodeData* nav_tree_node_data = &g.NavTreeNodeStack.back();
+        IM_ASSERT(nav_tree_node_data->ID == window->IDStack.back());
+        if (g.NavIdIsAlive && g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
+            NavMoveRequestResolveWithPastTreeNode(&g.NavMoveResultLocal, nav_tree_node_data);
+        g.NavTreeNodeStack.pop_back();
+    }
     window->DC.TreeJumpToParentOnPopMask &= tree_depth_mask - 1;
 
     IM_ASSERT(window->IDStack.Size > 1); // There should always be 1 element in the IDStack (pushed during window creation). If this triggers you called TreePop/PopID too much.
