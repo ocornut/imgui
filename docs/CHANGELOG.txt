@@ -5,46 +5,108 @@ This document holds the user-facing changelog that we also use in release notes.
 We generally fold multiple commits pertaining to the same topic as a single entry.
 Changes to backends are also included within the individual .cpp files of each backend.
 
-RELEASE NOTES:          https://github.com/ocornut/imgui/releases
-REPORT ISSUES:          https://github.com/ocornut/imgui/issues
-DISCUSS, ASK QUESTIONS: https://github.com/ocornut/imgui/discussions
-WIKI                    https://github.com/ocornut/imgui/wiki
 FAQ                     https://www.dearimgui.com/faq/
+RELEASE NOTES:          https://github.com/ocornut/imgui/releases
+WIKI                    https://github.com/ocornut/imgui/wiki
+GETTING STARTED         https://github.com/ocornut/imgui/wiki/Getting-Started
+GLOSSARY                https://github.com/ocornut/imgui/wiki/Glossary
+ISSUES & SUPPORT        https://github.com/ocornut/imgui/issues
 
 WHEN TO UPDATE?
 
 - Keeping your copy of Dear ImGui updated regularly is recommended.
-- It is generally safe to sync to the latest commit in master or docking branches
-  The library is fairly stable and regressions tends to be fixed fast when reported.
+- It is generally safe and recommended to sync to the latest commit in 'master' or 'docking'
+  branches. The library is fairly stable and regressions tends to be fixed fast when reported.
 
 HOW TO UPDATE?
 
-- Overwrite every file except imconfig.h (if you have modified it).
-- You may also locally branch to modify imconfig.h and merge latest into your branch.
+- Update submodule or copy/overwrite every file.
+- About imconfig.h:
+  - You may modify your copy of imconfig.h, in this case don't overwrite it.
+  - or you may locally branch to modify imconfig.h and merge/rebase latest.
+  - or you may '#define IMGUI_USER_CONFIG "my_config_file.h"' globally from your build system to
+    specify a custom path for your imconfig.h file and instead not have to modify the default one.
 - Read the `Breaking Changes` section (in imgui.cpp or here in the Changelog).
 - If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it.
-- If you are dropping this repository in your codebase, please leave the demo and text files in there, they will be useful.
+- If you are copying this repository in your codebase, please leave the demo and documentations files in there, they will be useful.
 - You may diff your previous Changelog with the one you just copied and read that diff.
 - You may enable `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in imconfig.h to forcefully disable legacy names and symbols.
   Doing it every once in a while is a good way to make sure you are not using obsolete symbols. Dear ImGui is in active development,
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+
 -----------------------------------------------------------------------
- VERSION 1.89.8 WIP (In Progress)
+ VERSION 1.89.9 WIP (In Progress)
 -----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Tables: Made it possible to use SameLine(0,0) after TableNextColumn() or
+  TableSetColumnIndex() in order to reuse line height from previous cell. (#3740)
+- Nav, TreeNode: Pressing Left with ImGuiTreeNodeFlags_NavLeftJumpsBackHere now goes
+  through proper navigation logic: honor scrolling and selection. (#1079, #1131)
+- Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
+  v_max=INT_MAX (#6675, #6679) [@jbarthelmes]
+- ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
+  of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
+- ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
+  large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
+- Misc: Made multiple calls to Render() during the same frame early out faster.
+- Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
+  appearing empty (regression in 1.89.8).
+- Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.8 (Released 2023-08-01)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.8
 
 Breaking changes:
 
 - IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
   and often incorrect/misleading considering the existence of a higher-level
-  input queue. (#4921)
+  input queue. This is automatically cleared by io.ClearInputsKeys(). (#4921)
+- ImDrawData: CmdLists[] array is now owned, changed from 'ImDrawList**' to
+  'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
+  cannot compare to NULL nor reassign manually anymore.
+  Instead use AddDrawList(). Allocation count are identical. (#6406, #4879, #1878)
 
 Other changes:
 
+- Fonts: ImFontConfig::OversampleH now defaults to 2 instead of 3, since the
+  quality increase is largely minimal.
+- Fonts, imgui_freetype: Added support to render OpenType SVG fonts using lunasvg.
+  Requires enabling IMGUI_ENABLE_FREETYPE_LUNASVG along with IMGUI_ENABLE_FREETYPE,
+  and providing headers/libraries for lunasvg. (#6591, #6607) [@sakiodre]
+- ImDrawData: CmdLists[] array is now an ImVector<> owned by ImDrawData rather
+  than a pointer to internal state.
+  - This makes it easier for user to create their own or append to an existing draw data.
+    Added a ImDrawData::AddDrawList() helper function to do that. (#6406, #4879, #1878)
+  - This makes it easier to perform a deep-swap instead of a deep-copy, as array
+    ownership is now clear. (#6597, #6475, #6167, #5776, #5109, #4763, #3515, #1860)
+  - Syntax and allocation count are otherwise identical.
+- Fixed CTRL+Tab dimming background assert when target window has a callback
+  in the last ImDrawCmd. (#4857, #5937)
+- IsItemHovered: Fixed ImGuiHoveredFlags_ForTooltip for Keyboard/Gamepad navigation,
+  got broken prior to 1.89.7 due to an unrelated change making flags conflict. (#6622, #1485)
 - InputText: Fixed a case where deactivation frame would write to underlying
   buffer or call CallbackResize although unnecessary, in a frame where the
   return value was false.
+- Tables: fixed GetContentRegionAvail().y report not taking account of lower cell
+  padding or of using ImGuiTableFlags_NoHostExtendY. Not taking it into account
+  would make the idiom of creating vertically bottom-aligned content (e.g. a child
+  window) inside a table make the parent window erroneously have a scrollbar. (#6619)
+- Tables: fixed calculation of multi-instance shared decoration/scrollbar width of
+  scrolling tables, to avoid flickering width variation when resizing down a table
+  hosting a child window. (#5920, #6619)
+- Scrollbar: layout needs to take account of window border size, so a border size
+  will slightly reduce scrollbar size. Generally we tried to make it that window
+  border size has no incidence on layout but this can't work with thick borders. (#2522)
 - IO: Added io.ClearEventsQueue() to clear incoming inputs events. (#4921)
   May be useful in conjunction with io.ClearInputsKeys() if you need to clear
   both current inputs state and queued events (e.g. when using blocking native
@@ -52,8 +114,18 @@ Other changes:
 - IO: Changed io.ClearInputsKeys() specs to also clear current frame character buffer
   (what now obsoleted io.ClearInputCharacters() did), as this is effectively the
   desirable behavior.
+- Misc: Added IMGUI_DISABLE_STB_SPRINTF_IMPLEMENTATION config macro to disable
+  stb_sprintf implementation when using IMGUI_USE_STB_SPRINTF. (#6626) [@septag]
+- Misc: Avoid stb_textedit.h reincluding string.h while in a namespace, which
+  messes up with building with Clang Modules. (#6653, #4791) [@JohelEGP]
 - Demo: Better showcase use of SetNextItemAllowOverlap(). (#6574, #6512, #3909, #517)
 - Demo: Showcase a few more InputText() flags.
+- Backends: Made all backends sources files support global IMGUI_DISABLE. (#6601)
+- Backends: GLFW: Revert ignoring mouse data on GLFW_CURSOR_DISABLED as it can be used
+  differently. User may set ImGuiConfigFlags_NoMouse if desired. (#5625, #6609) [@scorpion-26]
+- Backends: WebGPU: Update for changes in Dawn. (#6602, #6188) [@williamhCode]
+- Examples: Vulkan: Creating minimal descriptor pools to fit only what is needed by
+  example. (#6642) [@SaschaWillem]
 
 
 -----------------------------------------------------------------------
@@ -74,6 +146,11 @@ Breaking changes:
     legacy 'SetItemAllowOverlap()' call (public API) + ImGuiButtonFlags_AllowOverlap (internal).
   - Obsoleted 'SetItemAllowOverlap()': it didn't and couldn't work reliably since 1.89 (2022-11-15),
     and relied on ambiguously defined design. Use 'SetNextItemAllowOverlap()' before item instead.
+  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
+    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
+    While this fixes a common small visual issue, it also means that calling IsItemHovered()
+    after a non-reactive elements - e.g. Text() - overlapping an active one may fail if you don't
+    use IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem). (#6610)
   - Renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap'.
   - Renamed 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'
   - Kept redirecting enums (will obsolete).
@@ -109,8 +186,6 @@ Other changes:
   - Fixed first frame of an overlap highlighting underlying item if previous frame didn't hover anything.
   - IsItemHovered: Changed to return false when querying an item using AllowOverlap mode which
     is being overlapped. Added ImGuiHoveredFlags_AllowWhenOverlappedByItem to opt-out. (#6512, #3909, #517)
-  - Selectable, TreeNode: When using ImGuiSelectableFlags_AllowOverlap/ImGuiTreeNodeFlags_AllowOverlap
-    and holding item held, overlapping widgets won't appear as hovered. (#6512, #3909)
 - IsWindowHovered: Added support for ImGuiHoveredFlags_Stationary.
 - IsWindowHovered, IsItemHovered: Assert when passed any unsupported flags.
 - Tables: Fixed a regression in 1.89.6 leading to the first column of tables with either
