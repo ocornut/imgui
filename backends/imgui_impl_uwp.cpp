@@ -19,9 +19,9 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <sdkddkver.h>
 #include <tchar.h>
 #include <wrl.h>
-
 
 //WinRT
 #include <Windows.UI.Core.h>
@@ -29,8 +29,10 @@
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;
 
-// Configuration flags to add in your imconfig.h file:
-//#define IMGUI_IMPL_UWP_DISABLE_GAMEPAD              // Disable gamepad support. This was meaningful before <1.81 but we now load XInput dynamically so the option is now less relevant.
+// Disabling XInput on older SDKs that didn't allow LoadLibrary for the Application Family
+#if  (NTDDI_VERSION < NTDDI_WIN10_CO)
+#define IMGUI_IMPL_UWP_DISABLE_GAMEPAD
+#endif
 
 // Using XInput for gamepad (will load DLL dynamically)
 #ifndef IMGUI_IMPL_UWP_DISABLE_GAMEPAD
@@ -42,7 +44,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 struct ImGui_ImplUwp_Data
 {
     ABI::Windows::UI::Core::ICoreWindow*    CoreWindow;
-    int                                     MouseTrackedArea;   // 0: not tracked, 1: client are, 2: non-client area
+    int                                     MouseTrackedArea;   // 0: not tracked, 1: client area, 2: non-client area
     int                                     MouseButtonsDown;
     INT64                                   Time;
     INT64                                   TicksPerSecond;
