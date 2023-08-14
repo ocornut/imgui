@@ -10,9 +10,9 @@
 // Read imgui.cpp for more details, documentation and comments.
 // Get the latest version at https://github.com/ocornut/imgui
 
-// -------------------------------------------------
+//---------------------------------------------------
 // PLEASE DO NOT REMOVE THIS FILE FROM YOUR PROJECT!
-// -------------------------------------------------
+//---------------------------------------------------
 // Message to the person tempted to delete this file when integrating Dear ImGui into their codebase:
 // Think again! It is the most useful reference code that you and other coders will want to refer to and call.
 // Have the ImGui::ShowDemoWindow() function wired in an always-available debug menu of your game/app!
@@ -26,14 +26,23 @@
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (which you won't delete)
 
-// Message to beginner C/C++ programmers about the meaning of the 'static' keyword:
-// In this demo code, we frequently use 'static' variables inside functions. A static variable persists across calls,
-// so it is essentially like a global variable but declared inside the scope of the function. We do this as a way to
-// gather code and data in the same place, to make the demo source code faster to read, faster to write, and smaller
-// in size. It also happens to be a convenient way of storing simple UI related information as long as your function
-// doesn't need to be reentrant or used in multiple threads. This might be a pattern you will want to use in your code,
-// but most of the real data you would be editing is likely going to be stored outside your functions.
+//--------------------------------------------
+// ABOUT THE MEANING OF THE 'static' KEYWORD:
+//--------------------------------------------
+// In this demo code, we frequently use 'static' variables inside functions.
+// A static variable persists across calls. It is essentially a global variable but declared inside the scope of the function.
+// Think of "static int n = 0;" as "global int n = 0;" !
+// We do this IN THE DEMO because we want:
+// - to gather code and data in the same place.
+// - to make the demo source code faster to read, faster to change, smaller in size.
+// - it is also a convenient way of storing simple UI related information as long as your function
+//   doesn't need to be reentrant or used in multiple threads.
+// This might be a pattern you will want to use in your code, but most of the data you would be working
+// with in a complex codebase is likely going to be stored outside your functions.
 
+//-----------------------------------------
+// ABOUT THE CODING STYLE OF OUR DEMO CODE
+//-----------------------------------------
 // The Demo code in this file is designed to be easy to copy-and-paste into your application!
 // Because of this:
 // - We never omit the ImGui:: prefix when calling functions, even though most code here is in the same namespace.
