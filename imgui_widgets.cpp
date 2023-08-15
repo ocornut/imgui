@@ -7165,10 +7165,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     ms->BeginIO.NavIdItem = ms->EndIO.NavIdItem = storage->NavIdItem;
     ms->BeginIO.NavIdSelected = ms->EndIO.NavIdSelected = (storage->NavIdSelected == 1) ? true : false;
 
-    if (!ms->IsFocused)
-        return &ms->BeginIO; // This is cleared at this point.
-
-    // Auto clear when using Navigation to move within the selection
+    // Clear when using Navigation to move within the scope
     // (we compare FocusScopeId so it possible to use multiple selections inside a same window)
     if (g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == ms->FocusScopeId && g.NavJustMovedToHasSelectionData)
     {
@@ -7179,18 +7176,27 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
         if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             ms->BeginIO.RequestClear = true;
     }
-
-    // Shortcut: Select all (CTRL+A)
-    if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-        if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
-            ms->BeginIO.RequestSelectAll = true;
-
-    // Shortcut: Clear selection (Escape)
-    // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
-    // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
-    if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
-        if (Shortcut(ImGuiKey_Escape))
+    else if (g.NavJustMovedFromFocusScopeId == ms->FocusScopeId)
+    {
+        // Also clear on leaving scope (may be optional?)
+        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             ms->BeginIO.RequestClear = true;
+    }
+
+    if (ms->IsFocused)
+    {
+        // Shortcut: Select all (CTRL+A)
+        if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
+                ms->BeginIO.RequestSelectAll = true;
+
+        // Shortcut: Clear selection (Escape)
+        // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
+        // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
+        if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
+            if (Shortcut(ImGuiKey_Escape))
+                ms->BeginIO.RequestClear = true;
+    }
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
         DebugLogMultiSelectRequests("BeginMultiSelect", &ms->BeginIO);
