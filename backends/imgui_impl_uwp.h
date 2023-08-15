@@ -8,6 +8,10 @@
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 
+// Configs:
+//  #define IMGUI_DISABLE_UWP_DEFAULT_CLIPBOARD_FUNCTIONS     // Don't implement default WinRT clipboard handler.
+//  #define IMGUI_IMPL_UWP_DISABLE_GAMEPAD                    // Don't implement default XInput gamepad handler.
+
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
