@@ -478,6 +478,11 @@ bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL2_Init(window, renderer);
 }
 
+bool ImGui_ImplSDL2_InitForOther(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_Init(window, nullptr);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
