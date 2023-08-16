@@ -54,6 +54,9 @@ Other changes:
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
+- IO: Fixed io.AddMousePosEvent() and io.AddMouseButtonEvent() writing MouseSource to
+  wrong union section. Was semantically incorrect and accidentally had no side-effects
+  with default compiler alignment settings. (#6727) [@RickHuang2001]
 - Misc: Made multiple calls to Render() during the same frame early out faster.
 - Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
   appearing empty (regression in 1.89.8).
