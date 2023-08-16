@@ -141,13 +141,6 @@
     <ClCompile Include="imgui_tables.cpp" />
     <ClCompile Include="imgui_widgets.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore" />
-    <None Include="premake5.lua" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="LICENSE.txt" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
