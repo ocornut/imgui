@@ -50,6 +50,8 @@ Other changes:
   through proper navigation logic: honor scrolling and selection. (#1079, #1131)
 - Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
   v_max=INT_MAX (#6675, #6679) [@jbarthelmes]
+- InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
+  point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
