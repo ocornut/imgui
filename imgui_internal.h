@@ -805,6 +805,7 @@ enum ImGuiItemFlags_
 
     // Controlled by widget code
     ImGuiItemFlags_Inputable                = 1 << 10, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
+    ImGuiItemFlags_ExcludedFromGroup        = 1 << 11, // false     // Don't collect activation, deactivation and edit information into surrounding groups. Useful for display modes in widgets that don't affect actual values.
 };
 
 // Status flags for an already submitted item
@@ -1223,6 +1224,7 @@ struct IMGUI_API ImGuiStackSizes
     short   SizeOfItemFlagsStack;
     short   SizeOfBeginPopupStack;
     short   SizeOfDisabledStack;
+    short   SizeOfExcludedStack;
 
     ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
     void SetToContextState(ImGuiContext* ctx);
@@ -1822,13 +1824,16 @@ struct ImGuiContext
     // Item/widgets state and tracking information
     ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
+    ImGuiItemFlags          HoveredIdFlags;                     // If HoveredId is valid, contains the flags of the widget during this frame
     ImGuiID                 HoveredIdPreviousFrame;
+    ImGuiItemFlags          HoveredIdPreviousFrameFlags;        // If HoveredIdPreviousFrame is valid, contains the flags of the widget during the previous frame
     bool                    HoveredIdAllowOverlap;
     bool                    HoveredIdDisabled;                  // At least one widget passed the rect test, but has been discarded by disabled flag or popup inhibit. May be true even if HoveredId == 0.
     float                   HoveredIdTimer;                     // Measure contiguous hovering time
     float                   HoveredIdNotActiveTimer;            // Measure contiguous hovering time where the item has not been active
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdIsAlive;                    // Active widget has been seen this frame (we can't use a bool as the ActiveId may change within the frame)
+    ImGuiItemFlags          ActiveIdFlags;                      // If ActiveIdIsAlive is valid, contains the flags of the widget during this frame
     float                   ActiveIdTimer;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
@@ -1842,6 +1847,7 @@ struct ImGuiContext
     int                     ActiveIdMouseButton;
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdPreviousFrameIsAlive;
+    ImGuiItemFlags          ActiveIdPreviousFrameFlags;         // If ActiveIdPreviousFrameIsAlive is true, contains the flags of the widget during this frame
     bool                    ActiveIdPreviousFrameHasBeenEditedBefore;
     ImGuiWindow*            ActiveIdPreviousFrameWindow;
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
@@ -2014,6 +2020,7 @@ struct ImGuiContext
     float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     float                   DisabledAlphaBackup;                // Backup for style.Alpha for BeginDisabled()
     short                   DisabledStackSize;
+    short                   ExcludedStackSize;
     short                   TooltipOverrideCount;
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
@@ -2103,11 +2110,13 @@ struct ImGuiContext
 
         DebugHookIdInfo = 0;
         HoveredId = HoveredIdPreviousFrame = 0;
+        HoveredIdFlags = HoveredIdPreviousFrameFlags = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdDisabled = false;
         HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
         ActiveId = 0;
         ActiveIdIsAlive = 0;
+        ActiveIdFlags = 0;
         ActiveIdTimer = 0.0f;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
@@ -2121,6 +2130,7 @@ struct ImGuiContext
         ActiveIdMouseButton = -1;
         ActiveIdPreviousFrame = 0;
         ActiveIdPreviousFrameIsAlive = false;
+        ActiveIdPreviousFrameFlags = 0;
         ActiveIdPreviousFrameHasBeenEditedBefore = false;
         ActiveIdPreviousFrameWindow = NULL;
         LastActiveId = 0;
@@ -2207,6 +2217,7 @@ struct ImGuiContext
         ScrollbarClickDeltaToGrabCenter = 0.0f;
         DisabledAlphaBackup = 0.0f;
         DisabledStackSize = 0;
+        ExcludedStackSize = 0;
         TooltipOverrideCount = 0;
 
         PlatformImeData.InputPos = ImVec2(0.0f, 0.0f);

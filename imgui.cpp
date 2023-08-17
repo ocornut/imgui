@@ -3890,6 +3890,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = id;
+        g.ActiveIdFlags = g.CurrentItemFlags;
         g.ActiveIdSource = (g.NavActivateId == id || g.NavJustMovedToId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
         IM_ASSERT(g.ActiveIdSource != ImGuiInputSource_None);
     }
@@ -3912,6 +3913,7 @@ void ImGui::SetHoveredID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
+    g.HoveredIdFlags = g.CurrentItemFlags;
     g.HoveredIdAllowOverlap = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
@@ -3928,10 +3930,16 @@ ImGuiID ImGui::GetHoveredID()
 void ImGui::KeepAliveID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    if (g.ActiveId == id)
+    if ( g.ActiveId == id )
+    {
         g.ActiveIdIsAlive = id;
+        g.ActiveIdFlags = g.CurrentItemFlags;
+    }
     if (g.ActiveIdPreviousFrame == id)
+    {
         g.ActiveIdPreviousFrameIsAlive = true;
+        g.ActiveIdPreviousFrameFlags = g.CurrentItemFlags;
+    }
 }
 
 void ImGui::MarkItemEdited(ImGuiID id)
@@ -4584,7 +4592,9 @@ void ImGui::NewFrame()
     if (g.HoveredId && g.ActiveId != g.HoveredId)
         g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
+    g.HoveredIdPreviousFrameFlags = g.HoveredIdFlags;
     g.HoveredId = 0;
+    g.HoveredIdFlags = 0;
     g.HoveredIdAllowOverlap = false;
     g.HoveredIdDisabled = false;
 
@@ -4605,8 +4615,10 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrameWindow = g.ActiveIdWindow;
     g.ActiveIdPreviousFrameHasBeenEditedBefore = g.ActiveIdHasBeenEditedBefore;
     g.ActiveIdIsAlive = 0;
+    g.ActiveIdFlags = 0;
     g.ActiveIdHasBeenEditedThisFrame = false;
     g.ActiveIdPreviousFrameIsAlive = false;
+    g.ActiveIdPreviousFrameFlags = 0;
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputId != 0 && g.ActiveId != g.TempInputId)
         g.TempInputId = 0;
@@ -7204,6 +7216,29 @@ void ImGui::EndDisabled()
         g.Style.Alpha = g.DisabledAlphaBackup; //PopStyleVar();
 }
 
+// BeginExcludedFromGroup()/EndExcludedFromGroup()
+// - Those can be nested but it cannot be used to include an already excluded section (a single BeginExcludedFromGroup(true) in the stack is enough to keep everything excluded)
+// - BeginExcludedFromGroup(false) essentially does nothing useful but is provided to facilitate use of boolean expressions. If you can avoid calling BeginExcludedFromGroup(False)/EndExcludedFromGroup() best to avoid it.
+void ImGui::BeginExcludedFromGroup(bool excluded)
+{
+    ImGuiContext& g = *GImGui;
+    bool was_excluded = (g.CurrentItemFlags & ImGuiItemFlags_ExcludedFromGroup) != 0;
+    if (was_excluded || excluded)
+        g.CurrentItemFlags |= ImGuiItemFlags_ExcludedFromGroup;
+    g.ItemFlagsStack.push_back(g.CurrentItemFlags);
+    g.ExcludedStackSize++;
+}
+
+void ImGui::EndExcludedFromGroup()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.ExcludedStackSize > 0);
+    g.ExcludedStackSize--;
+    //PopItemFlag();
+    g.ItemFlagsStack.pop_back();
+    g.CurrentItemFlags = g.ItemFlagsStack.back();
+}
+
 void ImGui::PushTabStop(bool tab_stop)
 {
     PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
@@ -9326,6 +9361,11 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'", window->Name);
         EndDisabled();
     }
+    while (g.ExcludedStackSize > stack_sizes->SizeOfExcludedStack) //-V1044
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndExcludedFromGroup() in '%s'", window->Name);
+        EndExcludedFromGroup();
+    }
     while (g.ColorStack.Size > stack_sizes->SizeOfColorStack)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
@@ -9367,6 +9407,7 @@ void ImGuiStackSizes::SetToContextState(ImGuiContext* ctx)
     SizeOfItemFlagsStack = (short)g.ItemFlagsStack.Size;
     SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
     SizeOfDisabledStack = (short)g.DisabledStackSize;
+    SizeOfExcludedStack = (short)g.ExcludedStackSize;
 }
 
 // Compare to detect usage errors
@@ -9385,6 +9426,7 @@ void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
     IM_ASSERT(SizeOfGroupStack      == g.GroupStack.Size        && "BeginGroup/EndGroup Mismatch!");
     IM_ASSERT(SizeOfBeginPopupStack == g.BeginPopupStack.Size   && "BeginPopup/EndPopup or BeginMenu/EndMenu Mismatch!");
     IM_ASSERT(SizeOfDisabledStack   == g.DisabledStackSize      && "BeginDisabled/EndDisabled Mismatch!");
+    IM_ASSERT(SizeOfExcludedStack   == g.ExcludedStackSize      && "BeginExcludedFromGroup/EndExcludedFromGroup Mismatch!");
     IM_ASSERT(SizeOfItemFlagsStack  >= g.ItemFlagsStack.Size    && "PushItemFlag/PopItemFlag Mismatch!");
     IM_ASSERT(SizeOfColorStack      >= g.ColorStack.Size        && "PushStyleColor/PopStyleColor Mismatch!");
     IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
@@ -9835,6 +9877,9 @@ void ImGui::BeginGroup()
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     if (g.LogEnabled)
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+
+    // Exclusion from groups is only meant for surrounding groups, nested groups must still collect interactions properly.
+    PushItemFlag(ImGuiItemFlags_ExcludedFromGroup, false);
 }
 
 void ImGui::EndGroup()
@@ -9848,6 +9893,9 @@ void ImGui::EndGroup()
 
     if (window->DC.IsSetPos)
         ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
+
+    // Reactivate exclusion from group if it has been active while beginning this group.
+    PopItemFlag();
 
     ImRect group_bb(group_data.BackupCursorPos, ImMax(window->DC.CursorMaxPos, group_data.BackupCursorPos));
 
@@ -9874,8 +9922,8 @@ void ImGui::EndGroup()
     // It would be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
     // Also if you grep for LastItemId you'll notice it is only used in that context.
     // (The two tests not the same because ActiveIdIsAlive is an ID itself, in order to be able to handle ActiveId being overwritten during the frame.)
-    const bool group_contains_curr_active_id = (group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId;
-    const bool group_contains_prev_active_id = (group_data.BackupActiveIdPreviousFrameIsAlive == false) && (g.ActiveIdPreviousFrameIsAlive == true);
+    const bool group_contains_curr_active_id = (group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId && !(g.ActiveIdFlags & ImGuiItemFlags_ExcludedFromGroup);
+    const bool group_contains_prev_active_id = (group_data.BackupActiveIdPreviousFrameIsAlive == false) && (g.ActiveIdPreviousFrameIsAlive == true) && !(g.ActiveIdPreviousFrameFlags & ImGuiItemFlags_ExcludedFromGroup);
     if (group_contains_curr_active_id)
         g.LastItemData.ID = g.ActiveId;
     else if (group_contains_prev_active_id)
@@ -9883,7 +9931,7 @@ void ImGui::EndGroup()
     g.LastItemData.Rect = group_bb;
 
     // Forward Hovered flag
-    const bool group_contains_curr_hovered_id = (group_data.BackupHoveredIdIsAlive == false) && g.HoveredId != 0;
+    const bool group_contains_curr_hovered_id = (group_data.BackupHoveredIdIsAlive == false) && (g.HoveredId != 0) && !(g.HoveredIdFlags & ImGuiItemFlags_ExcludedFromGroup);
     if (group_contains_curr_hovered_id)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
 
@@ -9898,6 +9946,17 @@ void ImGui::EndGroup()
 
     g.GroupStack.pop_back();
     //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
+
+    // If this group is excluded from surrounding groups, alter flags of contained items to reflect this
+    if (g.CurrentItemFlags & ImGuiItemFlags_ExcludedFromGroup)
+    {
+        if (group_contains_curr_active_id)
+            g.ActiveIdFlags |= ImGuiItemFlags_ExcludedFromGroup;
+        if (group_contains_prev_active_id)
+            g.ActiveIdPreviousFrameFlags |= ImGuiItemFlags_ExcludedFromGroup;
+        if (group_contains_curr_hovered_id)
+            g.HoveredIdFlags |= ImGuiItemFlags_ExcludedFromGroup;
+    }
 }
 
 

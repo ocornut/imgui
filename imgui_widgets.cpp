@@ -5128,7 +5128,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // Context menu: display and modify options (before defaults are applied)
     if (!(flags & ImGuiColorEditFlags_NoOptions))
+    {
+        BeginExcludedFromGroup();
         ColorEditOptionsPopup(col, flags);
+        EndExcludedFromGroup();
+    }
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags_DisplayMask_))
@@ -5393,7 +5397,11 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     // Context menu: display and store options.
     if (!(flags & ImGuiColorEditFlags_NoOptions))
+    {
+        BeginExcludedFromGroup();
         ColorPickerOptionsPopup(col, flags);
+        EndExcludedFromGroup();
+    }
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags_PickerMask_))

@@ -837,6 +837,13 @@ namespace ImGui
     IMGUI_API void          BeginDisabled(bool disabled = true);
     IMGUI_API void          EndDisabled();
 
+    // Excluding from group
+    // - Don't collect activation, deactivation and edit information into surrounding groups.
+    // - Those can be nested but it cannot be used to include an already excluded section (a single BeginExcludedFromGroup(true) in the stack is enough to keep everything excluded)
+    // - BeginExcludedFromGroup(false) essentially does nothing useful but is provided to facilitate use of boolean expressions. If you can avoid calling BeginExcludedFromGroup(False)/EndExcludedFromGroup() best to avoid it.
+    IMGUI_API void          BeginExcludedFromGroup(bool excluded = true);
+    IMGUI_API void          EndExcludedFromGroup();
+
     // Clipping
     // - Mouse hovering is affected by ImGui::PushClipRect() calls, unlike direct calls to ImDrawList::PushClipRect() which are render only.
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
