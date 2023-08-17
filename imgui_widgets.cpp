@@ -120,7 +120,7 @@ static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
 //-------------------------------------------------------------------------
 
 // For InputTextEx()
-static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiInputSource input_source);
+static bool             InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiInputSource input_source);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
 static ImVec2           InputTextCalcTextSizeW(ImGuiContext* ctx, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
 
@@ -3905,7 +3905,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
 }
 
 // Return false to discard a character.
-static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiInputSource input_source)
+static bool InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiInputSource input_source)
 {
     IM_ASSERT(input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Clipboard);
     unsigned int c = *p_char;
@@ -3944,10 +3944,10 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
         // The standard mandate that programs starts in the "C" locale where the decimal point is '.'.
         // We don't really intend to provide widespread support for it, but out of empathy for people stuck with using odd API, we support the bare minimum aka overriding the decimal point.
         // Change the default decimal_point with:
-        //   ImGui::GetCurrentContext()->PlatformLocaleDecimalPoint = *localeconv()->decimal_point;
+        //   ImGui::GetIO()->PlatformLocaleDecimalPoint = *localeconv()->decimal_point;
         // Users of non-default decimal point (in particular ',') may be affected by word-selection logic (is_word_boundary_from_right/is_word_boundary_from_left) functions.
-        ImGuiContext& g = *GImGui;
-        const unsigned c_decimal_point = (unsigned int)g.PlatformLocaleDecimalPoint;
+        ImGuiContext& g = *ctx;
+        const unsigned c_decimal_point = (unsigned int)g.IO.PlatformLocaleDecimalPoint;
         if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsScientific))
             if (c == '.' || c == ',')
                 c = c_decimal_point;
@@ -4386,7 +4386,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if ((flags & ImGuiInputTextFlags_AllowTabInput) && Shortcut(ImGuiKey_Tab, id) && !is_readonly)
         {
             unsigned int c = '\t'; // Insert TAB
-            if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
+            if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                 state->OnKeyPressed((int)c);
         }
 
@@ -4402,7 +4402,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     unsigned int c = (unsigned int)io.InputQueueCharacters[n];
                     if (c == '\t') // Skip Tab, see above.
                         continue;
-                    if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
+                    if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                         state->OnKeyPressed((int)c);
                 }
 
@@ -4485,7 +4485,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             else if (!is_readonly)
             {
                 unsigned int c = '\n'; // Insert new line
-                if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
+                if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                     state->OnKeyPressed((int)c);
             }
         }
@@ -4552,7 +4552,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 {
                     unsigned int c;
                     s += ImTextCharFromUtf8(&c, s, NULL);
-                    if (!InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Clipboard))
+                    if (!InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, ImGuiInputSource_Clipboard))
                         continue;
                     clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }

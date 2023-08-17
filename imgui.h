@@ -2044,6 +2044,9 @@ struct ImGuiIO
     void*       _UnusedPadding;                                     // Unused field to keep data structure the same size.
 #endif
 
+    // Optional: Platform locale
+    ImWchar     PlatformLocaleDecimalPoint;     // '.'              // [Experimental] Configure decimal point e.g. '.' or ',' useful for some languages (e.g. German), generally pulled from *localeconv()->decimal_point
+
     //------------------------------------------------------------------
     // Input - Call before calling NewFrame()
     //------------------------------------------------------------------

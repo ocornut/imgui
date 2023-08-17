@@ -1286,6 +1286,7 @@ ImGuiIO::ImGuiIO()
     // Note: Initialize() will setup default clipboard/ime handlers.
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
+    PlatformLocaleDecimalPoint = '.';
 
     // Input (NB: we already have memset zero the entire structure!)
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);

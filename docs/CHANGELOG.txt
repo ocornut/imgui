@@ -56,6 +56,9 @@ Other changes:
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
+- IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
+  languages needing it. Should ideally be set to the value of '*localeconv()->decimal_point'
+  but our backends don't do it yet. (#6719, #2278)
 - IO: Fixed io.AddMousePosEvent() and io.AddMouseButtonEvent() writing MouseSource to
   wrong union section. Was semantically incorrect and accidentally had no side-effects
   with default compiler alignment settings. (#6727) [@RickHuang2001]

@@ -2021,7 +2021,6 @@ struct ImGuiContext
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame
     ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data (when changing we will call io.SetPlatformImeDataFn
-    char                    PlatformLocaleDecimalPoint;         // '.' or *localeconv()->decimal_point
 
     // Settings
     bool                    SettingsLoaded;
@@ -2212,7 +2211,6 @@ struct ImGuiContext
 
         PlatformImeData.InputPos = ImVec2(0.0f, 0.0f);
         PlatformImeDataPrev.InputPos = ImVec2(-1.0f, -1.0f); // Different to ensure initial submission
-        PlatformLocaleDecimalPoint = '.';
 
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
