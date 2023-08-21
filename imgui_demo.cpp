@@ -2793,7 +2793,7 @@ struct ExampleSelection
     // you will need a way to iterate from one item to the other item given the ID you use.
     // You are likely to need some kind of data structure to convert 'view index' <> 'object ID' (FIXME-MULTISELECT: Would be worth providing a demo of doing this).
     // Note: This implementation of SetRange() is inefficient because it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
-    void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
+    void SetRange(int a, int b, bool v) { for (int n = a; n <= b; n++) SetSelected(n, v); }
     void SelectAll(int count)           { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
 
     // Apply requests coming from BeginMultiSelect() and EndMultiSelect(). Must be done in this order! Clear->SelectAll->SetRange.
@@ -2802,7 +2802,7 @@ struct ExampleSelection
     {
         if (ms_io->RequestClear)        { Clear(); }
         if (ms_io->RequestSelectAll)    { SelectAll(items_count); }
-        if (ms_io->RequestSetRange)     { SetRange((int)ms_io->RangeSrcItem, (int)ms_io->RangeDstItem, ms_io->RangeSelected ? 1 : 0); }
+        if (ms_io->RequestSetRange)     { SetRange((int)ms_io->RangeFirstItem, (int)ms_io->RangeLastItem, ms_io->RangeSelected ? 1 : 0); }
     }
 
     void DebugTooltip()
