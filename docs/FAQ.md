@@ -91,6 +91,7 @@ Many projects are using this branch and it is kept in sync with master regularly
 
 ### Q: How to get started?
 
+Read [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started). <BR>
 Read [EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
 Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
 Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp). <BR>

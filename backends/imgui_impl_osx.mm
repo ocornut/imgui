@@ -18,6 +18,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #import "imgui.h"
+#ifndef IMGUI_DISABLE
 #import "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
@@ -1109,3 +1110,7 @@ static void ImGui_ImplOSX_ShutdownPlatformInterface()
     main_viewport->PlatformUserData = nullptr;
     ImGui::DestroyPlatformWindows();
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

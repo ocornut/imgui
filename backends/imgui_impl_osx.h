@@ -18,6 +18,7 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"      // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
 
 #ifdef __OBJC__
 
@@ -44,3 +45,5 @@ IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(void* _Nullable view);
 
 #endif
 #endif
+
+#endif // #ifndef IMGUI_DISABLE
