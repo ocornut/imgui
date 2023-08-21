@@ -413,9 +413,9 @@ bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL3_Init(window, renderer);
 }
 
-bool ImGui_ImplSDL2_InitForOther(SDL_Window* window)
+bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
 {
-    return ImGui_ImplSDL2_Init(window, nullptr);
+    return ImGui_ImplSDL3_Init(window, nullptr);
 }
 
 void ImGui_ImplSDL3_Shutdown()
