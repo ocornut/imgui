@@ -671,7 +671,8 @@ namespace ImGui
 
     // Multi-selection system for Selectable() and TreeNode() functions.
     // - This enables standard multi-selection/range-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc.) in a way that also allow a clipper to be used.
-    // - ImGuiSelectionUserData is often used to store your item index. Read comments near ImGuiMultiSelectIO for details.
+    // - ImGuiSelectionUserData is often used to store your item index.
+    // - Read comments near ImGuiMultiSelectIO for instructions/details and see 'Demo->Widgets->Selection State' for demo.
     IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags);
     IMGUI_API ImGuiMultiSelectIO*   EndMultiSelect();
     IMGUI_API void                  SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
@@ -2740,32 +2741,35 @@ enum ImGuiMultiSelectFlags_
 // Multi-selection system
 // - Refer to 'Demo->Widgets->Selection State' for references using this.
 // - This system implements standard multi-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc)
-//   and supports a clipper being used. Handling this manually may be tricky, this is why we provide the functionality.
-//   If you don't need SHIFT+Mouse/Keyboard range-select + clipping, you can use a simpler form of multi-selection yourself,
-//   by reacting to click/presses on Selectable() items and checking keyboard modifiers.
-//   The complexity of this system is mostly caused by supporting SHIFT+Click/Arrow range-select with clipped elements.
+//   and supports a clipper being used. Handling this manually and correctly i tricky, this is why we provide
+//   the functionality. If you don't need SHIFT+Mouse/Keyboard range-select + clipping, you can implement a
+//   simple form of multi-selection yourself, by reacting to click/presses on Selectable() items.
 // - TreeNode() and Selectable() are supported but custom widgets may use it as well.
 // - In the spirit of Dear ImGui design, your code owns actual selection data.
 //   This is designed to allow all kinds of selection storage you may use in your application:
-//   e.g. instructive selection (store a bool inside each object), external array (store an array in your view data, next
-//   to your objects), set/map/hash (store only selected items), or other structures (store indices in an interval tree), etc.
-// - The work involved to deal with multi-selection differs whether you want to only submit visible items and clip others,
-//   or submit all items regardless of their visibility. Clipping items is more efficient and will allow you to deal with
-//   large lists (1k~100k items) with no performance penalty, but requires a little more work on the code.
-//   For small selection set (<100 items), you might want to not bother with using the clipper, as the cost you should
-//   be negligible (as least on Dear ImGui side).
-//   If you are not sure, always start without clipping and you can work your way to the optimized version afterwards.
+//   e.g. set/map/hash (store only selected items), instructive selection (store a bool inside each object),
+//   external array (store an array in your view data, next to your objects),  or other structures (store indices
+//   in an interval tree), etc.
+// - The work involved to deal with multi-selection differs whether you want to only submit visible items and
+//   clip others, or submit all items regardless of their visibility. Clipping items is more efficient and will
+//   allow you to deal with large lists (1k~100k items) with no performance penalty, but requires a little more
+//   work on the code.
+//   For small selection set (<100 items), you might want to not bother with using the clipper, as the cost
+//   should be negligible (as least on Dear ImGui side).
+//   If you are not sure, always start without clipping! You can work your way to the optimized version afterwards.
 // About ImGuiSelectionUserData:
 // - This is your application-defined identifier in a selection set:
 //   - For each item is submitted by your calls to SetNextItemSelectionUserData().
 //   - In return we store them into RangeSrcItem/RangeFirstItem/RangeLastItem and other fields in ImGuiMultiSelectIO.
 // - Most applications will store an object INDEX, hence the chosen name and type.
-//   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points
-//   and you will need to interpolate between them to honor range selection.
+//   Storing an integer index is the easiest thing to do, as RequestSetRange requests will give you two end-points
+//   and you will need to iterate/interpolate between them to honor range selection.
 // - However it is perfectly possible to store a POINTER inside this value! The multi-selection system never assume
-//   that you identify items by indices, and never attempt to interpolate between two ImGuiSelectionUserData values.
+//   that you identify items by indices. It never attempt to iterate/interpolate between 2 ImGuiSelectionUserData values.
 // - As most users will want to cast this to integer, for convenience and to reduce confusion we use ImS64 instead
 //   of void*, being syntactically easier to downcast. But feel free to reinterpret_cast a pointer into this.
+// - You may store another type of (e.g. an data) but this may make your lookups and the interpolation between
+//   two values more cumbersome.
 // - If you need to wrap this API for another language/framework, feel free to expose this as 'int' if simpler.
 // Usage flow:
 //   BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
@@ -2777,12 +2781,15 @@ enum ImGuiMultiSelectFlags_
 //         - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls. (optionally call IsItemToggledSelection() if you need that info immediately for displaying your item, before EndMultiSelect())
 //   END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
 //         - (6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 2.
-// If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
-// However it is perfectly fine to honor all steps even if you don't use a clipper.
+//   If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
+//   However it is perfectly fine to honor all steps even if you don't use a clipper.
+// Advanced:
+// - Deletion: If you need to handle items deletion a little more work if needed for post-deletion focus and scrolling to be correct.
+//   refer to 'Demo->Widgets->Selection State' for demos supporting deletion.
 struct ImGuiMultiSelectIO
 {
-    // - Always process requests in this order: Clear, SelectAll, SetRange. Use 'Debug Log->Selection' to see requests as they happen.
-    // - Some fields are only necessary if your list is dynamic and allows deletion (getting "post-deletion" state right is exhibited in the demo)
+    // - Always process requests in this order: Clear, SelectAll, SetRange. Use 'Demo->Tools->Debug Log->Selection' to see requests as they happen.
+    // - Some fields are only necessary if your list is dynamic and allows deletion (getting "post-deletion" state right is shown in the demo)
     // - Below: who reads/writes each fields? 'r'=read, 'w'=write, 'ms'=multi-select code, 'app'=application/user code, 'BEGIN'=BeginMultiSelect() and after, 'END'=EndMultiSelect() and after.
     // REQUESTS --------------------------------// BEGIN         / LOOP          / END
     bool                    RequestClear;       //  ms:w, app:r  /               /  ms:w, app:r  // 1. Request app/user to clear selection.
