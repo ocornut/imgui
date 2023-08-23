@@ -2792,7 +2792,6 @@ struct ImGuiMultiSelectIO
     bool                    RequestClear;       //  ms:w, app:r  /               /  ms:w, app:r  // 1. Request app/user to clear selection.
     bool                    RequestSelectAll;   //  ms:w, app:r  /               /  ms:w, app:r  // 2. Request app/user to select all.
     bool                    RequestSetRange;    //               /               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeFirstItem..RangeLastItem] items, based on RangeSelected. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
-    ImGuiSelectionUserData  RequestFocusItem;   //        app:w  /        app:r  /        app:r  // (If using deletion) 4. Request user to focus item. This is actually only manipulated in user-space, but we provide storage to facilitate implementing a deletion idiom (see demo).
     // STATE/ARGUMENTS -------------------------// BEGIN         / LOOP          / END
     ImGuiSelectionUserData  RangeSrcItem;       //  ms:w  app:r  /               /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be cliped!
     ImGuiSelectionUserData  RangeFirstItem;     //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
@@ -2803,7 +2802,7 @@ struct ImGuiMultiSelectIO
     ImGuiSelectionUserData  NavIdItem;          //  ms:w, app:r  /               /               // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
 
     ImGuiMultiSelectIO()    { Clear(); }
-    void Clear()            { memset(this, 0, sizeof(*this)); RequestFocusItem = NavIdItem = RangeSrcItem = RangeFirstItem = RangeLastItem = (ImGuiSelectionUserData)-1; }
+    void Clear()            { memset(this, 0, sizeof(*this)); NavIdItem = RangeSrcItem = RangeFirstItem = RangeLastItem = (ImGuiSelectionUserData)-1; }
 };
 
 //-----------------------------------------------------------------------------
