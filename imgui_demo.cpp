@@ -2761,6 +2761,13 @@ static void ShowDemoWindowWidgets()
     }
 }
 
+static const char* ExampleNames[] =
+{
+    "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
+    "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
+    "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
+};
+
 // Our multi-selection system doesn't make assumption about:
 // - how you want to identify items in multi-selection API?     Indices(*) / Custom Identifiers    / Pointers ?
 // - how you want to store persistent selection data?           Indices    / Custom Identifiers(*) / Pointers ?
@@ -2858,7 +2865,7 @@ struct ExampleSelection
         QueueDeletion = false;
 
         // If focused item is not selected...
-        const int focused_idx = adapter->UserDataToIndex(adapter, ms_io->NavIdItem);  // Index of currently focused item
+        const int focused_idx = (int)ms_io->NavIdItem;  // Index of currently focused item
         if (ms_io->NavIdSelected == false)  // This is merely a shortcut, == Contains(adapter->IndexToStorage(items, focused_idx))
         {
             ms_io->RangeSrcReset = true;    // Request to recover RangeSrc from NavId next frame. Would be ok to reset even when NavIdSelected==true, but it would take an extra frame to recover RangeSrc when deleting a selected item.
@@ -2905,6 +2912,147 @@ struct ExampleSelection
     }
 };
 
+// Example: Implement dual list box storage and interface
+struct ExampleDualListBox
+{
+    ImVector<ImGuiID>   Items[2];               // ID is index into ExampleName[]
+    ExampleSelection    Selections[2];          // Store ExampleItemId into selection
+    bool                OptKeepSorted = true;
+
+    void MoveAll(int src, int dst)
+    {
+        IM_ASSERT((src == 0 && dst == 1) || (src == 1 && dst == 0));
+        for (ImGuiID item_id : Items[src])
+            Items[dst].push_back(item_id);
+        Items[src].clear();
+        SortItems(dst);
+        Selections[src].Swap(Selections[dst]);
+        Selections[src].Clear();
+    }
+    void MoveSelected(int src, int dst)
+    {
+        for (int src_n = 0; src_n < Items[src].Size; src_n++)
+        {
+            ImGuiID item_id = Items[src][src_n];
+            if (!Selections[src].Contains(item_id))
+                continue;
+            Items[src].erase(&Items[src][src_n]); // FIXME-OPT: Could be implemented more optimally (rebuild src items and swap)
+            Items[dst].push_back(item_id);
+            src_n--;
+        }
+        if (OptKeepSorted)
+            SortItems(dst);
+        Selections[src].Swap(Selections[dst]);
+        Selections[src].Clear();
+    }
+    void ApplySelectionRequests(ImGuiMultiSelectIO* ms_io, int side)
+    {
+        // In this example we store item id in selection (instead of item index)
+        ExampleSelectionAdapter adapter;
+        adapter.Data = Items[side].Data;
+        adapter.IndexToStorage = [](ExampleSelectionAdapter* self, int idx) { return (ImGuiID)((ImGuiID*)self->Data)[idx]; };
+        Selections[side].ApplyRequests(ms_io, &adapter, Items[side].Size);
+    }
+    static int IMGUI_CDECL CompareItemsByValue(const void* lhs, const void* rhs)
+    {
+        const int* a = (const int*)lhs;
+        const int* b = (const int*)rhs;
+        return (*a - *b) > 0 ? +1 : -1;
+    }
+    void SortItems(int n)
+    {
+        qsort(Items[n].Data, (size_t)Items[n].Size, sizeof(Items[n][0]), CompareItemsByValue);
+    }
+    void Show()
+    {
+        ImGui::Checkbox("Sorted", &OptKeepSorted);
+        if (ImGui::BeginTable("split", 3, ImGuiTableFlags_None))
+        {
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);    // Left side
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);      // Buttons
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);    // Right side
+            ImGui::TableNextRow();
+
+            int request_move_selected = -1;
+            int request_move_all = -1;
+            for (int side = 0; side < 2; side++)
+            {
+                // FIXME-MULTISELECT: Dual List Box: Add context menus
+                // FIXME-NAV: Using ImGuiWindowFlags_NavFlattened exhibit many issues.
+                ImVector<ImGuiID>& items = Items[side];
+                ExampleSelection& selection = Selections[side];
+
+                ImGui::TableSetColumnIndex((side == 0) ? 0 : 2);
+                ImGui::Text("%s (%d)", (side == 0) ? "Available" : "Basket", items.Size);
+
+                // Submit scrolling range to avoid glitches on moving/deletion
+                const float items_height = ImGui::GetTextLineHeightWithSpacing();
+                ImGui::SetNextWindowContentSize(ImVec2(0.0f, items.Size * items_height));
+
+                if (ImGui::BeginChild(ImGui::GetID(side ? "1" : "0"), ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle))
+                {
+                    ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+                    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+                    ApplySelectionRequests(ms_io, side);
+
+                    for (int item_n = 0; item_n < items.Size; item_n++)
+                    {
+                        ImGuiID item_id = items[item_n];
+                        bool item_is_selected = selection.Contains(item_id);
+                        ImGui::SetNextItemSelectionUserData(item_n);
+                        ImGui::Selectable(ExampleNames[item_id], item_is_selected, ImGuiSelectableFlags_AllowDoubleClick);
+                        if (ImGui::IsItemFocused())
+                        {
+                            // FIXME-MULTISELECT: Dual List Box: Transfer focus
+                            if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))
+                                request_move_selected = side;
+                            if (ImGui::IsMouseDoubleClicked(0)) // FIXME-MULTISELECT: Double-click on multi-selection?
+                                request_move_selected = side;
+                        }
+                    }
+
+                    ms_io = ImGui::EndMultiSelect();
+                    ApplySelectionRequests(ms_io, side);
+                }
+                ImGui::EndChild();
+            }
+
+            // Buttons columns
+            ImGui::TableSetColumnIndex(1);
+            ImGui::NewLine();
+            //ImVec2 button_sz = { ImGui::CalcTextSize(">>").x + ImGui::GetStyle().FramePadding.x * 2.0f, ImGui::GetFrameHeight() + padding.y * 2.0f };
+            ImVec2 button_sz = { ImGui::GetFrameHeight(), ImGui::GetFrameHeight() };
+
+            // (Using BeginDisabled()/EndDisabled() works but feels distracting given how it is currently visualized)
+            if (ImGui::Button(">>", button_sz))
+                request_move_all = 0;
+            if (ImGui::Button(">", button_sz))
+                request_move_selected = 0;
+            if (ImGui::Button("<", button_sz))
+                request_move_selected = 1;
+            if (ImGui::Button("<<", button_sz))
+                request_move_all = 1;
+
+            // Process requests
+            if (request_move_all != -1)
+                MoveAll(request_move_all, request_move_all ^ 1);
+            if (request_move_selected != -1)
+                MoveSelected(request_move_selected, request_move_selected ^ 1);
+
+            // FIXME-MULTISELECT: action from outside
+            if (OptKeepSorted == false)
+            {
+                ImGui::NewLine();
+                if (ImGui::ArrowButton("MoveUp", ImGuiDir_Up)) {}
+                if (ImGui::ArrowButton("MoveDown", ImGuiDir_Down)) {}
+            }
+
+            ImGui::EndTable();
+        }
+    }
+};
+
+
 static void ShowDemoWindowMultiSelect()
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
@@ -2947,13 +3095,6 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        static const char* random_names[] =
-        {
-            "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
-            "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
-            "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
-        };
-
         // Demonstrate holding/updating multi-selection data using the BeginMultiSelect/EndMultiSelect API.
         // SHIFT+Click w/ CTRL and other standard features are supported.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select");
@@ -2982,7 +3123,7 @@ static void ShowDemoWindowMultiSelect()
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
                     char label[64];
-                    sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                    sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_ARRAYSIZE(ExampleNames)]);
                     bool item_is_selected = selection.Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
@@ -3023,7 +3164,7 @@ static void ShowDemoWindowMultiSelect()
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
                         char label[64];
-                        sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                        sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_ARRAYSIZE(ExampleNames)]);
                         bool item_is_selected = selection.Contains((ImGuiID)n);
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected);
@@ -3092,7 +3233,7 @@ static void ShowDemoWindowMultiSelect()
                 {
                     const int item_id = items[n];
                     char label[64];
-                    sprintf(label, "Object %05d: %s", item_id, random_names[item_id % IM_ARRAYSIZE(random_names)]);
+                    sprintf(label, "Object %05d: %s", item_id, ExampleNames[item_id % IM_ARRAYSIZE(ExampleNames)]);
 
                     bool item_is_selected = selection.Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
@@ -3109,6 +3250,22 @@ static void ShowDemoWindowMultiSelect()
 
                 ImGui::EndListBox();
             }
+            ImGui::TreePop();
+        }
+
+        // Implement a Dual List Box (#6648)
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (dual list box)");
+        if (ImGui::TreeNode("Multi-Select (dual list box)"))
+        {
+            // Init default state
+            static ExampleDualListBox dlb;
+            if (dlb.Items[0].Size == 0 && dlb.Items[1].Size == 0)
+                for (int item_id = 0; item_id < IM_ARRAYSIZE(ExampleNames); item_id++)
+                    dlb.Items[0].push_back((ImGuiID)item_id);
+
+            // Show
+            dlb.Show();
+
             ImGui::TreePop();
         }
 
@@ -3135,7 +3292,7 @@ static void ShowDemoWindowMultiSelect()
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
                     char label[64];
-                    sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                    sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_ARRAYSIZE(ExampleNames)]);
                     bool item_is_selected = selection->Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
@@ -3239,7 +3396,7 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::TableNextColumn();
 
                         const int item_id = items[n];
-                        const char* item_category = random_names[item_id % IM_ARRAYSIZE(random_names)];
+                        const char* item_category = ExampleNames[item_id % IM_ARRAYSIZE(ExampleNames)];
                         char label[64];
                         sprintf(label, "Object %05d: %s", item_id, item_category);
 
