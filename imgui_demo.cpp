@@ -2911,7 +2911,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        const char* random_names[] =
+        static const char* random_names[] =
         {
             "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
             "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
@@ -2935,7 +2935,7 @@ static void ShowDemoWindowMultiSelect()
 
             // The BeginListBox() has no actual purpose for selection logic (other that offering a scrolling region).
             const int ITEMS_COUNT = 50;
-            ImGui::Text("Selection size: %d", selection.GetSize());
+            ImGui::Text("Selection: %d/%d", selection.GetSize(), ITEMS_COUNT);
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
@@ -2951,7 +2951,49 @@ static void ShowDemoWindowMultiSelect()
                     ImGui::Selectable(label, item_is_selected);
                 }
 
-                // Apply multi-select requests
+                ms_io = ImGui::EndMultiSelect();
+                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+
+                ImGui::EndListBox();
+            }
+            ImGui::TreePop();
+        }
+
+        // Demonstrate using the clipper with BeginMultiSelect()/EndMultiSelect()
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (with clipper)");
+        if (ImGui::TreeNode("Multi-Select (with clipper)"))
+        {
+            static ExampleSelection selection;
+
+            ImGui::Text("Added features:");
+            ImGui::BulletText("Using ImGuiListClipper.");
+
+            const int ITEMS_COUNT = 10000;
+            ImGui::Text("Selection: %d/%d", selection.GetSize(), ITEMS_COUNT);
+            if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
+            {
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+
+                ImGuiListClipper clipper;
+                clipper.Begin(ITEMS_COUNT);
+                while (clipper.Step())
+                {
+                    if (!ms_io->RangeSrcPassedBy && clipper.DisplayStart > ms_io->RangeSrcItem)
+                        ms_io->RangeSrcPassedBy = true;
+                    for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
+                    {
+                        char label[64];
+                        sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                        bool item_is_selected = selection.Contains(n);
+                        ImGui::SetNextItemSelectionUserData(n);
+                        ImGui::Selectable(label, item_is_selected);
+                    }
+                }
+                if (!ms_io->RangeSrcPassedBy && ITEMS_COUNT > ms_io->RangeSrcItem)
+                    ms_io->RangeSrcPassedBy = true;
+
                 ms_io = ImGui::EndMultiSelect();
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 

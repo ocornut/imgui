@@ -2774,11 +2774,13 @@ enum ImGuiMultiSelectFlags_
 // Usage flow:
 //   BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
 //         - (2) [If using clipper] Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 6.
-//   LOOP  - (3) [If using clipper] Set RangeSrcPassedBy=true if the RangeSrcItem item is part of the items clipped before the first submitted/visible item.
+//   LOOP  - (3) [If using clipper] Set RangeSrcPassedBy=true if the RangeSrcItem item was already passed by.
 //               This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
-//               - If you are using integer indices in ImGuiSelectionUserData, this is easy to compute: if (clipper.DisplayStart > data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
-//               - If you are using pointers in ImGuiSelectionUserData, you may need additional processing in each clipper step to tell if current DisplayStart comes after RangeSrcItem..
-//         - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls. (optionally call IsItemToggledSelection() if you need that info immediately for displaying your item, before EndMultiSelect())
+//               - If you are using integer indices in ImGuiSelectionUserData, this is easy to compute:
+//                    if (clipper.DisplayStart > data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
+//               - If you are using pointers in ImGuiSelectionUserData, you may need additional processing, e.g. find the index of RangeSrcItem before applying the above operation.
+//               - This also needs to be done at the end of the clipper loop, otherwise we can't tell if the item still exist.
+//         - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //   END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
 //         - (6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 2.
 //   If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
@@ -2801,7 +2803,7 @@ struct ImGuiMultiSelectIO
     ImGuiSelectionUserData  RangeFirstItem;     //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
     ImGuiSelectionUserData  RangeLastItem;      //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
     bool                    RangeSelected;      //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request. true = Select Range, false = Unselect Range.
-    bool                    RangeSrcPassedBy;   //               /  ms:rw app:w  /  ms:r         // (If using clipper) Need to be set by app/user if RangeSrcItem was part of the clipped set before submitting the visible items. Ignore if not clipping.
+    bool                    RangeSrcPassedBy;   //               /  ms:rw app:w  /  ms:r         // (If using clipper) Need to be set by app/user if RangeSrcItem was passed by. Ignore if not clipping.
     bool                    RangeSrcReset;      //        app:w  /        app:w  /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
     bool                    NavIdSelected;      //  ms:w, app:r  /               /               // (If using deletion) Last known selection state for NavId (if part of submitted items).
     ImGuiSelectionUserData  NavIdItem;          //  ms:w, app:r  /               /               // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
