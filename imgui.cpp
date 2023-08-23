@@ -9547,7 +9547,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 // Gets back to previous line and continue with horizontal layout
 //      offset_from_start_x == 0 : follow right after previous item
 //      offset_from_start_x != 0 : align to specified x position (relative to window/group left)
-//      spacing_w < 0            : use default spacing if pos_x == 0, no spacing if pos_x != 0
+//      spacing_w < 0            : use default spacing if offset_from_start_x == 0, no spacing if offset_from_start_x != 0
 //      spacing_w >= 0           : enforce spacing amount
 void ImGui::SameLine(float offset_from_start_x, float spacing_w)
 {
