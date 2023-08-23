@@ -1725,7 +1725,8 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    IsFocused;          // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
     bool                    IsSetRange;         // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
     bool                    NavIdPassedBy;
-    bool                    RangeDstPassedBy;   // Set by the the item that matches NavJustMovedToId when IsSetRange is set.
+    bool                    RangeSrcPassedBy;   // Set by the item that matches RangeSrcItem.
+    bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
     //ImRect                Rect;               // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectTempData()  { Clear(); }

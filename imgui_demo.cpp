@@ -2978,10 +2978,10 @@ static void ShowDemoWindowMultiSelect()
 
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
+                if (ms_io->RangeSrcItem > 0)
+                    clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
                 while (clipper.Step())
                 {
-                    if (!ms_io->RangeSrcPassedBy && clipper.DisplayStart > ms_io->RangeSrcItem)
-                        ms_io->RangeSrcPassedBy = true;
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
                         char label[64];
@@ -2991,8 +2991,6 @@ static void ShowDemoWindowMultiSelect()
                         ImGui::Selectable(label, item_is_selected);
                     }
                 }
-                if (!ms_io->RangeSrcPassedBy && ITEMS_COUNT > ms_io->RangeSrcItem)
-                    ms_io->RangeSrcPassedBy = true;
 
                 ms_io = ImGui::EndMultiSelect();
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
@@ -3185,16 +3183,13 @@ static void ShowDemoWindowMultiSelect()
                 {
                     clipper.Begin(items.Size);
                     if (next_focus_item_idx != -1)
-                        clipper.IncludeItemByIndex(next_focus_item_idx); // Ensure item to focus is not clipped
+                        clipper.IncludeItemByIndex(next_focus_item_idx); // Ensure focused item is not clipped
+                    if (ms_io->RangeSrcItem > 0)
+                        clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
                 }
 
                 while (!use_clipper || clipper.Step())
                 {
-                    // IF clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
-                    // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
-                    if (use_clipper && !ms_io->RangeSrcPassedBy && clipper.DisplayStart > ms_io->RangeSrcItem)
-                        ms_io->RangeSrcPassedBy = true;
-
                     const int item_begin = use_clipper ? clipper.DisplayStart : 0;
                     const int item_end = use_clipper ? clipper.DisplayEnd : items.Size;
                     for (int n = item_begin; n < item_end; n++)
@@ -3280,12 +3275,6 @@ static void ShowDemoWindowMultiSelect()
                     if (!use_clipper)
                         break;
                 }
-
-                // If clipping is used: you need to set 'RangeSrcPassedBy = true' if RangeSrc was passed over.
-                // If you submit all items this is unnecessary as this is one by SetNextItemSelectionUserData()
-                // Here we essentially notify before EndMultiSelect() that RangeSrc is still present in our data set.
-                if (use_clipper && !ms_io->RangeSrcPassedBy && items.Size > ms_io->RangeSrcItem)
-                    ms_io->RangeSrcPassedBy = true;
 
                 if (show_in_table)
                 {

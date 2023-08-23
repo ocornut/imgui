@@ -2774,13 +2774,8 @@ enum ImGuiMultiSelectFlags_
 // Usage flow:
 //   BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
 //         - (2) [If using clipper] Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 6.
-//   LOOP  - (3) [If using clipper] Set RangeSrcPassedBy=true if the RangeSrcItem item was already passed by.
-//               This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
-//               - If you are using integer indices in ImGuiSelectionUserData, this is easy to compute:
-//                    if (clipper.DisplayStart > data->RangeSrcItem) { data->RangeSrcPassedBy = true; }
-//               - If you are using pointers in ImGuiSelectionUserData, you may need additional processing, e.g. find the index of RangeSrcItem before applying the above operation.
-//               - This also needs to be done at the end of the clipper loop, otherwise we can't tell if the item still exist.
-//         - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
+//         - (3) [If using clipper] You need to make sure RangeSrcItem is always submitted. Calculate its index and pass to clipper.IncludeIndex(). If already using indices in ImGuiSelectionUserData, it is as simple as clipper.IncludeIndex((int)ms_io->RangeSrcItem);
+//   LOOP  - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //   END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
 //         - (6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 2.
 //   If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
@@ -2799,12 +2794,11 @@ struct ImGuiMultiSelectIO
     bool                    RequestSetRange;    //               /               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeFirstItem..RangeLastItem] items, based on RangeSelected. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
     ImGuiSelectionUserData  RequestFocusItem;   //        app:w  /        app:r  /        app:r  // (If using deletion) 4. Request user to focus item. This is actually only manipulated in user-space, but we provide storage to facilitate implementing a deletion idiom (see demo).
     // STATE/ARGUMENTS -------------------------// BEGIN         / LOOP          / END
-    ImGuiSelectionUserData  RangeSrcItem;       //  ms:w         /        app:r  /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point). Read during loop in order for user code to set RangeSrcPassedBy.
+    ImGuiSelectionUserData  RangeSrcItem;       //  ms:w  app:r  /               /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be cliped!
     ImGuiSelectionUserData  RangeFirstItem;     //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
     ImGuiSelectionUserData  RangeLastItem;      //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
     bool                    RangeSelected;      //               /               /  ms:w, app:r  // End: parameter for RequestSetRange request. true = Select Range, false = Unselect Range.
-    bool                    RangeSrcPassedBy;   //               /  ms:rw app:w  /  ms:r         // (If using clipper) Need to be set by app/user if RangeSrcItem was passed by. Ignore if not clipping.
-    bool                    RangeSrcReset;      //        app:w  /        app:w  /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
+    bool                    RangeSrcReset;      //        app:w  /               /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
     bool                    NavIdSelected;      //  ms:w, app:r  /               /               // (If using deletion) Last known selection state for NavId (if part of submitted items).
     ImGuiSelectionUserData  NavIdItem;          //  ms:w, app:r  /               /               // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
 

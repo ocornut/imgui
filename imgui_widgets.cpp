@@ -7213,7 +7213,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     if (ms->IsFocused)
     {
-        if (ms->BeginIO.RangeSrcReset || (ms->BeginIO.RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid))
+        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid))
         {
             IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset RangeSrcItem.\n"); // Will set be to NavId.
             ms->Storage->RangeSrcItem = ImGuiSelectionUserData_Invalid;
@@ -7262,7 +7262,7 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
         // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
         g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
         if (ms->BeginIO.RangeSrcItem == selection_user_data)
-            ms->BeginIO.RangeSrcPassedBy = true;
+            ms->RangeSrcPassedBy = true;
     }
     else
     {
@@ -7291,7 +7291,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
         selected = true;
 
     // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
-    // For this to work, IF the user is clipping items, they need to set RangeSrcPassedBy = true to notify the system.
+    // For this to work, we need someone to set 'RangeSrcPassedBy = true' at some point (either clipper either SetNextItemSelectionUserData() function)
     if (ms->IsSetRange)
     {
         IM_ASSERT(id != 0 && (ms->KeyMods & ImGuiMod_Shift) != 0);
@@ -7306,7 +7306,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
             }
         }
         const bool is_range_src = storage->RangeSrcItem == item_data;
-        if (is_range_src || is_range_dst || ms->BeginIO.RangeSrcPassedBy != ms->RangeDstPassedBy)
+        if (is_range_src || is_range_dst || ms->RangeSrcPassedBy != ms->RangeDstPassedBy)
         {
             IM_ASSERT(storage->RangeSrcItem != ImGuiSelectionUserData_Invalid && storage->RangeSelected != -1);
             selected = (storage->RangeSelected != 0);
@@ -7406,7 +7406,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
             ms->EndIO.RangeSrcItem = (storage->RangeSrcItem != ImGuiSelectionUserData_Invalid) ? storage->RangeSrcItem : item_data;
             ms->EndIO.RangeSelected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
-            range_direction = ms->BeginIO.RangeSrcPassedBy ? +1 : -1;
+            range_direction = ms->RangeSrcPassedBy ? +1 : -1;
         }
         else
         {
