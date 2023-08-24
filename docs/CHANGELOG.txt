@@ -72,6 +72,8 @@ Other changes:
 - Backends: SDL2,SDL3: added ImGui_ImplSDL2_InitForOther()/ImGui_ImplSDL3_InitForOther()
   for consistency (matching GLFW backend) and as most initialization paths don't actually
   need to care about rendering backend.
+- Examples: Emscripten+WebGPU: Fixed WGPUInstance creation process + use preferred
+  framebuffer format. (#6640, #6748) [@smileorigin]
 
 
 -----------------------------------------------------------------------
