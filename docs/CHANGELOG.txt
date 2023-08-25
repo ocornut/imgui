@@ -42,6 +42,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Clipper: Renamed IncludeRangeByIndices(), also called ForceDisplayRangeByIndices()
+  before 1.89.6, to IncludeItemsByIndex(). Kept inline redirection function. (#6424, #3841)
+
 Other changes:
 
 - Tables: Made it possible to use SameLine(0,0) after TableNextColumn() or
@@ -55,7 +58,7 @@ Other changes:
   setting large values. (#6749)
 - InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
   point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
-- Clipper: Added IncludeByIndex() helper to include a single item. (#6424, #3841)
+- Clipper: Added IncludeItemByIndex() helper to include a single item. (#6424, #3841)
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
