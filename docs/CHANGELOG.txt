@@ -44,17 +44,34 @@ Breaking changes:
 
 Other changes:
 
+- Tables: Made it possible to use SameLine(0,0) after TableNextColumn() or
+  TableSetColumnIndex() in order to reuse line height from previous cell. (#3740)
 - Nav, TreeNode: Pressing Left with ImGuiTreeNodeFlags_NavLeftJumpsBackHere now goes
   through proper navigation logic: honor scrolling and selection. (#1079, #1131)
 - Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
   v_max=INT_MAX (#6675, #6679) [@jbarthelmes]
+- Windows: Layout of Close/Collapse buttons uses style.ItemInnerSpacing.x between items,
+  stopped incorrectly using FramePadding in a way where hit-boxes could overlap when
+  setting large values. (#6749)
+- InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
+  point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
+- IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
+  languages needing it. Should ideally be set to the value of '*localeconv()->decimal_point'
+  but our backends don't do it yet. (#6719, #2278)
+- IO: Fixed io.AddMousePosEvent() and io.AddMouseButtonEvent() writing MouseSource to
+  wrong union section. Was semantically incorrect and accidentally had no side-effects
+  with default compiler alignment settings. (#6727) [@RickHuang2001]
+- Misc: Made multiple calls to Render() during the same frame early out faster.
 - Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
   appearing empty (regression in 1.89.8).
 - Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
+- Backends: SDL2,SDL3: added ImGui_ImplSDL2_InitForOther()/ImGui_ImplSDL3_InitForOther()
+  for consistency (matching GLFW backend) and as most initialization paths don't actually
+  need to care about rendering backend.
 
 
 -----------------------------------------------------------------------

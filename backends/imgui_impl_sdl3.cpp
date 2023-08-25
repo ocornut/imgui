@@ -473,6 +473,11 @@ bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL3_Init(window, renderer, nullptr);
 }
 
+bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
+{
+    return ImGui_ImplSDL3_Init(window, nullptr);
+}
+
 void ImGui_ImplSDL3_Shutdown()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();

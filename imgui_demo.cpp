@@ -10,9 +10,9 @@
 // Read imgui.cpp for more details, documentation and comments.
 // Get the latest version at https://github.com/ocornut/imgui
 
-// -------------------------------------------------
+//---------------------------------------------------
 // PLEASE DO NOT REMOVE THIS FILE FROM YOUR PROJECT!
-// -------------------------------------------------
+//---------------------------------------------------
 // Message to the person tempted to delete this file when integrating Dear ImGui into their codebase:
 // Think again! It is the most useful reference code that you and other coders will want to refer to and call.
 // Have the ImGui::ShowDemoWindow() function wired in an always-available debug menu of your game/app!
@@ -26,14 +26,23 @@
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (which you won't delete)
 
-// Message to beginner C/C++ programmers about the meaning of the 'static' keyword:
-// In this demo code, we frequently use 'static' variables inside functions. A static variable persists across calls,
-// so it is essentially like a global variable but declared inside the scope of the function. We do this as a way to
-// gather code and data in the same place, to make the demo source code faster to read, faster to write, and smaller
-// in size. It also happens to be a convenient way of storing simple UI related information as long as your function
-// doesn't need to be reentrant or used in multiple threads. This might be a pattern you will want to use in your code,
-// but most of the real data you would be editing is likely going to be stored outside your functions.
+//--------------------------------------------
+// ABOUT THE MEANING OF THE 'static' KEYWORD:
+//--------------------------------------------
+// In this demo code, we frequently use 'static' variables inside functions.
+// A static variable persists across calls. It is essentially a global variable but declared inside the scope of the function.
+// Think of "static int n = 0;" as "global int n = 0;" !
+// We do this IN THE DEMO because we want:
+// - to gather code and data in the same place.
+// - to make the demo source code faster to read, faster to change, smaller in size.
+// - it is also a convenient way of storing simple UI related information as long as your function
+//   doesn't need to be reentrant or used in multiple threads.
+// This might be a pattern you will want to use in your code, but most of the data you would be working
+// with in a complex codebase is likely going to be stored outside your functions.
 
+//-----------------------------------------
+// ABOUT THE CODING STYLE OF OUR DEMO CODE
+//-----------------------------------------
 // The Demo code in this file is designed to be easy to copy-and-paste into your application!
 // Because of this:
 // - We never omit the ImGui:: prefix when calling functions, even though most code here is in the same namespace.
@@ -4840,7 +4849,7 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Row height"))
     {
         HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would require a unique clipping rectangle per row.");
-        if (ImGui::BeginTable("table_row_height", 1, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersInnerV))
+        if (ImGui::BeginTable("table_row_height", 1, ImGuiTableFlags_Borders))
         {
             for (int row = 0; row < 10; row++)
             {
@@ -4851,6 +4860,28 @@ static void ShowDemoWindowTables()
             }
             ImGui::EndTable();
         }
+
+        HelpMarker("Showcase using SameLine(0,0) to share Current Line Height between cells.\n\nPlease note that Tables Row Height is not the same thing as Current Line Height, as a table cell may contains multiple lines.");
+        if (ImGui::BeginTable("table_share_lineheight", 2, ImGuiTableFlags_Borders))
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::ColorButton("##1", ImVec4(0.13f, 0.26f, 0.40f, 1.0f), ImGuiColorEditFlags_None, ImVec2(40, 40));
+            ImGui::TableNextColumn();
+            ImGui::Text("Line 1");
+            ImGui::Text("Line 2");
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::ColorButton("##2", ImVec4(0.13f, 0.26f, 0.40f, 1.0f), ImGuiColorEditFlags_None, ImVec2(40, 40));
+            ImGui::TableNextColumn();
+            ImGui::SameLine(0.0f, 0.0f); // Reuse line height from previous column
+            ImGui::Text("Line 1, with SameLine(0,0)");
+            ImGui::Text("Line 2");
+
+            ImGui::EndTable();
+        }
+
         ImGui::TreePop();
     }
 
