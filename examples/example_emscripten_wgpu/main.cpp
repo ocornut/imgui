@@ -22,11 +22,14 @@ static WGPUSwapChain     wgpu_swap_chain = nullptr;
 static int               wgpu_swap_chain_width = 0;
 static int               wgpu_swap_chain_height = 0;
 
+const char* canvas_selector = "#canvas";
+
 // Forward declarations
 static void MainLoopStep(void* window);
 static bool InitWGPU();
 static void print_glfw_error(int error, const char* description);
 static void print_wgpu_error(WGPUErrorType error_type, const char* message, void*);
+static EM_BOOL on_canvas_size_changed(int event_type, const EmscriptenUiEvent* ui_event, void* user_data);
 
 // Main code
 int main(int, char**)
@@ -35,15 +38,20 @@ int main(int, char**)
     if (!glfwInit())
         return 1;
 
+    double canvas_width, canvas_height;
+    emscripten_get_element_css_size(canvas_selector, &canvas_width, &canvas_height);
+
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)canvas_width, (int)canvas_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (!window)
     {
         glfwTerminate();
         return 1;
     }
+
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, window, false, on_canvas_size_changed);
 
     // Initialize the WebGPU environment
     if (!InitWGPU())
@@ -246,4 +254,12 @@ static void print_wgpu_error(WGPUErrorType error_type, const char* message, void
     default:                        error_type_lbl = "Unknown";
     }
     printf("%s error: %s\n", error_type_lbl, message);
+}
+
+static EM_BOOL on_canvas_size_changed(int /* event_type */, const EmscriptenUiEvent* /* ui_event */, void* user_data) {
+    double canvas_width, canvas_height;
+    emscripten_get_element_css_size(canvas_selector, &canvas_width, &canvas_height);
+    glfwSetWindowSize((GLFWwindow *)user_data, (int)canvas_width, (int)canvas_height);
+    emscripten_set_canvas_element_size(canvas_selector, canvas_width, canvas_height);
+    return true;
 }
