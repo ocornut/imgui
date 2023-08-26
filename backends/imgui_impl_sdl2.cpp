@@ -548,7 +548,7 @@ bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
 
 bool ImGui_ImplSDL2_InitForOther(SDL_Window* window)
 {
-    return ImGui_ImplSDL2_Init(window, nullptr);
+    return ImGui_ImplSDL2_Init(window, nullptr, nullptr);
 }
 
 void ImGui_ImplSDL2_Shutdown()
