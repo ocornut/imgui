@@ -2801,17 +2801,17 @@ struct ExampleSelection
 {
     // Data
     ImGuiStorage                        Storage;        // Selection set
-    int                                 Size;           // Number of selected items (== number of 1 in the Storage, maintained by this class). // FIXME-MULTISELECT: Imply more difficult to track with intrusive selection schemes?
+    int                                 Size;           // Number of selected items (== number of 1 in the Storage, maintained by this class).
     bool                                QueueDeletion;  // Request deleting selected items
 
     // Functions
     ExampleSelection()                  { Clear(); }
     void Clear()                        { Storage.Clear(); Size = 0; QueueDeletion = false; }
     void Swap(ExampleSelection& rhs)    { Storage.Data.swap(rhs.Storage.Data); }
-    bool Contains(int n) const          { return Storage.GetInt((ImGuiID)n, 0) != 0; }
-	void AddItem(int n)					{ int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int != 0) return; *p_int = 1; Size++; }
-	void RemoveItem(int n)				{ int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int == 0) return; *p_int = 0; Size--; }
-    void UpdateItem(int n, bool v)      { if (v) AddItem(n); else RemoveItem(n); }
+    bool Contains(ImGuiID key) const    { return Storage.GetInt(key, 0) != 0; }
+	void AddItem(ImGuiID key)           { int* p_int = Storage.GetIntRef(key, 0); if (*p_int != 0) return; *p_int = 1; Size++; }
+	void RemoveItem(ImGuiID key)        { int* p_int = Storage.GetIntRef(key, 0); if (*p_int == 0) return; *p_int = 0; Size--; }
+    void UpdateItem(ImGuiID key, bool v){ if (v) AddItem(key); else RemoveItem(key); }
     int  GetSize() const                { return Size; }
     void DebugTooltip()                 { if (ImGui::BeginTooltip()) { for (auto& pair : Storage.Data) if (pair.val_i) ImGui::Text("0x%03X (%d)", pair.key, pair.key); ImGui::EndTooltip(); } }
 
@@ -2985,7 +2985,7 @@ static void ShowDemoWindowMultiSelect()
                 {
                     char label[64];
                     sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
-                    bool item_is_selected = selection.Contains(n);
+                    bool item_is_selected = selection.Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                 }
@@ -3026,7 +3026,7 @@ static void ShowDemoWindowMultiSelect()
                     {
                         char label[64];
                         sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
-                        bool item_is_selected = selection.Contains(n);
+                        bool item_is_selected = selection.Contains((ImGuiID)n);
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected);
                     }
@@ -3071,7 +3071,7 @@ static void ShowDemoWindowMultiSelect()
                     items.push_back(items_next_id++);
             if (ImGui::SmallButton("Add 20 items"))     { for (int n = 0; n < 20; n++) { items.push_back(items_next_id++); } }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.RemoveItem(items.Size - 1); items.pop_back(); } } // This is to test
+            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.RemoveItem((ImGuiID)(items.Size - 1)); items.pop_back(); } } // This is to test
 
             // (1) Extra to support deletion: Submit scrolling range to avoid glitches on deletion
             const float items_height = ImGui::GetTextLineHeightWithSpacing();
@@ -3097,7 +3097,7 @@ static void ShowDemoWindowMultiSelect()
                     char label[64];
                     sprintf(label, "Object %05d: %s", item_id, random_names[item_id % IM_ARRAYSIZE(random_names)]);
 
-                    bool item_is_selected = selection.Contains(n);
+                    bool item_is_selected = selection.Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                     if (next_focus_item_idx == n)
@@ -3139,7 +3139,7 @@ static void ShowDemoWindowMultiSelect()
                 {
                     char label[64];
                     sprintf(label, "Object %05d: %s", n, random_names[n % IM_ARRAYSIZE(random_names)]);
-                    bool item_is_selected = selection->Contains(n);
+                    bool item_is_selected = selection->Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                 }
@@ -3261,7 +3261,7 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::SameLine();
                         }
 
-                        bool item_is_selected = selection.Contains(n);
+                        bool item_is_selected = selection.Contains((ImGuiID)n);
                         ImGui::SetNextItemSelectionUserData(n);
                         if (widget_type == WidgetType_Selectable)
                         {
