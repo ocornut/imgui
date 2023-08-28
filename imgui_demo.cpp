@@ -6230,9 +6230,8 @@ void ImGui::ShowFontSelector(const char* label)
     ImFont* font_current = ImGui::GetFont();
     if (ImGui::BeginCombo(label, font_current->GetDebugName()))
     {
-        for (int n = 0; n < io.Fonts->Fonts.Size; n++)
+        for (ImFont* font : io.Fonts->Fonts)
         {
-            ImFont* font = io.Fonts->Fonts[n];
             ImGui::PushID((void*)font);
             if (ImGui::Selectable(font->GetDebugName(), font == font_current))
                 io.FontDefault = font;
@@ -6840,9 +6839,8 @@ struct ExampleAppConsole
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
             if (copy_to_clipboard)
                 ImGui::LogToClipboard();
-            for (int i = 0; i < Items.Size; i++)
+            for (const char* item : Items)
             {
-                const char* item = Items[i];
                 if (!Filter.PassFilter(item))
                     continue;
 
@@ -8027,12 +8025,11 @@ struct ExampleAppDocuments
 // Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
 static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app)
 {
-    for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+    for (MyDocument& doc : app.Documents)
     {
-        MyDocument* doc = &app.Documents[doc_n];
-        if (!doc->Open && doc->OpenPrev)
-            ImGui::SetTabItemClosed(doc->Name);
-        doc->OpenPrev = doc->Open;
+        if (!doc.Open && doc.OpenPrev)
+            ImGui::SetTabItemClosed(doc.Name);
+        doc.OpenPrev = doc.Open;
     }
 }
 
@@ -8057,23 +8054,19 @@ void ShowExampleAppDocuments(bool* p_open)
         if (ImGui::BeginMenu("File"))
         {
             int open_count = 0;
-            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                open_count += app.Documents[doc_n].Open ? 1 : 0;
+            for (MyDocument& doc : app.Documents)
+                open_count += doc.Open ? 1 : 0;
 
             if (ImGui::BeginMenu("Open", open_count < app.Documents.Size))
             {
-                for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                {
-                    MyDocument* doc = &app.Documents[doc_n];
-                    if (!doc->Open)
-                        if (ImGui::MenuItem(doc->Name))
-                            doc->DoOpen();
-                }
+                for (MyDocument& doc : app.Documents)
+                    if (!doc.Open && ImGui::MenuItem(doc.Name))
+                        doc.DoOpen();
                 ImGui::EndMenu();
             }
             if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
-                for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                    app.Documents[doc_n].DoQueueClose();
+                for (MyDocument& doc : app.Documents)
+                    doc.DoQueueClose();
             if (ImGui::MenuItem("Exit", "Ctrl+F4") && p_open)
                 *p_open = false;
             ImGui::EndMenu();
@@ -8084,13 +8077,13 @@ void ShowExampleAppDocuments(bool* p_open)
     // [Debug] List documents with one checkbox for each
     for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
     {
-        MyDocument* doc = &app.Documents[doc_n];
+        MyDocument& doc = app.Documents[doc_n];
         if (doc_n > 0)
             ImGui::SameLine();
-        ImGui::PushID(doc);
-        if (ImGui::Checkbox(doc->Name, &doc->Open))
-            if (!doc->Open)
-                doc->DoForceClose();
+        ImGui::PushID(&doc);
+        if (ImGui::Checkbox(doc.Name, &doc.Open))
+            if (!doc.Open)
+                doc.DoForceClose();
         ImGui::PopID();
     }
 
@@ -8119,26 +8112,25 @@ void ShowExampleAppDocuments(bool* p_open)
             //if (ImGui::GetIO().KeyCtrl) ImGui::SetTabItemSelected(docs[1].Name);  // [DEBUG] Test SetTabItemSelected(), probably not very useful as-is anyway..
 
             // Submit Tabs
-            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+            for (MyDocument& doc : app.Documents)
             {
-                MyDocument* doc = &app.Documents[doc_n];
-                if (!doc->Open)
+                if (!doc.Open)
                     continue;
 
-                ImGuiTabItemFlags tab_flags = (doc->Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
-                bool visible = ImGui::BeginTabItem(doc->Name, &doc->Open, tab_flags);
+                ImGuiTabItemFlags tab_flags = (doc.Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
+                bool visible = ImGui::BeginTabItem(doc.Name, &doc.Open, tab_flags);
 
                 // Cancel attempt to close when unsaved add to save queue so we can display a popup.
-                if (!doc->Open && doc->Dirty)
+                if (!doc.Open && doc.Dirty)
                 {
-                    doc->Open = true;
-                    doc->DoQueueClose();
+                    doc.Open = true;
+                    doc.DoQueueClose();
                 }
 
-                MyDocument::DisplayContextMenu(doc);
+                MyDocument::DisplayContextMenu(&doc);
                 if (visible)
                 {
-                    MyDocument::DisplayContents(doc);
+                    MyDocument::DisplayContents(&doc);
                     ImGui::EndTabItem();
                 }
             }
@@ -8152,15 +8144,12 @@ void ShowExampleAppDocuments(bool* p_open)
     if (close_queue.empty())
     {
         // Close queue is locked once we started a popup
-        for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-        {
-            MyDocument* doc = &app.Documents[doc_n];
-            if (doc->WantClose)
+        for (MyDocument& doc : app.Documents)
+            if (doc.WantClose)
             {
-                doc->WantClose = false;
-                close_queue.push_back(doc);
+                doc.WantClose = false;
+                close_queue.push_back(&doc);
             }
-        }
     }
 
     // Display closing confirmation UI
