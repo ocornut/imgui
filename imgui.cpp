@@ -5341,20 +5341,16 @@ void ImGui::Render()
     CallContextHooks(&g, ImGuiContextHookType_RenderPre);
 
     // Add background ImDrawList (for each active viewport)
-    for (int n = 0; n != g.Viewports.Size; n++)
+    for (ImGuiViewportP* viewport : g.Viewports)
     {
-        ImGuiViewportP* viewport = g.Viewports[n];
         InitViewportDrawData(viewport);
         if (viewport->BgFgDrawLists[0] != NULL)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
-    for (int n = 0; n != g.WindowsFocusOrder.Size; n++)
-    {
-        ImGuiWindow* window = g.Windows[n];
+    for (ImGuiWindow* window : g.WindowsFocusOrder)
         if (window->Flags & ImGuiWindowFlags_DockNodeHost)
             window->DrawList->ChannelsMerge();
-    }
 
     // Draw modal/window whitening backgrounds
     RenderDimmedBackgrounds();
