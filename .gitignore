@@ -8,7 +8,6 @@ imgui.ini
 *.o
 *.obj
 *.exe
-examples/build/*
 examples/*/Debug/*
 examples/*/Release/*
 examples/*/x64/*
@@ -30,7 +29,7 @@ ipch
 JSON/
 
 ## Commonly used CMake directories
-/build*/
+build*/
 
 ## Xcode artifacts
 project.xcworkspace

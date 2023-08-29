@@ -73,6 +73,7 @@
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_sdl2.h"
 
 // Clang warnings with -Weverything
@@ -477,6 +478,11 @@ bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL2_Init(window, renderer);
 }
 
+bool ImGui_ImplSDL2_InitForOther(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_Init(window, nullptr);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -491,6 +497,7 @@ void ImGui_ImplSDL2_Shutdown()
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad);
     IM_DELETE(bd);
 }
 
@@ -640,6 +647,10 @@ void ImGui_ImplSDL2_NewFrame()
     ImGui_ImplSDL2_UpdateGamepads();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

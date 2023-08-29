@@ -2,8 +2,8 @@
 // (headers)
 
 #pragma once
-
 #include "imgui.h"      // IMGUI_API
+#ifndef IMGUI_DISABLE
 
 // Forward declarations
 struct ImFontAtlas;
@@ -48,3 +48,5 @@ namespace ImGuiFreeType
     static inline bool BuildFontAtlas(ImFontAtlas* atlas, unsigned int flags = 0) { atlas->FontBuilderIO = GetBuilderForFreeType(); atlas->FontBuilderFlags = flags; return atlas->Build(); }
 #endif
 }
+
+#endif // #ifndef IMGUI_DISABLE

@@ -2,12 +2,12 @@ dear imgui
 ISSUES & TODO LIST
 
 Issue numbers (#) refer to GitHub issues listed at https://github.com/ocornut/imgui/issues/XXXX
-This list is not well maintained, most of the work happens on GitHub nowadays.
+THIS LIST IS NOT WELL MAINTAINED. MOST OF THE WORK HAPPENS ON GITHUB NOWADAYS.
 The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point they usually exist on the github issue tracker).
 It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
- - doc/test: add a proper documentation+regression testing system (#435)
- - doc/test: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc: add a proper documentation system (maybe relying on automation? #435)
+ - doc: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
  - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
 
@@ -18,7 +18,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: begin with *p_open == false could return false.
  - window: get size/pos helpers given names (see discussion in #249)
  - window: when window is very small, prioritize resize button over close button.
- - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - window: double-clicking on title bar to minimize isn't consistent interaction, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
@@ -31,29 +31,26 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
- - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
- - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331)
+ - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar, trying to click behind a modal).
+ - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331) -> model from test engine.
  ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling: forward mouse wheel scrolling to parent window when at the edge of scrolling limits? (useful for listbox,tables?)
- - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents (see e.g. DaVinci Resolve ui)
 
  - drawdata: make it easy to deep-copy (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (e.g. #2646)
  ! drawlist: add CalcTextSize() func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command). (WIP branch)
- - drawlist: primitives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
  - drawlist: non-AA strokes have gaps between points (#593, #288), glitch especially on RenderCheckmark() and ColorPicker4().
- - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
  - drawlist: AddRect vs AddLine position confusing (#2441)
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
  - drawlist/opt: thick AA line could be doable in same number of triangles as 1.0 AA line by storing gradient+full color in atlas.
 
- - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
+ - items: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
 
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
@@ -61,8 +58,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
- - widgets: a way to represent "mixed" values, so e.g. all values replaced with *, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed) (#2644)
- - widgets: checkbox: checkbox with custom glyph inside frame.
+ - widgets: custom glyph/shapes replacements for stock sapes. (also #6090 #2431 #2235 #6517)
  - widgets: coloredit: keep reporting as active when picker is on?
  - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
  - selectable: using (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
@@ -81,7 +77,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
- - input text: add flag (e.g. ImGuiInputTextFlags_EscapeClearsBuffer) to clear instead of revert. what to do with focus? (also see #2890)
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
@@ -116,20 +111,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tables: see https://github.com/ocornut/imgui/issues/2957#issuecomment-569726095
 
  - group: BeginGroup() needs a border option. (~#1496)
- - group: IsHovered() after EndGroup() covers whole AABB rather than the intersection of individual items. Is that desirable?
+ - group: IsItemHovered() after EndGroup() covers whole AABB rather than the intersection of individual items. Is that desirable?
  - group: merge deactivation/activation within same group (fwd WasEdited flag). (#2550)
 
 !- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
- - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
- - plot: PlotLines() should use the polygon-stroke facilities, less vertices (currently issues with averaging normals)
- - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
- - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
- - plot: option/feature: draw the zero line
- - plot: option/feature: draw grid, vertical markers
- - plot: option/feature: draw unit
- - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
+ - plot: full featured plot/graph api w/ scrolling, zooming etc. --> ImPlot
+ - (plot: deleted all other todo lines on 2023-06-28)
 
  - clipper: ability to disable the clipping through a simple flag/bool.
  - clipper: ability to run without knowing full count in advance.
@@ -140,21 +129,16 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - separator: width, thickness, centering (#1643)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
- - dock: merge docking branch (#2109)
+ - docking: merge docking branch (#2109)
 
  - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work (WIP branch)
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
- - tabs: TabItem could honor SetNextItemWidth()?
  - tabs: explicit api (even if internal) to cleanly manipulate tab order.
- - tabs: Mouse wheel over tab bar could scroll? (with shift?) (#2702)
 
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
- - image button: not taking an explicit id can be problematic. (#2464, #1390)
- - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see TempInputTextScalar)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: relative dragging? + precision dragging
@@ -167,7 +151,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper.
- - combo: flag for BeginCombo to not return true when unchanged (#1182)
  - combo: a way/helper to customize the combo preview (#1658) -> experimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection (WIP range-select branch)
@@ -189,7 +172,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485) (WIP branch)
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers (WIP branch)
 
  - status-bar: add a per-window status bar helper similar to what menu-bar does. generalize concept of layer0 rect in window (can make _MenuBar window flag obsolete too).
@@ -198,7 +180,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
- - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
  - menus: would be nice if the Selectable() supported horizontal alignment (must be given the equivalent of WorkRect.Max.x matching the position of the shortcut column)
 
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
@@ -244,7 +225,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov. (see 2018/01/11 post in #143)
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)
- - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: make it easier and provide a demo to have tooltip both are source and target site, with a more detailed one on target site (tooltip ordering problem)
  - drag and drop: demo with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop (make it easy to do a naive WM_DROPFILE integration)
@@ -296,10 +276,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16-bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
+ - nav: visual feedback on button press.
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line? how about CTRL+Tab)
  ! nav: never clear NavId on some setup (e.g. gamepad centric)
  - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
- - nav: code to focus child-window on restoring NavId appears to have issue: e.g. when focus change is implicit because of window closure.
  - nav: Home/End behavior when navigable item is not fully visible at the edge of scrolling? should be backtrack to keep item into view?
  - nav: NavScrollToBringItemIntoView() with item bigger than view should focus top-right? Repro: using Nav in "About Window"
  - nav: wrap around logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
@@ -320,12 +300,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/menus: when using the main menu bar, even though we restore focus after, the underlying window loses its title bar highlight during menu manipulation. could we prevent it?
  - nav/menus: main menu bar currently cannot restore a nullptr focus. Could save NavWindow at the time of being focused, similarly to what popup do?
  - nav/menus: Alt,Up could open the first menu (e.g. "File") currently it tends to nav into the window/collapse menu. Do do that we would need custom transition?
- - nav/windowing: configure fade-in/fade-out delay on Ctrl+Tab?
  - nav/windowing: when CTRL+Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
 
- - inputs: we need an explicit flag about whether the platform window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: support track pad style scrolling & slider edit.
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
@@ -351,7 +329,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
  - backends: report it better when not able to create texture?
- - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?

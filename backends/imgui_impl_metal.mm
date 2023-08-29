@@ -30,6 +30,7 @@
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_metal.h"
 #import <time.h>
 #import <Metal/Metal.h>
@@ -135,8 +136,15 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 
 void ImGui_ImplMetal_Shutdown()
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGui_ImplMetal_DestroyDeviceObjects();
     ImGui_ImplMetal_DestroyBackendData();
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
 }
 
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
@@ -573,3 +581,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 }
 
 @end
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

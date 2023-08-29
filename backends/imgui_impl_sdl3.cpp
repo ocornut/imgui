@@ -19,12 +19,14 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-05-04: Fixed build on Emscripten/iOS/Android. (#6391)
 //  2023-04-06: Inputs: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
 //  2023-02-23: Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. (#6189, #6114, #3644)
 //  2023-02-07: Forked "imgui_impl_sdl2" into "imgui_impl_sdl3". Removed version checks for old feature. Refer to imgui_impl_sdl2.cpp for older changelog.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_sdl3.h"
 
 // Clang warnings with -Weverything
@@ -411,6 +413,11 @@ bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL3_Init(window, renderer);
 }
 
+bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
+{
+    return ImGui_ImplSDL3_Init(window, nullptr);
+}
+
 void ImGui_ImplSDL3_Shutdown()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -425,6 +432,7 @@ void ImGui_ImplSDL3_Shutdown()
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad);
     IM_DELETE(bd);
 }
 
@@ -440,6 +448,7 @@ static void ImGui_ImplSDL3_UpdateMouseData()
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (bd->Window == focused_window);
 #else
+    SDL_Window* focused_window = bd->Window;
     const bool is_app_focused = (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
 #endif
     if (is_app_focused)
@@ -573,7 +582,10 @@ void ImGui_ImplSDL3_NewFrame()
     ImGui_ImplSDL3_UpdateGamepads();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
+#endif // #ifndef IMGUI_DISABLE
