@@ -168,6 +168,7 @@ struct ImGuiTableColumnSortSpecs;   // Sorting specification for one column of a
 struct ImGuiTextBuffer;             // Helper to hold and append into a text buffer (~string builder)
 struct ImGuiTextFilter;             // Helper to parse and apply text filters (e.g. "aaaaa[,bbbbb][,ccccc]")
 struct ImGuiViewport;               // A Platform Window (always only one in 'master' branch), in the future may represent Platform Monitor
+struct ImGuiWindow;                 // Storage for one window
 
 // Enumerations
 // - We don't use strongly typed enums much because they add constraints (can't extend in private code, can't store typed in bit fields, extra casting on iteration)
@@ -253,11 +254,11 @@ typedef ImWchar16 ImWchar;
 #endif
 
 // Callback and functions types
-typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);                    // Callback function for ImGui::InputText()
-typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);                              // Callback function for ImGui::SetNextWindowSizeConstraints()
-typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);                               // Function signature for ImGui::SetAllocatorFunctions()
-typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                                // Function signature for ImGui::SetAllocatorFunctions()
-typedef bool    (*ImGuiEventHandlerCallback)(const ImGuiInputEvent* event, void* user_data);    // Callback used for per window event handlers, and ImGui::SetNextWindowEventHandler()/SetWindowEventHandler()
+typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);                                        // Callback function for ImGui::InputText()
+typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);                                                  // Callback function for ImGui::SetNextWindowSizeConstraints()
+typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);                                                   // Function signature for ImGui::SetAllocatorFunctions()
+typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                                                    // Function signature for ImGui::SetAllocatorFunctions()
+typedef bool    (*ImGuiEventHandlerCallback)(ImGuiWindow* window, const ImGuiInputEvent* event, void* user_data);   // Callback used for per window event handlers, and ImGui::SetNextWindowEventHandler()/SetWindowEventHandler()
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.

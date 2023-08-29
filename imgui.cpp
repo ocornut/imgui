@@ -4522,7 +4522,7 @@ void ImGui::RunEventHandlers(ImGuiWindow* window)
 
         if ((is_focused && is_hovered) || event.Type == ImGuiInputEventType_Focus)
         {
-            if (event_handler.Callback != NULL && event_handler.Callback(&event, event_handler.UserData))
+            if (event_handler.Callback != NULL && event_handler.Callback(window, &event, event_handler.UserData))
                 window->HandledEvents.push_back(event);
         }
     }

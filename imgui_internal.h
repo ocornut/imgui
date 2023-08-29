@@ -154,7 +154,6 @@ struct ImGuiTableInstanceData;      // Storage for one instance of a same table
 struct ImGuiTableTempData;          // Temporary storage for one table (one per table in the stack), shared between tables.
 struct ImGuiTableSettings;          // Storage for a table .ini settings
 struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
-struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
 
