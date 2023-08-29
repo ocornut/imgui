@@ -183,6 +183,7 @@ typedef int ImGuiMouseCursor;       // -> enum ImGuiMouseCursor_     // Enum: A 
 typedef int ImGuiSortDirection;     // -> enum ImGuiSortDirection_   // Enum: A sorting direction (ascending or descending)
 typedef int ImGuiStyleVar;          // -> enum ImGuiStyleVar_        // Enum: A variable identifier for styling
 typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A color target for TableSetBgColor()
+typedef int ImGuiTriState;          // -> enum ImGuiTriState_        // Tri-state variable, for anything that needs three possible states.
 
 // Flags (declared as int for compatibility with old C++, to allow using as flags without overhead, and to not pollute the top of this file)
 // - Tip: Use your programming IDE navigation facilities on the names in the _central column_ below to find the actual flags/enum lists!
@@ -967,6 +968,16 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 // [SECTION] Flags & Enumerations
 //-----------------------------------------------------------------------------
+
+// Tri-state variable, for anything that needs three possible states.
+enum ImGuiTriState_
+{
+    ImGuiTriState_False     = 0,
+    ImGuiTriState_True      = 1,
+    ImGuiTriState_Unknown   = 2,
+    ImGuiTriState_Default   = ImGuiTriState_Unknown,
+    ImGuiTriState_COUNT,
+};
 
 // Flags for ImGui::Begin()
 // (Those are per-window flags. There are shared flags in ImGuiIO: io.ConfigWindowsResizeFromEdges and io.ConfigWindowsMoveFromTitleBarOnly)
