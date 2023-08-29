@@ -7213,7 +7213,8 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     if (ms->IsFocused)
     {
-        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid))
+        // We currently don't allow user code to modify RangeSrcItem by writing to BeginIO's version, but that would be an easy change here.
+        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid)) // Can't read storage->RangeSrcItem here! (see tests)
         {
             IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset RangeSrcItem.\n"); // Will set be to NavId.
             ms->Storage->RangeSrcItem = ImGuiSelectionUserData_Invalid;
@@ -7396,7 +7397,14 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         // Mouse Pressed:  Ctrl+Shift  | n/a    | Dst=item, Sel=!Sel =>         SetRange Src-Dst
         //----------------------------------------------------------------------------------------
 
-        ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
+        const ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
+        if (!is_multiselect)
+            ms->EndIO.RequestClear = true;
+        else if ((input_source == ImGuiInputSource_Mouse || g.NavActivateId == id) && !is_ctrl)
+            ms->EndIO.RequestClear = true;
+        else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
+            ms->EndIO.RequestClear = true; // With is_false==false the RequestClear was done in BeginIO, not necessary to do again.
+
         int range_direction;
         ms->EndIO.RequestSetRange = true;
         if (is_shift && is_multiselect)
@@ -7419,21 +7427,6 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         ImGuiSelectionUserData range_dst_item = item_data;
         ms->EndIO.RangeFirstItem = (range_direction > 0) ? ms->EndIO.RangeSrcItem : range_dst_item;
         ms->EndIO.RangeLastItem = (range_direction > 0) ? range_dst_item : ms->EndIO.RangeSrcItem;
-
-        if (!is_multiselect)
-        {
-            ms->EndIO.RequestClear = true;
-        }
-        else if (input_source == ImGuiInputSource_Mouse || g.NavActivateId == id)
-        {
-            if (!is_ctrl)
-                ms->EndIO.RequestClear = true;
-        }
-        else if (input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad)
-        {
-            if (is_shift && !is_ctrl) // Without Shift the RequestClear was done in BeginIO, not necessary to do again.
-                ms->EndIO.RequestClear = true;
-        }
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
