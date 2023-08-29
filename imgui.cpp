@@ -4506,6 +4506,94 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
+void ImGui::RunEventHandlers(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    const bool focused = IsWindowFocused(window);
+    const bool hovered = IsWindowHovered(window);
+    window->HandledEvents.resize(0);
+
+    for (int i = 0; i < g.InputEventsTrail.size(); i++)
+    {
+        const ImGuiInputEvent& event = g.InputEventsTrail[i];
+        const ImGuiEventHandler& event_handler = window->EventHandlers[event.Type];
+        const bool is_focused = (event_handler.NeedsFocus == ImGuiTriState_Default ? event_handler.DefaultFocus() : event_handler.NeedsFocus) ? focused : true;
+        const bool is_hovered = (event_handler.NeedsHover == ImGuiTriState_Default ? event_handler.DefaultHover() : event_handler.NeedsHover) ? hovered : true;
+
+        if ((is_focused && is_hovered) || event.Type == ImGuiInputEventType_Focus)
+        {
+            if (event_handler.Callback != NULL && event_handler.Callback(&event, event_handler.UserData))
+                window->HandledEvents.push_back(event);
+        }
+    }
+}
+
+void ImGui::UpdateEventFilter(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i < window->HandledEvents.size(); i++)
+    {
+        const ImGuiInputEvent& event = window->HandledEvents[i];
+        ImGuiEventHandlerFilter& event_filter = window->EventFilter;
+        event_filter.MousePos = event.Type == ImGuiInputEventType_MousePos;
+        event_filter.MouseWheel = event.Type == ImGuiInputEventType_MouseWheel;
+        event_filter.Text = event.Type == ImGuiInputEventType_Text;
+
+        if (event.Type == ImGuiInputEventType_MouseButton)
+        {
+            const ImGuiMouseButton button = event.MouseButton.Button;
+            event_filter.MouseClickedCount[button] = g.IO.MouseClickedCount[button];
+            if (event.MouseButton.Down)
+            {
+                event_filter.MouseButton.Down.SetBit(button);
+                event_filter.MouseButton.Up.ClearBit(button);
+            }
+            else
+            {
+                event_filter.MouseButton.Up.SetBit(button);
+                event_filter.MouseButton.Down.ClearBit(button);
+            }
+        }
+        else if (event.Type == ImGuiInputEventType_Key)
+        {
+            const ImGuiKey key = (event.Key.Key & ImGuiMod_Mask_) ? ConvertSingleModFlagToKey(&g, event.Key.Key) : event.Key.Key;
+            if (key < ImGuiKey_COUNT)
+            {
+                if (event.Key.Down)
+                {
+                    event_filter.Key.Down.SetBit(key);
+                    event_filter.Key.Up.ClearBit(key);
+                }
+                else
+                {
+                    event_filter.Key.Up.SetBit(key);
+                    event_filter.Key.Down.ClearBit(key);
+                }
+            }
+        }
+        else if (event.Type == ImGuiInputEventType_Focus)
+        {
+            event_filter.AppFocused.Focused = event.AppFocused.Focused;
+            event_filter.AppFocused.Unfocused = !event.AppFocused.Focused;
+        }
+    }
+}
+
+void ImGui::RunAllEventHandlers()
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i != g.Windows.Size; i++)
+    {
+        ImGuiWindow* window = g.Windows[i];
+
+        // Execute any event handlers we have.
+        RunEventHandlers(window);
+
+        // Update event handler filter.
+        UpdateEventFilter(window);
+    }
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -4673,6 +4761,9 @@ void ImGui::NewFrame()
     // Close popups on focus lost (currently wip/opt-in)
     //if (g.IO.AppFocusLost)
     //    ClosePopupsExceptModals();
+
+    // Run all event handlers.
+    RunAllEventHandlers();
 
     // Update keyboard input state
     UpdateKeyboardInputs();
@@ -6344,6 +6435,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->ScrollTargetCenterRatio.y = 0.0f;
         }
     }
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasEventHandlers)
+    {
+        for (int i = 0; i < ImGuiInputEventType_COUNT; i++)
+            window->EventHandlers[i] = g.NextWindowData.EventHandlers[i].Callback != NULL ? g.NextWindowData.EventHandlers[i] : window->EventHandlers[i];
+    }
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasContentSize)
         window->ContentSizeExplicit = g.NextWindowData.ContentSizeVal;
     else if (first_begin_of_the_frame)
@@ -7292,28 +7388,27 @@ bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_b
     return false;
 }
 
-bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
+bool ImGui::IsWindowHovered(ImGuiWindow* window, ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsWindowHovered) == 0 && "Invalid flags for IsWindowHovered()!");
 
     ImGuiContext& g = *GImGui;
     ImGuiWindow* ref_window = g.HoveredWindow;
-    ImGuiWindow* cur_window = g.CurrentWindow;
     if (ref_window == NULL)
         return false;
 
     if ((flags & ImGuiHoveredFlags_AnyWindow) == 0)
     {
-        IM_ASSERT(cur_window); // Not inside a Begin()/End()
+        IM_ASSERT(window); // Not inside a Begin()/End()
         const bool popup_hierarchy = (flags & ImGuiHoveredFlags_NoPopupHierarchy) == 0;
         if (flags & ImGuiHoveredFlags_RootWindow)
-            cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy);
+            window = GetCombinedRootWindow(window, popup_hierarchy);
 
         bool result;
         if (flags & ImGuiHoveredFlags_ChildWindows)
-            result = IsWindowChildOf(ref_window, cur_window, popup_hierarchy);
+            result = IsWindowChildOf(ref_window, window, popup_hierarchy);
         else
-            result = (ref_window == cur_window);
+            result = (ref_window == window);
         if (!result)
             return false;
     }
@@ -7337,26 +7432,38 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     return true;
 }
 
-bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
+
+bool ImGui::IsWindowFocused(ImGuiWindow* window, ImGuiFocusedFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* ref_window = g.NavWindow;
-    ImGuiWindow* cur_window = g.CurrentWindow;
 
     if (ref_window == NULL)
         return false;
     if (flags & ImGuiFocusedFlags_AnyWindow)
         return true;
 
-    IM_ASSERT(cur_window); // Not inside a Begin()/End()
+    IM_ASSERT(window); // Not inside a Begin()/End()
     const bool popup_hierarchy = (flags & ImGuiFocusedFlags_NoPopupHierarchy) == 0;
     if (flags & ImGuiHoveredFlags_RootWindow)
-        cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy);
+        window = GetCombinedRootWindow(window, popup_hierarchy);
 
     if (flags & ImGuiHoveredFlags_ChildWindows)
-        return IsWindowChildOf(ref_window, cur_window, popup_hierarchy);
+        return IsWindowChildOf(ref_window, window, popup_hierarchy);
     else
-        return (ref_window == cur_window);
+        return (ref_window == window);
+}
+
+bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    return IsWindowHovered(g.CurrentWindow, flags);
+}
+
+bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    return IsWindowFocused(g.CurrentWindow, flags);
 }
 
 // Can we focus this window with CTRL+TAB (or PadMenu + PadFocusPrev/PadFocusNext)
@@ -7528,6 +7635,16 @@ void ImGui::SetWindowFocus(const char* name)
     }
 }
 
+void ImGui::SetWindowEventHandler(ImGuiInputEventType type, ImGuiEventHandlerCallback callback, void* callback_data, ImGuiTriState needs_focus, ImGuiTriState needs_hover)
+{
+    IM_ASSERT(type != ImGuiInputEventType_None && type < ImGuiInputEventType_COUNT);
+    GImGui->CurrentWindow->EventHandlers[type].Type = type;
+    GImGui->CurrentWindow->EventHandlers[type].Callback = callback;
+    GImGui->CurrentWindow->EventHandlers[type].UserData = callback_data;
+    GImGui->CurrentWindow->EventHandlers[type].NeedsFocus = needs_focus;
+    GImGui->CurrentWindow->EventHandlers[type].NeedsHover = needs_hover;
+}
+
 void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot)
 {
     ImGuiContext& g = *GImGui;
@@ -7592,6 +7709,18 @@ void ImGui::SetNextWindowBgAlpha(float alpha)
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasBgAlpha;
     g.NextWindowData.BgAlphaVal = alpha;
+}
+
+void ImGui::SetNextWindowEventHandler(ImGuiInputEventType type, ImGuiEventHandlerCallback callback, void* callback_data, ImGuiTriState needs_focus, ImGuiTriState needs_hover)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(type != ImGuiInputEventType_None && type < ImGuiInputEventType_COUNT);
+    g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasEventHandlers;
+    g.NextWindowData.EventHandlers[type].Type = type;
+    g.NextWindowData.EventHandlers[type].Callback = callback;
+    g.NextWindowData.EventHandlers[type].UserData = callback_data;
+    g.NextWindowData.EventHandlers[type].NeedsFocus = needs_focus;
+    g.NextWindowData.EventHandlers[type].NeedsHover = needs_hover;
 }
 
 ImDrawList* ImGui::GetWindowDrawList()
@@ -8216,13 +8345,17 @@ bool ImGui::TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id)
 
 // Note that Dear ImGui doesn't know the meaning/semantic of ImGuiKey from 0..511: they are legacy native keycodes.
 // Consider transitioning from 'IsKeyDown(MY_ENGINE_KEY_A)' (<1.87) to IsKeyDown(ImGuiKey_A) (>= 1.87)
-bool ImGui::IsKeyDown(ImGuiKey key)
+bool ImGui::IsKeyDown(ImGuiKey key, bool use_nav_window)
 {
-    return IsKeyDown(key, ImGuiKeyOwner_Any);
+    return IsKeyDown(key, ImGuiKeyOwner_Any, use_nav_window);
 }
 
-bool ImGui::IsKeyDown(ImGuiKey key, ImGuiID owner_id)
+bool ImGui::IsKeyDown(ImGuiKey key, ImGuiID owner_id, bool use_nav_window)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = use_nav_window ? g.NavWindow : g.CurrentWindow;
+    if (win != NULL && win->EventFilter.Key.Down[(key & ImGuiMod_Mask_) ? ConvertSingleModFlagToKey(&g, key) : key])
+        return false;
     const ImGuiKeyData* key_data = GetKeyData(key);
     if (!key_data->Down)
         return false;
@@ -8231,14 +8364,18 @@ bool ImGui::IsKeyDown(ImGuiKey key, ImGuiID owner_id)
     return true;
 }
 
-bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
+bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat, bool use_nav_window)
 {
-    return IsKeyPressed(key, ImGuiKeyOwner_Any, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None);
+    return IsKeyPressed(key, ImGuiKeyOwner_Any, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None, use_nav_window);
 }
 
 // Important: unless legacy IsKeyPressed(ImGuiKey, bool repeat=true) which DEFAULT to repeat, this requires EXPLICIT repeat.
-bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags)
+bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags, bool use_nav_window)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = use_nav_window ? g.NavWindow : g.CurrentWindow;
+    if (win != NULL && win->EventFilter.Key.Down[(key & ImGuiMod_Mask_) ? ConvertSingleModFlagToKey(&g, key) : key])
+        return false;
     const ImGuiKeyData* key_data = GetKeyData(key);
     if (!key_data->Down) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on key ownership)
         return false;
@@ -8261,13 +8398,17 @@ bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags)
     return true;
 }
 
-bool ImGui::IsKeyReleased(ImGuiKey key)
+bool ImGui::IsKeyReleased(ImGuiKey key, bool use_nav_window)
 {
-    return IsKeyReleased(key, ImGuiKeyOwner_Any);
+    return IsKeyReleased(key, ImGuiKeyOwner_Any, use_nav_window);
 }
 
-bool ImGui::IsKeyReleased(ImGuiKey key, ImGuiID owner_id)
+bool ImGui::IsKeyReleased(ImGuiKey key, ImGuiID owner_id, bool use_nav_window)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = use_nav_window ? g.NavWindow : g.CurrentWindow;
+    if (win != NULL && win->EventFilter.Key.Up[(key & ImGuiMod_Mask_) ? ConvertSingleModFlagToKey(&g, key) : key])
+        return false;
     const ImGuiKeyData* key_data = GetKeyData(key);
     if (key_data->DownDurationPrev < 0.0f || key_data->Down)
         return false;
@@ -8279,14 +8420,20 @@ bool ImGui::IsKeyReleased(ImGuiKey key, ImGuiID owner_id)
 bool ImGui::IsMouseDown(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseButton.Down[button])
+        return false;
     return g.IO.MouseDown[button] && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any); // should be same as IsKeyDown(MouseButtonToKey(button), ImGuiKeyOwner_Any), but this allows legacy code hijacking the io.Mousedown[] array.
 }
 
 bool ImGui::IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseButton.Down[button])
+        return false;
     return g.IO.MouseDown[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyDown(MouseButtonToKey(button), owner_id), but this allows legacy code hijacking the io.Mousedown[] array.
 }
 
@@ -8298,7 +8445,10 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseButton.Down[button])
+        return false;
     if (!g.IO.MouseDown[button]) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on key ownership)
         return false;
     const float t = g.IO.MouseDownDuration[button];
@@ -8320,21 +8470,30 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInput
 bool ImGui::IsMouseReleased(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseButton.Up[button])
+        return false;
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any); // Should be same as IsKeyReleased(MouseButtonToKey(button), ImGuiKeyOwner_Any)
 }
 
 bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseButton.Up[button])
+        return false;
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyReleased(MouseButtonToKey(button), owner_id)
 }
 
 bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* win = g.CurrentWindow;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (win != NULL && win->EventFilter.MouseClickedCount[button] == 2)
+	    return false;
     return g.IO.MouseClickedCount[button] == 2 && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any);
 }
 
@@ -10931,7 +11090,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
         }
     }
     const bool debug_hovering = IsMouseHoveringRect(cand.Min, cand.Max);
-    const bool debug_tty = (g.IO.KeyCtrl && IsKeyPressed(ImGuiKey_Space));
+    const bool debug_tty = (g.IO.KeyCtrl && IsKeyPressed(ImGuiKey_Space, true, true));
     if (debug_hovering || debug_tty)
     {
         ImFormatString(buf, IM_ARRAYSIZE(buf),
@@ -11366,7 +11525,7 @@ float ImGui::GetNavTweakPressedAmount(ImGuiAxis axis)
         key_more = (axis == ImGuiAxis_X) ? ImGuiKey_RightArrow : ImGuiKey_DownArrow;
     }
     float amount = (float)GetKeyPressedAmount(key_more, repeat_delay, repeat_rate) - (float)GetKeyPressedAmount(key_less, repeat_delay, repeat_rate);
-    if (amount != 0.0f && IsKeyDown(key_less) && IsKeyDown(key_more)) // Cancel when opposite directions are held, regardless of repeat phase
+    if (amount != 0.0f && IsKeyDown(key_less, true) && IsKeyDown(key_more, true)) // Cancel when opposite directions are held, regardless of repeat phase
         amount = 0.0f;
     return amount;
 }
@@ -11385,13 +11544,13 @@ static void ImGui::NavUpdate()
     const ImGuiKey nav_gamepad_keys_to_change_source[] = { ImGuiKey_GamepadFaceRight, ImGuiKey_GamepadFaceLeft, ImGuiKey_GamepadFaceUp, ImGuiKey_GamepadFaceDown, ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadDpadDown };
     if (nav_gamepad_active)
         for (ImGuiKey key : nav_gamepad_keys_to_change_source)
-            if (IsKeyDown(key))
+            if (IsKeyDown(key, true))
                 g.NavInputSource = ImGuiInputSource_Gamepad;
     const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     const ImGuiKey nav_keyboard_keys_to_change_source[] = { ImGuiKey_Space, ImGuiKey_Enter, ImGuiKey_Escape, ImGuiKey_RightArrow, ImGuiKey_LeftArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow };
     if (nav_keyboard_active)
         for (ImGuiKey key : nav_keyboard_keys_to_change_source)
-            if (IsKeyDown(key))
+            if (IsKeyDown(key, true))
                 g.NavInputSource = ImGuiInputSource_Keyboard;
 
     // Process navigation init request (select first/default focus)
@@ -11437,10 +11596,10 @@ static void ImGui::NavUpdate()
     g.NavActivateFlags = ImGuiActivateFlags_None;
     if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
-        const bool activate_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Space)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadActivate));
-        const bool activate_pressed = activate_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Space, false)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadActivate, false)));
-        const bool input_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Enter)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadInput));
-        const bool input_pressed = input_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Enter, false)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadInput, false)));
+        const bool activate_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Space, true)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadActivate, true));
+        const bool activate_pressed = activate_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Space, false, true)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadActivate, false, true)));
+        const bool input_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Enter, true)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadInput, true));
+        const bool input_pressed = input_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Enter, false, true)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadInput, false, true)));
         if (g.ActiveId == 0 && activate_pressed)
         {
             g.NavActivateId = g.NavId;
@@ -11497,7 +11656,7 @@ static void ImGui::NavUpdate()
         if (nav_gamepad_active)
         {
             const ImVec2 scroll_dir = GetKeyMagnitude2d(ImGuiKey_GamepadLStickLeft, ImGuiKey_GamepadLStickRight, ImGuiKey_GamepadLStickUp, ImGuiKey_GamepadLStickDown);
-            const float tweak_factor = IsKeyDown(ImGuiKey_NavGamepadTweakSlow) ? 1.0f / 10.0f : IsKeyDown(ImGuiKey_NavGamepadTweakFast) ? 10.0f : 1.0f;
+            const float tweak_factor = IsKeyDown(ImGuiKey_NavGamepadTweakSlow, true) ? 1.0f / 10.0f : IsKeyDown(ImGuiKey_NavGamepadTweakFast, true) ? 10.0f : 1.0f;
             if (scroll_dir.x != 0.0f && window->ScrollbarX)
                 SetScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed * tweak_factor));
             if (scroll_dir.y != 0.0f)
@@ -11607,10 +11766,10 @@ void ImGui::NavUpdateCreateMoveRequest()
         if (window && !g.NavWindowingTarget && !(window->Flags & ImGuiWindowFlags_NoNavInputs))
         {
             const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateNavMove;
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Left; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Right; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Up; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Down)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadDown,  ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_DownArrow,  ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Down; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  ImGuiKeyOwner_None, repeat_mode, true)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  ImGuiKeyOwner_None, repeat_mode, true)))) { g.NavMoveDir = ImGuiDir_Left; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, ImGuiKeyOwner_None, repeat_mode, true)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, ImGuiKeyOwner_None, repeat_mode, true)))) { g.NavMoveDir = ImGuiDir_Right; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    ImGuiKeyOwner_None, repeat_mode, true)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    ImGuiKeyOwner_None, repeat_mode, true)))) { g.NavMoveDir = ImGuiDir_Up; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Down)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadDown,  ImGuiKeyOwner_None, repeat_mode, true)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_DownArrow,  ImGuiKeyOwner_None, repeat_mode, true)))) { g.NavMoveDir = ImGuiDir_Down; }
         }
         g.NavMoveClipDir = g.NavMoveDir;
         g.NavScoringNoClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -11706,7 +11865,7 @@ void ImGui::NavUpdateCreateTabbingRequest()
     if (window == NULL || g.NavWindowingTarget != NULL || (window->Flags & ImGuiWindowFlags_NoNavInputs))
         return;
 
-    const bool tab_pressed = IsKeyPressed(ImGuiKey_Tab, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
+    const bool tab_pressed = IsKeyPressed(ImGuiKey_Tab, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat, true) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
     if (!tab_pressed)
         return;
 
@@ -11839,7 +11998,7 @@ static void ImGui::NavUpdateCancelRequest()
     ImGuiContext& g = *GImGui;
     const bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (g.IO.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    if (!(nav_keyboard_active && IsKeyPressed(ImGuiKey_Escape, ImGuiKeyOwner_None)) && !(nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, ImGuiKeyOwner_None)))
+    if (!(nav_keyboard_active && IsKeyPressed(ImGuiKey_Escape, ImGuiKeyOwner_None, ImGuiInputFlags_None, true)) && !(nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, ImGuiKeyOwner_None, ImGuiInputFlags_None, true)))
         return;
 
     IMGUI_DEBUG_LOG_NAV("[nav] NavUpdateCancelRequest()\n");
@@ -11889,10 +12048,10 @@ static float ImGui::NavUpdatePageUpPageDown()
     if ((window->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL)
         return 0.0f;
 
-    const bool page_up_held = IsKeyDown(ImGuiKey_PageUp, ImGuiKeyOwner_None);
-    const bool page_down_held = IsKeyDown(ImGuiKey_PageDown, ImGuiKeyOwner_None);
-    const bool home_pressed = IsKeyPressed(ImGuiKey_Home, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat);
-    const bool end_pressed = IsKeyPressed(ImGuiKey_End, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat);
+    const bool page_up_held = IsKeyDown(ImGuiKey_PageUp, ImGuiKeyOwner_None, true);
+    const bool page_down_held = IsKeyDown(ImGuiKey_PageDown, ImGuiKeyOwner_None, true);
+    const bool home_pressed = IsKeyPressed(ImGuiKey_Home, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat, true);
+    const bool end_pressed = IsKeyPressed(ImGuiKey_End, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat, true);
     if (page_up_held == page_down_held && home_pressed == end_pressed) // Proceed if either (not both) are pressed, otherwise early out
         return 0.0f;
 
@@ -11902,9 +12061,9 @@ static float ImGui::NavUpdatePageUpPageDown()
     if (window->DC.NavLayersActiveMask == 0x00 && window->DC.NavWindowHasScrollY)
     {
         // Fallback manual-scroll when window has no navigable item
-        if (IsKeyPressed(ImGuiKey_PageUp, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat))
+        if (IsKeyPressed(ImGuiKey_PageUp, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat, true))
             SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-        else if (IsKeyPressed(ImGuiKey_PageDown, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat))
+        else if (IsKeyPressed(ImGuiKey_PageDown, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat, true))
             SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
         else if (home_pressed)
             SetScrollY(window, 0.0f);
@@ -11916,14 +12075,14 @@ static float ImGui::NavUpdatePageUpPageDown()
         ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
         const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
         float nav_scoring_rect_offset_y = 0.0f;
-        if (IsKeyPressed(ImGuiKey_PageUp, true))
+        if (IsKeyPressed(ImGuiKey_PageUp, true, true))
         {
             nav_scoring_rect_offset_y = -page_offset_y;
             g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset up, we request the down direction (so we can always land on the last item)
             g.NavMoveClipDir = ImGuiDir_Up;
             g.NavMoveFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet | ImGuiNavMoveFlags_IsPageMove;
         }
-        else if (IsKeyPressed(ImGuiKey_PageDown, true))
+        else if (IsKeyPressed(ImGuiKey_PageDown, true, true))
         {
             nav_scoring_rect_offset_y = +page_offset_y;
             g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset down, we request the up direction (so we can always land on the last item)
@@ -12098,7 +12257,7 @@ static void ImGui::NavUpdateWindowing()
     const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     const bool keyboard_next_window = allow_windowing && g.ConfigNavWindowingKeyNext && Shortcut(g.ConfigNavWindowingKeyNext, owner_id, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways);
     const bool keyboard_prev_window = allow_windowing && g.ConfigNavWindowingKeyPrev && Shortcut(g.ConfigNavWindowingKeyPrev, owner_id, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways);
-    const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, 0, ImGuiInputFlags_None);
+    const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, 0, ImGuiInputFlags_None, true);
     const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && (keyboard_next_window || keyboard_prev_window); // Note: enabled even without NavEnableKeyboard!
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
@@ -12122,7 +12281,7 @@ static void ImGui::NavUpdateWindowing()
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
 
         // Select window to focus
-        const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
+        const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1, true, true) - (int)IsKeyPressed(ImGuiKey_GamepadR1, true, true);
         if (focus_change_dir != 0)
         {
             NavUpdateWindowingHighlightWindow(focus_change_dir);
@@ -12130,7 +12289,7 @@ static void ImGui::NavUpdateWindowing()
         }
 
         // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered top-most)
-        if (!IsKeyDown(ImGuiKey_NavGamepadMenu))
+        if (!IsKeyDown(ImGuiKey_NavGamepadMenu, true))
         {
             g.NavWindowingToggleLayer &= (g.NavWindowingHighlightAlpha < 1.0f); // Once button was held long enough we don't consider it a tap-to-toggle-layer press anymore.
             if (g.NavWindowingToggleLayer && g.NavWindow)
@@ -12157,7 +12316,7 @@ static void ImGui::NavUpdateWindowing()
     // Keyboard: Press and Release ALT to toggle menu layer
     // - Testing that only Alt is tested prevents Alt+Shift or AltGR from toggling menu layer.
     // - AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl). But even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
-    if (nav_keyboard_active && IsKeyPressed(ImGuiMod_Alt, ImGuiKeyOwner_None))
+    if (nav_keyboard_active && IsKeyPressed(ImGuiMod_Alt, ImGuiKeyOwner_None, ImGuiInputFlags_None, true))
     {
         g.NavWindowingToggleLayer = true;
         g.NavInputSource = ImGuiInputSource_Keyboard;
@@ -12172,11 +12331,11 @@ static void ImGui::NavUpdateWindowing()
 
         // Apply layer toggle on release
         // Important: as before version <18314 we lacked an explicit IO event for focus gain/loss, we also compare mouse validity to detect old backends clearing mouse pos on focus loss.
-        if (IsKeyReleased(ImGuiMod_Alt) && g.NavWindowingToggleLayer)
+        if (IsKeyReleased(ImGuiMod_Alt, true) && g.NavWindowingToggleLayer)
             if (g.ActiveId == 0 || g.ActiveIdAllowOverlap)
                 if (IsMousePosValid(&io.MousePos) == IsMousePosValid(&io.MousePosPrev))
                     apply_toggle_layer = true;
-        if (!IsKeyDown(ImGuiMod_Alt))
+        if (!IsKeyDown(ImGuiMod_Alt, true))
             g.NavWindowingToggleLayer = false;
     }
 
