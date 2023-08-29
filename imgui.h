@@ -2733,12 +2733,13 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_None                  = 0,
     ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to use same code/logic is desired, but may not be very useful.
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to set RequestSelectAll
-    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 2,   // Clear selection when pressing Escape while scope is focused.
-    ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 3,   // Clear selection when clicking on empty location within scope.
-    ImGuiMultiSelectFlags_ScopeWindow           = 1 << 4,   // Scope for _ClearOnClickVoid and _BoxSelect is whole window (Default). Use if (use if BeginMultiSelect() covers a whole window.
-    ImGuiMultiSelectFlags_ScopeRect             = 1 << 5,   // Scope for _ClearOnClickVoid and _BoxSelect is rectangle covering submitted items. Use if multiple BeginMultiSelect() are used in the same host window.
-    ImGuiMultiSelectFlags_SelectOnClick         = 1 << 7,   // Apply selection on mouse down when clicking on unselected item. (Default)
-    ImGuiMultiSelectFlags_SelectOnClickRelease  = 1 << 8,   // Apply selection on mouse release when clicking an unselected item. Allow dragging an unselected item without altering selection.
+    ImGuiMultiSelectFlags_BoxSelect             = 1 << 2,   // Enable box-selection. Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
+    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 4,   // Clear selection when pressing Escape while scope is focused.
+    ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 5,   // Clear selection when clicking on empty location within scope.
+    ImGuiMultiSelectFlags_ScopeWindow           = 1 << 6,   // Scope for _ClearOnClickVoid and _BoxSelect is whole window (Default). Use if (use if BeginMultiSelect() covers a whole window.
+    ImGuiMultiSelectFlags_ScopeRect             = 1 << 7,   // Scope for _ClearOnClickVoid and _BoxSelect is rectangle covering submitted items. Use if multiple BeginMultiSelect() are used in the same host window.
+    ImGuiMultiSelectFlags_SelectOnClick         = 1 << 8,   // Apply selection on mouse down when clicking on unselected item. (Default)
+    ImGuiMultiSelectFlags_SelectOnClickRelease  = 1 << 9,   // Apply selection on mouse release when clicking an unselected item. Allow dragging an unselected item without altering selection.
 };
 
 // Multi-selection system

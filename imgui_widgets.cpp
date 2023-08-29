@@ -7103,6 +7103,8 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: Multi-Select support
 //-------------------------------------------------------------------------
+// - DebugLogMultiSelectRequests() [Internal]
+// - BoxSelectStart() [Internal]
 // - BeginMultiSelect()
 // - EndMultiSelect()
 // - SetNextItemSelectionUserData()
@@ -7120,6 +7122,15 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
         if (req.Type == ImGuiSelectionRequestType_SelectAll) IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SelectAll\n", function);
         if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.RangeSelected);
     }
+}
+
+static void BoxSelectStart(ImGuiMultiSelectState* storage, ImGuiSelectionUserData clicked_item)
+{
+    ImGuiContext& g = *GImGui;
+    storage->BoxSelectStarting = true; // Consider starting box-select.
+    storage->BoxSelectFromVoid = (clicked_item == ImGuiSelectionUserData_Invalid);
+    storage->BoxSelectKeyMods = g.IO.KeyMods;
+    storage->BoxSelectStartPosRel = storage->BoxSelectEndPosRel = ImGui::WindowPosAbsToRel(g.CurrentWindow, g.IO.MousePos);
 }
 
 // Return ImGuiMultiSelectIO structure. Lifetime: valid until corresponding call to EndMultiSelect().
@@ -7193,6 +7204,38 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
                 request_select_all = true;
     }
 
+    // Box-select handling: update active state.
+    if (flags & ImGuiMultiSelectFlags_BoxSelect)
+    {
+        ms->BoxSelectId = GetID("##BoxSelect");
+        KeepAliveID(ms->BoxSelectId);
+
+        // BoxSelectStarting is set by MultiSelectItemFooter() when considering a possible box-select. We validate it here and lock geometry.
+        if (storage->BoxSelectStarting && IsMouseDragPastThreshold(0))
+        {
+            storage->BoxSelectActive = true;
+            storage->BoxSelectStarting = false;
+            SetActiveID(ms->BoxSelectId, window);
+            if (storage->BoxSelectFromVoid && (storage->BoxSelectKeyMods & ImGuiMod_Shift) == 0)
+                request_clear = true;
+        }
+        else if ((storage->BoxSelectStarting || storage->BoxSelectActive) && g.IO.MouseDown[0] == false)
+        {
+            storage->BoxSelectActive = storage->BoxSelectStarting = false;
+            if (g.ActiveId == ms->BoxSelectId)
+                ClearActiveID();
+        }
+        if (storage->BoxSelectActive)
+        {
+            ImVec2 start_pos_abs = WindowPosRelToAbs(window, storage->BoxSelectStartPosRel);
+            ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, storage->BoxSelectEndPosRel);
+            ms->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
+            ms->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
+            ms->BoxSelectRectCurr.Min = ImMin(start_pos_abs, g.IO.MousePos);
+            ms->BoxSelectRectCurr.Max = ImMax(start_pos_abs, g.IO.MousePos);
+        }
+    }
+
     if (request_clear || request_select_all)
         ms->IO.Requests.push_back(ImGuiSelectionRequest(request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear));
     ms->LoopRequestClear = request_clear;
@@ -7228,6 +7271,15 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
             storage->NavIdItem = ImGuiSelectionUserData_Invalid;
             storage->NavIdSelected = -1;
         }
+
+        // Box-select: render selection rectangle
+        // FIXME-MULTISELECT: Scroll on box-select
+        if ((ms->Flags & ImGuiMultiSelectFlags_BoxSelect) && storage->BoxSelectActive)
+        {
+            ms->Storage->BoxSelectEndPosRel = WindowPosAbsToRel(window, g.IO.MousePos);
+            window->DrawList->AddRectFilled(ms->BoxSelectRectCurr.Min, ms->BoxSelectRectCurr.Max, GetColorU32(ImGuiCol_SeparatorHovered, 0.30f)); // FIXME-MULTISELECT: Styling
+            window->DrawList->AddRect(ms->BoxSelectRectCurr.Min, ms->BoxSelectRectCurr.Max, GetColorU32(ImGuiCol_NavHighlight)); // FIXME-MULTISELECT: Styling
+        }
     }
 
     if (ms->IsEndIO == false)
@@ -7240,6 +7292,10 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
     if (scope_hovered && g.HoveredId == 0)
     {
+        if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
+            if (!storage->BoxSelectActive && !storage->BoxSelectStarting && g.IO.MouseClickedCount[0] == 1)
+                BoxSelectStart(storage, ImGuiSelectionUserData_Invalid);
+
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
@@ -7385,6 +7441,26 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             selected = pressed = true;
     }
 
+    // Box-select handling
+    if (ms->Storage->BoxSelectActive)
+    {
+        const bool rect_overlap_curr = ms->BoxSelectRectCurr.Overlaps(g.LastItemData.Rect);
+        const bool rect_overlap_prev = ms->BoxSelectRectPrev.Overlaps(g.LastItemData.Rect);
+        if ((rect_overlap_curr && !rect_overlap_prev && !selected) || (rect_overlap_prev && !rect_overlap_curr))
+        {
+            selected = !selected;
+            ImGuiSelectionRequest req(ImGuiSelectionRequestType_SetRange);
+            req.RangeFirstItem = req.RangeLastItem = item_data;
+            req.RangeSelected = selected;
+            ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
+            if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->RangeSelected == selected)
+                prev_req->RangeLastItem = item_data; // Merge span into same request
+            else
+                ms->IO.Requests.push_back(req);
+        }
+        ms->BoxSelectLastitem = item_data;
+    }
+
     // Right-click handling: this could be moved at the Selectable() level.
     // FIXME-MULTISELECT: See https://github.com/ocornut/imgui/pull/5816
     if (hovered && IsMouseClicked(1))
@@ -7407,6 +7483,12 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     // Alter selection
     if (pressed && (!enter_pressed || !selected))
     {
+        // Box-select
+        ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
+        if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
+            if (selected == false && !storage->BoxSelectActive && !storage->BoxSelectStarting && input_source == ImGuiInputSource_Mouse && g.IO.MouseClickedCount[0] == 1)
+                BoxSelectStart(storage, item_data);
+
         //----------------------------------------------------------------------------------------
         // ACTION                      | Begin  | Pressed/Activated  | End
         //----------------------------------------------------------------------------------------
@@ -7424,7 +7506,6 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         // Mouse Pressed:  Ctrl+Shift  | n/a    | Dst=item, Sel=!Sel =>         SetRange Src-Dst
         //----------------------------------------------------------------------------------------
 
-        const ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
         bool request_clear = false;
         if (is_singleselect)
             request_clear = true;
@@ -7492,6 +7573,7 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
         return;
     Text("RangeSrcItem = %" IM_PRId64 " (0x%" IM_PRIX64 "), RangeSelected = %d", storage->RangeSrcItem, storage->RangeSrcItem, storage->RangeSelected);
     Text("NavIdItem = %" IM_PRId64 " (0x%" IM_PRIX64 "), NavIdSelected = %d", storage->NavIdItem, storage->NavIdItem, storage->NavIdSelected);
+    Text("BoxSelect Starting = %d, Active %d", storage->BoxSelectStarting, storage->BoxSelectActive);
     TreePop();
 #else
     IM_UNUSED(storage);

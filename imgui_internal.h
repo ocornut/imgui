@@ -1722,6 +1722,10 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImGuiMultiSelectFlags   Flags;
     ImVec2                  ScopeRectMin;
     ImVec2                  BackupCursorMaxPos;
+    ImGuiID                 BoxSelectId;
+    ImRect                  BoxSelectRectCurr;  // Selection rectangle in absolute coordinates (derived from Storage->BoxSelectStartPosRel + MousePos)
+    ImRect                  BoxSelectRectPrev;
+    ImGuiSelectionUserData  BoxSelectLastitem;
     ImGuiKeyChord           KeyMods;
     bool                    LoopRequestClear;
     bool                    LoopRequestSelectAll;
@@ -1733,7 +1737,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()            { size_t io_sz = sizeof(IO); IO.Clear(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); } // Zero-clear except IO
+    void Clear()            { size_t io_sz = sizeof(IO); IO.Clear(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); BoxSelectLastitem = -1; } // Zero-clear except IO
 };
 
 // Persistent storage for multi-select (as long as selection is alive)
@@ -1747,8 +1751,15 @@ struct IMGUI_API ImGuiMultiSelectState
     ImGuiSelectionUserData  RangeSrcItem;       //
     ImGuiSelectionUserData  NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
 
+    bool                    BoxSelectActive;
+    bool                    BoxSelectStarting;
+    bool                    BoxSelectFromVoid;
+    ImGuiKeyChord           BoxSelectKeyMods : 16; // Latched key-mods for box-select logic.
+    ImVec2                  BoxSelectStartPosRel;  // Start position in window-relative space (to support scrolling)
+    ImVec2                  BoxSelectEndPosRel;    // End position in window-relative space
+
     ImGuiMultiSelectState() { Init(0); }
-    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
+    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; BoxSelectActive = BoxSelectStarting = BoxSelectFromVoid = false; BoxSelectKeyMods = 0; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
@@ -3087,6 +3098,7 @@ namespace ImGui
     inline ImRect           WindowRectAbsToRel(ImGuiWindow* window, const ImRect& r) { ImVec2 off = window->DC.CursorStartPos; return ImRect(r.Min.x - off.x, r.Min.y - off.y, r.Max.x - off.x, r.Max.y - off.y); }
     inline ImRect           WindowRectRelToAbs(ImGuiWindow* window, const ImRect& r) { ImVec2 off = window->DC.CursorStartPos; return ImRect(r.Min.x + off.x, r.Min.y + off.y, r.Max.x + off.x, r.Max.y + off.y); }
     inline ImVec2           WindowPosRelToAbs(ImGuiWindow* window, const ImVec2& p)  { ImVec2 off = window->DC.CursorStartPos; return ImVec2(p.x + off.x, p.y + off.y); }
+    inline ImVec2           WindowPosAbsToRel(ImGuiWindow* window, const ImVec2& p) { ImVec2 off = window->DC.CursorStartPos; return ImVec2(p.x - off.x, p.y - off.y); }
 
     // Windows: Display Order and Focus Order
     IMGUI_API void          FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags = 0);

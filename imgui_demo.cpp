@@ -3299,14 +3299,13 @@ static void ShowDemoWindowMultiSelect()
 
             for (int selection_scope_n = 0; selection_scope_n < SCOPES_COUNT; selection_scope_n++)
             {
+                ImGui::PushID(selection_scope_n);
                 ExampleSelection* selection = &selections_data[selection_scope_n];
-
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection->ApplyRequests(ms_io, &selection_adapter, ITEMS_COUNT);
 
                 ImGui::SeparatorText("Selection scope");
                 ImGui::Text("Selection size: %d/%d", selection->GetSize(), ITEMS_COUNT);
-                ImGui::PushID(selection_scope_n);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -3325,6 +3324,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
+        // See ShowExampleAppAssetsBrowser()
         if (ImGui::TreeNode("Multi-Select (tiled assets browser)"))
         {
             ImGui::BulletText("See 'Examples->Assets Browser' in menu");
@@ -3361,6 +3361,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::Checkbox("Show color button", &show_color_button);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
