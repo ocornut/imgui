@@ -7307,7 +7307,7 @@ bool ImGui::IsWindowHovered(ImGuiWindow* window, ImGuiHoveredFlags flags)
     {
         const bool popup_hierarchy = (flags & ImGuiHoveredFlags_NoPopupHierarchy) == 0;
         if (flags & ImGuiHoveredFlags_RootWindow)
-            cur_window = GetCombinedRootWindow(window, popup_hierarchy);
+            window = GetCombinedRootWindow(window, popup_hierarchy);
 
         bool result;
         if (flags & ImGuiHoveredFlags_ChildWindows)
@@ -7349,12 +7349,22 @@ bool ImGui::IsWindowFocused(ImGuiWindow* window, ImGuiFocusedFlags flags)
 
     const bool popup_hierarchy = (flags & ImGuiFocusedFlags_NoPopupHierarchy) == 0;
     if (flags & ImGuiHoveredFlags_RootWindow)
-        cur_window = GetCombinedRootWindow(window, popup_hierarchy);
+        window = GetCombinedRootWindow(window, popup_hierarchy);
 
     if (flags & ImGuiHoveredFlags_ChildWindows)
         return IsWindowChildOf(ref_window, window, popup_hierarchy);
     else
         return (ref_window == window);
+}
+
+bool ImGui::IsWindowIDHovered(ImGuiID id, ImGuiHoveredFlags flags)
+{
+    return IsWindowHovered(FindWindowByID(id), flags);
+}
+
+bool ImGui::IsWindowIDFocused(ImGuiID id, ImGuiFocusedFlags flags)
+{
+    return IsWindowFocused(FindWindowByID(id), flags);
 }
 
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
