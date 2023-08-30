@@ -3639,6 +3639,7 @@ static const ImGuiLocEntry GLocalizationEntriesEnUS[] =
     { ImGuiLocKey_WindowingPopup,       "(Popup)"                               },
     { ImGuiLocKey_WindowingUntitled,    "(Untitled)"                            },
     { ImGuiLocKey_DockingHideTabBar,    "Hide tab bar###HideTabBar"             },
+    { ImGuiLocKey_DockingHoldShiftToDock, "Hold SHIFT to enable Docking window."},
 };
 
 void ImGui::Initialize()
@@ -7314,9 +7315,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             // Docking: Dragging a dockable window (or any of its child) turns it into a drag and drop source.
             // We need to do this _before_ we overwrite window->DC.LastItemId below because BeginDockableDragDropSource() also overwrites it.
-            if ((g.MovingWindow == window) && (g.IO.ConfigDockingWithShift == g.IO.KeyShift))
-                if ((window->RootWindowDockTree->Flags & ImGuiWindowFlags_NoDocking) == 0)
-                    BeginDockableDragDropSource(window);
+            if (g.MovingWindow == window && (window->RootWindowDockTree->Flags & ImGuiWindowFlags_NoDocking) == 0)
+                BeginDockableDragDropSource(window);
 
             // Docking: Any dockable window can act as a target. For dock node hosts we call BeginDockableDragDropTarget() in DockNodeUpdate() instead.
             if (g.DragDropActive && !(flags & ImGuiWindowFlags_NoDocking))
@@ -18553,6 +18553,17 @@ void ImGui::BeginDockableDragDropSource(ImGuiWindow* window)
     IM_ASSERT(g.ActiveId == window->MoveId);
     IM_ASSERT(g.MovingWindow == window);
     IM_ASSERT(g.CurrentWindow == window);
+
+    // 0: Hold SHIFT to disable docking, 1: Hold SHIFT to enable docking.
+    if (g.IO.ConfigDockingWithShift != g.IO.KeyShift)
+    {
+        // When ConfigDockingWithShift is set, display a tooltip to increase UI affordance.
+        // We cannot set for HoveredWindowUnderMovingWindow != NULL here, as it is only valid/useful when drag and drop is already active
+        // (because of the 'is_mouse_dragging_with_an_expected_destination' logic in UpdateViewportsNewFrame() function)
+        if (g.IO.ConfigDockingWithShift && g.MouseStationaryTimer >= 1.0f && g.ActiveId >= 1.0f)
+            SetTooltip("%s", LocalizeGetMsg(ImGuiLocKey_DockingHoldShiftToDock));
+        return;
+    }
 
     g.LastItemData.ID = window->MoveId;
     window = window->RootWindowDockTree;

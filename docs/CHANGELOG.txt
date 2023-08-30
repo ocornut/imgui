@@ -73,6 +73,11 @@ Other changes:
   for consistency (matching GLFW backend) and as most initialization paths don't actually
   need to care about rendering backend.
 
+Docking+Viewports Branch:
+
+- Docking: when io.ConfigDockingWithShift is enabled, staying stationary while moving
+  a window displays an help tooltip to increase affordance. (#6709, #4643)
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.8 (Released 2023-08-01)
