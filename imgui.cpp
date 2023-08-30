@@ -7294,28 +7294,26 @@ bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_b
     return false;
 }
 
-bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
+bool ImGui::IsWindowHovered(ImGuiWindow* window, ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsWindowHovered) == 0 && "Invalid flags for IsWindowHovered()!");
 
     ImGuiContext& g = *GImGui;
     ImGuiWindow* ref_window = g.HoveredWindow;
-    ImGuiWindow* cur_window = g.CurrentWindow;
-    if (ref_window == NULL)
+    if (ref_window == NULL || window == NULL)
         return false;
 
     if ((flags & ImGuiHoveredFlags_AnyWindow) == 0)
     {
-        IM_ASSERT(cur_window); // Not inside a Begin()/End()
         const bool popup_hierarchy = (flags & ImGuiHoveredFlags_NoPopupHierarchy) == 0;
         if (flags & ImGuiHoveredFlags_RootWindow)
-            cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy);
+            cur_window = GetCombinedRootWindow(window, popup_hierarchy);
 
         bool result;
         if (flags & ImGuiHoveredFlags_ChildWindows)
-            result = IsWindowChildOf(ref_window, cur_window, popup_hierarchy);
+            result = IsWindowChildOf(ref_window, window, popup_hierarchy);
         else
-            result = (ref_window == cur_window);
+            result = (ref_window == window);
         if (!result)
             return false;
     }
@@ -7339,26 +7337,38 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     return true;
 }
 
-bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
+bool ImGui::IsWindowFocused(ImGuiWindow* window, ImGuiFocusedFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* ref_window = g.NavWindow;
-    ImGuiWindow* cur_window = g.CurrentWindow;
 
-    if (ref_window == NULL)
+    if (ref_window == NULL || window == NULL)
         return false;
     if (flags & ImGuiFocusedFlags_AnyWindow)
         return true;
 
-    IM_ASSERT(cur_window); // Not inside a Begin()/End()
     const bool popup_hierarchy = (flags & ImGuiFocusedFlags_NoPopupHierarchy) == 0;
     if (flags & ImGuiHoveredFlags_RootWindow)
-        cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy);
+        cur_window = GetCombinedRootWindow(window, popup_hierarchy);
 
     if (flags & ImGuiHoveredFlags_ChildWindows)
-        return IsWindowChildOf(ref_window, cur_window, popup_hierarchy);
+        return IsWindowChildOf(ref_window, window, popup_hierarchy);
     else
-        return (ref_window == cur_window);
+        return (ref_window == window);
+}
+
+bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow); // Not inside a Begin()/End()
+    return IsWindowHovered(g.CurrentWindow, flags);
+}
+
+bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow); // Not inside a Begin()/End()
+    return IsWindowFocused(g.CurrentWindow, flags);
 }
 
 // Can we focus this window with CTRL+TAB (or PadMenu + PadFocusPrev/PadFocusNext)

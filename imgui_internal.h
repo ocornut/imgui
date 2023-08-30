@@ -2790,6 +2790,8 @@ namespace ImGui
     IMGUI_API bool          IsWindowWithinBeginStackOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
+    IMGUI_API bool          IsWindowFocused(ImGuiWindow* window, ImGuiFocusedFlags flags=0);
+    IMGUI_API bool          IsWindowHovered(ImGuiWindow* window, ImGuiHoveredFlags flags=0);
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond = 0);
