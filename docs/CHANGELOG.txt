@@ -63,6 +63,7 @@ Other changes:
 - Clipper: Added IncludeItemByIndex() helper to include a single item. (#6424, #3841)
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
+- ImDrawList: Automatically calling ChannelsMerge() if not done after a split.
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
 - IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
