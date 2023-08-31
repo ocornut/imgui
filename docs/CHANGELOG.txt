@@ -61,6 +61,8 @@ Other changes:
 - ColorEdit, ColorPicker: Manipulating options popup don't mark item as edited. (#6722)
   (Note that they may still be marked as Active/Hovered.)
 - Clipper: Added IncludeItemByIndex() helper to include a single item. (#6424, #3841)
+- Clipper: Fixed a bug if attempt to force-include a range which matches an already
+  included range, clipper would end earlier. (#3841)
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
 - ImDrawList: Automatically calling ChannelsMerge() if not done after a split.
