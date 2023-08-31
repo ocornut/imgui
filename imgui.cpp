@@ -3498,6 +3498,20 @@ void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     }
 }
 
+// Render a rectangle shaped with optional rounding and borders
+void ImGui::RenderFrameWithGradient(ImVec2 p_min, ImVec2 p_max, ImU32 up_left_col, ImU32 up_right_col, ImU32 bottom_right_col, ImU32 bottom_left_col, bool border)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DrawList->AddRectFilledMultiColor(p_min, p_max, up_left_col, up_right_col, bottom_right_col, bottom_left_col);
+    const float border_size = g.Style.FrameBorderSize;
+    if (border && border_size > 0.0f)
+    {
+        window->DrawList->AddRect(p_min + ImVec2(1, 1), p_max + ImVec2(1, 1), GetColorU32(ImGuiCol_BorderShadow), 0.0f, 0, border_size);
+        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), 0.0f, 0, border_size);
+    }
+}
+
 void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
 {
     ImGuiContext& g = *GImGui;
