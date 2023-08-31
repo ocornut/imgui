@@ -3338,6 +3338,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickWindowVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickWindowVoid);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease); ImGui::SameLine();  HelpMarker("Allow dragging an unselected item without altering selection.");
 
             // Initialize default list with 1000 items.
             static ImVector<int> items;
@@ -3403,11 +3404,11 @@ static void ShowDemoWindowMultiSelect()
                         // IMPORTANT: for deletion refocus to work we need object ID to be stable,
                         // aka not depend on their index in the list. Here we use our persistent item_id
                         // instead of index to build a unique ID that will persist.
-                        // (If we used PushID(n) instead, focus wouldn't be restored correctly after deletion).
+                        // (If we used PushID(index) instead, focus wouldn't be restored correctly after deletion).
                         ImGui::PushID(item_id);
 
                         // Emit a color button, to test that Shift+LeftArrow landing on an item that is not part
-                        // of the selection scope doesn't erroneously alter our selection (FIXME-TESTS: Add a test for that!).
+                        // of the selection scope doesn't erroneously alter our selection.
                         if (show_color_button)
                         {
                             ImU32 dummy_col = (ImU32)((unsigned int)n * 0xC250B74B) | IM_COL32_A_MASK;
@@ -3415,38 +3416,56 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::SameLine();
                         }
 
+                        // Submit item
                         bool item_is_selected = selection.Contains((ImGuiID)n);
+                        bool item_is_open = false;
                         ImGui::SetNextItemSelectionUserData(n);
                         if (widget_type == WidgetType_Selectable)
                         {
-                            ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_None;
-                            ImGui::Selectable(label, item_is_selected, selectable_flags);
-                            if (item_curr_idx_to_focus == n)
-                                ImGui::SetKeyboardFocusHere(-1);
-
-                            if (use_drag_drop && ImGui::BeginDragDropSource())
-                            {
-                                ImGui::Text("(Dragging %d items)", selection.GetSize());
-                                ImGui::EndDragDropSource();
-                            }
+                            ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_None);
                         }
                         else if (widget_type == WidgetType_TreeNode)
                         {
-                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-                            tree_node_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
                             if (item_is_selected)
                                 tree_node_flags |= ImGuiTreeNodeFlags_Selected;
-                            bool open = ImGui::TreeNodeEx(label, tree_node_flags);
-                            if (item_curr_idx_to_focus == n)
-                                ImGui::SetKeyboardFocusHere(-1);
-                            if (use_drag_drop && ImGui::BeginDragDropSource())
-                            {
-                                ImGui::Text("(Dragging %d items)", selection.GetSize());
-                                ImGui::EndDragDropSource();
-                            }
-                            if (open)
-                                ImGui::TreePop();
+                            item_is_open = ImGui::TreeNodeEx(label, tree_node_flags);
                         }
+
+                        // Focus (for after deletion)
+                        if (item_curr_idx_to_focus == n)
+                            ImGui::SetKeyboardFocusHere(-1);
+
+                        // Drag and Drop
+                        if (use_drag_drop && ImGui::BeginDragDropSource())
+                        {
+                            // Write payload with full selection OR single unselected item (only possible with ImGuiMultiSelectFlags_SelectOnClickRelease)
+                            if (ImGui::GetDragDropPayload() == NULL)
+                            {
+                                ImVector<int> payload_items;
+                                if (!item_is_selected)
+                                    payload_items.push_back(item_id);
+                                else
+                                    for (const ImGuiStoragePair& pair : selection.Storage.Data)
+                                        if (pair.val_i)
+                                            payload_items.push_back((int)pair.key);
+                                ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+                            }
+
+                            // Display payload content in tooltip
+                            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+                            const int* payload_items = (int*)payload->Data;
+                            const int payload_count = (int)payload->DataSize / (int)sizeof(payload_items[0]);
+                            if (payload_count == 1)
+                                ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_ARRAYSIZE(ExampleNames)]);
+                            else
+                                ImGui::Text("Dragging %d objects", payload_count);
+
+                            ImGui::EndDragDropSource();
+                        }
+
+                        if (widget_type == WidgetType_TreeNode && item_is_open)
+                            ImGui::TreePop();
 
                         // Right-click: context menu
                         if (ImGui::BeginPopupContextItem())

@@ -2736,6 +2736,8 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 2,   // Clear selection when pressing Escape while scope is focused.
     ImGuiMultiSelectFlags_ClearOnClickWindowVoid= 1 << 3,   // Clear selection when clicking on empty location within host window (use if BeginMultiSelect() covers a whole window)
     //ImGuiMultiSelectFlags_ClearOnClickRectVoid= 1 << 4,   // Clear selection when clicking on empty location within rectangle covered by selection scope (use if multiple BeginMultiSelect() are used in the same host window)
+    ImGuiMultiSelectFlags_SelectOnClick         = 1 << 5,   // Apply selection on mouse down when clicking on unselected item. (Default)
+    ImGuiMultiSelectFlags_SelectOnClickRelease  = 1 << 6,   // Apply selection on mouse release when clicking an unselected item. Allow dragging an unselected item without altering selection.
 };
 
 // Multi-selection system

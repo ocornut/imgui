@@ -7306,10 +7306,9 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
     // Alter button behavior flags
     // To handle drag and drop of multiple items we need to avoid clearing selection on click.
     // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
-    // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
     ImGuiButtonFlags button_flags = *p_button_flags;
     button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
-    if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
+    if ((!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore)) && !(ms->Flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
         button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
     else
         button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
