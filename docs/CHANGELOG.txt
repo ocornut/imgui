@@ -75,6 +75,7 @@ Other changes:
 - Misc: Made multiple calls to Render() during the same frame early out faster.
 - Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
   appearing empty (regression in 1.89.8).
+- Demo: Reorganized "Examples" menu.
 - Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
 - Backends: SDL2,SDL3: added ImGui_ImplSDL2_InitForOther()/ImGui_ImplSDL3_InitForOther()
   for consistency (matching GLFW backend) and as most initialization paths don't actually

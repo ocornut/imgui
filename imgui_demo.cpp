@@ -187,19 +187,19 @@ Index of this file:
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations
-static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleAppConsole(bool* p_open);
+static void ShowExampleAppCustomRendering(bool* p_open);
+static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
 static void ShowExampleAppLayout(bool* p_open);
 static void ShowExampleAppPropertyEditor(bool* p_open);
-static void ShowExampleAppLongText(bool* p_open);
+static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
 static void ShowExampleAppConstrainedResize(bool* p_open);
-static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppFullscreen(bool* p_open);
+static void ShowExampleAppLongText(bool* p_open);
 static void ShowExampleAppWindowTitles(bool* p_open);
-static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
@@ -255,59 +255,59 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 void ImGui::ShowDemoWindow(bool* p_open)
 {
     // Exceptionally add an extra assert here for people confused about initial Dear ImGui setup
-    // Most functions would normally just crash if the context is missing.
-    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
+    // Most functions would normally just assert/crash if the context is missing.
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing Dear ImGui context. Refer to examples app!");
 
     // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_main_menu_bar = false;
-    static bool show_app_documents = false;
     static bool show_app_console = false;
+    static bool show_app_custom_rendering = false;
+    static bool show_app_documents = false;
     static bool show_app_log = false;
     static bool show_app_layout = false;
     static bool show_app_property_editor = false;
-    static bool show_app_long_text = false;
+    static bool show_app_simple_overlay = false;
     static bool show_app_auto_resize = false;
     static bool show_app_constrained_resize = false;
-    static bool show_app_simple_overlay = false;
     static bool show_app_fullscreen = false;
+    static bool show_app_long_text = false;
     static bool show_app_window_titles = false;
-    static bool show_app_custom_rendering = false;
 
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
+    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
     if (show_app_log)                 ShowExampleAppLog(&show_app_log);
     if (show_app_layout)              ShowExampleAppLayout(&show_app_layout);
     if (show_app_property_editor)     ShowExampleAppPropertyEditor(&show_app_property_editor);
-    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_auto_resize)         ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_constrained_resize)  ShowExampleAppConstrainedResize(&show_app_constrained_resize);
-    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_fullscreen)          ShowExampleAppFullscreen(&show_app_fullscreen);
+    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
     if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
-    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
-    // Dear ImGui Tools/Apps (accessible from the "Tools" menu)
-    static bool show_app_metrics = false;
-    static bool show_app_debug_log = false;
-    static bool show_app_stack_tool = false;
-    static bool show_app_about = false;
-    static bool show_app_style_editor = false;
+    // Dear ImGui Tools (accessible from the "Tools" menu)
+    static bool show_tool_metrics = false;
+    static bool show_tool_debug_log = false;
+    static bool show_tool_stack_tool = false;
+    static bool show_tool_style_editor = false;
+    static bool show_tool_about = false;
 
-    if (show_app_metrics)
-        ImGui::ShowMetricsWindow(&show_app_metrics);
-    if (show_app_debug_log)
-        ImGui::ShowDebugLogWindow(&show_app_debug_log);
-    if (show_app_stack_tool)
-        ImGui::ShowStackToolWindow(&show_app_stack_tool);
-    if (show_app_about)
-        ImGui::ShowAboutWindow(&show_app_about);
-    if (show_app_style_editor)
+    if (show_tool_metrics)
+        ImGui::ShowMetricsWindow(&show_tool_metrics);
+    if (show_tool_debug_log)
+        ImGui::ShowDebugLogWindow(&show_tool_debug_log);
+    if (show_tool_stack_tool)
+        ImGui::ShowStackToolWindow(&show_tool_stack_tool);
+    if (show_tool_style_editor)
     {
-        ImGui::Begin("Dear ImGui Style Editor", &show_app_style_editor);
+        ImGui::Begin("Dear ImGui Style Editor", &show_tool_style_editor);
         ImGui::ShowStyleEditor();
         ImGui::End();
     }
+    if (show_tool_about)
+        ImGui::ShowAboutWindow(&show_tool_about);
 
     // Demonstrate the various window flags. Typically you would just use the default!
     static bool no_titlebar = false;
@@ -368,18 +368,23 @@ void ImGui::ShowDemoWindow(bool* p_open)
         {
             IMGUI_DEMO_MARKER("Menu/Examples");
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
+
+            ImGui::SeparatorText("Mini apps");
             ImGui::MenuItem("Console", NULL, &show_app_console);
-            ImGui::MenuItem("Log", NULL, &show_app_log);
-            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
-            ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
-            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
-            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
-            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
-            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
-            ImGui::MenuItem("Fullscreen window", NULL, &show_app_fullscreen);
-            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::MenuItem("Documents", NULL, &show_app_documents);
+            ImGui::MenuItem("Log", NULL, &show_app_log);
+            ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
+            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
+            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
+
+            ImGui::SeparatorText("Concepts");
+            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
+            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
+            ImGui::MenuItem("Fullscreen window", NULL, &show_app_fullscreen);
+            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
+            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
+
             ImGui::EndMenu();
         }
         //if (ImGui::MenuItem("MenuItem")) {} // You can also use MenuItem() inside a menu bar!
@@ -391,11 +396,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
 #else
             const bool has_debug_tools = false;
 #endif
-            ImGui::MenuItem("Metrics/Debugger", NULL, &show_app_metrics, has_debug_tools);
-            ImGui::MenuItem("Debug Log", NULL, &show_app_debug_log, has_debug_tools);
-            ImGui::MenuItem("Stack Tool", NULL, &show_app_stack_tool, has_debug_tools);
-            ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);
-            ImGui::MenuItem("About Dear ImGui", NULL, &show_app_about);
+            ImGui::MenuItem("Metrics/Debugger", NULL, &show_tool_metrics, has_debug_tools);
+            ImGui::MenuItem("Debug Log", NULL, &show_tool_debug_log, has_debug_tools);
+            ImGui::MenuItem("Stack Tool", NULL, &show_tool_stack_tool, has_debug_tools);
+            ImGui::MenuItem("Style Editor", NULL, &show_tool_style_editor);
+            ImGui::MenuItem("About Dear ImGui", NULL, &show_tool_about);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -7329,6 +7334,7 @@ static void ShowPlaceholderObject(const char* prefix, int uid)
 }
 
 // Demonstrate create a simple property editor.
+// This demo is a bit lackluster nowadays, would be nice to improve.
 static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
@@ -7337,23 +7343,24 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
         ImGui::End();
         return;
     }
-    IMGUI_DEMO_MARKER("Examples/Property Editor");
 
+    IMGUI_DEMO_MARKER("Examples/Property Editor");
     HelpMarker(
         "This example shows how you may implement a property editor using two columns.\n"
-        "All objects/fields data are dummies here.\n"
-        "Remember that in many simple cases, you can use ImGui::SameLine(xxx) to position\n"
-        "your cursor horizontally instead of using the Columns() API.");
+        "All objects/fields data are dummies here.\n");
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    if (ImGui::BeginTable("split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable))
+    if (ImGui::BeginTable("##split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
     {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("Object");
+        ImGui::TableSetupColumn("Contents");
+        ImGui::TableHeadersRow();
+
         // Iterate placeholder objects (all the same data)
         for (int obj_i = 0; obj_i < 4; obj_i++)
-        {
             ShowPlaceholderObject("Object", obj_i);
-            //ImGui::Separator();
-        }
+
         ImGui::EndTable();
     }
     ImGui::PopStyleVar();
