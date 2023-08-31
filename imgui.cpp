@@ -3498,7 +3498,7 @@ void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     }
 }
 
-// Render a rectangle shaped with optional rounding and borders
+// [Tethys Custom]
 void ImGui::RenderFrameWithGradient(ImVec2 p_min, ImVec2 p_max, ImU32 up_left_col, ImU32 up_right_col, ImU32 bottom_right_col, ImU32 bottom_left_col, bool border)
 {
     ImGuiContext& g = *GImGui;
@@ -16872,6 +16872,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
             if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
                 tab_item_flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
+            if (window->Flags & ImGuiWindowFlags_HighlightTitleBar)
+                tab_item_flags |= ImGuiWindowFlags_HighlightTitleBar;
 
             // Apply stored style overrides for the window
             for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)

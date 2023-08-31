@@ -2480,8 +2480,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 }
 
 
-// Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a Drag widget, p_min and p_max are optional.
-// Read code of e.g. DragFloat(), DragInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
+// [Custom]
 bool ImGui::DragScalarWithGradient(const char* label, ImGuiDataType data_type, void* p_data, ImU32 up_left_col, ImU32 up_right_col, ImU32 bottom_right_col, ImU32 bottom_left_col, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -2610,6 +2609,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, flags);
 }
 
+// [Tethys Custom]
 bool ImGui::DragFloatWithGradient(const char* label, float* v, ImU32 up_left_col, ImU32 up_right_col, ImU32 bottom_right_col, ImU32 bottom_left_col, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarWithGradient(label, ImGuiDataType_Float, v, up_left_col, up_right_col, bottom_right_col, bottom_left_col, v_speed, &v_min, &v_max, format, flags);
@@ -8668,6 +8668,11 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     ImDrawList* display_draw_list = window->DrawList;
     const ImU32 tab_col = GetColorU32((held || hovered) ? ImGuiCol_TabHovered : tab_contents_visible ? (tab_bar_focused ? ImGuiCol_TabActive : ImGuiCol_TabUnfocusedActive) : (tab_bar_focused ? ImGuiCol_Tab : ImGuiCol_TabUnfocused));
     TabItemBackground(display_draw_list, bb, flags, tab_col);
+    if (tab_bar_focused && (flags & ImGuiWindowFlags_HighlightTitleBar))
+    {
+        float height = bb.Max.y - bb.Min.y;
+        display_draw_list->AddRectFilled(bb.Min, { bb.Max.x, bb.Min.y + height / 10.0f }, GetColorU32(ImGuiCol_NavHighlight));
+    }
     RenderNavHighlight(bb, id);
 
     // Select with right mouse button. This is so the common idiom for context menu automatically highlight the current widget.
