@@ -94,6 +94,7 @@ Index of this file:
 // [SECTION] Example App: Manipulating window titles / ShowExampleAppWindowTitles()
 // [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
 // [SECTION] Example App: Documents Handling / ShowExampleAppDocuments()
+// [SECTION] Example App: Assets Browser / ShowExampleAppAssetsBrowser()
 
 */
 
@@ -198,6 +199,7 @@ Index of this file:
 
 // Forward Declarations
 static void ShowExampleAppMainMenuBar();
+static void ShowExampleAppAssetsBrowser(bool* p_open);
 static void ShowExampleAppConsole(bool* p_open);
 static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppDocuments(bool* p_open);
@@ -275,6 +277,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_main_menu_bar = false;
+    static bool show_app_assets_browser = false;
     static bool show_app_console = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_documents = false;
@@ -290,6 +293,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);
+    if (show_app_assets_browser)      ShowExampleAppAssetsBrowser(&show_app_assets_browser);
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
     if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
     if (show_app_log)                 ShowExampleAppLog(&show_app_log);
@@ -385,6 +389,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
 
             ImGui::SeparatorText("Mini apps");
+            ImGui::MenuItem("Assets Browser", NULL, &show_app_assets_browser);
             ImGui::MenuItem("Console", NULL, &show_app_console);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::MenuItem("Documents", NULL, &show_app_documents);
@@ -3303,6 +3308,12 @@ static void ShowDemoWindowMultiSelect()
                 selection->ApplyRequests(ms_io, &selection_adapter, ITEMS_COUNT);
                 ImGui::PopID();
             }
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Multi-Select (tiled assets browser)"))
+        {
+            ImGui::BulletText("See 'Examples->Assets Browser' in menu");
             ImGui::TreePop();
         }
 
@@ -9621,6 +9632,201 @@ void ShowExampleAppDocuments(bool* p_open)
     }
 
     ImGui::End();
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] Example App: Assets Browser / ShowExampleAppAssetsBrowser()
+//-----------------------------------------------------------------------------
+
+//#include "imgui_internal.h" // NavMoveRequestTryWrapping()
+
+struct ExampleAssetsBrowser
+{
+    // State
+    int                 ItemsCount = 10000;
+    ExampleSelection    Selection;
+    float               IconSize = 32.0f;
+    int                 IconSpacing = 7;
+    bool                StretchSpacing = true;
+    float               ZoomWheelAccum = 0.0f;
+
+    // Functions
+    void Draw(const char* title, bool* p_open)
+    {
+        if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_MenuBar))
+        {
+            ImGui::End();
+            return;
+        }
+
+        // Menu bar
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
+                    *p_open = false;
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Options"))
+            {
+                ImGui::PushItemWidth(ImGui::GetFontSize() * 10);
+                ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
+                ImGui::SliderInt("Icon Spacing", &IconSpacing, 0, 32);
+                ImGui::Checkbox("Stretch Spacing", &StretchSpacing);
+                ImGui::PopItemWidth();
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+
+        // Zooming with CTRL+Wheel
+        // FIXME-MULTISELECT: Try to maintain scroll.
+        ImGuiIO& io = ImGui::GetIO();
+        if (ImGui::IsWindowAppearing())
+            ZoomWheelAccum = 0.0f;
+        if (io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)
+        {
+            ZoomWheelAccum += io.MouseWheel;
+            if (fabsf(ZoomWheelAccum) >= 1.0f)
+            {
+                IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
+                IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
+                ZoomWheelAccum -= (int)ZoomWheelAccum;
+            }
+        }
+
+        // Show a table with ONLY one header row to showcase the idea/possibility of using this to provide a sorting UI
+        // FIXME-MULTISELECT: Showcase sorting.
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+        ImGuiTableFlags table_flags_for_sort_specs = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders;
+        if (ImGui::BeginTable("for_sort_specs_only", 3, table_flags_for_sort_specs, ImVec2(0.0f, ImGui::GetFrameHeight())))
+        {
+            ImGui::TableSetupColumn("Index");
+            ImGui::TableSetupColumn("Color");
+            ImGui::TableSetupColumn("Type");
+            ImGui::TableHeadersRow();
+            if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
+                sort_specs->SpecsDirty = false; // No actual sorting in this demo yet
+            ImGui::EndTable();
+        }
+        ImGui::PopStyleVar();
+
+        if (ImGui::BeginChild("Assets", ImVec2(0, 0), true, ImGuiWindowFlags_NoMove))
+        {
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            const ImVec2 item_size(floorf(IconSize), floorf(IconSize));
+
+            // Layout: when not stretching: allow extending into right-most spacing.
+            float item_spacing = (float)IconSpacing;
+            const float avail_width = ImGui::GetContentRegionAvail().x + (StretchSpacing ? 0.0f : floorf(item_spacing * 0.5f));
+
+            // Layout: calculate number of icon per line and number of lines
+            const int column_count = IM_MAX((int)(avail_width / (item_size.x + IconSpacing)), 1);
+            const int line_count = (ItemsCount + column_count - 1) / column_count;
+
+            // Layout: when stretching: allocate remaining space to more spacing. Round before division, so item_spacing may be non-integer.
+            if (StretchSpacing && column_count > 1)
+                item_spacing = floorf(avail_width - item_size.x * column_count) / column_count;
+
+            // Calculate and store start position.
+            const float outer_padding = floorf(item_spacing * 0.5f);
+            ImVec2 start_pos = ImGui::GetCursorScreenPos();
+            start_pos = ImVec2(start_pos.x + outer_padding, start_pos.y + outer_padding);
+            ImGui::SetCursorScreenPos(start_pos);
+
+            // Multi-select
+            ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
+            ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+            ExampleSelectionAdapter selection_adapter;
+            Selection.ApplyRequests(ms_io, &selection_adapter, ItemsCount);
+
+            // Altering ItemSpacing may seem unnecessary as we position every items using SetCursorScreenPos()...
+            // But it is necessary for two reasons:
+            // - Selectables uses it by default to visually fill the space between two items.
+            // - The vertical spacing would be measured by Clipper to calculate line height if we didn't provide it explicitly (here we do).
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(item_spacing, item_spacing));
+
+            const float line_height = item_size.y + item_spacing;
+            ImGuiListClipper clipper;
+            clipper.Begin(line_count, line_height);
+            if (ms_io->RangeSrcItem != -1)
+                clipper.IncludeItemByIndex((int)(ms_io->RangeSrcItem / column_count));
+            while (clipper.Step())
+            {
+                for (int line_idx = clipper.DisplayStart; line_idx < clipper.DisplayEnd; line_idx++)
+                {
+                    const int item_min_idx_for_current_line = line_idx * column_count;
+                    const int item_max_idx_for_current_line = IM_MIN((line_idx + 1) * column_count, ItemsCount);
+                    for (int item_idx = item_min_idx_for_current_line; item_idx < item_max_idx_for_current_line; ++item_idx)
+                    {
+                        ImGui::PushID(item_idx);
+
+                        // Position item
+                        ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * (item_size.x + item_spacing), start_pos.y + (line_idx * line_height));
+                        ImGui::SetCursorScreenPos(pos);
+
+                        // Draw box
+                        ImVec2 box_min(pos.x - 1, pos.y - 1);
+                        ImVec2 box_max(box_min.x + item_size.x + 2, box_min.y + item_size.y + 2);
+                        draw_list->AddRect(box_min, box_max, IM_COL32(90, 90, 90, 255));
+
+                        bool item_is_selected = Selection.Contains((ImGuiID)item_idx);
+                        ImGui::SetNextItemSelectionUserData(item_idx);
+                        ImGui::Selectable("##select", item_is_selected, ImGuiSelectableFlags_None, item_size);
+
+                        // Update our selection state immediately (without waiting for EndMultiSelect() requests)
+                        // because we use this to alter the color of our text/icon.
+                        if (ImGui::IsItemToggledSelection())
+                            item_is_selected = !item_is_selected;
+
+                        // Drag and drop
+                        if (ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", "Dummy", 5);
+                            ImGui::Text("%d assets", Selection.Size);
+                            ImGui::EndDragDropSource();
+                        }
+
+                        // Popup menu
+                        if (ImGui::BeginPopupContextItem())
+                        {
+                            ImGui::Text("Selection: %d items", Selection.Size);
+                            if (ImGui::Button("Close"))
+                                ImGui::CloseCurrentPopup();
+                            ImGui::EndPopup();
+                        }
+
+                        // A real app would likely display an image/thumbnail here.
+                        char label[32];
+                        sprintf(label, "%d", item_idx);
+                        draw_list->AddRectFilled(box_min, box_max, IM_COL32(48, 48, 48, 128));
+                        draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled), label);
+
+                        ImGui::PopID();
+                    }
+                }
+            }
+            clipper.End();
+            ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
+
+            ms_io = ImGui::EndMultiSelect();
+            Selection.ApplyRequests(ms_io, &selection_adapter, ItemsCount);
+
+            // FIXME-MULTISELECT: Find a way to expose this in public API. This currently requires "imgui_internal.h"
+            //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
+        }
+
+        ImGui::EndChild();
+        ImGui::End();
+    }
+};
+
+void ShowExampleAppAssetsBrowser(bool* p_open)
+{
+    IMGUI_DEMO_MARKER("Examples/Assets Browser");
+    static ExampleAssetsBrowser assets_browser;
+    assets_browser.Draw("Example: Assets Browser", p_open);
 }
 
 // End of Demo code
