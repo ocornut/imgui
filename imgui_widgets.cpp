@@ -6468,19 +6468,11 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
     // Multi-selection support (header)
     if (is_multi_select)
     {
-        MultiSelectItemHeader(id, &selected);
-        button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
+        // Handle multi-select + alter button flags for it
+        MultiSelectItemHeader(id, &selected, &button_flags);
 
-        // We absolutely need to distinguish open vs select so this is the default when multi-select is enabled.
+        // We absolutely need to distinguish open vs select so comes by default
         flags |= ImGuiTreeNodeFlags_OpenOnArrow;
-
-        // To handle drag and drop of multiple items we need to avoid clearing selection on click.
-        // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
-        // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
-        if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
-            button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
-        else
-            button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
     }
     else
     {
@@ -6822,15 +6814,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     const bool was_selected = selected;
     if (is_multi_select)
     {
-        MultiSelectItemHeader(id, &selected);
-        button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
-
-        // To handle drag and drop of multiple items we need to avoid clearing selection on click.
-        // Enabling this test makes actions using CTRL+SHIFT delay their effect on the mouse release which is annoying, but it allows drag and drop of multiple items.
-        if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
-            button_flags |= ImGuiButtonFlags_PressedOnClick;
-        else
-            button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
+        // Handle multi-select + alter button flags for it
+        MultiSelectItemHeader(id, &selected, &button_flags);
     }
 
     bool hovered, held;
@@ -7271,52 +7256,64 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     }
 }
 
-void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
+void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
-    if (!ms->IsFocused)
-        return;
-    ImGuiMultiSelectState* storage = ms->Storage;
 
-    IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
-    ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
-
-    // Apply Clear/SelectAll requests requested by BeginMultiSelect().
-    // This is only useful if the user hasn't processed them already, and this only works if the user isn't using the clipper.
-    // If you are using a clipper (aka not submitting every element of the list) you need to process the Clear/SelectAll request after calling BeginMultiSelect()
     bool selected = *p_selected;
-    if (ms->BeginIO.RequestClear)
-        selected = false;
-    else if (ms->BeginIO.RequestSelectAll)
-        selected = true;
-
-    // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
-    // For this to work, we need someone to set 'RangeSrcPassedBy = true' at some point (either clipper either SetNextItemSelectionUserData() function)
-    if (ms->IsSetRange)
+    if (ms->IsFocused)
     {
-        IM_ASSERT(id != 0 && (ms->KeyMods & ImGuiMod_Shift) != 0);
-        const bool is_range_dst = (ms->RangeDstPassedBy == false) && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
-        if (is_range_dst)
-        {
-            ms->RangeDstPassedBy = true;
-            if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid) // If we don't have RangeSrc, assign RangeSrc = RangeDst
-            {
-                storage->RangeSrcItem = item_data;
-                storage->RangeSelected = selected ? 1 : 0;
-            }
-        }
-        const bool is_range_src = storage->RangeSrcItem == item_data;
-        if (is_range_src || is_range_dst || ms->RangeSrcPassedBy != ms->RangeDstPassedBy)
-        {
-            IM_ASSERT(storage->RangeSrcItem != ImGuiSelectionUserData_Invalid && storage->RangeSelected != -1);
-            selected = (storage->RangeSelected != 0);
-        }
-        else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0)
+        ImGuiMultiSelectState* storage = ms->Storage;
+        ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
+        IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
+
+        // Apply Clear/SelectAll requests requested by BeginMultiSelect().
+        // This is only useful if the user hasn't processed them already, and this only works if the user isn't using the clipper.
+        // If you are using a clipper (aka not submitting every element of the list) you need to process the Clear/SelectAll request after calling BeginMultiSelect()
+        if (ms->BeginIO.RequestClear)
             selected = false;
+        else if (ms->BeginIO.RequestSelectAll)
+            selected = true;
+
+        // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
+        // For this to work, we need someone to set 'RangeSrcPassedBy = true' at some point (either clipper either SetNextItemSelectionUserData() function)
+        if (ms->IsSetRange)
+        {
+            IM_ASSERT(id != 0 && (ms->KeyMods & ImGuiMod_Shift) != 0);
+            const bool is_range_dst = (ms->RangeDstPassedBy == false) && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
+            if (is_range_dst)
+            {
+                ms->RangeDstPassedBy = true;
+                if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid) // If we don't have RangeSrc, assign RangeSrc = RangeDst
+                {
+                    storage->RangeSrcItem = item_data;
+                    storage->RangeSelected = selected ? 1 : 0;
+                }
+            }
+            const bool is_range_src = storage->RangeSrcItem == item_data;
+            if (is_range_src || is_range_dst || ms->RangeSrcPassedBy != ms->RangeDstPassedBy)
+            {
+                IM_ASSERT(storage->RangeSrcItem != ImGuiSelectionUserData_Invalid && storage->RangeSelected != -1);
+                selected = (storage->RangeSelected != 0);
+            }
+            else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0)
+                selected = false;
+        }
+        *p_selected = selected;
     }
 
-    *p_selected = selected;
+    // Alter button behavior flags
+    // To handle drag and drop of multiple items we need to avoid clearing selection on click.
+    // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
+    // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
+    ImGuiButtonFlags button_flags = *p_button_flags;
+    button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
+    if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
+        button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
+    else
+        button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
+    *p_button_flags = button_flags;
 }
 
 void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)

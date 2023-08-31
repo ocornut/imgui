@@ -3419,7 +3419,8 @@ static void ShowDemoWindowMultiSelect()
                         ImGui::SetNextItemSelectionUserData(n);
                         if (widget_type == WidgetType_Selectable)
                         {
-                            ImGui::Selectable(label, item_is_selected);
+                            ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_None;
+                            ImGui::Selectable(label, item_is_selected, selectable_flags);
                             if (item_curr_idx_to_focus == n)
                                 ImGui::SetKeyboardFocusHere(-1);
 
