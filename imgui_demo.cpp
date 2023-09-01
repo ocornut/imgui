@@ -3785,6 +3785,14 @@ struct MyItem
     // very often by the sorting algorithm it would be a little wasteful.
     static const ImGuiTableSortSpecs* s_current_sort_specs;
 
+    static void SortWithSortSpecs(ImGuiTableSortSpecs* sort_specs, MyItem* items, int items_count)
+    {
+        s_current_sort_specs = sort_specs; // Store in variable accessible by the sort function.
+        if (items_count > 1)
+            qsort(items, (size_t)items_count, sizeof(items[0]), MyItem::CompareWithSortSpecs);
+        s_current_sort_specs = NULL;
+    }
+
     // Compare function to be used by qsort()
     static int IMGUI_CDECL CompareWithSortSpecs(const void* lhs, const void* rhs)
     {
@@ -5304,14 +5312,11 @@ static void ShowDemoWindowTables()
             ImGui::TableHeadersRow();
 
             // Sort our data if sort specs have been changed!
-            if (ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs())
-                if (sorts_specs->SpecsDirty)
+            if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
+                if (sort_specs->SpecsDirty)
                 {
-                    MyItem::s_current_sort_specs = sorts_specs; // Store in variable accessible by the sort function.
-                    if (items.Size > 1)
-                        qsort(&items[0], (size_t)items.Size, sizeof(items[0]), MyItem::CompareWithSortSpecs);
-                    MyItem::s_current_sort_specs = NULL;
-                    sorts_specs->SpecsDirty = false;
+                    MyItem::SortWithSortSpecs(sort_specs, items.Data, items.Size);
+                    sort_specs->SpecsDirty = false;
                 }
 
             // Demonstrate using clipper for large vertical lists
@@ -5519,15 +5524,13 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
 
             // Sort our data if sort specs have been changed!
-            ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs();
-            if (sorts_specs && sorts_specs->SpecsDirty)
+            ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs();
+            if (sort_specs && sort_specs->SpecsDirty)
                 items_need_sort = true;
-            if (sorts_specs && items_need_sort && items.Size > 1)
+            if (sort_specs && items_need_sort && items.Size > 1)
             {
-                MyItem::s_current_sort_specs = sorts_specs; // Store in variable accessible by the sort function.
-                qsort(&items[0], (size_t)items.Size, sizeof(items[0]), MyItem::CompareWithSortSpecs);
-                MyItem::s_current_sort_specs = NULL;
-                sorts_specs->SpecsDirty = false;
+                MyItem::SortWithSortSpecs(sort_specs, items.Data, items.Size);
+                sort_specs->SpecsDirty = false;
             }
             items_need_sort = false;
 
