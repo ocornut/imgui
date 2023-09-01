@@ -68,7 +68,6 @@ Other changes:
 - ImDrawList: Automatically calling ChannelsMerge() if not done after a split.
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
-- IO: ImGuiMod_Shortcut (Ctrl/Cmd depending on platform) is reflected in io.KeyMods. (#5923, #456)
 - IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
   languages needing it. Should ideally be set to the value of '*localeconv()->decimal_point'
   but our backends don't do it yet. (#6719, #2278)
