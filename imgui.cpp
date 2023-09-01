@@ -8480,6 +8480,7 @@ static ImGuiKeyChord GetMergedModsFromKeys()
     if (ImGui::IsKeyDown(ImGuiMod_Shift))    { mods |= ImGuiMod_Shift; }
     if (ImGui::IsKeyDown(ImGuiMod_Alt))      { mods |= ImGuiMod_Alt; }
     if (ImGui::IsKeyDown(ImGuiMod_Super))    { mods |= ImGuiMod_Super; }
+    if (ImGui::IsKeyDown(ImGuiMod_Shortcut)) { mods |= ImGuiMod_Shortcut; }
     return mods;
 }
 
@@ -9226,7 +9227,7 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     // We silently accommodate for this case by ignoring the case where all io.KeyXXX modifiers were released (aka key_mod_flags == 0),
     // while still correctly asserting on mid-frame key press events.
     const ImGuiKeyChord key_mods = GetMergedModsFromKeys();
-    IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
+    IM_ASSERT((key_mods == 0 || (g.IO.KeyMods & ~ImGuiMod_Shortcut ) == (key_mods & ~ImGuiMod_Shortcut)) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mods);
 
     // [EXPERIMENTAL] Recover from errors: You may call this yourself before EndFrame().
