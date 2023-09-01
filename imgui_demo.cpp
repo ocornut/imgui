@@ -2761,26 +2761,27 @@ static void ShowDemoWindowWidgets()
     }
 }
 
-// We use a little extra indirection layer here in order to use and demonstrate different ways to
-// - identify items in the multi-selection system (using index? using identifiers? using pointers?)
-// - store our persistent selection data (using index? using identifiers? using pointers?)
+// Our multi-selection system doesn't make assumption about:
+// - how you want to identify items in multi-selection API?     Indices(*) / Custom Identifiers    / Pointers ?
+// - how you want to store persistent selection data?           Indices    / Custom Identifiers(*) / Pointers ?
+// (*) This is the suggested solution: pass indices to API (because easy to iterate/interpolate) + persist your custom identifiers inside selection data.
+// In this demo we:
+// - always use indices in the multi-selection API (passed to SetNextItemSelectionUserData(), retrieved in ImGuiMultiSelectIO)
+// - use a little extra indirection layer in order to abstract how persistent selection data is derived from an index.
+//   - in some cases we use Index as custom identifier, in some cases we read from some custom item data structure.
 // Many combinations are possible depending on how you prefer to store your items and how you prefer to store your selection.
 // WHEN YOUR APPLICATION SETTLES ON A CHOICE, YOU WILL PROBABLY PREFER TO GET RID OF THIS UNNECESSARY 'ExampleSelectionAdapter' INDIRECTION LOGIC.
-// In theory we could add a IndexToUserData() function which would be used when calling SetNextItemSelectionUserData(), but omitting it makes things clearer.
+// In theory, for maximum abstraction, this class could contains IndexToUserData() and UserDataToIndex() functions,
+// but because we always use indices in SetNextItemSelectionUserData() in the demo, we omit that for clarify.
 struct ExampleSelectionAdapter
 {
     void*   Data = NULL;
-    int     (*UserDataToIndex)(ExampleSelectionAdapter* self, ImGuiSelectionUserData item_data);    // Function to convert item ImGuiSelectionUserData to item index
-    ImGuiID (*IndexToStorage)(ExampleSelectionAdapter* self, int idx);                              // Function to convert item index to data stored in persistent selection
+    ImGuiID (*IndexToStorage)(ExampleSelectionAdapter* self, int idx);  // Function to convert item index to data stored in persistent selection
 
-    ExampleSelectionAdapter() { SetupForDirectIndexes(); }
+    ExampleSelectionAdapter()    { SetupForDirectIndexes(); }
 
-    // Example for the simplest case: UserData==Index==SelectionStorage (this adapter doesn't even need to use the item data field)
-    void SetupForDirectIndexes()
-    {
-        UserDataToIndex = [](ExampleSelectionAdapter*, ImGuiSelectionUserData item_data) { return (int)item_data; }; // No transform: Pass indices to SetNextItemSelectionUserData()
-        IndexToStorage = [](ExampleSelectionAdapter*, int idx)                           { return (ImGuiID)idx; };   // No transform: Store indices inside persistent selection storage
-    }
+    // Example for the simplest case: Index==SelectionStorage (this adapter doesn't even need to use the item data field)
+    void SetupForDirectIndexes() { IndexToStorage = [](ExampleSelectionAdapter*, int idx) { return (ImGuiID)idx; }; }
 };
 
 // [Advanced] Helper class to store multi-selection state, used by the BeginMultiSelect() demos.
@@ -2830,7 +2831,7 @@ struct ExampleSelection
     //   if (ms_io->RequestSetRange)     { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->RangeSelected); } }
     void ApplyRequests(ImGuiMultiSelectIO* ms_io, ExampleSelectionAdapter* adapter, int items_count)
     {
-        IM_ASSERT(adapter->UserDataToIndex != NULL && adapter->IndexToStorage != NULL);
+        IM_ASSERT(adapter->IndexToStorage != NULL);
 
         if (ms_io->RequestClear || ms_io->RequestSelectAll)
             Clear();
@@ -2840,12 +2841,8 @@ struct ExampleSelection
                 AddItem(adapter->IndexToStorage(adapter, idx));
 
         if (ms_io->RequestSetRange)
-        {
-            int first_item_idx = adapter->UserDataToIndex(adapter, ms_io->RangeFirstItem);
-            int last_item_idx = adapter->UserDataToIndex(adapter, ms_io->RangeLastItem);
-            for (int idx = first_item_idx; idx <= last_item_idx; idx++)
+            for (int idx = (int)ms_io->RangeFirstItem; idx <= (int)ms_io->RangeLastItem; idx++)
                 UpdateItem(adapter->IndexToStorage(adapter, idx), ms_io->RangeSelected);
-        }
     }
 
     // Call after BeginMultiSelect().
