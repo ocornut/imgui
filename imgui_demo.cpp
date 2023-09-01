@@ -2770,7 +2770,7 @@ static const char* ExampleNames[] =
 {
     "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
     "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
-    "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
+    "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
 };
 
 // Our multi-selection system doesn't make assumption about:
@@ -9640,19 +9640,84 @@ void ShowExampleAppDocuments(bool* p_open)
 
 //#include "imgui_internal.h" // NavMoveRequestTryWrapping()
 
+struct ExampleAsset
+{
+    int     ID;
+    int     Type;
+
+    ExampleAsset(int id, int type) { ID = id; Type = type; }
+
+    static const ImGuiTableSortSpecs* s_current_sort_specs;
+
+    static void SortWithSortSpecs(ImGuiTableSortSpecs* sort_specs, ExampleAsset* items, int items_count)
+    {
+        s_current_sort_specs = sort_specs; // Store in variable accessible by the sort function.
+        if (items_count > 1)
+            qsort(items, (size_t)items_count, sizeof(items[0]), ExampleAsset::CompareWithSortSpecs);
+        s_current_sort_specs = NULL;
+    }
+
+    // Compare function to be used by qsort()
+    static int IMGUI_CDECL CompareWithSortSpecs(const void* lhs, const void* rhs)
+    {
+        const ExampleAsset* a = (const ExampleAsset*)lhs;
+        const ExampleAsset* b = (const ExampleAsset*)rhs;
+        for (int n = 0; n < s_current_sort_specs->SpecsCount; n++)
+        {
+            const ImGuiTableColumnSortSpecs* sort_spec = &s_current_sort_specs->Specs[n];
+            int delta = 0;
+            if (sort_spec->ColumnIndex == 0)
+                delta = (a->ID - b->ID);
+            else if (sort_spec->ColumnIndex == 1)
+                delta = (a->Type - b->Type);
+            if (delta > 0)
+                return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? +1 : -1;
+            if (delta < 0)
+                return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? -1 : +1;
+        }
+        return (a->ID - b->ID);
+    }
+};
+const ImGuiTableSortSpecs* ExampleAsset::s_current_sort_specs = NULL;
+
 struct ExampleAssetsBrowser
 {
+    // Options
+    bool                    ShowTypeOverlay = true;
+    float                   IconSize = 32.0f;
+    int                     IconSpacing = 7;
+    bool                    StretchSpacing = true;
+
     // State
-    int                 ItemsCount = 10000;
-    ExampleSelection    Selection;
-    float               IconSize = 32.0f;
-    int                 IconSpacing = 7;
-    bool                StretchSpacing = true;
-    float               ZoomWheelAccum = 0.0f;
+    ImVector<ExampleAsset>  Items;
+    ExampleSelection        Selection;
+    int                     NextItemId = 0;
+    bool                    SortDirty = false;
+    float                   ZoomWheelAccum = 0.0f;
 
     // Functions
+    ExampleAssetsBrowser()
+    {
+        AddItems(10000);
+    }
+    void AddItems(int count)
+    {
+        if (Items.Size == 0)
+            NextItemId = 0;
+        Items.reserve(Items.Size + count);
+        for (int n = 0; n < count; n++, NextItemId++)
+            Items.push_back(ExampleAsset(NextItemId, (NextItemId % 20) < 15 ? 0 : (NextItemId % 20) < 18 ? 1 : 2));
+        SortDirty = true;
+    }
+    void ClearItems()
+    {
+        Items.clear();
+        Selection.Clear();
+    }
+
     void Draw(const char* title, bool* p_open)
     {
+        ImGui::SetNextWindowSize(ImVec2(IconSize * 25, IconSize * 15), ImGuiCond_FirstUseEver);
         if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_MenuBar))
         {
             ImGui::End();
@@ -9664,6 +9729,11 @@ struct ExampleAssetsBrowser
         {
             if (ImGui::BeginMenu("File"))
             {
+                if (ImGui::MenuItem("Add 10000 items"))
+                    AddItems(10000);
+                if (ImGui::MenuItem("Clear items"))
+                    ClearItems();
+                ImGui::Separator();
                 if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
                     *p_open = false;
                 ImGui::EndMenu();
@@ -9671,6 +9741,11 @@ struct ExampleAssetsBrowser
             if (ImGui::BeginMenu("Options"))
             {
                 ImGui::PushItemWidth(ImGui::GetFontSize() * 10);
+
+                ImGui::SeparatorText("Contents");
+                ImGui::Checkbox("Show Type Overlay", &ShowTypeOverlay);
+
+                ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
                 ImGui::SliderInt("Icon Spacing", &IconSpacing, 0, 32);
                 ImGui::Checkbox("Stretch Spacing", &StretchSpacing);
@@ -9697,22 +9772,24 @@ struct ExampleAssetsBrowser
         }
 
         // Show a table with ONLY one header row to showcase the idea/possibility of using this to provide a sorting UI
-        // FIXME-MULTISELECT: Showcase sorting.
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         ImGuiTableFlags table_flags_for_sort_specs = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders;
-        if (ImGui::BeginTable("for_sort_specs_only", 3, table_flags_for_sort_specs, ImVec2(0.0f, ImGui::GetFrameHeight())))
+        if (ImGui::BeginTable("for_sort_specs_only", 2, table_flags_for_sort_specs, ImVec2(0.0f, ImGui::GetFrameHeight())))
         {
             ImGui::TableSetupColumn("Index");
-            ImGui::TableSetupColumn("Color");
             ImGui::TableSetupColumn("Type");
             ImGui::TableHeadersRow();
             if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
-                sort_specs->SpecsDirty = false; // No actual sorting in this demo yet
+                if (sort_specs->SpecsDirty || SortDirty)
+                {
+                    ExampleAsset::SortWithSortSpecs(sort_specs, Items.Data, Items.Size);
+                    sort_specs->SpecsDirty = SortDirty = false;
+                }
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
 
-        if (ImGui::BeginChild("Assets", ImVec2(0, 0), true, ImGuiWindowFlags_NoMove))
+        if (ImGui::BeginChild("Assets", ImVec2(0, -ImGui::GetTextLineHeightWithSpacing()), true, ImGuiWindowFlags_NoMove))
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             const ImVec2 item_size(floorf(IconSize), floorf(IconSize));
@@ -9723,7 +9800,7 @@ struct ExampleAssetsBrowser
 
             // Layout: calculate number of icon per line and number of lines
             const int column_count = IM_MAX((int)(avail_width / (item_size.x + IconSpacing)), 1);
-            const int line_count = (ItemsCount + column_count - 1) / column_count;
+            const int line_count = (Items.Size + column_count - 1) / column_count;
 
             // Layout: when stretching: allocate remaining space to more spacing. Round before division, so item_spacing may be non-integer.
             if (StretchSpacing && column_count > 1)
@@ -9736,16 +9813,24 @@ struct ExampleAssetsBrowser
             ImGui::SetCursorScreenPos(start_pos);
 
             // Multi-select
-            ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
-            ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+            ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
+            ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags);
             ExampleSelectionAdapter selection_adapter;
-            Selection.ApplyRequests(ms_io, &selection_adapter, ItemsCount);
+            selection_adapter.Data = this;
+            selection_adapter.IndexToStorage = [](ExampleSelectionAdapter* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->Data; return (ImGuiID)self->Items[idx].ID; };
+            Selection.ApplyRequests(ms_io, &selection_adapter, Items.Size);
 
             // Altering ItemSpacing may seem unnecessary as we position every items using SetCursorScreenPos()...
             // But it is necessary for two reasons:
             // - Selectables uses it by default to visually fill the space between two items.
             // - The vertical spacing would be measured by Clipper to calculate line height if we didn't provide it explicitly (here we do).
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(item_spacing, item_spacing));
+
+            // Rendering parameters
+            const ImU32 icon_bg_color = IM_COL32(48, 48, 48, 128);
+            const ImU32 icon_type_overlay_colors[3] = { 0, IM_COL32(200, 70, 70, 255), IM_COL32(70, 170, 70, 255) };
+            const ImVec2 icon_type_overlay_size = ImVec2(4.0f, 4.0f);
+            const bool display_label = (item_size.x >= ImGui::CalcTextSize("999").x);
 
             const float line_height = item_size.y + item_spacing;
             ImGuiListClipper clipper;
@@ -9757,10 +9842,11 @@ struct ExampleAssetsBrowser
                 for (int line_idx = clipper.DisplayStart; line_idx < clipper.DisplayEnd; line_idx++)
                 {
                     const int item_min_idx_for_current_line = line_idx * column_count;
-                    const int item_max_idx_for_current_line = IM_MIN((line_idx + 1) * column_count, ItemsCount);
+                    const int item_max_idx_for_current_line = IM_MIN((line_idx + 1) * column_count, Items.Size);
                     for (int item_idx = item_min_idx_for_current_line; item_idx < item_max_idx_for_current_line; ++item_idx)
                     {
-                        ImGui::PushID(item_idx);
+                        ExampleAsset* item_data = &Items[item_idx];
+                        ImGui::PushID(item_data->ID);
 
                         // Position item
                         ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * (item_size.x + item_spacing), start_pos.y + (line_idx * line_height));
@@ -9771,9 +9857,9 @@ struct ExampleAssetsBrowser
                         ImVec2 box_max(box_min.x + item_size.x + 2, box_min.y + item_size.y + 2);
                         draw_list->AddRect(box_min, box_max, IM_COL32(90, 90, 90, 255));
 
-                        bool item_is_selected = Selection.Contains((ImGuiID)item_idx);
                         ImGui::SetNextItemSelectionUserData(item_idx);
-                        ImGui::Selectable("##select", item_is_selected, ImGuiSelectableFlags_None, item_size);
+                        bool item_is_selected = Selection.Contains((ImGuiID)item_data->ID);
+                        ImGui::Selectable("", item_is_selected, ImGuiSelectableFlags_None, item_size);
 
                         // Update our selection state immediately (without waiting for EndMultiSelect() requests)
                         // because we use this to alter the color of our text/icon.
@@ -9798,10 +9884,19 @@ struct ExampleAssetsBrowser
                         }
 
                         // A real app would likely display an image/thumbnail here.
-                        char label[32];
-                        sprintf(label, "%d", item_idx);
-                        draw_list->AddRectFilled(box_min, box_max, IM_COL32(48, 48, 48, 128));
-                        draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled), label);
+                        draw_list->AddRectFilled(box_min, box_max, icon_bg_color);
+                        if (ShowTypeOverlay && item_data->Type != 0)
+                        {
+                            ImU32 type_col = icon_type_overlay_colors[item_data->Type % IM_ARRAYSIZE(icon_type_overlay_colors)];
+                            draw_list->AddRectFilled(ImVec2(box_max.x - 2 - icon_type_overlay_size.x, box_min.y + 2), ImVec2(box_max.x - 2, box_min.y + 2 + icon_type_overlay_size.y), type_col);
+                        }
+                        if (display_label)
+                        {
+                            ImU32 label_col = item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+                            char label[32];
+                            sprintf(label, "%d", item_data->ID);
+                            draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), label_col, label);
+                        }
 
                         ImGui::PopID();
                     }
@@ -9811,13 +9906,14 @@ struct ExampleAssetsBrowser
             ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
             ms_io = ImGui::EndMultiSelect();
-            Selection.ApplyRequests(ms_io, &selection_adapter, ItemsCount);
+            Selection.ApplyRequests(ms_io, &selection_adapter, Items.Size);
 
             // FIXME-MULTISELECT: Find a way to expose this in public API. This currently requires "imgui_internal.h"
             //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
         }
 
         ImGui::EndChild();
+        ImGui::Text("Selected: %d/%d items", Selection.Size, Items.Size);
         ImGui::End();
     }
 };
