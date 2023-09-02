@@ -9,6 +9,8 @@ project "ImGui"
 
 	files
 	{
+        "**.lua",
+        "LICENSE.txt",
 		"imconfig.h",
 		"imgui.h",
 		"imgui.cpp",

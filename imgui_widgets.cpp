@@ -2480,7 +2480,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 }
 
 
-// [Custom]
+// [Tethys Custom]
 bool ImGui::DragScalarWithGradient(const char* label, ImGuiDataType data_type, void* p_data, ImU32 up_left_col, ImU32 up_right_col, ImU32 bottom_right_col, ImU32 bottom_left_col, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
