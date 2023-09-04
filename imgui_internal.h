@@ -2617,6 +2617,7 @@ struct IMGUI_API ImGuiTable
     float                       RowPosY1;
     float                       RowPosY2;
     float                       RowMinHeight;               // Height submitted to TableNextRow()
+    float                       RowCellPaddingY;            // Top and bottom padding. Reloaded during row change.
     float                       RowTextBaseline;
     float                       RowIndentOffsetX;
     ImGuiTableRowFlags          RowFlags : 16;              // Current row flags, see ImGuiTableRowFlags_
@@ -2631,7 +2632,6 @@ struct IMGUI_API ImGuiTable
     float                       MinColumnWidth;
     float                       OuterPaddingX;
     float                       CellPaddingX;               // Padding from each borders. Locked in BeginTable()/Layout.
-    float                       CellPaddingY;               // Top and bottom padding. Reloaded during row change.
     float                       CellSpacingX1;              // Spacing between non-bordered cells. Locked in BeginTable()/Layout.
     float                       CellSpacingX2;
     float                       InnerWidth;                 // User value passed to BeginTable(), see comments at the top of BeginTable() for details.
