@@ -4833,7 +4833,7 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextColumn();
                 ImGui::Text("CellPadding.y = %.2f", style.CellPadding.y);
                 if ((row % 3) == 2)
-                    ImGui::PopStyleVar();;
+                    ImGui::PopStyleVar();
             }
             ImGui::EndTable();
         }
