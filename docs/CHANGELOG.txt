@@ -37,8 +37,10 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.9 WIP (In Progress)
+ VERSION 1.89.9 (Released 2023-09-04)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.9
 
 Breaking changes:
 
