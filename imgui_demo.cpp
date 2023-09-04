@@ -1,4 +1,4 @@
-// dear imgui, v1.89.9 WIP
+// dear imgui, v1.89.9
 // (demo code)
 
 // Help:
@@ -188,20 +188,20 @@ Index of this file:
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations
-static void ShowExampleAppDockSpace(bool* p_open);
-static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleAppConsole(bool* p_open);
+static void ShowExampleAppCustomRendering(bool* p_open);
+static void ShowExampleAppDockSpace(bool* p_open);
+static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
 static void ShowExampleAppLayout(bool* p_open);
 static void ShowExampleAppPropertyEditor(bool* p_open);
-static void ShowExampleAppLongText(bool* p_open);
+static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
 static void ShowExampleAppConstrainedResize(bool* p_open);
-static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppFullscreen(bool* p_open);
+static void ShowExampleAppLongText(bool* p_open);
 static void ShowExampleAppWindowTitles(bool* p_open);
-static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
@@ -267,61 +267,61 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 void ImGui::ShowDemoWindow(bool* p_open)
 {
     // Exceptionally add an extra assert here for people confused about initial Dear ImGui setup
-    // Most functions would normally just crash if the context is missing.
-    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
+    // Most functions would normally just assert/crash if the context is missing.
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing Dear ImGui context. Refer to examples app!");
 
     // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_main_menu_bar = false;
+    static bool show_app_console = false;
+    static bool show_app_custom_rendering = false;
     static bool show_app_dockspace = false;
     static bool show_app_documents = false;
-    static bool show_app_console = false;
     static bool show_app_log = false;
     static bool show_app_layout = false;
     static bool show_app_property_editor = false;
-    static bool show_app_long_text = false;
+    static bool show_app_simple_overlay = false;
     static bool show_app_auto_resize = false;
     static bool show_app_constrained_resize = false;
-    static bool show_app_simple_overlay = false;
     static bool show_app_fullscreen = false;
+    static bool show_app_long_text = false;
     static bool show_app_window_titles = false;
-    static bool show_app_custom_rendering = false;
 
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_dockspace)           ShowExampleAppDockSpace(&show_app_dockspace);     // Process the Docking app first, as explicit DockSpace() nodes needs to be submitted early (read comments near the DockSpace function)
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);     // Process the Document app next, as it may also use a DockSpace()
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
+    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
     if (show_app_log)                 ShowExampleAppLog(&show_app_log);
     if (show_app_layout)              ShowExampleAppLayout(&show_app_layout);
     if (show_app_property_editor)     ShowExampleAppPropertyEditor(&show_app_property_editor);
-    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_auto_resize)         ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_constrained_resize)  ShowExampleAppConstrainedResize(&show_app_constrained_resize);
-    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_fullscreen)          ShowExampleAppFullscreen(&show_app_fullscreen);
+    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
     if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
-    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
-    // Dear ImGui Tools/Apps (accessible from the "Tools" menu)
-    static bool show_app_metrics = false;
-    static bool show_app_debug_log = false;
-    static bool show_app_stack_tool = false;
-    static bool show_app_about = false;
-    static bool show_app_style_editor = false;
+    // Dear ImGui Tools (accessible from the "Tools" menu)
+    static bool show_tool_metrics = false;
+    static bool show_tool_debug_log = false;
+    static bool show_tool_stack_tool = false;
+    static bool show_tool_style_editor = false;
+    static bool show_tool_about = false;
 
-    if (show_app_metrics)
-        ImGui::ShowMetricsWindow(&show_app_metrics);
-    if (show_app_debug_log)
-        ImGui::ShowDebugLogWindow(&show_app_debug_log);
-    if (show_app_stack_tool)
-        ImGui::ShowStackToolWindow(&show_app_stack_tool);
-    if (show_app_about)
-        ImGui::ShowAboutWindow(&show_app_about);
-    if (show_app_style_editor)
+    if (show_tool_metrics)
+        ImGui::ShowMetricsWindow(&show_tool_metrics);
+    if (show_tool_debug_log)
+        ImGui::ShowDebugLogWindow(&show_tool_debug_log);
+    if (show_tool_stack_tool)
+        ImGui::ShowStackToolWindow(&show_tool_stack_tool);
+    if (show_tool_style_editor)
     {
-        ImGui::Begin("Dear ImGui Style Editor", &show_app_style_editor);
+        ImGui::Begin("Dear ImGui Style Editor", &show_tool_style_editor);
         ImGui::ShowStyleEditor();
         ImGui::End();
     }
+    if (show_tool_about)
+        ImGui::ShowAboutWindow(&show_tool_about);
 
     // Demonstrate the various window flags. Typically you would just use the default!
     static bool no_titlebar = false;
@@ -384,19 +384,24 @@ void ImGui::ShowDemoWindow(bool* p_open)
         {
             IMGUI_DEMO_MARKER("Menu/Examples");
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
+
+            ImGui::SeparatorText("Mini apps");
             ImGui::MenuItem("Console", NULL, &show_app_console);
-            ImGui::MenuItem("Log", NULL, &show_app_log);
-            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
-            ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
-            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
-            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
-            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
-            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
-            ImGui::MenuItem("Fullscreen window", NULL, &show_app_fullscreen);
-            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::MenuItem("Dockspace", NULL, &show_app_dockspace);
             ImGui::MenuItem("Documents", NULL, &show_app_documents);
+            ImGui::MenuItem("Log", NULL, &show_app_log);
+            ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
+            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
+            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
+
+            ImGui::SeparatorText("Concepts");
+            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
+            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
+            ImGui::MenuItem("Fullscreen window", NULL, &show_app_fullscreen);
+            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
+            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
+
             ImGui::EndMenu();
         }
         //if (ImGui::MenuItem("MenuItem")) {} // You can also use MenuItem() inside a menu bar!
@@ -408,11 +413,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
 #else
             const bool has_debug_tools = false;
 #endif
-            ImGui::MenuItem("Metrics/Debugger", NULL, &show_app_metrics, has_debug_tools);
-            ImGui::MenuItem("Debug Log", NULL, &show_app_debug_log, has_debug_tools);
-            ImGui::MenuItem("Stack Tool", NULL, &show_app_stack_tool, has_debug_tools);
-            ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);
-            ImGui::MenuItem("About Dear ImGui", NULL, &show_app_about);
+            ImGui::MenuItem("Metrics/Debugger", NULL, &show_tool_metrics, has_debug_tools);
+            ImGui::MenuItem("Debug Log", NULL, &show_tool_debug_log, has_debug_tools);
+            ImGui::MenuItem("Stack Tool", NULL, &show_tool_stack_tool, has_debug_tools);
+            ImGui::MenuItem("Style Editor", NULL, &show_tool_style_editor);
+            ImGui::MenuItem("About Dear ImGui", NULL, &show_tool_about);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -3854,6 +3859,14 @@ struct MyItem
     // very often by the sorting algorithm it would be a little wasteful.
     static const ImGuiTableSortSpecs* s_current_sort_specs;
 
+    static void SortWithSortSpecs(ImGuiTableSortSpecs* sort_specs, MyItem* items, int items_count)
+    {
+        s_current_sort_specs = sort_specs; // Store in variable accessible by the sort function.
+        if (items_count > 1)
+            qsort(items, (size_t)items_count, sizeof(items[0]), MyItem::CompareWithSortSpecs);
+        s_current_sort_specs = NULL;
+    }
+
     // Compare function to be used by qsort()
     static int IMGUI_CDECL CompareWithSortSpecs(const void* lhs, const void* rhs)
     {
@@ -4851,7 +4864,7 @@ static void ShowDemoWindowTables()
         HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would require a unique clipping rectangle per row.");
         if (ImGui::BeginTable("table_row_height", 1, ImGuiTableFlags_Borders))
         {
-            for (int row = 0; row < 10; row++)
+            for (int row = 0; row < 8; row++)
             {
                 float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row);
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
@@ -4879,6 +4892,23 @@ static void ShowDemoWindowTables()
             ImGui::Text("Line 1, with SameLine(0,0)");
             ImGui::Text("Line 2");
 
+            ImGui::EndTable();
+        }
+
+        HelpMarker("Showcase altering CellPadding.y between rows. Note that CellPadding.x is locked for the entire table.");
+        if (ImGui::BeginTable("table_changing_cellpadding_y", 1, ImGuiTableFlags_Borders))
+        {
+            ImGuiStyle& style = ImGui::GetStyle();
+            for (int row = 0; row < 8; row++)
+            {
+                if ((row % 3) == 2)
+                    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(style.CellPadding.x, 20.0f));
+                ImGui::TableNextRow(ImGuiTableRowFlags_None);
+                ImGui::TableNextColumn();
+                ImGui::Text("CellPadding.y = %.2f", style.CellPadding.y);
+                if ((row % 3) == 2)
+                    ImGui::PopStyleVar();;
+            }
             ImGui::EndTable();
         }
 
@@ -5373,14 +5403,11 @@ static void ShowDemoWindowTables()
             ImGui::TableHeadersRow();
 
             // Sort our data if sort specs have been changed!
-            if (ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs())
-                if (sorts_specs->SpecsDirty)
+            if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
+                if (sort_specs->SpecsDirty)
                 {
-                    MyItem::s_current_sort_specs = sorts_specs; // Store in variable accessible by the sort function.
-                    if (items.Size > 1)
-                        qsort(&items[0], (size_t)items.Size, sizeof(items[0]), MyItem::CompareWithSortSpecs);
-                    MyItem::s_current_sort_specs = NULL;
-                    sorts_specs->SpecsDirty = false;
+                    MyItem::SortWithSortSpecs(sort_specs, items.Data, items.Size);
+                    sort_specs->SpecsDirty = false;
                 }
 
             // Demonstrate using clipper for large vertical lists
@@ -5588,15 +5615,13 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
 
             // Sort our data if sort specs have been changed!
-            ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs();
-            if (sorts_specs && sorts_specs->SpecsDirty)
+            ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs();
+            if (sort_specs && sort_specs->SpecsDirty)
                 items_need_sort = true;
-            if (sorts_specs && items_need_sort && items.Size > 1)
+            if (sort_specs && items_need_sort && items.Size > 1)
             {
-                MyItem::s_current_sort_specs = sorts_specs; // Store in variable accessible by the sort function.
-                qsort(&items[0], (size_t)items.Size, sizeof(items[0]), MyItem::CompareWithSortSpecs);
-                MyItem::s_current_sort_specs = NULL;
-                sorts_specs->SpecsDirty = false;
+                MyItem::SortWithSortSpecs(sort_specs, items.Data, items.Size);
+                sort_specs->SpecsDirty = false;
             }
             items_need_sort = false;
 
@@ -6325,9 +6350,8 @@ void ImGui::ShowFontSelector(const char* label)
     ImFont* font_current = ImGui::GetFont();
     if (ImGui::BeginCombo(label, font_current->GetDebugName()))
     {
-        for (int n = 0; n < io.Fonts->Fonts.Size; n++)
+        for (ImFont* font : io.Fonts->Fonts)
         {
-            ImFont* font = io.Fonts->Fonts[n];
             ImGui::PushID((void*)font);
             if (ImGui::Selectable(font->GetDebugName(), font == font_current))
                 io.FontDefault = font;
@@ -6938,9 +6962,8 @@ struct ExampleAppConsole
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
             if (copy_to_clipboard)
                 ImGui::LogToClipboard();
-            for (int i = 0; i < Items.Size; i++)
+            for (const char* item : Items)
             {
-                const char* item = Items[i];
                 if (!Filter.PassFilter(item))
                     continue;
 
@@ -7429,6 +7452,7 @@ static void ShowPlaceholderObject(const char* prefix, int uid)
 }
 
 // Demonstrate create a simple property editor.
+// This demo is a bit lackluster nowadays, would be nice to improve.
 static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
@@ -7437,23 +7461,24 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
         ImGui::End();
         return;
     }
-    IMGUI_DEMO_MARKER("Examples/Property Editor");
 
+    IMGUI_DEMO_MARKER("Examples/Property Editor");
     HelpMarker(
         "This example shows how you may implement a property editor using two columns.\n"
-        "All objects/fields data are dummies here.\n"
-        "Remember that in many simple cases, you can use ImGui::SameLine(xxx) to position\n"
-        "your cursor horizontally instead of using the Columns() API.");
+        "All objects/fields data are dummies here.\n");
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    if (ImGui::BeginTable("split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable))
+    if (ImGui::BeginTable("##split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
     {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("Object");
+        ImGui::TableSetupColumn("Contents");
+        ImGui::TableHeadersRow();
+
         // Iterate placeholder objects (all the same data)
         for (int obj_i = 0; obj_i < 4; obj_i++)
-        {
             ShowPlaceholderObject("Object", obj_i);
-            //ImGui::Separator();
-        }
+
         ImGui::EndTable();
     }
     ImGui::PopStyleVar();
@@ -8255,12 +8280,11 @@ struct ExampleAppDocuments
 // Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
 static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app)
 {
-    for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+    for (MyDocument& doc : app.Documents)
     {
-        MyDocument* doc = &app.Documents[doc_n];
-        if (!doc->Open && doc->OpenPrev)
-            ImGui::SetTabItemClosed(doc->Name);
-        doc->OpenPrev = doc->Open;
+        if (!doc.Open && doc.OpenPrev)
+            ImGui::SetTabItemClosed(doc.Name);
+        doc.OpenPrev = doc.Open;
     }
 }
 
@@ -8299,23 +8323,19 @@ void ShowExampleAppDocuments(bool* p_open)
         if (ImGui::BeginMenu("File"))
         {
             int open_count = 0;
-            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                open_count += app.Documents[doc_n].Open ? 1 : 0;
+            for (MyDocument& doc : app.Documents)
+                open_count += doc.Open ? 1 : 0;
 
             if (ImGui::BeginMenu("Open", open_count < app.Documents.Size))
             {
-                for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                {
-                    MyDocument* doc = &app.Documents[doc_n];
-                    if (!doc->Open)
-                        if (ImGui::MenuItem(doc->Name))
-                            doc->DoOpen();
-                }
+                for (MyDocument& doc : app.Documents)
+                    if (!doc.Open && ImGui::MenuItem(doc.Name))
+                        doc.DoOpen();
                 ImGui::EndMenu();
             }
             if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
-                for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-                    app.Documents[doc_n].DoQueueClose();
+                for (MyDocument& doc : app.Documents)
+                    doc.DoQueueClose();
             if (ImGui::MenuItem("Exit", "Ctrl+F4") && p_open)
                 *p_open = false;
             ImGui::EndMenu();
@@ -8326,13 +8346,13 @@ void ShowExampleAppDocuments(bool* p_open)
     // [Debug] List documents with one checkbox for each
     for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
     {
-        MyDocument* doc = &app.Documents[doc_n];
+        MyDocument& doc = app.Documents[doc_n];
         if (doc_n > 0)
             ImGui::SameLine();
-        ImGui::PushID(doc);
-        if (ImGui::Checkbox(doc->Name, &doc->Open))
-            if (!doc->Open)
-                doc->DoForceClose();
+        ImGui::PushID(&doc);
+        if (ImGui::Checkbox(doc.Name, &doc.Open))
+            if (!doc.Open)
+                doc.DoForceClose();
         ImGui::PopID();
     }
     ImGui::PushItemWidth(ImGui::GetFontSize() * 12);
@@ -8368,26 +8388,25 @@ void ShowExampleAppDocuments(bool* p_open)
             //if (ImGui::GetIO().KeyCtrl) ImGui::SetTabItemSelected(docs[1].Name);  // [DEBUG] Test SetTabItemSelected(), probably not very useful as-is anyway..
 
             // Submit Tabs
-            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+            for (MyDocument& doc : app.Documents)
             {
-                MyDocument* doc = &app.Documents[doc_n];
-                if (!doc->Open)
+                if (!doc.Open)
                     continue;
 
-                ImGuiTabItemFlags tab_flags = (doc->Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
-                bool visible = ImGui::BeginTabItem(doc->Name, &doc->Open, tab_flags);
+                ImGuiTabItemFlags tab_flags = (doc.Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
+                bool visible = ImGui::BeginTabItem(doc.Name, &doc.Open, tab_flags);
 
                 // Cancel attempt to close when unsaved add to save queue so we can display a popup.
-                if (!doc->Open && doc->Dirty)
+                if (!doc.Open && doc.Dirty)
                 {
-                    doc->Open = true;
-                    doc->DoQueueClose();
+                    doc.Open = true;
+                    doc.DoQueueClose();
                 }
 
-                MyDocument::DisplayContextMenu(doc);
+                MyDocument::DisplayContextMenu(&doc);
                 if (visible)
                 {
-                    MyDocument::DisplayContents(doc);
+                    MyDocument::DisplayContents(&doc);
                     ImGui::EndTabItem();
                 }
             }
@@ -8448,15 +8467,12 @@ void ShowExampleAppDocuments(bool* p_open)
     if (close_queue.empty())
     {
         // Close queue is locked once we started a popup
-        for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
-        {
-            MyDocument* doc = &app.Documents[doc_n];
-            if (doc->WantClose)
+        for (MyDocument& doc : app.Documents)
+            if (doc.WantClose)
             {
-                doc->WantClose = false;
-                close_queue.push_back(doc);
+                doc.WantClose = false;
+                close_queue.push_back(&doc);
             }
-        }
     }
 
     // Display closing confirmation UI

@@ -39,9 +39,11 @@ Dear ImGui is particularly suited to integration in game engines (for tooling), 
 
 ### Usage
 
-**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (imgui*.cpp, imgui*.h). **No specific build process is required**. You can add the .cpp files into your existing project. See [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started).
+**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (imgui*.cpp, imgui*.h). **No specific build process is required**. You can add the .cpp files into your existing project. 
 
-**Backends for a variety of graphics API and rendering platforms** are provided in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder, along with example applications in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder. See the [Integration](#integration) section of this document for details. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
+**Backends for a variety of graphics API and rendering platforms** are provided in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder, along with example applications in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
+
+See the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide and [Integration](#integration) section of this document for more details.
 
 After Dear ImGui is set up in your application, you can use it from \_anywhere\_ in your program loop:
 ```cpp
@@ -114,9 +116,11 @@ The demo applications are not DPI aware so expect some blurriness on a 4K screen
 
 ### Integration
 
+See the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide for details.
+
 On most platforms and when using C++, **you should be able to use a combination of the [imgui_impl_xxxx](https://github.com/ocornut/imgui/tree/master/backends) backends without modification** (e.g. `imgui_impl_win32.cpp` + `imgui_impl_dx11.cpp`). If your engine supports multiple platforms, consider using more imgui_impl_xxxx files instead of rewriting them: this will be less work for you, and you can get Dear ImGui running immediately. You can _later_ decide to rewrite a custom backend using your custom engine functions if you wish so.
 
-See [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started). Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading a texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles, which is essentially what Backends are doing. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that: setting up a window and using backends. If you follow [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) it should in theory takes you less than an hour to integrate Dear ImGui.  **Make sure to spend time reading the [FAQ](https://www.dearimgui.com/faq), comments, and the examples applications!**
+Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading a texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles, which is essentially what Backends are doing. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that: setting up a window and using backends. If you follow the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide it should in theory takes you less than an hour to integrate Dear ImGui.  **Make sure to spend time reading the [FAQ](https://www.dearimgui.com/faq), comments, and the examples applications!**
 
 Officially maintained backends/bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, SDL_Renderer, Vulkan, WebGPU.

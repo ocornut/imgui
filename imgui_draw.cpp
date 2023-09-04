@@ -1,4 +1,4 @@
-// dear imgui, v1.89.9 WIP
+// dear imgui, v1.89.9
 // (drawing and font code)
 
 /*
@@ -1355,10 +1355,12 @@ static inline ImDrawFlags FixRectCornerFlags(ImDrawFlags flags)
 
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawFlags flags)
 {
-    flags = FixRectCornerFlags(flags);
-    rounding = ImMin(rounding, ImFabs(b.x - a.x) * ( ((flags & ImDrawFlags_RoundCornersTop)  == ImDrawFlags_RoundCornersTop)  || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f ) - 1.0f);
-    rounding = ImMin(rounding, ImFabs(b.y - a.y) * ( ((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight)  == ImDrawFlags_RoundCornersRight)  ? 0.5f : 1.0f ) - 1.0f);
-
+    if (rounding >= 0.5f)
+    {
+        flags = FixRectCornerFlags(flags);
+        rounding = ImMin(rounding, ImFabs(b.x - a.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(b.y - a.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+    }
     if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         PathLineTo(a);
@@ -1896,15 +1898,9 @@ void ImDrawData::DeIndexAllBuffers()
 // or if there is a difference between your window resolution and framebuffer resolution.
 void ImDrawData::ScaleClipRects(const ImVec2& fb_scale)
 {
-    for (int i = 0; i < CmdListsCount; i++)
-    {
-        ImDrawList* cmd_list = CmdLists[i];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
-            ImDrawCmd* cmd = &cmd_list->CmdBuffer[cmd_i];
-            cmd->ClipRect = ImVec4(cmd->ClipRect.x * fb_scale.x, cmd->ClipRect.y * fb_scale.y, cmd->ClipRect.z * fb_scale.x, cmd->ClipRect.w * fb_scale.y);
-        }
-    }
+    for (ImDrawList* draw_list : CmdLists)
+        for (ImDrawCmd& cmd : draw_list->CmdBuffer)
+            cmd.ClipRect = ImVec4(cmd.ClipRect.x * fb_scale.x, cmd.ClipRect.y * fb_scale.y, cmd.ClipRect.z * fb_scale.x, cmd.ClipRect.w * fb_scale.y);
 }
 
 //-----------------------------------------------------------------------------
@@ -2045,19 +2041,19 @@ ImFontAtlas::~ImFontAtlas()
 void    ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    for (int i = 0; i < ConfigData.Size; i++)
-        if (ConfigData[i].FontData && ConfigData[i].FontDataOwnedByAtlas)
+    for (ImFontConfig& font_cfg : ConfigData)
+        if (font_cfg.FontData && font_cfg.FontDataOwnedByAtlas)
         {
-            IM_FREE(ConfigData[i].FontData);
-            ConfigData[i].FontData = NULL;
+            IM_FREE(font_cfg.FontData);
+            font_cfg.FontData = NULL;
         }
 
     // When clearing this we lose access to the font name and other information used to build the font.
-    for (int i = 0; i < Fonts.Size; i++)
-        if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
+    for (ImFont* font : Fonts)
+        if (font->ConfigData >= ConfigData.Data && font->ConfigData < ConfigData.Data + ConfigData.Size)
         {
-            Fonts[i]->ConfigData = NULL;
-            Fonts[i]->ConfigDataCount = 0;
+            font->ConfigData = NULL;
+            font->ConfigDataCount = 0;
         }
     ConfigData.clear();
     CustomRects.clear();
@@ -2862,9 +2858,9 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
     }
 
     // Build all fonts lookup tables
-    for (int i = 0; i < atlas->Fonts.Size; i++)
-        if (atlas->Fonts[i]->DirtyLookupTables)
-            atlas->Fonts[i]->BuildLookupTable();
+    for (ImFont* font : atlas->Fonts)
+        if (font->DirtyLookupTables)
+            font->BuildLookupTable();
 
     atlas->TexReady = true;
 }

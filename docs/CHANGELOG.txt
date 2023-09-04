@@ -42,10 +42,14 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Clipper: Renamed IncludeRangeByIndices(), also called ForceDisplayRangeByIndices()
+  before 1.89.6, to IncludeItemsByIndex(). Kept inline redirection function. (#6424, #3841)
+
 Other changes:
 
 - Tables: Made it possible to use SameLine(0,0) after TableNextColumn() or
-  TableSetColumnIndex() in order to reuse line height from previous cell. (#3740)
+  TableSetColumnIndex() in order to reuse line pos/height from previous cell. (#3740)
+- Tables: Made it possible to change style.CellPadding.y between rows. (#3740)
 - Nav, TreeNode: Pressing Left with ImGuiTreeNodeFlags_NavLeftJumpsBackHere now goes
   through proper navigation logic: honor scrolling and selection. (#1079, #1131)
 - Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
@@ -55,8 +59,14 @@ Other changes:
   setting large values. (#6749)
 - InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
   point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
+- ColorEdit, ColorPicker: Manipulating options popup don't mark item as edited. (#6722)
+  (Note that they may still be marked as Active/Hovered.)
+- Clipper: Added IncludeItemByIndex() helper to include a single item. (#6424, #3841)
+- Clipper: Fixed a bug if attempt to force-include a range which matches an already
+  included range, clipper would end earlier. (#3841)
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
+- ImDrawList: Automatically calling ChannelsMerge() if not done after a split.
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
 - IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
@@ -68,10 +78,15 @@ Other changes:
 - Misc: Made multiple calls to Render() during the same frame early out faster.
 - Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
   appearing empty (regression in 1.89.8).
-- Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
+- Demo: Reorganized "Examples" menu.
+- Demo: Tables: Demonstrate using SameLine() between cells. (#3740)
+- Demo: Tables: Demonstrate altering CellPadding.y between rows. (#3740)
+- Demo: Custom Rendering: Demonstrate out-of-order rendering using ImDrawListSplitter.
 - Backends: SDL2,SDL3: added ImGui_ImplSDL2_InitForOther()/ImGui_ImplSDL3_InitForOther()
   for consistency (matching GLFW backend) and as most initialization paths don't actually
   need to care about rendering backend.
+- Examples: Emscripten+WebGPU: Fixed WGPUInstance creation process + use preferred
+  framebuffer format. (#6640, #6748) [@smileorigin]
 
 Docking+Viewports Branch:
 
