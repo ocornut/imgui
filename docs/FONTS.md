@@ -14,12 +14,13 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 - [Troubleshooting](#troubleshooting)
 - [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#fonts-loading-instructions)
+- [Loading Font Data from Memory](#loading-font-data-from-memory)
+- [Loading Font Data Embedded In Source Code](#loading-font-data-embedded-in-source-code)
 - [Using Icon Fonts](#using-icon-fonts)
 - [Using FreeType Rasterizer (imgui_freetype)](#using-freetype-rasterizer-imgui_freetype)
 - [Using Colorful Glyphs/Emojis](#using-colorful-glyphsemojis)
 - [Using Custom Glyph Ranges](#using-custom-glyph-ranges)
 - [Using Custom Colorful Icons](#using-custom-colorful-icons)
-- [Using Font Data Embedded In Source Code](#using-font-data-embedded-in-source-code)
 - [About Filenames](#about-filenames)
 - [About UTF-8 Encoding](#about-utf-8-encoding)
 - [Debug Tools](#debug-tools)
@@ -61,6 +62,7 @@ Some solutions:
 
 ##### [Return to Index](#index)
 
+---------------------------------------
 
 ## How should I handle DPI in my application?
 
@@ -68,6 +70,7 @@ See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-s
 
 ##### [Return to Index](#index)
 
+---------------------------------------
 
 ## Fonts Loading Instructions
 
@@ -139,7 +142,6 @@ io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyp
 ```
 See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create your own ranges.
 
-
 **Example loading and using a Japanese font:**
 
 ```cpp
@@ -160,6 +162,48 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 <br>_(settings: Dark style (left), Light style (right) / Font: NotoSansCJKjp-Medium, 20px / Rounding: 5)_
 
 ##### [Return to Index](#index)
+
+---------------------------------------
+
+## Loading Font Data from Memory
+
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, data_size, size_pixels, ...);
+```
+
+IMPORTANT: `AddFontFromMemoryTTF()` by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
+This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it).
+If you want to keep ownership of the data and free it yourself, you need to clear the `FontDataOwnedByAtlas` field:
+
+```cpp
+ImFontConfig font_cfg;
+font_cfg.FontDataOwnedByAtlas = false;
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg);
+```
+
+##### [Return to Index](#index)
+
+---------------------------------------
+
+## Loading Font Data Embedded In Source Code
+
+- Compile and use [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) to create a compressed C style array that you can embed in source code.
+- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instructions on how to use the tool.
+- You may find a precompiled version binary_to_compressed_c.exe for Windows inside the demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
+- The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the actual binary will be about 20% bigger.
+
+Then load the font with:
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
+```
+or
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
+```
+
+##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Icon Fonts
 
@@ -204,6 +248,8 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 
 ##### [Return to Index](#index)
 
+---------------------------------------
+
 ## Using FreeType Rasterizer (imgui_freetype)
 
 - Dear ImGui uses imstb\_truetype.h to rasterize fonts (with optional oversampling). This technique and its implementation are not ideal for fonts rendered at small sizes, which may appear a little blurry or hard to read.
@@ -213,6 +259,8 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 - Correct sRGB space blending will have an important effect on your font rendering quality.
 
 ##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Colorful Glyphs/Emojis
 
@@ -236,6 +284,8 @@ io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg, ra
 
 ##### [Return to Index](#index)
 
+---------------------------------------
+
 ## Using Custom Glyph Ranges
 
 You can use the `ImFontGlyphRangesBuilder` helper to create glyph ranges based on text input. For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs.
@@ -252,6 +302,8 @@ io.Fonts->Build();                                     // Build the atlas while 
 ```
 
 ##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Custom Colorful Icons
 
@@ -295,25 +347,7 @@ for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
 
 ##### [Return to Index](#index)
 
-## Using Font Data Embedded In Source Code
-
-- Compile and use [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) to create a compressed C style array that you can embed in source code.
-- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instructions on how to use the tool.
-- You may find a precompiled version binary_to_compressed_c.exe for Windows inside the demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
-- The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the actual binary will be about 20% bigger.
-
-Then load the font with:
-```cpp
-ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-```
-or
-```cpp
-ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
-```
-
-##### [Return to Index](#index)
-
---
+---------------------------------------
 
 ## About Filenames
 
@@ -335,7 +369,7 @@ io.Fonts->AddFontFromFileTTF("../MyImage01.jpg", ...);    // Load from the paren
 ```
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## About UTF-8 Encoding
 
@@ -382,7 +416,7 @@ ImGui::Text(U8("こんにちは"));
 ```
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## Debug Tools
 
@@ -398,7 +432,7 @@ You can use the `UTF-8 Encoding viewer` in `Metrics/Debugger` to verify the cont
 
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## Credits/Licenses For Fonts Included In Repository
 
