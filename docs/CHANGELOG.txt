@@ -44,6 +44,8 @@ Breaking changes:
 
 Other changes:
 
+- BeginListBox(): fixed not consuming SetNextWindowXXX data when returning false.
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.9 (Released 2023-09-04)
