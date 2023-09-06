@@ -623,6 +623,9 @@ bool ImGui_ImplGlfw_InitForOther(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
+#ifdef __EMSCRIPTEN__
+    emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, false, nullptr);
+#endif
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
