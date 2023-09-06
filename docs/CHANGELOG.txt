@@ -44,7 +44,9 @@ Breaking changes:
 
 Other changes:
 
-- BeginListBox(): fixed not consuming SetNextWindowXXX data when returning false.
+- InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+  (regression from 1.89.2, only happened in some states). (#6783, #6000)
+- BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 
 
 -----------------------------------------------------------------------
