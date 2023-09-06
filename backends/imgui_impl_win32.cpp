@@ -746,6 +746,22 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_KILLFOCUS:
         io.AddFocusEvent(msg == WM_SETFOCUS);
         return 0;
+#if HAS_WIN32_IME
+    case WM_IME_COMPOSITION:
+        if (lParam & GCS_RESULTSTR)
+        {
+            if (HIMC himc = ::ImmGetContext(hwnd))
+            {
+                wchar_t buffer;
+                ::ImmGetCompositionStringW(himc, GCS_RESULTSTR, &buffer, sizeof(buffer));
+                ::ImmReleaseContext(hwnd, himc);
+                io.AddInputCharacterUTF16(buffer);
+            }
+        }
+        return 0;
+    case WM_IME_CHAR:
+        return 1; // IME is processed above, so return 1 so that the WM_CHAR message is not generated.
+#endif
     case WM_CHAR:
         if (::IsWindowUnicode(hwnd))
         {
