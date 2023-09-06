@@ -47,6 +47,7 @@ Other changes:
 - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 
 
 -----------------------------------------------------------------------
