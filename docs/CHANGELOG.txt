@@ -42,6 +42,10 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - Commented out obsolete redirecting functions names that were marked obsolete:
+   - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
+   - Consider that generally 'GetContentRegionAvail().x' is more useful.
+
 Other changes:
 
 - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
