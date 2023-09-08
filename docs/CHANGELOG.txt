@@ -60,6 +60,7 @@ Other changes:
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
+- ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
