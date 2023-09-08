@@ -42,9 +42,14 @@ HOW TO UPDATE?
 
 Breaking changes:
 
- - Commented out obsolete redirecting functions names that were marked obsolete:
+ - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
    - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
-   - Consider that generally 'GetContentRegionAvail().x' is more useful.
+     Consider that generally 'GetContentRegionAvail().x' is more useful.
+   - ImDrawCornerFlags_XXX         -> use ImDrawFlags_RoundCornersXXX names.
+     Read 1.82 changelog for details + grep commented names in sources + .
+   - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
+     AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
+     Read 1.82 Changelog for details.
 
 Other changes:
 
