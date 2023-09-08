@@ -2265,6 +2265,18 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     }
     return bytes_count;
 }
+
+const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr)
+{
+    while (in_text_curr > in_text_start)
+    {
+        in_text_curr--;
+        if ((*in_text_curr & 0xC0) != 0x80)
+            return in_text_curr;
+    }
+    return in_text_start;
+}
+
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
