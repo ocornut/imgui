@@ -1,4 +1,4 @@
-// dear imgui, v1.89.9
+// dear imgui, v1.90 WIP
 // (drawing and font code)
 
 /*
@@ -1223,6 +1223,27 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     }
 }
 
+void ImDrawList::PathEllipticalArcTo(const ImVec2& center, float radius_x, float radius_y, float rot, float a_min, float a_max, int num_segments)
+{
+    if (num_segments <= 0)
+        num_segments = _CalcCircleAutoSegmentCount(ImMax(radius_x, radius_y)); // A bit pessimistic, maybe there's a better computation to do here.
+
+    _Path.reserve(_Path.Size + (num_segments + 1));
+
+    const float cos_rot = ImCos(rot);
+    const float sin_rot = ImSin(rot);
+    for (int i = 0; i <= num_segments; i++)
+    {
+        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+        ImVec2 point(ImCos(a) * radius_x, ImSin(a) * radius_y);
+        const float rel_x = (point.x * cos_rot) - (point.y * sin_rot);
+        const float rel_y = (point.x * sin_rot) + (point.y * cos_rot);
+        point.x = rel_x + center.x;
+        point.y = rel_y + center.y;
+        _Path.push_back(point);
+    }
+}
+
 ImVec2 ImBezierCubicCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float t)
 {
     float u = 1.0f - t;
@@ -1318,33 +1339,22 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     }
 }
 
-IM_STATIC_ASSERT(ImDrawFlags_RoundCornersTopLeft == (1 << 4));
 static inline ImDrawFlags FixRectCornerFlags(ImDrawFlags flags)
 {
+    /*
+    IM_STATIC_ASSERT(ImDrawFlags_RoundCornersTopLeft == (1 << 4));
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    // Obsoleted in 1.82 (from February 2021)
-    // Legacy Support for hard coded ~0 (used to be a suggested equivalent to ImDrawCornerFlags_All)
-    //   ~0   --> ImDrawFlags_RoundCornersAll or 0
-    if (flags == ~0)
-        return ImDrawFlags_RoundCornersAll;
-
-    // Legacy Support for hard coded 0x01 to 0x0F (matching 15 out of 16 old flags combinations)
-    //   0x01 --> ImDrawFlags_RoundCornersTopLeft (VALUE 0x01 OVERLAPS ImDrawFlags_Closed but ImDrawFlags_Closed is never valid in this path!)
-    //   0x02 --> ImDrawFlags_RoundCornersTopRight
-    //   0x03 --> ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight
-    //   0x04 --> ImDrawFlags_RoundCornersBotLeft
-    //   0x05 --> ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBotLeft
-    //   ...
-    //   0x0F --> ImDrawFlags_RoundCornersAll or 0
-    // (See all values in ImDrawCornerFlags_)
-    if (flags >= 0x01 && flags <= 0x0F)
-        return (flags << 4);
-
+    // Obsoleted in 1.82 (from February 2021). This code was stripped/simplified and mostly commented in 1.90 (from September 2023)
+    // - Legacy Support for hard coded ~0 (used to be a suggested equivalent to ImDrawCornerFlags_All)
+    if (flags == ~0)                    { return ImDrawFlags_RoundCornersAll; }
+    // - Legacy Support for hard coded 0x01 to 0x0F (matching 15 out of 16 old flags combinations). Read details in older version of this code.
+    if (flags >= 0x01 && flags <= 0x0F) { return (flags << 4); }
     // We cannot support hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'
 #endif
-
-    // If this triggers, please update your code replacing hardcoded values with new ImDrawFlags_RoundCorners* values.
-    // Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc...
+    */
+    // If this assert triggers, please update your code replacing hardcoded values with new ImDrawFlags_RoundCorners* values.
+    // Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc. anyway.
+    // See details in 1.82 Changelog as well as 2021/03/12 and 2023/09/08 entries in "API BREAKING CHANGES" section.
     IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
 
     if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
@@ -1550,6 +1560,35 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
+    PathFillConvex(col);
+}
+
+// Ellipse
+void ImDrawList::AddEllipse(const ImVec2& center, float radius_x, float radius_y, ImU32 col, float rot, int num_segments, float thickness)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    if (num_segments <= 0)
+        num_segments = _CalcCircleAutoSegmentCount(ImMax(radius_x, radius_y)); // A bit pessimistic, maybe there's a better computation to do here.
+
+    // Because we are filling a closed shape we remove 1 from the count of segments/points
+    const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    PathEllipticalArcTo(center, radius_x, radius_y, rot, 0.0f, a_max, num_segments - 1);
+    PathStroke(col, true, thickness);
+}
+
+void ImDrawList::AddEllipseFilled(const ImVec2& center, float radius_x, float radius_y, ImU32 col, float rot, int num_segments)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    if (num_segments <= 0)
+        num_segments = _CalcCircleAutoSegmentCount(ImMax(radius_x, radius_y)); // A bit pessimistic, maybe there's a better computation to do here.
+
+    // Because we are filling a closed shape we remove 1 from the count of segments/points
+    const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    PathEllipticalArcTo(center, radius_x, radius_y, rot, 0.0f, a_max, num_segments - 1);
     PathFillConvex(col);
 }
 

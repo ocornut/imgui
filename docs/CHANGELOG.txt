@@ -37,8 +37,40 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.9 WIP (In Progress)
+ VERSION 1.90 WIP (In Progress)
 -----------------------------------------------------------------------
+
+Breaking changes:
+
+ - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
+   - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
+     Consider that generally 'GetContentRegionAvail().x' is more useful.
+   - ImDrawCornerFlags_XXX         -> use ImDrawFlags_RoundCornersXXX names.
+     Read 1.82 changelog for details + grep commented names in sources + .
+   - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
+     AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
+     Read 1.82 Changelog for details.
+
+Other changes:
+
+- InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+  (regression from 1.89.2, only happened in some states). (#6783, #6000)
+- BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
+  register contents size in a way that would affect the scrolling layer.
+  Was most often noticable when using an horizontal scrollbar. (#6789)
+- ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
+- ImVector: Added find_index() helper.
+- Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
+- Backends: Win32: Added support for keyboard codepage conversion for when application
+  is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.9 (Released 2023-09-04)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.9
 
 Breaking changes:
 
