@@ -18,6 +18,7 @@ Index of this file:
 // [SECTION] Widgets: ColorEdit, ColorPicker, ColorButton, etc.
 // [SECTION] Widgets: TreeNode, CollapsingHeader, etc.
 // [SECTION] Widgets: Selectable
+// [SECTION] Widgets: Typing-Select support
 // [SECTION] Widgets: ListBox
 // [SECTION] Widgets: PlotLines, PlotHistogram
 // [SECTION] Widgets: Value helpers
@@ -6596,6 +6597,103 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
     }
     return false;
 }
+
+
+//-------------------------------------------------------------------------
+// [SECTION] Widgets: Typing-Select support
+//-------------------------------------------------------------------------
+
+// [Experimental] Currently not exposed in public API.
+// Consume character inputs and return search request, if any.
+// This would typically only be called on the focused window or location you want to grab inputs for, e.g.
+//   if (ImGui::IsWindowFocused(...))
+//       if (const ImGuiTypingSelectRequest* req = ImGui::GetTypingSelectRequest())
+//           if (req->SearchRequest)
+//               // perform search
+// However the code is written in a way where calling it from multiple locations is safe (e.g. to obtain buffer).
+const ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTypingSelectData* data = &g.TypingSelectData;
+    ImGuiTypingSelectRequest* out_request = &data->Request;
+
+    // Clear buffer
+    if (data->SearchBuffer[0] != 0)
+    {
+        const float TYPING_SELECT_RESET_TIMER = 1.70f; // FIXME: Potentially move to IO config.
+        bool clear_buffer = false;
+        clear_buffer |= (g.NavFocusScopeId != data->FocusScope);
+        clear_buffer |= (data->LastRequestTime + TYPING_SELECT_RESET_TIMER < g.Time);
+        clear_buffer |= g.NavAnyRequest;
+        clear_buffer |= g.ActiveId != 0 && g.NavActivateId == 0; // Allow temporary SPACE activation to not interfere
+        clear_buffer |= IsKeyPressed(ImGuiKey_Escape) || IsKeyPressed(ImGuiKey_Enter);
+        clear_buffer |= IsKeyPressed(ImGuiKey_Backspace) && (flags & ImGuiTypingSelectFlags_AllowBackspace) == 0;
+        //if (clear_buffer) { IMGUI_DEBUG_LOG("GetTypingSelectRequest(): Clear SearchBuffer.\n"); }
+        if (clear_buffer)
+            data->SearchBuffer[0] = 0;
+    }
+
+    // Append to buffer
+    const int buffer_max_len = IM_ARRAYSIZE(data->SearchBuffer) - 1;
+    int buffer_len = (int)strlen(data->SearchBuffer);
+    bool buffer_changed = false;
+    for (ImWchar w : g.IO.InputQueueCharacters)
+    {
+        if (w < 32 || (buffer_len == 0 && ImCharIsBlankW(w))) // Ignore leading blanks
+            continue;
+        int utf8_len = ImTextCountUtf8BytesFromStr(&w, &w + 1);
+        if (buffer_len + utf8_len > buffer_max_len)
+            break;
+        ImTextCharToUtf8(data->SearchBuffer + buffer_len, (unsigned int)w);
+        buffer_len += utf8_len;
+        buffer_changed = true;
+    }
+    g.IO.InputQueueCharacters.resize(0);
+    if ((flags & ImGuiTypingSelectFlags_AllowBackspace) && IsKeyPressed(ImGuiKey_Backspace, 0, ImGuiInputFlags_Repeat))
+    {
+        char* p = (char*)(void*)ImTextFindPreviousUtf8Codepoint(data->SearchBuffer, data->SearchBuffer + buffer_len);
+        *p = 0;
+        buffer_len = (int)(p - data->SearchBuffer);
+    }
+    if (buffer_len == 0)
+        return NULL;
+
+    // Return request if any
+    if (buffer_changed)
+    {
+        data->FocusScope = g.NavFocusScopeId;
+        data->LastRequestFrame = g.FrameCount;
+        data->LastRequestTime = (float)g.Time;
+    }
+    out_request->SearchBuffer = data->SearchBuffer;
+    out_request->SearchBufferLen = buffer_len;
+    out_request->SelectRequest = (data->LastRequestFrame == g.FrameCount);
+    out_request->RepeatCharMode = false;
+    out_request->RepeatCharSize = 0;
+
+    // Calculate if buffer contains the same character repeated.
+    // - This can be used to implement a special search mode on first character.
+    // - Performed on UTF-8 codepoint for correctness.
+    // - RepeatCharMode is always set for first input character, because it usually leads to a "next".
+    const char* buf_begin = out_request->SearchBuffer;
+    const char* buf_end = out_request->SearchBuffer + out_request->SearchBufferLen;
+    const int c0_len = ImTextCountUtf8BytesFromChar(buf_begin, buf_end);
+    const char* p = buf_begin + c0_len;
+    for (; p < buf_end; p += c0_len)
+        if (memcmp(buf_begin, p, (size_t)c0_len) != 0)
+            break;
+    out_request->RepeatCharMode = (p == buf_end);
+    out_request->RepeatCharSize = out_request->RepeatCharMode ? (ImS8)c0_len : 0;
+
+    return out_request;
+}
+
+
+//-------------------------------------------------------------------------
+// [SECTION] Widgets: Multi-Select support
+//-------------------------------------------------------------------------
+
+//
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: ListBox
