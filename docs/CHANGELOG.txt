@@ -56,6 +56,7 @@ Other changes:
 - Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
+- Tables: Fixed subtle drawing overlap between borders in some situations.
 - Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
 - Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
   in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.

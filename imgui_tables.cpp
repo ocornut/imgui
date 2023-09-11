@@ -1123,8 +1123,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         table->InnerClipRect.Max.x = ImMin(table->InnerClipRect.Max.x, unused_x1);
     }
     table->InnerWindow->ParentWorkRect = table->WorkRect;
-    table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
-    table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
+    table->BorderX1 = table->InnerClipRect.Min.x + ((table->Flags & ImGuiTableFlags_BordersOuterV) ? 1.0f : 0.0f);
+    table->BorderX2 = table->InnerClipRect.Max.x;
 
     // Setup window's WorkRect.Max.y for GetContentRegionAvail(). Other values will be updated in each TableBeginCell() call.
     float window_content_max_y;
@@ -2580,7 +2580,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     const float border_size = TABLE_BORDER_SIZE;
-    const float draw_y1 = table->InnerRect.Min.y;
+    const float draw_y1 = table->InnerRect.Min.y + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? 1.0f : 0.0f);
     const float draw_y2_body = table->InnerRect.Max.y;
     const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastFirstRowHeight) : draw_y1;
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
@@ -2654,7 +2654,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     }
     if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
-        // Draw bottom-most row border
+        // Draw bottom-most row border between it is above outer border.
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
             inner_drawlist->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), table->BorderColorLight, border_size);
