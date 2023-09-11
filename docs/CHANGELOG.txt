@@ -57,6 +57,8 @@ Other changes:
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
 - Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
+- Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
+  in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
 - Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
   This is because our layout/font system currently doesn't fully support non-integer sizes. Until
   it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
