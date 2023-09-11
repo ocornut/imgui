@@ -319,14 +319,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping criteria may evolve.
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
-    ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
-    ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
-    if (use_child_window && IsClippedEx(outer_rect, 0))
-        if (outer_window->AutoFitFramesX <= 0 && outer_window->AutoFitFramesY <= 0)
-        {
-            ItemSize(outer_rect);
-            return false;
-        }
+    const ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
+    const ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
+    const bool outer_window_is_measuring_size = (outer_window->AutoFitFramesX > 0) || (outer_window->AutoFitFramesY > 0); // Doesn't apply to auto-fitting windows!
+    if (use_child_window && IsClippedEx(outer_rect, 0) && !outer_window_is_measuring_size)
+    {
+        ItemSize(outer_rect);
+        return false;
+    }
 
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
@@ -404,6 +404,10 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         table->OuterRect = table->InnerWindow->Rect();
         table->InnerRect = table->InnerWindow->InnerRect;
         IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
+
+        // Allow submitting when host is measuring
+        if (table->InnerWindow->SkipItems && outer_window_is_measuring_size)
+            table->InnerWindow->SkipItems = false;
 
         // When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned)
         if (instance_no == 0)
@@ -847,8 +851,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
     IM_ASSERT(table->LeftMostEnabledColumn >= 0 && table->RightMostEnabledColumn >= 0);
 
-    // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
-    // to avoid the column fitting having to wait until the first visible frame of the child container (may or not be a good thing).
+    // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
+    // the column fitting having to wait until the first visible frame of the child container (may or not be a good thing). Also see #6510.
     // FIXME-TABLE: for always auto-resizing columns may not want to do that all the time.
     if (has_auto_fit_request && table->OuterWindow != table->InnerWindow)
         table->InnerWindow->SkipItems = false;
@@ -1061,6 +1065,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
 
         // Mark column as SkipItems (ignoring all items/layout)
+        // (table->HostSkipItems is a copy of inner_window->SkipItems before we cleared it above in Part 2)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
         if (column->IsSkipItems)
             IM_ASSERT(!is_visible);
