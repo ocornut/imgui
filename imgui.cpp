@@ -5572,6 +5572,7 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
     // Use SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
+    window->Size = window->SizeFull = ImVec2(0, 0);
     window->SetWindowPosAllowFlags = window->SetWindowSizeAllowFlags = window->SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
 
     if (settings != NULL)
@@ -14608,9 +14609,13 @@ void ImGui::DebugLogV(const char* fmt, va_list args)
     const int old_size = g.DebugLogBuf.size();
     g.DebugLogBuf.appendf("[%05d] ", g.FrameCount);
     g.DebugLogBuf.appendfv(fmt, args);
+    g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTTY)
         IMGUI_DEBUG_PRINTF("%s", g.DebugLogBuf.begin() + old_size);
-    g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTestEngine)
+        IMGUI_TEST_ENGINE_LOG("%s", g.DebugLogBuf.begin() + old_size);
+#endif
 }
 
 void ImGui::ShowDebugLogWindow(bool* p_open)

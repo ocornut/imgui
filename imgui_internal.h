@@ -1748,7 +1748,8 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_EventSelection   = 1 << 5,
     ImGuiDebugLogFlags_EventIO          = 1 << 6,
     ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO,
-    ImGuiDebugLogFlags_OutputToTTY      = 1 << 10,  // Also send output to TTY
+    ImGuiDebugLogFlags_OutputToTTY        = 1 << 10,  // Also send output to TTY
+    ImGuiDebugLogFlags_OutputToTestEngine = 1 << 11,  // Also send output to Test Engine
 };
 
 struct ImGuiMetricsConfig
