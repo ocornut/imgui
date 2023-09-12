@@ -1540,21 +1540,23 @@ struct ImGuiNavItemData
 // [SECTION] Typing-select support
 //-----------------------------------------------------------------------------
 
-// Flags for GetTypingSelectRequest()
+// Flags for GetTypingSelectRequest(), TypingSelectFindResult()
 enum ImGuiTypingSelectFlags_
 {
-    ImGuiTypingSelectFlags_None             = 0,
-    ImGuiTypingSelectFlags_AllowBackspace   = 1 << 0,   // Backspace to delete character inputs. If using: ensure GetTypingSelectRequest() is not called more than once per frame (filter by e.g. focus state)
+    ImGuiTypingSelectFlags_None                 = 0,
+    ImGuiTypingSelectFlags_AllowBackspace       = 1 << 0,   // Backspace to delete character inputs. If using: ensure GetTypingSelectRequest() is not called more than once per frame (filter by e.g. focus state)
+    ImGuiTypingSelectFlags_AllowSingleCharMode  = 1 << 1,   // Allow "single char" search mode which is activated when pressing the same character multiple times.
 };
 
 // Returned by GetTypingSelectRequest(), designed to eventually be public.
 struct IMGUI_API ImGuiTypingSelectRequest
 {
-    const char*     SearchBuffer;
-    int             SearchBufferLen;
-    bool            SelectRequest;              // Set when buffer was modified this frame, requesting a selection.
-    bool            RepeatCharMode;             // Notify when buffer contains same character repeated, to implement special mode.
-    ImS8            RepeatCharSize;             // Length in bytes of first letter codepoint (1 for ascii, 2-4 for UTF-8). If (SearchBufferLen==RepeatCharSize) only 1 letter has been input.
+    ImGuiTypingSelectFlags  Flags;              // Flags passed to GetTypingSelectRequest()
+    int                     SearchBufferLen;
+    const char*             SearchBuffer;
+    bool                    SelectRequest;      // Set when buffer was modified this frame, requesting a selection.
+    bool                    SingleCharMode;     // Notify when buffer contains same character repeated, to implement special mode.
+    ImS8                    SingleCharSize;     // Length in bytes of first letter codepoint (1 for ascii, 2-4 for UTF-8). If (SearchBufferLen==RepeatCharSize) only 1 letter has been input.
 };
 
 // Storage for GetTypingSelectRequest()
@@ -3097,7 +3099,8 @@ namespace ImGui
     IMGUI_API void          RenderDragDropTargetRect(const ImRect& bb);
 
     // Typing-Select API
-    IMGUI_API const ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
+    IMGUI_API ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
+    IMGUI_API int           TypingSelectFindResult(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);

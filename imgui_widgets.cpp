@@ -6612,11 +6612,10 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 // Consume character inputs and return search request, if any.
 // This would typically only be called on the focused window or location you want to grab inputs for, e.g.
 //   if (ImGui::IsWindowFocused(...))
-//       if (const ImGuiTypingSelectRequest* req = ImGui::GetTypingSelectRequest())
-//           if (req->SearchRequest)
-//               // perform search
+//       if (ImGuiTypingSelectRequest* req = ImGui::GetTypingSelectRequest())
+//           focus_idx = ImGui::TypingSelectFindResult(req, my_items.size(), [](void*, int n) { return my_items[n]->Name; }, &my_items, -1);
 // However the code is written in a way where calling it from multiple locations is safe (e.g. to obtain buffer).
-const ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
+ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTypingSelectData* data = &g.TypingSelectData;
@@ -6663,34 +6662,96 @@ const ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectF
     if (buffer_len == 0)
         return NULL;
 
-    // Return request if any
     if (buffer_changed)
     {
         data->FocusScope = g.NavFocusScopeId;
         data->LastRequestFrame = g.FrameCount;
         data->LastRequestTime = (float)g.Time;
     }
-    out_request->SearchBuffer = data->SearchBuffer;
+
+    // Return request if any
+    out_request->Flags = flags;
     out_request->SearchBufferLen = buffer_len;
+    out_request->SearchBuffer = data->SearchBuffer;
     out_request->SelectRequest = (data->LastRequestFrame == g.FrameCount);
-    out_request->RepeatCharMode = false;
-    out_request->RepeatCharSize = 0;
+    out_request->SingleCharMode = false;
+    out_request->SingleCharSize = 0;
 
     // Calculate if buffer contains the same character repeated.
     // - This can be used to implement a special search mode on first character.
     // - Performed on UTF-8 codepoint for correctness.
-    // - RepeatCharMode is always set for first input character, because it usually leads to a "next".
-    const char* buf_begin = out_request->SearchBuffer;
-    const char* buf_end = out_request->SearchBuffer + out_request->SearchBufferLen;
-    const int c0_len = ImTextCountUtf8BytesFromChar(buf_begin, buf_end);
-    const char* p = buf_begin + c0_len;
-    for (; p < buf_end; p += c0_len)
-        if (memcmp(buf_begin, p, (size_t)c0_len) != 0)
-            break;
-    out_request->RepeatCharMode = (p == buf_end);
-    out_request->RepeatCharSize = out_request->RepeatCharMode ? (ImS8)c0_len : 0;
+    // - SingleCharMode is always set for first input character, because it usually leads to a "next".
+    if (flags & ImGuiTypingSelectFlags_AllowSingleCharMode)
+    {
+        const char* buf_begin = out_request->SearchBuffer;
+        const char* buf_end = out_request->SearchBuffer + out_request->SearchBufferLen;
+        const int c0_len = ImTextCountUtf8BytesFromChar(buf_begin, buf_end);
+        const char* p = buf_begin + c0_len;
+        for (; p < buf_end; p += c0_len)
+            if (memcmp(buf_begin, p, (size_t)c0_len) != 0)
+                break;
+        out_request->SingleCharMode = (p == buf_end);
+        out_request->SingleCharSize = out_request->SingleCharMode ? (ImS8)c0_len : 0;
+    }
 
     return out_request;
+}
+
+static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
+{
+    int match_len = 0;
+    while (s1 < s1_end && ImToUpper(*s1++) == ImToUpper(*s2++))
+        match_len++;
+    return match_len;
+}
+
+// Default handler for finding a result for typing-select. You may implement your own.
+// You might want to display a tooltip to visualize the current request.
+// With same single character mode enabled:
+// - it may make less sense to be displaying a tooltip.
+// - the index of the currently focused item is required.
+// - in the context of using BeginMultiSelect(), you may retrieve data you stored to ImGuiMultiSelectIO::NavIdItem and convert it to an index.
+int ImGui::TypingSelectFindResult(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
+{
+    if (req->SelectRequest == false)
+        return -1;
+    if (req->SingleCharMode && (req->Flags & ImGuiTypingSelectFlags_AllowSingleCharMode))
+    {
+        // Special handling when a same character is typed twice in a row : perform search on a single letter and goes to next.
+        int first_match_idx = -1;
+        bool return_next_match = false;
+        for (int idx = 0; idx < items_count; idx++)
+        {
+            const char* item_name = get_item_name_func(user_data, idx);
+            if (ImStrimatchlen(req->SearchBuffer, req->SearchBuffer + req->SingleCharSize, item_name) < req->SingleCharSize)
+                continue;
+            if (return_next_match)                           // Return next matching item after current item.
+                return idx;
+            if (first_match_idx == -1 && nav_item_idx == -1) // Return first match immediately if we don't have a nav_item_idx value.
+                return idx;
+            if (first_match_idx == -1)                       // Record first match for wrapping.
+                first_match_idx = idx;
+            if (nav_item_idx == idx)                         // Record that we encountering nav_item so we can return next match.
+                return_next_match = true;
+        }
+        return first_match_idx; // First result
+    }
+
+    // Find longest match in item list
+    int longest_match_idx = -1;
+    int longest_match_len = 0;
+    for (int idx = 0; idx < items_count; idx++)
+    {
+        const char* item_name = get_item_name_func(user_data, idx);
+        const int match_len = ImStrimatchlen(req->SearchBuffer, req->SearchBuffer + req->SearchBufferLen, item_name);
+        if (match_len <= longest_match_len)
+            continue;
+        longest_match_idx = idx;
+        longest_match_len = match_len;
+        if (match_len == req->SearchBufferLen)
+            break;
+    }
+    return longest_match_idx;
 }
 
 
