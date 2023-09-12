@@ -59,6 +59,9 @@ Other changes:
 - Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
+- Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
+  code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
+  clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
 - Tables: Request user to submit contents when outer host-window is requesting auto-resize,
   so a scrolling table can contribute to initial window size. (#6510)
 - Tables: Fixed subtle drawing overlap between borders in some situations.

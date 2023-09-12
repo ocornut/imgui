@@ -985,6 +985,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 6] Setup final position, offset, skip/clip states and clipping rectangles, detect hovered column
     // Process columns in their visible orders as we are comparing the visible order and adjusting host_clip_rect while looping.
     int visible_n = 0;
+    bool has_at_least_one_column_requesting_output = false;
     bool offset_x_frozen = (table->FreezeColumnsCount > 0);
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
@@ -1069,6 +1070,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
         if (column->IsSkipItems)
             IM_ASSERT(!is_visible);
+        if (column->IsRequestOutput && !column->IsSkipItems)
+            has_at_least_one_column_requesting_output = true;
 
         // Update status flags
         column->Flags |= ImGuiTableColumnFlags_IsEnabled;
@@ -1104,6 +1107,14 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         offset_x += column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
         visible_n++;
+    }
+
+    // In case the table is visible (e.g. decorations) but all columns clipped, we keep a column visible.
+    // Else if give no chance to a clipper-savy user to submit rows and therefore total contents height used by scrollbar.
+    if (has_at_least_one_column_requesting_output == false)
+    {
+        table->Columns[table->LeftMostEnabledColumn].IsRequestOutput = true;
+        table->Columns[table->LeftMostEnabledColumn].IsSkipItems = false;
     }
 
     // [Part 7] Detect/store when we are hovering the unused space after the right-most column (so e.g. context menus can react on it)
