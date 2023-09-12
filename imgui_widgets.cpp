@@ -19,6 +19,7 @@ Index of this file:
 // [SECTION] Widgets: TreeNode, CollapsingHeader, etc.
 // [SECTION] Widgets: Selectable
 // [SECTION] Widgets: Typing-Select support
+// [SECTION] Widgets: Multi-Select support
 // [SECTION] Widgets: ListBox
 // [SECTION] Widgets: PlotLines, PlotHistogram
 // [SECTION] Widgets: Value helpers
@@ -6759,7 +6760,15 @@ int ImGui::TypingSelectFindResult(ImGuiTypingSelectRequest* req, int items_count
 // [SECTION] Widgets: Multi-Select support
 //-------------------------------------------------------------------------
 
-//
+void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data)
+{
+    // Note that flags will be cleared by ItemAdd(), so it's only useful for Navigation code!
+    // This designed so widgets can also cheaply set this before calling ItemAdd(), so we are not tied to MultiSelect api.
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData;
+    g.NextItemData.SelectionUserData = selection_user_data;
+}
+
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: ListBox

@@ -7065,6 +7065,7 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
         g.NavLayer = ImGuiNavLayer_Main;
         g.NavFocusScopeId = window ? window->NavRootFocusScopeId : 0;
         g.NavIdIsAlive = false;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
 
         // Close popups if any
         ClosePopupsOverWindow(window, false);
@@ -9489,6 +9490,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     g.LastItemData.NavRect = nav_bb_arg ? *nav_bb_arg : bb;
     g.LastItemData.InFlags = g.CurrentItemFlags | g.NextItemData.ItemFlags | extra_flags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
+    // Note: we don't copy 'g.NextItemData.SelectionUserData' to an hypothetical g.LastItemData.SelectionUserData: since the former is not cleared.
 
     // Directional navigation processing
     if (id != 0)
@@ -10800,6 +10802,7 @@ void ImGui::SetNavWindow(ImGuiWindow* window)
     {
         IMGUI_DEBUG_LOG_FOCUS("[focus] SetNavWindow(\"%s\")\n", window ? window->Name : "<NULL>");
         g.NavWindow = window;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
     }
     g.NavInitRequest = g.NavMoveSubmitted = g.NavMoveScoringItems = false;
     NavUpdateAnyRequestFlag();
@@ -11019,6 +11022,11 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result)
     result->FocusScopeId = g.CurrentFocusScopeId;
     result->InFlags = g.LastItemData.InFlags;
     result->RectRel = WindowRectAbsToRel(window, g.LastItemData.NavRect);
+    if (result->InFlags & ImGuiItemFlags_HasSelectionUserData)
+    {
+        IM_ASSERT(g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid);
+        result->SelectionUserData = g.NextItemData.SelectionUserData; // INTENTIONAL: At this point this field is not cleared in NextItemData. Avoid unnecessary copy to LastItemData.
+    }
 }
 
 // True when current work location may be scrolled horizontally when moving left / right.
@@ -11031,7 +11039,7 @@ void ImGui::NavUpdateCurrentWindowIsScrollPushableX()
 }
 
 // We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
-// This is called after LastItemData is set.
+// This is called after LastItemData is set, but NextItemData is also still valid.
 static void ImGui::NavProcessItem()
 {
     ImGuiContext& g = *GImGui;
@@ -11095,6 +11103,11 @@ static void ImGui::NavProcessItem()
         g.NavLayer = window->DC.NavLayerCurrent;
         g.NavFocusScopeId = g.CurrentFocusScopeId;
         g.NavIdIsAlive = true;
+        if (g.LastItemData.InFlags & ImGuiItemFlags_HasSelectionUserData)
+        {
+            IM_ASSERT(g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid);
+            g.NavLastValidSelectionUserData = g.NextItemData.SelectionUserData; // INTENTIONAL: At this point this field is not cleared in NextItemData. Avoid unnecessary copy to LastItemData.
+        }
         window->NavRectRel[window->DC.NavLayerCurrent] = WindowRectAbsToRel(window, nav_bb); // Store item bounding box (relative to window position)
     }
 }
@@ -11206,7 +11219,7 @@ void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGu
     ImGuiContext& g = *GImGui;
     g.NavMoveScoringItems = false;
     g.LastItemData.ID = tree_node_data->ID;
-    g.LastItemData.InFlags = tree_node_data->InFlags;
+    g.LastItemData.InFlags = tree_node_data->InFlags & ~ImGuiItemFlags_HasSelectionUserData; // Losing SelectionUserData, recovered next-frame (cheaper).
     g.LastItemData.NavRect = tree_node_data->NavRect;
     NavApplyItemToResult(result); // Result this instead of implementing a NavApplyPastTreeNodeToResult()
     NavClearPreferredPosForAxis(ImGuiAxis_Y);
@@ -11273,6 +11286,7 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
     {
         ImGuiWindow* prev_nav_window = g.NavWindow;
         g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);    // FIXME-NAV: Should clear ongoing nav requests?
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
         if (prev_nav_window)
             IMGUI_DEBUG_LOG_FOCUS("[focus] NavRestoreLayer: from \"%s\" to SetNavWindow(\"%s\")\n", prev_nav_window->Name, g.NavWindow->Name);
     }
@@ -11568,6 +11582,8 @@ void ImGui::NavInitRequestApplyResult()
     IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: ApplyResult: NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
     g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
+    if (result->SelectionUserData != ImGuiSelectionUserData_Invalid)
+        g.NavLastValidSelectionUserData = result->SelectionUserData;
     if (g.NavInitRequestFromMove)
         NavRestoreHighlightAfterMove();
 }
@@ -11799,6 +11815,7 @@ void ImGui::NavMoveRequestApplyResult()
     {
         IMGUI_DEBUG_LOG_FOCUS("[focus] NavMoveRequest: SetNavWindow(\"%s\")\n", result->Window->Name);
         g.NavWindow = result->Window;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
     }
     if (g.ActiveId != result->ID)
         ClearActiveID();
@@ -11816,6 +11833,8 @@ void ImGui::NavMoveRequestApplyResult()
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     ImVec2 preferred_scoring_pos_rel = g.NavWindow->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer];
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+    if (result->SelectionUserData != ImGuiSelectionUserData_Invalid)
+        g.NavLastValidSelectionUserData = result->SelectionUserData;
 
     // Restore last preferred position for current axis
     // (storing in RootWindowForNav-> as the info is desirable at the beginning of a Move Request. In theory all storage should use RootWindowForNav..)
@@ -14113,6 +14132,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
         DebugLocateItemOnHover(g.NavId);
         Text("NavInputSource: %s", GetInputSourceName(g.NavInputSource));
+        Text("NavLastValidSelectionUserData = %" IM_PRId64 " (0x%" IM_PRIX64 ")", g.NavLastValidSelectionUserData, g.NavLastValidSelectionUserData);
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
         Text("NavActivateId/DownId/PressedId: %08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId);
         Text("NavActivateFlags: %04X", g.NavActivateFlags);

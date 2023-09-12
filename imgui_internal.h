@@ -309,6 +309,18 @@ namespace ImStb
 #endif
 #endif // #ifndef IM_DEBUG_BREAK
 
+// Format specifiers, printing 64-bit hasn't been decently standardized...
+// In a real application you should be using PRId64 and PRIu64 from <inttypes.h> (non-windows) and on Windows define them yourself.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define IM_PRId64   "I64d"
+#define IM_PRIu64   "I64u"
+#define IM_PRIX64   "I64X"
+#else
+#define IM_PRId64   "lld"
+#define IM_PRIu64   "llu"
+#define IM_PRIX64   "llX"
+#endif
+
 //-----------------------------------------------------------------------------
 // [SECTION] Generic helpers
 // Note that the ImXXX helpers functions are lower-level than ImGui functions.
@@ -810,6 +822,7 @@ enum ImGuiItemFlags_
 
     // Controlled by widget code
     ImGuiItemFlags_Inputable                = 1 << 10, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
+    ImGuiItemFlags_HasSelectionUserData     = 1 << 11, // false     // Set by SetNextItemSelectionUserData()
 };
 
 // Status flags for an already submitted item
@@ -1174,6 +1187,10 @@ struct ImGuiNextWindowData
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
+// Multi-Selection item index or identifier when using SetNextItemSelectionUserData()/BeginMultiSelect()
+// (Most users are likely to use this store an item INDEX but this may be used to store a POINTER as well.)
+typedef ImS64 ImGuiSelectionUserData;
+
 enum ImGuiNextItemDataFlags_
 {
     ImGuiNextItemDataFlags_None     = 0,
@@ -1184,13 +1201,14 @@ enum ImGuiNextItemDataFlags_
 struct ImGuiNextItemData
 {
     ImGuiNextItemDataFlags      Flags;
-    ImGuiItemFlags              ItemFlags;      // Currently only tested/used for ImGuiItemFlags_AllowOverlap.
-    float                       Width;          // Set by SetNextItemWidth()
-    ImGuiID                     FocusScopeId;   // Set by SetNextItemMultiSelectData() (!= 0 signify value has been set, so it's an alternate version of HasSelectionData, we don't use Flags for this because they are cleared too early. This is mostly used for debugging)
+    ImGuiItemFlags              ItemFlags;          // Currently only tested/used for ImGuiItemFlags_AllowOverlap.
+    // Non-flags members are NOT cleared by ItemAdd() meaning they are still valid during NavProcessItem()
+    float                       Width;              // Set by SetNextItemWidth()
+    ImGuiSelectionUserData      SelectionUserData;  // Set by SetNextItemSelectionUserData() (note that NULL/0 is a valid value, we use -1 == ImGuiSelectionUserData_Invalid to mark invalid values)
     ImGuiCond                   OpenCond;
-    bool                        OpenVal;        // Set by SetNextItemOpen()
+    bool                        OpenVal;            // Set by SetNextItemOpen()
 
-    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
+    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!
 };
 
@@ -1528,12 +1546,13 @@ struct ImGuiNavItemData
     ImGuiID             FocusScopeId;   // Init,Move    // Best candidate focus scope ID
     ImRect              RectRel;        // Init,Move    // Best candidate bounding box in window relative space
     ImGuiItemFlags      InFlags;        // ????,Move    // Best candidate item flags
+    ImGuiSelectionUserData SelectionUserData;//I+Mov    // Best candidate SetNextItemSelectionData() value.
     float               DistBox;        //      Move    // Best candidate box distance to current NavId
     float               DistCenter;     //      Move    // Best candidate center distance to current NavId
     float               DistAxial;      //      Move    // Best candidate axial distance to current NavId
 
     ImGuiNavItemData()  { Clear(); }
-    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; DistBox = DistCenter = DistAxial = FLT_MAX; }
+    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; SelectionUserData = -1; DistBox = DistCenter = DistAxial = FLT_MAX; }
 };
 
 //-----------------------------------------------------------------------------
@@ -1630,6 +1649,9 @@ struct ImGuiOldColumns
 //-----------------------------------------------------------------------------
 // [SECTION] Multi-select support
 //-----------------------------------------------------------------------------
+
+// We always assume that -1 is an invalid value (which works for indices and pointers)
+#define ImGuiSelectionUserData_Invalid        ((ImGuiSelectionUserData)-1)
 
 #ifdef IMGUI_HAS_MULTI_SELECT
 // <this is filled in 'range_select' branch>
@@ -1939,6 +1961,7 @@ struct ImGuiContext
     ImGuiActivateFlags      NavNextActivateFlags;
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS CAN ONLY BE ImGuiInputSource_Keyboard or ImGuiInputSource_Mouse
     ImGuiNavLayer           NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
+    ImGuiSelectionUserData  NavLastValidSelectionUserData;      // Last valid data passed to SetNextItemSelectionUser(), or -1. For current window. Not reset when focusing an item that doesn't have selection data.
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRectRel is valid
     bool                    NavMousePosDirty;                   // When set we will update mouse position if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) if set (NB: this not enabled by default)
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
@@ -2186,6 +2209,7 @@ struct ImGuiContext
         NavJustMovedToKeyMods = ImGuiMod_None;
         NavInputSource = ImGuiInputSource_Keyboard;
         NavLayer = ImGuiNavLayer_Main;
+        NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
         NavIdIsAlive = false;
         NavMousePosDirty = false;
         NavDisableHighlight = true;
@@ -3241,6 +3265,7 @@ namespace ImGui
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
     IMGUI_API void          TreeNodeSetOpen(ImGuiID id, bool open);
     IMGUI_API bool          TreeNodeUpdateNextOpen(ImGuiID id, ImGuiTreeNodeFlags flags);   // Return open state. Consume previous SetNextItemOpen() data, if any. May return true when logging.
+    IMGUI_API void          SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
 
     // Template functions are instantiated in imgui_widgets.cpp for a finite number of types.
     // To use them externally (for custom widget) you may need an "extern template" statement in your code in order to link to existing instances and silence Clang warnings (see #2036).
