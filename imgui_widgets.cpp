@@ -6619,13 +6619,14 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiTypingSelectData* data = &g.TypingSelectData;
+    ImGuiTypingSelectState* data = &g.TypingSelectState;
     ImGuiTypingSelectRequest* out_request = &data->Request;
 
     // Clear buffer
+    const float TYPING_SELECT_RESET_TIMER = 1.80f;          // FIXME: Potentially move to IO config.
+    const int TYPING_SELECT_SINGLE_CHAR_COUNT_FOR_LOCK = 4; // Lock single char matching when repeating same char 4 times
     if (data->SearchBuffer[0] != 0)
     {
-        const float TYPING_SELECT_RESET_TIMER = 1.70f; // FIXME: Potentially move to IO config.
         bool clear_buffer = false;
         clear_buffer |= (g.NavFocusScopeId != data->FocusScope);
         clear_buffer |= (data->LastRequestTime + TYPING_SELECT_RESET_TIMER < g.Time);
@@ -6635,42 +6636,53 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
         clear_buffer |= IsKeyPressed(ImGuiKey_Backspace) && (flags & ImGuiTypingSelectFlags_AllowBackspace) == 0;
         //if (clear_buffer) { IMGUI_DEBUG_LOG("GetTypingSelectRequest(): Clear SearchBuffer.\n"); }
         if (clear_buffer)
-            data->SearchBuffer[0] = 0;
+            data->Clear();
     }
 
     // Append to buffer
     const int buffer_max_len = IM_ARRAYSIZE(data->SearchBuffer) - 1;
     int buffer_len = (int)strlen(data->SearchBuffer);
-    bool buffer_changed = false;
+    bool select_request = false;
     for (ImWchar w : g.IO.InputQueueCharacters)
     {
-        if (w < 32 || (buffer_len == 0 && ImCharIsBlankW(w))) // Ignore leading blanks
+        const int w_len = ImTextCountUtf8BytesFromStr(&w, &w + 1);
+        if (w < 32 || (buffer_len == 0 && ImCharIsBlankW(w)) || (buffer_len + w_len > buffer_max_len)) // Ignore leading blanks
             continue;
-        int utf8_len = ImTextCountUtf8BytesFromStr(&w, &w + 1);
-        if (buffer_len + utf8_len > buffer_max_len)
-            break;
-        ImTextCharToUtf8(data->SearchBuffer + buffer_len, (unsigned int)w);
-        buffer_len += utf8_len;
-        buffer_changed = true;
+        char w_buf[5];
+        ImTextCharToUtf8(w_buf, (unsigned int)w);
+        if (data->SingleCharModeLock && w_len == out_request->SingleCharSize && memcmp(w_buf, data->SearchBuffer, w_len) == 0)
+        {
+            select_request = true; // Same character: don't need to append to buffer.
+            continue;
+        }
+        if (data->SingleCharModeLock)
+        {
+            data->Clear(); // Different character: clear
+            buffer_len = 0;
+        }
+        memcpy(data->SearchBuffer + buffer_len, w_buf, w_len + 1); // Append
+        buffer_len += w_len;
+        select_request = true;
     }
     g.IO.InputQueueCharacters.resize(0);
+
+    // Handle backspace
     if ((flags & ImGuiTypingSelectFlags_AllowBackspace) && IsKeyPressed(ImGuiKey_Backspace, 0, ImGuiInputFlags_Repeat))
     {
         char* p = (char*)(void*)ImTextFindPreviousUtf8Codepoint(data->SearchBuffer, data->SearchBuffer + buffer_len);
         *p = 0;
         buffer_len = (int)(p - data->SearchBuffer);
     }
+
+    // Return request if any
     if (buffer_len == 0)
         return NULL;
-
-    if (buffer_changed)
+    if (select_request)
     {
         data->FocusScope = g.NavFocusScopeId;
         data->LastRequestFrame = g.FrameCount;
         data->LastRequestTime = (float)g.Time;
     }
-
-    // Return request if any
     out_request->Flags = flags;
     out_request->SearchBufferLen = buffer_len;
     out_request->SearchBuffer = data->SearchBuffer;
@@ -6691,8 +6703,10 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
         for (; p < buf_end; p += c0_len)
             if (memcmp(buf_begin, p, (size_t)c0_len) != 0)
                 break;
-        out_request->SingleCharMode = (p == buf_end);
-        out_request->SingleCharSize = out_request->SingleCharMode ? (ImS8)c0_len : 0;
+        const int single_char_count = (p == buf_end) ? (out_request->SearchBufferLen / c0_len) : 0;
+        out_request->SingleCharMode = (single_char_count > 0 || data->SingleCharModeLock);
+        out_request->SingleCharSize = (ImS8)c0_len;
+        data->SingleCharModeLock |= (single_char_count >= TYPING_SELECT_SINGLE_CHAR_COUNT_FOR_LOCK); // From now on we stop search matching to lock to single char mode.
     }
 
     return out_request;
@@ -6708,16 +6722,23 @@ static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
 
 // Default handler for finding a result for typing-select. You may implement your own.
 // You might want to display a tooltip to visualize the current request.
-// With same single character mode enabled:
-// - it may make less sense to be displaying a tooltip.
+// When SingleCharMode is set:
+// - it is better to NOT display a tooltip of other on-screen display indicator.
 // - the index of the currently focused item is required.
-// - in the context of using BeginMultiSelect(), you may retrieve data you stored to ImGuiMultiSelectIO::NavIdItem and convert it to an index.
-int ImGui::TypingSelectFindResult(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
+//   if your SetNextItemSelectionData() values are index, you can obtain it from ImGuiMultiSelectIO::NavIdItem, otherwise from g.NavLastValidSelectionUserData.
+int ImGui::TypingSelectFindTargetIndex(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
 {
     if (req->SelectRequest == false)
         return -1;
+
+    ImGuiContext& g = *GImGui;
+    g.NavDisableMouseHover = true;
     if (req->SingleCharMode && (req->Flags & ImGuiTypingSelectFlags_AllowSingleCharMode))
     {
+        // FIXME: Assume selection user data is index. Would be extremely practical.
+        //if (nav_item_idx == -1)
+        //    nav_item_idx = (int)g.NavLastValidSelectionUserData;
+
         // Special handling when a same character is typed twice in a row : perform search on a single letter and goes to next.
         int first_match_idx = -1;
         bool return_next_match = false;
@@ -6753,6 +6774,17 @@ int ImGui::TypingSelectFindResult(ImGuiTypingSelectRequest* req, int items_count
             break;
     }
     return longest_match_idx;
+}
+
+void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
+{
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    Text("SearchBuffer = \"%s\"", data->SearchBuffer);
+    Text("SingleCharMode = %d, Size = %d, Lock = %d", data->Request.SingleCharMode, data->Request.SingleCharSize, data->SingleCharModeLock);
+    Text("LastRequest = time: %.2f, frame: %d", data->LastRequestTime, data->LastRequestFrame);
+#else
+    IM_UNUSED(storage);
+#endif
 }
 
 
