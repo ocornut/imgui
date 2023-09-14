@@ -1559,7 +1559,7 @@ struct ImGuiNavItemData
 // [SECTION] Typing-select support
 //-----------------------------------------------------------------------------
 
-// Flags for GetTypingSelectRequest(), TypingSelectFindResult()
+// Flags for GetTypingSelectRequest()
 enum ImGuiTypingSelectFlags_
 {
     ImGuiTypingSelectFlags_None                 = 0,
@@ -1572,7 +1572,7 @@ struct IMGUI_API ImGuiTypingSelectRequest
 {
     ImGuiTypingSelectFlags  Flags;              // Flags passed to GetTypingSelectRequest()
     int                     SearchBufferLen;
-    const char*             SearchBuffer;
+    const char*             SearchBuffer;       // Search buffer contents (use full string. unless SingleCharMode is set, in which case use SingleCharSize).
     bool                    SelectRequest;      // Set when buffer was modified this frame, requesting a selection.
     bool                    SingleCharMode;     // Notify when buffer contains same character repeated, to implement special mode. In this situation it preferred to not display any on-screen search indication.
     ImS8                    SingleCharSize;     // Length in bytes of first letter codepoint (1 for ascii, 2-4 for UTF-8). If (SearchBufferLen==RepeatCharSize) only 1 letter has been input.
@@ -3126,7 +3126,9 @@ namespace ImGui
 
     // Typing-Select API
     IMGUI_API ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
-    IMGUI_API int           TypingSelectFindTargetIndex(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
+    IMGUI_API int           TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
+    IMGUI_API int           TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
+    IMGUI_API int           TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data);
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);

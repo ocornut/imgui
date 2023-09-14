@@ -6614,7 +6614,7 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 // This would typically only be called on the focused window or location you want to grab inputs for, e.g.
 //   if (ImGui::IsWindowFocused(...))
 //       if (ImGuiTypingSelectRequest* req = ImGui::GetTypingSelectRequest())
-//           focus_idx = ImGui::TypingSelectFindResult(req, my_items.size(), [](void*, int n) { return my_items[n]->Name; }, &my_items, -1);
+//           focus_idx = ImGui::TypingSelectFindMatch(req, my_items.size(), [](void*, int n) { return my_items[n]->Name; }, &my_items, -1);
 // However the code is written in a way where calling it from multiple locations is safe (e.g. to obtain buffer).
 ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags flags)
 {
@@ -6721,45 +6721,54 @@ static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
 }
 
 // Default handler for finding a result for typing-select. You may implement your own.
-// You might want to display a tooltip to visualize the current request.
+// You might want to display a tooltip to visualize the current request SearchBuffer
 // When SingleCharMode is set:
 // - it is better to NOT display a tooltip of other on-screen display indicator.
 // - the index of the currently focused item is required.
-//   if your SetNextItemSelectionData() values are index, you can obtain it from ImGuiMultiSelectIO::NavIdItem, otherwise from g.NavLastValidSelectionUserData.
-int ImGui::TypingSelectFindTargetIndex(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
+//   if your SetNextItemSelectionData() values are indices, you can obtain it from ImGuiMultiSelectIO::NavIdItem, otherwise from g.NavLastValidSelectionUserData.
+int ImGui::TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
 {
-    if (req->SelectRequest == false)
+    if (req == NULL || req->SelectRequest == false) // Support NULL parameter so both calls can be done from same spot.
         return -1;
-
     ImGuiContext& g = *GImGui;
-    g.NavDisableMouseHover = true;
+    int idx = -1;
     if (req->SingleCharMode && (req->Flags & ImGuiTypingSelectFlags_AllowSingleCharMode))
+        idx = TypingSelectFindNextSingleCharMatch(req, items_count, get_item_name_func, user_data, nav_item_idx);
+    else
+        idx = TypingSelectFindBestLeadingMatch(req, items_count, get_item_name_func, user_data);
+    if (idx != -1)
+        g.NavDisableMouseHover = true;
+    return idx;
+}
+
+// Special handling when a single character is repeated: perform search on a single letter and goes to next.
+int ImGui::TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
+{
+    // FIXME: Assume selection user data is index. Would be extremely practical.
+    //if (nav_item_idx == -1)
+    //    nav_item_idx = (int)g.NavLastValidSelectionUserData;
+
+    int first_match_idx = -1;
+    bool return_next_match = false;
+    for (int idx = 0; idx < items_count; idx++)
     {
-        // FIXME: Assume selection user data is index. Would be extremely practical.
-        //if (nav_item_idx == -1)
-        //    nav_item_idx = (int)g.NavLastValidSelectionUserData;
-
-        // Special handling when a same character is typed twice in a row : perform search on a single letter and goes to next.
-        int first_match_idx = -1;
-        bool return_next_match = false;
-        for (int idx = 0; idx < items_count; idx++)
-        {
-            const char* item_name = get_item_name_func(user_data, idx);
-            if (ImStrimatchlen(req->SearchBuffer, req->SearchBuffer + req->SingleCharSize, item_name) < req->SingleCharSize)
-                continue;
-            if (return_next_match)                           // Return next matching item after current item.
-                return idx;
-            if (first_match_idx == -1 && nav_item_idx == -1) // Return first match immediately if we don't have a nav_item_idx value.
-                return idx;
-            if (first_match_idx == -1)                       // Record first match for wrapping.
-                first_match_idx = idx;
-            if (nav_item_idx == idx)                         // Record that we encountering nav_item so we can return next match.
-                return_next_match = true;
-        }
-        return first_match_idx; // First result
+        const char* item_name = get_item_name_func(user_data, idx);
+        if (ImStrimatchlen(req->SearchBuffer, req->SearchBuffer + req->SingleCharSize, item_name) < req->SingleCharSize)
+            continue;
+        if (return_next_match)                           // Return next matching item after current item.
+            return idx;
+        if (first_match_idx == -1 && nav_item_idx == -1) // Return first match immediately if we don't have a nav_item_idx value.
+            return idx;
+        if (first_match_idx == -1)                       // Record first match for wrapping.
+            first_match_idx = idx;
+        if (nav_item_idx == idx)                         // Record that we encountering nav_item so we can return next match.
+            return_next_match = true;
     }
+    return first_match_idx; // First result
+}
 
-    // Find longest match in item list
+int ImGui::TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data)
+{
     int longest_match_idx = -1;
     int longest_match_len = 0;
     for (int idx = 0; idx < items_count; idx++)
