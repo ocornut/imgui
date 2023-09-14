@@ -6792,7 +6792,7 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
     Text("SingleCharMode = %d, Size = %d, Lock = %d", data->Request.SingleCharMode, data->Request.SingleCharSize, data->SingleCharModeLock);
     Text("LastRequest = time: %.2f, frame: %d", data->LastRequestTime, data->LastRequestFrame);
 #else
-    IM_UNUSED(storage);
+    IM_UNUSED(data);
 #endif
 }
 
