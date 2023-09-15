@@ -1679,8 +1679,9 @@ enum ImGuiDockNodeFlagsPrivate_
     ImGuiDockNodeFlags_NoDockingOverMe          = 1 << 19,  //       // [EXPERIMENTAL] Prevent another window/node to be docked over this node.
     ImGuiDockNodeFlags_NoDockingOverOther       = 1 << 20,  //       // [EXPERIMENTAL] Prevent this node to be docked over another window or non-empty node.
     ImGuiDockNodeFlags_NoDockingOverEmpty       = 1 << 21,  //       // [EXPERIMENTAL] Prevent this node to be docked over an empty node (e.g. DockSpace with no other windows)
-    ImGuiDockNodeFlags_NoResizeX                = 1 << 22,  //       // [EXPERIMENTAL]
-    ImGuiDockNodeFlags_NoResizeY                = 1 << 23,  //       // [EXPERIMENTAL]
+    ImGuiDockNodeFlags_NoUndocking              = 1 << 22,  //       // Disable undocking from this node.
+    ImGuiDockNodeFlags_NoResizeX                = 1 << 23,  //       // [EXPERIMENTAL]
+    ImGuiDockNodeFlags_NoResizeY                = 1 << 24,  //       // [EXPERIMENTAL]
     ImGuiDockNodeFlags_SharedFlagsInheritMask_  = ~0,
     ImGuiDockNodeFlags_NoResizeFlagsMask_       = ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
     // When splitting those flags are moved to the inheriting child, never duplicated
