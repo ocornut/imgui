@@ -1699,19 +1699,21 @@ enum ImGuiDockNodeFlagsPrivate_
     ImGuiDockNodeFlags_HiddenTabBar             = 1 << 13,  // Saved // Tab bar is hidden, with a triangle in the corner to show it again (NB: actual tab-bar instance may be destroyed as this is only used for single-window tab bar)
     ImGuiDockNodeFlags_NoWindowMenuButton       = 1 << 14,  // Saved // Disable window/docking menu (that one that appears instead of the collapse button)
     ImGuiDockNodeFlags_NoCloseButton            = 1 << 15,  // Saved // Disable close button
-    ImGuiDockNodeFlags_NoDocking                = 1 << 16,  //       // Disable any form of docking in this dockspace or individual node. (On a whole dockspace, this pretty much defeat the purpose of using a dockspace at all). Note: when turned on, existing docked nodes will be preserved.
-    ImGuiDockNodeFlags_NoDockingSplitMe         = 1 << 17,  //       // [EXPERIMENTAL] Prevent another window/node from splitting this node.
-    ImGuiDockNodeFlags_NoDockingSplitOther      = 1 << 18,  //       // [EXPERIMENTAL] Prevent this node from splitting another window/node.
-    ImGuiDockNodeFlags_NoDockingOverMe          = 1 << 19,  //       // [EXPERIMENTAL] Prevent another window/node to be docked over this node.
-    ImGuiDockNodeFlags_NoDockingOverOther       = 1 << 20,  //       // [EXPERIMENTAL] Prevent this node to be docked over another window or non-empty node.
-    ImGuiDockNodeFlags_NoDockingOverEmpty       = 1 << 21,  //       // [EXPERIMENTAL] Prevent this node to be docked over an empty node (e.g. DockSpace with no other windows)
-    ImGuiDockNodeFlags_NoUndocking              = 1 << 22,  //       // Disable undocking from this node.
-    ImGuiDockNodeFlags_NoResizeX                = 1 << 23,  //       // [EXPERIMENTAL]
-    ImGuiDockNodeFlags_NoResizeY                = 1 << 24,  //       // [EXPERIMENTAL]
+    // Disable docking/undocking actions in this dockspace or individual node (existing docked nodes will be preserved)
+    ImGuiDockNodeFlags_NoUndocking              = 1 << 16,  //       // Disable undocking this node.
+    ImGuiDockNodeFlags_NoDockingSplitMe         = 1 << 17,  //       // Disable other windows/nodes from splitting this node.
+    ImGuiDockNodeFlags_NoDockingSplitOther      = 1 << 18,  //       // Disable this node from splitting other windows/nodes.
+    ImGuiDockNodeFlags_NoDockingOverMe          = 1 << 19,  //       // Disable other windows/nodes from being docked over this node.
+    ImGuiDockNodeFlags_NoDockingOverOther       = 1 << 20,  //       // Disable this node from being docked over another window or non-empty node.
+    ImGuiDockNodeFlags_NoDockingOverEmpty       = 1 << 21,  //       // Disable this node from being docked over an empty node (e.g. DockSpace with no other windows)
+    ImGuiDockNodeFlags_NoDocking                = ImGuiDockNodeFlags_NoDockingOverMe | ImGuiDockNodeFlags_NoDockingOverOther | ImGuiDockNodeFlags_NoDockingOverEmpty | ImGuiDockNodeFlags_NoDockingSplitMe | ImGuiDockNodeFlags_NoDockingSplitOther,
+    ImGuiDockNodeFlags_NoResizeX                = 1 << 22,  //       //
+    ImGuiDockNodeFlags_NoResizeY                = 1 << 23,  //       //
+    // Masks
     ImGuiDockNodeFlags_SharedFlagsInheritMask_  = ~0,
     ImGuiDockNodeFlags_NoResizeFlagsMask_       = ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
-    // When splitting those flags are moved to the inheriting child, never duplicated
-    ImGuiDockNodeFlags_LocalFlagsTransferMask_  = ImGuiDockNodeFlags_NoSplit | ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton | ImGuiDockNodeFlags_NoDocking,
+    // When splitting, those local flags are moved to the inheriting child, never duplicated
+    ImGuiDockNodeFlags_LocalFlagsTransferMask_  = ImGuiDockNodeFlags_NoSplit | ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
     ImGuiDockNodeFlags_SavedFlagsMask_          = ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_DockSpace | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
 };
 
