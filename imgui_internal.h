@@ -2768,6 +2768,7 @@ struct IMGUI_API ImGuiTabBar
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     bool                TabsAddedNew;           // Set to true when a new tab item or button has been added to the tab bar during last frame
+    bool                VisibleSeparator;       // Bottom Line
     ImS16               TabsActiveCount;        // Number of tabs submitted this frame.
     ImS16               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem()
     float               ItemSpacingY;

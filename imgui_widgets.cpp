@@ -7720,8 +7720,13 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     // Set cursor pos in a way which only be used in the off-chance the user erroneously submits item before BeginTabItem(): items will overlap
     window->DC.CursorPos = ImVec2(tab_bar->BarRect.Min.x, tab_bar->BarRect.Max.y + tab_bar->ItemSpacingY);
 
-    // Draw separator
+    // Separator visibility
     const ImU32 col = GetColorU32((flags & ImGuiTabBarFlags_IsFocused) ? ImGuiCol_TabActive : ImGuiCol_TabUnfocusedActive);
+    tab_bar->VisibleSeparator = (col & IM_COL32_A_MASK) != 0;
+    if (tab_bar->VisibleSeparator == false)
+        return true;
+
+    // Draw separator
     const float y = tab_bar->BarRect.Max.y - 1.0f;
     if (dock_node != NULL)
     {
@@ -8486,6 +8491,10 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     else if (p_open == NULL)
         flags |= ImGuiTabItemFlags_NoCloseButton;
 
+    // There is no need for trimming if the separator is not drawn
+    if (tab_bar->VisibleSeparator == false)
+        flags |= ImGuiTabItemFlags_Preview;
+
     // Acquire tab data
     ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, id);
     bool tab_is_new = false;
@@ -8777,13 +8786,13 @@ ImVec2 ImGui::TabItemCalcSize(ImGuiWindow* window)
 
 void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col)
 {
-    // While rendering tabs, we trim 1 pixel off the top of our bounding box so they can fit within a regular frame height while looking "detached" from it.
     ImGuiContext& g = *GImGui;
     const float width = bb.GetWidth();
     IM_UNUSED(flags);
     IM_ASSERT(width > 0.0f);
     const float rounding = ImMax(0.0f, ImMin((flags & ImGuiTabItemFlags_Button) ? g.Style.FrameRounding : g.Style.TabRounding, width * 0.5f - 1.0f));
-    const float y1 = bb.Min.y + 1.0f;
+    // Trim both the top and bottom by 1 pixel for proportionality, keeping the content centered
+    const float y1 = bb.Min.y + ((flags & ImGuiTabItemFlags_Preview) ? 0.0f : 1.0f);
     const float y2 = bb.Max.y + ((flags & ImGuiTabItemFlags_Preview) ? 0.0f : -1.0f);
     draw_list->PathLineTo(ImVec2(bb.Min.x, y2));
     draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding, y1 + rounding), rounding, 6, 9);
