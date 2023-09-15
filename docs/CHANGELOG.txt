@@ -42,6 +42,16 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
+   Before:
+      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+      function:      bool Combo(const char* label, int* current_item, bool (*getter)(void* user_data, int idx, const char** out_text), ...);
+      function:      bool ListBox(const char* label, int* current_item, bool (*getting)(void* user_data, int idx, const char** out_text), ...);
+   After:
+      getter type:   const char* (*getter)(void* user_data, int idx)
+      function:      bool Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+      function:      bool ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+   Old type was unnecessarily complex and harder to wrap in e.g. a lambda. Kept inline redirection function (will obsolete).
  - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
    - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
      Consider that generally 'GetContentRegionAvail().x' is more useful.
