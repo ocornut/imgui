@@ -2183,6 +2183,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
         new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
+    ImFontAtlasUpdateConfigDataPointers(this);
+
     // Invalidate texture
     TexReady = false;
     ClearTexData();
@@ -2695,19 +2697,31 @@ const ImFontBuilderIO* ImFontAtlasGetBuilderForStbTruetype()
 
 #endif // IMGUI_ENABLE_STB_TRUETYPE
 
+void ImFontAtlasUpdateConfigDataPointers(ImFontAtlas* atlas)
+{
+    for (ImFontConfig& font_cfg : atlas->ConfigData)
+    {
+        ImFont* font = font_cfg.DstFont;
+        if (!font_cfg.MergeMode)
+        {
+            font->ConfigData = &font_cfg;
+            font->ConfigDataCount = 0;
+        }
+        font->ConfigDataCount++;
+    }
+}
+
 void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
 {
     if (!font_config->MergeMode)
     {
         font->ClearOutputData();
         font->FontSize = font_config->SizePixels;
-        font->ConfigData = font_config;
-        font->ConfigDataCount = 0;
+        IM_ASSERT(font->ConfigData == font_config);
         font->ContainerAtlas = atlas;
         font->Ascent = ascent;
         font->Descent = descent;
     }
-    font->ConfigDataCount++;
 }
 
 void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
@@ -3269,6 +3283,7 @@ void ImFont::BuildLookupTable()
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
     // Build lookup table
+    IM_ASSERT(Glyphs.Size > 0 && "Font has not loaded glyph!");
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
     IndexAdvanceX.clear();
     IndexLookup.clear();

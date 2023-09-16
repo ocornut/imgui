@@ -82,6 +82,8 @@ Other changes:
   This is because our layout/font system currently doesn't fully support non-integer sizes. Until
   it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
 - Fonts: Better assert during load when passing truncated font data or wrong data size. (#6822)
+- Fonts: Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
+  prior to building again. (#6825)
 - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
 - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
