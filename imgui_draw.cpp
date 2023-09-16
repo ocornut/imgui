@@ -2189,6 +2189,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
         new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
+    ImFontAtlasUpdateConfigDataPointers(this);
+
     // Invalidate texture
     TexReady = false;
     ClearTexData();
@@ -2255,13 +2257,14 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
 }
 
 // NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
-ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
+ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* font_data, int font_data_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     IM_ASSERT(font_cfg.FontData == NULL);
-    font_cfg.FontData = ttf_data;
-    font_cfg.FontDataSize = ttf_size;
+    IM_ASSERT(font_data_size > 100 && "Incorrect value for font_data_size!"); // Heuristic to prevent accidentally passing a wrong value to font_data_size.
+    font_cfg.FontData = font_data;
+    font_cfg.FontDataSize = font_data_size;
     font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     if (glyph_ranges)
         font_cfg.GlyphRanges = glyph_ranges;
@@ -2476,7 +2479,10 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
         IM_ASSERT(font_offset >= 0 && "FontData is incorrect, or FontNo cannot be found.");
         if (!stbtt_InitFont(&src_tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
+        {
+            IM_ASSERT(0 && "stbtt_InitFont(): failed to parse FontData. It is correct and complete? Check FontDataSize.");
             return false;
+        }
 
         // Measure highest codepoints
         ImFontBuildDstData& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
@@ -2697,19 +2703,31 @@ const ImFontBuilderIO* ImFontAtlasGetBuilderForStbTruetype()
 
 #endif // IMGUI_ENABLE_STB_TRUETYPE
 
+void ImFontAtlasUpdateConfigDataPointers(ImFontAtlas* atlas)
+{
+    for (ImFontConfig& font_cfg : atlas->ConfigData)
+    {
+        ImFont* font = font_cfg.DstFont;
+        if (!font_cfg.MergeMode)
+        {
+            font->ConfigData = &font_cfg;
+            font->ConfigDataCount = 0;
+        }
+        font->ConfigDataCount++;
+    }
+}
+
 void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
 {
     if (!font_config->MergeMode)
     {
         font->ClearOutputData();
         font->FontSize = font_config->SizePixels;
-        font->ConfigData = font_config;
-        font->ConfigDataCount = 0;
+        IM_ASSERT(font->ConfigData == font_config);
         font->ContainerAtlas = atlas;
         font->Ascent = ascent;
         font->Descent = descent;
     }
-    font->ConfigDataCount++;
 }
 
 void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
@@ -2856,6 +2874,13 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
 // Note: this is called / shared by both the stb_truetype and the FreeType builder
 void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
+    // Round font size
+    // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
+    // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
+    // - We may support it better later and remove this rounding.
+    for (ImFontConfig& cfg : atlas->ConfigData)
+       cfg.SizePixels = ImFloor(cfg.SizePixels);
+
     // Register texture region for mouse cursors or standard white pixels
     if (atlas->PackIdMouseCursors < 0)
     {
@@ -3264,6 +3289,7 @@ void ImFont::BuildLookupTable()
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
     // Build lookup table
+    IM_ASSERT(Glyphs.Size > 0 && "Font has not loaded glyph!");
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
     IndexAdvanceX.clear();
     IndexLookup.clear();

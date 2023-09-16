@@ -158,7 +158,7 @@ struct ImGuiTableInstanceData;      // Storage for one instance of a same table
 struct ImGuiTableTempData;          // Temporary storage for one table (one per table in the stack), shared between tables.
 struct ImGuiTableSettings;          // Storage for a table .ini settings
 struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
-struct ImGuiTypingSelectData;       // Storage for GetTypingSelectRequest()
+struct ImGuiTypingSelectState;      // Storage for GetTypingSelectRequest()
 struct ImGuiTypingSelectRequest;    // Storage for GetTypingSelectRequest() (aimed to be public)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
@@ -318,6 +318,18 @@ namespace ImStb
 #define IM_DEBUG_BREAK()    IM_ASSERT(0)    // It is expected that you define IM_DEBUG_BREAK() into something that will break nicely in a debugger!
 #endif
 #endif // #ifndef IM_DEBUG_BREAK
+
+// Format specifiers, printing 64-bit hasn't been decently standardized...
+// In a real application you should be using PRId64 and PRIu64 from <inttypes.h> (non-windows) and on Windows define them yourself.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define IM_PRId64   "I64d"
+#define IM_PRIu64   "I64u"
+#define IM_PRIX64   "I64X"
+#else
+#define IM_PRId64   "lld"
+#define IM_PRIu64   "llu"
+#define IM_PRIX64   "llX"
+#endif
 
 //-----------------------------------------------------------------------------
 // [SECTION] Generic helpers
@@ -820,6 +832,7 @@ enum ImGuiItemFlags_
 
     // Controlled by widget code
     ImGuiItemFlags_Inputable                = 1 << 10, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
+    ImGuiItemFlags_HasSelectionUserData     = 1 << 11, // false     // Set by SetNextItemSelectionUserData()
 };
 
 // Status flags for an already submitted item
@@ -1192,6 +1205,10 @@ struct ImGuiNextWindowData
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
+// Multi-Selection item index or identifier when using SetNextItemSelectionUserData()/BeginMultiSelect()
+// (Most users are likely to use this store an item INDEX but this may be used to store a POINTER as well.)
+typedef ImS64 ImGuiSelectionUserData;
+
 enum ImGuiNextItemDataFlags_
 {
     ImGuiNextItemDataFlags_None     = 0,
@@ -1202,13 +1219,14 @@ enum ImGuiNextItemDataFlags_
 struct ImGuiNextItemData
 {
     ImGuiNextItemDataFlags      Flags;
-    ImGuiItemFlags              ItemFlags;      // Currently only tested/used for ImGuiItemFlags_AllowOverlap.
-    float                       Width;          // Set by SetNextItemWidth()
-    ImGuiID                     FocusScopeId;   // Set by SetNextItemMultiSelectData() (!= 0 signify value has been set, so it's an alternate version of HasSelectionData, we don't use Flags for this because they are cleared too early. This is mostly used for debugging)
+    ImGuiItemFlags              ItemFlags;          // Currently only tested/used for ImGuiItemFlags_AllowOverlap.
+    // Non-flags members are NOT cleared by ItemAdd() meaning they are still valid during NavProcessItem()
+    float                       Width;              // Set by SetNextItemWidth()
+    ImGuiSelectionUserData      SelectionUserData;  // Set by SetNextItemSelectionUserData() (note that NULL/0 is a valid value, we use -1 == ImGuiSelectionUserData_Invalid to mark invalid values)
     ImGuiCond                   OpenCond;
-    bool                        OpenVal;        // Set by SetNextItemOpen()
+    bool                        OpenVal;            // Set by SetNextItemOpen()
 
-    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
+    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!
 };
 
@@ -1549,12 +1567,13 @@ struct ImGuiNavItemData
     ImGuiID             FocusScopeId;   // Init,Move    // Best candidate focus scope ID
     ImRect              RectRel;        // Init,Move    // Best candidate bounding box in window relative space
     ImGuiItemFlags      InFlags;        // ????,Move    // Best candidate item flags
+    ImGuiSelectionUserData SelectionUserData;//I+Mov    // Best candidate SetNextItemSelectionData() value.
     float               DistBox;        //      Move    // Best candidate box distance to current NavId
     float               DistCenter;     //      Move    // Best candidate center distance to current NavId
     float               DistAxial;      //      Move    // Best candidate axial distance to current NavId
 
     ImGuiNavItemData()  { Clear(); }
-    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; DistBox = DistCenter = DistAxial = FLT_MAX; }
+    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; SelectionUserData = -1; DistBox = DistCenter = DistAxial = FLT_MAX; }
 };
 
 //-----------------------------------------------------------------------------
@@ -1564,30 +1583,34 @@ struct ImGuiNavItemData
 // Flags for GetTypingSelectRequest()
 enum ImGuiTypingSelectFlags_
 {
-    ImGuiTypingSelectFlags_None             = 0,
-    ImGuiTypingSelectFlags_AllowBackspace   = 1 << 0,   // Backspace to delete character inputs. If using: ensure GetTypingSelectRequest() is not called more than once per frame (filter by e.g. focus state)
+    ImGuiTypingSelectFlags_None                 = 0,
+    ImGuiTypingSelectFlags_AllowBackspace       = 1 << 0,   // Backspace to delete character inputs. If using: ensure GetTypingSelectRequest() is not called more than once per frame (filter by e.g. focus state)
+    ImGuiTypingSelectFlags_AllowSingleCharMode  = 1 << 1,   // Allow "single char" search mode which is activated when pressing the same character multiple times.
 };
 
 // Returned by GetTypingSelectRequest(), designed to eventually be public.
 struct IMGUI_API ImGuiTypingSelectRequest
 {
-    const char*     SearchBuffer;
-    int             SearchBufferLen;
-    bool            SelectRequest;              // Set when buffer was modified this frame, requesting a selection.
-    bool            RepeatCharMode;             // Notify when buffer contains same character repeated, to implement special mode.
-    ImS8            RepeatCharSize;             // Length in bytes of first letter codepoint (1 for ascii, 2-4 for UTF-8). If (SearchBufferLen==RepeatCharSize) only 1 letter has been input.
+    ImGuiTypingSelectFlags  Flags;              // Flags passed to GetTypingSelectRequest()
+    int                     SearchBufferLen;
+    const char*             SearchBuffer;       // Search buffer contents (use full string. unless SingleCharMode is set, in which case use SingleCharSize).
+    bool                    SelectRequest;      // Set when buffer was modified this frame, requesting a selection.
+    bool                    SingleCharMode;     // Notify when buffer contains same character repeated, to implement special mode. In this situation it preferred to not display any on-screen search indication.
+    ImS8                    SingleCharSize;     // Length in bytes of first letter codepoint (1 for ascii, 2-4 for UTF-8). If (SearchBufferLen==RepeatCharSize) only 1 letter has been input.
 };
 
 // Storage for GetTypingSelectRequest()
-struct IMGUI_API ImGuiTypingSelectData
+struct IMGUI_API ImGuiTypingSelectState
 {
     ImGuiTypingSelectRequest Request;           // User-facing data
     char            SearchBuffer[64];           // Search buffer: no need to make dynamic as this search is very transient.
     ImGuiID         FocusScope;
     int             LastRequestFrame = 0;
     float           LastRequestTime = 0.0f;
+    bool            SingleCharModeLock = false; // After a certain single char repeat count we lock into SingleCharMode. Two benefits: 1) buffer never fill, 2) we can provide an immediate SingleChar mode without timer elapsing.
 
-    ImGuiTypingSelectData() { memset(this, 0, sizeof(*this)); }
+    ImGuiTypingSelectState() { memset(this, 0, sizeof(*this)); }
+    void            Clear()  { SearchBuffer[0] = 0; SingleCharModeLock = false; } // We preserve remaining data for easier debugging
 };
 
 //-----------------------------------------------------------------------------
@@ -1649,6 +1672,9 @@ struct ImGuiOldColumns
 //-----------------------------------------------------------------------------
 // [SECTION] Multi-select support
 //-----------------------------------------------------------------------------
+
+// We always assume that -1 is an invalid value (which works for indices and pointers)
+#define ImGuiSelectionUserData_Invalid        ((ImGuiSelectionUserData)-1)
 
 #ifdef IMGUI_HAS_MULTI_SELECT
 // <this is filled in 'range_select' branch>
@@ -1931,6 +1957,7 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_EventViewport    = 1 << 8,
     ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
     ImGuiDebugLogFlags_OutputToTTY      = 1 << 10,  // Also send output to TTY
+    ImGuiDebugLogFlags_OutputToTestEngine = 1 << 11,// Also send output to Test Engine
 };
 
 struct ImGuiMetricsConfig
@@ -2132,6 +2159,7 @@ struct ImGuiContext
     ImGuiActivateFlags      NavNextActivateFlags;
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS CAN ONLY BE ImGuiInputSource_Keyboard or ImGuiInputSource_Mouse
     ImGuiNavLayer           NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
+    ImGuiSelectionUserData  NavLastValidSelectionUserData;      // Last valid data passed to SetNextItemSelectionUser(), or -1. For current window. Not reset when focusing an item that doesn't have selection data.
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRectRel is valid
     bool                    NavMousePosDirty;                   // When set we will update mouse position if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) if set (NB: this not enabled by default)
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
@@ -2252,7 +2280,7 @@ struct ImGuiContext
     short                   TooltipOverrideCount;
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
-    ImGuiTypingSelectData   TypingSelectData;
+    ImGuiTypingSelectState  TypingSelectState;                  // State for GetTypingSelectRequest()
 
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame
@@ -2394,6 +2422,7 @@ struct ImGuiContext
         NavJustMovedToKeyMods = ImGuiMod_None;
         NavInputSource = ImGuiInputSource_Keyboard;
         NavLayer = ImGuiNavLayer_Main;
+        NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
         NavIdIsAlive = false;
         NavMousePosDirty = false;
         NavDisableHighlight = true;
@@ -3233,6 +3262,7 @@ namespace ImGui
     IMGUI_API void          NavMoveRequestApplyResult();
     IMGUI_API void          NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags);
     IMGUI_API void          NavClearPreferredPosForAxis(ImGuiAxis axis);
+    IMGUI_API void          NavRestoreHighlightAfterMove();
     IMGUI_API void          NavUpdateCurrentWindowIsScrollPushableX();
     IMGUI_API void          SetNavWindow(ImGuiWindow* window);
     IMGUI_API void          SetNavID(ImGuiID id, ImGuiNavLayer nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel);
@@ -3397,7 +3427,10 @@ namespace ImGui
     IMGUI_API void          RenderDragDropTargetRect(const ImRect& bb);
 
     // Typing-Select API
-    IMGUI_API const ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
+    IMGUI_API ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
+    IMGUI_API int           TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
+    IMGUI_API int           TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
+    IMGUI_API int           TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data);
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);
@@ -3542,6 +3575,7 @@ namespace ImGui
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
     IMGUI_API void          TreeNodeSetOpen(ImGuiID id, bool open);
     IMGUI_API bool          TreeNodeUpdateNextOpen(ImGuiID id, ImGuiTreeNodeFlags flags);   // Return open state. Consume previous SetNextItemOpen() data, if any. May return true when logging.
+    IMGUI_API void          SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
 
     // Template functions are instantiated in imgui_widgets.cpp for a finite number of types.
     // To use them externally (for custom widget) you may need an "extern template" statement in your code in order to link to existing instances and silence Clang warnings (see #2036).
@@ -3614,6 +3648,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);
     IMGUI_API void          DebugNodeTableSettings(ImGuiTableSettings* settings);
     IMGUI_API void          DebugNodeInputTextState(ImGuiInputTextState* state);
+    IMGUI_API void          DebugNodeTypingSelectState(ImGuiTypingSelectState* state);
     IMGUI_API void          DebugNodeWindow(ImGuiWindow* window, const char* label);
     IMGUI_API void          DebugNodeWindowSettings(ImGuiWindowSettings* settings);
     IMGUI_API void          DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label);
@@ -3656,6 +3691,7 @@ struct ImFontBuilderIO
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
 IMGUI_API const ImFontBuilderIO* ImFontAtlasGetBuilderForStbTruetype();
 #endif
+IMGUI_API void      ImFontAtlasUpdateConfigDataPointers(ImFontAtlas* atlas);
 IMGUI_API void      ImFontAtlasBuildInit(ImFontAtlas* atlas);
 IMGUI_API void      ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent);
 IMGUI_API void      ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque);

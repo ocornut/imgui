@@ -13,6 +13,14 @@
 // Missing features:
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
+// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
+
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE

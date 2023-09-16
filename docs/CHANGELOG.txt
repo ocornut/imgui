@@ -42,6 +42,16 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
+   Before:
+      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+      function:      bool Combo(const char* label, int* current_item, bool (*getter)(void* user_data, int idx, const char** out_text), ...);
+      function:      bool ListBox(const char* label, int* current_item, bool (*getting)(void* user_data, int idx, const char** out_text), ...);
+   After:
+      getter type:   const char* (*getter)(void* user_data, int idx)
+      function:      bool Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+      function:      bool ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+   Old type was unnecessarily complex and harder to wrap in e.g. a lambda. Kept inline redirection function (will obsolete).
  - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
    - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
      Consider that generally 'GetContentRegionAvail().x' is more useful.
@@ -53,8 +63,31 @@ Breaking changes:
 
 Other changes:
 
+- Tooltips: made using SetItemTooltip()/IsItemHovered(ImGuiHoveredFlags_ForTooltip) defaults to
+  activate tooltips on disabled items. This is done by adding ImGuiHoveredFlags_AllowWhenDisabled
+  to the default value of style.HoverFlagsForTooltipMouse/HoverFlagsForTooltipNav. (#1485)
+- Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
+  Previously was inconsistent and only enabled when stepping through a non-input item.
+  (#6802, #3092, #5759, #787)
+- Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
+  code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
+  clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
+- Tables: Request user to submit contents when outer host-window is requesting auto-resize,
+  so a scrolling table can contribute to initial window size. (#6510)
+- Tables: Fixed subtle drawing overlap between borders in some situations.
+- Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
+- Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
+  in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
+- Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
+  This is because our layout/font system currently doesn't fully support non-integer sizes. Until
+  it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
+- Fonts: Better assert during load when passing truncated font data or wrong data size. (#6822)
+- Fonts: Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
+  prior to building again. (#6825)
 - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
+- InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
+  be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.

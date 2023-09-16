@@ -1,8 +1,12 @@
 // Dear ImGui: standalone example application for Win32 + OpenGL 3
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-// This is provided for completeness, however it is strogly recommended you use OpenGL with SDL or GLFW.
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
+
+// This is provided for completeness, however it is strongly recommended you use OpenGL with SDL or GLFW.
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"

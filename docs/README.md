@@ -180,7 +180,7 @@ How to help
 - See [GitHub Forum/Issues](https://github.com/ocornut/imgui/issues) and [GitHub Discussions](https://github.com/ocornut/imgui/discussions).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest of the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
-- Have your company financially support this project with invoiced sponsoring/support contracts or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: contact at dearimgui dot com).
+- Have your company financially support this project with invoiced sponsoring/support contracts or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: omar AT dearimgui DOT com).
 
 Sponsors
 --------

@@ -142,7 +142,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
 - The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
 - Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
 - Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting backend).
-- See [Control Sheets for Gamepads](http://www.dearimgui.com/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
+- See [Control Sheets for Gamepads](https://www.dearimgui.com/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
 - See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
 
 ##### [Return to Index](#index)
@@ -669,7 +669,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 # Q&A: Community
 
 ### Q: How can I help?
-- Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance, or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding, we can hire more people to work on this project.
+- Businesses: please reach out to `omar AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance, or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding, we can hire more people to work on this project.
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.

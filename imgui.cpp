@@ -2,32 +2,31 @@
 // (main code and documentation)
 
 // Help:
-// - Read FAQ at http://dearimgui.com/faq
-// - Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
+// - See links below.
 // - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp. All applications in examples/ are doing that.
-// Read imgui.cpp for details, links and comments.
+// - Read top of imgui.cpp for more details, links and comments.
 
 // Resources:
-// - FAQ                   http://dearimgui.com/faq
+// - FAQ                   https://dearimgui.com/faq
+// - Getting Started       https://dearimgui.com/getting-started
 // - Homepage              https://github.com/ocornut/imgui
 // - Releases & changelog  https://github.com/ocornut/imgui/releases
 // - Gallery               https://github.com/ocornut/imgui/issues/6478 (please post your screenshots/video there!)
 // - Wiki                  https://github.com/ocornut/imgui/wiki (lots of good stuff there)
-// - Getting Started       https://github.com/ocornut/imgui/wiki/Getting-Started
 // - Glossary              https://github.com/ocornut/imgui/wiki/Glossary
 // - Issues & support      https://github.com/ocornut/imgui/issues
 // - Tests & Automation    https://github.com/ocornut/imgui_test_engine
 
-// Getting Started?
-// - Read https://github.com/ocornut/imgui/wiki/Getting-Started
-// - For first-time users having issues compiling/linking/running/loading fonts:
-//   please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
+// For first-time users having issues compiling/linking/running/loading fonts:
+// please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
+// Everything else should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
 
+// Copyright (c) 2014-2023 Omar Cornut
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
 // This library is free but needs your support to sustain development and maintenance.
 // Businesses: you can support continued development via B2B invoiced technical support, maintenance and sponsoring contracts.
-// PLEASE reach out at contact AT dearimgui DOT com. See https://github.com/ocornut/imgui/wiki/Sponsors
+// PLEASE reach out at omar AT dearimgui DOT com. See https://github.com/ocornut/imgui/wiki/Sponsors
 // Businesses: you can also purchase licenses for the Dear ImGui Automation/Test Engine.
 
 // It is recommended that you don't modify imgui.cpp! It will become difficult for you to update the library.
@@ -433,6 +432,11 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2023/09/15 (1.90.0) - ListBox, Combo: changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis. kept inline redirection function (will obsolete).
+                           - old: bool Combo(const char* label, int* current_item, bool (*getter)(void* user_data, int idx, const char** out_text), ...)
+                           - new: bool Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+                           - old: bool ListBox(const char* label, int* current_item, bool (*getting)(void* user_data, int idx, const char** out_text), ...);
+                           - new: bool ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
  - 2023/09/08 (1.90.0) - commented out obsolete redirecting functions:
                            - GetWindowContentRegionWidth()  -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x. Consider that generally 'GetContentRegionAvail().x' is more useful.
                            - ImDrawCornerFlags_XXX          -> use ImDrawFlags_RoundCornersXXX flags. Read 1.82 Changelog for details + grep commented names in sources.
@@ -917,7 +921,7 @@ CODE
  ==============
 
  Q: How can I help?
- A: - Businesses: please reach out to "contact AT dearimgui.com" if you work in a place using Dear ImGui!
+ A: - Businesses: please reach out to "omar AT dearimgui DOT com" if you work in a place using Dear ImGui!
       We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts.
       This is among the most useful thing you can do for Dear ImGui. With increased funding, we sustain and grow work on this project.
       Also see https://github.com/ocornut/imgui/wiki/Sponsors
@@ -1087,7 +1091,6 @@ static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             NavRestoreLayer(ImGuiNavLayer layer);
-static void             NavRestoreHighlightAfterMove();
 static int              FindWindowFocusIndex(ImGuiWindow* window);
 
 // Error Checking and Debug Tools
@@ -1225,8 +1228,8 @@ ImGuiStyle::ImGuiStyle()
     HoverStationaryDelay    = 0.15f;            // Delay for IsItemHovered(ImGuiHoveredFlags_Stationary). Time required to consider mouse stationary.
     HoverDelayShort         = 0.15f;            // Delay for IsItemHovered(ImGuiHoveredFlags_DelayShort). Usually used along with HoverStationaryDelay.
     HoverDelayNormal        = 0.40f;            // Delay for IsItemHovered(ImGuiHoveredFlags_DelayNormal). "
-    HoverFlagsForTooltipMouse = ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort;    // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using mouse.
-    HoverFlagsForTooltipNav = ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal;  // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using keyboard/gamepad.
+    HoverFlagsForTooltipMouse = ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled;    // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using mouse.
+    HoverFlagsForTooltipNav = ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_AllowWhenDisabled;  // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using keyboard/gamepad.
 
     // Default theme
     ImGui::StyleColorsDark(this);
@@ -5859,6 +5862,7 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
     // Use SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
+    window->Size = window->SizeFull = ImVec2(0, 0);
     window->ViewportPos = main_viewport->Pos;
     window->SetWindowPosAllowFlags = window->SetWindowSizeAllowFlags = window->SetWindowCollapsedAllowFlags = window->SetWindowDockAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
 
@@ -7602,6 +7606,7 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
         g.NavLayer = ImGuiNavLayer_Main;
         g.NavFocusScopeId = window ? window->NavRootFocusScopeId : 0;
         g.NavIdIsAlive = false;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
 
         // Close popups if any
         ClosePopupsOverWindow(window, false);
@@ -8274,7 +8279,7 @@ void ImGui::FocusItem()
         return;
     }
 
-    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSelect;
+    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavHighlight | ImGuiNavMoveFlags_NoSelect;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
     SetNavWindow(window);
     NavMoveRequestSubmit(ImGuiDir_None, ImGuiDir_Up, move_flags, scroll_flags);
@@ -8309,7 +8314,7 @@ void ImGui::SetKeyboardFocusHere(int offset)
 
     SetNavWindow(window);
 
-    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_Activate | ImGuiNavMoveFlags_FocusApi;
+    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_Activate | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavHighlight;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
     NavMoveRequestSubmit(ImGuiDir_None, offset < 0 ? ImGuiDir_Up : ImGuiDir_Down, move_flags, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
     if (offset == -1)
@@ -10143,6 +10148,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     g.LastItemData.NavRect = nav_bb_arg ? *nav_bb_arg : bb;
     g.LastItemData.InFlags = g.CurrentItemFlags | g.NextItemData.ItemFlags | extra_flags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
+    // Note: we don't copy 'g.NextItemData.SelectionUserData' to an hypothetical g.LastItemData.SelectionUserData: since the former is not cleared.
 
     // Directional navigation processing
     if (id != 0)
@@ -11465,6 +11471,7 @@ void ImGui::SetNavWindow(ImGuiWindow* window)
     {
         IMGUI_DEBUG_LOG_FOCUS("[focus] SetNavWindow(\"%s\")\n", window ? window->Name : "<NULL>");
         g.NavWindow = window;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
     }
     g.NavInitRequest = g.NavMoveSubmitted = g.NavMoveScoringItems = false;
     NavUpdateAnyRequestFlag();
@@ -11684,6 +11691,11 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result)
     result->FocusScopeId = g.CurrentFocusScopeId;
     result->InFlags = g.LastItemData.InFlags;
     result->RectRel = WindowRectAbsToRel(window, g.LastItemData.NavRect);
+    if (result->InFlags & ImGuiItemFlags_HasSelectionUserData)
+    {
+        IM_ASSERT(g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid);
+        result->SelectionUserData = g.NextItemData.SelectionUserData; // INTENTIONAL: At this point this field is not cleared in NextItemData. Avoid unnecessary copy to LastItemData.
+    }
 }
 
 // True when current work location may be scrolled horizontally when moving left / right.
@@ -11696,7 +11708,7 @@ void ImGui::NavUpdateCurrentWindowIsScrollPushableX()
 }
 
 // We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
-// This is called after LastItemData is set.
+// This is called after LastItemData is set, but NextItemData is also still valid.
 static void ImGui::NavProcessItem()
 {
     ImGuiContext& g = *GImGui;
@@ -11760,6 +11772,11 @@ static void ImGui::NavProcessItem()
         g.NavLayer = window->DC.NavLayerCurrent;
         g.NavFocusScopeId = g.CurrentFocusScopeId;
         g.NavIdIsAlive = true;
+        if (g.LastItemData.InFlags & ImGuiItemFlags_HasSelectionUserData)
+        {
+            IM_ASSERT(g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid);
+            g.NavLastValidSelectionUserData = g.NextItemData.SelectionUserData; // INTENTIONAL: At this point this field is not cleared in NextItemData. Avoid unnecessary copy to LastItemData.
+        }
         window->NavRectRel[window->DC.NavLayerCurrent] = WindowRectAbsToRel(window, nav_bb); // Store item bounding box (relative to window position)
     }
 }
@@ -11871,7 +11888,7 @@ void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGu
     ImGuiContext& g = *GImGui;
     g.NavMoveScoringItems = false;
     g.LastItemData.ID = tree_node_data->ID;
-    g.LastItemData.InFlags = tree_node_data->InFlags;
+    g.LastItemData.InFlags = tree_node_data->InFlags & ~ImGuiItemFlags_HasSelectionUserData; // Losing SelectionUserData, recovered next-frame (cheaper).
     g.LastItemData.NavRect = tree_node_data->NavRect;
     NavApplyItemToResult(result); // Result this instead of implementing a NavApplyPastTreeNodeToResult()
     NavClearPreferredPosForAxis(ImGuiAxis_Y);
@@ -11941,6 +11958,7 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
     {
         ImGuiWindow* prev_nav_window = g.NavWindow;
         g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);    // FIXME-NAV: Should clear ongoing nav requests?
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
         if (prev_nav_window)
             IMGUI_DEBUG_LOG_FOCUS("[focus] NavRestoreLayer: from \"%s\" to SetNavWindow(\"%s\")\n", prev_nav_window->Name, g.NavWindow->Name);
     }
@@ -12237,6 +12255,8 @@ void ImGui::NavInitRequestApplyResult()
     IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: ApplyResult: NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
     g.NavIdIsAlive = true; // Mark as alive from previous frame as we got a result
+    if (result->SelectionUserData != ImGuiSelectionUserData_Invalid)
+        g.NavLastValidSelectionUserData = result->SelectionUserData;
     if (g.NavInitRequestFromMove)
         NavRestoreHighlightAfterMove();
 }
@@ -12396,7 +12416,6 @@ void ImGui::NavUpdateCreateTabbingRequest()
 
     // Initiate tabbing request
     // (this is ALWAYS ENABLED, regardless of ImGuiConfigFlags_NavEnableKeyboard flag!)
-    // Initially this was designed to use counters and modulo arithmetic, but that could not work with unsubmitted items (list clipper). Instead we use a strategy close to other move requests.
     // See NavProcessItemForTabbingRequest() for a description of the various forward/backward tabbing cases with and without wrapping.
     const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     if (nav_keyboard_active)
@@ -12469,6 +12488,7 @@ void ImGui::NavMoveRequestApplyResult()
     {
         IMGUI_DEBUG_LOG_FOCUS("[focus] NavMoveRequest: SetNavWindow(\"%s\")\n", result->Window->Name);
         g.NavWindow = result->Window;
+        g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
     }
     if (g.ActiveId != result->ID)
         ClearActiveID();
@@ -12486,6 +12506,8 @@ void ImGui::NavMoveRequestApplyResult()
     IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequest: result NavID 0x%08X in Layer %d Window \"%s\"\n", result->ID, g.NavLayer, g.NavWindow->Name);
     ImVec2 preferred_scoring_pos_rel = g.NavWindow->RootWindowForNav->NavPreferredScoringPosRel[g.NavLayer];
     SetNavID(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
+    if (result->SelectionUserData != ImGuiSelectionUserData_Invalid)
+        g.NavLastValidSelectionUserData = result->SelectionUserData;
 
     // Restore last preferred position for current axis
     // (storing in RootWindowForNav-> as the info is desirable at the beginning of a Move Request. In theory all storage should use RootWindowForNav..)
@@ -12504,7 +12526,6 @@ void ImGui::NavMoveRequestApplyResult()
     {
         g.NavNextActivateId = result->ID;
         g.NavNextActivateFlags = ImGuiActivateFlags_None;
-        g.NavMoveFlags |= ImGuiNavMoveFlags_NoSetNavHighlight;
         if (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing)
             g.NavNextActivateFlags |= ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_TryToPreserveState;
     }
@@ -19560,6 +19581,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         TreePop();
     }
 
+    // Details for TypingSelect
+    if (TreeNode("TypingSelect", "TypingSelect (%d)", g.TypingSelectState.SearchBuffer[0] != 0 ? 1 : 0))
+    {
+        DebugNodeTypingSelectState(&g.TypingSelectState);
+        TreePop();
+    }
+
     // Details for Docking
 #ifdef IMGUI_HAS_DOCK
     if (TreeNode("Docking"))
@@ -19775,6 +19803,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
         DebugLocateItemOnHover(g.NavId);
         Text("NavInputSource: %s", GetInputSourceName(g.NavInputSource));
+        Text("NavLastValidSelectionUserData = %" IM_PRId64 " (0x%" IM_PRIX64 ")", g.NavLastValidSelectionUserData, g.NavLastValidSelectionUserData);
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
         Text("NavActivateId/DownId/PressedId: %08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId);
         Text("NavActivateFlags: %04X", g.NavActivateFlags);
@@ -20393,9 +20422,13 @@ void ImGui::DebugLogV(const char* fmt, va_list args)
     const int old_size = g.DebugLogBuf.size();
     g.DebugLogBuf.appendf("[%05d] ", g.FrameCount);
     g.DebugLogBuf.appendfv(fmt, args);
+    g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTTY)
         IMGUI_DEBUG_PRINTF("%s", g.DebugLogBuf.begin() + old_size);
-    g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTestEngine)
+        IMGUI_TEST_ENGINE_LOG("%s", g.DebugLogBuf.begin() + old_size);
+#endif
 }
 
 void ImGui::ShowDebugLogWindow(bool* p_open)

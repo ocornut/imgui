@@ -439,7 +439,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::BulletText("See the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
         ImGui::BulletText("See comments in imgui.cpp.");
         ImGui::BulletText("See example applications in the examples/ folder.");
-        ImGui::BulletText("Read the FAQ at http://www.dearimgui.com/faq/");
+        ImGui::BulletText("Read the FAQ at https://www.dearimgui.com/faq/");
         ImGui::BulletText("Set 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.");
         ImGui::BulletText("Set 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.");
 
@@ -887,13 +887,18 @@ static void ShowDemoWindowWidgets()
 
         ImGui::SeparatorText("Custom");
 
+        HelpMarker(
+            "Passing ImGuiHoveredFlags_ForTooltip to IsItemHovered() is the preferred way to standardize"
+            "tooltip activation details across your application. You may however decide to use custom"
+            "flags for a specific tooltip instance.");
+
         // The following examples are passed for documentation purpose but may not be useful to most users.
         // Passing ImGuiHoveredFlags_Tooltip to IsItemHovered() will pull ImGuiHoveredFlags flags values from
         // 'style.HoverFlagsForTooltipMouse' or 'style.HoverFlagsForTooltipNav' depending on whether mouse or gamepad/keyboard is being used.
         // With default settings, ImGuiHoveredFlags_Tooltip is equivalent to ImGuiHoveredFlags_DelayShort + ImGuiHoveredFlags_Stationary.
         ImGui::Button("Manual", sz);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
-            ImGui::SetTooltip("I am a manually emitted tooltip");
+            ImGui::SetTooltip("I am a manually emitted tooltip.");
 
         ImGui::Button("DelayNone", sz);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone))
@@ -905,11 +910,20 @@ static void ShowDemoWindowWidgets()
 
         ImGui::Button("DelayLong", sz);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay))
-            ImGui::SetTooltip("I am a tooltip with a long delay (%0.2f sec)", ImGui::GetStyle().HoverDelayNormal);
+            ImGui::SetTooltip("I am a tooltip with a long delay (%0.2f sec).", ImGui::GetStyle().HoverDelayNormal);
 
         ImGui::Button("Stationary", sz);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary))
             ImGui::SetTooltip("I am a tooltip requiring mouse to be stationary before activating.");
+
+        // Using ImGuiHoveredFlags_ForTooltip will pull flags from 'style.HoverFlagsForTooltipMouse' or 'style.HoverFlagsForTooltipNav',
+        // which default value include the ImGuiHoveredFlags_AllowWhenDisabled flag.
+        // As a result, Set
+        ImGui::BeginDisabled();
+        ImGui::Button("Disabled item", sz);
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("I am a a tooltip for a disabled item.");
 
         ImGui::TreePop();
     }
@@ -1271,9 +1285,8 @@ static void ShowDemoWindowWidgets()
         ImGui::Combo("combo 3 (array)", &item_current_3, items, IM_ARRAYSIZE(items));
 
         // Simplified one-liner Combo() using an accessor function
-        struct Funcs { static bool ItemGetter(void* data, int n, const char** out_str) { *out_str = ((const char**)data)[n]; return true; } };
         static int item_current_4 = 0;
-        ImGui::Combo("combo 4 (function)", &item_current_4, &Funcs::ItemGetter, items, IM_ARRAYSIZE(items));
+        ImGui::Combo("combo 4 (function)", &item_current_4, [](void* data, int n) { return ((const char**)data)[n]; }, items, IM_ARRAYSIZE(items));
 
         ImGui::TreePop();
     }
