@@ -16768,6 +16768,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         DockNodeAddTabBar(node);
         tab_bar = node->TabBar;
     }
+    tab_bar->ID = GetID("#TabBar");
 
     ImGuiID focus_tab_id = 0;
     node->IsFocused = is_focused;
@@ -16846,7 +16847,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
     // Begin tab bar
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs; // | ImGuiTabBarFlags_NoTabListScrollingButtons);
-    tab_bar_flags |= ImGuiTabBarFlags_SaveSettings | ImGuiTabBarFlags_DockNode;
+    tab_bar_flags |= ImGuiTabBarFlags_SaveSettings | ImGuiTabBarFlags_DockNode;// | ImGuiTabBarFlags_FittingPolicyScroll;
     if (!host_window->Collapsed && is_focused)
         tab_bar_flags |= ImGuiTabBarFlags_IsFocused;
     BeginTabBarEx(tab_bar, tab_bar_rect, tab_bar_flags, node);
