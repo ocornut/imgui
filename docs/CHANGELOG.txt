@@ -122,6 +122,8 @@ Other changes:
 - Windows: Layout of Close/Collapse buttons uses style.ItemInnerSpacing.x between items,
   stopped incorrectly using FramePadding in a way where hit-boxes could overlap when
   setting large values. (#6749)
+- TabBar, Style: added style.TabBarBorderSize and associated ImGuiStyleVar_TabBarBorderSize.
+  Tweaked rendering of that separator to allow thicker values. (#6820, #4859, #5022, #5239)
 - InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
   point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
 - ColorEdit, ColorPicker: Manipulating options popup don't mark item as edited. (#6722)
