@@ -1704,7 +1704,6 @@ enum ImGuiDockNodeFlagsPrivate_
     // Disable docking/undocking actions in this dockspace or individual node (existing docked nodes will be preserved)
     // Those are not exposed in public because the desirable sharing/inheriting/copy-flag-on-split behaviors are quite difficult to design and understand.
     // The two public flags ImGuiDockNodeFlags_NoDockingOverCentralNode/ImGuiDockNodeFlags_NoDockingSplit don't have those issues.
-    ImGuiDockNodeFlags_NoUndocking              = 1 << 18,  //       // Disable undocking this node.
     ImGuiDockNodeFlags_NoDockingSplitOther      = 1 << 19,  //       // Disable this node from splitting other windows/nodes.
     ImGuiDockNodeFlags_NoDockingOverMe          = 1 << 20,  //       // Disable other windows/nodes from being docked over this node.
     ImGuiDockNodeFlags_NoDockingOverOther       = 1 << 21,  //       // Disable this node from being docked over another window or non-empty node.
