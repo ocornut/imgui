@@ -92,6 +92,7 @@ Other changes:
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
+- IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228)
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
