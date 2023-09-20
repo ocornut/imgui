@@ -7109,12 +7109,12 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
 // - DebugNodeMultiSelectState() [Internal]
 //-------------------------------------------------------------------------
 
-static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSelectIO* data)
+static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSelectIO* io)
 {
     ImGuiContext& g = *GImGui;
-    if (data->RequestClear)     IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestClear\n", function);
-    if (data->RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestSelectAll\n", function);
-    if (data->RequestSetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestSetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, data->RangeFirstItem, data->RangeLastItem, data->RangeFirstItem, data->RangeLastItem, data->RangeSelected);
+    if (io->RequestClear)     IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestClear\n", function);
+    if (io->RequestSelectAll) IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestSelectAll\n", function);
+    if (io->RequestSetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: RequestSetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, io->RangeFirstItem, io->RangeLastItem, io->RangeFirstItem, io->RangeLastItem, io->RangeSelected);
 }
 
 // Return ImGuiMultiSelectIO structure. Lifetime: valid until corresponding call to EndMultiSelect().
@@ -7169,17 +7169,17 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 
     if (ms->IsFocused)
     {
-        // Shortcut: Select all (CTRL+A)
-        if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
-                ms->BeginIO.RequestSelectAll = true;
-
         // Shortcut: Clear selection (Escape)
         // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
         // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
         if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
             if (Shortcut(ImGuiKey_Escape))
                 ms->BeginIO.RequestClear = true;
+
+        // Shortcut: Select all (CTRL+A)
+        if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
+                ms->BeginIO.RequestSelectAll = true;
     }
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
@@ -7428,12 +7428,6 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
     if (storage->RangeSrcItem == item_data)
         storage->RangeSelected = selected ? 1 : 0;
-    if (ms->EndIO.RangeSrcItem == item_data && is_ctrl && is_shift && is_multiselect)
-    {
-        if (ms->EndIO.RequestSetRange)
-            IM_ASSERT(storage->RangeSrcItem == ms->EndIO.RangeSrcItem);
-        ms->EndIO.RangeSelected = selected;
-    }
 
     // Update/store the selection state of focused item
     if (g.NavId == id)

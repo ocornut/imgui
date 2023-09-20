@@ -2795,7 +2795,7 @@ struct ImGuiMultiSelectIO
     bool                    RequestSelectAll;   //  ms:w, app:r  /  ms:w, app:r  // 2. Request app/user to select all.
     bool                    RequestSetRange;    //               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeFirstItem..RangeLastItem] items based on 'bool RangeSelected'. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
     // STATE/ARGUMENTS -------------------------// BEGIN         / END
-    ImGuiSelectionUserData  RangeSrcItem;       //  ms:w  app:r  /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be cliped!
+    ImGuiSelectionUserData  RangeSrcItem;       //  ms:w  app:r  /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be clipped!
     ImGuiSelectionUserData  RangeFirstItem;     //               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
     ImGuiSelectionUserData  RangeLastItem;      //               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
     bool                    RangeSelected;      //               /  ms:w, app:r  // End: parameter for RequestSetRange request. true = Select Range, false = Unselect Range.
