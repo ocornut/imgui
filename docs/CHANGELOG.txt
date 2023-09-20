@@ -84,6 +84,7 @@ Other changes:
 - Fonts: Better assert during load when passing truncated font data or wrong data size. (#6822)
 - Fonts: Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
   prior to building again. (#6825)
+- Fonts, imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
 - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
 - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
@@ -92,7 +93,7 @@ Other changes:
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
-- IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228)
+- IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
