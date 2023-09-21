@@ -6891,7 +6891,9 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (disabled_item && !disabled_global)
         EndDisabled();
 
-    // Users of BeginMultiSelect() scope: call ImGui::IsItemToggledSelection() to retrieve selection toggle. Selectable() returns a pressed state!
+    // Selectable() always returns a pressed state!
+    // Users of BeginMultiSelect()/EndMultiSelect() scope: you may call ImGui::IsItemToggledSelection() to retrieve
+    // selection toggle, only useful if you need that state updated (e.g. for rendering purpose) before reaching EndMultiSelect().
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return pressed; //-V1020
 }
@@ -7335,7 +7337,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
 
-    const bool is_multiselect = (ms->Flags & ImGuiMultiSelectFlags_SingleSelect) == 0;
+    const bool is_singleselect = (ms->Flags & ImGuiMultiSelectFlags_SingleSelect) != 0;
     bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
     bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
 
@@ -7394,16 +7396,16 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         //----------------------------------------------------------------------------------------
 
         const ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
-        if (!is_multiselect)
+        if (is_singleselect)
             ms->EndIO.RequestClear = true;
         else if ((input_source == ImGuiInputSource_Mouse || g.NavActivateId == id) && !is_ctrl)
             ms->EndIO.RequestClear = true;
         else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
-            ms->EndIO.RequestClear = true; // With is_false==false the RequestClear was done in BeginIO, not necessary to do again.
+            ms->EndIO.RequestClear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
 
         int range_direction;
         ms->EndIO.RequestSetRange = true;
-        if (is_shift && is_multiselect)
+        if (is_shift && !is_singleselect)
         {
             // Shift+Arrow always select
             // Ctrl+Shift+Arrow copy source selection state (alrady stored by BeginMultiSelect() in RangeSelected)
