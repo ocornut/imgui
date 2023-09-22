@@ -7149,10 +7149,10 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     storage->Window = window;
     ms->Storage = storage;
 
-    // We want EndIO's NavIdItem/NavIdSelected to match BeginIO's one, so the value never changes after EndMultiSelect()
-    ms->BeginIO.RangeSrcItem = ms->EndIO.RangeSrcItem = storage->RangeSrcItem;
-    ms->BeginIO.NavIdItem = ms->EndIO.NavIdItem = storage->NavIdItem;
-    ms->BeginIO.NavIdSelected = ms->EndIO.NavIdSelected = (storage->NavIdSelected == 1) ? true : false;
+    ms->IO.RangeSrcItem = storage->RangeSrcItem;
+    ms->IO.NavIdItem = storage->NavIdItem;
+    ms->IO.NavIdSelected = (storage->NavIdSelected == 1) ? true : false;
+    ms->IO.Requests.resize(0);
 
     bool request_clear = false;
     bool request_select_all = false;
@@ -7191,14 +7191,14 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     }
 
     if (request_clear || request_select_all)
-        ms->BeginIO.Requests.push_back(ImGuiSelectionRequest(request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear));
+        ms->IO.Requests.push_back(ImGuiSelectionRequest(request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear));
     ms->LoopRequestClear = request_clear;
     ms->LoopRequestSelectAll = request_select_all;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
-        DebugLogMultiSelectRequests("BeginMultiSelect", &ms->BeginIO);
+        DebugLogMultiSelectRequests("BeginMultiSelect", &ms->IO);
 
-    return &ms->BeginIO;
+    return &ms->IO;
 }
 
 // Return updated ImGuiMultiSelectIO structure. Lifetime: until EndFrame() or next BeginMultiSelect() call.
@@ -7206,24 +7206,28 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 {
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
+    ImGuiMultiSelectState* storage = ms->Storage;
     IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
-    IM_ASSERT(g.CurrentMultiSelect != NULL && ms->Storage->Window == g.CurrentWindow);
+    IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
 
     if (ms->IsFocused)
     {
         // We currently don't allow user code to modify RangeSrcItem by writing to BeginIO's version, but that would be an easy change here.
-        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid)) // Can't read storage->RangeSrcItem here -> we want the state at begining of the scope (see tests for easy failure)
+        if (ms->IO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->IO.RangeSrcItem != ImGuiSelectionUserData_Invalid)) // Can't read storage->RangeSrcItem here -> we want the state at begining of the scope (see tests for easy failure)
         {
             IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset RangeSrcItem.\n"); // Will set be to NavId.
-            ms->Storage->RangeSrcItem = ImGuiSelectionUserData_Invalid;
+            storage->RangeSrcItem = ImGuiSelectionUserData_Invalid;
         }
-        if (ms->NavIdPassedBy == false && ms->Storage->NavIdItem != ImGuiSelectionUserData_Invalid)
+        if (ms->NavIdPassedBy == false && storage->NavIdItem != ImGuiSelectionUserData_Invalid)
         {
             IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset NavIdItem.\n");
-            ms->Storage->NavIdItem = ImGuiSelectionUserData_Invalid;
-            ms->Storage->NavIdSelected = -1;
+            storage->NavIdItem = ImGuiSelectionUserData_Invalid;
+            storage->NavIdSelected = -1;
         }
     }
+
+    if (ms->IsEndIO == false)
+        ms->IO.Requests.resize(0);
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
@@ -7231,21 +7235,20 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if (IsWindowHovered() && g.HoveredId == 0)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
-                ms->EndIO.Requests.resize(0);
-                ms->EndIO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
+                ms->IO.Requests.resize(0);
+                ms->IO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
             }
 
     // Unwind
     ms->FocusScopeId = 0;
     ms->Flags = ImGuiMultiSelectFlags_None;
-    ms->BeginIO.Clear(); // Invalidate contents of BeginMultiSelect() to enforce scope.
     PopFocusScope();
     g.CurrentMultiSelect = NULL;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
-        DebugLogMultiSelectRequests("EndMultiSelect", &ms->EndIO);
+        DebugLogMultiSelectRequests("EndMultiSelect", &ms->IO);
 
-    return &ms->EndIO;
+    return &ms->IO;
 }
 
 void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data)
@@ -7260,7 +7263,7 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     {
         // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
         g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
-        if (ms->BeginIO.RangeSrcItem == selection_user_data)
+        if (ms->IO.RangeSrcItem == selection_user_data)
             ms->RangeSrcPassedBy = true;
     }
     else
@@ -7357,6 +7360,11 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         storage->RangeSrcItem = item_data;
         storage->RangeSelected = selected; // Will be updated at the end of this function anyway.
     }
+    if (ms->IsEndIO == false)
+    {
+        ms->IO.Requests.resize(0);
+        ms->IsEndIO = true;
+    }
 
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
@@ -7416,8 +7424,8 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
         if (request_clear)
         {
-            ms->EndIO.Requests.resize(0);
-            ms->EndIO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
+            ms->IO.Requests.resize(0);
+            ms->IO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
         }
 
         int range_direction;
@@ -7443,7 +7451,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         ImGuiSelectionUserData range_dst_item = item_data;
         req.RangeFirstItem = (range_direction > 0) ? storage->RangeSrcItem : range_dst_item;
         req.RangeLastItem = (range_direction > 0) ? range_dst_item : storage->RangeSrcItem;
-        ms->EndIO.Requests.push_back(req);
+        ms->IO.Requests.push_back(req);
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
