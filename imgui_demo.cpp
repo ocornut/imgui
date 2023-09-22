@@ -2838,26 +2838,29 @@ struct ExampleSelection
     // WHEN YOUR APPLICATION SETTLES ON A CHOICE, YOU WILL PROBABLY PREFER TO GET RID OF THIS UNNECESSARY 'ExampleSelectionAdapter' INDIRECTION LOGIC.
     // Notice that with the simplest adapter (using indices everywhere), all functions return their parameters.
     // The most simple implementation (using indices everywhere) would look like:
-    //   if (ms_io->RequestClear)        { Clear(); }
-    //   if (ms_io->RequestSelectAll)    { Clear(); for (int n = 0; n < items_count; n++) { AddItem(n); } }
-    //   if (ms_io->RequestSetRange)     { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->RangeSelected); } }
+    //   for (ImGuiSelectionRequest& req : ms_io->Requests)
+    //   {
+    //      if (req.Type == ImGuiSelectionRequestType_Clear)     { Clear(); }
+    //      if (req.Type == ImGuiSelectionRequestType_SelectAll) { Clear(); for (int n = 0; n < items_count; n++) { AddItem(n); } }
+    //      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->RangeSelected); } }
+    //   }
     void ApplyRequests(ImGuiMultiSelectIO* ms_io, ExampleSelectionAdapter* adapter, int items_count)
     {
         IM_ASSERT(adapter->IndexToStorage != NULL);
-
-        if (ms_io->RequestClear || ms_io->RequestSelectAll)
-            Clear();
-
-        if (ms_io->RequestSelectAll)
+        for (ImGuiSelectionRequest& req : ms_io->Requests)
         {
-            Storage.Data.reserve(items_count);
-            for (int idx = 0; idx < items_count; idx++)
-                AddItem(adapter->IndexToStorage(adapter, idx));
+            if (req.Type == ImGuiSelectionRequestType_Clear || req.Type == ImGuiSelectionRequestType_SelectAll)
+                Clear();
+            if (req.Type == ImGuiSelectionRequestType_SelectAll)
+            {
+                Storage.Data.reserve(items_count);
+                for (int idx = 0; idx < items_count; idx++)
+                    AddItem(adapter->IndexToStorage(adapter, idx));
+            }
+            if (req.Type == ImGuiSelectionRequestType_SetRange)
+                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+                    UpdateItem(adapter->IndexToStorage(adapter, idx), req.RangeSelected);
         }
-
-        if (ms_io->RequestSetRange)
-            for (int idx = (int)ms_io->RangeFirstItem; idx <= (int)ms_io->RangeLastItem; idx++)
-                UpdateItem(adapter->IndexToStorage(adapter, idx), ms_io->RangeSelected);
     }
 
     // Find which item should be Focused after deletion.

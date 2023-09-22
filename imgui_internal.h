@@ -1722,6 +1722,8 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImGuiKeyChord           KeyMods;
     ImGuiMultiSelectIO      BeginIO;            // Requests are set and returned by BeginMultiSelect(), written to by user during the loop.
     ImGuiMultiSelectIO      EndIO;              // Requests are set during the loop and returned by EndMultiSelect().
+    bool                    LoopRequestClear;
+    bool                    LoopRequestSelectAll;
     bool                    IsFocused;          // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
     bool                    IsSetRange;         // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
     bool                    NavIdPassedBy;
@@ -1730,7 +1732,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     //ImRect                Rect;               // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()                { memset(this, 0, sizeof(*this)); BeginIO.Clear(); EndIO.Clear(); }
+    void Clear()            { Storage = NULL; FocusScopeId = 0; Flags = 0; KeyMods = 0; BeginIO.Clear(); EndIO.Clear(); LoopRequestClear = LoopRequestSelectAll = IsFocused = IsSetRange = NavIdPassedBy = RangeSrcPassedBy = RangeDstPassedBy = false; }
 };
 
 // Persistent storage for multi-select (as long as selection is alive)

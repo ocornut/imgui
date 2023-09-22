@@ -44,7 +44,7 @@ Index of this file:
 // [SECTION] ImGuiIO
 // [SECTION] Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, Math Operators, ImColor)
-// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO)
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiSelectionRequestType, ImGuiSelectionRequest, ImGuiMultiSelectIO)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
@@ -2720,7 +2720,7 @@ struct ImColor
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO)
+// [SECTION] Multi-Select API flags & structures (ImGuiMultiSelectFlags, ImGuiSelectionRequestType, ImGuiSelectionRequest, ImGuiMultiSelectIO)
 //-----------------------------------------------------------------------------
 
 #define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
@@ -2775,36 +2775,49 @@ enum ImGuiMultiSelectFlags_
 // - If you need to wrap this API for another language/framework, feel free to expose this as 'int' if simpler.
 // Usage flow:
 //   BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
-//         - (2) [If using clipper] Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 6.
+//         - (2) [If using clipper] Honor request list (Clear/SelectAll/SetRange requests) by updating your selection data. Same code as Step 6.
 //         - (3) [If using clipper] You need to make sure RangeSrcItem is always submitted. Calculate its index and pass to clipper.IncludeIndex(). If already using indices in ImGuiSelectionUserData, it is as simple as clipper.IncludeIndex((int)ms_io->RangeSrcItem);
 //   LOOP  - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //   END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
-//         - (6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Same code as Step 2.
+//         - (6) Honor request list (Clear/SelectAll/SetRange requests) by updating your selection data. Same code as Step 2.
 //   If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable()/TreeNode on a per-item basis.
 //   However it is perfectly fine to honor all steps even if you don't use a clipper.
 // Advanced:
 // - Deletion: If you need to handle items deletion a little more work if needed for post-deletion focus and scrolling to be correct.
 //   refer to 'Demo->Widgets->Selection State' for demos supporting deletion.
+
+enum ImGuiSelectionRequestType
+{
+    ImGuiSelectionRequestType_None = 0,
+    ImGuiSelectionRequestType_Clear,            // Request app to clear selection.
+    ImGuiSelectionRequestType_SelectAll,        // Request app to select all.
+    ImGuiSelectionRequestType_SetRange,         // Request app to select/unselect [RangeFirstItem..RangeLastItem] items based on 'bool RangeSelected'. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
+};
+
+// List of requests stored in ImGuiMultiSelectIO
+// - Use 'Demo->Tools->Debug Log->Selection' to see requests as they happen.
+// - Some fields are only necessary if your list is dynamic and allows deletion (handling deletion and getting "post-deletion" state right is shown in the demo)
+// - Below: who reads/writes each fields? 'r'=read, 'w'=write, 'ms'=multi-select code, 'app'=application/user code, 'BEGIN'=BeginMultiSelect() and after, 'END'=EndMultiSelect() and after.
+struct ImGuiSelectionRequest
+{
+    ImGuiSelectionRequestType   Type;           //  ms:w, app:r  /  ms:w, app:r
+    bool                        RangeSelected;  //               /  ms:w, app:r  // Parameter for SetRange request (true = select range, false = unselect range)
+    ImGuiSelectionUserData      RangeFirstItem; //               /  ms:w, app:r  // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
+    ImGuiSelectionUserData      RangeLastItem;  //               /  ms:w, app:r  // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
+
+    ImGuiSelectionRequest(ImGuiSelectionRequestType type = ImGuiSelectionRequestType_None) { Type = type; RangeSelected = false; RangeFirstItem = RangeLastItem = (ImGuiSelectionUserData)-1; }
+};
+
 struct ImGuiMultiSelectIO
 {
-    // - Always process requests in this order: Clear, SelectAll, SetRange. Use 'Demo->Tools->Debug Log->Selection' to see requests as they happen.
-    // - Some fields are only necessary if your list is dynamic and allows deletion (getting "post-deletion" state right is shown in the demo)
-    // - Below: who reads/writes each fields? 'r'=read, 'w'=write, 'ms'=multi-select code, 'app'=application/user code, 'BEGIN'=BeginMultiSelect() and after, 'END'=EndMultiSelect() and after.
-    // REQUESTS --------------------------------// BEGIN         / END
-    bool                    RequestClear;       //  ms:w, app:r  /  ms:w, app:r  // 1. Request app/user to clear selection.
-    bool                    RequestSelectAll;   //  ms:w, app:r  /  ms:w, app:r  // 2. Request app/user to select all.
-    bool                    RequestSetRange;    //               /  ms:w, app:r  // 3. Request app/user to select/unselect [RangeFirstItem..RangeLastItem] items based on 'bool RangeSelected'. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
-    // STATE/ARGUMENTS -------------------------// BEGIN         / END
-    ImGuiSelectionUserData  RangeSrcItem;       //  ms:w  app:r  /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be clipped!
-    ImGuiSelectionUserData  RangeFirstItem;     //               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
-    ImGuiSelectionUserData  RangeLastItem;      //               /  ms:w, app:r  // End: parameter for RequestSetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
-    bool                    RangeSelected;      //               /  ms:w, app:r  // End: parameter for RequestSetRange request. true = Select Range, false = Unselect Range.
-    bool                    RangeSrcReset;      //        app:w  /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
-    bool                    NavIdSelected;      //  ms:w, app:r  /        app:r  // (If using deletion) Last known selection state for NavId (if part of submitted items).
-    ImGuiSelectionUserData  NavIdItem;          //  ms:w, app:r  /               // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
+    ImVector<ImGuiSelectionRequest> Requests;   //  ms:w, app:r  /  ms:w  app:r  // Requests
+    ImGuiSelectionUserData      RangeSrcItem;   //  ms:w  app:r  /               // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be clipped!
+    ImGuiSelectionUserData      NavIdItem;      //  ms:w, app:r  /               // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
+    bool                        NavIdSelected;  //  ms:w, app:r  /        app:r  // (If using deletion) Last known selection state for NavId (if part of submitted items).
+    bool                        RangeSrcReset;  //        app:w  /  ms:r         // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
 
     ImGuiMultiSelectIO()    { Clear(); }
-    void Clear()            { memset(this, 0, sizeof(*this)); NavIdItem = RangeSrcItem = RangeFirstItem = RangeLastItem = (ImGuiSelectionUserData)-1; }
+    void Clear()            { Requests.resize(0); RangeSrcItem = NavIdItem = (ImGuiSelectionUserData)-1; NavIdSelected = RangeSrcReset = false; }
 };
 
 //-----------------------------------------------------------------------------
