@@ -2037,8 +2037,9 @@ ImFileHandle ImFileOpen(const char* filename, const char* mode)
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
     const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
     const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-    ImVector<wchar_t> buf;
-    buf.resize(filename_wsize + mode_wsize);
+    ImGuiContext& g = *GImGui;
+    g.TempBuffer.reserve((filename_wsize + mode_wsize) * sizeof(wchar_t));
+    wchar_t* buf = (wchar_t*)(void*)g.TempBuffer.Data;
     ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, (wchar_t*)&buf[0], filename_wsize);
     ::MultiByteToWideChar(CP_UTF8, 0, mode, -1, (wchar_t*)&buf[filename_wsize], mode_wsize);
     return ::_wfopen((const wchar_t*)&buf[0], (const wchar_t*)&buf[filename_wsize]);
@@ -4225,17 +4226,24 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 // IM_ALLOC() == ImGui::MemAlloc()
 void* ImGui::MemAlloc(size_t size)
 {
+    void* ptr = (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
     if (ImGuiContext* ctx = GImGui)
+    {
         ctx->IO.MetricsActiveAllocations++;
-    return (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
+        //printf("[%05d] MemAlloc(%d) -> 0x%p\n", ctx->FrameCount, size, ptr);
+    }
+    return ptr;
 }
 
 // IM_FREE() == ImGui::MemFree()
 void ImGui::MemFree(void* ptr)
 {
-    if (ptr)
+    if (ptr != NULL)
         if (ImGuiContext* ctx = GImGui)
+        {
             ctx->IO.MetricsActiveAllocations--;
+            //printf("[%05d] MemFree(0x%p)\n", ctx->FrameCount, ptr);
+        }
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
