@@ -2818,7 +2818,7 @@ struct ExampleSelection
 
     // Functions
     ExampleSelection()                  { Clear(); }
-    void Clear()                        { Storage.Clear(); Size = 0; QueueDeletion = false; }
+    void Clear()                        { Storage.Data.resize(0); Size = 0; QueueDeletion = false; }
     void Swap(ExampleSelection& rhs)    { Storage.Data.swap(rhs.Storage.Data); }
     bool Contains(ImGuiID key) const    { return Storage.GetInt(key, 0) != 0; }
 	void AddItem(ImGuiID key)           { int* p_int = Storage.GetIntRef(key, 0); if (*p_int != 0) return; *p_int = 1; Size++; }
@@ -2849,8 +2849,11 @@ struct ExampleSelection
             Clear();
 
         if (ms_io->RequestSelectAll)
+        {
+            Storage.Data.reserve(items_count);
             for (int idx = 0; idx < items_count; idx++)
                 AddItem(adapter->IndexToStorage(adapter, idx));
+        }
 
         if (ms_io->RequestSetRange)
             for (int idx = (int)ms_io->RangeFirstItem; idx <= (int)ms_io->RangeLastItem; idx++)
