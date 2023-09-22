@@ -7212,7 +7212,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     if (ms->IsFocused)
     {
         // We currently don't allow user code to modify RangeSrcItem by writing to BeginIO's version, but that would be an easy change here.
-        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid)) // Can't read storage->RangeSrcItem here! (see tests)
+        if (ms->BeginIO.RangeSrcReset || (ms->RangeSrcPassedBy == false && ms->BeginIO.RangeSrcItem != ImGuiSelectionUserData_Invalid)) // Can't read storage->RangeSrcItem here -> we want the state at begining of the scope (see tests for easy failure)
         {
             IMGUI_DEBUG_LOG_SELECTION("[selection] EndMultiSelect: Reset RangeSrcItem.\n"); // Will set be to NavId.
             ms->Storage->RangeSrcItem = ImGuiSelectionUserData_Invalid;
@@ -7427,7 +7427,8 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             // Shift+Arrow always select
             // Ctrl+Shift+Arrow copy source selection state (alrady stored by BeginMultiSelect() in RangeSelected)
             //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
-            ms->EndIO.RangeSrcItem = (storage->RangeSrcItem != ImGuiSelectionUserData_Invalid) ? storage->RangeSrcItem : item_data;
+            if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid)
+                storage->RangeSrcItem = item_data;
             req.RangeSelected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
             range_direction = ms->RangeSrcPassedBy ? +1 : -1;
         }
@@ -7435,13 +7436,13 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         {
             // Ctrl inverts selection, otherwise always select
             selected = is_ctrl ? !selected : true;
-            ms->EndIO.RangeSrcItem = storage->RangeSrcItem = item_data;
+            storage->RangeSrcItem = item_data;
             req.RangeSelected = selected;
             range_direction = +1;
         }
         ImGuiSelectionUserData range_dst_item = item_data;
-        req.RangeFirstItem = (range_direction > 0) ? ms->EndIO.RangeSrcItem : range_dst_item;
-        req.RangeLastItem = (range_direction > 0) ? range_dst_item : ms->EndIO.RangeSrcItem;
+        req.RangeFirstItem = (range_direction > 0) ? storage->RangeSrcItem : range_dst_item;
+        req.RangeLastItem = (range_direction > 0) ? range_dst_item : storage->RangeSrcItem;
         ms->EndIO.Requests.push_back(req);
     }
 
