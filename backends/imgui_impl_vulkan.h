@@ -67,6 +67,8 @@ struct ImGui_ImplVulkan_InitInfo
     // Dynamic Rendering (Optional)
     bool                            UseDynamicRendering;    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
     VkFormat                        ColorAttachmentFormat;  // Required for dynamic rendering
+    VkFormat                        DepthAttachmentFormat; // Required for dynamic rendering
+    VkFormat                        StencilAttachmentFormat; // Required for dynamic rendering
 
     // Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;

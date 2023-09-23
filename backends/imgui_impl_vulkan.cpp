@@ -858,6 +858,8 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
     pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
     pipelineRenderingCreateInfo.pColorAttachmentFormats = &bd->VulkanInitInfo.ColorAttachmentFormat;
+    pipelineRenderingCreateInfo.depthAttachmentFormat = bd->VulkanInitInfo.DepthAttachmentFormat;
+    pipelineRenderingCreateInfo.stencilAttachmentFormat = bd->VulkanInitInfo.StencilAttachmentFormat;
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
         info.pNext = &pipelineRenderingCreateInfo;
