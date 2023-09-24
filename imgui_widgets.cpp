@@ -38,7 +38,7 @@ Index of this file:
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
 
-#include "imgui.h"
+#include "ImGui/imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_internal.h"
 
@@ -1186,6 +1186,73 @@ bool ImGui::CheckboxFlagsT(const char* label, T* flags, T flags_value)
     return pressed;
 }
 
+bool ImGui::PinButton(const char* label, const char* _ID, bool active, const ImVec2& _center, const ImVec2& _size, bool _is_right, ImU32 _col, bool* is_hovered, bool _is_connected)
+{
+    ImGui::SetCursorScreenPos(_center);
+
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(_ID);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true) * _size[0];
+
+    const float square_sz = GetFrameHeight() * _size[0];
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
+    const ImRect total_bb(pos - ImVec2(square_sz / 1.5, square_sz / 1.5), pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x * _size[0] + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f * _size[0]));
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, id))
+        return false;
+
+    ImVec2 center = _center;
+    center.x = IM_ROUND(center.x);
+    center.y = IM_ROUND(center.y);
+    const float radius = (square_sz - 1.0f) * 0.5f;
+
+    *is_hovered = false;
+    bool hovered, held;
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+    //ImGui::GetForegroundDrawList()->AddRectFilled(total_bb.Min, total_bb.Max, IM_COL32(255, 255, 255, 100));
+
+    //std::cout << hovered << std::endl;
+    if (pressed)
+        MarkItemEdited(id);
+
+    RenderNavHighlight(total_bb, id);
+    window->DrawList->AddCircleFilled(center, radius, GetColorU32((held && (hovered || _is_connected)) ? ImGuiCol_FrameBgActive : (hovered || _is_connected) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 16);
+    if (active)
+    {
+        const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 6.0f));
+        window->DrawList->AddCircleFilled(center, radius - pad, _col, _size[0] + 32);    //core
+    }
+
+    if (style.FrameBorderSize > 0.0f)
+    {
+        window->DrawList->AddCircle(center + ImVec2(1, 1), radius, GetColorU32(ImGuiCol_BorderShadow), 16, style.FrameBorderSize);
+        window->DrawList->AddCircle(center, radius, GetColorU32(ImGuiCol_Border), 16, style.FrameBorderSize);
+    }
+
+    ImGui::SetWindowFontScale(_size[0] * 2);
+    ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+    if (g.LogEnabled)
+        LogRenderedText(&label_pos, active ? "(x)" : "( )");
+    if (label_size.x > 0.0f)
+        if (_is_right)
+            RenderText(label_pos - label_size * ImVec2(2, 1) - _size * ImVec2(50, 0) - ImVec2(0, 3), label);
+        else
+            RenderText(label_pos - label_size * ImVec2(0, 1) - _size * ImVec2(10, 0) - ImVec2(0, 3), label);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, _ID, g.LastItemData.StatusFlags);
+
+    ImGui::SetWindowFontScale(1);
+    if (is_hovered)
+        *is_hovered = hovered;
+    return held;
+}
+
 bool ImGui::CheckboxFlags(const char* label, int* flags, int flags_value)
 {
     return CheckboxFlagsT(label, flags, flags_value);
@@ -1744,7 +1811,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         RenderTextClipped(bb.Min + style.FramePadding, ImVec2(value_x2, bb.Max.y), preview_value, NULL, NULL);
     }
     if (label_size.x > 0)
-        RenderText(ImVec2(bb.Max.x + style.ItemInnerSpacing.x, bb.Min.y + style.FramePadding.y), label);
+        if (flags != ImGuiComboFlags_NoName)
+            RenderText(ImVec2(bb.Max.x + style.ItemInnerSpacing.x, bb.Min.y + style.FramePadding.y), label);
 
     if (!popup_open)
         return false;
@@ -3005,7 +3073,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
 
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a slider, they are all required.
 // Read code of e.g. SliderFloat(), SliderInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, const char* _ID)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3028,28 +3096,28 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     // Default format string when passing NULL
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
+    //else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
+    //    format = PatchFormatStringFloatToInt(format);
 
+    // Tabbing or CTRL-clicking on Slider turns it into an input box
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
-    if (!temp_input_is_active)
-    {
-        // Tabbing or CTRL-clicking on Slider turns it into an input box
-        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
-        const bool clicked = hovered && IsMouseClicked(0, id);
-        const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id);
-        if (make_active && clicked)
-            SetKeyOwner(ImGuiKey_MouseLeft, id);
-        if (make_active && temp_input_allowed)
-            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
-                temp_input_is_active = true;
+    const bool clicked = hovered && IsMouseClicked(0, id);
+    const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+    const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id);
+    if (make_active && clicked)
+        SetKeyOwner(ImGuiKey_MouseLeft, id);
+    if (make_active && temp_input_allowed)
+        if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
+            temp_input_is_active = true;
 
-        if (make_active && !temp_input_is_active)
-        {
+    if (make_active && !temp_input_is_active) {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-        }
+            //if (temp_input_allowed && (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
+            //    temp_input_is_active = true;
     }
 
     if (temp_input_is_active)
@@ -3084,7 +3152,97 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0));
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    return value_changed;
+}
+
+bool ImGui::SliderScalarM(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format /*= NULL*/, ImGuiSliderFlags flags /*= 0*/, const char* _ID /*= nullptr*/, float _size /*= 1.0f*/, float _length /*= 10.0f*/)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(_ID);
+    const float w = CalcItemWidth();
+
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImRect frame_bb(window->DC.CursorPos - ImVec2(0, (label_size.y + style.FramePadding.y * 2) * _size / 5), window->DC.CursorPos + ImVec2(w * _size * _length / 10, (label_size.y + style.FramePadding.y * 2) * _size / 5));
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+
+    const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
+        return false;
+
+    // Default format string when passing NULL
+    if (format == NULL)
+        format = DataTypeGetInfo(data_type)->PrintFmt;
+    //else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
+    //    format = PatchFormatStringFloatToInt(format);
+        
+    // Tabbing or CTRL-clicking on Slider turns it into an input box
+    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
+    if (!temp_input_is_active)
+    {
+        // Tabbing or CTRL-clicking on Slider turns it into an input box
+        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+        const bool clicked = hovered && IsMouseClicked(0, id);
+        const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id);
+        if (make_active && clicked)
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
+        if (make_active && temp_input_allowed)
+            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
+                temp_input_is_active = true;
+
+        if (make_active && !temp_input_is_active){
+            SetActiveID(id, window);
+            SetFocusID(id, window);
+            FocusWindow(window);
+            g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+            //if (temp_input_allowed && (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
+            //    temp_input_is_active = true;
+        }
+    }
+
+    if (temp_input_is_active)
+    {
+        // Only clamp CTRL+Click input when ImGuiSliderFlags_AlwaysClamp is set
+        const bool is_clamp_input = (flags & ImGuiSliderFlags_AlwaysClamp) != 0;
+        return TempInputScalar(frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL);
+    }
+
+    // Draw frame
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    RenderNavHighlight(frame_bb, id);
+    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+
+    // Slider behavior
+    ImRect grab_bb;
+    const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
+    if (value_changed)
+        MarkItemEdited(id);
+
+    // Render grab
+    if (grab_bb.Max.x > grab_bb.Min.x)
+        window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
+
+    // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    char value_buf[64];
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+    if (g.LogEnabled)
+        LogSetNextTextDecoration("{", "}");
+
+    ImGui::SetWindowFontScale(_size / 2);
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f), NULL);
+    ImGui::SetWindowFontScale(1);
+
+    //if (label_size.x > 0.0f)
+        //RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, _ID, g.LastItemData.StatusFlags);
     return value_changed;
 }
 
@@ -3124,24 +3282,59 @@ bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, i
     return value_changed;
 }
 
-bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderScalarNM(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format /*= NULL*/, ImGuiSliderFlags flags /*= 0*/, const char* _ID /*= nullptr*/, float _size /*= 1.0f*/, float _length /*= 10.0f*/)
 {
-    return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    bool value_changed = false;
+    BeginGroup();
+    PushID(_ID);
+    PushMultiItemsWidths(components, CalcItemWidth());
+    size_t type_size = GDataTypeInfo[data_type].Size;
+    for (int i = 0; i < components; i++)
+    {
+        PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
+        value_changed |= SliderScalarM("", data_type, v, v_min, v_max, format, flags, "", _size, _length);
+        PopID();
+        PopItemWidth();
+        v = (void*)((char*)v + type_size);
+    }
+    PopID();
+
+    //const char* label_end = FindRenderedTextEnd(label);
+    //if (label != label_end)
+    //{
+    //	SameLine(0, g.Style.ItemInnerSpacing.x);
+    //	TextEx(label, label_end);
+    //}
+
+    EndGroup();
+    return value_changed;
 }
 
-bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags, const char* _ID, bool is_movable, float _size, float _length /*= 10.0f*/)
 {
-    return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, flags);
+    return is_movable ? SliderScalarM(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags, _ID, _size, _length) : SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags, _ID);
 }
 
-bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, ImGuiSliderFlags flags, const char* _ID, bool is_movable, float _size, float _length /*= 10.0f*/)
 {
-    return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, flags);
+    return is_movable ? SliderScalarNM(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, flags, _ID, _size, _length) : SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, ImGuiSliderFlags flags, const char* _ID, bool is_movable, float _size, float _length /*= 10.0f*/)
 {
-    return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, flags);
+    return is_movable ? SliderScalarNM(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, flags, _ID, _size, _length) : SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, flags);
+}
+
+bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, ImGuiSliderFlags flags, const char* _ID, bool is_movable, float _size, float _length /*= 10.0f*/)
+{
+    return is_movable ? SliderScalarNM(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, flags, _ID, _size, _length) : SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, flags);
 }
 
 bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags)
@@ -3154,9 +3347,9 @@ bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, fl
     return value_changed;
 }
 
-bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
+bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags, const char* _ID, bool is_movable, float _size, float _length /*= 10.0f*/)
 {
-    return SliderScalar(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
+    return is_movable ? SliderScalarM(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags, _ID, _size, _length) : SliderScalar(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags, _ID);
 }
 
 bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
@@ -3576,6 +3769,41 @@ bool ImGui::InputScalarN(const char* label, ImGuiDataType data_type, void* p_dat
     return value_changed;
 }
 
+bool ImGui::InputScalarNM(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_step /*= NULL*/, const void* p_step_fast /*= NULL*/, const char* format /*= NULL*/, ImGuiInputTextFlags flags /*= 0*/, const char* _ID /*= nullptr*/)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    bool value_changed = false;
+    BeginGroup();
+    PushID(_ID);
+    PushMultiItemsWidths(components, CalcItemWidth());
+    size_t type_size = GDataTypeInfo[data_type].Size;
+    for (int i = 0; i < components; i++)
+    {
+        PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
+        value_changed |= InputScalar("", data_type, p_data, p_step, p_step_fast, format, flags);
+        PopID();
+        PopItemWidth();
+        p_data = (void*)((char*)p_data + type_size);
+    }
+    PopID();
+
+    const char* label_end = FindRenderedTextEnd(label);
+    if (label != label_end)
+    {
+        SameLine(0.0f, g.Style.ItemInnerSpacing.x);
+        TextEx(label, label_end);
+    }
+
+    EndGroup();
+    return value_changed;
+}
+
 bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, const char* format, ImGuiInputTextFlags flags)
 {
     flags |= ImGuiInputTextFlags_CharsScientific;
@@ -3590,6 +3818,11 @@ bool ImGui::InputFloat2(const char* label, float v[2], const char* format, ImGui
 bool ImGui::InputFloat3(const char* label, float v[3], const char* format, ImGuiInputTextFlags flags)
 {
     return InputScalarN(label, ImGuiDataType_Float, v, 3, NULL, NULL, format, flags);
+}
+
+bool ImGui::InputFloat3M(const char* id, const char* label, float v[3], const char* format /*= "%.3f"*/, ImGuiInputTextFlags flags /*= 0*/)
+{
+    return InputScalarNM(label, ImGuiDataType_Float, v, 3, NULL, NULL, format, flags, id);
 }
 
 bool ImGui::InputFloat4(const char* label, float v[4], const char* format, ImGuiInputTextFlags flags)
@@ -5033,7 +5266,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         LogRenderedText(&draw_pos, buf_display, buf_display_end);
     }
 
-    if (label_size.x > 0)
+    if (label_size.x > 0 && !(flags & ImGuiInputTextFlags_NoName))
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
     if (value_changed && !(flags & ImGuiInputTextFlags_NoMarkEdited))
@@ -6042,6 +6275,18 @@ bool ImGui::TreeNode(const char* label)
     return TreeNodeBehavior(window->GetID(label), 0, label, NULL);
 }
 
+bool ImGui::TreeNodeB(const char* label, int* is_open, bool* open_ev, bool* shut_ev, ImGuiTreeNodeFlags flags, bool is_close)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+    bool temp = *is_open;
+    *is_open = TreeNodeBehavior(window->GetID(label), flags, label, NULL, is_close);
+    *open_ev = (*is_open == true) && (temp == false);
+    *shut_ev = (*is_open == false) && (temp == true);
+    return *is_open;
+}
+
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 {
     return TreeNodeExV(str_id, 0, fmt, args);
@@ -6154,7 +6399,7 @@ bool ImGui::TreeNodeUpdateNextOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
     return is_open;
 }
 
-bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
+bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end, bool is_close)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6261,7 +6506,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool was_selected = selected;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
+    bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags) || (is_open && is_close);;
     bool toggled = false;
     if (!is_leaf)
     {
