@@ -485,7 +485,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     // Default only reacts to left mouse button
     if ((flags & ImGuiButtonFlags_MouseButtonMask_) == 0)
         flags |= ImGuiButtonFlags_MouseButtonDefault_;
-
+    
     // Default behavior requires click + release inside bounding box
     if ((flags & ImGuiButtonFlags_PressedOnMask_) == 0)
         flags |= ImGuiButtonFlags_PressedOnDefault_;
@@ -1214,7 +1214,7 @@ bool ImGui::PinButton(const char* label, const char* _ID, bool active, const ImV
 
     *is_hovered = false;
     bool hovered, held;
-    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held, ImGuiButtonFlags_AllowOverlap);
     //ImGui::GetForegroundDrawList()->AddRectFilled(total_bb.Min, total_bb.Max, IM_COL32(255, 255, 255, 100));
 
     //std::cout << hovered << std::endl;
