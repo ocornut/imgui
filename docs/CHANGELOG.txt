@@ -100,6 +100,8 @@ Other changes:
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
+- Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
+  doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 
 
 -----------------------------------------------------------------------
