@@ -1918,21 +1918,9 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 
 void ImFormatStringToTempBuffer(const char** out_buf, const char** out_buf_end, const char* fmt, ...)
 {
-    ImGuiContext& g = *GImGui;
     va_list args;
     va_start(args, fmt);
-    if (fmt[0] == '%' && fmt[1] == 's' && fmt[2] == 0)
-    {
-        const char* buf = va_arg(args, const char*); // Skip formatting when using "%s"
-        *out_buf = buf;
-        if (out_buf_end) { *out_buf_end = buf + strlen(buf); }
-    }
-    else
-    {
-        int buf_len = ImFormatStringV(g.TempBuffer.Data, g.TempBuffer.Size, fmt, args);
-        *out_buf = g.TempBuffer.Data;
-        if (out_buf_end) { *out_buf_end = g.TempBuffer.Data + buf_len; }
-    }
+    ImFormatStringToTempBufferV(out_buf, out_buf_end, fmt, args);
     va_end(args);
 }
 
@@ -1944,6 +1932,13 @@ void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end,
         const char* buf = va_arg(args, const char*); // Skip formatting when using "%s"
         *out_buf = buf;
         if (out_buf_end) { *out_buf_end = buf + strlen(buf); }
+    }
+    else if (fmt[0] == '%' && fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 's' && fmt[4] == 0)
+    {
+        int buf_len = va_arg(args, int); // Skip formatting when using "%.*s"
+        const char* buf = va_arg(args, const char*);
+        *out_buf = buf;
+        *out_buf_end = buf + buf_len; // Disallow not passing 'out_buf_end' here. User is expected to use it.
     }
     else
     {

@@ -93,6 +93,7 @@ Other changes:
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
+- Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
