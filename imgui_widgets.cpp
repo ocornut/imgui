@@ -7138,6 +7138,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     ms->FocusScopeId = id;
     ms->Flags = flags;
     ms->IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
+    ms->BackupCursorMaxPos = window->DC.CursorMaxPos;
+    ms->ScopeRectMin = window->DC.CursorMaxPos = window->DC.CursorPos;
     PushFocusScope(ms->FocusScopeId);
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
@@ -7208,6 +7210,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
     ImGuiMultiSelectState* storage = ms->Storage;
+    ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
     IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
 
@@ -7230,17 +7233,23 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     if (ms->IsEndIO == false)
         ms->IO.Requests.resize(0);
 
+    const ImRect scope_rect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin));
+    const bool scope_hovered = (ms->Flags & ImGuiMultiSelectFlags_ScopeRect) ? IsMouseHoveringRect(scope_rect.Min, scope_rect.Max) : IsWindowHovered();
+
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
-    if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickWindowVoid)
-        if (IsWindowHovered() && g.HoveredId == 0)
+    if (scope_hovered && g.HoveredId == 0)
+    {
+        if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
                 ms->IO.Requests.resize(0);
                 ms->IO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
             }
+    }
 
     // Unwind
+    window->DC.CursorMaxPos = ImMax(ms->BackupCursorMaxPos, window->DC.CursorMaxPos);
     ms->FocusScopeId = 0;
     ms->Flags = ImGuiMultiSelectFlags_None;
     PopFocusScope();

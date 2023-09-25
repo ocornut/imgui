@@ -3289,16 +3289,24 @@ static void ShowDemoWindowMultiSelect()
             static ExampleSelection selections_data[SCOPES_COUNT];
             ExampleSelectionAdapter selection_adapter; // Use default: Pass index to SetNextItemSelectionUserData(), store index in Selection
 
+            // Use ImGuiMultiSelectFlags_ScopeRect to not affect other selections in same window.
+            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ScopeRect | ImGuiMultiSelectFlags_ClearOnEscape;// | ImGuiMultiSelectFlags_ClearOnClickVoid;
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
+                flags &= ~ImGuiMultiSelectFlags_ScopeRect;
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
+                flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
+
             for (int selection_scope_n = 0; selection_scope_n < SCOPES_COUNT; selection_scope_n++)
             {
                 ExampleSelection* selection = &selections_data[selection_scope_n];
+
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+                selection->ApplyRequests(ms_io, &selection_adapter, ITEMS_COUNT);
+
                 ImGui::SeparatorText("Selection scope");
                 ImGui::Text("Selection size: %d/%d", selection->GetSize(), ITEMS_COUNT);
                 ImGui::PushID(selection_scope_n);
-
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape; // | ImGuiMultiSelectFlags_ClearOnClickRectVoid
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
-                selection->ApplyRequests(ms_io, &selection_adapter, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -3354,8 +3362,16 @@ static void ShowDemoWindowMultiSelect()
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickWindowVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickWindowVoid);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease); ImGui::SameLine();  HelpMarker("Allow dragging an unselected item without altering selection.");
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
+                flags &= ~ImGuiMultiSelectFlags_ScopeRect;
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
+                flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClick", &flags, ImGuiMultiSelectFlags_SelectOnClick) && (flags & ImGuiMultiSelectFlags_SelectOnClick))
+                flags &= ~ImGuiMultiSelectFlags_SelectOnClickRelease;
+            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease) && (flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
+                flags &= ~ImGuiMultiSelectFlags_SelectOnClick;
+            ImGui::SameLine();  HelpMarker("Allow dragging an unselected item without altering selection.");
 
             // Initialize default list with 1000 items.
             static ImVector<int> items;
@@ -9826,7 +9842,7 @@ struct ExampleAssetsBrowser
             ImGui::SetCursorScreenPos(start_pos);
 
             // Multi-select
-            ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
+            ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickVoid;
             if (AllowDragUnselected)
                 ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
 
