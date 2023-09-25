@@ -3456,7 +3456,8 @@ static void ShowDemoWindowMultiSelect()
                         // Drag and Drop
                         if (use_drag_drop && ImGui::BeginDragDropSource())
                         {
-                            // Write payload with full selection OR single unselected item (only possible with ImGuiMultiSelectFlags_SelectOnClickRelease)
+                            // Consider payload to be full selection OR single unselected item.
+                            // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
                             if (ImGui::GetDragDropPayload() == NULL)
                             {
                                 ImVector<int> payload_items;
@@ -9690,8 +9691,10 @@ struct ExampleAssetsBrowser
 {
     // Options
     bool                    ShowTypeOverlay = true;
+    bool                    AllowDragUnselected = false;
     float                   IconSize = 32.0f;
-    int                     IconSpacing = 7;
+    int                     IconSpacing = 10;
+    int                     IconHitSpacing = 4; // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
     bool                    StretchSpacing = true;
 
     // State
@@ -9751,9 +9754,13 @@ struct ExampleAssetsBrowser
                 ImGui::SeparatorText("Contents");
                 ImGui::Checkbox("Show Type Overlay", &ShowTypeOverlay);
 
+                ImGui::SeparatorText("Selection Behavior");
+                ImGui::Checkbox("Allow dragging unselected item", &AllowDragUnselected);
+
                 ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
                 ImGui::SliderInt("Icon Spacing", &IconSpacing, 0, 32);
+                ImGui::SliderInt("Icon Hit Spacing", &IconHitSpacing, 0, 32);
                 ImGui::Checkbox("Stretch Spacing", &StretchSpacing);
                 ImGui::PopItemWidth();
                 ImGui::EndMenu();
@@ -9820,6 +9827,9 @@ struct ExampleAssetsBrowser
 
             // Multi-select
             ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickWindowVoid;
+            if (AllowDragUnselected)
+                ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
+
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags);
             ExampleSelectionAdapter selection_adapter;
             selection_adapter.Data = this;
@@ -9830,7 +9840,8 @@ struct ExampleAssetsBrowser
             // But it is necessary for two reasons:
             // - Selectables uses it by default to visually fill the space between two items.
             // - The vertical spacing would be measured by Clipper to calculate line height if we didn't provide it explicitly (here we do).
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(item_spacing, item_spacing));
+            const float selectable_spacing = IM_MAX(floorf(item_spacing) - IconHitSpacing, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(selectable_spacing, selectable_spacing));
 
             // Rendering parameters
             const ImU32 icon_bg_color = IM_COL32(48, 48, 48, 128);
@@ -9875,8 +9886,13 @@ struct ExampleAssetsBrowser
                         // Drag and drop
                         if (ImGui::BeginDragDropSource())
                         {
-                            ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", "Dummy", 5);
-                            ImGui::Text("%d assets", Selection.Size);
+                            // Consider payload to be full selection OR single unselected item
+                            // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
+                            int payload_size = item_is_selected ? Selection.Size : 1;
+                            if (ImGui::GetDragDropPayload() == NULL)
+                                ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", "Dummy", 5); // Dummy payload
+
+                            ImGui::Text("%d assets", payload_size);
                             ImGui::EndDragDropSource();
                         }
 
