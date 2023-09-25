@@ -102,6 +102,9 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Viewports: Fixed window inner clipping rectangle off by one when window is located on a monitor
+  with negative coordinates. While it is expected that other small issues with arise from this
+  situation, at the moment we are fixing the most noticeable one. (#6861, #2884) [@Vuhdo, @alektron]
 - Docking: Fixed an issue leading to incorrect restoration of selected tab in dock nodes that
   don't carry the currently focused window. (#2304)
 - Docking: added ImGuiDockNodeFlags_NoUndocking. (#2999, #6823, #6780, #3492)
