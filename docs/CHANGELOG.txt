@@ -42,6 +42,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIdStackToolWindow() ("ID Stack Tool"),
+   as earlier name was misleading. Kept inline redirection function. (#4631)
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
