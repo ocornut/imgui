@@ -9854,6 +9854,7 @@ void ImGui::BeginGroup()
     group_data.BackupCurrLineTextBaseOffset = window->DC.CurrLineTextBaseOffset;
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupHoveredIdIsAlive = g.HoveredId != 0;
+    group_data.BackupIsSameLine = window->DC.IsSameLine;
     group_data.BackupActiveIdPreviousFrameIsAlive = g.ActiveIdPreviousFrameIsAlive;
     group_data.EmitItem = true;
 
@@ -9885,6 +9886,7 @@ void ImGui::EndGroup()
     window->DC.GroupOffset = group_data.BackupGroupOffset;
     window->DC.CurrLineSize = group_data.BackupCurrLineSize;
     window->DC.CurrLineTextBaseOffset = group_data.BackupCurrLineTextBaseOffset;
+    window->DC.IsSameLine = group_data.BackupIsSameLine;
     if (g.LogEnabled)
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 

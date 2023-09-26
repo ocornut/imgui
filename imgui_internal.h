@@ -1071,6 +1071,7 @@ struct IMGUI_API ImGuiGroupData
     ImGuiID     BackupActiveIdIsAlive;
     bool        BackupActiveIdPreviousFrameIsAlive;
     bool        BackupHoveredIdIsAlive;
+    bool        BackupIsSameLine;
     bool        EmitItem;
 };
 

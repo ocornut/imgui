@@ -93,6 +93,8 @@ Other changes:
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
 - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
   be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
+- BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
+  to SameLine() followed by manual cursor manipulation.
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
