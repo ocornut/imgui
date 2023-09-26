@@ -3362,6 +3362,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoBoxSelectScroll", &flags, ImGuiMultiSelectFlags_NoBoxSelectScroll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
@@ -3372,7 +3373,7 @@ static void ShowDemoWindowMultiSelect()
                 flags &= ~ImGuiMultiSelectFlags_SelectOnClickRelease;
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease) && (flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
                 flags &= ~ImGuiMultiSelectFlags_SelectOnClick;
-            ImGui::SameLine();  HelpMarker("Allow dragging an unselected item without altering selection.");
+            ImGui::SameLine(); HelpMarker("Allow dragging an unselected item without altering selection.");
 
             // Initialize default list with 1000 items.
             static ImVector<int> items;

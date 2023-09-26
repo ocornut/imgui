@@ -2734,6 +2734,7 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to use same code/logic is desired, but may not be very useful.
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to set RequestSelectAll
     ImGuiMultiSelectFlags_BoxSelect             = 1 << 2,   // Enable box-selection. Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
+    ImGuiMultiSelectFlags_NoBoxSelectScroll     = 1 << 3,   // Disable scrolling when box-selecting near edges of scope.
     ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 4,   // Clear selection when pressing Escape while scope is focused.
     ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 5,   // Clear selection when clicking on empty location within scope.
     ImGuiMultiSelectFlags_ScopeWindow           = 1 << 6,   // Scope for _ClearOnClickVoid and _BoxSelect is whole window (Default). Use if (use if BeginMultiSelect() covers a whole window.
