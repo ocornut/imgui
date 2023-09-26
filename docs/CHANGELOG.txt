@@ -78,6 +78,8 @@ Other changes:
 - Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
 - Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
   in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
+- TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
+  accidentally offset in 1.89.9. (#6862) [@alektron]
 - Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
   This is because our layout/font system currently doesn't fully support non-integer sizes. Until
   it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
@@ -93,12 +95,16 @@ Other changes:
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
+- Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
+- Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
+  doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
+- Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 Docking+Viewports Branch:
 
