@@ -42,7 +42,7 @@ HOW TO UPDATE?
 
 Breaking changes:
 
- - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIdStackToolWindow() ("ID Stack Tool"),
+ - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
    be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
