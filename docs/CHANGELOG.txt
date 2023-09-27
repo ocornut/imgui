@@ -96,6 +96,8 @@ Other changes:
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- Menus: Fixed a bug where activating an item in a child-menu and dragging mouse over the
+  parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
