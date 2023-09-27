@@ -7129,6 +7129,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiMultiSelectTempData* ms = &g.MultiSelectTempData[0];
     IM_ASSERT(g.CurrentMultiSelect == NULL); // No recursion allowed yet (we could allow it if we deem it useful)
+    IM_STATIC_ASSERT(offsetof(ImGuiMultiSelectTempData, IO) == 0); // Clear() relies on that.
     g.CurrentMultiSelect = ms;
 
     // FIXME: BeginFocusScope()

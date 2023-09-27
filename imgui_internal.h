@@ -1716,11 +1716,11 @@ struct ImGuiOldColumns
 // Temporary storage for multi-select
 struct IMGUI_API ImGuiMultiSelectTempData
 {
+    ImGuiMultiSelectIO      IO;                 // MUST BE FIRST FIELD. Requests are set and returned by BeginMultiSelect()/EndMultiSelect() + written to by user during the loop.
     ImGuiMultiSelectState*  Storage;
     ImGuiID                 FocusScopeId;       // Copied from g.CurrentFocusScopeId (unless another selection scope was pushed manually)
     ImGuiMultiSelectFlags   Flags;
     ImGuiKeyChord           KeyMods;
-    ImGuiMultiSelectIO      IO;                 // Requests are set and returned by BeginMultiSelect()/EndMultiSelect() + written to by user during the loop.
     bool                    LoopRequestClear;
     bool                    LoopRequestSelectAll;
     bool                    IsEndIO;            // Set when switching IO from BeginMultiSelect() to EndMultiSelect() state.
@@ -1732,7 +1732,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     //ImRect                Rect;               // Extent of selection scope between BeginMultiSelect() / EndMultiSelect(), used by ImGuiMultiSelectFlags_ClearOnClickRectVoid.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()            { Storage = NULL; FocusScopeId = 0; Flags = 0; KeyMods = 0; IO.Clear(); IsEndIO = LoopRequestClear = LoopRequestSelectAll = IsFocused = IsSetRange = NavIdPassedBy = RangeSrcPassedBy = RangeDstPassedBy = false; }
+    void Clear()            { size_t io_sz = sizeof(IO); IO.Clear(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); } // Zero-clear except IO
 };
 
 // Persistent storage for multi-select (as long as selection is alive)
