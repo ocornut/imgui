@@ -1064,6 +1064,7 @@ struct IMGUI_API ImGuiGroupData
     ImGuiID     WindowID;
     ImVec2      BackupCursorPos;
     ImVec2      BackupCursorMaxPos;
+    ImVec2      BackupCursorPosPrevLine;
     ImVec1      BackupIndent;
     ImVec1      BackupGroupOffset;
     ImVec2      BackupCurrLineSize;

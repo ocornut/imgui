@@ -9847,6 +9847,7 @@ void ImGui::BeginGroup()
     ImGuiGroupData& group_data = g.GroupStack.back();
     group_data.WindowID = window->ID;
     group_data.BackupCursorPos = window->DC.CursorPos;
+    group_data.BackupCursorPosPrevLine = window->DC.CursorPosPrevLine;
     group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
     group_data.BackupIndent = window->DC.Indent;
     group_data.BackupGroupOffset = window->DC.GroupOffset;
@@ -9881,6 +9882,7 @@ void ImGui::EndGroup()
     ImRect group_bb(group_data.BackupCursorPos, ImMax(window->DC.CursorMaxPos, group_data.BackupCursorPos));
 
     window->DC.CursorPos = group_data.BackupCursorPos;
+    window->DC.CursorPosPrevLine = group_data.BackupCursorPosPrevLine;
     window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, window->DC.CursorMaxPos);
     window->DC.Indent = group_data.BackupIndent;
     window->DC.GroupOffset = group_data.BackupGroupOffset;
