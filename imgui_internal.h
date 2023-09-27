@@ -1783,6 +1783,23 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_OutputToTestEngine = 1 << 11,  // Also send output to Test Engine
 };
 
+struct ImGuiDebugAllocEntry
+{
+    int         FrameCount;
+    ImS16       AllocCount;
+    ImS16       FreeCount;
+};
+
+struct ImGuiDebugAllocInfo
+{
+    int         TotalAllocCount;            // Number of call to MemAlloc().
+    int         TotalFreeCount;
+    ImS16       LastEntriesIdx;             // Current index in buffer
+    ImGuiDebugAllocEntry LastEntriesBuf[6]; // Track last 6 frames that had allocations
+
+    ImGuiDebugAllocInfo() { memset(this, 0, sizeof(*this)); }
+};
+
 struct ImGuiMetricsConfig
 {
     bool        ShowDebugLog = false;
@@ -2133,6 +2150,7 @@ struct ImGuiContext
     ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this ID
     ImGuiMetricsConfig      DebugMetricsConfig;
     ImGuiIdStackTool        DebugIdStackTool;
+    ImGuiDebugAllocInfo     DebugAllocInfo;
 
     // Misc
     float                   FramerateSecPerFrame[60];           // Calculate estimate of framerate for user over the last 60 frames..
@@ -3326,6 +3344,7 @@ namespace ImGui
     // Debug Log
     IMGUI_API void          DebugLog(const char* fmt, ...) IM_FMTARGS(1);
     IMGUI_API void          DebugLogV(const char* fmt, va_list args) IM_FMTLIST(1);
+    IMGUI_API void          DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size); // size >= 0 : alloc, size = -1 : free
 
     // Debug Tools
     IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);

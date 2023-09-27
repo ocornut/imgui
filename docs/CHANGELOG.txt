@@ -44,6 +44,8 @@ Breaking changes:
 
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIdStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
+ - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
+   be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -103,6 +105,7 @@ Other changes:
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
+- Debug Tools: Metrics: Added log recent alloc/free calls.
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]

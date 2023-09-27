@@ -424,6 +424,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2023/09/27 (1.90.0) - io: removed io.MetricsActiveAllocations introduced in 1.63. Same as 'g.DebugMemAllocCount - g.DebugMemFreeCount' (still displayed in Metrics, unlikely to be accessed by end-user).
  - 2023/09/26 (1.90.0) - debug tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIdStackToolWindow() ("ID Stack Tool"), as earlier name was misleading. Kept inline redirection function. (#4631)
  - 2023/09/15 (1.90.0) - ListBox, Combo: changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis. kept inline redirection function (will obsolete).
                            - old: bool Combo(const char* label, int* current_item, bool (*getter)(void* user_data, int idx, const char** out_text), ...)
@@ -4223,24 +4224,48 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 void* ImGui::MemAlloc(size_t size)
 {
     void* ptr = (*GImAllocatorAllocFunc)(size, GImAllocatorUserData);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (ImGuiContext* ctx = GImGui)
-    {
-        ctx->IO.MetricsActiveAllocations++;
-        //printf("[%05d] MemAlloc(%d) -> 0x%p\n", ctx->FrameCount, size, ptr);
-    }
+        DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, size);
+#endif
     return ptr;
 }
 
 // IM_FREE() == ImGui::MemFree()
 void ImGui::MemFree(void* ptr)
 {
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (ptr != NULL)
         if (ImGuiContext* ctx = GImGui)
-        {
-            ctx->IO.MetricsActiveAllocations--;
-            //printf("[%05d] MemFree(0x%p)\n", ctx->FrameCount, ptr);
-        }
+            DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, (size_t)-1);
+#endif
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
+}
+
+// We record the number of allocation in recent frames, as a way to audit/sanitize our guiding principles of "no allocations on idle/repeating frames"
+void ImGui::DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size)
+{
+    ImGuiDebugAllocEntry* entry = &info->LastEntriesBuf[info->LastEntriesIdx];
+    IM_UNUSED(ptr);
+    if (entry->FrameCount != frame_count)
+    {
+        info->LastEntriesIdx = (info->LastEntriesIdx + 1) % IM_ARRAYSIZE(info->LastEntriesBuf);
+        entry = &info->LastEntriesBuf[info->LastEntriesIdx];
+        entry->FrameCount = frame_count;
+        entry->AllocCount = entry->FreeCount = 0;
+    }
+    if (size != (size_t)-1)
+    {
+        entry->AllocCount++;
+        info->TotalAllocCount++;
+        //printf("[%05d] MemAlloc(%d) -> 0x%p\n", frame_count, size, ptr);
+    }
+    else
+    {
+        entry->FreeCount++;
+        info->TotalFreeCount++;
+        //printf("[%05d] MemFree(0x%p)\n", frame_count, ptr);
+    }
 }
 
 const char* ImGui::GetClipboardText()
@@ -13720,7 +13745,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     Text("Dear ImGui %s", GetVersion());
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
-    Text("%d visible windows, %d active allocations", io.MetricsRenderWindows, io.MetricsActiveAllocations);
+    Text("%d visible windows, %d current allocations", io.MetricsRenderWindows, g.DebugAllocInfo.TotalAllocCount - g.DebugAllocInfo.TotalFreeCount);
     //SameLine(); if (SmallButton("GC")) { g.GcCompactAll = true; }
 
     Separator();
@@ -14030,6 +14055,20 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             InputTextMultiline("##Ini", (char*)(void*)g.SettingsIniData.c_str(), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, GetTextLineHeight() * 20), ImGuiInputTextFlags_ReadOnly);
             TreePop();
+        }
+        TreePop();
+    }
+
+    // Settings
+    if (TreeNode("Memory allocations"))
+    {
+        ImGuiDebugAllocInfo* info = &g.DebugAllocInfo;
+        Text("%d current allocations", info->TotalAllocCount - info->TotalFreeCount);
+        int buf_size = IM_ARRAYSIZE(info->LastEntriesBuf);
+        for (int n = buf_size - 1; n >= 0; n--)
+        {
+            ImGuiDebugAllocEntry* entry = &info->LastEntriesBuf[(info->LastEntriesIdx - n + buf_size) % buf_size];
+            BulletText("Frame %06d: %+3d ( %2d malloc, %2d free )", entry->FrameCount, entry->AllocCount - entry->FreeCount, entry->AllocCount, entry->FreeCount);
         }
         TreePop();
     }
