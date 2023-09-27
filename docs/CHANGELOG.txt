@@ -42,6 +42,10 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIdStackToolWindow() ("ID Stack Tool"),
+   as earlier name was misleading. Kept inline redirection function. (#4631)
+ - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
+   be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -91,12 +95,17 @@ Other changes:
   (regression from 1.89.2, only happened in some states). (#6783, #6000)
 - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
   be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
+- BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
+  to SameLine() followed by manual cursor manipulation.
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- Menus: Fixed a bug where activating an item in a child-menu and dragging mouse over the
+  parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
 - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
+- Debug Tools: Metrics: Added log recent alloc/free calls.
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
