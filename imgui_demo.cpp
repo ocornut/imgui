@@ -313,7 +313,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (show_tool_debug_log)
         ImGui::ShowDebugLogWindow(&show_tool_debug_log);
     if (show_tool_id_stack_tool)
-        ImGui::ShowIdStackToolWindow(&show_tool_id_stack_tool);
+        ImGui::ShowIDStackToolWindow(&show_tool_id_stack_tool);
     if (show_tool_style_editor)
     {
         ImGui::Begin("Dear ImGui Style Editor", &show_tool_style_editor);
