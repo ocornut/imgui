@@ -467,7 +467,7 @@ GL3W_API int imgl3wIsSupported(int major, int minor);
 GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
-union GL3WProcs {
+union ImGL3WProcs {
     GL3WglProc ptr[59];
     struct {
         PFNGLACTIVETEXTUREPROC            ActiveTexture;
@@ -532,7 +532,7 @@ union GL3WProcs {
     } gl;
 };
 
-GL3W_API extern union GL3WProcs imgl3wProcs;
+GL3W_API extern union ImGL3WProcs imgl3wProcs;
 
 /* OpenGL functions */
 #define glActiveTexture                   imgl3wProcs.gl.ActiveTexture
@@ -794,7 +794,7 @@ static const char *proc_names[] = {
     "glViewport",
 };
 
-GL3W_API union GL3WProcs imgl3wProcs;
+GL3W_API union ImGL3WProcs imgl3wProcs;
 
 static void load_procs(GL3WGetProcAddressProc proc)
 {
