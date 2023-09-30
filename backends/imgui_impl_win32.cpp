@@ -41,6 +41,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-09-25: Inputs: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit it (same behavior as GLFW/SDL).
 //  2023-09-07: Inputs: Added support for keyboard codepage conversion for when application is compiled in MBCS mode and using a non-Unicode window.
 //  2023-04-19: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw Win32/Winapi with OpenGL. (#3218)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen/ImGuiMouseSource_Pen. (#2702)
@@ -731,10 +732,14 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             int vk = (int)wParam;
             if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))
                 vk = IM_VK_KEYPAD_ENTER;
-
-            // Submit key event
             const ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
             const int scancode = (int)LOBYTE(HIWORD(lParam));
+
+            // Special behavior for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit the key down event.
+            if (key == ImGuiKey_PrintScreen && !is_key_down)
+                ImGui_ImplWin32_AddKeyEvent(key, true, vk, scancode);
+
+            // Submit key event
             if (key != ImGuiKey_None)
                 ImGui_ImplWin32_AddKeyEvent(key, is_key_down, vk, scancode);
 
