@@ -105,7 +105,8 @@ Other changes:
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
-- Debug Tools: Metrics: Added log recent alloc/free calls.
+- Debug Tools: Metrics: Added log of recent alloc/free calls.
+- Debug Tools: Metrics: Added "Show groups rectangles" in tools.
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]

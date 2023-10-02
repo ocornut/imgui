@@ -9954,7 +9954,8 @@ void ImGui::EndGroup()
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Deactivated;
 
     g.GroupStack.pop_back();
-    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
+    if (g.DebugShowGroupRects)
+        window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
 }
 
 
@@ -13888,6 +13889,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 Unindent();
             }
         }
+        Checkbox("Show groups rectangles", &g.DebugShowGroupRects); // Storing in context as this is used by group code and prefers to be in hot-data
 
         Checkbox("Debug Begin/BeginChild return value", &io.ConfigDebugBeginReturnValueLoop);
         SameLine();
@@ -14064,11 +14066,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         ImGuiDebugAllocInfo* info = &g.DebugAllocInfo;
         Text("%d current allocations", info->TotalAllocCount - info->TotalFreeCount);
+        Text("Recent frames with allocations:");
         int buf_size = IM_ARRAYSIZE(info->LastEntriesBuf);
         for (int n = buf_size - 1; n >= 0; n--)
         {
             ImGuiDebugAllocEntry* entry = &info->LastEntriesBuf[(info->LastEntriesIdx - n + buf_size) % buf_size];
-            BulletText("Frame %06d: %+3d ( %2d malloc, %2d free )", entry->FrameCount, entry->AllocCount - entry->FreeCount, entry->AllocCount, entry->FreeCount);
+            BulletText("Frame %06d: %+3d ( %2d malloc, %2d free )%s", entry->FrameCount, entry->AllocCount - entry->FreeCount, entry->AllocCount, entry->FreeCount, (n == 0) ? " (most recent)" : "");
         }
         TreePop();
     }

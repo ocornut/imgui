@@ -1953,6 +1953,7 @@ struct ImGuiContext
     ImGuiNextItemData       NextItemData;                       // Storage for SetNextItem** functions
     ImGuiLastItemData       LastItemData;                       // Storage for last submitted item (setup by ItemAdd)
     ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
+    bool                    DebugShowGroupRects;
 
     // Shared stacks
     ImVector<ImGuiColorMod>     ColorStack;                     // Stack for PushStyleColor()/PopStyleColor() - inherited by Begin()
@@ -2225,6 +2226,7 @@ struct ImGuiContext
 
         CurrentFocusScopeId = 0;
         CurrentItemFlags = ImGuiItemFlags_None;
+        DebugShowGroupRects = false;
         BeginMenuCount = 0;
 
         NavWindow = NULL;
