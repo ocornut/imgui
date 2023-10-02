@@ -127,6 +127,12 @@ Docking+Viewports Branch:
 - Docking: renamed ImGuiDockNodeFlags_NoDockingInCentralNode to ImGuiDockNodeFlags_NoDockingOverCentralNode.
 - Docking: Internals: renamed ImGuiDockNodeFlags_NoDockingSplitMe to ImGuiDockNodeFlags_NoDockingSplit.
 
+Docking+Viewports Branch:
+
+- Docking: Fixed a bug where ClassId compare tests (when using SetNextWindowClass)
+  on success would prevent further filter from running, namely the one that prevent
+  docking over a popup.
+
 
 -----------------------------------------------------------------------
  VERSION 1.89.9 (Released 2023-09-04)

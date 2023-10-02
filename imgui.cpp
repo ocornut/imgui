@@ -17059,11 +17059,13 @@ static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_win
     ImGuiWindowClass* payload_class = &payload->WindowClass;
     if (host_class->ClassId != payload_class->ClassId)
     {
+        bool pass = false;
         if (host_class->ClassId != 0 && host_class->DockingAllowUnclassed && payload_class->ClassId == 0)
-            return true;
+            pass = true;
         if (payload_class->ClassId != 0 && payload_class->DockingAllowUnclassed && host_class->ClassId == 0)
-            return true;
-        return false;
+            pass = true;
+        if (!pass)
+            return false;
     }
 
     // Prevent docking any window created above a popup
