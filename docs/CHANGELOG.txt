@@ -130,6 +130,7 @@ Docking+Viewports Branch:
   prevent further filter from running, namely the one that prevent docking over a popup.
 - Backends: GLFW: Fixed an assertion in situation where the WndProc handler is different between
   main and secondary viewport (may happen due to third-party hooks). (#6889)
+- Backends: DX9: Fixed incorrect assert triggering on reopening session with minimized windows. (#3424)
 
 
 -----------------------------------------------------------------------
