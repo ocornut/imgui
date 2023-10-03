@@ -1414,26 +1414,19 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness)
     else if (flags & ImGuiSeparatorFlags_Horizontal)
     {
         // Horizontal Separator
-        float x1 = window->Pos.x;
-        float x2 = window->Pos.x + window->Size.x;
+        float x1 = window->DC.CursorPos.x;
+        float x2 = window->WorkRect.Max.x;
 
-        // FIXME-WORKRECT: old hack (#205) until we decide of consistent behavior with WorkRect/Indent and Separator
-        if (g.GroupStack.Size > 0 && g.GroupStack.back().WindowID == window->ID)
-            x1 += window->DC.Indent.x;
-
-        // FIXME-WORKRECT: In theory we should simply be using WorkRect.Min.x/Max.x everywhere but it isn't aesthetically what we want,
-        // need to introduce a variant of WorkRect for that purpose. (#4787)
-        if (ImGuiTable* table = g.CurrentTable)
-        {
-            x1 = table->Columns[table->CurrentColumn].MinX;
-            x2 = table->Columns[table->CurrentColumn].MaxX;
-        }
-
+        // Preserve legacy behavior inside Columns()
         // Before Tables API happened, we relied on Separator() to span all columns of a Columns() set.
         // We currently don't need to provide the same feature for tables because tables naturally have border features.
         ImGuiOldColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
         if (columns)
+        {
+            x1 = window->Pos.x + window->DC.Indent.x; // Used to be Pos.x before 2023/10/03
+            x2 = window->Pos.x + window->Size.x;
             PushColumnsBackground();
+        }
 
         // We don't provide our width to the layout so that it doesn't get feed back into AutoFit
         // FIXME: This prevents ->CursorMaxPos based bounding box evaluation from working (e.g. TableEndCell)

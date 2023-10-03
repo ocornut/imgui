@@ -73,6 +73,20 @@ Other changes:
 - Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
+- Separator(): Altered end-points to use more standard boundaries. (#205, #4787, #1643)
+  - Left position is always current cursor X position.
+  - Right position is always work-rect rightmost edge.
+  - Effectively means that:
+    - A separator in the root of a window will end up a little more distant from edges
+      than previously (essentially following WindowPadding instead of clipping edges).
+    - A separator inside a table cell end up a little distance from edges instead of
+      touching them (essentially following CellPadding instead of clipping edges).
+    - Matches tree indentation (was not the case before).
+    - Matches SeparatorText(). (#1643)
+    - Makes things correct inside groups without specific/hard-coded handling. (#205)
+  - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
+    only different is left position follows indentation level, to match calling a Separator()
+    inside or outside Columns().
 - Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
   code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
   clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.

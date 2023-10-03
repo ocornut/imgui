@@ -126,7 +126,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - separator: expose flags (#759)
  - separator: take indent into consideration (optional)
- - separator: width, thickness, centering (#1643)
+ - separator: width, thickness, centering (#1643, #2657)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - docking: merge docking branch (#2109)
