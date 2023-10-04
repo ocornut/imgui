@@ -840,7 +840,7 @@ static FT_Error ImGuiLunasvgPortInit(FT_Pointer* _state)
 
 static void ImGuiLunasvgPortFree(FT_Pointer* _state)
 {
-    IM_DELETE(*_state);
+    IM_DELETE(*(LunasvgPortState*)_state);
 }
 
 static FT_Error ImGuiLunasvgPortRender(FT_GlyphSlot slot, FT_Pointer* _state)

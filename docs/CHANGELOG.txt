@@ -37,15 +37,118 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.89.9 WIP (In Progress)
+ VERSION 1.90 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
+ - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
+   as earlier name was misleading. Kept inline redirection function. (#4631)
+ - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
+   be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
+ - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
+   Before:
+      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+      function:      bool Combo(const char* label, int* current_item, bool (*getter)(void* user_data, int idx, const char** out_text), ...);
+      function:      bool ListBox(const char* label, int* current_item, bool (*getting)(void* user_data, int idx, const char** out_text), ...);
+   After:
+      getter type:   const char* (*getter)(void* user_data, int idx)
+      function:      bool Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+      function:      bool ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), ...);
+   Old type was unnecessarily complex and harder to wrap in e.g. a lambda. Kept inline redirection function (will obsolete).
+ - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
+   - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
+     Consider that generally 'GetContentRegionAvail().x' is more useful.
+   - ImDrawCornerFlags_XXX         -> use ImDrawFlags_RoundCornersXXX names.
+     Read 1.82 changelog for details + grep commented names in sources + .
+   - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
+     AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
+     Read 1.82 Changelog for details.
+
+Other changes:
+
+- Tooltips: made using SetItemTooltip()/IsItemHovered(ImGuiHoveredFlags_ForTooltip) defaults to
+  activate tooltips on disabled items. This is done by adding ImGuiHoveredFlags_AllowWhenDisabled
+  to the default value of style.HoverFlagsForTooltipMouse/HoverFlagsForTooltipNav. (#1485)
+- Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
+  Previously was inconsistent and only enabled when stepping through a non-input item.
+  (#6802, #3092, #5759, #787)
+- Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
+  code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
+  clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
+- Tables: Request user to submit contents when outer host-window is requesting auto-resize,
+  so a scrolling table can contribute to initial window size. (#6510)
+- Tables: Fixed subtle drawing overlap between borders in some situations.
+- Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
+- Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
+  in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
+- TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
+  accidentally offset in 1.89.9. (#6862) [@alektron]
+- Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
+  This is because our layout/font system currently doesn't fully support non-integer sizes. Until
+  it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
+- Fonts: Better assert during load when passing truncated font data or wrong data size. (#6822)
+- Fonts: Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
+  prior to building again. (#6825)
+- Fonts, imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
+- InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+  (regression from 1.89.2, only happened in some states). (#6783, #6000)
+- InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
+  be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
+- BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
+  to SameLine() followed by manual cursor manipulation.
+- BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- Menus: Fixed a bug where activating an item in a child-menu and dragging mouse over the
+  parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
+- MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
+  register contents size in a way that would affect the scrolling layer.
+  Was most often noticable when using an horizontal scrollbar. (#6789)
+- Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
+- IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
+- Debug Tools: Metrics: Added log recent alloc/free calls.
+- ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
+- ImVector: Added find_index() helper.
+- Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
+- Backends: Win32: Added support for keyboard codepage conversion for when application
+  is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
+- Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
+  doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
+- Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
+
+Docking+Viewports Branch:
+
+- Viewports: Fixed window inner clipping rectangle off by one when window is located on a monitor
+  with negative coordinates. While it is expected that other small issues with arise from this
+  situation, at the moment we are fixing the most noticeable one. (#6861, #2884) [@Vuhdo, @alektron]
+- Docking: Fixed an issue leading to incorrect restoration of selected tab in dock nodes that
+  don't carry the currently focused window. (#2304)
+- Docking: added ImGuiDockNodeFlags_NoUndocking. (#2999, #6823, #6780, #3492)
+- Docking: renamed ImGuiDockNodeFlags_NoSplit to ImGuiDockNodeFlags_NoDockingSplit.
+- Docking: renamed ImGuiDockNodeFlags_NoDockingInCentralNode to ImGuiDockNodeFlags_NoDockingOverCentralNode.
+- Docking: Internals: renamed ImGuiDockNodeFlags_NoDockingSplitMe to ImGuiDockNodeFlags_NoDockingSplit.
+- Docking: Fixed a bug where ClassId compare tests (when using SetNextWindowClass) on success would
+  prevent further filter from running, namely the one that prevent docking over a popup.
+- Backends: GLFW: Fixed an assertion in situation where the WndProc handler is different between
+  main and secondary viewport (may happen due to third-party hooks). (#6889)
+- Backends: DX9: Fixed incorrect assert triggering on reopening session with minimized windows. (#3424)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.89.9 (Released 2023-09-04)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.89.9
+
+Breaking changes:
+
+- Clipper: Renamed IncludeRangeByIndices(), also called ForceDisplayRangeByIndices()
+  before 1.89.6, to IncludeItemsByIndex(). Kept inline redirection function. (#6424, #3841)
+
 Other changes:
 
 - Tables: Made it possible to use SameLine(0,0) after TableNextColumn() or
-  TableSetColumnIndex() in order to reuse line height from previous cell. (#3740)
+  TableSetColumnIndex() in order to reuse line pos/height from previous cell. (#3740)
+- Tables: Made it possible to change style.CellPadding.y between rows. (#3740)
 - Nav, TreeNode: Pressing Left with ImGuiTreeNodeFlags_NavLeftJumpsBackHere now goes
   through proper navigation logic: honor scrolling and selection. (#1079, #1131)
 - Sliders: Fixed an integer overflow and div-by-zero in SliderInt() when
@@ -53,10 +156,18 @@ Other changes:
 - Windows: Layout of Close/Collapse buttons uses style.ItemInnerSpacing.x between items,
   stopped incorrectly using FramePadding in a way where hit-boxes could overlap when
   setting large values. (#6749)
+- TabBar, Style: added style.TabBarBorderSize and associated ImGuiStyleVar_TabBarBorderSize.
+  Tweaked rendering of that separator to allow thicker values. (#6820, #4859, #5022, #5239)
 - InputFloat, SliderFloat, DragFloat: always turn both '.' and ',' into the current decimal
   point character when using Decimal/Scientific character filter. (#6719, #2278) [@adamsepp]
+- ColorEdit, ColorPicker: Manipulating options popup don't mark item as edited. (#6722)
+  (Note that they may still be marked as Active/Hovered.)
+- Clipper: Added IncludeItemByIndex() helper to include a single item. (#6424, #3841)
+- Clipper: Fixed a bug if attempt to force-include a range which matches an already
+  included range, clipper would end earlier. (#3841)
 - ImDrawData: Fixed an issue where TotalVtxCount/TotalIdxCount does not match the sum
   of individual ImDrawList's buffer sizes when a dimming/modal background is rendered. (#6716)
+- ImDrawList: Automatically calling ChannelsMerge() if not done after a split.
 - ImDrawList: Fixed OOB access in _CalcCircleAutoSegmentCount when passing excessively
   large radius to AddCircle(). (#6657, #5317) [@EggsyCRO, @jdpatdiscord]
 - IO: Exposed io.PlatformLocaleDecimalPoint to configure decimal point ('.' or ',') for
@@ -68,10 +179,15 @@ Other changes:
 - Misc: Made multiple calls to Render() during the same frame early out faster.
 - Debug Tools: Metrics: Fixed "Drawlists" section and per-viewport equivalent
   appearing empty (regression in 1.89.8).
-- Demo: Demonstrate out-of-order rendering using ImDrawListSplitter.
+- Demo: Reorganized "Examples" menu.
+- Demo: Tables: Demonstrate using SameLine() between cells. (#3740)
+- Demo: Tables: Demonstrate altering CellPadding.y between rows. (#3740)
+- Demo: Custom Rendering: Demonstrate out-of-order rendering using ImDrawListSplitter.
 - Backends: SDL2,SDL3: added ImGui_ImplSDL2_InitForOther()/ImGui_ImplSDL3_InitForOther()
   for consistency (matching GLFW backend) and as most initialization paths don't actually
   need to care about rendering backend.
+- Examples: Emscripten+WebGPU: Fixed WGPUInstance creation process + use preferred
+  framebuffer format. (#6640, #6748) [@smileorigin]
 
 Docking+Viewports Branch:
 
