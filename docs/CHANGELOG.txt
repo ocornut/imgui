@@ -87,6 +87,8 @@ Other changes:
   - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
     only different is left position follows indentation level, to match calling a Separator()
     inside or outside Columns().
+- Drag and Drop: Fixed submitting a tooltip from drop target location when using AcceptDragDropPayload()
+  with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
 - Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
   code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
   clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
@@ -123,6 +125,7 @@ Other changes:
 - Debug Tools: Metrics: Added "Show groups rectangles" in tools.
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
+- Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
