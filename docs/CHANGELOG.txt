@@ -87,6 +87,8 @@ Other changes:
   - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
     only different is left position follows indentation level, to match calling a Separator()
     inside or outside Columns().
+- Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
+  to false when popup is closed in ways other than clicking the close button. (#6900)
 - Drag and Drop: Rework drop target highlight: reduce rectangle to its visible portion, and
   then expand slightly. A full rectangle is always visible and it may protrude slightly. (#4281, #3272)
 - Drag and Drop: Fixed submitting a tooltip from drop target location when using AcceptDragDropPayload()
