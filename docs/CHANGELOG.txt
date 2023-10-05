@@ -73,6 +73,25 @@ Other changes:
 - Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
+- Separator(): Altered end-points to use more standard boundaries. (#205, #4787, #1643)
+  - Left position is always current cursor X position.
+  - Right position is always work-rect rightmost edge.
+  - Effectively means that:
+    - A separator in the root of a window will end up a little more distant from edges
+      than previously (essentially following WindowPadding instead of clipping edges).
+    - A separator inside a table cell end up a little distance from edges instead of
+      touching them (essentially following CellPadding instead of clipping edges).
+    - Matches tree indentation (was not the case before).
+    - Matches SeparatorText(). (#1643)
+    - Makes things correct inside groups without specific/hard-coded handling. (#205)
+  - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
+    only different is left position follows indentation level, to match calling a Separator()
+    inside or outside Columns().
+- Drag and Drop: Rework drop target highlight: reduce rectangle to its visible portion, and
+  then expand slightly. A full rectangle is always visible and it may protrude slightly. (#4281, #3272)
+- Drag and Drop: Fixed submitting a tooltip from drop target location when using AcceptDragDropPayload()
+  with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
+- TreeNode: Added ImGuiTreeNodeFlags_SpanAllColumns for use in tables. (#3151, #3565, #2451, #2438)
 - Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
   code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
   clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
@@ -105,14 +124,18 @@ Other changes:
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
-- Debug Tools: Metrics: Added log recent alloc/free calls.
+- Debug Tools: Metrics: Added log of recent alloc/free calls.
+- Debug Tools: Metrics: Added "Show groups rectangles" in tools.
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
+- Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
 - Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
+- Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
+  copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 Docking+Viewports Branch:
@@ -1617,7 +1640,7 @@ Breaking Changes:
 - Commented out redirecting functions/enums names that were marked obsolete in 1.67 and 1.69 (March 2019):
   - ImGui::GetOverlayDrawList() -> use ImGui::GetForegroundDrawList()
   - ImFont::GlyphRangesBuilder  -> use ImFontGlyphRangesBuilder
-- Backends: OpenGL3: added a third source file "imgui_impl_opengl3_loader.h". [@rokups]
+- Backends: OpenGL3: added a third source file "imgui_impl_opengl3_loader.h". (#4445) [@rokups]
 - Backends: GLFW: backend now uses glfwSetCursorEnterCallback(). (#3751, #4377, #2445)
 - Backends: GLFW: backend now uses glfwSetWindowFocusCallback(). (#4388) [@thedmd]
   - If calling ImGui_ImplGlfw_InitXXX with install_callbacks=true: this is already done for you.
@@ -1706,7 +1729,7 @@ Other Changes:
   about building on 32-bit systems. (#4225) [@kingofthebongo2008]
 - Backends: OpenGL3: Embed our own minimal GL headers/loader (imgui_impl_opengl3_loader.h) based on gl3w.
   Reduces the frequent issues and confusion coming from having to support multiple loaders and requiring users to use and
-  initialize the same loader as the backend. [@rokups]
+  initialize the same loader as the backend. (#4445) [@rokups]
   Removed support for gl3w, glew, glad, glad2, glbinding2, glbinding3 (all now unnecessary).
 - Backends: OpenGL3: Handle GL_CLIP_ORIGIN on <4.5 contexts if "GL_ARB_clip_control" extension is detected. (#4170, #3998)
 - Backends: OpenGL3: Destroy vertex/fragment shader objects right after they are linked into main shader. (#4244) [@Crowbarous]
