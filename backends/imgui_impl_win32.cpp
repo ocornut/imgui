@@ -39,6 +39,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys.
 //  2023-09-25: Inputs: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit it (same behavior as GLFW/SDL).
 //  2023-09-07: Inputs: Added support for keyboard codepage conversion for when application is compiled in MBCS mode and using a non-Unicode window.
 //  2023-04-19: Added ImGui_ImplWin32_InitForOpenGL() to facilitate combining raw Win32/Winapi with OpenGL. (#3218)
@@ -516,6 +517,18 @@ static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
         case VK_F10: return ImGuiKey_F10;
         case VK_F11: return ImGuiKey_F11;
         case VK_F12: return ImGuiKey_F12;
+        case VK_F13: return ImGuiKey_F13;
+        case VK_F14: return ImGuiKey_F14;
+        case VK_F15: return ImGuiKey_F15;
+        case VK_F16: return ImGuiKey_F16;
+        case VK_F17: return ImGuiKey_F17;
+        case VK_F18: return ImGuiKey_F18;
+        case VK_F19: return ImGuiKey_F19;
+        case VK_F20: return ImGuiKey_F20;
+        case VK_F21: return ImGuiKey_F21;
+        case VK_F22: return ImGuiKey_F22;
+        case VK_F23: return ImGuiKey_F23;
+        case VK_F24: return ImGuiKey_F24;
         default: return ImGuiKey_None;
     }
 }
@@ -552,6 +565,8 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
         return ImGuiMouseSource_TouchScreen;
     return ImGuiMouseSource_Mouse;
 }
+
+#include "imgui_internal.h"
 
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -659,6 +674,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
                 vk = IM_VK_KEYPAD_ENTER;
             const ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
             const int scancode = (int)LOBYTE(HIWORD(lParam));
+            printf("vk = %X -> key %d, scancode %d\n", vk, key, scancode);
 
             // Special behavior for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit the key down event.
             if (key == ImGuiKey_PrintScreen && !is_key_down)

@@ -125,6 +125,7 @@ Other changes:
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
+- IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
 - Debug Tools: Metrics: Added log of recent alloc/free calls.
 - Debug Tools: Metrics: Added "Show groups rectangles" in tools.
@@ -132,12 +133,16 @@ Other changes:
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
+- Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
+- Backends: SDL2, SDL3: Added support for F13 to F24 function keys. (#6891)
+- Backends: Win32: Added support for F13 to F24 function keys. (#6891)
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
 - Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
+- Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 
