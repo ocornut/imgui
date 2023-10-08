@@ -129,7 +129,35 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - separator: width, thickness, centering (#1643, #2657)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
- - docking: merge docking branch (#2109)
+ - docking: B: ordering currently held in tab bar should be implicitly held by windows themselves (also see #2304)
+ - docking: B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
+ - docking: B~ rework code to be able to lazily create tab bar instance in a single place. The _Unsorted tab flag could be replacing a trailing-counter in DockNode?
+ - docking: B~ fully track windows/settings reference in dock nodes. perhaps find a representation that allows facilitate use of dock builder functions.
+ - docking: B~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
+ - docking: B: when docking outer, perform size locking on neighbors nodes the same way we do it with splitters, so other nodes are not resized.
+ - docking: B~ central node resizing behavior incorrect.
+ - docking: B: changing title font/style per-window is not supported as dock nodes are created in NewFrame.
+ - docking: B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them (doesn't affect the user nor request platform windows to be created, but unnecessary)
+ - docking: B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
+ - docking: B- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows != NULL) should show a normal title bar (not a tab bar)
+ - docking: B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
+ - docking: B~ tidy up tab list popup buttons features (available with manual tab-bar, see ImGuiTabBarFlags_NoTabListPopupButton code, not used by docking nodes)
+ - docking: B- SetNextWindowDockId(0) with a second Begin() in the frame will asserts
+ - docking: B: resize grip drawn in host window typically appears under scrollbar.
+ - docking: B: resize grip auto-resize on multiple node hierarchy doesn't make much sense or should be improved?
+ - docking: B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
+ - docking: B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
+ - docking: B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.
+ - docking: B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
+ - docking: B- tab bar: make selected tab always shows its full title?
+ - docking: B- hide close button on single tab bar?
+ - docking: B- nav: design interactions so nav controls can dock/undock
+ - docking: B- dockspace: flag to lock the dock tree and/or sizes (ImGuiDockNodeFlags_Locked?)
+ - docking: B- reintroduce collapsing a floating dock node. also collapsing a docked dock node!
+ - docking: B- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
+ - docking: B- option to remember undocked window size? (instead of keeping their docked size) (relate to #2104)
+ - docking: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
+ - docking: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
  - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work (WIP branch)
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
@@ -302,6 +330,20 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: when CTRL+Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
+
+ - viewport: make it possible to have no main/hosting viewport
+ - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
+   on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
+ - viewport: not focusing newly undocked viewport means clicking back on previous one doesn't bring OS window to front.
+ - viewport: with platform decoration enabled, platform may force constraint (e.g. minimum size)
+ - viewport: use getfocus/setfocus api to synchronize imgui<>platform focus better (e.g imgui-side ctrl-tab can focus os window, OS initial setup and alt-tab can focus imgui window etc.)
+ - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
+ - viewport: implicit/fallback Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
+ - viewport: need to clarify how to use GetMousePos() from a user point of view.
+ - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport.
+ - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
+ - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).
+ - platform: sdl: multi-viewport + minimized window seems to break mouse wheel events (at least under Win32).
 
  - inputs: support track pad style scrolling & slider edit.
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.

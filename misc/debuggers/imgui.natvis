@@ -55,4 +55,8 @@ More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/crea
   <DisplayString>{{Name {Name,s} Active {(Active||WasActive)?1:0,d} Child {(Flags &amp; 0x01000000)?1:0,d} Popup {(Flags &amp; 0x04000000)?1:0,d} Hidden {(Hidden)?1:0,d}}</DisplayString>
 </Type>
 
+<Type Name="ImGuiDockNode">
+  <DisplayString>{{ID {ID,x} Pos=({Pos.x,g} {Pos.y,g}) Size=({Size.x,g} {Size.y,g}) Parent {(ParentNode==0)?0:ParentNode->ID,x} Childs {(ChildNodes[0] != 0)+(ChildNodes[1] != 0)} Windows {Windows.Size}  }</DisplayString>
+</Type>
+
 </AutoVisualizer>
