@@ -1157,7 +1157,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 10] Hit testing on borders
     if (table->Flags & ImGuiTableFlags_Resizable)
         TableUpdateBorders(table);
-    table_instance->LastFirstRowHeight = 0.0f;
+    table_instance->LastTopHeadersRowHeight = 0.0f;
     table->IsLayoutLocked = true;
     table->IsUsingHeaders = false;
 
@@ -1203,7 +1203,7 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
     const float hit_half_width = TABLE_RESIZE_SEPARATOR_HALF_THICKNESS;
     const float hit_y1 = table->OuterRect.Min.y;
     const float hit_y2_body = ImMax(table->OuterRect.Max.y, hit_y1 + table_instance->LastOuterHeight);
-    const float hit_y2_head = hit_y1 + table_instance->LastFirstRowHeight;
+    const float hit_y2_head = hit_y1 + table_instance->LastTopHeadersRowHeight;
 
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
@@ -1461,7 +1461,7 @@ void    ImGui::EndTable()
     NavUpdateCurrentWindowIsScrollPushableX();
 }
 
-// See "COLUMN SIZING POLICIES" comments at the top of this file
+// See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
 void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
@@ -1836,15 +1836,16 @@ void ImGui::TableEndRow(ImGuiTable* table)
     const float bg_y2 = table->RowPosY2;
     const bool unfreeze_rows_actual = (table->CurrentRow + 1 == table->FreezeRowsCount);
     const bool unfreeze_rows_request = (table->CurrentRow + 1 == table->FreezeRowsRequest);
-    if (table->CurrentRow == 0)
-        TableGetInstanceData(table, table->InstanceCurrent)->LastFirstRowHeight = bg_y2 - bg_y1;
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    if ((table->RowFlags & ImGuiTableRowFlags_Headers) && (table->CurrentRow == 0 || (table->LastRowFlags & ImGuiTableRowFlags_Headers)))
+        table_instance->LastTopHeadersRowHeight += bg_y2 - bg_y1;
 
     const bool is_visible = (bg_y2 >= table->InnerClipRect.Min.y && bg_y1 <= table->InnerClipRect.Max.y);
     if (is_visible)
     {
         // Update data for TableGetHoveredRow()
         if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2)
-            TableGetInstanceData(table, table->InstanceCurrent)->HoveredRowNext = table->CurrentRow;
+            table_instance->HoveredRowNext = table->CurrentRow;
 
         // Decide of background color for the row
         ImU32 bg_col0 = 0;
@@ -1922,7 +1923,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
         IM_ASSERT(table->IsUnfrozenRows == false);
         const float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->IsUnfrozenRows = true;
-        TableGetInstanceData(table, table->InstanceCurrent)->LastFrozenHeight = y0 - table->OuterRect.Min.y;
+        table_instance->LastFrozenHeight = y0 - table->OuterRect.Min.y;
 
         // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
         table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
@@ -2599,7 +2600,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     const float border_size = TABLE_BORDER_SIZE;
     const float draw_y1 = table->InnerRect.Min.y + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? 1.0f : 0.0f);
     const float draw_y2_body = table->InnerRect.Max.y;
-    const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastFirstRowHeight) : draw_y1;
+    const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastTopHeadersRowHeight) : draw_y1;
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
@@ -2890,16 +2891,14 @@ float ImGui::TableGetHeaderRowHeight()
     // Calculate row height, for the unlikely case that some labels may be taller than others.
     // If we didn't do that, uneven header height would highlight but smaller one before the tallest wouldn't catch input for all height.
     // In your custom header row you may omit this all together and just call TableNextRow() without a height...
-    float row_height = GetTextLineHeight();
-    int columns_count = TableGetColumnCount();
-    for (int column_n = 0; column_n < columns_count; column_n++)
-    {
-        ImGuiTableColumnFlags flags = TableGetColumnFlags(column_n);
-        if ((flags & ImGuiTableColumnFlags_IsEnabled) && !(flags & ImGuiTableColumnFlags_NoHeaderLabel))
-            row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
-    }
-    row_height += GetStyle().CellPadding.y * 2.0f;
-    return row_height;
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    float row_height = g.FontSize;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        if (IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
+            if ((table->Columns[column_n].Flags & ImGuiTableColumnFlags_NoHeaderLabel) == 0)
+                row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(table, column_n)).y);
+    return row_height + g.Style.CellPadding.y * 2.0f;
 }
 
 // [Public] This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
