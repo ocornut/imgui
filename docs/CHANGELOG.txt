@@ -118,6 +118,7 @@ Other changes:
   be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
+- BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 - Menus: Fixed a bug where activating an item in a child-menu and dragging mouse over the
   parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
