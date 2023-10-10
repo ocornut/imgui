@@ -2919,9 +2919,9 @@ void ImGui::TableHeadersRow()
         TableUpdateLayout(table);
 
     // Open row
-    const float row_y1 = GetCursorScreenPos().y;
     const float row_height = TableGetHeaderRowHeight();
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
+    const float row_y1 = GetCursorScreenPos().y;
     if (table->HostSkipItems) // Merely an optimization, you may skip in your own code.
         return;
 
@@ -2943,7 +2943,7 @@ void ImGui::TableHeadersRow()
     ImVec2 mouse_pos = ImGui::GetMousePos();
     if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
         if (mouse_pos.y >= row_y1 && mouse_pos.y < row_y1 + row_height)
-            TableOpenContextMenu(-1); // Will open a non-column-specific popup.
+            TableOpenContextMenu(columns_count); // Will open a non-column-specific popup.
 }
 
 // Emit a column header (text + optional sort order)
