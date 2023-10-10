@@ -8,8 +8,11 @@
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -32,6 +35,7 @@
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_metal.h"
 #import <time.h>
 #import <Metal/Metal.h>
@@ -740,3 +744,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
 }
 
 @end
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

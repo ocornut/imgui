@@ -91,6 +91,7 @@ Many projects are using this branch and it is kept in sync with master regularly
 
 ### Q: How to get started?
 
+Read [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started). <BR>
 Read [EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
 Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
 Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp). <BR>
@@ -141,7 +142,7 @@ void MyLowLevelMouseButtonHandler(int button, bool down)
 - The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
 - Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
 - Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting backend).
-- See [Control Sheets for Gamepads](http://www.dearimgui.com/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
+- See [Control Sheets for Gamepads](https://www.dearimgui.com/controls_sheets) (reference PNG/PSD for PS4, XB1, Switch gamepads).
 - See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
 
 ##### [Return to Index](#index)
@@ -164,8 +165,8 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 ---
 
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
-Your renderer is not using the font texture correctly or it hasn't been uploaded to the GPU.
-- If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+Your renderer backend is not using the font texture correctly or it hasn't been uploaded to the GPU.
+- If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which **can if your texture atlas is too big**. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - If this happens with a custom backend: make sure you have uploaded the font texture to the GPU, that all shaders are rendering states are setup properly (e.g. texture is bound). Compare your code to existing backends and use a graphics debugger such as [RenderDoc](https://renderdoc.org) to debug your rendering states.
 
 ##### [Return to Index](#index)
@@ -216,7 +217,7 @@ Interactive widgets (such as calls to Button buttons) need a unique ID.
 **Unique IDs are used internally to track active widgets and occasionally associate state to widgets.<BR>
 Unique IDs are implicitly built from the hash of multiple elements that identify the "path" to the UI element.**
 
-Since Dear ImGui 1.85, you can use `Demo>Tools>Stack Tool` or call `ImGui::ShowStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
+Since Dear ImGui 1.85, you can use `Demo>Tools>ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
 
 ![Stack tool](https://user-images.githubusercontent.com/8225057/136235657-a0ea5665-dcd1-423f-9be6-dc3f8ced8f12.png)
 
@@ -529,7 +530,7 @@ This approach is relatively easy and functional but comes with two issues:
 - Style override may be lost during the `Begin()` call crossing monitor boundaries. You may need to do some custom scaling mumbo-jumbo if you want your `OnChangedViewport()` handler to preserve style overrides.
 
 Please note that if you are not using multi-viewports with multi-monitors using different DPI scales, you can ignore that and use the simpler technique recommended at the top.
-    
+
 On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
 
 - For SDL: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()``.
@@ -569,44 +570,15 @@ io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ### Q: How can I easily use icons in my application?
 The most convenient and practical way is to merge an icon font such as FontAwesome inside your
 main font. Then you can refer to icons within your strings.
-You may want to see `ImFontConfig::GlyphMinAdvanceX` to make your icon look monospace to facilitate alignment.
-(Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file for more details about icons font loading.)
-With some extra effort, you may use colorful icons by registering custom rectangle space inside the font atlas,
-and copying your own graphics data into it. See docs/FONTS.md about using the AddCustomRectFontGlyph API.
+Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file for more details about icons font loading.
 
 ##### [Return to Index](#index)
 
 ---
 
 ### Q: How can I load multiple fonts?
-Use the font atlas to pack them into a single texture:
-(Read the [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) file and the code in ImFontAtlas for more details.)
 
-```cpp
-ImGuiIO& io = ImGui::GetIO();
-ImFont* font0 = io.Fonts->AddFontDefault();
-ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
-io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-// the first loaded font gets used by default
-// use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
-
-// Options
-ImFontConfig config;
-config.OversampleH = 2;
-config.OversampleV = 1;
-config.GlyphOffset.y -= 1.0f;      // Move everything by 1 pixel up
-config.GlyphExtraSpacing.x = 1.0f; // Increase spacing between characters
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
-
-// Combine multiple fonts into one (e.g. for icon fonts)
-static ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
-ImFontConfig config;
-config.MergeMode = true;
-io.Fonts->AddFontDefault();
-io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, nullptr, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
-```
+Use the font atlas to pack them into a single texture. Read [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) for more details.
 
 ##### [Return to Index](#index)
 
@@ -655,7 +627,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors)
-- [Gallery](https://github.com/ocornut/imgui/issues/6478)
+- [Gallery](https://github.com/ocornut/imgui/issues/6897)
 
 ##### [Return to Index](#index)
 
@@ -697,11 +669,11 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 # Q&A: Community
 
 ### Q: How can I help?
-- Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance, or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding, we can hire more people to work on this project.
+- Businesses: please reach out to `omar AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance, or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding, we can hire more people to work on this project.
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.
-You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/6478). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
+You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/6897). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)

@@ -16,11 +16,15 @@
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
+#ifndef IMGUI_DISABLE
 
 struct SDL_Window;
 struct SDL_Renderer;
@@ -31,6 +35,9 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForVulkan(SDL_Window* window);
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForD3D(SDL_Window* window);
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForMetal(SDL_Window* window);
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* renderer);
+IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForOther(SDL_Window* window);
 IMGUI_IMPL_API void     ImGui_ImplSDL3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL3_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event);
+
+#endif // #ifndef IMGUI_DISABLE

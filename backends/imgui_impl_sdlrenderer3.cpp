@@ -14,19 +14,20 @@
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 //  2023-05-30: Initial version.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_sdlrenderer3.h"
-#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
-#include <stddef.h>     // intptr_t
-#else
 #include <stdint.h>     // intptr_t
-#endif
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -253,6 +254,10 @@ void ImGui_ImplSDLRenderer3_DestroyDeviceObjects()
     ImGui_ImplSDLRenderer3_DestroyFontsTexture();
 }
 
+//-----------------------------------------------------------------------------
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

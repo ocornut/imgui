@@ -1,4 +1,4 @@
-// dear imgui, v1.89.7
+// dear imgui, v1.90 WIP
 // (tables and columns code)
 
 /*
@@ -82,7 +82,7 @@ Index of this file:
 //   Y with ScrollX/ScrollY disabled: we output table directly in current window
 //   - outer_size.y  < 0.0f  ->  Bottom-align (but will auto extend, unless _NoHostExtendY is set). Not meaningful if parent window can vertically scroll.
 //   - outer_size.y  = 0.0f  ->  No minimum height (but will auto extend, unless _NoHostExtendY is set)
-//   - outer_size.y  > 0.0f  ->  Set Minimum height (but will auto extend, unless _NoHostExtenY is set)
+//   - outer_size.y  > 0.0f  ->  Set Minimum height (but will auto extend, unless _NoHostExtendY is set)
 //   Y with ScrollX/ScrollY enabled: using a child window for scrolling
 //   - outer_size.y  < 0.0f  ->  Bottom-align. Not meaningful if parent window can vertically scroll.
 //   - outer_size.y  = 0.0f  ->  Bottom-align, consistent with BeginChild(). Not recommended unless table is last item in parent window.
@@ -198,11 +198,7 @@ Index of this file:
 #include "imgui_internal.h"
 
 // System includes
-#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
-#include <stddef.h>     // intptr_t
-#else
 #include <stdint.h>     // intptr_t
-#endif
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -323,9 +319,10 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping criteria may evolve.
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
-    ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
-    ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
-    if (use_child_window && IsClippedEx(outer_rect, 0))
+    const ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
+    const ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
+    const bool outer_window_is_measuring_size = (outer_window->AutoFitFramesX > 0) || (outer_window->AutoFitFramesY > 0); // Doesn't apply to auto-fitting windows!
+    if (use_child_window && IsClippedEx(outer_rect, 0) && !outer_window_is_measuring_size)
     {
         ItemSize(outer_rect);
         return false;
@@ -408,13 +405,17 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         table->InnerRect = table->InnerWindow->InnerRect;
         IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
 
+        // Allow submitting when host is measuring
+        if (table->InnerWindow->SkipItems && outer_window_is_measuring_size)
+            table->InnerWindow->SkipItems = false;
+
         // When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned)
         if (instance_no == 0)
         {
             table->HasScrollbarYPrev = table->HasScrollbarYCurr;
             table->HasScrollbarYCurr = false;
         }
-        table->HasScrollbarYCurr |= (table->InnerWindow->ScrollMax.y > 0.0f);
+        table->HasScrollbarYCurr |= table->InnerWindow->ScrollbarY;
     }
     else
     {
@@ -456,7 +457,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->CellSpacingX1 = inner_spacing_explicit + inner_spacing_for_border;
     table->CellSpacingX2 = inner_spacing_explicit;
     table->CellPaddingX = inner_padding_explicit;
-    table->CellPaddingY = g.Style.CellPadding.y;
 
     const float outer_padding_for_border = (flags & ImGuiTableFlags_BordersOuterV) ? TABLE_BORDER_SIZE : 0.0f;
     const float outer_padding_explicit = pad_outer_x ? g.Style.CellPadding.x : 0.0f;
@@ -473,6 +473,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
+    table->RowCellPaddingY = 0.0f;
     table->FreezeRowsRequest = table->FreezeRowsCount = 0; // This will be setup by TableSetupScrollFreeze(), if any
     table->FreezeColumnsRequest = table->FreezeColumnsCount = 0;
     table->IsUnfrozenRows = true;
@@ -850,8 +851,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
     IM_ASSERT(table->LeftMostEnabledColumn >= 0 && table->RightMostEnabledColumn >= 0);
 
-    // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
-    // to avoid the column fitting having to wait until the first visible frame of the child container (may or not be a good thing).
+    // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
+    // the column fitting having to wait until the first visible frame of the child container (may or not be a good thing). Also see #6510.
     // FIXME-TABLE: for always auto-resizing columns may not want to do that all the time.
     if (has_auto_fit_request && table->OuterWindow != table->InnerWindow)
         table->InnerWindow->SkipItems = false;
@@ -936,7 +937,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->Flags & ImGuiTableColumnFlags_WidthStretch)
         {
             float weight_ratio = column->StretchWeight / stretch_sum_weights;
-            column->WidthRequest = IM_FLOOR(ImMax(width_avail_for_stretched_columns * weight_ratio, table->MinColumnWidth) + 0.01f);
+            column->WidthRequest = IM_TRUNC(ImMax(width_avail_for_stretched_columns * weight_ratio, table->MinColumnWidth) + 0.01f);
             width_remaining_for_stretched_columns -= column->WidthRequest;
         }
 
@@ -946,7 +947,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             column->Flags |= ImGuiTableColumnFlags_NoDirectResize_;
 
         // Assign final width, record width in case we will need to shrink
-        column->WidthGiven = ImFloor(ImMax(column->WidthRequest, table->MinColumnWidth));
+        column->WidthGiven = ImTrunc(ImMax(column->WidthRequest, table->MinColumnWidth));
         table->ColumnsGivenWidth += column->WidthGiven;
     }
 
@@ -971,6 +972,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     //   clear ActiveId, which is equivalent to the change provided by _AllowWhenBLockedByActiveItem).
     // - This allows columns to be marked as hovered when e.g. clicking a button inside the column, or using drag and drop.
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    table_instance->HoveredRowLast = table_instance->HoveredRowNext;
+    table_instance->HoveredRowNext = -1;
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
     const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table_instance->LastOuterHeight));
@@ -982,6 +985,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 6] Setup final position, offset, skip/clip states and clipping rectangles, detect hovered column
     // Process columns in their visible orders as we are comparing the visible order and adjusting host_clip_rect while looping.
     int visible_n = 0;
+    bool has_at_least_one_column_requesting_output = false;
     bool offset_x_frozen = (table->FreezeColumnsCount > 0);
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
@@ -1038,7 +1042,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // - FIXME-TABLE: We want equal width columns to have equal (ClipRect.Max.x - WorkMinX) width, which means ClipRect.max.x cannot stray off host_clip_rect.Max.x else right-most column may appear shorter.
         column->WorkMinX = column->MinX + table->CellPaddingX + table->CellSpacingX1;
         column->WorkMaxX = column->MaxX - table->CellPaddingX - table->CellSpacingX2; // Expected max
-        column->ItemWidth = ImFloor(column->WidthGiven * 0.65f);
+        column->ItemWidth = ImTrunc(column->WidthGiven * 0.65f);
         column->ClipRect.Min.x = column->MinX;
         column->ClipRect.Min.y = work_rect.Min.y;
         column->ClipRect.Max.x = column->MaxX; //column->WorkMaxX;
@@ -1062,9 +1066,12 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
 
         // Mark column as SkipItems (ignoring all items/layout)
+        // (table->HostSkipItems is a copy of inner_window->SkipItems before we cleared it above in Part 2)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
         if (column->IsSkipItems)
             IM_ASSERT(!is_visible);
+        if (column->IsRequestOutput && !column->IsSkipItems)
+            has_at_least_one_column_requesting_output = true;
 
         // Update status flags
         column->Flags |= ImGuiTableColumnFlags_IsEnabled;
@@ -1102,6 +1109,14 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         visible_n++;
     }
 
+    // In case the table is visible (e.g. decorations) but all columns clipped, we keep a column visible.
+    // Else if give no chance to a clipper-savy user to submit rows and therefore total contents height used by scrollbar.
+    if (has_at_least_one_column_requesting_output == false)
+    {
+        table->Columns[table->LeftMostEnabledColumn].IsRequestOutput = true;
+        table->Columns[table->LeftMostEnabledColumn].IsSkipItems = false;
+    }
+
     // [Part 7] Detect/store when we are hovering the unused space after the right-most column (so e.g. context menus can react on it)
     // Clear Resizable flag if none of our column are actually resizable (either via an explicit _NoResize flag, either
     // because of using _WidthAuto/_WidthStretch). This will hide the resizing option from the context menu.
@@ -1125,8 +1140,16 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         table->InnerClipRect.Max.x = ImMin(table->InnerClipRect.Max.x, unused_x1);
     }
     table->InnerWindow->ParentWorkRect = table->WorkRect;
-    table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
-    table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
+    table->BorderX1 = table->InnerClipRect.Min.x + ((table->Flags & ImGuiTableFlags_BordersOuterV) ? 1.0f : 0.0f);
+    table->BorderX2 = table->InnerClipRect.Max.x;
+
+    // Setup window's WorkRect.Max.y for GetContentRegionAvail(). Other values will be updated in each TableBeginCell() call.
+    float window_content_max_y;
+    if (table->Flags & ImGuiTableFlags_NoHostExtendY)
+        window_content_max_y = table->OuterRect.Max.y;
+    else
+        window_content_max_y = ImMax(table->InnerWindow->ContentRegionRect.Max.y, (table->Flags & ImGuiTableFlags_ScrollY) ? 0.0f : table->OuterRect.Max.y);
+    table->InnerWindow->WorkRect.Max.y = ImClamp(window_content_max_y - g.Style.CellPadding.y, table->InnerWindow->WorkRect.Min.y, table->InnerWindow->WorkRect.Max.y);
 
     // [Part 9] Allocate draw channels and setup background cliprect
     TableSetupDrawChannels(table);
@@ -1355,7 +1378,7 @@ void    ImGui::EndTable()
     {
         ImGuiTableColumn* column = &table->Columns[table->ResizedColumn];
         const float new_x2 = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + TABLE_RESIZE_SEPARATOR_HALF_THICKNESS);
-        const float new_width = ImFloor(new_x2 - column->MinX - table->CellSpacingX1 - table->CellPaddingX * 2.0f);
+        const float new_width = ImTrunc(new_x2 - column->MinX - table->CellSpacingX1 - table->CellPaddingX * 2.0f);
         table->ResizedColumnNextWidth = new_width;
     }
 
@@ -1547,6 +1570,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
 // - TableGetCellBgRect() [Internal]
 // - TableGetColumnResizeID() [Internal]
 // - TableGetHoveredColumn() [Internal]
+// - TableGetHoveredRow() [Internal]
 // - TableSetBgColor()
 //-----------------------------------------------------------------------------
 
@@ -1651,6 +1675,19 @@ int ImGui::TableGetHoveredColumn()
     return (int)table->HoveredColumnBody;
 }
 
+// Return -1 when table is not hovered. Return maxrow+1 if in table but below last submitted row.
+// *IMPORTANT* Unlike TableGetHoveredColumn(), this has a one frame latency in updating the value.
+// This difference with is the reason why this is not public yet.
+int ImGui::TableGetHoveredRow()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return -1;
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    return (int)table_instance->HoveredRowLast;
+}
+
 void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n)
 {
     ImGuiContext& g = *GImGui;
@@ -1725,19 +1762,20 @@ void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 
     table->LastRowFlags = table->RowFlags;
     table->RowFlags = row_flags;
+    table->RowCellPaddingY = g.Style.CellPadding.y;
     table->RowMinHeight = row_min_height;
     TableBeginRow(table);
 
     // We honor min_row_height requested by user, but cannot guarantee per-row maximum height,
     // because that would essentially require a unique clipping rectangle per-cell.
-    table->RowPosY2 += table->CellPaddingY * 2.0f;
+    table->RowPosY2 += table->RowCellPaddingY * 2.0f;
     table->RowPosY2 = ImMax(table->RowPosY2, table->RowPosY1 + row_min_height);
 
     // Disable output until user calls TableNextColumn()
     table->InnerWindow->SkipItems = true;
 }
 
-// [Internal] Called by TableNextRow()
+// [Internal] Only called by TableNextRow()
 void ImGui::TableBeginRow(ImGuiTable* table)
 {
     ImGuiWindow* window = table->InnerWindow;
@@ -1758,8 +1796,10 @@ void ImGui::TableBeginRow(ImGuiTable* table)
     table->RowPosY1 = table->RowPosY2 = next_y1;
     table->RowTextBaseline = 0.0f;
     table->RowIndentOffsetX = window->DC.Indent.x - table->HostIndentX; // Lock indent
+
     window->DC.PrevLineTextBaseOffset = 0.0f;
-    window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
+    window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y + table->RowCellPaddingY); // This allows users to call SameLine() to share LineSize between columns.
+    window->DC.PrevLineSize = window->DC.CurrLineSize = ImVec2(0.0f, 0.0f); // This allows users to call SameLine() to share LineSize between columns, and to call it from first column too.
     window->DC.IsSameLine = window->DC.IsSetPos = false;
     window->DC.CursorMaxPos.y = next_y1;
 
@@ -1802,6 +1842,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
     const bool is_visible = (bg_y2 >= table->InnerClipRect.Min.y && bg_y1 <= table->InnerClipRect.Max.y);
     if (is_visible)
     {
+        // Update data for TableGetHoveredRow()
+        if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2)
+            TableGetInstanceData(table, table->InstanceCurrent)->HoveredRowNext = table->CurrentRow;
+
         // Decide of background color for the row
         ImU32 bg_col0 = 0;
         ImU32 bg_col1 = 0;
@@ -1813,15 +1857,14 @@ void ImGui::TableEndRow(ImGuiTable* table)
             bg_col1 = table->RowBgColor[1];
 
         // Decide of top border color
-        ImU32 border_col = 0;
+        ImU32 top_border_col = 0;
         const float border_size = TABLE_BORDER_SIZE;
-        if (table->CurrentRow > 0 || table->InnerWindow == table->OuterWindow)
-            if (table->Flags & ImGuiTableFlags_BordersInnerH)
-                border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
+        if (table->CurrentRow > 0 && (table->Flags & ImGuiTableFlags_BordersInnerH))
+            top_border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
 
         const bool draw_cell_bg_color = table->RowCellDataCurrent >= 0;
         const bool draw_strong_bottom_border = unfreeze_rows_actual;
-        if ((bg_col0 | bg_col1 | border_col) != 0 || draw_strong_bottom_border || draw_cell_bg_color)
+        if ((bg_col0 | bg_col1 | top_border_col) != 0 || draw_strong_bottom_border || draw_cell_bg_color)
         {
             // In theory we could call SetWindowClipRectBeforeSetChannel() but since we know TableEndRow() is
             // always followed by a change of clipping rectangle we perform the smallest overwrite possible here.
@@ -1860,8 +1903,8 @@ void ImGui::TableEndRow(ImGuiTable* table)
         }
 
         // Draw top border
-        if (border_col && bg_y1 >= table->BgClipRect.Min.y && bg_y1 < table->BgClipRect.Max.y)
-            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y1), ImVec2(table->BorderX2, bg_y1), border_col, border_size);
+        if (top_border_col && bg_y1 >= table->BgClipRect.Min.y && bg_y1 < table->BgClipRect.Max.y)
+            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y1), ImVec2(table->BorderX2, bg_y1), top_border_col, border_size);
 
         // Draw bottom border at the row unfreezing mark (always strong)
         if (draw_strong_bottom_border && bg_y2 >= table->BgClipRect.Min.y && bg_y2 < table->BgClipRect.Max.y)
@@ -1989,12 +2032,14 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         start_x += table->RowIndentOffsetX; // ~~ += window.DC.Indent.x - table->HostIndentX, except we locked it for the row.
 
     window->DC.CursorPos.x = start_x;
-    window->DC.CursorPos.y = table->RowPosY1 + table->CellPaddingY;
+    window->DC.CursorPos.y = table->RowPosY1 + table->RowCellPaddingY;
     window->DC.CursorMaxPos.x = window->DC.CursorPos.x;
     window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
+    window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x; // PrevLine.y is preserved. This allows users to call SameLine() to share LineSize between columns.
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
     window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
 
+    // Note how WorkRect.Max.y is only set once during layout
     window->WorkRect.Min.y = window->DC.CursorPos.y;
     window->WorkRect.Min.x = column->WorkMinX;
     window->WorkRect.Max.x = column->WorkMaxX;
@@ -2045,7 +2090,7 @@ void ImGui::TableEndCell(ImGuiTable* table)
         p_max_pos_x = table->IsUnfrozenRows ? &column->ContentMaxXUnfrozen : &column->ContentMaxXFrozen;
     *p_max_pos_x = ImMax(*p_max_pos_x, window->DC.CursorMaxPos.x);
     if (column->IsEnabled)
-        table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->CellPaddingY);
+        table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->RowCellPaddingY);
     column->ItemWidth = window->DC.ItemWidth;
 
     // Propagate text baseline for the entire row
@@ -2552,7 +2597,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     const float border_size = TABLE_BORDER_SIZE;
-    const float draw_y1 = table->InnerRect.Min.y;
+    const float draw_y1 = table->InnerRect.Min.y + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? 1.0f : 0.0f);
     const float draw_y2_body = table->InnerRect.Max.y;
     const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastFirstRowHeight) : draw_y1;
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
@@ -2611,7 +2656,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         const ImU32 outer_col = table->BorderColorStrong;
         if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
         {
-            inner_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, 0, border_size);
+            inner_drawlist->AddRect(outer_border.Min, outer_border.Max + ImVec2(1, 1), outer_col, 0.0f, 0, border_size);
         }
         else if (table->Flags & ImGuiTableFlags_BordersOuterV)
         {
@@ -2626,7 +2671,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     }
     if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
-        // Draw bottom-most row border
+        // Draw bottom-most row border between it is above outer border.
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
             inner_drawlist->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), table->BorderColorLight, border_size);
@@ -2647,8 +2692,9 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
 //-------------------------------------------------------------------------
 
 // Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
-// You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since
-// last call, or the first time.
+// When 'sort_specs->SpecsDirty == true' you should sort your data. It will be true when sorting specs have
+// changed since last call, or the first time. Make sure to set 'SpecsDirty = false' after sorting,
+// else you may wastefully sort your data every frame!
 // Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
 ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 {
@@ -2926,7 +2972,7 @@ void ImGui::TableHeader(const char* label)
     // If we already got a row height, there's use that.
     // FIXME-TABLE: Padding problem if the correct outer-padding CellBgRect strays off our ClipRect?
     ImRect cell_r = TableGetCellBgRect(table, column_n);
-    float label_height = ImMax(label_size.y, table->RowMinHeight - table->CellPaddingY * 2.0f);
+    float label_height = ImMax(label_size.y, table->RowMinHeight - table->RowCellPaddingY * 2.0f);
 
     // Calculate ideal size for sort order arrow
     float w_arrow = 0.0f;
@@ -2935,7 +2981,7 @@ void ImGui::TableHeader(const char* label)
     const float ARROW_SCALE = 0.65f;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
-        w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);
+        w_arrow = ImTrunc(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);
         if (column->SortOrder > 0)
         {
             ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
@@ -3595,6 +3641,11 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     BulletText("CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
     BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
     BulletText("ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
+    for (int n = 0; n < table->InstanceCurrent + 1; n++)
+    {
+        ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
+        BulletText("Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
+    }
     //BulletText("BgDrawChannels: %d/%d", 0, table->BgDrawChannelUnfrozen);
     float sum_weights = 0.0f;
     for (int n = 0; n < table->ColumnsCount; n++)
@@ -3904,7 +3955,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
     // Set state for first column
     // We aim so that the right-most column will have the same clipping width as other after being clipped by parent ClipRect
     const float column_padding = g.Style.ItemSpacing.x;
-    const float half_clip_extend_x = ImFloor(ImMax(window->WindowPadding.x * 0.5f, window->WindowBorderSize));
+    const float half_clip_extend_x = ImTrunc(ImMax(window->WindowPadding.x * 0.5f, window->WindowBorderSize));
     const float max_1 = window->WorkRect.Max.x + column_padding - ImMax(column_padding - window->WindowPadding.x, 0.0f);
     const float max_2 = window->WorkRect.Max.x + half_clip_extend_x;
     columns->OffMinX = window->DC.Indent.x - column_padding + ImMax(column_padding - window->WindowPadding.x, 0.0f);
@@ -3951,8 +4002,9 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
     float width = offset_1 - offset_0;
     PushItemWidth(width * 0.65f);
     window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
-    window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
+    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
+    window->WorkRect.Max.y = window->ContentRegionRect.Max.y;
 }
 
 void ImGui::NextColumn()
@@ -3966,7 +4018,7 @@ void ImGui::NextColumn()
 
     if (columns->Count == 1)
     {
-        window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
+        window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
         IM_ASSERT(columns->Current == 0);
         return;
     }
@@ -3998,7 +4050,7 @@ void ImGui::NextColumn()
         window->DC.IsSameLine = false;
         columns->LineMinY = columns->LineMaxY;
     }
-    window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
+    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->DC.CursorPos.y = columns->LineMinY;
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     window->DC.CurrLineTextBaseOffset = 0.0f;
@@ -4062,7 +4114,7 @@ void ImGui::EndColumns()
 
             // Draw column
             const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
-            const float xi = IM_FLOOR(x);
+            const float xi = IM_TRUNC(x);
             window->DrawList->AddLine(ImVec2(xi, y1 + 1.0f), ImVec2(xi, y2), col);
         }
 
@@ -4083,7 +4135,7 @@ void ImGui::EndColumns()
     window->ParentWorkRect = columns->HostBackupParentWorkRect;
     window->DC.CurrentColumns = NULL;
     window->DC.ColumnsOffset.x = 0.0f;
-    window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
+    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     NavUpdateCurrentWindowIsScrollPushableX();
 }
 

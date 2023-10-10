@@ -8,6 +8,7 @@
 //  [ ] Platform: Clipboard support.
 //  [ ] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [ ] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
+//  [ ] Platform: Multi-viewport support (multiple windows). Not meaningful on Android.
 // Important:
 //  - Consider using SDL or GLFW backend on Android, which will be more full-featured than this.
 //  - FIXME: On-screen keyboard currently needs to be enabled by the application (see examples/ and issue #3446)
@@ -15,8 +16,11 @@
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -27,6 +31,7 @@
 //  2021-03-04: Initial version.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_android.h"
 #include <time.h>
 #include <android/native_window.h>
@@ -294,3 +299,7 @@ void ImGui_ImplAndroid_NewFrame()
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE

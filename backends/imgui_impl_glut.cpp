@@ -7,7 +7,7 @@
 
 // Implemented features:
 //  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
-// Issues:
+// Missing features:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
 //  [ ] Platform: Missing horizontal mouse wheel support.
 //  [ ] Platform: Missing mouse cursor shape/visibility support.
@@ -16,8 +16,11 @@
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -32,6 +35,7 @@
 //  2018-03-22: Added GLUT Platform binding.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_glut.h"
 #define GL_SILENCE_DEPRECATION
 #ifdef __APPLE__
@@ -298,3 +302,7 @@ void ImGui_ImplGLUT_MotionFunc(int x, int y)
     ImGuiIO& io = ImGui::GetIO();
     io.AddMousePosEvent((float)x, (float)y);
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE
