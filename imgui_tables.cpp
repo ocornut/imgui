@@ -1234,7 +1234,7 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         {
             TableSetColumnWidthAutoSingle(table, column_n);
             ClearActiveID();
-            held = hovered = false;
+            held = false;
         }
         if (held)
         {
