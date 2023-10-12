@@ -3166,9 +3166,13 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
     TableNextColumn();
     table->DrawSplitter->SetCurrentChannel(draw_list, TABLE_DRAW_CHANNEL_BG0);
-    PushClipRect(table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
+    float clip_rect_min_x = table->BgClipRect.Min.x;
+    if (table->FreezeColumnsCount > 0)
+        clip_rect_min_x = ImMax(clip_rect_min_x, table->Columns[table->FreezeColumnsCount - 1].MaxX);
     TableSetBgColor(ImGuiTableBgTarget_RowBg0, 0); // Cancel
+    PushClipRect(table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
     draw_list->AddRectFilled(table->BgClipRect.Min, table->BgClipRect.Max, GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
+    PushClipRect(ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
 
     const ImRect row_r(table->WorkRect.Min.x, table->BgClipRect.Min.y, table->WorkRect.Max.x, window->DC.CursorPos.y + row_height);
     const ImGuiID row_id = GetID("##AngledHeaders");
@@ -3229,6 +3233,7 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                 draw_list->AddLine(bg_shape[0], bg_shape[3], TableGetColumnBorderCol(table, order_n, column_n));
             }
         }
+    PopClipRect();
     PopClipRect();
     table->TempData->AngledheadersExtraWidth = ImMax(0.0f, max_x - table->Columns[table->RightMostEnabledColumn].MaxX);
 }
