@@ -87,20 +87,27 @@ Other changes:
   - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
     only different is left position follows indentation level, to match calling a Separator()
     inside or outside Columns().
+- Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
+  to false when popup is closed in ways other than clicking the close button. (#6900)
 - Drag and Drop: Rework drop target highlight: reduce rectangle to its visible portion, and
   then expand slightly. A full rectangle is always visible and it may protrude slightly. (#4281, #3272)
 - Drag and Drop: Fixed submitting a tooltip from drop target location when using AcceptDragDropPayload()
   with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
 - TreeNode: Added ImGuiTreeNodeFlags_SpanAllColumns for use in tables. (#3151, #3565, #2451, #2438)
-- Tables: Fixed an edge-case when no columns are visible + table scrollbar is visible + user
-  code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
-  clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
-- Tables: Request user to submit contents when outer host-window is requesting auto-resize,
-  so a scrolling table can contribute to initial window size. (#6510)
-- Tables: Fixed subtle drawing overlap between borders in some situations.
-- Tables: Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
-- Tables: Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
-  in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
+- Tables:
+  - Added angled headers support. You need to set ImGuiTableColumnFlags_AngledHeader on selected
+    columns and call TableAngledHeadersRow(). Added style.TableAngledHeadersAngle style option.
+  - Added ImGuiTableFlags_HighlightHoveredColumn flag, currently highlighting column header.
+  - Fixed an edge-case when no columns are visible + table scrollbar is visible + user
+    code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
+    clipper it would have asserted. Without a clipper, the scrollbar range would be wrong.
+  - Request user to submit contents when outer host-window is requesting auto-resize,
+    so a scrolling table can contribute to initial window size. (#6510)
+  - Fixed subtle drawing overlap between borders in some situations.
+  - Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
+  - Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
+    in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
+  - fixed right-clicking right-most section (past right-most column) from highlighting a column.
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
 - Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
@@ -116,6 +123,7 @@ Other changes:
   be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
+- BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 - Menus: Fixed a bug where activating an item in a child-menu and dragging mouse over the
   parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
@@ -123,6 +131,8 @@ Other changes:
   register contents size in a way that would affect the scrolling layer.
   Was most often noticable when using an horizontal scrollbar. (#6789)
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
+- IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
+- IO: Add extra keys to ImGuiKey enum: ImGuiKey_AppBack, ImGuiKey_AppForward. (#4921)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
 - Debug Tools: Metrics: Added log of recent alloc/free calls.
 - Debug Tools: Metrics: Added "Show groups rectangles" in tools.
@@ -130,12 +140,16 @@ Other changes:
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
+- Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
+- Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
+- Backends: Win32: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
 - Backends: Win32: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
+- Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 Docking+Viewports Branch:
