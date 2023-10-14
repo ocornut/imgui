@@ -2009,6 +2009,7 @@ ImFontConfig::ImFontConfig()
     OversampleV = 1;
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;
+    RasterizationDensity = 1.0f;
     EllipsisChar = (ImWchar)-1;
 }
 
