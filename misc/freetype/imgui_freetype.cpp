@@ -166,6 +166,8 @@ namespace
         unsigned int    UserFlags;          // = ImFontConfig::RasterizerFlags
         FT_Int32        LoadFlags;
         FT_Render_Mode  RenderMode;
+        float           RasterizationScale;
+        float           InvRasterizationScale;
     };
 
     // From SDL_ttf: Handy routines for converting from fixed point
@@ -208,6 +210,9 @@ namespace
         if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
             LoadFlags |= FT_LOAD_COLOR;
 
+        RasterizationScale = cfg.RasterizationDensity;
+        InvRasterizationScale = 1.0f / RasterizationScale;
+
         memset(&Info, 0, sizeof(Info));
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
@@ -231,19 +236,19 @@ namespace
         FT_Size_RequestRec req;
         req.type = (UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
         req.width = 0;
-        req.height = (uint32_t)pixel_height * 64;
+        req.height = (uint32_t)(pixel_height * 64 * RasterizationScale);
         req.horiResolution = 0;
         req.vertResolution = 0;
         FT_Request_Size(Face, &req);
 
         // Update font info
         FT_Size_Metrics metrics = Face->size->metrics;
-        Info.PixelHeight = (uint32_t)pixel_height;
-        Info.Ascender = (float)FT_CEIL(metrics.ascender);
-        Info.Descender = (float)FT_CEIL(metrics.descender);
-        Info.LineSpacing = (float)FT_CEIL(metrics.height);
-        Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender);
-        Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
+        Info.PixelHeight = (uint32_t)(pixel_height * InvRasterizationScale);
+        Info.Ascender = (float)FT_CEIL(metrics.ascender) * InvRasterizationScale;
+        Info.Descender = (float)FT_CEIL(metrics.descender) * InvRasterizationScale;
+        Info.LineSpacing = (float)FT_CEIL(metrics.height) * InvRasterizationScale;
+        Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * InvRasterizationScale;
+        Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * InvRasterizationScale;
     }
 
     const FT_Glyph_Metrics* FreeTypeFont::LoadGlyph(uint32_t codepoint)
@@ -695,15 +700,15 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             const int ty = pack_rect.y + padding;
 
             // Register glyph
-            float x0 = info.OffsetX + font_off_x;
-            float y0 = info.OffsetY + font_off_y;
-            float x1 = x0 + info.Width;
-            float y1 = y0 + info.Height;
+            float x0 = info.OffsetX * src_tmp.Font.InvRasterizationScale + font_off_x;
+            float y0 = info.OffsetY * src_tmp.Font.InvRasterizationScale + font_off_y;
+            float x1 = x0 + info.Width * src_tmp.Font.InvRasterizationScale;
+            float y1 = y0 + info.Height * src_tmp.Font.InvRasterizationScale;
             float u0 = (tx) / (float)atlas->TexWidth;
             float v0 = (ty) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
-            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
+            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX * src_tmp.Font.InvRasterizationScale);
 
             ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
             IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
