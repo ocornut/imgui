@@ -4001,11 +4001,19 @@ bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flag
 static inline float CalcDelayFromHoveredFlags(ImGuiHoveredFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (flags & ImGuiHoveredFlags_DelayShort)
-        return g.Style.HoverDelayShort;
     if (flags & ImGuiHoveredFlags_DelayNormal)
         return g.Style.HoverDelayNormal;
+    if (flags & ImGuiHoveredFlags_DelayShort)
+        return g.Style.HoverDelayShort;
     return 0.0f;
+}
+
+static ImGuiHoveredFlags ApplyHoverFlagsForTooltip(ImGuiHoveredFlags user_flags, ImGuiHoveredFlags shared_flags)
+{
+    // Allow instance flags to override shared flags
+    if (user_flags & (ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_DelayNormal))
+        shared_flags &= ~(ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_DelayNormal);
+    return user_flags | shared_flags;
 }
 
 // This is roughly matching the behavior of internal-facing ItemHoverable()
@@ -4025,7 +4033,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
             return false;
 
         if (flags & ImGuiHoveredFlags_ForTooltip)
-            flags |= g.Style.HoverFlagsForTooltipNav;
+            flags = ApplyHoverFlagsForTooltip(flags, g.Style.HoverFlagsForTooltipNav);
     }
     else
     {
@@ -4035,7 +4043,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
             return false;
 
         if (flags & ImGuiHoveredFlags_ForTooltip)
-            flags |= g.Style.HoverFlagsForTooltipMouse;
+            flags = ApplyHoverFlagsForTooltip(flags, g.Style.HoverFlagsForTooltipMouse);
 
         IM_ASSERT((flags & (ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_NoPopupHierarchy)) == 0);   // Flags not supported by this function
 
@@ -5423,7 +5431,6 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     // Size
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImTrunc(size_arg);
-    const int auto_fit_axises = ((size.x == 0.0f) ? (1 << ImGuiAxis_X) : 0x00) | ((size.y == 0.0f) ? (1 << ImGuiAxis_Y) : 0x00);
     if (size.x <= 0.0f)
         size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too many issues)
     if (size.y <= 0.0f)
@@ -7371,7 +7378,7 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     // for different windows of the hierarchy. Possibly need a Hash(Current+Flags) ==> (Timer) cache.
     // We can implement this for _Stationary because the data is linked to HoveredWindow rather than CurrentWindow.
     if (flags & ImGuiHoveredFlags_ForTooltip)
-        flags |= g.Style.HoverFlagsForTooltipMouse;
+        flags = ApplyHoverFlagsForTooltip(flags, g.Style.HoverFlagsForTooltipMouse);
     if ((flags & ImGuiHoveredFlags_Stationary) != 0 && g.HoverWindowUnlockedStationaryId != ref_window->ID)
         return false;
 

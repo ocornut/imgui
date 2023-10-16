@@ -70,6 +70,8 @@ Other changes:
 - Tooltips: made using SetItemTooltip()/IsItemHovered(ImGuiHoveredFlags_ForTooltip) defaults to
   activate tooltips on disabled items. This is done by adding ImGuiHoveredFlags_AllowWhenDisabled
   to the default value of style.HoverFlagsForTooltipMouse/HoverFlagsForTooltipNav. (#1485)
+- Tooltips: made is possible to combine ImGuiHoveredFlags_ForTooltip with a ImGuiHoveredFlags_DelayXXX
+  override. (#1485)
 - Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
   Previously was inconsistent and only enabled when stepping through a non-input item.
   (#6802, #3092, #5759, #787)
