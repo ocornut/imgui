@@ -107,6 +107,7 @@ Other changes:
     so a scrolling table can contribute to initial window size. (#6510)
   - Fixed subtle drawing overlap between borders in some situations.
   - Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
+  - Fixed top-most and left-most outer border overlapping inner clip-rect when scrolling. (#6765)
   - Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
     in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
   - Fixed right-clicking right-most section (past right-most column) from highlighting a column.
