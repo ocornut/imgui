@@ -3015,11 +3015,14 @@ void ImGui::TableHeader(const char* label)
     // Calculate ideal size for sort order arrow
     float w_arrow = 0.0f;
     float w_sort_text = 0.0f;
+    bool sort_arrow = false;
     char sort_order_suf[4] = "";
     const float ARROW_SCALE = 0.65f;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
         w_arrow = ImTrunc(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);
+        if (column->SortOrder != -1)
+            sort_arrow = true;
         if (column->SortOrder > 0)
         {
             ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
@@ -3027,9 +3030,9 @@ void ImGui::TableHeader(const char* label)
         }
     }
 
-    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
+    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considered for merging.
     float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
-    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, column->WorkMaxX);
+    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, sort_arrow ? cell_r.Max.x : ImMin(max_pos_x, cell_r.Max.x));
     column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);
 
     // Keep header highlighted when context menu is open.

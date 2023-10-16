@@ -109,7 +109,8 @@ Other changes:
   - Fixed bottom-most and right-most outer border offset by one. (#6765, #3752) [@v-ein]
   - Fixed top-most outer border being drawn with both TableBorderLight and TableBorderStrong
     in some situations, causing the earlier to be visible underneath when alpha is not 1.0f.
-  - fixed right-clicking right-most section (past right-most column) from highlighting a column.
+  - Fixed right-clicking right-most section (past right-most column) from highlighting a column.
+  - Fixed an issue with ScrollX enabled where an extraneous draw command would be created.
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
 - Fonts: 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
