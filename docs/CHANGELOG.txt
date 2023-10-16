@@ -157,6 +157,14 @@ Docking+Viewports Branch:
 - Viewports: Fixed window inner clipping rectangle off by one when window is located on a monitor
   with negative coordinates. While it is expected that other small issues with arise from this
   situation, at the moment we are fixing the most noticeable one. (#6861, #2884) [@Vuhdo, @alektron]
+- Docking: revised undocking to reduce accidental whole-node undocking:
+  - cannot undock a whole node by dragging from empty space in tab-bar.
+  - can undock whole node by dragging from window/collapse menu button.
+  - can undock single window by dragging from its tab.
+  - can still move (but not undock) whole node or whole hierarchy when node is part of a
+    floating hierarchy.
+  - added tooltip when hovering the collapse/window menu button, to faciliate understanding
+    that whole dock node may be undocked or grabbed from here.
 - Docking: Fixed an issue leading to incorrect restoration of selected tab in dock nodes that
   don't carry the currently focused window. (#2304)
 - Docking: added ImGuiDockNodeFlags_NoUndocking. (#2999, #6823, #6780, #3492)
