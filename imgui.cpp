@@ -16746,6 +16746,8 @@ bool ImGui::DockNodeBeginAmendTabBar(ImGuiDockNode* node)
         return false;
     if (node->MergedFlags & ImGuiDockNodeFlags_KeepAliveOnly)
         return false;
+    if (node->TabBar->ID == 0)
+        return false;
     Begin(node->HostWindow->Name);
     PushOverrideID(node->ID);
     bool ret = BeginTabBarEx(node->TabBar, node->TabBar->BarRect, node->TabBar->Flags);
