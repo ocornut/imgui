@@ -2346,9 +2346,9 @@ struct ImGuiStorage
     {
         ImGuiID key;
         union { int val_i; float val_f; void* val_p; };
-        ImGuiStoragePair(ImGuiID _key, int _val_i)      { key = _key; val_i = _val_i; }
-        ImGuiStoragePair(ImGuiID _key, float _val_f)    { key = _key; val_f = _val_f; }
-        ImGuiStoragePair(ImGuiID _key, void* _val_p)    { key = _key; val_p = _val_p; }
+        ImGuiStoragePair(ImGuiID _key, int _val)    { key = _key; val_i = _val; }
+        ImGuiStoragePair(ImGuiID _key, float _val)  { key = _key; val_f = _val; }
+        ImGuiStoragePair(ImGuiID _key, void* _val)  { key = _key; val_p = _val; }
     };
 
     ImVector<ImGuiStoragePair>      Data;
@@ -2375,11 +2375,10 @@ struct ImGuiStorage
     IMGUI_API float*    GetFloatRef(ImGuiID key, float default_val = 0.0f);
     IMGUI_API void**    GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
 
-    // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
-    IMGUI_API void      SetAllInt(int val);
-
-    // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
+    // Advanced: for quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
     IMGUI_API void      BuildSortByKey();
+    // Obsolete: use on your own storage if you know only integer are being stored (open/close all tree nodes)
+    IMGUI_API void      SetAllInt(int val);
 };
 
 // Helper: Manually clip large list of items.

@@ -2479,11 +2479,9 @@ void ImGuiStorage::SetInt(ImGuiID key, int val)
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-    {
         Data.insert(it, ImGuiStoragePair(key, val));
-        return;
-    }
-    it->val_i = val;
+    else
+        it->val_i = val;
 }
 
 void ImGuiStorage::SetBool(ImGuiID key, bool val)
@@ -2495,22 +2493,18 @@ void ImGuiStorage::SetFloat(ImGuiID key, float val)
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-    {
         Data.insert(it, ImGuiStoragePair(key, val));
-        return;
-    }
-    it->val_f = val;
+    else
+        it->val_f = val;
 }
 
 void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val)
 {
     ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-    {
         Data.insert(it, ImGuiStoragePair(key, val));
-        return;
-    }
-    it->val_p = val;
+    else
+        it->val_p = val;
 }
 
 void ImGuiStorage::SetAllInt(int v)
@@ -5420,11 +5414,22 @@ ImVec2 ImGui::GetItemRectSize()
     return g.LastItemData.Rect.GetSize();
 }
 
+bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return BeginChildEx(str_id, window->GetID(str_id), size_arg, border, extra_flags);
+}
+
+bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
+{
+    IM_ASSERT(id != 0);
+    return BeginChildEx(NULL, id, size_arg, border, extra_flags);
+}
+
 bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
-
     flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_ChildWindow;
     flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove);  // Inherit the NoMove flag
 
@@ -5471,18 +5476,6 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
         g.ActiveIdSource = g.NavInputSource;
     }
     return ret;
-}
-
-bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    return BeginChildEx(str_id, window->GetID(str_id), size_arg, border, extra_flags);
-}
-
-bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
-{
-    IM_ASSERT(id != 0);
-    return BeginChildEx(NULL, id, size_arg, border, extra_flags);
 }
 
 void ImGui::EndChild()
