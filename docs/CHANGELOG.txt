@@ -62,6 +62,8 @@ Other changes:
 - Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
   It is possible that some prior manual use of ImFontConfig::GlyphOffset may become
   duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
+- TreeNode: Added ImGuiTreeNodeFlags_SpanTextWidth to make hitbox and highlight only
+  cover the label. (#6937) [@dimateos]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: OpenGL: Detect ES3 contexts on desktop based on version string,
