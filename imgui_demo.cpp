@@ -2779,6 +2779,23 @@ static void ShowDemoWindowLayout()
             ImGui::EndChild();
         }
 
+        // Child 4: auto-resizing height with a limit
+        ImGui::SeparatorText("Auto-resize with constraints");
+        {
+            static int draw_lines = 3;
+            static int max_height_in_lines = 10;
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::DragInt("Lines Count", &draw_lines, 0.2f);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::DragInt("Max Height (in Lines)", &max_height_in_lines, 0.2f);
+
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 1), ImVec2(FLT_MAX, ImGui::GetTextLineHeightWithSpacing() * max_height_in_lines));
+            if (ImGui::BeginChild("ConstrainedChild", ImVec2(-FLT_MIN, 0.0f), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY))
+                for (int n = 0; n < draw_lines; n++)
+                    ImGui::Text("Line %04d", n);
+            ImGui::EndChild();
+        }
+
         ImGui::SeparatorText("Misc/Advanced");
 
         // Demonstrate a few extra things
@@ -6605,6 +6622,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "Left-click on color square to open color picker,\n"
                 "Right-click to open edit options menu.");
 
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10), ImVec2(FLT_MAX, FLT_MAX));
             ImGui::BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Border, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
             ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
             for (int i = 0; i < ImGuiCol_COUNT; i++)

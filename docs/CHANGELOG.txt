@@ -94,6 +94,21 @@ Other changes:
     child windows from the bottom/right border (toward layout direction). Resized child windows
     settings are saved and persistent in .ini file. (#1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+  - BeginChild(): Added ImGuiChildFlags_AutoResizeX and ImGuiChildFlags_AutoResizeY to auto-resize
+    on one axis, while generally providing a size on the other axis. (#1666, #1395, #1496, #1710)
+    e.g. BeginChild("name", {-FLT_MIN, 0.0f}, ImGuiChildFlags_AutoResizeY);
+    - Size is only reevaluated if the child window is within visible boundaries or just appearing.
+      This allows coarse clipping to be performed and auto-resizing childs to return false when
+      hidden because of being scrolled out.
+    - Combining this with also specifying ImGuiChildFlags_AlwaysAutoResize disables
+      this optimization, meaning child contents will never be clipped (not recommended).
+    - Please be considerate that child are full windows and carry significiant overhead:
+      combining auto-resizing for both axises to create a non-scrolling child to merely draw
+      a border would be better more optimally using BeginGroup().
+      (until we come up with new helpers for framed groups and work-rect adjustments).
+  - BeginChild(): made it possible to use SetNextWindowSizeConstraints() rectangle, often
+    useful when ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY. (#1666, #1395, #1496)
+    Custom constraint callback are not supported with child window.
   - BeginChild(): Added ImGuiChildFlags_FrameStyle as a replacement for BeginChildFrame(),
     use it to make child window use FrameBg, FrameRounding, FrameBorderSize, FramePadding
     instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
@@ -192,6 +207,7 @@ Other changes:
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
+- Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)

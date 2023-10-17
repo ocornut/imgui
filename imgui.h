@@ -338,7 +338,12 @@ namespace ImGui
 
     // Child Windows
     // - Use child windows to begin into a self-contained independent scrolling/clipping regions within a host window. Child windows can embed their own child.
-    // - For each independent axis of 'size': ==0.0f: use remaining host window size / >0.0f: fixed size / <0.0f: use remaining window size minus abs(size) / Each axis can use a different mode, e.g. ImVec2(0,400).
+    // - Manual sizing (each axis can use a different setting e.g. ImVec2(0.0f, 400.0f)):
+    //     == 0.0f: use remaining parent window size for this axis.
+    //      > 0.0f: use specified size for this axis.
+    //      < 0.0f: right/bottom-align to specified distance from available content boundaries.
+    // - Specifying ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY makes the sizing automatic based on child contents.
+    //   Combining both ImGuiChildFlags_AutoResizeX _and_ ImGuiChildFlags_AutoResizeY defeats purpose of a scrolling region and is NOT recommended.
     // - BeginChild() returns false to indicate the window is collapsed or fully clipped, so you may early out and omit submitting
     //   anything to the window. Always call a matching EndChild() for each BeginChild() call, regardless of its return value.
     //   [Important: due to legacy reason, Begin/End and BeginChild/EndChild are inconsistent with all other functions
@@ -1015,6 +1020,13 @@ enum ImGuiWindowFlags_
 
 // Flags for ImGui::BeginChild()
 // (Legacy: bit 0 must always correspond to ImGuiChildFlags_Border to be backward compatible with old API using 'bool border'.
+// About using AutoResizeX/AutoResizeY flags:
+// - May be combined with SetNextWindowSizeConstraints() to set a min/max size for each axis (see "Demo->Child->Auto-resize with Constraints").
+// - Size measurement for a given axis is only performed when the child window is within visible boundaries, or is just appearing.
+//   - This allows BeginChild() to return false when not within boundaries (e.g. when scrolling), which is more optimal. BUT it won't update its auto-size while clipped.
+//     While not perfect, it is a better default behavior as the always-on performance gain is more valuable than the occasional "resizing after becoming visible again" glitch.
+//   - You may also use ImGuiChildFlags_AlwaysAutoResize to force an update even when child window is not in view.
+//     HOWEVER PLEASE UNDERSTAND THAT DOING SO WILL PREVENT BeginChild() FROM EVER RETURNING FALSE, disabling benefits of coarse clipping.
 enum ImGuiChildFlags_
 {
     ImGuiChildFlags_None                    = 0,
@@ -1022,6 +1034,9 @@ enum ImGuiChildFlags_
     ImGuiChildFlags_AlwaysUseWindowPadding  = 1 << 1,   // Pad with style.WindowPadding even if no border are drawn (no padding by default for non-bordered child windows because it makes more sense)
     ImGuiChildFlags_ResizeX                 = 1 << 2,   // Allow resize from right border (layout direction). Enable .ini saving (unless ImGuiWindowFlags_NoSavedSettings passed to window flags)
     ImGuiChildFlags_ResizeY                 = 1 << 3,   // Allow resize from bottom border (layout direction). "
+    ImGuiChildFlags_AutoResizeX             = 1 << 4,   // Enable auto-resizing width. Read "IMPORTANT: Size measurement" details above.
+    ImGuiChildFlags_AutoResizeY             = 1 << 5,   // Enable auto-resizing height. Read "IMPORTANT: Size measurement" details above.
+    ImGuiChildFlags_AlwaysAutoResize        = 1 << 6,   // Combined with AutoResizeX/AutoResizeY. Always measure size even when child is hidden, always return true, always disable clipping optimization! NOT RECOMMENDED.
     ImGuiChildFlags_FrameStyle              = 1 << 7,   // Style the child window like a framed item: use FrameBg, FrameRounding, FrameBorderSize, FramePadding instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
 };
 

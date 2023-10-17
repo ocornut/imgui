@@ -5444,19 +5444,29 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     IM_ASSERT(id != 0);
 
     // Sanity check as it is likely that some user will accidentally pass ImGuiWindowFlags into the ImGuiChildFlags argument.
-    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_FrameStyle;
+    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_FrameStyle;
     IM_UNUSED(ImGuiChildFlags_SupportedMask_);
     IM_ASSERT((child_flags & ~ImGuiChildFlags_SupportedMask_) == 0 && "Illegal ImGuiChildFlags value. Did you pass ImGuiWindowFlags values instead of ImGuiChildFlags?");
-    if (window_flags & ImGuiWindowFlags_AlwaysAutoResize)
-        IM_ASSERT((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0 && "Cannot combine ImGuiChildFlags_ResizeX/ImGuiChildFlags_ResizeY with ImGuiWindowFlags_AlwaysAutoResize.");
+    IM_ASSERT((window_flags & ImGuiWindowFlags_AlwaysAutoResize) == 0 && "Cannot specify ImGuiWindowFlags_AlwaysAutoResize for BeginChild(). Use ImGuiChildFlags_AlwaysAutoResize!");
+    if (child_flags & ImGuiChildFlags_AlwaysAutoResize)
+    {
+        IM_ASSERT((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0 && "Cannot use ImGuiChildFlags_ResizeX or ImGuiChildFlags_ResizeY with ImGuiChildFlags_AlwaysAutoResize!");
+        IM_ASSERT((child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0 && "Must use ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY with ImGuiChildFlags_AlwaysAutoResize!");
+    }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding)
         child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
 #endif
+    if (child_flags & ImGuiChildFlags_AutoResizeX)
+        child_flags &= ~ImGuiChildFlags_ResizeX;
+    if (child_flags & ImGuiChildFlags_AutoResizeY)
+        child_flags &= ~ImGuiChildFlags_ResizeY;
 
+    // Set window flags
     window_flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar;
     window_flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove); // Inherit the NoMove flag
-
+    if (child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize))
+        window_flags |= ImGuiWindowFlags_AlwaysAutoResize;
     if ((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
         window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
 
@@ -5478,12 +5488,9 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     // Forward size
     // Important: Begin() has special processing to switch condition to ImGuiCond_FirstUseEver for a given axis when ImGuiChildFlags_ResizeXXX is set.
     // (the alternative would to store conditional flags per axis, which is possible but more code)
-    const ImVec2 content_avail = GetContentRegionAvail();
-    ImVec2 size = ImTrunc(size_arg);
-    if (size.x <= 0.0f)
-        size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too many issues)
-    if (size.y <= 0.0f)
-        size.y = ImMax(content_avail.y + size.y, 4.0f);
+    const ImVec2 size_avail = GetContentRegionAvail();
+    const ImVec2 size_default((child_flags & ImGuiChildFlags_AutoResizeX) ? 0.0f : size_avail.x, (child_flags & ImGuiChildFlags_AutoResizeY) ? 0.0f : size_avail.y);
+    const ImVec2 size = CalcItemSize(size_arg, size_default.x, size_default.y);
     SetNextWindowSize(size);
 
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
@@ -7010,7 +7017,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             const bool nav_request = (flags & ImGuiWindowFlags_NavFlattened) && (g.NavAnyRequest && g.NavWindow && g.NavWindow->RootWindowForNav == window->RootWindowForNav);
             if (!g.LogEnabled && !nav_request)
                 if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
-                    window->HiddenFramesCanSkipItems = 1;
+                {
+                    if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
+                        window->HiddenFramesCannotSkipItems = 1;
+                    else
+                        window->HiddenFramesCanSkipItems = 1;
+                }
 
             // Hide along with parent or if parent is collapsed
             if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
@@ -7591,10 +7603,14 @@ void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     IM_ASSERT(cond == 0 || ImIsPowerOfTwo(cond)); // Make sure the user doesn't attempt to combine multiple condition flags.
     window->SetWindowSizeAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
 
+    // Enable auto-fit (not done in BeginChild() path unless appearing or combined with ImGuiChildFlags_AlwaysAutoResize)
+    if ((window->Flags & ImGuiWindowFlags_ChildWindow) == 0 || window->Appearing || (window->ChildFlags & ImGuiChildFlags_AlwaysAutoResize) != 0)
+        window->AutoFitFramesX = (size.x <= 0.0f) ? 2 : 0;
+    if ((window->Flags & ImGuiWindowFlags_ChildWindow) == 0 || window->Appearing || (window->ChildFlags & ImGuiChildFlags_AlwaysAutoResize) != 0)
+        window->AutoFitFramesY = (size.y <= 0.0f) ? 2 : 0;
+
     // Set
     ImVec2 old_size = window->SizeFull;
-    window->AutoFitFramesX = (size.x <= 0.0f) ? 2 : 0;
-    window->AutoFitFramesY = (size.y <= 0.0f) ? 2 : 0;
     if (size.x <= 0.0f)
         window->AutoFitOnlyGrows = false;
     else
