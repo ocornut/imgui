@@ -888,7 +888,14 @@ static void ShowDemoWindowWidgets()
                 if (i == 0)
                     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
-                if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
+                bool node_open = ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i);
+
+                // Item 2 has an additional inline button
+                if (i == 2) {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("button")) {}
+                }
+                if (node_open)
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
@@ -945,6 +952,11 @@ static void ShowDemoWindowWidgets()
                         ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
+                    }
+                    // Item 2 has an additional inline button
+                    if (i == 2) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("button")) {}
                     }
                     if (node_open)
                     {
