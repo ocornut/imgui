@@ -73,6 +73,7 @@ Other changes:
 - Windows:
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
+  - Can also auto-resize by double-clicking lower-left resize grip (not only lower-right one).
 - Separators:
   - Altered end-points to use more standard boundaries. (#205, #4787, #1643)
     Left position is always current cursor X position.
