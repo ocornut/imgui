@@ -42,6 +42,16 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - BeginChild(): Upgraded 'bool border = false' parameter to 'ImGuiChildFlags flags'.
+   Added ImGuiChildFlags_Border value. As with our prior "bool-to-flags" API updates,
+   the ImGuiChildFlags_Border value is guaranteed to be == true forever to ensure a
+   smoother transition, meaning all existing calls will still work.
+   If you want to neatly transition your call sites:
+      Before:  BeginChild("Name", size, true)
+      After:   BeginChild("Name", size, ImGuiChildFlags_Border)
+      Before:  BeginChild("Name", size, false)
+      After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
+   Kept inline redirection function with strongly typed bool versions (will obsolete).
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
@@ -68,6 +78,7 @@ Breaking changes:
 Other changes:
 
 - Windows:
+  - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
   - BeginChild(): Internal name used by child windows now omits the hash/id if the child
     window is submitted in root of id stack of parent window. Makes debugging/metrics easier
     and shorter to read in many cases.
