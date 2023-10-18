@@ -1059,7 +1059,7 @@ enum ImGuiTreeNodeFlags_
     ImGuiTreeNodeFlags_SpanFullWidth        = 1 << 12,  // Extend hit box to the left-most and right-most edges (bypass the indented area).
     ImGuiTreeNodeFlags_SpanAllColumns       = 1 << 13,  // Frame will span all columns of its container table (text will still fit in current column)
     ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 14,  // (WIP) Nav: left direction may move to this TreeNode() from any of its child (items submitted between TreeNode and TreePop)
-    ImGuiTreeNodeFlags_SpanOnlyText         = 1 << 15,  // Hovering highlight will only cover the label text and reduces the hitbox to wrap the text tighter (0.5f style.ItemSpacing.x instead of regular 2.0f). Does nothing when the following flags are set: ImGuiTreeNodeFlags_Framed, ImGuiTreeNodeFlags_SpanAvailWidth, ImGuiTreeNodeFlags_SpanFullWidth, ImGuiTreeNodeFlags_SpanAllColumns.
+    ImGuiTreeNodeFlags_SpanOnlyText         = 1 << 15,  // Hovering highlight will only cover the label text and reduces the hitbox to wrap the text tighter (0.5f style.ItemSpacing.x instead of regular 2.0f). Does nothing when any of the following flags is set: ImGuiTreeNodeFlags_Framed, ImGuiTreeNodeFlags_SpanAvailWidth, ImGuiTreeNodeFlags_SpanFullWidth, ImGuiTreeNodeFlags_SpanAllColumns.
     //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 16,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog,
 
