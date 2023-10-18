@@ -51,7 +51,14 @@ Breaking changes:
       After:   BeginChild("Name", size, ImGuiChildFlags_Border)
       Before:  BeginChild("Name", size, false)
       After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
-   Kept inline redirection function with strongly typed bool versions (will obsolete).
+   Kept inline redirection function (will obsolete later) so existing code will work.
+ - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
+   the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
+   for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
+   child-flags we are moving it there. (#462)
+      Before:  BeginChild("Name", size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding);
+      After:   BeginChild("Name", size, ImGuiChildFlags_AlwaysUseWindowPadding, 0);
+   Kept inline redirection enum (will obsolete later) so existing code will work.
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
