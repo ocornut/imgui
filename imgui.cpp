@@ -5249,7 +5249,7 @@ static void FindHoveredWindow()
             continue;
 
         // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
-        ImVec2 hit_padding = (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)) ? padding_regular : padding_for_resize;
+        ImVec2 hit_padding = (window->Flags & (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)) ? padding_regular : padding_for_resize;
         if (!window->OuterRectClipped.ContainsWithPad(g.IO.MousePos, hit_padding))
             continue;
 
@@ -5442,22 +5442,29 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     IM_ASSERT(id != 0);
 
     // Sanity check as it is likely that some user will accidentally pass ImGuiWindowFlags into the ImGuiChildFlags argument.
-    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding;
+    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY;
     IM_UNUSED(ImGuiChildFlags_SupportedMask_);
     IM_ASSERT((child_flags & ~ImGuiChildFlags_SupportedMask_) == 0 && "Illegal ImGuiChildFlags value. Did you pass ImGuiWindowFlags values instead of ImGuiChildFlags?");
+    if (window_flags & ImGuiWindowFlags_AlwaysAutoResize)
+        IM_ASSERT((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0 && "Cannot combine ImGuiChildFlags_ResizeX/ImGuiChildFlags_ResizeY with ImGuiWindowFlags_AlwaysAutoResize.");
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding)
         child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
 #endif
 
-    window_flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+    window_flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar;
     window_flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove); // Inherit the NoMove flag
+
+    if ((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
+        window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
 
     // Forward child flags
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
     g.NextWindowData.ChildFlags = child_flags;
 
     // Forward size
+    // Important: Begin() has special processing to switch condition to ImGuiCond_FirstUseEver for a given axis when ImGuiChildFlags_ResizeXXX is set.
+    // (the alternative would to store conditional flags per axis, which is possible but more code)
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImTrunc(size_arg);
     if (size.x <= 0.0f)
@@ -5679,7 +5686,8 @@ static inline ImVec2 CalcWindowMinSize(ImGuiWindow* window)
     ImVec2 size_min;
     if (window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_ChildWindow))
     {
-        size_min = ImVec2(4.0f, 4.0f);
+        size_min.x = (window->ChildFlags & ImGuiChildFlags_ResizeX) ? g.Style.WindowMinSize.x : 4.0f;
+        size_min.y = (window->ChildFlags & ImGuiChildFlags_ResizeY) ? g.Style.WindowMinSize.y : 4.0f;
     }
     else
     {
@@ -5939,7 +5947,11 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             resize_grip_col[resize_grip_n] = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
     }
 
-    const int resize_border_mask = g.IO.ConfigWindowsResizeFromEdges ? 0x0F : 0x00;
+    int resize_border_mask = 0x00;
+    if (window->Flags & ImGuiWindowFlags_ChildWindow)
+        resize_border_mask |= ((window->ChildFlags & ImGuiChildFlags_ResizeX) ? 0x02 : 0) | ((window->ChildFlags & ImGuiChildFlags_ResizeY) ? 0x08 : 0);
+    else
+        resize_border_mask = g.IO.ConfigWindowsResizeFromEdges ? 0x0F : 0x00;
     for (int border_n = 0; border_n < 4; border_n++)
     {
         if ((resize_border_mask & (1 << border_n)) == 0)
@@ -5976,6 +5988,8 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             ImVec2 border_target = window->Pos;
             border_target[axis] = g.IO.MousePos[axis] - g.ActiveIdClickOffset[axis] + WINDOWS_HOVER_PADDING;
             border_target = ImClamp(border_target, clamp_min, clamp_max);
+            if (window->Flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
+                border_target = ImClamp(border_target, window->ParentWindow->InnerClipRect.Min, window->ParentWindow->InnerClipRect.Max);
             CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
         }
         if (hovered)
@@ -6423,6 +6437,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
         window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
+        if ((window->ChildFlags & ImGuiChildFlags_ResizeX) && (window->SetWindowSizeAllowFlags & ImGuiCond_FirstUseEver) == 0) // Axis-specific conditions for BeginChild()
+            g.NextWindowData.SizeVal.x = window->SizeFull.x;
+        if ((window->ChildFlags & ImGuiChildFlags_ResizeY) && (window->SetWindowSizeAllowFlags & ImGuiCond_FirstUseEver) == 0)
+            g.NextWindowData.SizeVal.y = window->SizeFull.y;
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
     }
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasScroll)
@@ -6680,7 +6698,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_hovered = -1, border_held = -1;
         ImU32 resize_grip_col[4] = {};
-        const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
+        const int resize_grip_count = (window->Flags & ImGuiWindowFlags_ChildWindow) ? 0 : g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
         const float resize_grip_draw_size = IM_TRUNC(ImMax(g.FontSize * 1.10f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (!window->Collapsed)
             if (int auto_fit_mask = UpdateWindowManualResize(window, size_auto_fit, &border_hovered, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
@@ -13327,6 +13345,7 @@ static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
     if (sscanf(line, "Pos=%i,%i", &x, &y) == 2)         { settings->Pos = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "Size=%i,%i", &x, &y) == 2)   { settings->Size = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "Collapsed=%d", &i) == 1)     { settings->Collapsed = (i != 0); }
+    else if (sscanf(line, "IsChild=%d", &i) == 1)       { settings->IsChild = (i != 0); }
 }
 
 // Apply to existing windows (if any)
@@ -13361,7 +13380,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         IM_ASSERT(settings->ID == window->ID);
         settings->Pos = ImVec2ih(window->Pos);
         settings->Size = ImVec2ih(window->SizeFull);
-
+        settings->IsChild = (window->Flags & ImGuiWindowFlags_ChildWindow) != 0;
         settings->Collapsed = window->Collapsed;
         settings->WantDelete = false;
     }
@@ -13374,10 +13393,18 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
             continue;
         const char* settings_name = settings->GetName();
         buf->appendf("[%s][%s]\n", handler->TypeName, settings_name);
-        buf->appendf("Pos=%d,%d\n", settings->Pos.x, settings->Pos.y);
-        buf->appendf("Size=%d,%d\n", settings->Size.x, settings->Size.y);
-        if (settings->Collapsed)
-            buf->appendf("Collapsed=1\n");
+        if (settings->IsChild)
+        {
+            buf->appendf("IsChild=1\n");
+            buf->appendf("Size=%d,%d\n", settings->Size.x, settings->Size.y);
+        }
+        else
+        {
+            buf->appendf("Pos=%d,%d\n", settings->Pos.x, settings->Pos.y);
+            buf->appendf("Size=%d,%d\n", settings->Size.x, settings->Size.y);
+            if (settings->Collapsed)
+                buf->appendf("Collapsed=1\n");
+        }
         buf->append("\n");
     }
 }

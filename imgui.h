@@ -1022,6 +1022,8 @@ enum ImGuiChildFlags_
     ImGuiChildFlags_None                    = 0,
     ImGuiChildFlags_Border                  = 1 << 0,   // Show an outer border and enable WindowPadding. (Important: this is always == 1 for legacy reason)
     ImGuiChildFlags_AlwaysUseWindowPadding  = 1 << 1,   // Pad with style.WindowPadding even if no border are drawn (no padding by default for non-bordered child windows because it makes more sense)
+    ImGuiChildFlags_ResizeX                 = 1 << 2,   // Allow resize from right border (layout direction). Enable .ini saving (unless ImGuiWindowFlags_NoSavedSettings passed to window flags)
+    ImGuiChildFlags_ResizeY                 = 1 << 3,   // Allow resize from bottom border (layout direction). "
 };
 
 // Flags for ImGui::InputText()

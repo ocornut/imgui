@@ -1712,6 +1712,7 @@ struct ImGuiWindowSettings
     ImVec2ih    Pos;
     ImVec2ih    Size;
     bool        Collapsed;
+    bool        IsChild;
     bool        WantApply;      // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
     bool        WantDelete;     // Set to invalidate/delete the settings entry
 

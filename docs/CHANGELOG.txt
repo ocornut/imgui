@@ -85,6 +85,9 @@ Breaking changes:
 Other changes:
 
 - Windows:
+  - BeginChild(): Added ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY to allow resizing
+    child windows from the bottom/right border (toward layout direction). Resized child windows
+    settings are saved and persistent in .ini file. (#1666, #1496, #1395, #1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
   - BeginChild(): Internal name used by child windows now omits the hash/id if the child
     window is submitted in root of id stack of parent window. Makes debugging/metrics easier

@@ -2764,6 +2764,18 @@ static void ShowDemoWindowLayout()
             ImGui::PopStyleVar();
         }
 
+        // Child 3: manual-resize
+        ImGui::SeparatorText("Manual-resize");
+        {
+            HelpMarker("Drag bottom border to resize. Double-click bottom border to auto-fit to vertical contents.");
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+            ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
+            ImGui::PopStyleColor();
+            for (int n = 0; n < 10; n++)
+                ImGui::Text("Line %04d", n);
+            ImGui::EndChild();
+        }
+
         ImGui::SeparatorText("Misc/Advanced");
 
         // Demonstrate a few extra things
@@ -2775,13 +2787,22 @@ static void ShowDemoWindowLayout()
         //   the POV of the parent window). See 'Demo->Querying Status (Edited/Active/Hovered etc.)' for details.
         {
             static int offset_x = 0;
+            static bool override_bg_color = true;
+            static ImGuiChildFlags child_flags = ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY;
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
             ImGui::DragInt("Offset X", &offset_x, 1.0f, -1000, 1000);
+            ImGui::Checkbox("Override ChildBg color", &override_bg_color);
+            ImGui::CheckboxFlags("ImGuiChildFlags_Border", &child_flags, ImGuiChildFlags_Border);
+            ImGui::CheckboxFlags("ImGuiChildFlags_AlwaysUseWindowPadding", &child_flags, ImGuiChildFlags_AlwaysUseWindowPadding);
+            ImGui::CheckboxFlags("ImGuiChildFlags_ResizeX", &child_flags, ImGuiChildFlags_ResizeX);
+            ImGui::CheckboxFlags("ImGuiChildFlags_ResizeY", &child_flags, ImGuiChildFlags_ResizeY);
 
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
-            ImGui::BeginChild("Red", ImVec2(200, 100), ImGuiChildFlags_Border, ImGuiWindowFlags_None);
-            ImGui::PopStyleColor();
+            if (override_bg_color)
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
+            ImGui::BeginChild("Red", ImVec2(200, 100), child_flags, ImGuiWindowFlags_None);
+            if (override_bg_color)
+                ImGui::PopStyleColor();
 
             for (int n = 0; n < 50; n++)
                 ImGui::Text("Some test %d", n);
