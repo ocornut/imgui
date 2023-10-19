@@ -600,6 +600,31 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
 
     VkResult err;
 
+    if (bd->FontDescriptorSet) {
+        err = vkFreeDescriptorSets(v->Device, v->DescriptorPool, 1, &bd->FontDescriptorSet);
+        check_vk_result(err);
+        bd->FontDescriptorSet = VK_NULL_HANDLE;
+    }
+
+    // clean up before reallocating to avoid a resource leak
+    if (bd->FontView)
+    {
+        vkDestroyImageView(v->Device, bd->FontView, v->Allocator);
+        bd->FontView = VK_NULL_HANDLE;
+    }
+    if (bd->FontImage)
+    {
+        vkDestroyImage(v->Device, bd->FontImage, v->Allocator);
+        bd->FontImage = VK_NULL_HANDLE;
+        }
+    if (bd->FontMemory)
+    {
+        vkFreeMemory(v->Device, bd->FontMemory, v->Allocator);
+        bd->FontMemory = VK_NULL_HANDLE;
+    }
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+
     // Create the Image:
     {
         VkImageCreateInfo info = {};
