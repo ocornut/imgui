@@ -1098,9 +1098,9 @@ static void             UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt);
 
 // Misc
 static void             UpdateSettings();
-static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
-static void             RenderWindowOuterBorders(ImGuiWindow* window);
-static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
+static int              UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
+static void             RenderWindowOuterBorders(ImGuiWindow* window, int border_hovered, int border_held);
+static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size, int border_hovered, int border_held);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
 static void             RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col);
 static void             RenderDimmedBackgrounds();
@@ -5838,7 +5838,7 @@ ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir)
 
 // Handle resize for: Resize Grips, Borders, Gamepad
 // Return true when using auto-fit (double-click on resize grip)
-static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
+static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
@@ -5848,8 +5848,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     if (window->WasActive == false) // Early out to avoid running this code for e.g. a hidden implicit/fallback Debug window.
         return false;
 
-    bool ret_auto_fit = false;
-    const int resize_border_count = g.IO.ConfigWindowsResizeFromEdges ? 4 : 0;
+    int ret_auto_fit_mask = 0x00;
     const float grip_draw_size = IM_TRUNC(ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
     const float grip_hover_inner_size = IM_TRUNC(grip_draw_size * 0.75f);
     const float grip_hover_outer_size = g.IO.ConfigWindowsResizeFromEdges ? WINDOWS_HOVER_PADDING : 0.0f;
@@ -5884,11 +5883,11 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         if (hovered || held)
             g.MouseCursor = (resize_grip_n & 1) ? ImGuiMouseCursor_ResizeNESW : ImGuiMouseCursor_ResizeNWSE;
 
-        if (held && g.IO.MouseClickedCount[0] == 2)
+        if (held && g.IO.MouseDoubleClicked[0])
         {
-            // Manual auto-fit when double-clicking
+            // Auto-fit when double-clicking
             size_target = CalcWindowSizeAfterConstraint(window, size_auto_fit);
-            ret_auto_fit = true;
+            ret_auto_fit_mask = 0x03; // Both axises
             ClearActiveID();
         }
         else if (held)
@@ -5906,8 +5905,12 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         if (resize_grip_n == 0 || held || hovered)
             resize_grip_col[resize_grip_n] = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
     }
-    for (int border_n = 0; border_n < resize_border_count; border_n++)
+
+    const int resize_border_mask = g.IO.ConfigWindowsResizeFromEdges ? 0x0F : 0x00;
+    for (int border_n = 0; border_n < 4; border_n++)
     {
+        if ((resize_border_mask & (1 << border_n)) == 0)
+            continue;
         const ImGuiResizeBorderDef& def = resize_border_def[border_n];
         const ImGuiAxis axis = (border_n == ImGuiDir_Left || border_n == ImGuiDir_Right) ? ImGuiAxis_X : ImGuiAxis_Y;
 
@@ -5920,10 +5923,23 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         if ((hovered && g.HoveredIdTimer > WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER) || held)
         {
             g.MouseCursor = (axis == ImGuiAxis_X) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
+            if (hovered)
+                *border_hovered = border_n;
             if (held)
                 *border_held = border_n;
         }
-        if (held)
+        if (held && g.IO.MouseDoubleClicked[0])
+        {
+            // Double-clicking bottom or right border auto-fit on this axis
+            // FIXME: Support top and right borders: rework CalcResizePosSizeFromAnyCorner() to be reusable in both cases.
+            if (border_n == 1 || border_n == 3) // Right and bottom border
+            {
+                size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit)[axis];
+                ret_auto_fit_mask |= (1 << axis);
+            }
+            ClearActiveID();
+        }
+        else if (held)
         {
             ImVec2 clamp_min(border_n == ImGuiDir_Right ? clamp_rect.Min.x : -FLT_MAX, border_n == ImGuiDir_Down || (border_n == ImGuiDir_Up && window_move_from_title_bar) ? clamp_rect.Min.y : -FLT_MAX);
             ImVec2 clamp_max(border_n == ImGuiDir_Left ? clamp_rect.Max.x : +FLT_MAX, border_n == ImGuiDir_Up ? clamp_rect.Max.y : +FLT_MAX);
@@ -5969,18 +5985,17 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
 
     // Apply back modified position/size to window
     if (size_target.x != FLT_MAX)
-    {
-        window->SizeFull = size_target;
-        MarkIniSettingsDirty(window);
-    }
+        window->Size.x = window->SizeFull.x = size_target.x;
+    if (size_target.y != FLT_MAX)
+        window->Size.y = window->SizeFull.y = size_target.y;
     if (pos_target.x != FLT_MAX)
-    {
-        window->Pos = ImTrunc(pos_target);
-        MarkIniSettingsDirty(window);
-    }
+        window->Pos.x = ImTrunc(pos_target.x);
+    if (pos_target.y != FLT_MAX)
+        window->Pos.y = ImTrunc(pos_target.y);
+    if (size_target.x != FLT_MAX || size_target.y != FLT_MAX || pos_target.x != FLT_MAX|| pos_target.y != FLT_MAX)
+    MarkIniSettingsDirty(window);
 
-    window->Size = window->SizeFull;
-    return ret_auto_fit;
+    return ret_auto_fit_mask;
 }
 
 static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_rect)
@@ -5992,7 +6007,7 @@ static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
 
-static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
+static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window, int border_hovered, int border_held)
 {
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
@@ -6000,14 +6015,15 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     if (border_size > 0.0f && !(window->Flags & ImGuiWindowFlags_NoBackground))
         window->DrawList->AddRect(window->Pos, window->Pos + window->Size, GetColorU32(ImGuiCol_Border), rounding, 0, border_size);
 
-    int border_held = window->ResizeBorderHeld;
-    if (border_held != -1)
+    if (border_hovered != -1 || border_held != -1)
     {
-        const ImGuiResizeBorderDef& def = resize_border_def[border_held];
-        ImRect border_r = GetResizeBorderRect(window, border_held, rounding, 0.0f);
+        const int border_n = (border_held != -1) ? border_held : border_hovered;
+        const ImGuiResizeBorderDef& def = resize_border_def[border_n];
+        const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
+        const ImU32 border_col = GetColorU32((border_held != -1) ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
         window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
         window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
-        window->DrawList->PathStroke(GetColorU32(ImGuiCol_SeparatorActive), 0, ImMax(2.0f, border_size)); // Thicker than usual
+        window->DrawList->PathStroke(border_col, 0, ImMax(2.0f, border_size)); // Thicker than usual
     }
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
     {
@@ -6018,7 +6034,7 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 
 // Draw background and borders
 // Draw and handle scrollbars
-void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size)
+void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size, int border_hovered, int border_held)
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
@@ -6101,7 +6117,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
 
         // Borders
         if (handle_borders_and_resize_grips)
-            RenderWindowOuterBorders(window);
+            RenderWindowOuterBorders(window, border_hovered, border_held);
     }
 }
 
@@ -6627,14 +6643,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 #endif
 
         // Handle manual resize: Resize Grips, Borders, Gamepad
-        int border_held = -1;
+        int border_hovered = -1, border_held = -1;
         ImU32 resize_grip_col[4] = {};
         const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
         const float resize_grip_draw_size = IM_TRUNC(ImMax(g.FontSize * 1.10f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (!window->Collapsed)
-            if (UpdateWindowManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
-                use_current_size_for_scrollbar_x = use_current_size_for_scrollbar_y = true;
-        window->ResizeBorderHeld = (signed char)border_held;
+            if (int auto_fit_mask = UpdateWindowManualResize(window, size_auto_fit, &border_hovered, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
+            {
+                if (auto_fit_mask & (1 << ImGuiAxis_X))
+                    use_current_size_for_scrollbar_x = true;
+                if (auto_fit_mask & (1 << ImGuiAxis_Y))
+                    use_current_size_for_scrollbar_y = true;
+            }
 
         // SCROLLBAR VISIBILITY
 
@@ -6749,7 +6769,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
             const bool title_bar_is_highlight = want_focus || (window_to_highlight && window->RootWindowForTitleBarHighlight == window_to_highlight->RootWindowForTitleBarHighlight);
             const bool handle_borders_and_resize_grips = true; // This exists to facilitate merge with 'docking' branch.
-            RenderWindowDecorations(window, title_bar_rect, title_bar_is_highlight, handle_borders_and_resize_grips, resize_grip_count, resize_grip_col, resize_grip_draw_size);
+            RenderWindowDecorations(window, title_bar_rect, title_bar_is_highlight, handle_borders_and_resize_grips, resize_grip_count, resize_grip_col, resize_grip_draw_size, border_hovered, border_held);
 
             if (render_decorations_in_parent)
                 window->DrawList = &window->DrawListInst;
