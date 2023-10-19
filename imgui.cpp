@@ -9136,6 +9136,12 @@ void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
     }
 }
 
+// This is the only public API until we expose owner_id versions of the API as replacements.
+bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord)
+{
+    return IsKeyChordPressed(key_chord, 0, ImGuiInputFlags_None);
+}
+
 // This is equivalent to comparing KeyMods + doing a IsKeyPressed()
 bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 {

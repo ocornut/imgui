@@ -141,6 +141,8 @@ Other changes:
   - Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
     prior to building again. (#6825)
   - imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
+- Inputs: Added IsKeyChordPressed() helper function e.g. IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S).
+  (Note that ImGuiMod_Shortcut may be used as an alias for Cmd on OSX and Ctrl on other systems).
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_AppBack, ImGuiKey_AppForward. (#4921)
