@@ -141,6 +141,24 @@ static void ImGui_ImplWin32_UpdateKeyboardCodePage()
         bd->KeyboardCodePage = CP_ACP; // Fallback to default ANSI code page when fails.
 }
 
+static void ImGui_ImplWin32_RegisterClassEx(bool platform_has_own_dc)
+{
+    WNDCLASSEX wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW | (platform_has_own_dc ? CS_OWNDC : 0);
+    wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = ::GetModuleHandle(nullptr);
+    wcex.hIcon = nullptr;
+    wcex.hCursor = nullptr;
+    wcex.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
+    wcex.lpszMenuName = nullptr;
+    wcex.lpszClassName = _T("ImGui Platform");
+    wcex.hIconSm = nullptr;
+    ::RegisterClassEx(&wcex);
+}
+
 static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -1035,6 +1053,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
+    ImGui_ImplWin32_RegisterClassEx(true);
     vd->Hwnd = ::CreateWindowEx(
         vd->DwExStyle, _T("ImGui Platform"), _T("Untitled"), vd->DwStyle,       // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
@@ -1270,21 +1289,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
 
 static void ImGui_ImplWin32_InitPlatformInterface(bool platform_has_own_dc)
 {
-    WNDCLASSEX wcex;
-    wcex.cbSize = sizeof(WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW | (platform_has_own_dc ? CS_OWNDC : 0);
-    wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
-    wcex.cbClsExtra = 0;
-    wcex.cbWndExtra = 0;
-    wcex.hInstance = ::GetModuleHandle(nullptr);
-    wcex.hIcon = nullptr;
-    wcex.hCursor = nullptr;
-    wcex.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
-    wcex.lpszMenuName = nullptr;
-    wcex.lpszClassName = _T("ImGui Platform");
-    wcex.hIconSm = nullptr;
-    ::RegisterClassEx(&wcex);
-
+    ImGui_ImplWin32_RegisterClassEx(platform_has_own_dc);
     ImGui_ImplWin32_UpdateMonitors();
 
     // Register platform interface (will be coupled with a renderer interface)
