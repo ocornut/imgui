@@ -5779,7 +5779,7 @@ static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& co
     *out_size = size_constrained;
 }
 
-// Data for resizing from corner
+// Data for resizing from resize grip / corner
 struct ImGuiResizeGripDef
 {
     ImVec2  CornerPosN;
@@ -5797,9 +5797,9 @@ static const ImGuiResizeGripDef resize_grip_def[4] =
 // Data for resizing from borders
 struct ImGuiResizeBorderDef
 {
-    ImVec2 InnerDir;
-    ImVec2 SegmentN1, SegmentN2;
-    float  OuterAngle;
+    ImVec2  InnerDir;               // Normal toward inside
+    ImVec2  SegmentN1, SegmentN2;   // End positions, normalized (0,0: upper left)
+    float   OuterAngle;             // Angle toward outside
 };
 static const ImGuiResizeBorderDef resize_border_def[4] =
 {
@@ -5927,14 +5927,10 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         ItemAdd(border_rect, border_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
         //GetForegroundDrawLists(window)->AddRect(border_rect.Min, border_rect.Max, IM_COL32(255, 255, 0, 255));
-        if ((hovered && g.HoveredIdTimer > WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER) || held)
-        {
+        if (hovered && g.HoveredIdTimer <= WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER)
+            hovered = false;
+        if (hovered || held)
             g.MouseCursor = (axis == ImGuiAxis_X) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
-            if (hovered)
-                *border_hovered = border_n;
-            if (held)
-                *border_held = border_n;
-        }
         if (held && g.IO.MouseDoubleClicked[0])
         {
             // Double-clicking bottom or right border auto-fit on this axis
@@ -5943,6 +5939,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             {
                 size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit)[axis];
                 ret_auto_fit_mask |= (1 << axis);
+                hovered = held = false; // So border doesn't show highlighted at new position
             }
             ClearActiveID();
         }
@@ -5955,6 +5952,10 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             border_target = ImClamp(border_target, clamp_min, clamp_max);
             CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
         }
+        if (hovered)
+            *border_hovered = border_n;
+        if (held)
+            *border_held = border_n;
     }
     PopID();
 
@@ -5999,8 +6000,8 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         window->Pos.x = ImTrunc(pos_target.x);
     if (pos_target.y != FLT_MAX)
         window->Pos.y = ImTrunc(pos_target.y);
-    if (size_target.x != FLT_MAX || size_target.y != FLT_MAX || pos_target.x != FLT_MAX|| pos_target.y != FLT_MAX)
-    MarkIniSettingsDirty(window);
+    if (size_target.x != FLT_MAX || size_target.y != FLT_MAX || pos_target.x != FLT_MAX || pos_target.y != FLT_MAX)
+        MarkIniSettingsDirty(window);
 
     return ret_auto_fit_mask;
 }
