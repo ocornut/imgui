@@ -133,6 +133,8 @@ Other changes:
 - TreeNode: Added ImGuiTreeNodeFlags_SpanAllColumns for use in tables. (#3151, #3565, #2451, #2438)
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
+- ColorPicker4(): Fixed ImGuiColorEditFlags_NoTooltip not being forwarded to individual DragFloat3
+  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is set. (#6957)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
 - BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
