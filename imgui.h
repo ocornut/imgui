@@ -2811,6 +2811,9 @@ struct ImGuiSelectionRequest
     ImGuiSelectionRequest(ImGuiSelectionRequestType type = ImGuiSelectionRequestType_None) { Type = type; RangeSelected = false; RangeFirstItem = RangeLastItem = (ImGuiSelectionUserData)-1; }
 };
 
+// Main IO structure returned by BeginMultiSelect()/EndMultiSelect().
+// Read the large comments block above for details.
+// Lifetime: don't hold on ImGuiMultiSelectIO* pointers over multiple frames or past any subsequent call to BeginMultiSelect() or EndMultiSelect().
 struct ImGuiMultiSelectIO
 {
     ImVector<ImGuiSelectionRequest> Requests;   //  ms:w, app:r  /  ms:w  app:r  // Requests

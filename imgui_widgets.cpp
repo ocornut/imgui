@@ -7156,8 +7156,10 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiMultiSelectTempData* ms = &g.MultiSelectTempData[0];
-    IM_ASSERT(g.CurrentMultiSelect == NULL); // No recursion allowed yet (we could allow it if we deem it useful)
+
+    if (++g.MultiSelectTempDataStacked > g.MultiSelectTempData.Size)
+        g.MultiSelectTempData.resize(g.MultiSelectTempDataStacked, ImGuiMultiSelectTempData());
+    ImGuiMultiSelectTempData* ms = &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1];
     IM_STATIC_ASSERT(offsetof(ImGuiMultiSelectTempData, IO) == 0); // Clear() relies on that.
     g.CurrentMultiSelect = ms;
     if ((flags & (ImGuiMultiSelectFlags_ScopeWindow | ImGuiMultiSelectFlags_ScopeRect)) == 0)
@@ -7276,6 +7278,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
     IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
+    IM_ASSERT(g.MultiSelectTempDataStacked > 0 && &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1] == g.CurrentMultiSelect);
 
     const ImRect scope_rect = (ms->Flags & ImGuiMultiSelectFlags_ScopeRect) ? ImRect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin)) : window->InnerClipRect;
     if (ms->IsFocused)
@@ -7332,13 +7335,14 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     // Unwind
     window->DC.CursorMaxPos = ImMax(ms->BackupCursorMaxPos, window->DC.CursorMaxPos);
-    ms->FocusScopeId = 0;
-    ms->Flags = ImGuiMultiSelectFlags_None;
     PopFocusScope();
-    g.CurrentMultiSelect = NULL;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
         DebugLogMultiSelectRequests("EndMultiSelect", &ms->IO);
+
+    ms->FocusScopeId = 0;
+    ms->Flags = ImGuiMultiSelectFlags_None;
+    g.CurrentMultiSelect = (--g.MultiSelectTempDataStacked > 0) ? &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1] : NULL;
 
     return &ms->IO;
 }
