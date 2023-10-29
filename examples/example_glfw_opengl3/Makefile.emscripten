@@ -7,7 +7,7 @@
 # (On Windows, you may need to execute emsdk_env.bat or encmdprompt.bat ahead)
 #
 # Running `make -f Makefile.emscripten` will produce three files:
-#  - web/index.html
+#  - web/index.html (current stored in the repository)
 #  - web/index.js
 #  - web/index.wasm
 #
@@ -16,7 +16,7 @@
 CC = emcc
 CXX = em++
 WEB_DIR = web
-EXE = $(WEB_DIR)/index.html
+EXE = $(WEB_DIR)/index.js
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp

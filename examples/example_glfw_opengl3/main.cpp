@@ -26,8 +26,12 @@
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
+
+const char* canvas_selector = "#canvas";
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -64,8 +68,16 @@ int main(int, char**)
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif
 
+    double canvas_width, canvas_height;
+#ifdef __EMSCRIPTEN__
+    emscripten_get_element_css_size(canvas_selector, &canvas_width, &canvas_height);
+#else
+    canvas_width = 1280;
+    canvas_height = 720;
+#endif
+
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)canvas_width, (int)canvas_height, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -84,6 +96,9 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_SetEmscriptenCanvasSelector(canvas_selector);
+#endif
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Load Fonts
