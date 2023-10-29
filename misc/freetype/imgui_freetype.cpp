@@ -63,7 +63,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
+#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wsubobject-linkage"        // warning: 'xxxx' has a field 'xxxx' whose type uses the anonymous namespace
+#endif
 #endif
 
 //-------------------------------------------------------------------------
@@ -840,7 +842,7 @@ static FT_Error ImGuiLunasvgPortInit(FT_Pointer* _state)
 
 static void ImGuiLunasvgPortFree(FT_Pointer* _state)
 {
-    IM_DELETE(*_state);
+    IM_DELETE(*(LunasvgPortState**)_state);
 }
 
 static FT_Error ImGuiLunasvgPortRender(FT_GlyphSlot slot, FT_Pointer* _state)

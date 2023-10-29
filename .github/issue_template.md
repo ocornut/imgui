@@ -1,6 +1,6 @@
 (Click "Preview" above ^ to turn URL into clickable links)
 
-1. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING or LOADING FONTS,  please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions).
+1. FOR FIRST-TIME USERS PROBLEMS COMPILING/LINKING/RUNNING or LOADING FONTS,  please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions). EVERYTHING ELSE CAN BE POSTED HERE!
 
 2. PLEASE CAREFULLY READ: [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
 

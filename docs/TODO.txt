@@ -126,7 +126,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - separator: expose flags (#759)
  - separator: take indent into consideration (optional)
- - separator: width, thickness, centering (#1643)
+ - separator: width, thickness, centering (#1643, #2657)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - docking: merge docking branch (#2109)
@@ -187,7 +187,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
- - tree node: flag to disable formatting and/or detect "%s"
  - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height? format only %s/%c to be able to count height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
