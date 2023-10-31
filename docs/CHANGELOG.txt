@@ -96,6 +96,9 @@ Other changes:
     to false when popup is closed in ways other than clicking the close button. (#6900)
   - Double-clicking lower-left resize grip auto-resize (like lower-rightone).
   - Double-clicking bottom or right window border auto-resize on a singles axis.
+  - Use relative mouse movement for border resize when the border geometry has moved
+    (e.g. resizing a child window triggering parent scroll) in order to avoid resizing
+    feedback loops. Unless manually mouse-wheeling while border resizing. (#1710)
 - Separators:
   - Altered end-points to use more standard boundaries. (#205, #4787, #1643)
     Left position is always current cursor X position, right position is always work-rect
