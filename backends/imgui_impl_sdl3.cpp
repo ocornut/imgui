@@ -322,8 +322,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             return true;
         }
         case SDL_EVENT_DISPLAY_ORIENTATION:
-        case SDL_EVENT_DISPLAY_CONNECTED:
-        case SDL_EVENT_DISPLAY_DISCONNECTED:
+        case SDL_EVENT_DISPLAY_ADDED:
+        case SDL_EVENT_DISPLAY_REMOVED:
         case SDL_EVENT_DISPLAY_MOVED:
         case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
         {
