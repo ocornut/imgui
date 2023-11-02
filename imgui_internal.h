@@ -2436,6 +2436,8 @@ struct IMGUI_API ImGuiWindow
     bool                    IsFallbackWindow;                   // Set on the "Debug##Default" window.
     bool                    IsExplicitChild;                    // Set when passed _ChildWindow, left to false by BeginDocked()
     bool                    HasCloseButton;                     // Set when the window has a close button (p_open != NULL)
+    signed char             ResizeBorderHovered;                // Current border being hovered for resize (-1: none, otherwise 0-3)
+    signed char             ResizeBorderHeld;                   // Current border being held for resize (-1: none, otherwise 0-3)
     short                   BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     short                   BeginCountPreviousFrame;            // Number of Begin() during the previous frame
     short                   BeginOrderWithinParent;             // Begin() order within immediate parent window, if we are a child window. Otherwise 0.
