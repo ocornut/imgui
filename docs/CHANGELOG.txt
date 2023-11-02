@@ -42,6 +42,23 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+ - BeginChild(): Upgraded 'bool border = false' parameter to 'ImGuiChildFlags flags'.
+   Added ImGuiChildFlags_Border value. As with our prior "bool-to-flags" API updates,
+   the ImGuiChildFlags_Border value is guaranteed to be == true forever to ensure a
+   smoother transition, meaning all existing calls will still work.
+   If you want to neatly transition your call sites:
+      Before:  BeginChild("Name", size, true)
+      After:   BeginChild("Name", size, ImGuiChildFlags_Border)
+      Before:  BeginChild("Name", size, false)
+      After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
+   Kept inline redirection function (will obsolete later) so existing code will work.
+ - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
+   the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
+   for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
+   child-flags we are moving it there. (#462)
+      Before:  BeginChild("Name", size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding);
+      After:   BeginChild("Name", size, ImGuiChildFlags_AlwaysUseWindowPadding, 0);
+   Kept inline redirection enum (will obsolete later) so existing code will work.
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
@@ -67,18 +84,25 @@ Breaking changes:
 
 Other changes:
 
-- Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
-  Previously was inconsistent and only enabled when stepping through a non-input item.
-  (#6802, #3092, #5759, #787)
 - Windows:
+  - BeginChild(): Added ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY to allow resizing
+    child windows from the bottom/right border (toward layout direction). Resized child windows
+    settings are saved and persistent in .ini file. (#1666, #1496, #1395, #1710)
+  - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+  - BeginChild(): Internal name used by child windows now omits the hash/id if the child
+    window is submitted in root of id stack of parent window. Makes debugging/metrics easier
+    and shorter to read in many cases.
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
-  - Can also auto-resize by double-clicking lower-left resize grip (not only lower-right one).
+  - Double-clicking lower-left resize grip auto-resize (like lower-rightone).
+  - Double-clicking bottom or right window border auto-resize on a singles axis.
+  - Use relative mouse movement for border resize when the border geometry has moved
+    (e.g. resizing a child window triggering parent scroll) in order to avoid resizing
+    feedback loops. Unless manually mouse-wheeling while border resizing. (#1710)
 - Separators:
   - Altered end-points to use more standard boundaries. (#205, #4787, #1643)
-    Left position is always current cursor X position.
-    Right position is always work-rect rightmost edge.
-  - Effectively means that:
+    Left position is always current cursor X position, right position is always work-rect
+    rightmost edge. It effectively means that:
     - A separator in the root of a window will end up a little more distant from edges
       than previously (essentially following WindowPadding instead of clipping edges).
     - A separator inside a table cell end up a little distance from edges instead of
@@ -96,8 +120,8 @@ Other changes:
   - Made is possible to combine ImGuiHoveredFlags_ForTooltip with a ImGuiHoveredFlags_DelayXXX
     override. (#1485)
 - Drag and Drop:
-  - Reworked drop target highlight: reduce rectangle to its visible portion, and
-    then expand slightly. A full rectangle is always visible and it may protrude slightly. (#4281, #3272)
+  - Reworked drop target highlight: reduce rectangle to its visible portion, and then expand
+    slightly. A full rectangle is always visible and it may protrude slightly. (#4281, #3272)
   - Fixed submitting a tooltip from drop target location when using AcceptDragDropPayload()
     with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
 - Tables:
@@ -122,25 +146,33 @@ Other changes:
   - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
     register contents size in a way that would affect the scrolling layer.
     Was most often noticable when using an horizontal scrollbar. (#6789)
+- InputText:
+  - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+    (regression from 1.89.2, only happened in some states). (#6783, #6000)
+  - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
+    be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
+- Nav: Tabbing always enable nav highlight when ImGuiConfigFlags_NavEnableKeyboard is set.
+  Previously was inconsistent and only enabled when stepping through a non-input item.
+  (#6802, #3092, #5759, #787)
 - TreeNode: Added ImGuiTreeNodeFlags_SpanAllColumns for use in tables. (#3151, #3565, #2451, #2438)
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
-- InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
-  (regression from 1.89.2, only happened in some states). (#6783, #6000)
-- InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
-  be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
+- ColorPicker4(): Fixed ImGuiColorEditFlags_NoTooltip not being forwarded to individual DragFloat3
+  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is set. (#6957)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
 - BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
 - BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
 - Fonts:
-  - Arument 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
+  - Argument 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
     This is because our layout/font system currently doesn't fully support non-integer sizes. Until
     it does, this has been a common pitfall leading to more or less subtle issues. (#3164, #3309, #6800)
   - Better assert during load when passing truncated font data or wrong data size. (#6822)
   - Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
     prior to building again. (#6825)
   - imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
+- Inputs: Added IsKeyChordPressed() helper function e.g. IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S).
+  (note that ImGuiMod_Shortcut may be used as an alias for Cmd on OSX and Ctrl on other systems).
 - Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_AppBack, ImGuiKey_AppForward. (#4921)
