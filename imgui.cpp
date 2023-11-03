@@ -14111,7 +14111,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         settings->ClassId = window->WindowClass.ClassId;
         settings->DockOrder = window->DockOrder;
         settings->Collapsed = window->Collapsed;
-        settings->IsChild = (window->Flags & ImGuiWindowFlags_ChildWindow) != 0;
+        settings->IsChild = (window->RootWindow != window); // Cannot rely on ImGuiWindowFlags_ChildWindow here as docked windows have this set.
         settings->WantDelete = false;
     }
 
