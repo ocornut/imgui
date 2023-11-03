@@ -8668,7 +8668,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     ImDrawList* display_draw_list = window->DrawList;
     const ImU32 tab_col = GetColorU32((held || hovered) ? ImGuiCol_TabHovered : tab_contents_visible ? (tab_bar_focused ? ImGuiCol_TabActive : ImGuiCol_TabUnfocusedActive) : (tab_bar_focused ? ImGuiCol_Tab : ImGuiCol_TabUnfocused));
     TabItemBackground(display_draw_list, bb, flags, tab_col);
-    if (tab_bar_focused && (flags & ImGuiWindowFlags_HighlightTitleBar))
+    // [Tethys Custom]
+    if (tab_bar_focused && tab_contents_visible && (flags & ImGuiWindowFlags_HighlightTitleBar))
     {
         float height = bb.Max.y - bb.Min.y;
         display_draw_list->AddRectFilled(bb.Min, { bb.Max.x, bb.Min.y + height / 10.0f }, GetColorU32(ImGuiCol_NavHighlight));
