@@ -8490,6 +8490,13 @@ bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
     return g.IO.MouseClickedCount[button] == 2 && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any);
 }
 
+bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button, ImGuiID owner_id)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    return g.IO.MouseClickedCount[button] == 2 && TestKeyOwner(MouseButtonToKey(button), owner_id);
+}
+
 int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
