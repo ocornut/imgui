@@ -231,6 +231,7 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+    colors[ImGuiCol_AccentColor]            = ImVec4(0.07f, 0.54f, 1.00f, 1.00f); // [Tethys Custom]
 }
 
 void ImGui::StyleColorsClassic(ImGuiStyle* dst)

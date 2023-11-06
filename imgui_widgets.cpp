@@ -8672,7 +8672,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     if (tab_bar_focused && tab_contents_visible && (flags & ImGuiWindowFlags_HighlightTitleBar))
     {
         float height = bb.Max.y - bb.Min.y;
-        display_draw_list->AddRectFilled(bb.Min, { bb.Max.x, bb.Min.y + height / 10.0f }, GetColorU32(ImGuiCol_NavHighlight));
+        display_draw_list->AddRectFilled(bb.Min, { bb.Max.x, bb.Min.y + height / 10.0f }, GetColorU32(ImGuiCol_AccentColor));
     }
     RenderNavHighlight(bb, id);
 
