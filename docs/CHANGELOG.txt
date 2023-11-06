@@ -87,14 +87,15 @@ Other changes:
 - Windows:
   - BeginChild(): Added ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY to allow resizing
     child windows from the bottom/right border (toward layout direction). Resized child windows
-    settings are saved and persistent in .ini file. (#1666, #1496, #1395, #1710)
+    settings are saved and persistent in .ini file. (#1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
   - BeginChild(): Internal name used by child windows now omits the hash/id if the child
-    window is submitted in root of id stack of parent window. Makes debugging/metrics easier
-    and shorter to read in many cases.
+    window is submitted in root of id stack of parent window.
+    So "Parent/Child_XXXXXXX" becomes "Parent/Child" when in root of id stack.
+    Makes debugging/metrics easier and shorter to read in many cases.
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
-  - Double-clicking lower-left resize grip auto-resize (like lower-rightone).
+  - Double-clicking lower-left resize grip auto-resize (like lower-right one).
   - Double-clicking bottom or right window border auto-resize on a singles axis.
   - Use relative mouse movement for border resize when the border geometry has moved
     (e.g. resizing a child window triggering parent scroll) in order to avoid resizing
@@ -182,6 +183,7 @@ Other changes:
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
+- Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)

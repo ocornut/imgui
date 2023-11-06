@@ -2769,10 +2769,10 @@ static void ShowDemoWindowLayout()
         {
             HelpMarker("Drag bottom border to resize. Double-click bottom border to auto-fit to vertical contents.");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-            ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
+            if (ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+                for (int n = 0; n < 10; n++)
+                    ImGui::Text("Line %04d", n);
             ImGui::PopStyleColor();
-            for (int n = 0; n < 10; n++)
-                ImGui::Text("Line %04d", n);
             ImGui::EndChild();
         }
 
@@ -5065,6 +5065,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth", &tree_node_flags, ImGuiTreeNodeFlags_SpanFullWidth);
         ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &tree_node_flags, ImGuiTreeNodeFlags_SpanAllColumns);
 
+        HelpMarker("See \"Columns flags\" section to configure how indentation is applied to individual columns.");
         if (ImGui::BeginTable("3ways", 3, flags))
         {
             // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On

@@ -329,9 +329,9 @@ namespace ImGui
     //   Some information such as 'flags' or 'p_open' will only be considered by the first call to Begin().
     // - Begin() return false to indicate the window is collapsed or fully clipped, so you may early out and omit submitting
     //   anything to the window. Always call a matching End() for each Begin() call, regardless of its return value!
-    //   [Important: due to legacy reason, this is inconsistent with most other functions such as BeginMenu/EndMenu,
-    //    BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding BeginXXX function
-    //    returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
+    //   [Important: due to legacy reason, Begin/End and BeginChild/EndChild are inconsistent with all other functions
+    //    such as BeginMenu/EndMenu, BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding
+    //    BeginXXX function returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
     // - Note that the bottom of window stack always contains a window called "Debug".
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);
     IMGUI_API void          End();
@@ -339,11 +339,11 @@ namespace ImGui
     // Child Windows
     // - Use child windows to begin into a self-contained independent scrolling/clipping regions within a host window. Child windows can embed their own child.
     // - For each independent axis of 'size': ==0.0f: use remaining host window size / >0.0f: fixed size / <0.0f: use remaining window size minus abs(size) / Each axis can use a different mode, e.g. ImVec2(0,400).
-    // - BeginChild() returns false to indicate the window is collapsed or fully clipped, so you may early out and omit submitting anything to the window.
-    //   Always call a matching EndChild() for each BeginChild() call, regardless of its return value.
-    //   [Important: due to legacy reason, this is inconsistent with most other functions such as BeginMenu/EndMenu,
-    //    BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding BeginXXX function
-    //    returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
+    // - BeginChild() returns false to indicate the window is collapsed or fully clipped, so you may early out and omit submitting
+    //   anything to the window. Always call a matching EndChild() for each BeginChild() call, regardless of its return value.
+    //   [Important: due to legacy reason, Begin/End and BeginChild/EndChild are inconsistent with all other functions
+    //    such as BeginMenu/EndMenu, BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding
+    //    BeginXXX function returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
     IMGUI_API bool          BeginChild(const char* str_id, const ImVec2& size = ImVec2(0, 0), ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0);
     IMGUI_API bool          BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0);
     IMGUI_API void          EndChild();
