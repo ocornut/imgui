@@ -6901,7 +6901,7 @@ bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
         window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, label_pos + label_size);
     }
 
-    BeginChildFrame(id, frame_bb.GetSize());
+    BeginChild(id, frame_bb.GetSize(), ImGuiChildFlags_FrameStyle);
     return true;
 }
 
@@ -6912,7 +6912,7 @@ void ImGui::EndListBox()
     IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) && "Mismatched BeginListBox/EndListBox calls. Did you test the return value of BeginListBox?");
     IM_UNUSED(window);
 
-    EndChildFrame();
+    EndChild();
     EndGroup(); // This is only required to be able to do IsItemXXX query on the whole ListBox including label
 }
 

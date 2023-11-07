@@ -59,6 +59,11 @@ Breaking changes:
       Before:  BeginChild("Name", size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding);
       After:   BeginChild("Name", size, ImGuiChildFlags_AlwaysUseWindowPadding, 0);
    Kept inline redirection enum (will obsolete later) so existing code will work.
+ - BeginChildFrame()/EndChildFrame(): removed functions in favor of using BeginChild() with
+   the ImGuiChildFlags_FrameStyle flag. Kept inline redirection function (will obsolete).
+   Those functions were merely PushStyle/PopStyle helpers and custom versions are easy to create.
+   (The removal isn't so much motivated by needing to add the feature in BeginChild(), but by the
+   necessity to avoid BeginChildFrame() signature mismatching BeginChild() signature and features.)
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
@@ -89,6 +94,9 @@ Other changes:
     child windows from the bottom/right border (toward layout direction). Resized child windows
     settings are saved and persistent in .ini file. (#1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+  - BeginChild(): Added ImGuiChildFlags_FrameStyle as a replacement for BeginChildFrame(),
+    use it to make child window use FrameBg, FrameRounding, FrameBorderSize, FramePadding
+    instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
   - BeginChild(): Internal name used by child windows now omits the hash/id if the child
     window is submitted in root of id stack of parent window.
     So "Parent/Child_XXXXXXX" becomes "Parent/Child" when in root of id stack.

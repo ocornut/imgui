@@ -424,6 +424,8 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2023/11/07 (1.90.0) - removed BeginChildFrame()/EndChildFrame() in favor of using BeginChild() with the ImGuiChildFlags_FrameStyle flag. kept inline redirection function (will obsolete).
+                         those functions were merely PushStyle/PopStyle helpers, the removal isn't so much motivated by needing to add the feature in BeginChild(), but by the necessity to avoid BeginChildFrame() signature mismatching BeginChild() signature and features.
  - 2023/11/02 (1.90.0) - BeginChild: upgraded 'bool border = true' parameter to 'ImGuiChildFlags flags' type, added ImGuiChildFlags_Border equivalent. As with our prior "bool-to-flags" API updates, the ImGuiChildFlags_Border value is guaranteed to be == true forever to ensure a smoother transition, meaning all existing calls will still work.
                            - old: BeginChild("Name", size, true)
                            - new: BeginChild("Name", size, ImGuiChildFlags_Border)
@@ -5442,7 +5444,7 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     IM_ASSERT(id != 0);
 
     // Sanity check as it is likely that some user will accidentally pass ImGuiWindowFlags into the ImGuiChildFlags argument.
-    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY;
+    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_FrameStyle;
     IM_UNUSED(ImGuiChildFlags_SupportedMask_);
     IM_ASSERT((child_flags & ~ImGuiChildFlags_SupportedMask_) == 0 && "Illegal ImGuiChildFlags value. Did you pass ImGuiWindowFlags values instead of ImGuiChildFlags?");
     if (window_flags & ImGuiWindowFlags_AlwaysAutoResize)
@@ -5457,6 +5459,17 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
 
     if ((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
         window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+
+    // Special framed style
+    if (child_flags & ImGuiChildFlags_FrameStyle)
+    {
+        PushStyleColor(ImGuiCol_ChildBg, g.Style.Colors[ImGuiCol_FrameBg]);
+        PushStyleVar(ImGuiStyleVar_ChildRounding, g.Style.FrameRounding);
+        PushStyleVar(ImGuiStyleVar_ChildBorderSize, g.Style.FrameBorderSize);
+        PushStyleVar(ImGuiStyleVar_WindowPadding, g.Style.FramePadding);
+        child_flags |= ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding;
+        window_flags |= ImGuiWindowFlags_NoMove;
+    }
 
     // Forward child flags
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
@@ -5482,13 +5495,21 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     else
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%08X", parent_window->Name, id);
 
+    // Set style
     const float backup_border_size = g.Style.ChildBorderSize;
     if ((child_flags & ImGuiChildFlags_Border) == 0)
         g.Style.ChildBorderSize = 0.0f;
 
     // Begin into window
     const bool ret = Begin(temp_window_name, NULL, window_flags);
+
+    // Restore style
     g.Style.ChildBorderSize = backup_border_size;
+    if (child_flags & ImGuiChildFlags_FrameStyle)
+    {
+        PopStyleVar(3);
+        PopStyleColor();
+    }
 
     ImGuiWindow* child_window = g.CurrentWindow;
     child_window->ChildId = id;
@@ -5552,26 +5573,6 @@ void ImGui::EndChild()
     }
     g.WithinEndChild = false;
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
-}
-
-// Helper to create a child window / scrolling region that looks like a normal widget frame.
-bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags)
-{
-    ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-    PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
-    PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
-    PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
-    PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-    bool ret = BeginChild(id, size, ImGuiChildFlags_Border | ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoMove | extra_flags);
-    PopStyleVar(3);
-    PopStyleColor();
-    return ret;
-}
-
-void ImGui::EndChildFrame()
-{
-    EndChild();
 }
 
 static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
