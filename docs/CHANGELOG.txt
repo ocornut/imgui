@@ -59,6 +59,11 @@ Breaking changes:
       Before:  BeginChild("Name", size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding);
       After:   BeginChild("Name", size, ImGuiChildFlags_AlwaysUseWindowPadding, 0);
    Kept inline redirection enum (will obsolete later) so existing code will work.
+ - BeginChildFrame()/EndChildFrame(): removed functions in favor of using BeginChild() with
+   the ImGuiChildFlags_FrameStyle flag. Kept inline redirection function (will obsolete).
+   Those functions were merely PushStyle/PopStyle helpers and custom versions are easy to create.
+   (The removal isn't so much motivated by needing to add the feature in BeginChild(), but by the
+   necessity to avoid BeginChildFrame() signature mismatching BeginChild() signature and features.)
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
@@ -87,14 +92,33 @@ Other changes:
 - Windows:
   - BeginChild(): Added ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY to allow resizing
     child windows from the bottom/right border (toward layout direction). Resized child windows
-    settings are saved and persistent in .ini file. (#1666, #1496, #1395, #1710)
+    settings are saved and persistent in .ini file. (#1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+  - BeginChild(): Added ImGuiChildFlags_AutoResizeX and ImGuiChildFlags_AutoResizeY to auto-resize
+    on one axis, while generally providing a size on the other axis. (#1666, #1395, #1496, #1710)
+    e.g. BeginChild("name", {-FLT_MIN, 0.0f}, ImGuiChildFlags_AutoResizeY);
+    - Size is only reevaluated if the child window is within visible boundaries or just appearing.
+      This allows coarse clipping to be performed and auto-resizing childs to return false when
+      hidden because of being scrolled out.
+    - Combining this with also specifying ImGuiChildFlags_AlwaysAutoResize disables
+      this optimization, meaning child contents will never be clipped (not recommended).
+    - Please be considerate that child are full windows and carry significiant overhead:
+      combining auto-resizing for both axises to create a non-scrolling child to merely draw
+      a border would be better more optimally using BeginGroup().
+      (until we come up with new helpers for framed groups and work-rect adjustments).
+  - BeginChild(): made it possible to use SetNextWindowSizeConstraints() rectangle, often
+    useful when ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY. (#1666, #1395, #1496)
+    Custom constraint callback are not supported with child window.
+  - BeginChild(): Added ImGuiChildFlags_FrameStyle as a replacement for BeginChildFrame(),
+    use it to make child window use FrameBg, FrameRounding, FrameBorderSize, FramePadding
+    instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
   - BeginChild(): Internal name used by child windows now omits the hash/id if the child
-    window is submitted in root of id stack of parent window. Makes debugging/metrics easier
-    and shorter to read in many cases.
+    window is submitted in root of id stack of parent window.
+    So "Parent/Child_XXXXXXX" becomes "Parent/Child" when in root of id stack.
+    Makes debugging/metrics easier and shorter to read in many cases.
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
-  - Double-clicking lower-left resize grip auto-resize (like lower-rightone).
+  - Double-clicking lower-left resize grip auto-resize (like lower-right one).
   - Double-clicking bottom or right window border auto-resize on a singles axis.
   - Use relative mouse movement for border resize when the border geometry has moved
     (e.g. resizing a child window triggering parent scroll) in order to avoid resizing
@@ -182,6 +206,8 @@ Other changes:
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
+- Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
+- Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)

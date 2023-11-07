@@ -1309,6 +1309,9 @@ static void ShowDemoWindowWidgets()
     IMGUI_DEMO_MARKER("Widgets/List Boxes");
     if (ImGui::TreeNode("List boxes"))
     {
+        // BeginListBox() is essentially a thin wrapper to using BeginChild()/EndChild() with the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
+        // You may be tempted to simply use BeginChild() directly, however note that BeginChild() requires EndChild() to always be called (inconsistent with BeginListBox()/EndListBox()).
+
         // Using the generic BeginListBox() API, you have full control over how to display the combo contents.
         // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
         // stored in the object itself, etc.)
@@ -2843,10 +2846,27 @@ static void ShowDemoWindowLayout()
         {
             HelpMarker("Drag bottom border to resize. Double-click bottom border to auto-fit to vertical contents.");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-            ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
+            if (ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+                for (int n = 0; n < 10; n++)
+                    ImGui::Text("Line %04d", n);
             ImGui::PopStyleColor();
-            for (int n = 0; n < 10; n++)
-                ImGui::Text("Line %04d", n);
+            ImGui::EndChild();
+        }
+
+        // Child 4: auto-resizing height with a limit
+        ImGui::SeparatorText("Auto-resize with constraints");
+        {
+            static int draw_lines = 3;
+            static int max_height_in_lines = 10;
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::DragInt("Lines Count", &draw_lines, 0.2f);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::DragInt("Max Height (in Lines)", &max_height_in_lines, 0.2f);
+
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 1), ImVec2(FLT_MAX, ImGui::GetTextLineHeightWithSpacing() * max_height_in_lines));
+            if (ImGui::BeginChild("ConstrainedChild", ImVec2(-FLT_MIN, 0.0f), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY))
+                for (int n = 0; n < draw_lines; n++)
+                    ImGui::Text("Line %04d", n);
             ImGui::EndChild();
         }
 
@@ -2870,6 +2890,10 @@ static void ShowDemoWindowLayout()
             ImGui::CheckboxFlags("ImGuiChildFlags_AlwaysUseWindowPadding", &child_flags, ImGuiChildFlags_AlwaysUseWindowPadding);
             ImGui::CheckboxFlags("ImGuiChildFlags_ResizeX", &child_flags, ImGuiChildFlags_ResizeX);
             ImGui::CheckboxFlags("ImGuiChildFlags_ResizeY", &child_flags, ImGuiChildFlags_ResizeY);
+            ImGui::CheckboxFlags("ImGuiChildFlags_FrameStyle", &child_flags, ImGuiChildFlags_FrameStyle);
+            ImGui::SameLine(); HelpMarker("Style the child window like a framed item: use FrameBg, FrameRounding, FrameBorderSize, FramePadding instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.");
+            if (child_flags & ImGuiChildFlags_FrameStyle)
+                override_bg_color = false;
 
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
             if (override_bg_color)
@@ -5139,6 +5163,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth", &tree_node_flags, ImGuiTreeNodeFlags_SpanFullWidth);
         ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &tree_node_flags, ImGuiTreeNodeFlags_SpanAllColumns);
 
+        HelpMarker("See \"Columns flags\" section to configure how indentation is applied to individual columns.");
         if (ImGui::BeginTable("3ways", 3, flags))
         {
             // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
@@ -6346,7 +6371,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 
         bool copy_to_clipboard = ImGui::Button("Copy to clipboard");
         ImVec2 child_size = ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 18);
-        ImGui::BeginChildFrame(ImGui::GetID("cfg_infos"), child_size, ImGuiWindowFlags_NoMove);
+        ImGui::BeginChild(ImGui::GetID("cfg_infos"), child_size, ImGuiChildFlags_FrameStyle);
         if (copy_to_clipboard)
         {
             ImGui::LogToClipboard();
@@ -6483,7 +6508,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
             ImGui::LogText("\n```\n");
             ImGui::LogFinish();
         }
-        ImGui::EndChildFrame();
+        ImGui::EndChild();
     }
     ImGui::End();
 }
@@ -6695,6 +6720,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "Left-click on color square to open color picker,\n"
                 "Right-click to open edit options menu.");
 
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10), ImVec2(FLT_MAX, FLT_MAX));
             ImGui::BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Border, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
             ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
             for (int i = 0; i < ImGuiCol_COUNT; i++)
@@ -7518,7 +7544,7 @@ static void ShowExampleAppLayout(bool* p_open)
         // Left
         static int selected = 0;
         {
-            ImGui::BeginChild("left pane", ImVec2(150, 0), ImGuiChildFlags_Border);
+            ImGui::BeginChild("left pane", ImVec2(150, 0), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX);
             for (int i = 0; i < 100; i++)
             {
                 // FIXME: Good candidate to use ImGuiSelectableFlags_SelectOnNav
@@ -8662,13 +8688,13 @@ void ShowExampleAppDocuments(bool* p_open)
             {
                 ImGui::Text("Save change to the following items?");
                 float item_height = ImGui::GetTextLineHeightWithSpacing();
-                if (ImGui::BeginChildFrame(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height)))
+                if (ImGui::BeginChild(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height), ImGuiChildFlags_FrameStyle))
                 {
                     for (int n = 0; n < close_queue.Size; n++)
                         if (close_queue[n]->Dirty)
                             ImGui::Text("%s", close_queue[n]->Name);
                 }
-                ImGui::EndChildFrame();
+                ImGui::EndChild();
 
                 ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
                 if (ImGui::Button("Yes", button_size))
