@@ -68,6 +68,7 @@ Breaking changes:
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
    be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
+ - Defining IMGUI_DISABLE_OBSOLETE_FUNCTIONS now automaticaly define IMGUI_DISABLE_OBSOLETE_KEYIO. (#4921)
  - Removed IM_OFFSETOF() macro in favor of using offsetof() available in C++11. Kept redirection define. (#4537)
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
