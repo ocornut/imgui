@@ -49,7 +49,7 @@ Index of this file:
 //    | TableSetupDrawChannels()                - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableBeginContextMenuPopup()
-//    | - TableDrawContextMenu()                - draw right-click context menu contents
+//    | - TableDrawDefaultContextMenu()         - draw right-click context menu contents
 //-----------------------------------------------------------------------------
 // - TableHeadersRow() or TableHeader()         user submit a headers row (optional)
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
@@ -1194,11 +1194,11 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 11] Default context menu
     // - To append to this menu: you can call TableBeginContextMenuPopup()/.../EndPopup().
     // - To modify or replace this: set table->IsContextPopupNoDefaultContents = true, then call TableBeginContextMenuPopup()/.../EndPopup().
-    // - You may call TableDrawContextMenu() with selected flags to display specific sections of the default menu,
-    //   e.g. TableDrawContextMenu(table, table->Flags & ~ImGuiTableFlags_Hideable) will display everything EXCEPT columns visibility options.
+    // - You may call TableDrawDefaultContextMenu() with selected flags to display specific sections of the default menu,
+    //   e.g. TableDrawDefaultContextMenu(table, table->Flags & ~ImGuiTableFlags_Hideable) will display everything EXCEPT columns visibility options.
     if (table->DisableDefaultContextMenu == false && TableBeginContextMenuPopup(table))
     {
-        TableDrawContextMenu(table, table->Flags);
+        TableDrawDefaultContextMenu(table, table->Flags);
         EndPopup();
     }
 
@@ -3262,7 +3262,8 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
 // [SECTION] Tables: Context Menu
 //-------------------------------------------------------------------------
 // - TableOpenContextMenu() [Internal]
-// - TableDrawContextMenu() [Internal]
+// - TableBeginContextMenuPopup() [Internal]
+// - TableDrawDefaultContextMenu() [Internal]
 //-------------------------------------------------------------------------
 
 // Use -1 to open menu not specific to a given column.
@@ -3304,7 +3305,7 @@ bool ImGui::TableBeginContextMenuPopup(ImGuiTable* table)
 ////- ImGuiTableFlags_Sortable   -> display sorting options (disabled)
 // - ImGuiTableFlags_Hideable    -> display columns visibility menu items
 // It means if you have a custom context menus you can call this section and omit some sections, and add your own.
-void ImGui::TableDrawContextMenu(ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display)
+void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
