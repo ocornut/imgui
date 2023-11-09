@@ -218,6 +218,8 @@ Other changes:
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
+- Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead
+  of "libGL.so.1", accomodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 - Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
