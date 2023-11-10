@@ -88,6 +88,11 @@ Breaking changes:
    - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
      AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
      Read 1.82 Changelog for details.
+ - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
+   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+   You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload the font atlas texture.
+   (#6943, #6715, #6327, #3743, #4618)
 
 Other changes:
 
@@ -210,9 +215,13 @@ Other changes:
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
 - Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
-- Backends: Vulkan: Added ImGui_ImplVulkan_DestroyFontsTexture(), made ImGui_ImplVulkan_CreateFontsTexture()
-  destroy previous one, allowing recreation of fonts without leaks. (#6943, #6715, #6327, #3743, #4618)
-  [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb]
+- Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+  command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
+  No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+  You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload font atlas texture.
+  Fixed leaks, and added ImGui_ImplVulkan_DestroyFontsTexture() (probably no need to call this directly).
+  (#6943, #6715, #6327, #3743, #4618)
+  [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb, @ocornut]
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
