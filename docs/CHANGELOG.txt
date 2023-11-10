@@ -68,6 +68,8 @@ Breaking changes:
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
    be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
+ - Defining IMGUI_DISABLE_OBSOLETE_FUNCTIONS now automaticaly define IMGUI_DISABLE_OBSOLETE_KEYIO. (#4921)
+ - Removed IM_OFFSETOF() macro in favor of using offsetof() available in C++11. Kept redirection define. (#4537)
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -86,6 +88,11 @@ Breaking changes:
    - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
      AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
      Read 1.82 Changelog for details.
+ - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
+   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+   You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload the font atlas texture.
+   (#6943, #6715, #6327, #3743, #4618)
 
 Other changes:
 
@@ -208,6 +215,13 @@ Other changes:
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
 - Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
+- Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+  command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
+  No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+  You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload font atlas texture.
+  Fixed leaks, and added ImGui_ImplVulkan_DestroyFontsTexture() (probably no need to call this directly).
+  (#6943, #6715, #6327, #3743, #4618)
+  [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb, @ocornut]
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
@@ -218,7 +232,10 @@ Other changes:
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
+- Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead
+  of "libGL.so.1", accomodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 - Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
+- Examples: GLFW+Vulkan, SDL+Vulkan: Extracted font upload code into a UploadFonts() function.
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 Docking+Viewports Branch:
