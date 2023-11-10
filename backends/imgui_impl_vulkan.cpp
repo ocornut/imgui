@@ -175,14 +175,18 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkAllocateCommandBuffers) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkAllocateDescriptorSets) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkAllocateMemory) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkBeginCommandBuffer) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkBindBufferMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkBindImageMemory) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBeginRenderPass) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBindDescriptorSets) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBindIndexBuffer) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBindPipeline) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBindVertexBuffers) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdCopyBufferToImage) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdDrawIndexed) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdEndRenderPass) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPipelineBarrier) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPushConstants) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdSetScissor) \
@@ -217,6 +221,7 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroySurfaceKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroySwapchainKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDeviceWaitIdle) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkEndCommandBuffer) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFlushMappedMemoryRanges) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeCommandBuffers) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeDescriptorSets) \
@@ -227,21 +232,17 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceCapabilitiesKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceFormatsKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfacePresentModesKHR) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceSupportKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetSwapchainImagesKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkMapMemory) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueuePresentKHR) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueSubmit) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueWaitIdle) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetFences) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUnmapMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceSupportKHR) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkWaitForFences) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdBeginRenderPass) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdEndRenderPass) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueuePresentKHR) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkBeginCommandBuffer) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkEndCommandBuffer) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetFences) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueSubmit) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR)
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkWaitForFences)
 
 // Define function pointers
 #define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
