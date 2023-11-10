@@ -51,7 +51,7 @@ Breaking changes:
       After:   BeginChild("Name", size, ImGuiChildFlags_Border)
       Before:  BeginChild("Name", size, false)
       After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
-   Kept inline redirection function (will obsolete later) so existing code will work.
+   Existing code will still work as 'ImGuiChildFlags_Border == true', but you are encouraged to upgrade.
  - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
    the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
    for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
