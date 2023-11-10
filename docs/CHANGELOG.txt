@@ -210,6 +210,9 @@ Other changes:
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
 - Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
+- Backends: Vulkan: Added ImGui_ImplVulkan_DestroyFontsTexture(), made ImGui_ImplVulkan_CreateFontsTexture()
+  destroy previous one, allowing recreation of fonts without leaks. (#6943, #6715, #6327, #3743, #4618)
+  [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb]
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
@@ -223,6 +226,7 @@ Other changes:
 - Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead
   of "libGL.so.1", accomodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 - Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
+- Examples: GLFW+Vulkan, SDL+Vulkan: Extracted font upload code into a UploadFonts() function.
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 
