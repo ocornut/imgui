@@ -222,6 +222,8 @@ Other changes:
   Fixed leaks, and added ImGui_ImplVulkan_DestroyFontsTexture() (probably no need to call this directly).
   (#6943, #6715, #6327, #3743, #4618)
   [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb, @ocornut]
+- Backends: Vulkan: use specified ColorAttachmentFormat when creating a secondary window when enabling
+  UseDynamicRendering option. (#6999, #5446, #5037) [@raaaviol]
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
