@@ -7674,9 +7674,21 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     {
         // Helper functions to demonstrate programmatic constraints
         // FIXME: This doesn't take account of decoration size (e.g. title bar), library should make this easier.
-        static void AspectRatio(ImGuiSizeCallbackData* data)    { float aspect_ratio = *(float*)data->UserData; data->DesiredSize.x = IM_MAX(data->CurrentSize.x, data->CurrentSize.y); data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio); }
-        static void Square(ImGuiSizeCallbackData* data)         { data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->CurrentSize.x, data->CurrentSize.y); }
-        static void Step(ImGuiSizeCallbackData* data)           { float step = *(float*)data->UserData; data->DesiredSize = ImVec2((int)(data->CurrentSize.x / step + 0.5f) * step, (int)(data->CurrentSize.y / step + 0.5f) * step); }
+        // FIXME: None of the three demos works consistently when resizing from borders.
+        static void AspectRatio(ImGuiSizeCallbackData* data)
+        {
+            float aspect_ratio = *(float*)data->UserData;
+            data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio);
+        }
+        static void Square(ImGuiSizeCallbackData* data)
+        {
+            data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y);
+        }
+        static void Step(ImGuiSizeCallbackData* data)
+        {
+            float step = *(float*)data->UserData;
+            data->DesiredSize = ImVec2((int)(data->DesiredSize.x / step + 0.5f) * step, (int)(data->DesiredSize.y / step + 0.5f) * step);
+        }
     };
 
     const char* test_desc[] =

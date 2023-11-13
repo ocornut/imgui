@@ -215,6 +215,7 @@ Other changes:
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
 - Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
 - Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
+- Demo: Partly fixed "Examples -> Constrained-resizing window" custom constrains demo. (#6210) [@cfillion]
 - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
