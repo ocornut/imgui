@@ -5713,7 +5713,7 @@ static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& s
     ImVec2 new_size = size_desired;
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSizeConstraint)
     {
-        // Using -1,-1 on either X/Y axis to preserve the current size.
+        // See comments in SetNextWindowSizeConstraints() for details about setting size_min an size_max.
         ImRect cr = g.NextWindowData.SizeConstraintRect;
         new_size.x = (cr.Min.x >= 0 && cr.Max.x >= 0) ? ImClamp(new_size.x, cr.Min.x, cr.Max.x) : window->SizeFull.x;
         new_size.y = (cr.Min.y >= 0 && cr.Max.y >= 0) ? ImClamp(new_size.y, cr.Min.y, cr.Max.y) : window->SizeFull.y;
@@ -7719,6 +7719,10 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
     g.NextWindowData.SizeCond = cond ? cond : ImGuiCond_Always;
 }
 
+// For each axis:
+// - Use 0.0f as min or FLT_MAX as max if you don't want limits, e.g. size_min = (500.0f, 0.0f), size_max = (FLT_MAX, FLT_MAX) sets a minimum width.
+// - Use -1 for both min and max of same axis to preserve current size which itself is a constraint.
+// - See "Demo->Examples->Constrained-resizing window" for examples.
 void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data)
 {
     ImGuiContext& g = *GImGui;
