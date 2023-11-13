@@ -201,6 +201,12 @@ Other changes:
   - Better assert during load when passing truncated font data or wrong data size. (#6822)
   - Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
     prior to building again. (#6825)
+  - Added ImFontConfig::RasterizerDensity field to increase texture size of rendered glyphs
+    without altering other metrics. Among other things, this makes it easier to have zooming code
+    swapping between 2 fonts (e.g. a 100% and a 400% fonts) depending on current scale. (#6925) [@thedmd]
+    Important: if you increase this it is expected that you would render the font with a scale of
+    similar value or magnitude. Merely increasing this without increasing scale may lower quality.
+  - imgui_freetype: Added support for RasterizerDensity. (#6925) [@thedmd]
   - imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
 - Inputs: Added IsKeyChordPressed() helper function e.g. IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S).
   (note that ImGuiMod_Shortcut may be used as an alias for Cmd on OSX and Ctrl on other systems).
