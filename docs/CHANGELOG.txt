@@ -225,6 +225,7 @@ Other changes:
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
+- Backends: SDL3: Updates for recent API changes. (#7000, #6974)
 - Backends: Win32: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
