@@ -119,10 +119,6 @@ Other changes:
   - BeginChild(): Added ImGuiChildFlags_FrameStyle as a replacement for BeginChildFrame(),
     use it to make child window use FrameBg, FrameRounding, FrameBorderSize, FramePadding
     instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
-  - BeginChild(): Internal name used by child windows now omits the hash/id if the child
-    window is submitted in root of id stack of parent window.
-    So "Parent/Child_XXXXXXX" becomes "Parent/Child" when in root of id stack.
-    Makes debugging/metrics easier and shorter to read in many cases.
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
   - Double-clicking lower-left resize grip auto-resize (like lower-right one).
