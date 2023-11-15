@@ -5697,6 +5697,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
 static inline ImVec2 CalcWindowMinSize(ImGuiWindow* window)
 {
     // Popups, menus and childs bypass style.WindowMinSize by default, but we give then a non-zero minimum size to facilitate understanding problematic cases (e.g. empty popups)
+    // FIXME: the if/else could probably be removed, "reduce artifacts" section for all windows.
     ImGuiContext& g = *GImGui;
     ImVec2 size_min;
     if (window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_ChildWindow))
@@ -5707,7 +5708,8 @@ static inline ImVec2 CalcWindowMinSize(ImGuiWindow* window)
     else
     {
         ImGuiWindow* window_for_height = window;
-        size_min = g.Style.WindowMinSize;
+        size_min.x = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.x : 4.0f;
+        size_min.y = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.x : 4.0f;
         size_min.y = ImMax(size_min.y, window_for_height->TitleBarHeight() + window_for_height->MenuBarHeight() + ImMax(0.0f, g.Style.WindowRounding - 1.0f)); // Reduce artifacts with very small windows
     }
     return size_min;
