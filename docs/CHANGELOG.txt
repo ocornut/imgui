@@ -44,6 +44,10 @@ Breaking changes:
 
 Other changes:
 
+- Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
+  like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
+
+
 -----------------------------------------------------------------------
  VERSION 1.90.0 (Released 2023-11-15)
 -----------------------------------------------------------------------
