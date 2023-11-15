@@ -6,6 +6,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
 //  2023/08/01: added support for SVG fonts, enable by using '#define IMGUI_ENABLE_FREETYPE_LUNASVG' (#6591)
 //  2023/01/04: fixed a packing issue which in some occurrences would prevent large amount of glyphs from being packed correctly.
 //  2021/08/23: fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL.
@@ -166,6 +167,8 @@ namespace
         unsigned int    UserFlags;          // = ImFontConfig::RasterizerFlags
         FT_Int32        LoadFlags;
         FT_Render_Mode  RenderMode;
+        float           RasterizationDensity;
+        float           InvRasterizationDensity;
     };
 
     // From SDL_ttf: Handy routines for converting from fixed point
@@ -208,6 +211,9 @@ namespace
         if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
             LoadFlags |= FT_LOAD_COLOR;
 
+        RasterizationDensity = cfg.RasterizerDensity;
+        InvRasterizationDensity = 1.0f / RasterizationDensity;
+
         memset(&Info, 0, sizeof(Info));
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
@@ -231,19 +237,19 @@ namespace
         FT_Size_RequestRec req;
         req.type = (UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
         req.width = 0;
-        req.height = (uint32_t)pixel_height * 64;
+        req.height = (uint32_t)(pixel_height * 64 * RasterizationDensity);
         req.horiResolution = 0;
         req.vertResolution = 0;
         FT_Request_Size(Face, &req);
 
         // Update font info
         FT_Size_Metrics metrics = Face->size->metrics;
-        Info.PixelHeight = (uint32_t)pixel_height;
-        Info.Ascender = (float)FT_CEIL(metrics.ascender);
-        Info.Descender = (float)FT_CEIL(metrics.descender);
-        Info.LineSpacing = (float)FT_CEIL(metrics.height);
-        Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender);
-        Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
+        Info.PixelHeight = (uint32_t)(pixel_height * InvRasterizationDensity);
+        Info.Ascender = (float)FT_CEIL(metrics.ascender) * InvRasterizationDensity;
+        Info.Descender = (float)FT_CEIL(metrics.descender) * InvRasterizationDensity;
+        Info.LineSpacing = (float)FT_CEIL(metrics.height) * InvRasterizationDensity;
+        Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * InvRasterizationDensity;
+        Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * InvRasterizationDensity;
     }
 
     const FT_Glyph_Metrics* FreeTypeFont::LoadGlyph(uint32_t codepoint)
@@ -695,15 +701,15 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             const int ty = pack_rect.y + padding;
 
             // Register glyph
-            float x0 = info.OffsetX + font_off_x;
-            float y0 = info.OffsetY + font_off_y;
-            float x1 = x0 + info.Width;
-            float y1 = y0 + info.Height;
+            float x0 = info.OffsetX * src_tmp.Font.InvRasterizationDensity + font_off_x;
+            float y0 = info.OffsetY * src_tmp.Font.InvRasterizationDensity + font_off_y;
+            float x1 = x0 + info.Width * src_tmp.Font.InvRasterizationDensity;
+            float y1 = y0 + info.Height * src_tmp.Font.InvRasterizationDensity;
             float u0 = (tx) / (float)atlas->TexWidth;
             float v0 = (ty) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
-            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
+            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX * src_tmp.Font.InvRasterizationDensity);
 
             ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
             IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
