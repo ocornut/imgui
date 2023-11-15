@@ -37,12 +37,12 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.90 WIP (In Progress)
+ VERSION 1.90.0 (Released 2023-11-15)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
- - BeginChild(): Upgraded 'bool border = false' parameter to 'ImGuiChildFlags flags'.
+ - BeginChild(): Upgraded 'bool border = false' parameter to 'ImGuiChildFlags flags = 0'.
    Added ImGuiChildFlags_Border value. As with our prior "bool-to-flags" API updates,
    the ImGuiChildFlags_Border value is guaranteed to be == true forever to ensure a
    smoother transition, meaning all existing calls will still work.
@@ -51,7 +51,7 @@ Breaking changes:
       After:   BeginChild("Name", size, ImGuiChildFlags_Border)
       Before:  BeginChild("Name", size, false)
       After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
-   Existing code will still work as 'ImGuiChildFlags_Border == true', but you are encouraged to upgrade.
+   Existing code will still work as 'ImGuiChildFlags_Border == true', but you are encouraged to update call sites.
  - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
    the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
    for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
@@ -68,7 +68,7 @@ Breaking changes:
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
    be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
- - Defining IMGUI_DISABLE_OBSOLETE_FUNCTIONS now automaticaly define IMGUI_DISABLE_OBSOLETE_KEYIO. (#4921)
+ - Defining IMGUI_DISABLE_OBSOLETE_FUNCTIONS now automatically defines IMGUI_DISABLE_OBSOLETE_KEYIO. (#4921)
  - Removed IM_OFFSETOF() macro in favor of using offsetof() available in C++11. Kept redirection define. (#4537)
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
@@ -82,15 +82,15 @@ Breaking changes:
    Old type was unnecessarily complex and harder to wrap in e.g. a lambda. Kept inline redirection function (will obsolete).
  - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
    - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
-     Consider that generally 'GetContentRegionAvail().x' is more useful.
+     Consider that generally 'GetContentRegionAvail().x' is often more correct and more useful.
    - ImDrawCornerFlags_XXX         -> use ImDrawFlags_RoundCornersXXX names.
-     Read 1.82 changelog for details + grep commented names in sources + .
+     Read 1.82 changelog for details + grep commented names in sources.
    - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
      AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
-     Read 1.82 Changelog for details.
+     Read 1.82 changelog for details.
  - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
-   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
-   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unnecessary.
+   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in ImGui_ImplVulkan_NewFrame().
    You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload the font atlas texture.
    (#6943, #6715, #6327, #3743, #4618)
 
@@ -109,9 +109,9 @@ Other changes:
       hidden because of being scrolled out.
     - Combining this with also specifying ImGuiChildFlags_AlwaysAutoResize disables
       this optimization, meaning child contents will never be clipped (not recommended).
-    - Please be considerate that child are full windows and carry significiant overhead:
+    - Please be considerate that child are full windows and carry significant overhead:
       combining auto-resizing for both axises to create a non-scrolling child to merely draw
-      a border would be better more optimally using BeginGroup().
+      a border would be better more optimally using BeginGroup(). (see #1496)
       (until we come up with new helpers for framed groups and work-rect adjustments).
   - BeginChild(): made it possible to use SetNextWindowSizeConstraints() rectangle, often
     useful when ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY. (#1666, #1395, #1496)
@@ -137,7 +137,7 @@ Other changes:
     - Matches tree indentation (was not the case before).
     - Matches SeparatorText(). (#1643)
     - Makes things correct inside groups without specific/hard-coded handling. (#205)
-  - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
+  - Support legacy behavior when used inside old Columns(), as we favored that idiom back then,
     only different is left position follows indentation level, to match calling a Separator()
     inside or outside Columns().
 - Tooltips:
@@ -172,9 +172,9 @@ Other changes:
     parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
   - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
     register contents size in a way that would affect the scrolling layer.
-    Was most often noticable when using an horizontal scrollbar. (#6789)
+    Was most often noticeable when using an horizontal scrollbar. (#6789)
 - InputText:
-  - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+  - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multi-line buffer.
     (regression from 1.89.2, only happened in some states). (#6783, #6000)
   - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
     be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
@@ -185,11 +185,11 @@ Other changes:
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
 - ColorPicker4(): Fixed ImGuiColorEditFlags_NoTooltip not being forwarded to individual DragFloat3
-  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is set. (#6957)
+  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is also set. (#6957)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
 - BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
-- BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- BeginListBox(): Fixed not consuming SetNextWindowXXX() data when returning false.
 - Fonts:
   - Argument 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
     This is because our layout/font system currently doesn't fully support non-integer sizes. Until
@@ -206,7 +206,7 @@ Other changes:
   - imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
 - Inputs: Added IsKeyChordPressed() helper function e.g. IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S).
   (note that ImGuiMod_Shortcut may be used as an alias for Cmd on OSX and Ctrl on other systems).
-- Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
+- Misc: Most text functions also treat "%.*s" (along with "%s") specially to bypass formatting. (#3466, #6846)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_AppBack, ImGuiKey_AppForward. (#4921)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
@@ -219,8 +219,8 @@ Other changes:
 - Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
 - Demo: Partly fixed "Examples -> Constrained-resizing window" custom constrains demo. (#6210) [@cfillion]
 - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
-  command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary.
-  No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in NewFrame().
+  command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unnecessary.
+  No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in ImGui_ImplVulkan_NewFrame().
   You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload font atlas texture.
   Fixed leaks, and added ImGui_ImplVulkan_DestroyFontsTexture() (probably no need to call this directly).
   (#6943, #6715, #6327, #3743, #4618)
@@ -237,9 +237,9 @@ Other changes:
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
 - Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead
-  of "libGL.so.1", accomodating for NetBSD systems having only "libGL.so.3" available. (#6983)
+  of "libGL.so.1", accommodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 - Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
-- Examples: GLFW+Vulkan, SDL+Vulkan: Extracted font upload code into a UploadFonts() function.
+- Examples: GLFW+Vulkan, SDL+Vulkan: Simplified and removed code due to backend improvements.
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 
