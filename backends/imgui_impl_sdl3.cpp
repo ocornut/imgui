@@ -336,6 +336,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
 
 static void ImGui_ImplSDL3_SetupPlatformHandles(ImGuiViewport* viewport, SDL_Window* window)
 {
+    IM_UNUSED(window);
     viewport->PlatformHandleRaw = nullptr;
 #if defined(__WIN32__) && !defined(__WINRT__)
     viewport->PlatformHandleRaw = (HWND)SDL_GetProperty(SDL_GetWindowProperties(window), "SDL.window.win32.hwnd", NULL);
