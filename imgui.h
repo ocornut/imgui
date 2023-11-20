@@ -3276,7 +3276,11 @@ enum ImGuiModFlags_ { ImGuiModFlags_None = 0, ImGuiModFlags_Ctrl = ImGuiMod_Ctrl
 
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
 #ifdef IMGUI_INCLUDE_IMGUI_USER_H
+#ifdef IMGUI_USER_H_PATH
+#include IMGUI_USER_H_PATH
+#else
 #include "imgui_user.h"
+#endif
 #endif
 
 #endif // #ifndef IMGUI_DISABLE
