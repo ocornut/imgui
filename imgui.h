@@ -3280,9 +3280,14 @@ enum ImGuiModFlags_ { ImGuiModFlags_None = 0, ImGuiModFlags_Ctrl = ImGuiMod_Ctrl
 #pragma warning (pop)
 #endif
 
-// Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
+// Include imgui_user.h at the end of imgui.h
+// May be convenient for some users to only explicitly include vanilla imgui.h and have extra stuff included.
 #ifdef IMGUI_INCLUDE_IMGUI_USER_H
+#ifdef IMGUI_USER_H_FILENAME
+#include IMGUI_USER_H_FILENAME
+#else
 #include "imgui_user.h"
+#endif
 #endif
 
 #endif // #ifndef IMGUI_DISABLE

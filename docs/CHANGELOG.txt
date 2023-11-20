@@ -54,6 +54,8 @@ Other changes:
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
+- Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
+  IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
 - Misc: Added extra courtesy ==/!= operators when IMGUI_DEFINE_MATH_OPERATORS is defined.
 - Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
   like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
