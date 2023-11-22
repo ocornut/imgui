@@ -46,6 +46,8 @@ Other changes:
 
 - Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
   like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
+- Misc: Renamed some defines in imstb_textedit.h to avoid conflicts when using unity/jumbo builds
+  on a codebase where another copy of the library is used.
 
 
 -----------------------------------------------------------------------
