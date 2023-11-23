@@ -3137,7 +3137,7 @@ namespace ImGui
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     IMGUI_API ImGuiKey     GetKeyIndex(ImGuiContext* ctx, ImGuiKey key);  // map ImGuiKey_* values into legacy native key index. == io.KeyMap[key]
 #else
-    static inline ImGuiKey GetKeyIndex(ImGuiKey key)   { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "ImGuiKey and native_index was merged together and native_index is disabled by IMGUI_DISABLE_OBSOLETE_KEYIO. Please switch to ImGuiKey."); return key; }
+    static inline ImGuiKey GetKeyIndex(ImGuiContext*, ImGuiKey key)   { IM_ASSERT(key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END && "ImGuiKey and native_index was merged together and native_index is disabled by IMGUI_DISABLE_OBSOLETE_KEYIO. Please switch to ImGuiKey."); return key; }
 #endif
 }
 

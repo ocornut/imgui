@@ -6090,7 +6090,7 @@ static void ShowDemoWindowInputs(ImGuiContext* ctx)
             // We iterate both legacy native range and named ImGuiKey ranges, which is a little odd but this allows displaying the data for old/new backends.
             // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-            struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
+            struct funcs { static bool IsLegacyNativeDupe(ImGuiContext*, ImGuiKey) { return false; } };
             ImGuiKey start_key = ImGuiKey_NamedKey_BEGIN;
 #else
             struct funcs { static bool IsLegacyNativeDupe(ImGuiContext* ctx, ImGuiKey key) { return key < 512 && ImGui::GetIO(ctx).KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
@@ -6305,37 +6305,37 @@ void ImGui::ShowAboutWindow(ImGuiContext* ctx, bool* p_open)
         ImGui::Text(ctx, "sizeof(size_t): %d, sizeof(ImDrawIdx): %d, sizeof(ImDrawVert): %d", (int)sizeof(size_t), (int)sizeof(ImDrawIdx), (int)sizeof(ImDrawVert));
         ImGui::Text(ctx, "define: __cplusplus=%d", (int)__cplusplus);
 #ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_OBSOLETE_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_OBSOLETE_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-        ImGui::Text("define: IMGUI_DISABLE_OBSOLETE_KEYIO");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_OBSOLETE_KEYIO");
 #endif
 #ifdef IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_WIN32_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_WIN32_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_WIN32_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
-        ImGui::Text("define: IMGUI_DISABLE_FILE_FUNCTIONS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_FILE_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_DEFAULT_ALLOCATORS
-        ImGui::Text("define: IMGUI_DISABLE_DEFAULT_ALLOCATORS");
+        ImGui::Text(ctx, "define: IMGUI_DISABLE_DEFAULT_ALLOCATORS");
 #endif
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
-        ImGui::Text("define: IMGUI_USE_BGRA_PACKED_COLOR");
+        ImGui::Text(ctx, "define: IMGUI_USE_BGRA_PACKED_COLOR");
 #endif
 #ifdef _WIN32
         ImGui::Text(ctx, "define: _WIN32");
@@ -6344,10 +6344,10 @@ void ImGui::ShowAboutWindow(ImGuiContext* ctx, bool* p_open)
         ImGui::Text(ctx, "define: _WIN64");
 #endif
 #ifdef __linux__
-        ImGui::Text("define: __linux__");
+        ImGui::Text(ctx, "define: __linux__");
 #endif
 #ifdef __APPLE__
-        ImGui::Text("define: __APPLE__");
+        ImGui::Text(ctx, "define: __APPLE__");
 #endif
 #ifdef _MSC_VER
         ImGui::Text(ctx, "define: _MSC_VER=%d", _MSC_VER);
@@ -6356,19 +6356,19 @@ void ImGui::ShowAboutWindow(ImGuiContext* ctx, bool* p_open)
         ImGui::Text(ctx, "define: _MSVC_LANG=%d", (int)_MSVC_LANG);
 #endif
 #ifdef __MINGW32__
-        ImGui::Text("define: __MINGW32__");
+        ImGui::Text(ctx, "define: __MINGW32__");
 #endif
 #ifdef __MINGW64__
-        ImGui::Text("define: __MINGW64__");
+        ImGui::Text(ctx, "define: __MINGW64__");
 #endif
 #ifdef __GNUC__
-        ImGui::Text("define: __GNUC__=%d", (int)__GNUC__);
+        ImGui::Text(ctx, "define: __GNUC__=%d", (int)__GNUC__);
 #endif
 #ifdef __clang_version__
         ImGui::Text(ctx, "define: __clang_version__=%s", __clang_version__);
 #endif
 #ifdef __EMSCRIPTEN__
-        ImGui::Text("define: __EMSCRIPTEN__");
+        ImGui::Text(ctx, "define: __EMSCRIPTEN__");
 #endif
         ImGui::Separator(ctx);
         ImGui::Text(ctx, "io.BackendPlatformName: %s", io.BackendPlatformName ? io.BackendPlatformName : "NULL");
@@ -8443,10 +8443,10 @@ void ShowExampleAppDocuments(ImGuiContext* ctx, bool* p_open)
 // End of Demo code
 #else
 
-void ImGui::ShowAboutWindow(bool*) {}
-void ImGui::ShowDemoWindow(bool*) {}
-void ImGui::ShowUserGuide() {}
-void ImGui::ShowStyleEditor(ImGuiStyle*) {}
+void ImGui::ShowAboutWindow(ImGuiContext*, bool*) {}
+void ImGui::ShowDemoWindow(ImGuiContext*, bool*) {}
+void ImGui::ShowUserGuide(ImGuiContext*) {}
+void ImGui::ShowStyleEditor(ImGuiContext*, ImGuiStyle*) {}
 
 #endif
 
