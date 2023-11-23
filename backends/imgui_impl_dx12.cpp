@@ -75,9 +75,9 @@ struct ImGui_ImplDX12_Data
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
-static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
+static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData(ImGuiContext* ctx)
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplDX12_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
+    return ctx ? (ImGui_ImplDX12_Data*)ImGui::GetIO(ctx).BackendRendererUserData : nullptr;
 }
 
 // Buffers used during the rendering of a frame
@@ -95,9 +95,9 @@ struct VERTEX_CONSTANT_BUFFER_DX12
 };
 
 // Functions
-static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_ImplDX12_RenderBuffers* fr)
+static void ImGui_ImplDX12_SetupRenderState(ImGuiContext* imctx, ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_ImplDX12_RenderBuffers* fr)
 {
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(imctx);
 
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
@@ -161,7 +161,7 @@ static inline void SafeRelease(T*& res)
 }
 
 // Render function
-void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
+void ImGui_ImplDX12_RenderDrawData(ImGuiContext* imctx, ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
 {
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
@@ -169,7 +169,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
 
     // FIXME: I'm assuming that this only gets called once per frame!
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(imctx);
     bd->frameIndex = bd->frameIndex + 1;
     ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[bd->frameIndex % bd->numFramesInFlight];
 
@@ -243,7 +243,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     fr->IndexBuffer->Unmap(0, &range);
 
     // Setup desired DX state
-    ImGui_ImplDX12_SetupRenderState(draw_data, ctx, fr);
+    ImGui_ImplDX12_SetupRenderState(imctx, draw_data, ctx, fr);
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -261,7 +261,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplDX12_SetupRenderState(draw_data, ctx, fr);
+                    ImGui_ImplDX12_SetupRenderState(imctx, draw_data, ctx, fr);
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }
@@ -287,11 +287,11 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     }
 }
 
-static void ImGui_ImplDX12_CreateFontsTexture()
+static void ImGui_ImplDX12_CreateFontsTexture(ImGuiContext* ctx)
 {
     // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO(ctx);
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(ctx);
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -444,13 +444,13 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     io.Fonts->SetTexID((ImTextureID)bd->hFontSrvGpuDescHandle.ptr);
 }
 
-bool    ImGui_ImplDX12_CreateDeviceObjects()
+bool    ImGui_ImplDX12_CreateDeviceObjects(ImGuiContext* ctx)
 {
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(ctx);
     if (!bd || !bd->pd3dDevice)
         return false;
     if (bd->pPipelineState)
-        ImGui_ImplDX12_InvalidateDeviceObjects();
+        ImGui_ImplDX12_InvalidateDeviceObjects(ctx);
 
     // Create the root signature
     {
@@ -673,18 +673,18 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (result_pipeline_state != S_OK)
         return false;
 
-    ImGui_ImplDX12_CreateFontsTexture();
+    ImGui_ImplDX12_CreateFontsTexture(ctx);
 
     return true;
 }
 
-void    ImGui_ImplDX12_InvalidateDeviceObjects()
+void    ImGui_ImplDX12_InvalidateDeviceObjects(ImGuiContext* ctx)
 {
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(ctx);
     if (!bd || !bd->pd3dDevice)
         return;
 
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
     SafeRelease(bd->pFontTextureResource);
@@ -698,10 +698,10 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     }
 }
 
-bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* cbv_srv_heap,
+bool ImGui_ImplDX12_Init(ImGuiContext* ctx, ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* cbv_srv_heap,
                          D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
@@ -732,14 +732,14 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     return true;
 }
 
-void ImGui_ImplDX12_Shutdown()
+void ImGui_ImplDX12_Shutdown(ImGuiContext* ctx)
 {
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(ctx);
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
 
     // Clean up windows and device objects
-    ImGui_ImplDX12_InvalidateDeviceObjects();
+    ImGui_ImplDX12_InvalidateDeviceObjects(ctx);
     delete[] bd->pFrameResources;
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
@@ -747,13 +747,13 @@ void ImGui_ImplDX12_Shutdown()
     IM_DELETE(bd);
 }
 
-void ImGui_ImplDX12_NewFrame()
+void ImGui_ImplDX12_NewFrame(ImGuiContext* ctx)
 {
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData(ctx);
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplDX12_Init()?");
 
     if (!bd->pPipelineState)
-        ImGui_ImplDX12_CreateDeviceObjects();
+        ImGui_ImplDX12_CreateDeviceObjects(ctx);
 }
 
 //-----------------------------------------------------------------------------

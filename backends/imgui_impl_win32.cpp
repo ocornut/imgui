@@ -117,25 +117,25 @@ struct ImGui_ImplWin32_Data
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
-static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
+static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData(ImGuiContext* ctx)
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
+    return ctx ? (ImGui_ImplWin32_Data*)ImGui::GetIO(ctx).BackendPlatformUserData : nullptr;
 }
 
 // Functions
-static void ImGui_ImplWin32_UpdateKeyboardCodePage()
+static void ImGui_ImplWin32_UpdateKeyboardCodePage(ImGuiContext* ctx)
 {
     // Retrieve keyboard code page, required for handling of non-Unicode Windows.
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
     HKL keyboard_layout = ::GetKeyboardLayout(0);
     LCID keyboard_lcid = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
     if (::GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
         bd->KeyboardCodePage = CP_ACP; // Fallback to default ANSI code page when fails.
 }
 
-static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
+static bool ImGui_ImplWin32_InitEx(ImGuiContext* ctx, void* hwnd, bool platform_has_own_dc)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
     INT64 perf_frequency, perf_counter;
@@ -155,10 +155,10 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     bd->TicksPerSecond = perf_frequency;
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
-    ImGui_ImplWin32_UpdateKeyboardCodePage();
+    ImGui_ImplWin32_UpdateKeyboardCodePage(ctx);
 
     // Set platform dependent data in viewport
-    ImGui::GetMainViewport()->PlatformHandleRaw = (void*)hwnd;
+    ImGui::GetMainViewport(ctx)->PlatformHandleRaw = (void*)hwnd;
     IM_UNUSED(platform_has_own_dc); // Used in 'docking' branch
 
     // Dynamically load XInput library
@@ -185,22 +185,22 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     return true;
 }
 
-IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd)
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(ImGuiContext* ctx, void* hwnd)
 {
-    return ImGui_ImplWin32_InitEx(hwnd, false);
+    return ImGui_ImplWin32_InitEx(ctx, hwnd, false);
 }
 
-IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(void* hwnd)
+IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(ImGuiContext* ctx, void* hwnd)
 {
     // OpenGL needs CS_OWNDC
-    return ImGui_ImplWin32_InitEx(hwnd, true);
+    return ImGui_ImplWin32_InitEx(ctx, hwnd, true);
 }
 
-void    ImGui_ImplWin32_Shutdown()
+void    ImGui_ImplWin32_Shutdown(ImGuiContext* ctx)
 {
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
 
     // Unload XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -214,13 +214,13 @@ void    ImGui_ImplWin32_Shutdown()
     IM_DELETE(bd);
 }
 
-static bool ImGui_ImplWin32_UpdateMouseCursor()
+static bool ImGui_ImplWin32_UpdateMouseCursor(ImGuiContext* ctx)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return false;
 
-    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor(ctx);
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
@@ -252,42 +252,42 @@ static bool IsVkDown(int vk)
     return (::GetKeyState(vk) & 0x8000) != 0;
 }
 
-static void ImGui_ImplWin32_AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
+static void ImGui_ImplWin32_AddKeyEvent(ImGuiContext* ctx, ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     io.AddKeyEvent(key, down);
     io.SetKeyEventNativeData(key, native_keycode, native_scancode); // To support legacy indexing (<1.87 user code)
     IM_UNUSED(native_scancode);
 }
 
-static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
+static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds(ImGuiContext* ctx)
 {
     // Left & right Shift keys: when both are pressed together, Windows tend to not generate the WM_KEYUP event for the first released one.
-    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !IsVkDown(VK_LSHIFT))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftShift, false, VK_LSHIFT);
-    if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !IsVkDown(VK_RSHIFT))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightShift, false, VK_RSHIFT);
+    if (ImGui::IsKeyDown(ctx, ImGuiKey_LeftShift) && !IsVkDown(VK_LSHIFT))
+        ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_LeftShift, false, VK_LSHIFT);
+    if (ImGui::IsKeyDown(ctx, ImGuiKey_RightShift) && !IsVkDown(VK_RSHIFT))
+        ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_RightShift, false, VK_RSHIFT);
 
     // Sometimes WM_KEYUP for Win key is not passed down to the app (e.g. for Win+V on some setups, according to GLFW).
-    if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) && !IsVkDown(VK_LWIN))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftSuper, false, VK_LWIN);
-    if (ImGui::IsKeyDown(ImGuiKey_RightSuper) && !IsVkDown(VK_RWIN))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightSuper, false, VK_RWIN);
+    if (ImGui::IsKeyDown(ctx, ImGuiKey_LeftSuper) && !IsVkDown(VK_LWIN))
+        ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_LeftSuper, false, VK_LWIN);
+    if (ImGui::IsKeyDown(ctx, ImGuiKey_RightSuper) && !IsVkDown(VK_RWIN))
+        ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_RightSuper, false, VK_RWIN);
 }
 
-static void ImGui_ImplWin32_UpdateKeyModifiers()
+static void ImGui_ImplWin32_UpdateKeyModifiers(ImGuiContext* ctx)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO(ctx);
     io.AddKeyEvent(ImGuiMod_Ctrl, IsVkDown(VK_CONTROL));
     io.AddKeyEvent(ImGuiMod_Shift, IsVkDown(VK_SHIFT));
     io.AddKeyEvent(ImGuiMod_Alt, IsVkDown(VK_MENU));
     io.AddKeyEvent(ImGuiMod_Super, IsVkDown(VK_APPS));
 }
 
-static void ImGui_ImplWin32_UpdateMouseData()
+static void ImGui_ImplWin32_UpdateMouseData(ImGuiContext* ctx)
 {
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
+    ImGuiIO& io = ImGui::GetIO(ctx);
     IM_ASSERT(bd->hWnd != 0);
 
     HWND focused_window = ::GetForegroundWindow();
@@ -314,11 +314,11 @@ static void ImGui_ImplWin32_UpdateMouseData()
 }
 
 // Gamepad navigation mapping
-static void ImGui_ImplWin32_UpdateGamepads()
+static void ImGui_ImplWin32_UpdateGamepads(ImGuiContext* ctx)
 {
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO(ctx);
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
     //if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
     //    return;
 
@@ -370,10 +370,10 @@ static void ImGui_ImplWin32_UpdateGamepads()
 #endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 }
 
-void    ImGui_ImplWin32_NewFrame()
+void    ImGui_ImplWin32_NewFrame(ImGuiContext* ctx)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO(ctx);
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplWin32_Init()?");
 
     // Setup display size (every frame to accommodate for window resizing)
@@ -388,21 +388,21 @@ void    ImGui_ImplWin32_NewFrame()
     bd->Time = current_time;
 
     // Update OS mouse position
-    ImGui_ImplWin32_UpdateMouseData();
+    ImGui_ImplWin32_UpdateMouseData(ctx);
 
     // Process workarounds for known Windows key handling issues
-    ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
+    ImGui_ImplWin32_ProcessKeyEventsWorkarounds(ctx);
 
     // Update OS mouse cursor with the cursor requested by imgui
-    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor(ctx);
     if (bd->LastMouseCursor != mouse_cursor)
     {
         bd->LastMouseCursor = mouse_cursor;
-        ImGui_ImplWin32_UpdateMouseCursor();
+        ImGui_ImplWin32_UpdateMouseCursor(ctx);
     }
 
     // Update game controllers (if enabled and available)
-    ImGui_ImplWin32_UpdateGamepads();
+    ImGui_ImplWin32_UpdateGamepads(ctx);
 }
 
 // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
@@ -553,7 +553,7 @@ static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
 // PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
 #if 0
 // Copy this line into your .cpp file to forward declare the function.
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(ImGuiContext* ctx, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
 // See https://learn.microsoft.com/en-us/windows/win32/tablet/system-events-and-mouse-messages
@@ -568,13 +568,12 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
     return ImGuiMouseSource_Mouse;
 }
 
-IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(ImGuiContext* ctx, HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui::GetCurrentContext() == nullptr)
-        return 0;
+    IM_ASSERT(ctx != NULL);
 
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGuiIO& io = ImGui::GetIO(ctx);
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(ctx);
 
     switch (msg)
     {
@@ -665,7 +664,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (wParam < 256)
         {
             // Submit modifiers
-            ImGui_ImplWin32_UpdateKeyModifiers();
+            ImGui_ImplWin32_UpdateKeyModifiers(ctx);
 
             // Obtain virtual key code
             // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
@@ -677,28 +676,28 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 
             // Special behavior for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit the key down event.
             if (key == ImGuiKey_PrintScreen && !is_key_down)
-                ImGui_ImplWin32_AddKeyEvent(key, true, vk, scancode);
+                ImGui_ImplWin32_AddKeyEvent(ctx, key, true, vk, scancode);
 
             // Submit key event
             if (key != ImGuiKey_None)
-                ImGui_ImplWin32_AddKeyEvent(key, is_key_down, vk, scancode);
+                ImGui_ImplWin32_AddKeyEvent(ctx, key, is_key_down, vk, scancode);
 
             // Submit individual left/right modifier events
             if (vk == VK_SHIFT)
             {
                 // Important: Shift keys tend to get stuck when pressed together, missing key-up events are corrected in ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
-                if (IsVkDown(VK_LSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftShift, is_key_down, VK_LSHIFT, scancode); }
-                if (IsVkDown(VK_RSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightShift, is_key_down, VK_RSHIFT, scancode); }
+                if (IsVkDown(VK_LSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_LeftShift, is_key_down, VK_LSHIFT, scancode); }
+                if (IsVkDown(VK_RSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_RightShift, is_key_down, VK_RSHIFT, scancode); }
             }
             else if (vk == VK_CONTROL)
             {
-                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
-                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
+                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
+                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
             }
             else if (vk == VK_MENU)
             {
-                if (IsVkDown(VK_LMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftAlt, is_key_down, VK_LMENU, scancode); }
-                if (IsVkDown(VK_RMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightAlt, is_key_down, VK_RMENU, scancode); }
+                if (IsVkDown(VK_LMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_LeftAlt, is_key_down, VK_LMENU, scancode); }
+                if (IsVkDown(VK_RMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ctx, ImGuiKey_RightAlt, is_key_down, VK_RMENU, scancode); }
             }
         }
         return 0;
@@ -708,7 +707,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         io.AddFocusEvent(msg == WM_SETFOCUS);
         return 0;
     case WM_INPUTLANGCHANGE:
-        ImGui_ImplWin32_UpdateKeyboardCodePage();
+        ImGui_ImplWin32_UpdateKeyboardCodePage(ctx);
         return 0;
     case WM_CHAR:
         if (::IsWindowUnicode(hwnd))
@@ -726,7 +725,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
     case WM_SETCURSOR:
         // This is required to restore cursor when transitioning from e.g resize borders to client area.
-        if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
+        if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor(ctx))
             return 1;
         return 0;
     case WM_DEVICECHANGE:
