@@ -1206,7 +1206,7 @@ ImGuiStyle::ImGuiStyle()
     HoverFlagsForTooltipNav = ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_AllowWhenDisabled;  // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using keyboard/gamepad.
 
     // Default theme
-    ImGui::StyleColorsDark(this);
+    ImGui::StyleColorsDark(NULL, this);
 }
 
 // To scale your entire UI (e.g. if you want your app to use High DPI or generally be DPI aware) you may use this helper function. Scaling the fonts is done separately and is up to you.
@@ -14238,7 +14238,7 @@ void ImGui::ShowMetricsWindow(ImGuiContext* ctx, bool* p_open)
             // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
             Indent(ctx);
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-            struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
+            struct funcs { static bool IsLegacyNativeDupe(ImGuiContext*, ImGuiKey) { return false; } };
 #else
             struct funcs { static bool IsLegacyNativeDupe(ImGuiContext* ctx, ImGuiKey key) { return key < 512 && GetIO(ctx).KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
             //Text("Legacy raw:");      for (ImGuiKey key = ImGuiKey_KeysData_OFFSET; key < ImGuiKey_COUNT; key++) { if (io.KeysDown[key]) { SameLine(); Text("\"%s\" %d", GetKeyName(key), key); } }

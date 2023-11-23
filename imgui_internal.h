@@ -3092,7 +3092,6 @@ namespace ImGui
     }
 
     IMGUI_API ImGuiKeyData* GetKeyData(ImGuiContext* ctx, ImGuiKey key);
-    inline ImGuiKeyData*    GetKeyData(ImGuiContext* ctx, ImGuiKey key)                                    { ImGuiContext& g = *ctx; return GetKeyData(&g, key); }
     IMGUI_API void          GetKeyChordName(ImGuiContext* ctx, ImGuiKeyChord key_chord, char* out_buf, int out_buf_size);
     inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return (ImGuiKey)(ImGuiKey_MouseLeft + button); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiContext* ctx, ImGuiMouseButton button, float lock_threshold = -1.0f);
