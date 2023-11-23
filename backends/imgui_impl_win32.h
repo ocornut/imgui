@@ -20,10 +20,10 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
-IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
-IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(void* hwnd);
-IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(ImGuiContext* ctx, void* hwnd);
+IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(ImGuiContext* ctx, void* hwnd);
+IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown(ImGuiContext* ctx);
+IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame(ImGuiContext* ctx);
 
 // Win32 message handler your application need to call.
 // - Intentionally commented out in a '#if 0' block to avoid dragging dependencies on <windows.h> from this helper.
