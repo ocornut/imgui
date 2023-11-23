@@ -292,23 +292,23 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
     return flags;
 }
 
-ImGuiTable* ImGui::TableFindByID(ImGuiID id)
+ImGuiTable* ImGui::TableFindByID(ImGuiContext* ctx, ImGuiID id)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     return g.Tables.GetByKey(id);
 }
 
 // Read about "TABLE SIZING" at the top of this file.
-bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
+bool    ImGui::BeginTable(ImGuiContext* ctx, const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
-    ImGuiID id = GetID(str_id);
-    return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
+    ImGuiID id = GetID(ctx, str_id);
+    return BeginTableEx(ctx, str_id, id, columns_count, flags, outer_size, inner_width);
 }
 
-bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
+bool    ImGui::BeginTableEx(ImGuiContext* ctx, const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* outer_window = GetCurrentWindow();
+    ImGuiContext& g = *ctx;
+    ImGuiWindow* outer_window = GetCurrentWindow(ctx);
     if (outer_window->SkipItems) // Consistent with other tables + beneficial side effect that assert on miscalling EndTable() will be more visible.
         return false;
 
@@ -319,13 +319,13 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping criteria may evolve.
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
-    const ImVec2 avail_size = GetContentRegionAvail();
-    const ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
+    const ImVec2 avail_size = GetContentRegionAvail(ctx);
+    const ImVec2 actual_outer_size = CalcItemSize(ctx, outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
     const ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
     const bool outer_window_is_measuring_size = (outer_window->AutoFitFramesX > 0) || (outer_window->AutoFitFramesY > 0); // Doesn't apply to AlwaysAutoResize windows!
-    if (use_child_window && IsClippedEx(outer_rect, 0) && !outer_window_is_measuring_size)
+    if (use_child_window && IsClippedEx(ctx, outer_rect, 0) && !outer_window_is_measuring_size)
     {
-        ItemSize(outer_rect);
+        ItemSize(ctx, outer_rect);
         return false;
     }
 
@@ -366,7 +366,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
         if (table->InstanceDataExtra.Size < instance_no)
             table->InstanceDataExtra.push_back(ImGuiTableInstanceData());
-        instance_id = GetIDWithSeed(instance_no, GetIDWithSeed("##Instances", NULL, id)); // Push "##Instances" followed by (int)instance_no in ID stack.
+        instance_id = GetIDWithSeed(ctx, instance_no, GetIDWithSeed(ctx, "##Instances", NULL, id)); // Push "##Instances" followed by (int)instance_no in ID stack.
     }
     else
     {
@@ -392,15 +392,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
             override_content_size.x = inner_width;
 
         if (override_content_size.x != FLT_MAX || override_content_size.y != FLT_MAX)
-            SetNextWindowContentSize(ImVec2(override_content_size.x != FLT_MAX ? override_content_size.x : 0.0f, override_content_size.y != FLT_MAX ? override_content_size.y : 0.0f));
+            SetNextWindowContentSize(ctx, ImVec2(override_content_size.x != FLT_MAX ? override_content_size.x : 0.0f, override_content_size.y != FLT_MAX ? override_content_size.y : 0.0f));
 
         // Reset scroll if we are reactivating it
         if ((table_last_flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) == 0)
-            SetNextWindowScroll(ImVec2(0.0f, 0.0f));
+            SetNextWindowScroll(ctx, ImVec2(0.0f, 0.0f));
 
         // Create scrolling region (without border and zero window padding)
         ImGuiWindowFlags child_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
-        BeginChildEx(name, instance_id, outer_rect.GetSize(), false, child_flags);
+        BeginChildEx(ctx, name, instance_id, outer_rect.GetSize(), false, child_flags);
         table->InnerWindow = g.CurrentWindow;
         table->WorkRect = table->InnerWindow->WorkRect;
         table->OuterRect = table->InnerWindow->Rect();
@@ -427,9 +427,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
-    PushOverrideID(id);
+    PushOverrideID(ctx, id);
     if (instance_no > 0)
-        PushOverrideID(instance_id); // FIXME: Somehow this is not resolved by stack-tool, even tho GetIDWithSeed() submitted the symbol.
+        PushOverrideID(ctx, instance_id); // FIXME: Somehow this is not resolved by stack-tool, even tho GetIDWithSeed() submitted the symbol.
 
     // Backup a copy of host window members we will modify
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -497,8 +497,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     temp_data->AngledheadersExtraWidth = 0.0f;
 
     // Using opaque colors facilitate overlapping lines of the grid, otherwise we'd need to improve TableDrawBorders()
-    table->BorderColorStrong = GetColorU32(ImGuiCol_TableBorderStrong);
-    table->BorderColorLight = GetColorU32(ImGuiCol_TableBorderLight);
+    table->BorderColorStrong = GetColorU32(ctx, ImGuiCol_TableBorderStrong);
+    table->BorderColorLight = GetColorU32(ctx, ImGuiCol_TableBorderLight);
 
     // Make table current
     g.CurrentTable = table;
@@ -569,7 +569,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Load settings
     if (table->IsSettingsRequestLoad)
-        TableLoadSettings(table);
+        TableLoadSettings(ctx, table);
 
     // Handle DPI/font resize
     // This is designed to facilitate DPI changes with the assumption that e.g. style.CellPadding has been scaled as well.
@@ -597,7 +597,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         table->ColumnsNames.Buf.resize(0);
 
     // Apply queued resizing/reordering/hiding requests
-    TableBeginApplyRequests(table);
+    TableBeginApplyRequests(ctx, table);
 
     return true;
 }
@@ -633,7 +633,7 @@ void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
 }
 
 // Apply queued resizing/reordering/hiding requests
-void ImGui::TableBeginApplyRequests(ImGuiTable* table)
+void ImGui::TableBeginApplyRequests(ImGuiContext* ctx, ImGuiTable* table)
 {
     // Handle resizing request
     // (We process this in the TableBegin() of the first instance of each table)
@@ -641,7 +641,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     if (table->InstanceCurrent == 0)
     {
         if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
-            TableSetColumnWidth(table->ResizedColumn, table->ResizedColumnNextWidth);
+            TableSetColumnWidth(ctx, table->ResizedColumn, table->ResizedColumnNextWidth);
         table->LastResizedColumn = table->ResizedColumn;
         table->ResizedColumnNextWidth = FLT_MAX;
         table->ResizedColumn = -1;
@@ -650,7 +650,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
         // FIXME-TABLE: Would be nice to redistribute available stretch space accordingly to other weights, instead of giving it all to siblings.
         if (table->AutoFitSingleColumn != -1)
         {
-            TableSetColumnWidth(table->AutoFitSingleColumn, table->Columns[table->AutoFitSingleColumn].WidthAuto);
+            TableSetColumnWidth(ctx, table->AutoFitSingleColumn, table->Columns[table->AutoFitSingleColumn].WidthAuto);
             table->AutoFitSingleColumn = -1;
         }
     }
@@ -759,9 +759,9 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
 // Runs on the first call to TableNextRow(), to give a chance for TableSetupColumn() and other TableSetupXXXXX() functions to be called first.
 // FIXME-TABLE: Our width (and therefore our WorkRect) will be minimal in the first frame for _WidthAuto columns.
 // Increase feedback side-effect with widgets relying on WorkRect.Max.x... Maybe provide a default distribution for _WidthAuto columns?
-void ImGui::TableUpdateLayout(ImGuiTable* table)
+void ImGui::TableUpdateLayout(ImGuiContext* ctx, ImGuiTable* table)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     IM_ASSERT(table->IsLayoutLocked == false);
 
     const ImGuiTableFlags table_sizing_policy = (table->Flags & ImGuiTableFlags_SizingMask_);
@@ -995,7 +995,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table_instance->LastOuterHeight));
     const ImGuiID backup_active_id = g.ActiveId;
     g.ActiveId = 0;
-    const bool is_hovering_table = ItemHoverable(mouse_hit_rect, 0, ImGuiItemFlags_None);
+    const bool is_hovering_table = ItemHoverable(ctx, mouse_hit_rect, 0, ImGuiItemFlags_None);
     g.ActiveId = backup_active_id;
 
     // Determine skewed MousePos.x to support angled headers.
@@ -1178,7 +1178,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 10] Hit testing on borders
     if (table->Flags & ImGuiTableFlags_Resizable)
-        TableUpdateBorders(table);
+        TableUpdateBorders(ctx, table);
     table_instance->LastTopHeadersRowHeight = 0.0f;
     table->IsLayoutLocked = true;
     table->IsUsingHeaders = false;
@@ -1196,10 +1196,10 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // - To modify or replace this: set table->IsContextPopupNoDefaultContents = true, then call TableBeginContextMenuPopup()/.../EndPopup().
     // - You may call TableDrawDefaultContextMenu() with selected flags to display specific sections of the default menu,
     //   e.g. TableDrawDefaultContextMenu(table, table->Flags & ~ImGuiTableFlags_Hideable) will display everything EXCEPT columns visibility options.
-    if (table->DisableDefaultContextMenu == false && TableBeginContextMenuPopup(table))
+    if (table->DisableDefaultContextMenu == false && TableBeginContextMenuPopup(ctx, table))
     {
-        TableDrawDefaultContextMenu(table, table->Flags);
-        EndPopup();
+        TableDrawDefaultContextMenu(ctx, table, table->Flags);
+        EndPopup(ctx);
     }
 
     // [Part 12] Sanitize and build sort specs before we have a chance to use them for display.
@@ -1224,9 +1224,9 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
 // Process hit-testing on resizing borders. Actual size change will be applied in EndTable()
 // - Set table->HoveredColumnBorder with a short delay/timer to reduce visual feedback noise.
-void ImGui::TableUpdateBorders(ImGuiTable* table)
+void ImGui::TableUpdateBorders(ImGuiContext* ctx, ImGuiTable* table)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     IM_ASSERT(table->Flags & ImGuiTableFlags_Resizable);
 
     // At this point OuterRect height may be zero or under actual final height, so we rely on temporal coherency and
@@ -1259,15 +1259,15 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
 
         ImGuiID column_id = TableGetColumnResizeID(table, column_n, table->InstanceCurrent);
         ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, border_y2_hit);
-        ItemAdd(hit_rect, column_id, NULL, ImGuiItemFlags_NoNav);
+        ItemAdd(ctx, hit_rect, column_id, NULL, ImGuiItemFlags_NoNav);
         //GetForegroundDrawList()->AddRect(hit_rect.Min, hit_rect.Max, IM_COL32(255, 0, 0, 100));
 
         bool hovered = false, held = false;
-        bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_NoNavFocus);
-        if (pressed && IsMouseDoubleClicked(0))
+        bool pressed = ButtonBehavior(ctx, hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_NoNavFocus);
+        if (pressed && IsMouseDoubleClicked(ctx, 0))
         {
             TableSetColumnWidthAutoSingle(table, column_n);
-            ClearActiveID();
+            ClearActiveID(ctx);
             held = false;
         }
         if (held)
@@ -1280,14 +1280,14 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         if ((hovered && g.HoveredIdTimer > TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER) || held)
         {
             table->HoveredColumnBorder = (ImGuiTableColumnIdx)column_n;
-            SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+            SetMouseCursor(ctx, ImGuiMouseCursor_ResizeEW);
         }
     }
 }
 
-void    ImGui::EndTable()
+void    ImGui::EndTable(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Only call EndTable() if BeginTable() returns true!");
 
@@ -1298,7 +1298,7 @@ void    ImGui::EndTable()
     // If the user never got to call TableNextRow() or TableNextColumn(), we call layout ourselves to ensure all our
     // code paths are consistent (instead of just hoping that TableBegin/TableEnd will work), get borders drawn, etc.
     if (!table->IsLayoutLocked)
-        TableUpdateLayout(table);
+        TableUpdateLayout(ctx, table);
 
     const ImGuiTableFlags flags = table->Flags;
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -1308,12 +1308,12 @@ void    ImGui::EndTable()
     IM_ASSERT(outer_window == inner_window || outer_window == inner_window->ParentWindow);
 
     if (table->IsInsideRow)
-        TableEndRow(table);
+        TableEndRow(ctx, table);
 
     // Context menu in columns body
     if (flags & ImGuiTableFlags_ContextMenuInBody)
-        if (table->HoveredColumnBody != -1 && !IsAnyItemHovered() && IsMouseReleased(ImGuiMouseButton_Right))
-            TableOpenContextMenu((int)table->HoveredColumnBody);
+        if (table->HoveredColumnBody != -1 && !IsAnyItemHovered(ctx) && IsMouseReleased(ctx, ImGuiMouseButton_Right))
+            TableOpenContextMenu(ctx, (int)table->HoveredColumnBody);
 
     // Finalize table height
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
@@ -1350,7 +1350,7 @@ void    ImGui::EndTable()
 
     // Draw borders
     if ((flags & ImGuiTableFlags_Borders) != 0)
-        TableDrawBorders(table);
+        TableDrawBorders(ctx, table);
 
 #if 0
     // Strip out dummy channel draw calls
@@ -1369,7 +1369,7 @@ void    ImGui::EndTable()
     ImDrawListSplitter* splitter = table->DrawSplitter;
     splitter->SetCurrentChannel(inner_window->DrawList, 0);
     if ((table->Flags & ImGuiTableFlags_NoClip) == 0)
-        TableMergeDrawChannels(table);
+        TableMergeDrawChannels(ctx, table);
     splitter->Merge(inner_window->DrawList);
 
     // Update ColumnsAutoFitWidth to get us ahead for host using our size to auto-resize without waiting for next BeginTable()
@@ -1422,8 +1422,8 @@ void    ImGui::EndTable()
     IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table_instance->TableInstanceID, "Mismatching PushID/PopID!");
     IM_ASSERT_USER_ERROR(outer_window->DC.ItemWidthStack.Size >= temp_data->HostBackupItemWidthStackSize, "Too many PopItemWidth!");
     if (table->InstanceCurrent > 0)
-        PopID();
-    PopID();
+        PopID(ctx);
+    PopID(ctx);
 
     // Restore window data that we modified
     const ImVec2 backup_outer_max_pos = outer_window->DC.CursorMaxPos;
@@ -1440,12 +1440,12 @@ void    ImGui::EndTable()
     // CursorPosPrevLine and CursorMaxPos manually. That should be a more general layout feature, see same problem e.g. #3414)
     if (inner_window != outer_window)
     {
-        EndChild();
+        EndChild(ctx);
     }
     else
     {
-        ItemSize(table->OuterRect.GetSize());
-        ItemAdd(table->OuterRect, 0);
+        ItemSize(ctx, table->OuterRect.GetSize());
+        ItemAdd(ctx, table->OuterRect, 0);
     }
 
     // Override declared contents width/height to enable auto-resize while not needlessly adding a scrollbar
@@ -1480,7 +1480,7 @@ void    ImGui::EndTable()
 
     // Save settings
     if (table->IsSettingsDirty)
-        TableSaveSettings(table);
+        TableSaveSettings(ctx, table);
     table->IsInitializing = false;
 
     // Clear or restore current table, if any
@@ -1494,14 +1494,14 @@ void    ImGui::EndTable()
         g.CurrentTable->DrawSplitter = &temp_data->DrawSplitter;
     }
     outer_window->DC.CurrentTableIdx = g.CurrentTable ? g.Tables.GetIndex(g.CurrentTable) : -1;
-    NavUpdateCurrentWindowIsScrollPushableX();
+    NavUpdateCurrentWindowIsScrollPushableX(ctx);
 }
 
 // See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
-void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+void ImGui::TableSetupColumn(ImGuiContext* ctx, const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableSetupColumn() after BeginTable()!");
     IM_ASSERT(table->IsLayoutLocked == false && "Need to call call TableSetupColumn() before first row!");
@@ -1572,9 +1572,9 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
 }
 
 // [Public]
-void ImGui::TableSetupScrollFreeze(int columns, int rows)
+void ImGui::TableSetupScrollFreeze(ImGuiContext* ctx, int columns, int rows)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableSetupColumn() after BeginTable()!");
     IM_ASSERT(table->IsLayoutLocked == false && "Need to call TableSetupColumn() before first row!");
@@ -1615,16 +1615,16 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
 // - TableSetBgColor()
 //-----------------------------------------------------------------------------
 
-int ImGui::TableGetColumnCount()
+int ImGui::TableGetColumnCount(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     return table ? table->ColumnsCount : 0;
 }
 
-const char* ImGui::TableGetColumnName(int column_n)
+const char* ImGui::TableGetColumnName(ImGuiContext* ctx, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return NULL;
@@ -1649,9 +1649,9 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
 // - Request will be applied during next layout, which happens on the first call to TableNextRow() after BeginTable().
 // - For the getter you can test (TableGetColumnFlags() & ImGuiTableColumnFlags_IsEnabled) != 0.
 // - Alternative: the ImGuiTableColumnFlags_Disabled is an overriding/master disable flag which will also hide the column from context menu.
-void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
+void ImGui::TableSetColumnEnabled(ImGuiContext* ctx, int column_n, bool enabled)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL);
     if (!table)
@@ -1665,9 +1665,9 @@ void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
 }
 
 // We allow querying for an extra column in order to poll the IsHovered state of the right-most section
-ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
+ImGuiTableColumnFlags ImGui::TableGetColumnFlags(ImGuiContext* ctx, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return ImGuiTableColumnFlags_None;
@@ -1707,9 +1707,9 @@ ImGuiID ImGui::TableGetColumnResizeID(ImGuiTable* table, int column_n, int insta
 }
 
 // Return -1 when table is not hovered. return columns_count if hovering the unused space at the right of the right-most visible column.
-int ImGui::TableGetHoveredColumn()
+int ImGui::TableGetHoveredColumn(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return -1;
@@ -1719,9 +1719,9 @@ int ImGui::TableGetHoveredColumn()
 // Return -1 when table is not hovered. Return maxrow+1 if in table but below last submitted row.
 // *IMPORTANT* Unlike TableGetHoveredColumn(), this has a one frame latency in updating the value.
 // This difference with is the reason why this is not public yet.
-int ImGui::TableGetHoveredRow()
+int ImGui::TableGetHoveredRow(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return -1;
@@ -1729,9 +1729,9 @@ int ImGui::TableGetHoveredRow()
     return (int)table_instance->HoveredRowLast;
 }
 
-void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n)
+void ImGui::TableSetBgColor(ImGuiContext* ctx, ImGuiTableBgTarget target, ImU32 color, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(target != ImGuiTableBgTarget_None);
 
@@ -1781,9 +1781,9 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
 //-------------------------------------------------------------------------
 
 // [Public] Note: for row coloring we use ->RowBgColorCounter which is the same value without counting header rows
-int ImGui::TableGetRowIndex()
+int ImGui::TableGetRowIndex(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return 0;
@@ -1791,21 +1791,21 @@ int ImGui::TableGetRowIndex()
 }
 
 // [Public] Starts into the first cell of a new row
-void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
+void ImGui::TableNextRow(ImGuiContext* ctx, ImGuiTableRowFlags row_flags, float row_min_height)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
 
     if (!table->IsLayoutLocked)
-        TableUpdateLayout(table);
+        TableUpdateLayout(ctx, table);
     if (table->IsInsideRow)
-        TableEndRow(table);
+        TableEndRow(ctx, table);
 
     table->LastRowFlags = table->RowFlags;
     table->RowFlags = row_flags;
     table->RowCellPaddingY = g.Style.CellPadding.y;
     table->RowMinHeight = row_min_height;
-    TableBeginRow(table);
+    TableBeginRow(ctx, table);
 
     // We honor min_row_height requested by user, but cannot guarantee per-row maximum height,
     // because that would essentially require a unique clipping rectangle per-cell.
@@ -1817,7 +1817,7 @@ void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 }
 
 // [Internal] Only called by TableNextRow()
-void ImGui::TableBeginRow(ImGuiTable* table)
+void ImGui::TableBeginRow(ImGuiContext* ctx, ImGuiTable* table)
 {
     ImGuiWindow* window = table->InnerWindow;
     IM_ASSERT(!table->IsInsideRow);
@@ -1847,26 +1847,26 @@ void ImGui::TableBeginRow(ImGuiTable* table)
     // Making the header BG color non-transparent will allow us to overlay it multiple times when handling smooth dragging.
     if (table->RowFlags & ImGuiTableRowFlags_Headers)
     {
-        TableSetBgColor(ImGuiTableBgTarget_RowBg0, GetColorU32(ImGuiCol_TableHeaderBg));
+        TableSetBgColor(ctx, ImGuiTableBgTarget_RowBg0, GetColorU32(ctx, ImGuiCol_TableHeaderBg));
         if (table->CurrentRow == 0)
             table->IsUsingHeaders = true;
     }
 }
 
 // [Internal] Called by TableNextRow()
-void ImGui::TableEndRow(ImGuiTable* table)
+void ImGui::TableEndRow(ImGuiContext* ctx, ImGuiTable* table)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(window == table->InnerWindow);
     IM_ASSERT(table->IsInsideRow);
 
     if (table->CurrentColumn != -1)
-        TableEndCell(table);
+        TableEndCell(ctx, table);
 
     // Logging
     if (g.LogEnabled)
-        LogRenderedText(NULL, "|");
+        LogRenderedText(ctx, NULL, "|");
 
     // Position cursor at the bottom of our row so it can be used for e.g. clipping calculation. However it is
     // likely that the next call to TableBeginCell() will reposition the cursor to take account of vertical padding.
@@ -1894,7 +1894,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
         if (table->RowBgColor[0] != IM_COL32_DISABLE)
             bg_col0 = table->RowBgColor[0];
         else if (table->Flags & ImGuiTableFlags_RowBg)
-            bg_col0 = GetColorU32((table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
+            bg_col0 = GetColorU32(ctx, (table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
         if (table->RowBgColor[1] != IM_COL32_DISABLE)
             bg_col1 = table->RowBgColor[1];
 
@@ -2002,9 +2002,9 @@ void ImGui::TableEndRow(ImGuiTable* table)
 // - TableEndCell() [Internal]
 //-------------------------------------------------------------------------
 
-int ImGui::TableGetColumnIndex()
+int ImGui::TableGetColumnIndex(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return 0;
@@ -2012,9 +2012,9 @@ int ImGui::TableGetColumnIndex()
 }
 
 // [Public] Append into a specific column
-bool ImGui::TableSetColumnIndex(int column_n)
+bool ImGui::TableSetColumnIndex(ImGuiContext* ctx, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return false;
@@ -2022,9 +2022,9 @@ bool ImGui::TableSetColumnIndex(int column_n)
     if (table->CurrentColumn != column_n)
     {
         if (table->CurrentColumn != -1)
-            TableEndCell(table);
+            TableEndCell(ctx, table);
         IM_ASSERT(column_n >= 0 && table->ColumnsCount);
-        TableBeginCell(table, column_n);
+        TableBeginCell(ctx, table, column_n);
     }
 
     // Return whether the column is visible. User may choose to skip submitting items based on this return value,
@@ -2033,9 +2033,9 @@ bool ImGui::TableSetColumnIndex(int column_n)
 }
 
 // [Public] Append into the next column, wrap and create a new row when already on last column
-bool ImGui::TableNextColumn()
+bool ImGui::TableNextColumn(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return false;
@@ -2043,13 +2043,13 @@ bool ImGui::TableNextColumn()
     if (table->IsInsideRow && table->CurrentColumn + 1 < table->ColumnsCount)
     {
         if (table->CurrentColumn != -1)
-            TableEndCell(table);
-        TableBeginCell(table, table->CurrentColumn + 1);
+            TableEndCell(ctx, table);
+        TableBeginCell(ctx, table, table->CurrentColumn + 1);
     }
     else
     {
-        TableNextRow();
-        TableBeginCell(table, 0);
+        TableNextRow(ctx);
+        TableBeginCell(ctx, table, 0);
     }
 
     // Return whether the column is visible. User may choose to skip submitting items based on this return value,
@@ -2061,9 +2061,9 @@ bool ImGui::TableNextColumn()
 // [Internal] Called by TableSetColumnIndex()/TableNextColumn()
 // This is called very frequently, so we need to be mindful of unnecessary overhead.
 // FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
-void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
+void ImGui::TableBeginCell(ImGuiContext* ctx, ImGuiTable* table, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTableColumn* column = &table->Columns[column_n];
     ImGuiWindow* window = table->InnerWindow;
     table->CurrentColumn = column_n;
@@ -2110,19 +2110,19 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     // Logging
     if (g.LogEnabled && !column->IsSkipItems)
     {
-        LogRenderedText(&window->DC.CursorPos, "|");
+        LogRenderedText(ctx, &window->DC.CursorPos, "|");
         g.LogLinePosY = FLT_MAX;
     }
 }
 
 // [Internal] Called by TableNextRow()/TableSetColumnIndex()/TableNextColumn()
-void ImGui::TableEndCell(ImGuiTable* table)
+void ImGui::TableEndCell(ImGuiContext* ctx, ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
     ImGuiWindow* window = table->InnerWindow;
 
     if (window->DC.IsSetPos)
-        ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
+        ErrorCheckUsingSetCursorPosToExtendParentBoundaries(ctx);
 
     // Report maximum position so we can infer content size per column.
     float* p_max_pos_x;
@@ -2201,9 +2201,9 @@ float ImGui::TableGetColumnWidthAuto(ImGuiTable* table, ImGuiTableColumn* column
 }
 
 // 'width' = inner column width, without padding
-void ImGui::TableSetColumnWidth(int column_n, float width)
+void ImGui::TableSetColumnWidth(ImGuiContext* ctx, int column_n, float width)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
     IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
@@ -2348,9 +2348,9 @@ void ImGui::TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
 
 // Bg2 is used by Selectable (and possibly other widgets) to render to the background.
 // Unlike our Bg0/1 channel which we uses for RowBg/CellBg/Borders and where we guarantee all shapes to be CPU-clipped, the Bg2 channel being widgets-facing will rely on regular ClipRect.
-void ImGui::TablePushBackgroundChannel()
+void ImGui::TablePushBackgroundChannel(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
 
@@ -2360,9 +2360,9 @@ void ImGui::TablePushBackgroundChannel()
     table->DrawSplitter->SetCurrentChannel(window->DrawList, table->Bg2DrawChannelCurrent);
 }
 
-void ImGui::TablePopBackgroundChannel()
+void ImGui::TablePopBackgroundChannel(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
@@ -2456,9 +2456,9 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
 // Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
 //
 // This function is particularly tricky to understand.. take a breath.
-void ImGui::TableMergeDrawChannels(ImGuiTable* table)
+void ImGui::TableMergeDrawChannels(ImGuiContext* ctx, ImGuiTable* table)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImDrawListSplitter* splitter = table->DrawSplitter;
     const bool has_freeze_v = (table->FreezeRowsCount > 0);
     const bool has_freeze_h = (table->FreezeColumnsCount > 0);
@@ -2626,20 +2626,20 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     }
 }
 
-static ImU32 TableGetColumnBorderCol(ImGuiTable* table, int order_n, int column_n)
+static ImU32 TableGetColumnBorderCol(ImGuiContext* ctx, ImGuiTable* table, int order_n, int column_n)
 {
     const bool is_hovered = (table->HoveredColumnBorder == column_n);
     const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceCurrent);
     const bool is_frozen_separator = (table->FreezeColumnsCount == order_n + 1);
     if (is_resized || is_hovered)
-        return ImGui::GetColorU32(is_resized ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
+        return ImGui::GetColorU32(ctx, is_resized ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
     if (is_frozen_separator || (table->Flags & (ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_NoBordersInBodyUntilResize)))
         return table->BorderColorStrong;
     return table->BorderColorLight;
 }
 
 // FIXME-TABLE: This is a mess, need to redesign how we render borders (as some are also done in TableEndRow)
-void ImGui::TableDrawBorders(ImGuiTable* table)
+void ImGui::TableDrawBorders(ImGuiContext* ctx, ImGuiTable* table)
 {
     ImGuiWindow* inner_window = table->InnerWindow;
     if (!table->OuterWindow->ClipRect.Overlaps(table->OuterRect))
@@ -2682,7 +2682,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             // Always draw full height border when being resized/hovered, or on the delimitation of frozen column scrolling.
             float draw_y2 = (is_hovered || is_resized || is_frozen_separator || (table->Flags & (ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_NoBordersInBodyUntilResize)) == 0) ? draw_y2_body : draw_y2_head;
             if (draw_y2 > draw_y1)
-                inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), TableGetColumnBorderCol(table, order_n, column_n), border_size);
+                inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), TableGetColumnBorderCol(ctx, table, order_n, column_n), border_size);
         }
     }
 
@@ -2739,9 +2739,9 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
 // changed since last call, or the first time. Make sure to set 'SpecsDirty = false' after sorting,
 // else you may wastefully sort your data every frame!
 // Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
-ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
+ImGuiTableSortSpecs* ImGui::TableGetSortSpecs(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL);
 
@@ -2750,7 +2750,7 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 
     // Require layout (in case TableHeadersRow() hasn't been called) as it may alter IsSortSpecsDirty in some paths.
     if (!table->IsLayoutLocked)
-        TableUpdateLayout(table);
+        TableUpdateLayout(ctx, table);
 
     TableSortSpecsBuild(table);
     return &table->SortSpecs;
@@ -2789,9 +2789,9 @@ ImGuiSortDirection ImGui::TableGetColumnNextSortDirection(ImGuiTableColumn* colu
 
 // Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
 // the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
-void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
+void ImGui::TableSetColumnSortDirection(ImGuiContext* ctx, int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
 
     if (!(table->Flags & ImGuiTableFlags_SortMulti))
@@ -2929,31 +2929,31 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 // - TableAngledHeadersRowEx() [Internal]
 //-------------------------------------------------------------------------
 
-float ImGui::TableGetHeaderRowHeight()
+float ImGui::TableGetHeaderRowHeight(ImGuiContext* ctx)
 {
     // Caring for a minor edge case:
     // Calculate row height, for the unlikely case that some labels may be taller than others.
     // If we didn't do that, uneven header height would highlight but smaller one before the tallest wouldn't catch input for all height.
     // In your custom header row you may omit this all together and just call TableNextRow() without a height...
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     float row_height = g.FontSize;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         if (IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             if ((table->Columns[column_n].Flags & ImGuiTableColumnFlags_NoHeaderLabel) == 0)
-                row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(table, column_n)).y);
+                row_height = ImMax(row_height, CalcTextSize(ctx, TableGetColumnName(table, column_n)).y);
     return row_height + g.Style.CellPadding.y * 2.0f;
 }
 
-float ImGui::TableGetHeaderAngledMaxLabelWidth()
+float ImGui::TableGetHeaderAngledMaxLabelWidth(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     float width = 0.0f;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         if (IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             if (table->Columns[column_n].Flags & ImGuiTableColumnFlags_AngledHeader)
-                width = ImMax(width, CalcTextSize(TableGetColumnName(table, column_n), NULL, true).x);
+                width = ImMax(width, CalcTextSize(ctx, TableGetColumnName(table, column_n), NULL, true).x);
     return width + g.Style.CellPadding.x * 2.0f;
 }
 
@@ -2963,50 +2963,50 @@ float ImGui::TableGetHeaderAngledMaxLabelWidth()
 // See 'Demo->Tables->Custom headers' for a demonstration of implementing a custom version of this.
 // This code is constructed to not make much use of internal functions, as it is intended to be a template to copy.
 // FIXME-TABLE: TableOpenContextMenu() and TableGetHeaderRowHeight() are not public.
-void ImGui::TableHeadersRow()
+void ImGui::TableHeadersRow(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableHeadersRow() after BeginTable()!");
 
     // Layout if not already done (this is automatically done by TableNextRow, we do it here solely to facilitate stepping in debugger as it is frequent to step in TableUpdateLayout)
     if (!table->IsLayoutLocked)
-        TableUpdateLayout(table);
+        TableUpdateLayout(ctx, table);
 
     // Open row
-    const float row_height = TableGetHeaderRowHeight();
-    TableNextRow(ImGuiTableRowFlags_Headers, row_height);
-    const float row_y1 = GetCursorScreenPos().y;
+    const float row_height = TableGetHeaderRowHeight(ctx);
+    TableNextRow(ctx, ImGuiTableRowFlags_Headers, row_height);
+    const float row_y1 = GetCursorScreenPos(ctx).y;
     if (table->HostSkipItems) // Merely an optimization, you may skip in your own code.
         return;
 
-    const int columns_count = TableGetColumnCount();
+    const int columns_count = TableGetColumnCount(ctx);
     for (int column_n = 0; column_n < columns_count; column_n++)
     {
-        if (!TableSetColumnIndex(column_n))
+        if (!TableSetColumnIndex(ctx, column_n))
             continue;
 
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
         // In your own code you may omit the PushID/PopID all-together, provided you know they won't collide.
-        const char* name = (TableGetColumnFlags(column_n) & ImGuiTableColumnFlags_NoHeaderLabel) ? "" : TableGetColumnName(column_n);
-        PushID(column_n);
-        TableHeader(name);
-        PopID();
+        const char* name = (TableGetColumnFlags(ctx, column_n) & ImGuiTableColumnFlags_NoHeaderLabel) ? "" : TableGetColumnName(ctx, column_n);
+        PushID(ctx, column_n);
+        TableHeader(ctx, name);
+        PopID(ctx);
     }
 
     // Allow opening popup from the right-most section after the last column.
-    ImVec2 mouse_pos = ImGui::GetMousePos();
-    if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
+    ImVec2 mouse_pos = ImGui::GetMousePos(ctx);
+    if (IsMouseReleased(ctx, 1) && TableGetHoveredColumn(ctx) == columns_count)
         if (mouse_pos.y >= row_y1 && mouse_pos.y < row_y1 + row_height)
-            TableOpenContextMenu(columns_count); // Will open a non-column-specific popup.
+            TableOpenContextMenu(ctx, columns_count); // Will open a non-column-specific popup.
 }
 
 // Emit a column header (text + optional sort order)
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
 // Note that because of how we cpu-clip and display sorting indicators, you _cannot_ use SameLine() after a TableHeader()
-void ImGui::TableHeader(const char* label)
+void ImGui::TableHeader(ImGuiContext* ctx, const char* label)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return;
@@ -3021,7 +3021,7 @@ void ImGui::TableHeader(const char* label)
     if (label == NULL)
         label = "";
     const char* label_end = FindRenderedTextEnd(label);
-    ImVec2 label_size = CalcTextSize(label, label_end, true);
+    ImVec2 label_size = CalcTextSize(ctx, label, label_end, true);
     ImVec2 label_pos = window->DC.CursorPos;
 
     // If we already got a row height, there's use that.
@@ -3043,7 +3043,7 @@ void ImGui::TableHeader(const char* label)
         if (column->SortOrder > 0)
         {
             ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
-            w_sort_text = g.Style.ItemInnerSpacing.x + CalcTextSize(sort_order_suf).x;
+            w_sort_text = g.Style.ItemInnerSpacing.x + CalcTextSize(ctx, sort_order_suf).x;
         }
     }
 
@@ -3055,8 +3055,8 @@ void ImGui::TableHeader(const char* label)
     // Keep header highlighted when context menu is open.
     ImGuiID id = window->GetID(label);
     ImRect bb(cell_r.Min.x, cell_r.Min.y, cell_r.Max.x, ImMax(cell_r.Max.y, cell_r.Min.y + label_height + g.Style.CellPadding.y * 2.0f));
-    ItemSize(ImVec2(0.0f, label_height)); // Don't declare unclipped width, it'll be fed ContentMaxPosHeadersIdeal
-    if (!ItemAdd(bb, id))
+    ItemSize(ctx, ImVec2(0.0f, label_height)); // Don't declare unclipped width, it'll be fed ContentMaxPosHeadersIdeal
+    if (!ItemAdd(ctx, bb, id))
         return;
 
     //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
@@ -3065,27 +3065,27 @@ void ImGui::TableHeader(const char* label)
     // Using AllowOverlap mode because we cover the whole cell, and we want user to be able to submit subsequent items.
     const bool highlight = (table->HighlightColumnHeader == column_n);
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_AllowOverlap);
+    bool pressed = ButtonBehavior(ctx, bb, id, &hovered, &held, ImGuiButtonFlags_AllowOverlap);
     if (held || hovered || highlight)
     {
-        const ImU32 col = GetColorU32(held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        const ImU32 col = GetColorU32(ctx, held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         //RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
-        TableSetBgColor(ImGuiTableBgTarget_CellBg, col, table->CurrentColumn);
+        TableSetBgColor(ctx, ImGuiTableBgTarget_CellBg, col, table->CurrentColumn);
     }
     else
     {
         // Submit single cell bg color in the case we didn't submit a full header row
         if ((table->RowFlags & ImGuiTableRowFlags_Headers) == 0)
-            TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_TableHeaderBg), table->CurrentColumn);
+            TableSetBgColor(ctx, ImGuiTableBgTarget_CellBg, GetColorU32(ctx, ImGuiCol_TableHeaderBg), table->CurrentColumn);
     }
-    RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
+    RenderNavHighlight(ctx, bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
     if (held)
         table->HeldHeaderColumn = (ImGuiTableColumnIdx)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
 
     // Drag and drop to re-order columns.
     // FIXME-TABLE: Scroll request while reordering a column and it lands out of the scrolling zone.
-    if (held && (table->Flags & ImGuiTableFlags_Reorderable) && IsMouseDragging(0) && !g.DragDropActive)
+    if (held && (table->Flags & ImGuiTableFlags_Reorderable) && IsMouseDragging(ctx, 0) && !g.DragDropActive)
     {
         // While moving a column it will jump on the other side of the mouse, so we also test for MouseDelta.x
         table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
@@ -3114,48 +3114,48 @@ void ImGui::TableHeader(const char* label)
             float y = label_pos.y;
             if (column->SortOrder > 0)
             {
-                PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_Text, 0.70f));
-                RenderText(ImVec2(x + g.Style.ItemInnerSpacing.x, y), sort_order_suf);
-                PopStyleColor();
+                PushStyleColor(ctx, ImGuiCol_Text, GetColorU32(ctx, ImGuiCol_Text, 0.70f));
+                RenderText(ctx, ImVec2(x + g.Style.ItemInnerSpacing.x, y), sort_order_suf);
+                PopStyleColor(ctx);
                 x += w_sort_text;
             }
-            RenderArrow(window->DrawList, ImVec2(x, y), GetColorU32(ImGuiCol_Text), column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
+            RenderArrow(window->DrawList, ImVec2(x, y), GetColorU32(ctx, ImGuiCol_Text), column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
         }
 
         // Handle clicking on column header to adjust Sort Order
         if (pressed && table->ReorderColumn != column_n)
         {
             ImGuiSortDirection sort_direction = TableGetColumnNextSortDirection(column);
-            TableSetColumnSortDirection(column_n, sort_direction, g.IO.KeyShift);
+            TableSetColumnSortDirection(ctx, column_n, sort_direction, g.IO.KeyShift);
         }
     }
 
     // Render clipped label. Clipping here ensure that in the majority of situations, all our header cells will
     // be merged into a single draw call.
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
-    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
+    RenderTextEllipsis(ctx, window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
 
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.ActiveId == 0)
-        SetItemTooltip("%.*s", (int)(label_end - label), label);
+        SetItemTooltip(ctx, "%.*s", (int)(label_end - label), label);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
-    if (IsMouseReleased(1) && IsItemHovered())
-        TableOpenContextMenu(column_n);
+    if (IsMouseReleased(ctx, 1) && IsItemHovered(ctx))
+        TableOpenContextMenu(ctx, column_n);
 }
 
 // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
 // FIXME: highlight without ImGuiTableFlags_HighlightHoveredColumn
 // FIXME: No hit-testing/button on the angled header.
-void ImGui::TableAngledHeadersRow()
+void ImGui::TableAngledHeadersRow(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
-    TableAngledHeadersRowEx(g.Style.TableAngledHeadersAngle, 0.0f);
+    ImGuiContext& g = *ctx;
+    TableAngledHeadersRowEx(ctx, g.Style.TableAngledHeadersAngle, 0.0f);
 }
 
-void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
+void ImGui::TableAngledHeadersRowEx(ImGuiContext* ctx, float angle, float max_label_width)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     ImGuiWindow* window = g.CurrentWindow;
     ImDrawList* draw_list = window->DrawList;
@@ -3163,7 +3163,7 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
     IM_ASSERT(table->CurrentRow == -1 && "Must be first row");
 
     if (max_label_width == 0.0f)
-        max_label_width = TableGetHeaderAngledMaxLabelWidth();
+        max_label_width = TableGetHeaderAngledMaxLabelWidth(ctx);
 
     // Angle argument expressed in (-IM_PI/2 .. +IM_PI/2) as it is easier to think about for user.
     const bool flip_label = (angle < 0.0f);
@@ -3183,21 +3183,21 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
     table->AngledHeadersSlope = (sin_a != 0.0f) ? (cos_a / sin_a) : 0.0f;
 
     // Declare row, override and draw our own background
-    TableNextRow(ImGuiTableRowFlags_Headers, row_height);
-    TableNextColumn();
+    TableNextRow(ctx, ImGuiTableRowFlags_Headers, row_height);
+    TableNextColumn(ctx);
     table->DrawSplitter->SetCurrentChannel(draw_list, TABLE_DRAW_CHANNEL_BG0);
     float clip_rect_min_x = table->BgClipRect.Min.x;
     if (table->FreezeColumnsCount > 0)
         clip_rect_min_x = ImMax(clip_rect_min_x, table->Columns[table->FreezeColumnsCount - 1].MaxX);
-    TableSetBgColor(ImGuiTableBgTarget_RowBg0, 0); // Cancel
-    PushClipRect(table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
-    draw_list->AddRectFilled(table->BgClipRect.Min, table->BgClipRect.Max, GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
-    PushClipRect(ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
+    TableSetBgColor(ctx, ImGuiTableBgTarget_RowBg0, 0); // Cancel
+    PushClipRect(ctx, table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
+    draw_list->AddRectFilled(table->BgClipRect.Min, table->BgClipRect.Max, GetColorU32(ctx, ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
+    PushClipRect(ctx, ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
 
     const ImRect row_r(table->WorkRect.Min.x, table->BgClipRect.Min.y, table->WorkRect.Max.x, window->DC.CursorPos.y + row_height);
-    const ImGuiID row_id = GetID("##AngledHeaders");
-    ButtonBehavior(row_r, row_id, NULL, NULL);
-    KeepAliveID(row_id);
+    const ImGuiID row_id = GetID(ctx, "##AngledHeaders");
+    ButtonBehavior(ctx, row_r, row_id, NULL, NULL);
+    KeepAliveID(ctx, row_id);
 
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     int highlight_column_n = table->HighlightColumnHeader;
@@ -3224,9 +3224,9 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
             if (pass == 0)
             {
                 // Draw shape
-                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableHeaderBg));
+                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ctx, ImGuiCol_TableHeaderBg));
                 if (column_n == highlight_column_n)
-                    draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_Header)); // Highlight on hover
+                    draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ctx, ImGuiCol_Header)); // Highlight on hover
                 //draw_list->AddQuad(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableBorderLight), 1.0f);
                 max_x = ImMax(max_x, bg_shape[3].x);
 
@@ -3235,10 +3235,10 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                 const char* label_name = TableGetColumnName(table, column_n);
                 const float clip_width = max_label_width - (sin_a * table->RowCellPaddingY);
                 ImRect label_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width + (flip_label ? 0.0f : table->CellPaddingX), header_height + table->RowCellPaddingY));
-                ImVec2 label_size = CalcTextSize(label_name, NULL, true);
+                ImVec2 label_size = CalcTextSize(ctx, label_name, NULL, true);
                 ImVec2 label_off = ImVec2(flip_label ? ImMax(0.0f, max_label_width - label_size.x - table->CellPaddingX) : table->CellPaddingX, table->RowCellPaddingY);
                 int vtx_idx_begin = draw_list->_VtxCurrentIdx;
-                RenderTextEllipsis(draw_list, label_r.Min + label_off, label_r.Max, label_r.Max.x, label_r.Max.x, label_name, NULL, &label_size);
+                RenderTextEllipsis(ctx, draw_list, label_r.Min + label_off, label_r.Max, label_r.Max.x, label_r.Max.x, label_name, NULL, &label_size);
                 //if (g.IO.KeyShift) { draw_list->AddRect(label_r.Min, label_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f); }
                 int vtx_idx_end = draw_list->_VtxCurrentIdx;
 
@@ -3250,11 +3250,11 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
             if (pass == 1)
             {
                 // Draw border
-                draw_list->AddLine(bg_shape[0], bg_shape[3], TableGetColumnBorderCol(table, order_n, column_n));
+                draw_list->AddLine(bg_shape[0], bg_shape[3], TableGetColumnBorderCol(ctx, table, order_n, column_n));
             }
         }
-    PopClipRect();
-    PopClipRect();
+    PopClipRect(ctx);
+    PopClipRect(ctx);
     table->TempData->AngledheadersExtraWidth = ImMax(0.0f, max_x - table->Columns[table->RightMostEnabledColumn].MaxX);
 }
 
@@ -3267,9 +3267,9 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
 //-------------------------------------------------------------------------
 
 // Use -1 to open menu not specific to a given column.
-void ImGui::TableOpenContextMenu(int column_n)
+void ImGui::TableOpenContextMenu(ImGuiContext* ctx, int column_n)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTable* table = g.CurrentTable;
     if (column_n == -1 && table->CurrentColumn != -1)   // When called within a column automatically use this one (for consistency)
         column_n = table->CurrentColumn;
@@ -3282,16 +3282,16 @@ void ImGui::TableOpenContextMenu(int column_n)
         table->ContextPopupColumn = (ImGuiTableColumnIdx)column_n;
         table->InstanceInteracted = table->InstanceCurrent;
         const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
-        OpenPopupEx(context_menu_id, ImGuiPopupFlags_None);
+        OpenPopupEx(ctx, context_menu_id, ImGuiPopupFlags_None);
     }
 }
 
-bool ImGui::TableBeginContextMenuPopup(ImGuiTable* table)
+bool ImGui::TableBeginContextMenuPopup(ImGuiContext* ctx, ImGuiTable* table)
 {
     if (!table->IsContextPopupOpen || table->InstanceCurrent != table->InstanceInteracted)
         return false;
     const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
-    if (BeginPopupEx(context_menu_id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+    if (BeginPopupEx(ctx, context_menu_id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
         return true;
     table->IsContextPopupOpen = false;
     return false;
@@ -3305,9 +3305,9 @@ bool ImGui::TableBeginContextMenuPopup(ImGuiTable* table)
 ////- ImGuiTableFlags_Sortable   -> display sorting options (disabled)
 // - ImGuiTableFlags_Hideable    -> display columns visibility menu items
 // It means if you have a custom context menus you can call this section and omit some sections, and add your own.
-void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display)
+void ImGui::TableDrawDefaultContextMenu(ImGuiContext* ctx, ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return;
@@ -3322,16 +3322,16 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         if (column != NULL)
         {
             const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
-            if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableSizeOne), NULL, false, can_resize)) // "###SizeOne"
+            if (MenuItem(ctx, LocalizeGetMsg(ctx, ImGuiLocKey_TableSizeOne), NULL, false, can_resize)) // "###SizeOne"
                 TableSetColumnWidthAutoSingle(table, column_n);
         }
 
         const char* size_all_desc;
         if (table->ColumnsEnabledFixedCount == table->ColumnsEnabledCount && (table->Flags & ImGuiTableFlags_SizingMask_) != ImGuiTableFlags_SizingFixedSame)
-            size_all_desc = LocalizeGetMsg(ImGuiLocKey_TableSizeAllFit);        // "###SizeAll" All fixed
+            size_all_desc = LocalizeGetMsg(ctx, ImGuiLocKey_TableSizeAllFit);        // "###SizeAll" All fixed
         else
-            size_all_desc = LocalizeGetMsg(ImGuiLocKey_TableSizeAllDefault);    // "###SizeAll" All stretch or mixed
-        if (MenuItem(size_all_desc, NULL))
+            size_all_desc = LocalizeGetMsg(ctx, ImGuiLocKey_TableSizeAllDefault);    // "###SizeAll" All stretch or mixed
+        if (MenuItem(ctx, size_all_desc, NULL))
             TableSetColumnWidthAutoAll(table);
         want_separator = true;
     }
@@ -3339,7 +3339,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
     // Ordering
     if (flags_for_section_to_display & ImGuiTableFlags_Reorderable)
     {
-        if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder))
+        if (MenuItem(ctx, LocalizeGetMsg(ctx, ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder))
             table->IsResetDisplayOrderRequest = true;
         want_separator = true;
     }
@@ -3369,10 +3369,10 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
     if (flags_for_section_to_display & ImGuiTableFlags_Hideable)
     {
         if (want_separator)
-            Separator();
+            Separator(ctx);
         want_separator = true;
 
-        PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+        PushItemFlag(ctx, ImGuiItemFlags_SelectableDontClosePopup, true);
         for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
         {
             ImGuiTableColumn* other_column = &table->Columns[other_column_n];
@@ -3387,10 +3387,10 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             bool menu_item_active = (other_column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
             if (other_column->IsUserEnabled && table->ColumnsEnabledCount <= 1)
                 menu_item_active = false;
-            if (MenuItem(name, NULL, other_column->IsUserEnabled, menu_item_active))
+            if (MenuItem(ctx, name, NULL, other_column->IsUserEnabled, menu_item_active))
                 other_column->IsUserEnabledNextFrame = !other_column->IsUserEnabled;
         }
-        PopItemFlag();
+        PopItemFlag(ctx);
     }
 }
 
@@ -3438,19 +3438,19 @@ static size_t TableSettingsCalcChunkSize(int columns_count)
     return sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings);
 }
 
-ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
+ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiContext* ctx, ImGuiID id, int columns_count)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
     TableSettingsInit(settings, id, columns_count, columns_count);
     return settings;
 }
 
 // Find existing settings
-ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiID id)
+ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiContext* ctx, ImGuiID id)
 {
     // FIXME-OPT: Might want to store a lookup map for this?
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
         if (settings->ID == id)
             return settings;
@@ -3458,11 +3458,11 @@ ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiID id)
 }
 
 // Get settings for a given table, NULL if none
-ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
+ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiContext* ctx, ImGuiTable* table)
 {
     if (table->SettingsOffset != -1)
     {
-        ImGuiContext& g = *GImGui;
+        ImGuiContext& g = *ctx;
         ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
         IM_ASSERT(settings->ID == table->ID);
         if (settings->ColumnsCountMax >= table->ColumnsCount)
@@ -3481,18 +3481,18 @@ void ImGui::TableResetSettings(ImGuiTable* table)
     table->SettingsLoadedFlags = ImGuiTableFlags_None;      // Mark as nothing loaded so our initialized data becomes authoritative
 }
 
-void ImGui::TableSaveSettings(ImGuiTable* table)
+void ImGui::TableSaveSettings(ImGuiContext* ctx, ImGuiTable* table)
 {
     table->IsSettingsDirty = false;
     if (table->Flags & ImGuiTableFlags_NoSavedSettings)
         return;
 
     // Bind or create settings data
-    ImGuiContext& g = *GImGui;
-    ImGuiTableSettings* settings = TableGetBoundSettings(table);
+    ImGuiContext& g = *ctx;
+    ImGuiTableSettings* settings = TableGetBoundSettings(ctx, table);
     if (settings == NULL)
     {
-        settings = TableSettingsCreate(table->ID, table->ColumnsCount);
+        settings = TableSettingsCreate(ctx, table->ID, table->ColumnsCount);
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
     settings->ColumnsCount = (ImGuiTableColumnIdx)table->ColumnsCount;
@@ -3533,12 +3533,12 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 
-    MarkIniSettingsDirty();
+    MarkIniSettingsDirty(ctx);
 }
 
-void ImGui::TableLoadSettings(ImGuiTable* table)
+void ImGui::TableLoadSettings(ImGuiContext* ctx, ImGuiTable* table)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     table->IsSettingsRequestLoad = false;
     if (table->Flags & ImGuiTableFlags_NoSavedSettings)
         return;
@@ -3547,7 +3547,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     ImGuiTableSettings* settings;
     if (table->SettingsOffset == -1)
     {
-        settings = TableSettingsFindByID(table->ID);
+        settings = TableSettingsFindByID(ctx, table->ID);
         if (settings == NULL)
             return;
         if (settings->ColumnsCount != table->ColumnsCount) // Allow settings if columns count changed. We could otherwise decide to return...
@@ -3556,7 +3556,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     }
     else
     {
-        settings = TableGetBoundSettings(table);
+        settings = TableGetBoundSettings(ctx, table);
     }
 
     table->SettingsLoadedFlags = settings->SaveFlags;
@@ -3622,14 +3622,14 @@ static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandle
         }
 }
 
-static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
+static void* TableSettingsHandler_ReadOpen(ImGuiContext* ctx, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiID id = 0;
     int columns_count = 0;
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
 
-    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id))
+    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(ctx, id))
     {
         if (settings->ColumnsCountMax >= columns_count)
         {
@@ -3638,7 +3638,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
         }
         settings->ID = 0; // Invalidate storage, we won't fit because of a count change
     }
-    return ImGui::TableSettingsCreate(id, columns_count);
+    return ImGui::TableSettingsCreate(ctx, id, columns_count);
 }
 
 static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
@@ -3708,7 +3708,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
     }
 }
 
-void ImGui::TableSettingsAddSettingsHandler()
+void ImGui::TableSettingsAddSettingsHandler(ImGuiContext* ctx)
 {
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Table";
@@ -3718,7 +3718,7 @@ void ImGui::TableSettingsAddSettingsHandler()
     ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
     ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;
     ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
-    AddSettingsHandler(&ini_handler);
+    AddSettingsHandler(ctx, &ini_handler);
 }
 
 //-------------------------------------------------------------------------
@@ -3730,10 +3730,10 @@ void ImGui::TableSettingsAddSettingsHandler()
 //-------------------------------------------------------------------------
 
 // Remove Table (currently only used by TestEngine)
-void ImGui::TableRemove(ImGuiTable* table)
+void ImGui::TableRemove(ImGuiContext* ctx, ImGuiTable* table)
 {
     //IMGUI_DEBUG_PRINT("TableRemove() id=0x%08X\n", table->ID);
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     int table_idx = g.Tables.GetIndex(table);
     //memset(table->RawData.Data, 0, table->RawData.size_in_bytes());
     //memset(table, 0, sizeof(ImGuiTable));
@@ -3742,10 +3742,10 @@ void ImGui::TableRemove(ImGuiTable* table)
 }
 
 // Free up/compact internal Table buffers for when it gets unused
-void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
+void ImGui::TableGcCompactTransientBuffers(ImGuiContext* ctx, ImGuiTable* table)
 {
     //IMGUI_DEBUG_PRINT("TableGcCompactTransientBuffers() id=0x%08X\n", table->ID);
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     IM_ASSERT(table->MemoryCompacted == false);
     table->SortSpecs.Specs = NULL;
     table->SortSpecsMulti.clear();
@@ -3764,9 +3764,9 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTableTempData* temp_data)
 }
 
 // Compact and remove unused settings data (currently only used by TestEngine)
-void ImGui::TableGcCompactSettings()
+void ImGui::TableGcCompactSettings(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     int required_memory = 0;
     for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
         if (settings->ID != 0)
@@ -3800,30 +3800,30 @@ static const char* DebugNodeTableGetSizingPolicyDesc(ImGuiTableFlags sizing_poli
     return "N/A";
 }
 
-void ImGui::DebugNodeTable(ImGuiTable* table)
+void ImGui::DebugNodeTable(ImGuiContext* ctx, ImGuiTable* table)
 {
-    const bool is_active = (table->LastFrameActive >= GetFrameCount() - 2); // Note that fully clipped early out scrolling tables will appear as inactive here.
-    if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
-    bool open = TreeNode(table, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, is_active ? "" : " *Inactive*");
-    if (!is_active) { PopStyleColor(); }
-    if (IsItemHovered())
-        GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
-    if (IsItemVisible() && table->HoveredColumnBody != -1)
-        GetForegroundDrawList()->AddRect(GetItemRectMin(), GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+    const bool is_active = (table->LastFrameActive >= GetFrameCount(ctx) - 2); // Note that fully clipped early out scrolling tables will appear as inactive here.
+    if (!is_active) { PushStyleColor(ctx, ImGuiCol_Text, GetStyleColorVec4(ctx, ImGuiCol_TextDisabled)); }
+    bool open = TreeNode(ctx, table, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, is_active ? "" : " *Inactive*");
+    if (!is_active) { PopStyleColor(ctx); }
+    if (IsItemHovered(ctx))
+        GetForegroundDrawList(ctx)->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
+    if (IsItemVisible(ctx) && table->HoveredColumnBody != -1)
+        GetForegroundDrawList(ctx)->AddRect(GetItemRectMin(ctx), GetItemRectMax(ctx), IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
     if (table->InstanceCurrent > 0)
-        Text("** %d instances of same table! Some data below will refer to last instance.", table->InstanceCurrent + 1);
-    bool clear_settings = SmallButton("Clear settings");
-    BulletText("OuterRect: Pos: (%.1f,%.1f) Size: (%.1f,%.1f) Sizing: '%s'", table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.GetWidth(), table->OuterRect.GetHeight(), DebugNodeTableGetSizingPolicyDesc(table->Flags));
-    BulletText("ColumnsGivenWidth: %.1f, ColumnsAutoFitWidth: %.1f, InnerWidth: %.1f%s", table->ColumnsGivenWidth, table->ColumnsAutoFitWidth, table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
-    BulletText("CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
-    BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
-    BulletText("ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
+        Text(ctx, "** %d instances of same table! Some data below will refer to last instance.", table->InstanceCurrent + 1);
+    bool clear_settings = SmallButton(ctx, "Clear settings");
+    BulletText(ctx, "OuterRect: Pos: (%.1f,%.1f) Size: (%.1f,%.1f) Sizing: '%s'", table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.GetWidth(), table->OuterRect.GetHeight(), DebugNodeTableGetSizingPolicyDesc(table->Flags));
+    BulletText(ctx, "ColumnsGivenWidth: %.1f, ColumnsAutoFitWidth: %.1f, InnerWidth: %.1f%s", table->ColumnsGivenWidth, table->ColumnsAutoFitWidth, table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
+    BulletText(ctx, "CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
+    BulletText(ctx, "HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
+    BulletText(ctx, "ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
     for (int n = 0; n < table->InstanceCurrent + 1; n++)
     {
         ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
-        BulletText("Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
+        BulletText(ctx, "Instance %d: HoveredRow: %d, LastOuterHeight: %.2f", n, table_instance->HoveredRowLast, table_instance->LastOuterHeight);
     }
     //BulletText("BgDrawChannels: %d/%d", 0, table->BgDrawChannelUnfrozen);
     float sum_weights = 0.0f;
@@ -3851,37 +3851,37 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? "WidthStretch " : "",
             (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
             (column->Flags & ImGuiTableColumnFlags_NoResize) ? "NoResize " : "");
-        Bullet();
-        Selectable(buf);
-        if (IsItemHovered())
+        Bullet(ctx);
+        Selectable(ctx, buf);
+        if (IsItemHovered(ctx))
         {
             ImRect r(column->MinX, table->OuterRect.Min.y, column->MaxX, table->OuterRect.Max.y);
-            GetForegroundDrawList()->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255));
+            GetForegroundDrawList(ctx)->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255));
         }
     }
-    if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
-        DebugNodeTableSettings(settings);
+    if (ImGuiTableSettings* settings = TableGetBoundSettings(ctx, table))
+        DebugNodeTableSettings(ctx, settings);
     if (clear_settings)
         table->IsResetAllRequest = true;
-    TreePop();
+    TreePop(ctx);
 }
 
-void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
+void ImGui::DebugNodeTableSettings(ImGuiContext* ctx, ImGuiTableSettings* settings)
 {
-    if (!TreeNode((void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
+    if (!TreeNode(ctx, (void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
         return;
-    BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
-    BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
+    BulletText(ctx, "SaveFlags: 0x%08X", settings->SaveFlags);
+    BulletText(ctx, "ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
     for (int n = 0; n < settings->ColumnsCount; n++)
     {
         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
         ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-        BulletText("Column %d Order %d SortOrder %d %s Vis %d %s %7.3f UserID 0x%08X",
+        BulletText(ctx, "Column %d Order %d SortOrder %d %s Vis %d %s %7.3f UserID 0x%08X",
             n, column_settings->DisplayOrder, column_settings->SortOrder,
             (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
             column_settings->IsEnabled, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->UserID);
     }
-    TreePop();
+    TreePop(ctx);
 }
 
 #else // #ifndef IMGUI_DISABLE_DEBUG_TOOLS
@@ -3928,15 +3928,15 @@ void ImGui::SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect&
     window->DrawList->_ClipRectStack.Data[window->DrawList->_ClipRectStack.Size - 1] = clip_rect_vec4;
 }
 
-int ImGui::GetColumnIndex()
+int ImGui::GetColumnIndex(ImGuiContext* ctx)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     return window->DC.CurrentColumns ? window->DC.CurrentColumns->Current : 0;
 }
 
-int ImGui::GetColumnsCount()
+int ImGui::GetColumnsCount(ImGuiContext* ctx)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     return window->DC.CurrentColumns ? window->DC.CurrentColumns->Count : 1;
 }
 
@@ -3952,26 +3952,26 @@ float ImGui::GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offse
 
 static const float COLUMNS_HIT_RECT_HALF_WIDTH = 4.0f;
 
-static float GetDraggedColumnOffset(ImGuiOldColumns* columns, int column_index)
+static float GetDraggedColumnOffset(ImGuiContext* ctx, ImGuiOldColumns* columns, int column_index)
 {
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
     // window creates a feedback loop because we store normalized positions. So while dragging we enforce absolute positioning.
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(column_index > 0); // We are not supposed to drag column 0.
     IM_ASSERT(g.ActiveId == columns->ID + ImGuiID(column_index));
 
     float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + COLUMNS_HIT_RECT_HALF_WIDTH - window->Pos.x;
-    x = ImMax(x, ImGui::GetColumnOffset(column_index - 1) + g.Style.ColumnsMinSpacing);
+    x = ImMax(x, ImGui::GetColumnOffset(ctx, column_index - 1) + g.Style.ColumnsMinSpacing);
     if ((columns->Flags & ImGuiOldColumnFlags_NoPreserveWidths))
-        x = ImMin(x, ImGui::GetColumnOffset(column_index + 1) - g.Style.ColumnsMinSpacing);
+        x = ImMin(x, ImGui::GetColumnOffset(ctx, column_index + 1) - g.Style.ColumnsMinSpacing);
 
     return x;
 }
 
-float ImGui::GetColumnOffset(int column_index)
+float ImGui::GetColumnOffset(ImGuiContext* ctx, int column_index)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     if (columns == NULL)
         return 0.0f;
@@ -3998,22 +3998,22 @@ static float GetColumnWidthEx(ImGuiOldColumns* columns, int column_index, bool b
     return ImGui::GetColumnOffsetFromNorm(columns, offset_norm);
 }
 
-float ImGui::GetColumnWidth(int column_index)
+float ImGui::GetColumnWidth(ImGuiContext* ctx, int column_index)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     if (columns == NULL)
-        return GetContentRegionAvail().x;
+        return GetContentRegionAvail(ctx).x;
 
     if (column_index < 0)
         column_index = columns->Current;
     return GetColumnOffsetFromNorm(columns, columns->Columns[column_index + 1].OffsetNorm - columns->Columns[column_index].OffsetNorm);
 }
 
-void ImGui::SetColumnOffset(int column_index, float offset)
+void ImGui::SetColumnOffset(ImGuiContext* ctx, int column_index, float offset)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
@@ -4030,35 +4030,35 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     columns->Columns[column_index].OffsetNorm = GetColumnNormFromOffset(columns, offset - columns->OffMinX);
 
     if (preserve_width)
-        SetColumnOffset(column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
+        SetColumnOffset(ctx, column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
 }
 
-void ImGui::SetColumnWidth(int column_index, float width)
+void ImGui::SetColumnWidth(ImGuiContext* ctx, int column_index, float width)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     if (column_index < 0)
         column_index = columns->Current;
-    SetColumnOffset(column_index + 1, GetColumnOffset(column_index) + width);
+    SetColumnOffset(ctx, column_index + 1, GetColumnOffset(ctx, column_index) + width);
 }
 
-void ImGui::PushColumnClipRect(int column_index)
+void ImGui::PushColumnClipRect(ImGuiContext* ctx, int column_index)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     if (column_index < 0)
         column_index = columns->Current;
 
     ImGuiOldColumnData* column = &columns->Columns[column_index];
-    PushClipRect(column->ClipRect.Min, column->ClipRect.Max, false);
+    PushClipRect(ctx, column->ClipRect.Min, column->ClipRect.Max, false);
 }
 
 // Get into the columns background draw command (which is generally the same draw command as before we called BeginColumns)
-void ImGui::PushColumnsBackground()
+void ImGui::PushColumnsBackground(ImGuiContext* ctx)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
@@ -4069,9 +4069,9 @@ void ImGui::PushColumnsBackground()
     columns->Splitter.SetCurrentChannel(window->DrawList, 0);
 }
 
-void ImGui::PopColumnsBackground()
+void ImGui::PopColumnsBackground(ImGuiContext* ctx)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GetCurrentWindowRead(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
@@ -4094,29 +4094,29 @@ ImGuiOldColumns* ImGui::FindOrCreateColumns(ImGuiWindow* window, ImGuiID id)
     return columns;
 }
 
-ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
+ImGuiID ImGui::GetColumnsID(ImGuiContext* ctx, const char* str_id, int columns_count)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow(ctx);
 
     // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
     // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
-    PushID(0x11223347 + (str_id ? 0 : columns_count));
+    PushID(ctx, 0x11223347 + (str_id ? 0 : columns_count));
     ImGuiID id = window->GetID(str_id ? str_id : "columns");
-    PopID();
+    PopID(ctx);
 
     return id;
 }
 
-void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFlags flags)
+void ImGui::BeginColumns(ImGuiContext* ctx, const char* str_id, int columns_count, ImGuiOldColumnFlags flags)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *ctx;
+    ImGuiWindow* window = GetCurrentWindow(ctx);
 
     IM_ASSERT(columns_count >= 1);
     IM_ASSERT(window->DC.CurrentColumns == NULL);   // Nested columns are currently not supported
 
     // Acquire storage for the columns set
-    ImGuiID id = GetColumnsID(str_id, columns_count);
+    ImGuiID id = GetColumnsID(ctx, str_id, columns_count);
     ImGuiOldColumns* columns = FindOrCreateColumns(window, id);
     IM_ASSERT(columns->ID == id);
     columns->Current = 0;
@@ -4162,8 +4162,8 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
     {
         // Compute clipping rectangle
         ImGuiOldColumnData* column = &columns->Columns[n];
-        float clip_x1 = IM_ROUND(window->Pos.x + GetColumnOffset(n));
-        float clip_x2 = IM_ROUND(window->Pos.x + GetColumnOffset(n + 1) - 1.0f);
+        float clip_x1 = IM_ROUND(window->Pos.x + GetColumnOffset(ctx, n));
+        float clip_x2 = IM_ROUND(window->Pos.x + GetColumnOffset(ctx, n + 1) - 1.0f);
         column->ClipRect = ImRect(clip_x1, -FLT_MAX, clip_x2, +FLT_MAX);
         column->ClipRect.ClipWithFull(window->ClipRect);
     }
@@ -4172,27 +4172,27 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
     {
         columns->Splitter.Split(window->DrawList, 1 + columns->Count);
         columns->Splitter.SetCurrentChannel(window->DrawList, 1);
-        PushColumnClipRect(0);
+        PushColumnClipRect(ctx, 0);
     }
 
     // We don't generally store Indent.x inside ColumnsOffset because it may be manipulated by the user.
-    float offset_0 = GetColumnOffset(columns->Current);
-    float offset_1 = GetColumnOffset(columns->Current + 1);
+    float offset_0 = GetColumnOffset(ctx, columns->Current);
+    float offset_1 = GetColumnOffset(ctx, columns->Current + 1);
     float width = offset_1 - offset_0;
-    PushItemWidth(width * 0.65f);
+    PushItemWidth(ctx, width * 0.65f);
     window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
     window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
     window->WorkRect.Max.y = window->ContentRegionRect.Max.y;
 }
 
-void ImGui::NextColumn()
+void ImGui::NextColumn(ImGuiContext* ctx)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow(ctx);
     if (window->SkipItems || window->DC.CurrentColumns == NULL)
         return;
 
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *ctx;
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
 
     if (columns->Count == 1)
@@ -4206,7 +4206,7 @@ void ImGui::NextColumn()
     if (++columns->Current == columns->Count)
         columns->Current = 0;
 
-    PopItemWidth();
+    PopItemWidth(ctx);
 
     // Optimization: avoid PopClipRect() + SetCurrentChannel() + PushClipRect()
     // (which would needlessly attempt to update commands in the wrong channel, then pop or overwrite them),
@@ -4220,7 +4220,7 @@ void ImGui::NextColumn()
     {
         // Columns 1+ ignore IndentX (by canceling it out)
         // FIXME-COLUMNS: Unnecessary, could be locked?
-        window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + column_padding;
+        window->DC.ColumnsOffset.x = GetColumnOffset(ctx, columns->Current) - window->DC.Indent.x + column_padding;
     }
     else
     {
@@ -4235,24 +4235,24 @@ void ImGui::NextColumn()
     window->DC.CurrLineTextBaseOffset = 0.0f;
 
     // FIXME-COLUMNS: Share code with BeginColumns() - move code on columns setup.
-    float offset_0 = GetColumnOffset(columns->Current);
-    float offset_1 = GetColumnOffset(columns->Current + 1);
+    float offset_0 = GetColumnOffset(ctx, columns->Current);
+    float offset_1 = GetColumnOffset(ctx, columns->Current + 1);
     float width = offset_1 - offset_0;
-    PushItemWidth(width * 0.65f);
+    PushItemWidth(ctx, width * 0.65f);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
 }
 
-void ImGui::EndColumns()
+void ImGui::EndColumns(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *ctx;
+    ImGuiWindow* window = GetCurrentWindow(ctx);
     ImGuiOldColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
-    PopItemWidth();
+    PopItemWidth(ctx);
     if (columns->Count > 1)
     {
-        PopClipRect();
+        PopClipRect(ctx);
         columns->Splitter.Merge(window->DrawList);
     }
 
@@ -4274,17 +4274,17 @@ void ImGui::EndColumns()
         for (int n = 1; n < columns->Count; n++)
         {
             ImGuiOldColumnData* column = &columns->Columns[n];
-            float x = window->Pos.x + GetColumnOffset(n);
+            float x = window->Pos.x + GetColumnOffset(ctx, n);
             const ImGuiID column_id = columns->ID + ImGuiID(n);
             const float column_hit_hw = COLUMNS_HIT_RECT_HALF_WIDTH;
             const ImRect column_hit_rect(ImVec2(x - column_hit_hw, y1), ImVec2(x + column_hit_hw, y2));
-            if (!ItemAdd(column_hit_rect, column_id, NULL, ImGuiItemFlags_NoNav))
+            if (!ItemAdd(ctx, column_hit_rect, column_id, NULL, ImGuiItemFlags_NoNav))
                 continue;
 
             bool hovered = false, held = false;
             if (!(flags & ImGuiOldColumnFlags_NoResize))
             {
-                ButtonBehavior(column_hit_rect, column_id, &hovered, &held);
+                ButtonBehavior(ctx, column_hit_rect, column_id, &hovered, &held);
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeEW;
                 if (held && !(column->Flags & ImGuiOldColumnFlags_NoResize))
@@ -4292,7 +4292,7 @@ void ImGui::EndColumns()
             }
 
             // Draw column
-            const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
+            const ImU32 col = GetColorU32(ctx, held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
             const float xi = IM_TRUNC(x);
             window->DrawList->AddLine(ImVec2(xi, y1 + 1.0f), ImVec2(xi, y2), col);
         }
@@ -4304,8 +4304,8 @@ void ImGui::EndColumns()
                 for (int n = 0; n < columns->Count + 1; n++)
                     columns->Columns[n].OffsetNormBeforeResize = columns->Columns[n].OffsetNorm;
             columns->IsBeingResized = is_being_resized = true;
-            float x = GetDraggedColumnOffset(columns, dragging_column);
-            SetColumnOffset(dragging_column, x);
+            float x = GetDraggedColumnOffset(ctx, columns, dragging_column);
+            SetColumnOffset(ctx, dragging_column, x);
         }
     }
     columns->IsBeingResized = is_being_resized;
@@ -4315,12 +4315,12 @@ void ImGui::EndColumns()
     window->DC.CurrentColumns = NULL;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
-    NavUpdateCurrentWindowIsScrollPushableX();
+    NavUpdateCurrentWindowIsScrollPushableX(ctx);
 }
 
-void ImGui::Columns(int columns_count, const char* id, bool border)
+void ImGui::Columns(ImGuiContext* ctx, int columns_count, const char* id, bool border)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow(ctx);
     IM_ASSERT(columns_count >= 1);
 
     ImGuiOldColumnFlags flags = (border ? 0 : ImGuiOldColumnFlags_NoBorder);
@@ -4330,10 +4330,10 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         return;
 
     if (columns != NULL)
-        EndColumns();
+        EndColumns(ctx);
 
     if (columns_count != 1)
-        BeginColumns(id, columns_count, flags);
+        BeginColumns(ctx, id, columns_count, flags);
 }
 
 //-------------------------------------------------------------------------
