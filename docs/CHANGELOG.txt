@@ -37,6 +37,27 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.90.1 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
+  minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+- Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
+  navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
+- Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
+  (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
+  all columns. (#7049, #4281, #3272)
+- Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
+  like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
+- Misc: Renamed some defines in imstb_textedit.h to avoid conflicts when using unity/jumbo builds
+  on a codebase where another copy of the library is used.
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.0 (Released 2023-11-15)
 -----------------------------------------------------------------------
 

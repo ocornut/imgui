@@ -1,4 +1,4 @@
-// dear imgui, v1.90.0
+// dear imgui, v1.90.1 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -201,13 +201,13 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 namespace ImStb
 {
 
-#undef STB_TEXTEDIT_STRING
-#undef STB_TEXTEDIT_CHARTYPE
-#define STB_TEXTEDIT_STRING             ImGuiInputTextState
-#define STB_TEXTEDIT_CHARTYPE           ImWchar
-#define STB_TEXTEDIT_GETWIDTH_NEWLINE   (-1.0f)
-#define STB_TEXTEDIT_UNDOSTATECOUNT     99
-#define STB_TEXTEDIT_UNDOCHARCOUNT      999
+#undef IMSTB_TEXTEDIT_STRING
+#undef IMSTB_TEXTEDIT_CHARTYPE
+#define IMSTB_TEXTEDIT_STRING             ImGuiInputTextState
+#define IMSTB_TEXTEDIT_CHARTYPE           ImWchar
+#define IMSTB_TEXTEDIT_GETWIDTH_NEWLINE   (-1.0f)
+#define IMSTB_TEXTEDIT_UNDOSTATECOUNT     99
+#define IMSTB_TEXTEDIT_UNDOCHARCOUNT      999
 #include "imstb_textedit.h"
 
 } // namespace ImStb
@@ -847,6 +847,7 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_HoveredWindow      = 1 << 7,   // Override the HoveredWindow test to allow cross-window hover testing.
     ImGuiItemStatusFlags_FocusedByTabbing   = 1 << 8,   // Set when the Focusable item just got focused by Tabbing (FIXME: to be removed soon)
     ImGuiItemStatusFlags_Visible            = 1 << 9,   // [WIP] Set when item is overlapping the current clipping rectangle (Used internally. Please don't use yet: API/system will change as we refactor Itemadd()).
+    ImGuiItemStatusFlags_HasClipRect        = 1 << 10,  // g.LastItemData.ClipRect is valid
 
     // Additional status + semantic for ImGuiTestEngine
 #ifdef IMGUI_ENABLE_TEST_ENGINE
@@ -1131,7 +1132,7 @@ struct IMGUI_API ImGuiInputTextState
     void        ClearText()                 { CurLenW = CurLenA = 0; TextW[0] = 0; TextA[0] = 0; CursorClamp(); }
     void        ClearFreeMemory()           { TextW.clear(); TextA.clear(); InitialTextA.clear(); }
     int         GetUndoAvailCount() const   { return Stb.undostate.undo_point; }
-    int         GetRedoAvailCount() const   { return STB_TEXTEDIT_UNDOSTATECOUNT - Stb.undostate.redo_point; }
+    int         GetRedoAvailCount() const   { return IMSTB_TEXTEDIT_UNDOSTATECOUNT - Stb.undostate.redo_point; }
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
 
     // Cursor & Selection
@@ -1239,7 +1240,9 @@ struct ImGuiLastItemData
     ImGuiItemStatusFlags    StatusFlags;        // See ImGuiItemStatusFlags_
     ImRect                  Rect;               // Full rectangle
     ImRect                  NavRect;            // Navigation scoring rectangle (not displayed)
-    ImRect                  DisplayRect;        // Display rectangle (only if ImGuiItemStatusFlags_HasDisplayRect is set)
+    // Rarely used fields are not explicitly cleared, only valid when the corresponding ImGuiItemStatusFlags is set.
+    ImRect                  DisplayRect;        // Display rectangle (ONLY VALID IF ImGuiItemStatusFlags_HasDisplayRect is set)
+    ImRect                  ClipRect;           // Clip rectangle at the time of submitting item (ONLY VALID IF ImGuiItemStatusFlags_HasClipRect is set)
 
     ImGuiLastItemData()     { memset(this, 0, sizeof(*this)); }
 };
@@ -2237,6 +2240,7 @@ struct ImGuiContext
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
     ImRect                  DragDropTargetRect;                 // Store rectangle of current target candidate (we favor small targets when overlapping)
+    ImRect                  DragDropTargetClipRect;             // Store ClipRect at the time of item's drawing
     ImGuiID                 DragDropTargetId;
     ImGuiDragDropFlags      DragDropAcceptFlags;
     float                   DragDropAcceptIdCurrRectSurface;    // Target item surface (we resolve overlapping targets by prioritizing the smaller surface)
@@ -3471,7 +3475,7 @@ namespace ImGui
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
     IMGUI_API void          ClearDragDrop();
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
-    IMGUI_API void          RenderDragDropTargetRect(const ImRect& bb);
+    IMGUI_API void          RenderDragDropTargetRect(const ImRect& bb, const ImRect& item_clip_rect);
 
     // Typing-Select API
     IMGUI_API ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);

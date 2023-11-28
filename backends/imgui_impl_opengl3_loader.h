@@ -608,7 +608,7 @@ extern "C" {
 
 #include <stdlib.h>
 
-#define ARRAY_SIZE(x)  (sizeof(x) / sizeof((x)[0]))
+#define GL3W_ARRAY_SIZE(x)  (sizeof(x) / sizeof((x)[0]))
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -800,7 +800,7 @@ GL3W_API union ImGL3WProcs imgl3wProcs;
 static void load_procs(GL3WGetProcAddressProc proc)
 {
     size_t i;
-    for (i = 0; i < ARRAY_SIZE(proc_names); i++)
+    for (i = 0; i < GL3W_ARRAY_SIZE(proc_names); i++)
         imgl3wProcs.ptr[i] = proc(proc_names[i]);
 }
 
