@@ -4566,12 +4566,11 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     }
 
     // Update io.WantCaptureKeyboard for the user application (true = dispatch keyboard info to Dear ImGui only, false = dispatch keyboard info to Dear ImGui + underlying app)
-    if (g.WantCaptureKeyboardNextFrame != -1)
-        io.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != 0);
-    else
-        io.WantCaptureKeyboard = (g.ActiveId != 0) || (modal_window != NULL);
+    io.WantCaptureKeyboard = (g.ActiveId != 0) || (modal_window != NULL);
     if (io.NavActive && (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && !(io.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard))
         io.WantCaptureKeyboard = true;
+    if (g.WantCaptureKeyboardNextFrame != -1) // Manual override
+        io.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != 0);
 
     // Update io.WantTextInput flag, this is to allow systems without a keyboard (e.g. mobile, hand-held) to show a software keyboard if possible
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
