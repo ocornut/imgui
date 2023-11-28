@@ -1,3 +1,57 @@
+Fork of Dear ImGui: Introducing Explicit Context
+=====
+
+
+This repository is a fork of [Dear ImGui](https://github.com/ocornut/imgui). In this fork, the state of Dear ImGui (instance of `ImGuiContext`) is not global and implicit and anymore. It has to be forwarded as first argument of every API call.
+
+Original Dear ImGui:
+```cpp
+bool state;
+ImGui::Begin("My Window");
+ImGui::Button("My Button", &state);
+ImGui::End();
+```
+
+This Fork:
+```cpp
+ImGuiContext* ctx = ImGui::CreateContext();
+bool state;
+ImGui::Begin(ctx, "My Window");
+ImGui::Button(ctx, "My Button", &state);
+ImGui::End(ctx);
+```
+
+### Details
+
+You can follow the conversation about this work in [PR-5856](https://github.com/ocornut/imgui/pull/5856).
+
+The branch has been partial generated using [make_explicit_imgui.py](https://github.com/Dragnalith/make_explicit_imgui/) scripts. You can easily rebase this branch on another version of Dear Imgui's branch using that script (see more explanation on the [README](https://github.com/Dragnalith/make_explicit_imgui/tree/main#readme) of the script repository)
+
+### Compatibility
+
+Not all backend have been ported to the explicit context version of the API. Status:
+- [x] Win32
+- [ ] OSX
+- [ ] Android
+- [ ] GLFW
+- [ ] GLUT
+- [ ] SDL 2
+- [ ] SDL 3
+- [ ] Allegro 5
+- [x] DirectX 12
+- [ ] DirectX 11
+- [ ] DirectX 10
+- [ ] DirectX 9
+- [ ] OpenGL 2
+- [ ] OpenGL 3
+- [ ] Vulkan
+- [ ] Metal
+- [ ] SDL Renderer 3
+- [ ] SDL Renderer 2
+- [ ] WGPU
+
+-------
+
 Dear ImGui
 =====
 
