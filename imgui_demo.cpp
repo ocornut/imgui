@@ -8360,6 +8360,7 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
             ImVector<DemoMarkerTag> r;
             {
                 char line_buffer[2048];
+                memset(line_buffer, 0, 2048);
                 char tag_buffer[IMGUI_DEMO_MARKER_MAX_TAG_LENGTH];
                 for (int line_number = 0; line_number < lines.size(); ++line_number)
                 {
@@ -8396,9 +8397,9 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
         ~DemoCodeWindow()
         {
             if (SourceCode)
-                IM_DELETE(SourceCode);
+                IM_FREE(SourceCode);
             if (SourceLineNumbersStr)
-                IM_DELETE(SourceLineNumbersStr);
+                IM_FREE(SourceLineNumbersStr);
         }
 
         void NavigateTo(int line_number)
@@ -8516,17 +8517,21 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
 
         void ReadSourceCodeContent(const char* source_file)
         {
-            FILE *f = fopen(source_file, "r");
-            if (!f)
+            FILE *f = fopen(source_file, "rb"); // binary mode for windows (do not translate \n)
+            if (f == NULL)
             {
                 SourceCode = NULL;
                 return;
             }
             fseek(f, 0, SEEK_END);
             size_t file_size = (size_t) ftell(f);
-            SourceCode = (char *) IM_ALLOC(file_size * sizeof(char));
+            SourceCode = (char *) IM_ALLOC((file_size + 1)* sizeof(char));
             rewind(f);
-            fread(SourceCode, sizeof(char), file_size, f);
+            size_t nb_bytes_read = fread(SourceCode, sizeof(char), file_size, f);
+            if (nb_bytes_read != file_size)
+                SourceCode = NULL;
+            else
+                SourceCode[file_size] = '\0';
             fclose(f);
         }
 
@@ -8566,7 +8571,11 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
         bool ShowFilterResults;
     };
 
-    DemoCodeWindow GDemoCodeWindow;
+    DemoCodeWindow& GDemoCodeWindow()
+    {
+        static DemoCodeWindow demoCodeWindow;
+        return demoCodeWindow;
+    }
 
 } // namespace ImGuiDemoMarkerCodeViewer_Impl
 
@@ -8574,11 +8583,11 @@ namespace ImGuiDemoMarkerCodeViewer
 {
     void ShowCodeViewer()
     {
-        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow.Gui();
+        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow().Gui();
     }
     void NavigateTo(int line_number)
     {
-        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow.NavigateTo(line_number);
+        ImGuiDemoMarkerCodeViewer_Impl::GDemoCodeWindow().NavigateTo(line_number);
     }
 }
 
@@ -8608,11 +8617,15 @@ void BrowseToUrl(const char *url)
 #elif TARGET_OS_OSX
     char cmd[1024];
     snprintf(cmd, 1024, "open %s", url);
-    system(cmd);
+    int result = system(cmd);
+    if (result != 0)
+        fprintf(stderr, "Error when calling system(%s)\n", cmd);
 #elif defined(__linux__)
     char cmd[1024];
-        snprintf(cmd, 1024, "xdg-open %s", url);
-        system(cmd);
+    snprintf(cmd, 1024, "xdg-open %s", url);
+    int result = system(cmd);
+    if (result != 0)
+        fprintf(stderr, "Please install xdg-open to open links\n");
 #endif
 }
 
