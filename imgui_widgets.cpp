@@ -7513,18 +7513,18 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         ImGuiWindow* child_menu_window = (child_popup && child_popup->Window && child_popup->Window->ParentWindow == window) ? child_popup->Window : NULL;
         if (g.HoveredWindow == window && child_menu_window != NULL)
         {
-            float ref_unit = g.FontSize; // FIXME-DPI
-            float child_dir = (window->Pos.x < child_menu_window->Pos.x) ? 1.0f : -1.0f;
-            ImRect next_window_rect = child_menu_window->Rect();
+            const float ref_unit = g.FontSize; // FIXME-DPI
+            const float child_dir = (window->Pos.x < child_menu_window->Pos.x) ? 1.0f : -1.0f;
+            const ImRect next_window_rect = child_menu_window->Rect();
             ImVec2 ta = (g.IO.MousePos - g.IO.MouseDelta);
             ImVec2 tb = (child_dir > 0.0f) ? next_window_rect.GetTL() : next_window_rect.GetTR();
             ImVec2 tc = (child_dir > 0.0f) ? next_window_rect.GetBL() : next_window_rect.GetBR();
-            float extra = ImClamp(ImFabs(ta.x - tb.x) * 0.30f, ref_unit * 0.5f, ref_unit * 2.5f);   // add a bit of extra slack.
+            const float pad_farmost_h = ImClamp(ImFabs(ta.x - tb.x) * 0.30f, ref_unit * 0.5f, ref_unit * 2.5f); // Add a bit of extra slack.
             ta.x += child_dir * -0.5f;
             tb.x += child_dir * ref_unit;
             tc.x += child_dir * ref_unit;
-            tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -ref_unit * 8.0f);                           // triangle has maximum height to limit the slope and the bias toward large sub-menus
-            tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +ref_unit * 8.0f);
+            tb.y = ta.y + ImMax((tb.y - pad_farmost_h) - ta.y, -ref_unit * 8.0f); // Triangle has maximum height to limit the slope and the bias toward large sub-menus
+            tc.y = ta.y + ImMin((tc.y + pad_farmost_h) - ta.y, +ref_unit * 8.0f);
             moving_toward_child_menu = ImTriangleContainsPoint(ta, tb, tc, g.IO.MousePos);
             //GetForegroundDrawList()->AddTriangleFilled(ta, tb, tc, moving_toward_child_menu ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); // [DEBUG]
         }
@@ -7539,6 +7539,8 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         if (!menu_is_open && pressed) // Click/activate to open
             want_open = true;
         else if (!menu_is_open && hovered && !moving_toward_child_menu) // Hover to open
+            want_open = true;
+        else if (!menu_is_open && hovered && !g.NavDisableMouseHover && g.HoveredIdTimer >= 0.30f && g.MouseStationaryTimer >= 0.30f) // Hover to open (timer fallback)
             want_open = true;
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right) // Nav-Right to open
         {
