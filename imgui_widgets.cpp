@@ -7536,11 +7536,12 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
             want_close = true;
 
         // Open
+        // (note: at this point 'hovered' actually includes the NavDisableMouseHover == false test)
         if (!menu_is_open && pressed) // Click/activate to open
             want_open = true;
         else if (!menu_is_open && hovered && !moving_toward_child_menu) // Hover to open
             want_open = true;
-        else if (!menu_is_open && hovered && !g.NavDisableMouseHover && g.HoveredIdTimer >= 0.30f && g.MouseStationaryTimer >= 0.30f) // Hover to open (timer fallback)
+        else if (!menu_is_open && hovered && g.HoveredIdTimer >= 0.30f && g.MouseStationaryTimer >= 0.30f) // Hover to open (timer fallback)
             want_open = true;
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right) // Nav-Right to open
         {
