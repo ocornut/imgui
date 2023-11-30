@@ -47,7 +47,7 @@ int main(int, char**)
     {
         SDL_Log("Error: SDL_CreateRenderer(): %s\n", SDL_GetError());
         return -1;
-}
+    }
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_ShowWindow(window);
 

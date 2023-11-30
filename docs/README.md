@@ -27,7 +27,7 @@ Dear ImGui is designed to **enable fast iterations** and to **empower programmer
 Dear ImGui is particularly suited to integration in game engines (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on console platforms where operating system features are non-standard.
 
  - Minimize state synchronization.
- - Minimize state storage on user side.
+ - Minimize UI-related state storage on user side.
  - Minimize setup and maintenance.
  - Easy to use to create dynamic UI which are the reflection of a dynamic data set.
  - Easy to use to create code-driven and data-driven tools.
@@ -128,12 +128,12 @@ Officially maintained backends/bindings (in repository):
 - Frameworks: Allegro5, Emscripten.
 
 [Third-party backends/bindings](https://github.com/ocornut/imgui/wiki/Bindings) wiki page:
-- Languages: C, C# and: Beef, ChaiScript, Crystal, D, Go, Haskell, Haxe/hxcpp, Java, JavaScript, Julia, Kotlin, Lobster, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
-- Frameworks: AGS/Adventure Game Studio, Amethyst, Blender, bsf, Cinder, Cocos2d-x, Diligent Engine, Flexium, GML/Game Maker Studio2, GLEQ, Godot, GTK3+OpenGL3, Irrlicht Engine, LÖVE+LUA, Magnum, Monogame, NanoRT, nCine, Nim Game Lib, Nintendo 3DS & Switch (homebrew), Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, SDL_Renderer, SFML, Sokol, Unity, Unreal Engine 4, vtk, VulkanHpp, VulkanSceneGraph, Win32 GDI, WxWidgets.
+- Languages: C, C# and: Beef, ChaiScript, CovScript, Crystal, D, Go, Haskell, Haxe/hxcpp, Java, JavaScript, Julia, Kotlin, Lobster, Lua, Nim, Odin, Pascal, PureBasic, Python, ReaScript, Ruby, Rust, Swift, Zig...
+- Frameworks: AGS/Adventure Game Studio, Amethyst, Blender, bsf, Cinder, Cocos2d-x, Defold, Diligent Engine, Ebiten, Flexium, GML/Game Maker Studio, GLEQ, Godot, GTK3, Irrlicht Engine, JUCE, LÖVE+LUA, Mach Engine, Magnum, Marmalade, Monogame, NanoRT, nCine, Nim Game Lib, Nintendo 3DS/Switch/WiiU (homebrew), Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, raylib, SFML, Sokol, Unity, Unreal Engine 4/5, UWP, vtk, VulkanHpp, VulkanSceneGraph, Win32 GDI, WxWidgets.
 - Many bindings are auto-generated (by good old [cimgui](https://github.com/cimgui/cimgui) or newer/experimental [dear_bindings](https://github.com/dearimgui/dear_bindings)), you can use their metadata output to generate bindings for other languages.
 
 [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page:
-- Automation/testing, Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos, etc. One of the most notable and well supported extension is [ImPlot](https://github.com/epezent/implot).
+- Automation/testing, Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos, etc. Notable and well supported extensions include [ImPlot](https://github.com/epezent/implot) and [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
 Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
@@ -160,7 +160,7 @@ See: [Upcoming Changes](https://github.com/ocornut/imgui/wiki/Upcoming-Changes).
 
 See: [Dear ImGui Test Engine + Test Suite](https://github.com/ocornut/imgui_test_engine) for Automation & Testing.
 
-Getting started? For first-time users having issues compiling/linking/running or issues loading fonts, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions). For other questions, bug reports, requests, feedback, you may post on [GitHub Issues](https://github.com/ocornut/imgui/issues). Please read and fill the New Issue template carefully.
+Getting started? For first-time users having issues compiling/linking/running or issues loading fonts, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions). For ANY other questions, bug reports, requests, feedback, please post on [GitHub Issues](https://github.com/ocornut/imgui/issues). Please read and fill the New Issue template carefully.
 
 Private support is available for paying business customers (E-mail: _contact @ dearimgui dot com_).
 
@@ -177,10 +177,10 @@ How to help
 
 **How can I help?**
 
-- See [GitHub Forum/Issues](https://github.com/ocornut/imgui/issues) and [GitHub Discussions](https://github.com/ocornut/imgui/discussions).
+- See [GitHub Forum/Issues](https://github.com/ocornut/imgui/issues).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest of the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
-- Have your company financially support this project with invoiced sponsoring/support contracts or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: omar AT dearimgui DOT com).
+- Be a [sponsor](https://github.com/ocornut/imgui/wiki/Sponsors)! Have your company financially support this project via invoiced sponsors/maintenance or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: omar AT dearimgui DOT com).
 
 Sponsors
 --------
@@ -201,9 +201,9 @@ Credits
 
 Developed by [Omar Cornut](https://www.miracleworld.net) and every direct or indirect [contributors](https://github.com/ocornut/imgui/graphs/contributors) to the GitHub. The early version of this library was developed with the support of [Media Molecule](https://www.mediamolecule.com) and first used internally on the game [Tearaway](https://tearaway.mediamolecule.com) (PS Vita).
 
-Recurring contributors (2022): Omar Cornut [@ocornut](https://github.com/ocornut), Rokas Kupstys [@rokups](https://github.com/rokups) (a good portion of work on automation system and regression tests now available in [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine)).
+Recurring contributors include Rokas Kupstys [@rokups](https://github.com/rokups) (2020-2022): a good portion of work on automation system and regression tests now available in [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
-Sponsoring, support contracts and other B2B transactions are hosted and handled by [Disco Hello](https://www.discohello.com).
+Sponsoring, maintenance/support contracts and other B2B transactions are hosted and handled by [Disco Hello](https://www.discohello.com).
 
 Omar: "I first discovered the IMGUI paradigm at [Q-Games](https://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it."
 
