@@ -7112,6 +7112,7 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
 // - MultiSelectItemHeader() [Internal]
 // - MultiSelectItemFooter() [Internal]
 // - DebugNodeMultiSelectState() [Internal]
+// - ImGuiSelectionBasicStorage
 //-------------------------------------------------------------------------
 
 static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSelectIO* io)
@@ -7611,6 +7612,44 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
     IM_UNUSED(storage);
 #endif
 }
+
+// Apply requests coming from BeginMultiSelect() and EndMultiSelect().
+// - Enable 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.
+// - Honoring SetRange requests requires that you can iterate/interpolate between RangeFirstItem and RangeLastItem.
+//   - In this demo we often submit indices to SetNextItemSelectionUserData() + store the same indices in persistent selection.
+//   - Your code may do differently. If you store pointers or objects ID in ImGuiSelectionUserData you may need to perform
+//     a lookup in order to have some way to iterate/interpolate between two items.
+// - A full-featured application is likely to allow search/filtering which is likely to lead to using indices
+//   and constructing a view index <> object id/ptr data structure anyway.
+// WHEN YOUR APPLICATION SETTLES ON A CHOICE, YOU WILL PROBABLY PREFER TO GET RID OF THIS UNNECESSARY 'ImGuiSelectionBasicStorage' INDIRECTION LOGIC.
+// Notice that with the simplest adapter (using indices everywhere), all functions return their parameters.
+// The most simple implementation (using indices everywhere) would look like:
+//   for (ImGuiSelectionRequest& req : ms_io->Requests)
+//   {
+//      if (req.Type == ImGuiSelectionRequestType_Clear)     { Clear(); }
+//      if (req.Type == ImGuiSelectionRequestType_SelectAll) { Clear(); for (int n = 0; n < items_count; n++) { AddItem(n); } }
+//      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->RangeSelected); } }
+//   }
+void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count)
+{
+    IM_ASSERT(AdapterIndexToStorageId != NULL);
+    for (ImGuiSelectionRequest& req : ms_io->Requests)
+    {
+        if (req.Type == ImGuiSelectionRequestType_Clear)
+            Clear();
+        if (req.Type == ImGuiSelectionRequestType_SelectAll)
+        {
+            Storage.Data.resize(0);
+            Storage.Data.reserve(items_count);
+            for (int idx = 0; idx < items_count; idx++)
+                AddItem(AdapterIndexToStorageId(this, idx));
+        }
+        if (req.Type == ImGuiSelectionRequestType_SetRange)
+            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+                UpdateItem(AdapterIndexToStorageId(this, idx), req.RangeSelected);
+    }
+}
+
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: ListBox
