@@ -1738,7 +1738,8 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()            { size_t io_sz = sizeof(IO); IO.Clear(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); BoxSelectLastitem = -1; } // Zero-clear except IO
+    void Clear()            { size_t io_sz = sizeof(IO); ClearIO(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); BoxSelectLastitem = -1; } // Zero-clear except IO as we preserve IO.Requests[] buffer allocation.
+    void ClearIO()          { IO.Requests.resize(0); IO.RangeSrcItem = IO.NavIdItem = (ImGuiSelectionUserData)-1; IO.NavIdSelected = IO.RangeSrcReset = false; }
 };
 
 // Persistent storage for multi-select (as long as selection is alive)

@@ -7259,7 +7259,10 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     }
 
     if (request_clear || request_select_all)
-        ms->IO.Requests.push_back(ImGuiSelectionRequest(request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear));
+    {
+        ImGuiSelectionRequest req = { request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
+        ms->IO.Requests.push_back(req);
+    }
     ms->LoopRequestClear = request_clear;
     ms->LoopRequestSelectAll = request_select_all;
 
@@ -7328,8 +7331,9 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
+                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
                 ms->IO.Requests.resize(0);
-                ms->IO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
+                ms->IO.Requests.push_back(req);
             }
     }
 
@@ -7479,9 +7483,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         if ((rect_overlap_curr && !rect_overlap_prev && !selected) || (rect_overlap_prev && !rect_overlap_curr))
         {
             selected = !selected;
-            ImGuiSelectionRequest req(ImGuiSelectionRequestType_SetRange);
-            req.RangeFirstItem = req.RangeLastItem = item_data;
-            req.RangeSelected = selected;
+            ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
             ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
             if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->RangeSelected == selected)
                 prev_req->RangeLastItem = item_data; // Merge span into same request
@@ -7545,12 +7547,13 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
         if (request_clear)
         {
+            ImGuiSelectionRequest req = { ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
             ms->IO.Requests.resize(0);
-            ms->IO.Requests.push_back(ImGuiSelectionRequest(ImGuiSelectionRequestType_Clear));
+            ms->IO.Requests.push_back(req);
         }
 
         int range_direction;
-        ImGuiSelectionRequest req(ImGuiSelectionRequestType_SetRange);
+        bool range_selected;
         if (is_shift && !is_singleselect)
         {
             // Shift+Arrow always select
@@ -7558,7 +7561,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
             if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid)
                 storage->RangeSrcItem = item_data;
-            req.RangeSelected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
+            range_selected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
             range_direction = ms->RangeSrcPassedBy ? +1 : -1;
         }
         else
@@ -7566,12 +7569,11 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             // Ctrl inverts selection, otherwise always select
             selected = is_ctrl ? !selected : true;
             storage->RangeSrcItem = item_data;
-            req.RangeSelected = selected;
+            range_selected = selected;
             range_direction = +1;
         }
         ImGuiSelectionUserData range_dst_item = item_data;
-        req.RangeFirstItem = (range_direction > 0) ? storage->RangeSrcItem : range_dst_item;
-        req.RangeLastItem = (range_direction > 0) ? range_dst_item : storage->RangeSrcItem;
+        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, range_selected, (range_direction > 0) ? storage->RangeSrcItem : range_dst_item, (range_direction > 0) ? range_dst_item : storage->RangeSrcItem };
         ms->IO.Requests.push_back(req);
     }
 
