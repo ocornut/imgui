@@ -404,16 +404,12 @@ ImGui::Text(u8"こんにちは");   // this will always be encoded as UTF-8
 ImGui::Text("こんにちは");     // the encoding of this is depending on compiler settings/flags and may be incorrect.
 ```
 
-Since C++20, because the C++ committee hate its users, they decided to change the `u8""` syntax to not return `const char*` but a new type `const char_t*` which doesn't cast to `const char*`.
+Since C++20, because the C++ committee hate its users, they decided to change the `u8""` syntax to not return `const char*` but a new type `const char8_t*` which doesn't cast to `const char*`.
 Because of type usage of `u8""` in C++20 is a little more tedious:
 ```cpp
 ImGui::Text((const char*)u8"こんにちは");
 ```
-We suggest using a macro in your codebase:
-```cpp
-#define U8(_S)    (const char*)u8##_S
-ImGui::Text(U8("こんにちは"));
-```
+However, you can disable this behavior completely using the compiler option [`/Zc:char8_t-`](https://learn.microsoft.com/en-us/cpp/build/reference/zc-char8-t?view=msvc-170) for MSVC and [`-fno-char8_t`](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1423r3.html) for Clang and GCC.
 ##### [Return to Index](#index)
 
 ---------------------------------------
