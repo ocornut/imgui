@@ -1111,6 +1111,7 @@ static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
 static void             UpdateDebugToolItemPicker();
 static void             UpdateDebugToolStackQueries();
+static void             UpdateDebugToolFlashStyleColor();
 
 // Inputs
 static void             UpdateKeyboardInputs();
@@ -3156,7 +3157,8 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
     g.ColorStack.push_back(backup);
-    g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
+    if (g.DebugFlashStyleColorIdx != idx)
+        g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
 }
 
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
@@ -3166,7 +3168,8 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
     g.ColorStack.push_back(backup);
-    g.Style.Colors[idx] = col;
+    if (g.DebugFlashStyleColorIdx != idx)
+        g.Style.Colors[idx] = col;
 }
 
 void ImGui::PopStyleColor(int count)
@@ -5019,6 +5022,7 @@ void ImGui::NewFrame()
     // [DEBUG] Update debug features
     UpdateDebugToolItemPicker();
     UpdateDebugToolStackQueries();
+    UpdateDebugToolFlashStyleColor();
     if (g.DebugLocateFrames > 0 && --g.DebugLocateFrames == 0)
         g.DebugLocateId = 0;
     if (g.DebugLogClipperAutoDisableFrames > 0 && --g.DebugLogClipperAutoDisableFrames == 0)
@@ -19481,6 +19485,35 @@ void ImGui::DebugTextEncoding(const char* str)
     EndTable();
 }
 
+static void DebugFlashStyleColorStop()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.DebugFlashStyleColorIdx != ImGuiCol_COUNT)
+        g.Style.Colors[g.DebugFlashStyleColorIdx] = g.DebugFlashStyleColorBackup;
+    g.DebugFlashStyleColorIdx = ImGuiCol_COUNT;
+}
+
+// Flash a given style color for some + inhibit modifications of this color via PushStyleColor() calls.
+void ImGui::DebugFlashStyleColor(ImGuiCol idx)
+{
+    ImGuiContext& g = *GImGui;
+    DebugFlashStyleColorStop();
+    g.DebugFlashStyleColorTime = 0.5f;
+    g.DebugFlashStyleColorIdx = idx;
+    g.DebugFlashStyleColorBackup = g.Style.Colors[idx];
+}
+
+void ImGui::UpdateDebugToolFlashStyleColor()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.DebugFlashStyleColorTime <= 0.0f)
+        return;
+    ColorConvertHSVtoRGB(cosf(g.DebugFlashStyleColorTime * 6.0f) * 0.5f + 0.5f, 0.5f, 0.5f, g.Style.Colors[g.DebugFlashStyleColorIdx].x, g.Style.Colors[g.DebugFlashStyleColorIdx].y, g.Style.Colors[g.DebugFlashStyleColorIdx].z);
+    g.Style.Colors[g.DebugFlashStyleColorIdx].w = 1.0f;
+    if ((g.DebugFlashStyleColorTime -= g.IO.DeltaTime) <= 0.0f)
+        DebugFlashStyleColorStop();
+}
+
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
 static void MetricsHelpMarker(const char* desc)
 {
@@ -21054,6 +21087,7 @@ void ImGui::ShowIDStackToolWindow(bool*) {}
 void ImGui::DebugHookIdInfo(ImGuiID, ImGuiDataType, const void*, const void*) {}
 void ImGui::UpdateDebugToolItemPicker() {}
 void ImGui::UpdateDebugToolStackQueries() {}
+void ImGui::UpdateDebugToolFlashStyleColor() {}
 
 #endif // #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 

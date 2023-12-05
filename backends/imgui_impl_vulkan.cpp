@@ -35,6 +35,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2023-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2023-11-29: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs vkDestroyCommandPool(). (#7075)
 //  2023-11-10: *BREAKING CHANGE*: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own command-buffer to upload fonts.
 //              *BREAKING CHANGE*: Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unecessary as we create and destroy those objects in the backend.
 //              ImGui_ImplVulkan_CreateFontsTexture() is automatically called by NewFrame() the first time.
@@ -646,7 +647,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         info.queueFamilyIndex = v->QueueFamily;
-        vkCreateCommandPool(v->Device, &info, nullptr, &bd->FontCommandPool);
+        vkCreateCommandPool(v->Device, &info, v->Allocator, &bd->FontCommandPool);
     }
     if (bd->FontCommandBuffer == VK_NULL_HANDLE)
     {
