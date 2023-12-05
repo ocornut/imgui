@@ -1600,7 +1600,7 @@ struct IMGUI_API ImGuiTypingSelectState
 // [SECTION] Columns support
 //-----------------------------------------------------------------------------
 
-// Flags for internal's BeginColumns(). Prefix using BeginTable() nowadays!
+// Flags for internal's BeginColumns(). This is an obsolete API. Prefer using BeginTable() nowadays!
 enum ImGuiOldColumnFlags_
 {
     ImGuiOldColumnFlags_None                    = 0,
@@ -1608,16 +1608,16 @@ enum ImGuiOldColumnFlags_
     ImGuiOldColumnFlags_NoResize                = 1 << 1,   // Disable resizing columns when clicking on the dividers
     ImGuiOldColumnFlags_NoPreserveWidths        = 1 << 2,   // Disable column width preservation when adjusting columns
     ImGuiOldColumnFlags_NoForceWithinWindow     = 1 << 3,   // Disable forcing columns to fit within window
-    ImGuiOldColumnFlags_GrowParentContentsSize  = 1 << 4,   // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
+    ImGuiOldColumnFlags_GrowParentContentsSize  = 1 << 4,   // Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImGuiColumnsFlags_None                      = ImGuiOldColumnFlags_None,
-    ImGuiColumnsFlags_NoBorder                  = ImGuiOldColumnFlags_NoBorder,
-    ImGuiColumnsFlags_NoResize                  = ImGuiOldColumnFlags_NoResize,
-    ImGuiColumnsFlags_NoPreserveWidths          = ImGuiOldColumnFlags_NoPreserveWidths,
-    ImGuiColumnsFlags_NoForceWithinWindow       = ImGuiOldColumnFlags_NoForceWithinWindow,
-    ImGuiColumnsFlags_GrowParentContentsSize    = ImGuiOldColumnFlags_GrowParentContentsSize,
+    //ImGuiColumnsFlags_None                    = ImGuiOldColumnFlags_None,
+    //ImGuiColumnsFlags_NoBorder                = ImGuiOldColumnFlags_NoBorder,
+    //ImGuiColumnsFlags_NoResize                = ImGuiOldColumnFlags_NoResize,
+    //ImGuiColumnsFlags_NoPreserveWidths        = ImGuiOldColumnFlags_NoPreserveWidths,
+    //ImGuiColumnsFlags_NoForceWithinWindow     = ImGuiOldColumnFlags_NoForceWithinWindow,
+    //ImGuiColumnsFlags_GrowParentContentsSize  = ImGuiOldColumnFlags_GrowParentContentsSize,
 #endif
 };
 

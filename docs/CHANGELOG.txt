@@ -42,6 +42,11 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
+  Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
+- Internals, Columns: commented out legacy ImGuiColumnsFlags_XXX symbols redirecting
+  to ImGuiOldColumnsFlags_XXX, obsoleted from imgui_internal.h in 1.80.
+
 Other changes:
 
 - Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
