@@ -15,6 +15,7 @@
 #pragma once
 
 #include "opencv2/core/cvdef.h"
+#include "../../include/opencv2/v4d/detail/imguicontext.hpp"
 
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
@@ -27,7 +28,8 @@
 // for each static/DLL boundary you are calling from. Read "Context and Memory Allocators" section of imgui.cpp for more details.
 #define IMGUI_API CV_EXPORTS
 #define IMGUI_API CV_EXPORTS
-
+#define GImGui cv::v4d::detail::ImGuiContextImpl::getContext()  // Current implicit context pointer
+#define IMGUI_SET_CURRENT_CONTEXT_FUNC cv::v4d::detail::ImGuiContextImpl::setContext
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to clean your code of obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 //#define IMGUI_DISABLE_OBSOLETE_KEYIO                      // 1.87: disable legacy io.KeyMap[]+io.KeysDown[] in favor io.AddKeyEvent(). This will be folded into IMGUI_DISABLE_OBSOLETE_FUNCTIONS in a few versions.
