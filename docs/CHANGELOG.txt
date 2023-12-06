@@ -44,6 +44,8 @@ Breaking changes:
 
 - imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
   Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
+- Removed CalcListClipping() marked obsolete in 1.86. (#3841)
+  Prefer using ImGuiListClipper which can return non-contiguous ranges.
 - Internals, Columns: commented out legacy ImGuiColumnsFlags_XXX symbols redirecting
   to ImGuiOldColumnsFlags_XXX, obsoleted from imgui_internal.h in 1.80.
 
