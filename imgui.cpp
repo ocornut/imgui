@@ -8294,22 +8294,25 @@ static int CalcRoutingScore(ImGuiWindow* location, ImGuiID owner_id, ImGuiInputF
         if (owner_id != 0 && g.ActiveId == owner_id)
             return 1;
 
+        // Early out when not in focus stack
+        if (focused == NULL || focused->RootWindow != location->RootWindow)
+            return 255;
+
         // Score based on distance to focused window (lower is better)
         // Assuming both windows are submitting a routing request,
         // - When Window....... is focused -> Window scores 3 (best), Window/ChildB scores 255 (no match)
         // - When Window/ChildB is focused -> Window scores 4,        Window/ChildB scores 3 (best)
         // Assuming only WindowA is submitting a routing request,
         // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
-        if (focused != NULL && focused->RootWindow == location->RootWindow)
-            for (int next_score = 3; focused != NULL; next_score++)
+        for (int next_score = 3; focused != NULL; next_score++)
+        {
+            if (focused == location)
             {
-                if (focused == location)
-                {
-                    IM_ASSERT(next_score < 255);
-                    return next_score;
-                }
-                focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
+                IM_ASSERT(next_score < 255);
+                return next_score;
             }
+            focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
+        }
         return 255;
     }
 
