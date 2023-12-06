@@ -2773,10 +2773,9 @@ static const char* ExampleNames[] =
     "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
 };
 
-struct ExampleSelectionStorageWithDeletion : ImGuiSelectionBasicStorage
+// Extra functions to add deletion support to ImGuiSelectionBasicStorage
+struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 {
-    bool QueueDeletion = false; // Track request deleting selected items
-
     // Find which item should be Focused after deletion.
     // Call _before_ item submission. Retunr an index in the before-deletion item list, your item loop should call SetKeyboardFocusHere() on it.
     // The subsequent ApplyDeletionPostLoop() code will use it to apply Selection.
@@ -2786,7 +2785,6 @@ struct ExampleSelectionStorageWithDeletion : ImGuiSelectionBasicStorage
     // FIXME-MULTISELECT: Doesn't take account of the possibility focus target will be moved during deletion. Need refocus or scroll offset.
     int ApplyDeletionPreLoop(ImGuiMultiSelectIO* ms_io, int items_count)
     {
-        QueueDeletion = false;
         if (Size == 0)
             return -1;
 
@@ -3032,12 +3030,13 @@ static void ShowDemoWindowMultiSelect()
             ImGui::BulletText("Ctrl modifier to preserve and toggle selection.");
             ImGui::BulletText("Shift modifier for range selection.");
             ImGui::BulletText("CTRL+A to select all.");
-            ImGui::Text("Tip: Use 'Debug Log->Selection' to see selection requests as they happen.");
+            ImGui::BulletText("Escape to clear selection.");
+            ImGui::Text("Tip: Use 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.");
 
             // Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
             const int ITEMS_COUNT = 50;
             static ImGuiSelectionBasicStorage selection;
-            ImGui::Text("Selection: %d/%d", selection.GetSize(), ITEMS_COUNT);
+            ImGui::Text("Selection: %d/%d", selection.Size, ITEMS_COUNT);
 
             // The BeginListBox() has no actual purpose for selection logic (other that offering a scrolling region).
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
@@ -3074,7 +3073,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::BulletText("Using ImGuiListClipper.");
 
             const int ITEMS_COUNT = 10000;
-            ImGui::Text("Selection: %d/%d", selection.GetSize(), ITEMS_COUNT);
+            ImGui::Text("Selection: %d/%d", selection.Size, ITEMS_COUNT);
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
@@ -3116,24 +3115,26 @@ static void ShowDemoWindowMultiSelect()
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (with deletion)");
         if (ImGui::TreeNode("Multi-Select (with deletion)"))
         {
-            // Intentionally separating items data from selection data!
-            // But you may decide to store selection data inside your item (aka intrusive storage).
-            // Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
-            static ImVector<int> items;
-            static ExampleSelectionStorageWithDeletion selection;
+            // Storing items data separately from selection data.
+            // (you may decide to store selection data inside your item (aka intrusive storage) if you don't need multiple views over same items)
+            // Use a custom selection.Adapter: store item identifier in Selection (instead of index)
+            static ImVector<ImGuiID> items;
+            static ExampleSelectionWithDeletion selection;
+            selection.AdapterData = (void*)&items;
+            selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImVector<ImGuiID>* p_items = (ImVector<ImGuiID>*)self->AdapterData; return (*p_items)[idx]; }; // Index -> ID
 
-            ImGui::Text("Adding features:");
+            ImGui::Text("Added features:");
             ImGui::BulletText("Dynamic list with Delete key support.");
-            ImGui::Text("Selection size: %d/%d", selection.GetSize(), items.Size);
+            ImGui::Text("Selection size: %d/%d", selection.Size, items.Size);
 
             // Initialize default list with 50 items + button to add/remove items.
-            static int items_next_id = 0;
+            static ImGuiID items_next_id = 0;
             if (items_next_id == 0)
-                for (int n = 0; n < 50; n++)
+                for (ImGuiID n = 0; n < 50; n++)
                     items.push_back(items_next_id++);
             if (ImGui::SmallButton("Add 20 items"))     { for (int n = 0; n < 20; n++) { items.push_back(items_next_id++); } }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.RemoveItem((ImGuiID)(items.Size - 1)); items.pop_back(); } } // This is to test
+            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.RemoveItem(items.back()); items.pop_back(); } }
 
             // (1) Extra to support deletion: Submit scrolling range to avoid glitches on deletion
             const float items_height = ImGui::GetTextLineHeightWithSpacing();
@@ -3147,18 +3148,16 @@ static void ShowDemoWindowMultiSelect()
 
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to turn into 'ms_io->RequestDelete' signal -> need HasSelection passed.
                 // FIXME-MULTISELECT: If pressing Delete + another key we have ambiguous behavior.
-                const bool want_delete = selection.QueueDeletion || ((selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
-                int item_curr_idx_to_focus = -1;
-                if (want_delete)
-                    item_curr_idx_to_focus = selection.ApplyDeletionPreLoop(ms_io, items.Size);
+                const bool want_delete = (selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
+                const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
 
                 for (int n = 0; n < items.Size; n++)
                 {
-                    const int item_id = items[n];
+                    const ImGuiID item_id = items[n];
                     char label[64];
-                    sprintf(label, "Object %05d: %s", item_id, ExampleNames[item_id % IM_ARRAYSIZE(ExampleNames)]);
+                    sprintf(label, "Object %05u: %s", item_id, ExampleNames[item_id % IM_ARRAYSIZE(ExampleNames)]);
 
-                    bool item_is_selected = selection.Contains((ImGuiID)n);
+                    bool item_is_selected = selection.Contains(item_id);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                     if (item_curr_idx_to_focus == n)
@@ -3217,7 +3216,7 @@ static void ShowDemoWindowMultiSelect()
                 selection->ApplyRequests(ms_io, ITEMS_COUNT);
 
                 ImGui::SeparatorText("Selection scope");
-                ImGui::Text("Selection size: %d/%d", selection->GetSize(), ITEMS_COUNT);
+                ImGui::Text("Selection size: %d/%d", selection->Size, ITEMS_COUNT);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -3292,9 +3291,10 @@ static void ShowDemoWindowMultiSelect()
             static ImVector<int> items;
             static int items_next_id = 0;
             if (items_next_id == 0) { for (int n = 0; n < 1000; n++) { items.push_back(items_next_id++); } }
-            static ExampleSelectionStorageWithDeletion selection;
+            static ExampleSelectionWithDeletion selection;
+            static bool request_deletion_from_menu = false; // Queue deletion triggered from context menu
 
-            ImGui::Text("Selection size: %d/%d", selection.GetSize(), items.Size);
+            ImGui::Text("Selection size: %d/%d", selection.Size, items.Size);
 
             const float items_height = (widget_type == WidgetType_TreeNode) ? ImGui::GetTextLineHeight() : ImGui::GetTextLineHeightWithSpacing();
             ImGui::SetNextWindowContentSize(ImVec2(0.0f, items.Size * items_height));
@@ -3308,10 +3308,9 @@ static void ShowDemoWindowMultiSelect()
                 selection.ApplyRequests(ms_io, items.Size);
 
                 // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to turn into 'ms_io->RequestDelete' signal -> need HasSelection passed.
-                const bool want_delete = selection.QueueDeletion || ((selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
-                int item_curr_idx_to_focus = -1;
-                if (want_delete)
-                    item_curr_idx_to_focus = selection.ApplyDeletionPreLoop(ms_io, items.Size);
+                const bool want_delete = request_deletion_from_menu || ((selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
+                const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
+                request_deletion_from_menu = false;
 
                 if (show_in_table)
                 {
@@ -3328,7 +3327,7 @@ static void ShowDemoWindowMultiSelect()
                 {
                     clipper.Begin(items.Size);
                     if (item_curr_idx_to_focus != -1)
-                        clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped
+                        clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped.
                     if (ms_io->RangeSrcItem > 0)
                         clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
                 }
@@ -3417,9 +3416,10 @@ static void ShowDemoWindowMultiSelect()
                         // Right-click: context menu
                         if (ImGui::BeginPopupContextItem())
                         {
-                            ImGui::BeginDisabled(!use_deletion || selection.GetSize() == 0);
-                            sprintf(label, "Delete %d item(s)###DeleteSelected", selection.GetSize());
-                            selection.QueueDeletion |= ImGui::Selectable(label);
+                            ImGui::BeginDisabled(!use_deletion || selection.Size == 0);
+                            sprintf(label, "Delete %d item(s)###DeleteSelected", selection.Size);
+                            if (ImGui::Selectable(label))
+                                request_deletion_from_menu = true;
                             ImGui::EndDisabled();
                             ImGui::Selectable("Close");
                             ImGui::EndPopup();
@@ -9619,19 +9619,20 @@ const ImGuiTableSortSpecs* ExampleAsset::s_current_sort_specs = NULL;
 struct ExampleAssetsBrowser
 {
     // Options
-    bool                    ShowTypeOverlay = true;
-    bool                    AllowDragUnselected = false;
-    float                   IconSize = 32.0f;
-    int                     IconSpacing = 10;
-    int                     IconHitSpacing = 4; // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
-    bool                    StretchSpacing = true;
+    bool            ShowTypeOverlay = true;
+    bool            AllowDragUnselected = false;
+    float           IconSize = 32.0f;
+    int             IconSpacing = 10;
+    int             IconHitSpacing = 4;         // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
+    bool            StretchSpacing = true;
 
     // State
-    ImVector<ExampleAsset>  Items;
-    ImGuiSelectionBasicStorage Selection;
-    ImGuiID                 NextItemId = 0;
-    bool                    SortDirty = false;
-    float                   ZoomWheelAccum = 0.0f;
+    ImVector<ExampleAsset> Items;               // Our items
+    ExampleSelectionWithDeletion Selection;     // Our selection (ImGuiSelectionBasicStorage + helper funcs to handle deletion)
+    ImGuiID         NextItemId = 0;             // Unique identifier when creating new items
+    bool            RequestDelete = false;      // Deferred deletion request
+    bool            RequestSort = false;        // Deferred sort request
+    float           ZoomWheelAccum = 0.0f;      // Mouse wheel accumulator to handle smooth wheels better
 
     // Functions
     ExampleAssetsBrowser()
@@ -9645,7 +9646,7 @@ struct ExampleAssetsBrowser
         Items.reserve(Items.Size + count);
         for (int n = 0; n < count; n++, NextItemId++)
             Items.push_back(ExampleAsset(NextItemId, (NextItemId % 20) < 15 ? 0 : (NextItemId % 20) < 18 ? 1 : 2));
-        SortDirty = true;
+        RequestSort = true;
     }
     void ClearItems()
     {
@@ -9676,6 +9677,12 @@ struct ExampleAssetsBrowser
                     *p_open = false;
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Edit"))
+            {
+                if (ImGui::MenuItem("Delete", "Del", false, Selection.Size > 0))
+                    RequestDelete = true;
+                ImGui::EndMenu();
+            }
             if (ImGui::BeginMenu("Options"))
             {
                 ImGui::PushItemWidth(ImGui::GetFontSize() * 10);
@@ -9697,22 +9704,6 @@ struct ExampleAssetsBrowser
             ImGui::EndMenuBar();
         }
 
-        // Zooming with CTRL+Wheel
-        // FIXME-MULTISELECT: Try to maintain scroll.
-        ImGuiIO& io = ImGui::GetIO();
-        if (ImGui::IsWindowAppearing())
-            ZoomWheelAccum = 0.0f;
-        if (io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)
-        {
-            ZoomWheelAccum += io.MouseWheel;
-            if (fabsf(ZoomWheelAccum) >= 1.0f)
-            {
-                IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
-                IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
-                ZoomWheelAccum -= (int)ZoomWheelAccum;
-            }
-        }
-
         // Show a table with ONLY one header row to showcase the idea/possibility of using this to provide a sorting UI
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         ImGuiTableFlags table_flags_for_sort_specs = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders;
@@ -9722,10 +9713,10 @@ struct ExampleAssetsBrowser
             ImGui::TableSetupColumn("Type");
             ImGui::TableHeadersRow();
             if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs())
-                if (sort_specs->SpecsDirty || SortDirty)
+                if (sort_specs->SpecsDirty || RequestSort)
                 {
                     ExampleAsset::SortWithSortSpecs(sort_specs, Items.Data, Items.Size);
-                    sort_specs->SpecsDirty = SortDirty = false;
+                    sort_specs->SpecsDirty = RequestSort = false;
                 }
             ImGui::EndTable();
         }
@@ -9765,6 +9756,10 @@ struct ExampleAssetsBrowser
             Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->AdapterData; return self->Items[idx].ID; };
             Selection.ApplyRequests(ms_io, Items.Size);
 
+            const bool want_delete = RequestDelete || ((Selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
+            const int item_curr_idx_to_focus = want_delete ? Selection.ApplyDeletionPreLoop(ms_io, Items.Size) : -1;
+            RequestDelete = false;
+
             // Altering ItemSpacing may seem unnecessary as we position every items using SetCursorScreenPos()...
             // But it is necessary for two reasons:
             // - Selectables uses it by default to visually fill the space between two items.
@@ -9781,8 +9776,10 @@ struct ExampleAssetsBrowser
             const float line_height = item_size.y + item_spacing;
             ImGuiListClipper clipper;
             clipper.Begin(line_count, line_height);
+            if (item_curr_idx_to_focus != -1)
+                clipper.IncludeItemByIndex(item_curr_idx_to_focus / column_count); // Ensure focused item line is not clipped.
             if (ms_io->RangeSrcItem != -1)
-                clipper.IncludeItemByIndex((int)(ms_io->RangeSrcItem / column_count));
+                clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem / column_count); // Ensure RangeSrc item line is not clipped.
             while (clipper.Step())
             {
                 for (int line_idx = clipper.DisplayStart; line_idx < clipper.DisplayEnd; line_idx++)
@@ -9812,6 +9809,10 @@ struct ExampleAssetsBrowser
                         if (ImGui::IsItemToggledSelection())
                             item_is_selected = !item_is_selected;
 
+                        // Focus (for after deletion)
+                        if (item_curr_idx_to_focus == item_idx)
+                            ImGui::SetKeyboardFocusHere(-1);
+
                         // Drag and drop
                         if (ImGui::BeginDragDropSource())
                         {
@@ -9823,15 +9824,6 @@ struct ExampleAssetsBrowser
 
                             ImGui::Text("%d assets", payload_size);
                             ImGui::EndDragDropSource();
-                        }
-
-                        // Popup menu
-                        if (ImGui::BeginPopupContextItem())
-                        {
-                            ImGui::Text("Selection: %d items", Selection.Size);
-                            if (ImGui::Button("Close"))
-                                ImGui::CloseCurrentPopup();
-                            ImGui::EndPopup();
                         }
 
                         // A real app would likely display an image/thumbnail here.
@@ -9856,11 +9848,39 @@ struct ExampleAssetsBrowser
             clipper.End();
             ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
+            // Context menu
+            if (ImGui::BeginPopupContextWindow())
+            {
+                ImGui::Text("Selection: %d items", Selection.Size);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Delete", "Del", false, Selection.Size > 0))
+                    RequestDelete = true;
+                ImGui::EndPopup();
+            }
+
             ms_io = ImGui::EndMultiSelect();
             Selection.ApplyRequests(ms_io, Items.Size);
+            if (want_delete)
+                Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
 
             // FIXME-MULTISELECT: Find a way to expose this in public API. This currently requires "imgui_internal.h"
             //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
+        }
+
+        // Zooming with CTRL+Wheel
+        // FIXME-MULTISELECT: Try to maintain scroll.
+        ImGuiIO& io = ImGui::GetIO();
+        if (ImGui::IsWindowAppearing())
+            ZoomWheelAccum = 0.0f;
+        if (ImGui::IsWindowHovered() && io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)
+        {
+            ZoomWheelAccum += io.MouseWheel;
+            if (fabsf(ZoomWheelAccum) >= 1.0f)
+            {
+                IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
+                IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
+                ZoomWheelAccum -= (int)ZoomWheelAccum;
+            }
         }
 
         ImGui::EndChild();

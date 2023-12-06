@@ -2871,7 +2871,6 @@ struct ImGuiSelectionBasicStorage
     void    AddItem(ImGuiID key)                { int* p_int = Storage.GetIntRef(key, 0); if (*p_int != 0) return; *p_int = 1; Size++; }
     void    RemoveItem(ImGuiID key)             { int* p_int = Storage.GetIntRef(key, 0); if (*p_int == 0) return; *p_int = 0; Size--; }
     void    UpdateItem(ImGuiID key, bool v)     { if (v) { AddItem(key); } else { RemoveItem(key); } }
-    int     GetSize() const                     { return Size; }
 
     // Methods: apply selection requests (that are coming from BeginMultiSelect() and EndMultiSelect() functions)
     IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count);
