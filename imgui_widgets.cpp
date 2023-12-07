@@ -8257,7 +8257,7 @@ void ImGui::TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     if (tab->Flags & ImGuiTabItemFlags_Button)
         return; // A button appended with TabItemButton().
 
-    if (!(tab->Flags & ImGuiTabItemFlags_UnsavedDocument))
+    if ((tab->Flags & (ImGuiTabItemFlags_UnsavedDocument | ImGuiTabItemFlags_NoAssumedClosure)) == 0)
     {
         // This will remove a frame of lag for selecting another tab on closure.
         // However we don't run it in the case where the 'Unsaved' flag is set, so user gets a chance to fully undo the closure
