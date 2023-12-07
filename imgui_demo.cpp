@@ -220,6 +220,31 @@ static void HelpMarker(const char* desc)
     }
 }
 
+ImVec2           GImGuiDemoWindowPos = ImVec2(-1.f, -1.f); // if x < 0, will use default position defined inside ImGui::ShowDemoWindow()
+ImVec2           GImGuiDemoWindowSize = ImVec2(-1.f, -1.f);
+ImGuiCond        GImGuiDemoWindowCond = ImGuiCond_Appearing;
+
+// Enables to position the ImGui Demo window. Not referred anywhere in imgui.h: you need to copy this declaration if you want to use it.
+void SetImGuiDemoWindowPos(ImVec2 pos, ImVec2 size, ImGuiCond cond)
+{
+    GImGuiDemoWindowPos = pos;
+    GImGuiDemoWindowSize = size;
+    GImGuiDemoWindowCond = cond;
+}
+
+ImVec2           GImGuiDemoCodeWindowPos = ImVec2(-1.f, -1.f);
+ImVec2           GImGuiDemoCodeWindowSize = ImVec2(-1.f, -1.f);
+ImGuiCond        GImGuiDemoCodeWindowCond = ImGuiCond_Appearing;
+
+// Enable to position the ImGui Demo code window. Not referred anywhere in imgui.h: you need to copy this declaration if you want to use it.
+void SetImGuiDemoCodeWindowPos(ImVec2 pos, ImVec2 size, ImGuiCond cond)
+{
+    GImGuiDemoCodeWindowPos = pos;
+    GImGuiDemoCodeWindowSize = size;
+    GImGuiDemoCodeWindowCond = cond;
+}
+
+
 // Helper to wire demo markers located in code to an interactive browser
 typedef void (*ImGuiDemoMarkerCallback)(const char* file, int line, const char* section, void* user_data);
 void ImGuiDemoMarkerCallback_Default(const char* file, int line, const char* section, void* user_data);
@@ -333,8 +358,16 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // We specify a default position/size in case there's no data in the .ini file.
     // We only do it to make the demo applications a little more welcoming, but typically this isn't required.
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+    if (GImGuiDemoWindowPos.x >= 0.f)
+    {
+        ImGui::SetNextWindowPos(GImGuiDemoWindowPos, GImGuiDemoWindowCond);
+        ImGui::SetNextWindowSize(GImGuiDemoWindowSize, GImGuiDemoWindowCond);
+    }
+    else
+    {
+        ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+    }
 
     // Main body of the Demo window starts here.
     if (!ImGui::Begin("Dear ImGui Demo", p_open, window_flags))
@@ -8417,10 +8450,18 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
 
             // Default position/size of the code window case there's no data in the .ini file.
             // By default, it appears to the left of the demo window.
-            ImGuiViewport *main_viewport = ImGui::GetMainViewport();
-            ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 100, main_viewport->WorkPos.y + 20),
-                                    ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(520.f, 680), ImGuiCond_FirstUseEver);
+            if (GImGuiDemoCodeWindowPos.x >= 0.f)
+            {
+                ImGui::SetNextWindowPos(GImGuiDemoCodeWindowPos, GImGuiDemoCodeWindowCond);
+                ImGui::SetNextWindowSize(GImGuiDemoCodeWindowSize, GImGuiDemoCodeWindowCond);
+            }
+            else
+            {
+                ImGuiViewport *main_viewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 100, main_viewport->WorkPos.y + 20),
+                                        ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(520.f, 680), ImGuiCond_FirstUseEver);
+            }
             if (ImGui::Begin("imgui_demo.cpp - code", &IsWindowOpened))
             {
                 GuiSearch();
@@ -8454,7 +8495,7 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
     private:
         void ReadSource(const char* source_file)
         {
-            ReadSourceCodeContent(source_file);
+            SourceCode = ReadSourceCodeContent(source_file);
             if (SourceCode != NULL)
             {
                 Tags = DemoMarkerTagsParser::ParseDemoMarkerTags(SourceCode);
@@ -8515,24 +8556,27 @@ namespace ImGuiDemoMarkerCodeViewer_Impl
             }
         }
 
-        void ReadSourceCodeContent(const char* source_file)
+        char* ReadSourceCodeContent(const char* source_file)
         {
             FILE *f = fopen(source_file, "rb"); // binary mode for windows (do not translate \n)
             if (f == NULL)
             {
-                SourceCode = NULL;
-                return;
+                return NULL;
             }
             fseek(f, 0, SEEK_END);
             size_t file_size = (size_t) ftell(f);
-            SourceCode = (char *) IM_ALLOC((file_size + 1)* sizeof(char));
+            char * source_code = (char *) IM_ALLOC((file_size + 1)* sizeof(char));
             rewind(f);
-            size_t nb_bytes_read = fread(SourceCode, sizeof(char), file_size, f);
+            size_t nb_bytes_read = fread(source_code, sizeof(char), file_size, f);
             if (nb_bytes_read != file_size)
-                SourceCode = NULL;
+            {
+                IM_FREE(source_code);
+                return NULL;
+            }
             else
-                SourceCode[file_size] = '\0';
+                source_code[file_size] = '\0';
             fclose(f);
+            return source_code;
         }
 
         void MakeSourceLineNumbersStr()
