@@ -818,9 +818,6 @@ static EM_BOOL ImGui_ImplGlfw_OnCanvasSizeChange(int event_type, const Emscripte
     double canvas_width, canvas_height;
     emscripten_get_element_css_size(bd->CanvasSelector, &canvas_width, &canvas_height);
 
-    // Will cause a "Permissions check failed" error when set to fullscreen resolution.
-    // An imperfect way to get around this issue is to check if the canvas size is equal to the screen resolution,
-    // and if it is, change the width or height a little bit, say from (1920, 1080) to (1919, 1080).
     glfwSetWindowSize(bd->Window, (int)canvas_width, (int)canvas_height);
 
     return true;
@@ -833,9 +830,6 @@ static EM_BOOL ImGui_ImplGlfw_OnFullscreenChange(int event_type, const Emscripte
     double canvas_width, canvas_height;
     emscripten_get_element_css_size(bd->CanvasSelector, &canvas_width, &canvas_height);
 
-    // Will cause a "Permissions check failed" error when set to fullscreen resolution.
-    // An imperfect way to get around this issue is to check if the canvas size is equal to the screen resolution,
-    // and if it is, change the width or height a little bit, say from (1920, 1080) to (1919, 1080).
     glfwSetWindowSize(bd->Window, (int)canvas_width, (int)canvas_height);
 
     return true;
