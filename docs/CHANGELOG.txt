@@ -42,6 +42,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
+  stack when number of components is 1. [#7095] [@Nahor]
 - imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
   Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
 - Removed CalcListClipping() marked obsolete in 1.86. (#3841)

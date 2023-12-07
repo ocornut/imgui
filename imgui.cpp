@@ -9864,7 +9864,8 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
     const float w_item_one  = ImMax(1.0f, IM_TRUNC((w_full - (style.ItemInnerSpacing.x) * (components - 1)) / (float)components));
     const float w_item_last = ImMax(1.0f, IM_TRUNC(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components - 1)));
     window->DC.ItemWidthStack.push_back(window->DC.ItemWidth); // Backup current width
-    window->DC.ItemWidthStack.push_back(w_item_last);
+    if (components > 1)
+        window->DC.ItemWidthStack.push_back(w_item_last);
     for (int i = 0; i < components - 2; i++)
         window->DC.ItemWidthStack.push_back(w_item_one);
     window->DC.ItemWidth = (components == 1) ? w_item_last : w_item_one;
