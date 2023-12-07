@@ -55,6 +55,8 @@ Other changes:
 
 - Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
   minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+- Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
+  speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
 - Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
   navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
 - Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
