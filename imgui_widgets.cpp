@@ -823,14 +823,30 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
     // FIXME: Clarify this mess
     ImU32 col = GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
     ImVec2 center = bb.GetCenter();
-    if (hovered)
-        window->DrawList->AddCircleFilled(center, ImMax(2.0f, g.FontSize * 0.5f + 1.0f), col);
+//    if (hovered)
+//        window->DrawList->AddCircleFilled(center, ImMax(2.0f, g.FontSize * 0.5f + 1.0f), col);
+//
+//    float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
+//    ImU32 cross_col = GetColorU32(ImGuiCol_Text);
+//    center -= ImVec2(0.5f, 0.5f);
+//    window->DrawList->AddLine(center + ImVec2(+cross_extent, +cross_extent), center + ImVec2(-cross_extent, -cross_extent), cross_col, 1.0f);
+//    window->DrawList->AddLine(center + ImVec2(+cross_extent, -cross_extent), center + ImVec2(-cross_extent, +cross_extent), cross_col, 1.0f);
 
-    float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
-    ImU32 cross_col = GetColorU32(ImGuiCol_Text);
-    center -= ImVec2(0.5f, 0.5f);
-    window->DrawList->AddLine(center + ImVec2(+cross_extent, +cross_extent), center + ImVec2(-cross_extent, -cross_extent), cross_col, 1.0f);
-    window->DrawList->AddLine(center + ImVec2(+cross_extent, -cross_extent), center + ImVec2(-cross_extent, +cross_extent), cross_col, 1.0f);
+    if (!hovered)
+    {
+        window->DrawList->AddCircleFilled(center, ImMax(1.0f, g.FontSize * 0.5f - 1.0f), IM_COL32(143, 143, 143, 255), 100);
+    }
+    else
+    {
+        window->DrawList->AddCircleFilled(center, ImMax(1.0f, g.FontSize * 0.5f - 1.0f), IM_COL32(240, 40, 29, 255));
+        float cross_extent = g.FontSize * 0.5f * 0.7071f - 3.0f;
+        ImU32 cross_col = GetColorU32(ImGuiCol_Text);
+        center -= ImVec2(0.5f, 0.5f);
+        window->DrawList->AddLine(center + ImVec2(+cross_extent, +cross_extent), center + ImVec2(-cross_extent, -cross_extent), cross_col, 1.0f);
+        window->DrawList->AddLine(center + ImVec2(+cross_extent, -cross_extent), center + ImVec2(-cross_extent, +cross_extent), cross_col, 1.0f);
+    }
+
+
 
     return pressed;
 }
