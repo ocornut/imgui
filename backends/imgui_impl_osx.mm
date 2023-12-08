@@ -864,7 +864,9 @@ struct ImGuiViewportDataOSX
 
 static void ConvertNSRect(NSScreen* screen, NSRect* r)
 {
-    r->origin.y = screen.frame.size.height - r->origin.y - r->size.height;
+    NSRect firstScreenFrame = NSScreen.screens[0].frame;
+    IM_ASSERT(firstScreenFrame.origin.x == 0 && firstScreenFrame.origin.y == 0);
+    r->origin.y = firstScreenFrame.size.height - r->origin.y - r->size.height;
 }
 
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
