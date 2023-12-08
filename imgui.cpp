@@ -9860,6 +9860,7 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(components > 0);
     const ImGuiStyle& style = g.Style;
     const float w_item_one  = ImMax(1.0f, IM_TRUNC((w_full - (style.ItemInnerSpacing.x) * (components - 1)) / (float)components));
     const float w_item_last = ImMax(1.0f, IM_TRUNC(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components - 1)));
