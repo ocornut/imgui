@@ -37,15 +37,79 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.90 WIP (In Progress)
+ VERSION 1.90.1 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
+- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
+  stack when number of components is 1. [#7095] [@Nahor]
+- imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
+  Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
+- Removed CalcListClipping() marked obsolete in 1.86. (#3841)
+  Prefer using ImGuiListClipper which can return non-contiguous ranges.
+- Internals, Columns: commented out legacy ImGuiColumnsFlags_XXX symbols redirecting
+  to ImGuiOldColumnsFlags_XXX, obsoleted from imgui_internal.h in 1.80.
+
+Other changes:
+
+- Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
+  minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+- Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
+  speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
+- Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
+  navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
+- Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
+  (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
+  all columns. (#7049, #4281, #3272)
+- Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
+  movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
+- Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
+- Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
+  IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
+- Misc: Added extra courtesy ==/!= operators when IMGUI_DEFINE_MATH_OPERATORS is defined.
+- Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
+  like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
+- Misc: Renamed some defines in imstb_textedit.h to avoid conflicts when using unity/jumbo builds
+  on a codebase where another copy of the library is used.
+- Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
+  vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.90.0 (Released 2023-11-15)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+ - BeginChild(): Upgraded 'bool border = false' parameter to 'ImGuiChildFlags flags = 0'.
+   Added ImGuiChildFlags_Border value. As with our prior "bool-to-flags" API updates,
+   the ImGuiChildFlags_Border value is guaranteed to be == true forever to ensure a
+   smoother transition, meaning all existing calls will still work.
+   If you want to neatly transition your call sites:
+      Before:  BeginChild("Name", size, true)
+      After:   BeginChild("Name", size, ImGuiChildFlags_Border)
+      Before:  BeginChild("Name", size, false)
+      After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
+   Existing code will still work as 'ImGuiChildFlags_Border == true', but you are encouraged to update call sites.
+ - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
+   the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
+   for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
+   child-flags we are moving it there. (#462)
+      Before:  BeginChild("Name", size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding);
+      After:   BeginChild("Name", size, ImGuiChildFlags_AlwaysUseWindowPadding, 0);
+   Kept inline redirection enum (will obsolete later) so existing code will work.
+ - BeginChildFrame()/EndChildFrame(): removed functions in favor of using BeginChild() with
+   the ImGuiChildFlags_FrameStyle flag. Kept inline redirection function (will obsolete).
+   Those functions were merely PushStyle/PopStyle helpers and custom versions are easy to create.
+   (The removal isn't so much motivated by needing to add the feature in BeginChild(), but by the
+   necessity to avoid BeginChildFrame() signature mismatching BeginChild() signature and features.)
  - Debug Tools: Renamed ShowStackToolWindow() ("Stack Tool") to ShowIDStackToolWindow() ("ID Stack Tool"),
    as earlier name was misleading. Kept inline redirection function. (#4631)
  - IO: Removed io.MetricsActiveAllocations introduced in 1.63, was displayed in Metrics and unlikely to
    be accessed by end-user. Value still visible in the UI and easily to recompute from a delta.
+ - Defining IMGUI_DISABLE_OBSOLETE_FUNCTIONS now automatically defines IMGUI_DISABLE_OBSOLETE_KEYIO. (#4921)
+ - Removed IM_OFFSETOF() macro in favor of using offsetof() available in C++11. Kept redirection define. (#4537)
  - ListBox, Combo: Changed signature of "name getter" callback in old one-liner ListBox()/Combo() apis.
    Before:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -58,23 +122,50 @@ Breaking changes:
    Old type was unnecessarily complex and harder to wrap in e.g. a lambda. Kept inline redirection function (will obsolete).
  - Commented out obsolete redirecting enums/functions that were marked obsolete two years ago:
    - GetWindowContentRegionWidth() -> use GetWindowContentRegionMax().x - GetWindowContentRegionMin().x.
-     Consider that generally 'GetContentRegionAvail().x' is more useful.
+     Consider that generally 'GetContentRegionAvail().x' is often more correct and more useful.
    - ImDrawCornerFlags_XXX         -> use ImDrawFlags_RoundCornersXXX names.
-     Read 1.82 changelog for details + grep commented names in sources + .
+     Read 1.82 changelog for details + grep commented names in sources.
    - Commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for
      AddRect()/AddRectFilled()/PathRect()/AddImageRounded(). -> Use ImDrawFlags_RoundCornersXXX flags.
-     Read 1.82 Changelog for details.
+     Read 1.82 changelog for details.
+ - Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+   command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unnecessary.
+   No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in ImGui_ImplVulkan_NewFrame().
+   You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload the font atlas texture.
+   (#6943, #6715, #6327, #3743, #4618)
 
 Other changes:
 
 - Windows:
-  - BeginChild(): Internal name used by child windows now omits the hash/id if the child
-    window is submitted in root of id stack of parent window. Makes debugging/metrics easier
-    and shorter to read in many cases.
+  - BeginChild(): Added ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY to allow resizing
+    child windows from the bottom/right border (toward layout direction). Resized child windows
+    settings are saved and persistent in .ini file. (#1710)
+  - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+  - BeginChild(): Added ImGuiChildFlags_AutoResizeX and ImGuiChildFlags_AutoResizeY to auto-resize
+    on one axis, while generally providing a size on the other axis. (#1666, #1395, #1496, #1710)
+    e.g. BeginChild("name", {-FLT_MIN, 0.0f}, ImGuiChildFlags_AutoResizeY);
+    - Size is only reevaluated if the child window is within visible boundaries or just appearing.
+      This allows coarse clipping to be performed and auto-resizing childs to return false when
+      hidden because of being scrolled out.
+    - Combining this with also specifying ImGuiChildFlags_AlwaysAutoResize disables
+      this optimization, meaning child contents will never be clipped (not recommended).
+    - Please be considerate that child are full windows and carry significant overhead:
+      combining auto-resizing for both axises to create a non-scrolling child to merely draw
+      a border would be better more optimally using BeginGroup(). (see #1496)
+      (until we come up with new helpers for framed groups and work-rect adjustments).
+  - BeginChild(): made it possible to use SetNextWindowSizeConstraints() rectangle, often
+    useful when ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY. (#1666, #1395, #1496)
+    Custom constraint callback are not supported with child window.
+  - BeginChild(): Added ImGuiChildFlags_FrameStyle as a replacement for BeginChildFrame(),
+    use it to make child window use FrameBg, FrameRounding, FrameBorderSize, FramePadding
+    instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.
   - Popups: clarified meaning of 'p_open != NULL' in BeginPopupModal() + set back user value
     to false when popup is closed in ways other than clicking the close button. (#6900)
-  - Double-clicking lower-left resize grip auto-resize (like lower-rightone).
+  - Double-clicking lower-left resize grip auto-resize (like lower-right one).
   - Double-clicking bottom or right window border auto-resize on a singles axis.
+  - Use relative mouse movement for border resize when the border geometry has moved
+    (e.g. resizing a child window triggering parent scroll) in order to avoid resizing
+    feedback loops. Unless manually mouse-wheeling while border resizing. (#1710)
 - Separators:
   - Altered end-points to use more standard boundaries. (#205, #4787, #1643)
     Left position is always current cursor X position, right position is always work-rect
@@ -86,7 +177,7 @@ Other changes:
     - Matches tree indentation (was not the case before).
     - Matches SeparatorText(). (#1643)
     - Makes things correct inside groups without specific/hard-coded handling. (#205)
-  - Mostly legacy behavior when used inside old Columns(), as we favored that idiom back then,
+  - Support legacy behavior when used inside old Columns(), as we favored that idiom back then,
     only different is left position follows indentation level, to match calling a Separator()
     inside or outside Columns().
 - Tooltips:
@@ -121,9 +212,9 @@ Other changes:
     parent-menu would erroneously close the child-menu. (Regression from 1.88). (#6869)
   - MenuBar: Fixed an issue where layouting an item in the menu-bar would erroneously
     register contents size in a way that would affect the scrolling layer.
-    Was most often noticable when using an horizontal scrollbar. (#6789)
+    Was most often noticeable when using an horizontal scrollbar. (#6789)
 - InputText:
-  - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multiline buffer.
+  - InputTextMultiline: Fixed a crash pressing Down on last empty line of a multi-line buffer.
     (regression from 1.89.2, only happened in some states). (#6783, #6000)
   - InputTextMultiline: Fixed Tabbing cycle leading to a situation where Enter key wouldn't
     be accepted by the widget when navigation highlight is visible. (#6802, #3092, #5759, #787)
@@ -134,11 +225,11 @@ Other changes:
 - TabBar: Fixed position of unsaved document marker (ImGuiTabItemFlags_UnsavedDocument) which was
   accidentally offset in 1.89.9. (#6862) [@alektron]
 - ColorPicker4(): Fixed ImGuiColorEditFlags_NoTooltip not being forwarded to individual DragFloat3
-  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is set. (#6957)
+  sub-widgets which have a visible color preview when ImGuiColorEditFlags_NoSidePreview is also set. (#6957)
 - BeginGroup(): Fixed a bug pushing line lower extent too far down when called after a call
   to SameLine() followed by manual cursor manipulation.
 - BeginCombo(): Added ImGuiComboFlags_WidthFitPreview flag. (#6881) [@mpv-enjoyer]
-- BeginListBox(): Fixed not consuming SetNextWindowXXX data when returning false.
+- BeginListBox(): Fixed not consuming SetNextWindowXXX() data when returning false.
 - Fonts:
   - Argument 'float size_pixels' passed to AddFontXXX() functions is now rounded to lowest integer.
     This is because our layout/font system currently doesn't fully support non-integer sizes. Until
@@ -146,10 +237,16 @@ Other changes:
   - Better assert during load when passing truncated font data or wrong data size. (#6822)
   - Ensure calling AddFontXXX function doesn't invalidates ImFont's ConfigData pointers
     prior to building again. (#6825)
+  - Added ImFontConfig::RasterizerDensity field to increase texture size of rendered glyphs
+    without altering other metrics. Among other things, this makes it easier to have zooming code
+    swapping between 2 fonts (e.g. a 100% and a 400% fonts) depending on current scale. (#6925) [@thedmd]
+    Important: if you increase this it is expected that you would render the font with a scale of
+    similar value or magnitude. Merely increasing this without increasing scale may lower quality.
+  - imgui_freetype: Added support for RasterizerDensity. (#6925) [@thedmd]
   - imgui_freetype: Fixed a warning and leak in IMGUI_ENABLE_FREETYPE_LUNASVG support. (#6842, #6591)
 - Inputs: Added IsKeyChordPressed() helper function e.g. IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S).
   (note that ImGuiMod_Shortcut may be used as an alias for Cmd on OSX and Ctrl on other systems).
-- Misc: Most text functions also treat "%.*s" (along with "%s") specially to avoid formatting. (#3466, #6846)
+- Misc: Most text functions also treat "%.*s" (along with "%s") specially to bypass formatting. (#3466, #6846)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_F13 to ImGuiKey_F24. (#6891, #4921)
 - IO: Add extra keys to ImGuiKey enum: ImGuiKey_AppBack, ImGuiKey_AppForward. (#4921)
 - IO: Setting io.WantSetMousePos ignores incoming MousePos events. (#6837, #228) [@bertaye]
@@ -158,9 +255,20 @@ Other changes:
 - ImDrawList: Added AddEllipse(), AddEllipseFilled(), PathEllipticalArcTo(). (#2743) [@Doohl]
 - ImVector: Added find_index() helper.
 - Demo: Added "Drag and Drop -> Tooltip at target location" demo.
+- Demo: Added "Layout -> Child Windows -> Manual-resize" demo. (#1710)
+- Demo: Added "Layout -> Child Windows -> Auto-resize with constraints" demo. (#1666, #1395, #1496, #1710)
+- Demo: Partly fixed "Examples -> Constrained-resizing window" custom constrains demo. (#6210) [@cfillion]
+- Backends: Vulkan: Removed parameter from ImGui_ImplVulkan_CreateFontsTexture(): backend now creates its own
+  command-buffer to upload fonts. Removed ImGui_ImplVulkan_DestroyFontUploadObjects() which is now unnecessary.
+  No need to call ImGui_ImplVulkan_CreateFontsTexture() as it is done automatically in ImGui_ImplVulkan_NewFrame().
+  You can call ImGui_ImplVulkan_CreateFontsTexture() manually if you need to reload font atlas texture.
+  Fixed leaks, and added ImGui_ImplVulkan_DestroyFontsTexture() (probably no need to call this directly).
+  (#6943, #6715, #6327, #3743, #4618)
+  [@helynranta, @thomasherzog, @guybrush77, @albin-johansson, @MiroKaku, @benbatya-fb, @ocornut]
 - Backends: GLFW: Clear emscripten's MouseWheel callback before shutdown. (#6790, #6096, #4019) [@halx99]
 - Backends: GLFW: Added support for F13 to F24 function keys. (#6891)
 - Backends: SDL2, SDL3: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
+- Backends: SDL3: Updates for recent API changes. (#7000, #6974)
 - Backends: Win32: Added support for F13 to F24 function keys, AppBack, AppForward. (#6891)
 - Backends: Win32: Added support for keyboard codepage conversion for when application
   is compiled in MBCS mode and using a non-Unicode window. (#6785, #6782, #5725, #5961) [@sneakyevil]
@@ -168,7 +276,10 @@ Other changes:
   doesn't emit it (same behavior as GLFW/SDL). (#6859) [@thedmd, @SuperWangKai]
 - Backends: OpenGL3: rename symbols in our internal loader so that LTO compilation with another
   copy of gl3w becomes possible. (#6875, #6668, #4445) [@nicolasnoble]
+- Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead
+  of "libGL.so.1", accommodating for NetBSD systems having only "libGL.so.3" available. (#6983)
 - Backends: OSX: Added support for F13 to F20 function keys. Support mapping F13 to PrintScreen. (#6891)
+- Examples: GLFW+Vulkan, SDL+Vulkan: Simplified and removed code due to backend improvements.
 - Internals: Renamed ImFloor() to ImTrunc(). Renamed ImFloorSigned() to ImFloor(). (#6861)
 
 
@@ -3356,6 +3467,8 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 
 Breaking Changes:
 
+- Tabs: Added ImGuiTabItemFlags_NoAssumedClosure to enable app to react on closure attempt, without having to draw
+  an unsaved document marker (ImGuiTabItemFlags_UnsavedDocument sets _NoAssumedClosure automatically). (#7084)
 - DragInt(): The default compile-time format string has been changed from "%.0f" to "%d", as we are not using integers internally
   any more. If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
   To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d,
