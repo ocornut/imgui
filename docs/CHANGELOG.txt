@@ -55,6 +55,8 @@ Other changes:
 
 - Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
   minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+- Windows: Fixed some auto-resizing path using style.WindowMinSize.x (instead of x/y)
+  for both axises since 1.90. (#7106) [@n0bodysec]
 - Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
   speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
 - Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
