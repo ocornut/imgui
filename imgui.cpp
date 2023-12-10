@@ -7971,6 +7971,12 @@ ImGuiID ImGui::GetID(const void* ptr_id)
     return window->GetID(ptr_id);
 }
 
+ImGuiID ImGui::GetID(int int_id)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->GetID(int_id);
+}
+
 bool ImGui::IsRectVisible(const ImVec2& size)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
