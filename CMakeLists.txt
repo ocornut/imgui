@@ -49,7 +49,12 @@ add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC "/")
 target_include_directories(imgui PUBLIC "/backends")
 
-target_link_libraries(imgui PRIVATE glfw)
+if(USE_BACKEND_GLFW)
+    target_link_libraries(imgui PRIVATE glfw)
+endif()
+if(USE_BACKEND_SDL3)
+    target_link_libraries(imgui PRIVATE SDL3::SDL3)
+endif()
 
 if(USE_BACKEND_VULKAN)
 find_package(Vulkan REQUIRED)
