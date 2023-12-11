@@ -16712,13 +16712,19 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             node->Size = host_window->Size;
 
             // We set ImGuiWindowFlags_NoFocusOnAppearing because we don't want the host window to take full focus (e.g. steal NavWindow)
-            // But we still it bring it to the front of display. There's no way to choose this precise behavior via window flags.
+            // But we still it bring it to the front of display unless all appearing windows have ImGuiWindowFlags_NoFocusOnAppearing set. If none of the
+            // windows wants initial focus, the host will not be brought to the front. There's no way to choose this precise behavior via window flags.
             // One simple case to ponder if: window A has a toggle to create windows B/C/D. Dock B/C/D together, clear the toggle and enable it again.
             // When reappearing B/C/D will request focus and be moved to the top of the display pile, but they are not linked to the dock host window
             // during the frame they appear. The dock host window would keep its old display order, and the sorting in EndFrame would move B/C/D back
             // after the dock host window, losing their top-most status.
             if (node->HostWindow->Appearing)
-                BringWindowToDisplayFront(node->HostWindow);
+                for (ImGuiWindow* window : node->Windows)
+                    if (window->Appearing && !(window->Flags & ImGuiWindowFlags_NoFocusOnAppearing))
+                    {
+                        BringWindowToDisplayFront(node->HostWindow);
+                        break;
+                    }
 
             node->AuthorityForPos = node->AuthorityForSize = node->AuthorityForViewport = ImGuiDataAuthority_Auto;
         }
