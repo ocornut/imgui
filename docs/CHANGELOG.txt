@@ -64,6 +64,8 @@ Other changes:
 - Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
   (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
   all columns. (#7049, #4281, #3272)
+- DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
+  width computation to better distribute the error. (#7120, #7121) [@Nahor]
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
