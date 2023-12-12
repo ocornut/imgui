@@ -14472,7 +14472,7 @@ void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
     TreePop();
 }
 
-static void FormatTextureIDForDebugDisplay(char* buf, int buf_size, const ImTextureID& tex_id)
+static void FormatTextureIDForDebugDisplay(char* buf, int buf_size, ImTextureID tex_id)
 {
     if (sizeof(tex_id) >= sizeof(void*))
         ImFormatString(buf, buf_size, "0x%p", (void*)*(intptr_t*)(void*)&tex_id);
