@@ -38,6 +38,7 @@
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
 #include <webgpu/webgpu.h>
+#include <memory>
 
 // Dear ImGui prototypes from imgui_internal.h
 extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
@@ -242,6 +243,18 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBuffer);
     SafeRelease(res.IndexBufferHost);
     SafeRelease(res.VertexBufferHost);
+}
+static void SafeRelease(WGPUSwapChain& res)
+{
+    if (res)
+        wgpuSwapChainRelease(res);
+    res = nullptr;
+}
+static void SafeRelease(WGPUSurface& res)
+{
+    if (res)
+        wgpuSurfaceRelease(res);
+    res = nullptr;
 }
 
 static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
@@ -724,6 +737,7 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #ifndef __EMSCRIPTEN__
     IM_ASSERT(instance == nullptr && "WGPUInstance required for multi viewport!");
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // Enable multiviewport on desktop.
 #endif
 
     bd->wgpuInstance = instance;
@@ -756,6 +770,9 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
         fr->VertexBufferSize = 5000;
     }
 
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGui_ImplWGPU_InitPlatformInterface();
+
     return true;
 }
 
@@ -773,6 +790,10 @@ void ImGui_ImplWGPU_Shutdown()
     bd->numFramesInFlight = 0;
     bd->frameIndex = UINT_MAX;
 
+    // Clean up windows
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGui_ImplWGPU_ShutdownPlatformInterface();
+
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
     io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
@@ -784,6 +805,147 @@ void ImGui_ImplWGPU_NewFrame()
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
     if (!bd->pipelineState)
         ImGui_ImplWGPU_CreateDeviceObjects();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+
+static void ImGui_ImplWGPU_CreateWindow(ImGuiViewport* viewport)
+{
+	ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
+	ImGui_ImplWGPU_ViewportData* vd = IM_NEW(ImGui_ImplWGPU_ViewportData)();
+	viewport->RendererUserData = vd;
+
+    WGPUChainedStruct chainedDescriptor = {};
+    // ------ ISSUE unknown for linux and apple -------------
+#ifdef _WIN32
+    chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
+    std::unique_ptr<WGPUSurfaceDescriptorFromWindowsHWND> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromWindowsHWND>();
+    surfaceDescFromHandle->hwnd = viewport->PlatformHandleRaw;
+#elif defined(__APPLE__)
+    chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromMetalLayer;
+    std::unique_ptr<WGPUSurfaceDescriptorFromMetalLayer> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromMetalLayer>();
+    NSWindow* ns_window = viewport->PlatformHandleRaw;
+    [ns_window.contentView setWantsLayer : YES];
+    metal_layer = [CAMetalLayer layer];
+    [ns_window.contentView setLayer : metal_layer] ;
+    surfaceDescFromHandle->layer = metal_layer;
+// #elif defined(DAWN_USE_WAYLAND)
+//     struct wl_display* wayland_display = glfwGetWaylandDisplay();
+//     struct wl_surface* wayland_surface = glfwGetWaylandWindow(window);
+//     chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
+//     std::unique_ptr<WGPUSurfaceDescriptorFromWaylandSurface> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromWaylandSurface>();
+//     surfaceDescFromHandle->display = wayland_display;
+//     surfaceDescFromHandle->surface = wayland_surface;
+// #else
+//     Display* x11_display = glfwGetX11Display();
+//     Window x11_window = glfwGetX11Window((GLFWwindow*) viewport->PlatformHandle);
+//     chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromXlibWindow;
+//     std::unique_ptr<WGPUSurfaceDescriptorFromXlibWindow> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromXlibWindow>();
+//     surfaceDescFromHandle->display = x11_display;
+//     surfaceDescFromHandle->window = x11_window;
+#endif
+    // ------------------------------------------------------
+
+    surfaceDescFromHandle->chain = chainedDescriptor;
+    WGPUSurfaceDescriptor surfaceDescriptor = {};
+    surfaceDescriptor.nextInChain = &surfaceDescFromHandle->chain;
+
+    vd->Window.surface = wgpuInstanceCreateSurface(bd->wgpuInstance, &surfaceDescriptor);
+
+    WGPUSwapChainDescriptor swapDescriptor = {};
+    swapDescriptor.usage = WGPUTextureUsage_RenderAttachment;
+    swapDescriptor.format = bd->renderTargetFormat;
+    swapDescriptor.width = viewport->Size.x;
+    swapDescriptor.height = viewport->Size.y;
+    swapDescriptor.presentMode = WGPUPresentMode_Fifo;
+
+    vd->Window.swapChain = wgpuDeviceCreateSwapChain(bd->wgpuDevice, vd->Window.surface, &swapDescriptor);
+}
+
+
+static void ImGui_ImplWGPU_DestroyWindow(ImGuiViewport* viewport)
+{
+    if (ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData)
+    {
+        SafeRelease(vd->Window.swapChain);
+        SafeRelease(vd->Window.surface);
+        IM_DELETE(vd);
+    }
+    viewport->RendererUserData = nullptr;
+}
+
+
+static void ImGui_ImplWGPU_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+	ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
+	ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData;
+
+    SafeRelease(vd->Window.swapChain);
+
+	WGPUSwapChainDescriptor swapDescriptor = {};
+	swapDescriptor.usage = WGPUTextureUsage_RenderAttachment;
+	swapDescriptor.format = bd->renderTargetFormat;
+	swapDescriptor.width = size.x;
+	swapDescriptor.height = size.y;
+	swapDescriptor.presentMode = WGPUPresentMode_Fifo;
+    
+    vd->Window.swapChain = wgpuDeviceCreateSwapChain(bd->wgpuDevice, vd->Window.surface, &swapDescriptor);
+}
+
+static void ImGui_ImplWGPU_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
+    ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData;
+
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    WGPURenderPassColorAttachment color_attachments = {};
+    color_attachments.view = wgpuSwapChainGetCurrentTextureView(vd->Window.swapChain);
+    color_attachments.loadOp = WGPULoadOp_Clear;
+    color_attachments.storeOp = WGPUStoreOp_Store;
+    color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+
+    WGPURenderPassDescriptor render_pass_desc = {};
+    render_pass_desc.colorAttachmentCount = 1;
+    render_pass_desc.colorAttachments = &color_attachments;
+    render_pass_desc.depthStencilAttachment = nullptr;
+
+    WGPUCommandEncoderDescriptor enc_desc = {};
+    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(bd->wgpuDevice, &enc_desc);
+
+    WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
+    ImGui_ImplWGPU_RenderDrawData(viewport->DrawData, pass);
+    wgpuRenderPassEncoderEnd(pass);
+
+    WGPUCommandBufferDescriptor cmd_buffer_desc = {};
+    WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
+    WGPUQueue queue = wgpuDeviceGetQueue(bd->wgpuDevice);
+    wgpuQueueSubmit(queue, 1, &cmd_buffer);
+}
+
+static void ImGui_ImplWGPU_SwapBuffers(ImGuiViewport* viewport, void*)
+{
+    ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData;
+    wgpuSwapChainPresent(vd->Window.swapChain);
+}
+
+void ImGui_ImplWGPU_InitPlatformInterface()
+{
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	platform_io.Renderer_CreateWindow = ImGui_ImplWGPU_CreateWindow;
+	platform_io.Renderer_DestroyWindow = ImGui_ImplWGPU_DestroyWindow;
+	platform_io.Renderer_SetWindowSize = ImGui_ImplWGPU_SetWindowSize;
+	platform_io.Renderer_RenderWindow = ImGui_ImplWGPU_RenderWindow;
+	platform_io.Renderer_SwapBuffers = ImGui_ImplWGPU_SwapBuffers;
+}
+
+void ImGui_ImplWGPU_ShutdownPlatformInterface()
+{
+	ImGui::DestroyPlatformWindows();
 }
 
 //-----------------------------------------------------------------------------
