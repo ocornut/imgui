@@ -72,6 +72,19 @@ struct Uniforms
     float Gamma;
 };
 
+// Forward declarations for multi-viewport support
+static void ImGui_ImplWGPU_InitPlatformInterface();
+static void ImGui_ImplWGPU_ShutdownPlatformInterface();
+
+// For multi-viewport support:
+// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
+struct ImGui_ImplWGPU_ViewportData
+{
+    ImGui_ImplWGPUH_Window          Window;
+    ImGui_ImplWGPU_ViewportData()   {  }
+	~ImGui_ImplWGPU_ViewportData()  { }
+};
+
 struct ImGui_ImplWGPU_Data
 {
     WGPUDevice          wgpuDevice = nullptr;
@@ -699,7 +712,7 @@ void ImGui_ImplWGPU_InvalidateDeviceObjects()
         SafeRelease(bd->pFrameResources[i]);
 }
 
-bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format, WGPUTextureFormat depth_format)
+bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format, WGPUTextureFormat depth_format, WGPUInstance instance)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
@@ -709,7 +722,11 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_webgpu";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+#ifndef __EMSCRIPTEN__
+    IM_ASSERT(instance == nullptr && "WGPUInstance required for multi viewport!");
+#endif
 
+    bd->wgpuInstance = instance;
     bd->wgpuDevice = device;
     bd->defaultQueue = wgpuDeviceGetQueue(bd->wgpuDevice);
     bd->renderTargetFormat = rt_format;
