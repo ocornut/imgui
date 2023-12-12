@@ -9634,6 +9634,15 @@ struct ExampleAssetsBrowser
     bool            RequestSort = false;        // Deferred sort request
     float           ZoomWheelAccum = 0.0f;      // Mouse wheel accumulator to handle smooth wheels better
 
+    // Calculated sizes for layout, output of UpdateLayoutSizes(). Could be locals but our code is simpler this way.
+    ImVec2          LayoutItemSize;
+    ImVec2          LayoutItemStep;             // == LayoutItemSize + LayoutItemSpacing
+    float           LayoutItemSpacing = 0.0f;
+    float           LayoutSelectableSpacing = 0.0f;
+    float           LayoutOuterPadding = 0.0f;
+    int             LayoutColumnCount = 0;
+    int             LayoutLineCount = 0;
+
     // Functions
     ExampleAssetsBrowser()
     {
@@ -9652,6 +9661,29 @@ struct ExampleAssetsBrowser
     {
         Items.clear();
         Selection.Clear();
+    }
+
+    // Logic would be written in the main code BeginChild() and outputing to local variables.
+    // We extracted it into a function so we can call it easily from multiple places.
+    void UpdateLayoutSizes(float avail_width)
+    {
+        // Layout: when not stretching: allow extending into right-most spacing.
+        LayoutItemSpacing = (float)IconSpacing;
+        if (StretchSpacing == false)
+            avail_width += floorf(LayoutItemSpacing * 0.5f);
+
+        // Layout: calculate number of icon per line and number of lines
+        LayoutItemSize = ImVec2(floorf(IconSize), floorf(IconSize));
+        LayoutColumnCount = IM_MAX((int)(avail_width / (LayoutItemSize.x + LayoutItemSpacing)), 1);
+        LayoutLineCount = (Items.Size + LayoutColumnCount - 1) / LayoutColumnCount;
+
+        // Layout: when stretching: allocate remaining space to more spacing. Round before division, so item_spacing may be non-integer.
+        if (StretchSpacing && LayoutColumnCount > 1)
+            LayoutItemSpacing = floorf(avail_width - LayoutItemSize.x * LayoutColumnCount) / LayoutColumnCount;
+
+        LayoutItemStep = ImVec2(LayoutItemSize.x + LayoutItemSpacing, LayoutItemSize.y + LayoutItemSpacing);
+        LayoutSelectableSpacing = IM_MAX(floorf(LayoutItemSpacing) - IconHitSpacing, 0.0f);
+        LayoutOuterPadding = floorf(LayoutItemSpacing * 0.5f);
     }
 
     void Draw(const char* title, bool* p_open)
@@ -9722,27 +9754,18 @@ struct ExampleAssetsBrowser
         }
         ImGui::PopStyleVar();
 
-        if (ImGui::BeginChild("Assets", ImVec2(0, -ImGui::GetTextLineHeightWithSpacing()), true, ImGuiWindowFlags_NoMove))
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::SetNextWindowContentSize(ImVec2(0.0f, LayoutOuterPadding + LayoutLineCount * (LayoutItemSize.x + LayoutItemSpacing)));
+        if (ImGui::BeginChild("Assets", ImVec2(0.0f, -ImGui::GetTextLineHeightWithSpacing()), ImGuiChildFlags_Border, ImGuiWindowFlags_NoMove))
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            const ImVec2 item_size(floorf(IconSize), floorf(IconSize));
 
-            // Layout: when not stretching: allow extending into right-most spacing.
-            float item_spacing = (float)IconSpacing;
-            const float avail_width = ImGui::GetContentRegionAvail().x + (StretchSpacing ? 0.0f : floorf(item_spacing * 0.5f));
-
-            // Layout: calculate number of icon per line and number of lines
-            const int column_count = IM_MAX((int)(avail_width / (item_size.x + IconSpacing)), 1);
-            const int line_count = (Items.Size + column_count - 1) / column_count;
-
-            // Layout: when stretching: allocate remaining space to more spacing. Round before division, so item_spacing may be non-integer.
-            if (StretchSpacing && column_count > 1)
-                item_spacing = floorf(avail_width - item_size.x * column_count) / column_count;
+            const float avail_width = ImGui::GetContentRegionAvail().x;
+            UpdateLayoutSizes(avail_width);
 
             // Calculate and store start position.
-            const float outer_padding = floorf(item_spacing * 0.5f);
             ImVec2 start_pos = ImGui::GetCursorScreenPos();
-            start_pos = ImVec2(start_pos.x + outer_padding, start_pos.y + outer_padding);
+            start_pos = ImVec2(start_pos.x + LayoutOuterPadding, start_pos.y + LayoutOuterPadding);
             ImGui::SetCursorScreenPos(start_pos);
 
             // Multi-select
@@ -9760,22 +9783,22 @@ struct ExampleAssetsBrowser
             const int item_curr_idx_to_focus = want_delete ? Selection.ApplyDeletionPreLoop(ms_io, Items.Size) : -1;
             RequestDelete = false;
 
-            // Altering ItemSpacing may seem unnecessary as we position every items using SetCursorScreenPos()...
+            // Push LayoutSelectableSpacing (which is LayoutItemSpacing minus hit-spacing, if we decide to have hit gaps between items)
+            // Altering style ItemSpacing may seem unnecessary as we position every items using SetCursorScreenPos()...
             // But it is necessary for two reasons:
             // - Selectables uses it by default to visually fill the space between two items.
             // - The vertical spacing would be measured by Clipper to calculate line height if we didn't provide it explicitly (here we do).
-            const float selectable_spacing = IM_MAX(floorf(item_spacing) - IconHitSpacing, 0.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(selectable_spacing, selectable_spacing));
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(LayoutSelectableSpacing, LayoutSelectableSpacing));
 
             // Rendering parameters
             const ImU32 icon_bg_color = IM_COL32(48, 48, 48, 128);
             const ImU32 icon_type_overlay_colors[3] = { 0, IM_COL32(200, 70, 70, 255), IM_COL32(70, 170, 70, 255) };
             const ImVec2 icon_type_overlay_size = ImVec2(4.0f, 4.0f);
-            const bool display_label = (item_size.x >= ImGui::CalcTextSize("999").x);
+            const bool display_label = (LayoutItemSize.x >= ImGui::CalcTextSize("999").x);
 
-            const float line_height = item_size.y + item_spacing;
+            const int column_count = LayoutColumnCount;
             ImGuiListClipper clipper;
-            clipper.Begin(line_count, line_height);
+            clipper.Begin(LayoutLineCount, LayoutItemStep.y);
             if (item_curr_idx_to_focus != -1)
                 clipper.IncludeItemByIndex(item_curr_idx_to_focus / column_count); // Ensure focused item line is not clipped.
             if (ms_io->RangeSrcItem != -1)
@@ -9792,17 +9815,17 @@ struct ExampleAssetsBrowser
                         ImGui::PushID((int)item_data->ID);
 
                         // Position item
-                        ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * (item_size.x + item_spacing), start_pos.y + (line_idx * line_height));
+                        ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * LayoutItemStep.x, start_pos.y + line_idx * LayoutItemStep.y);
                         ImGui::SetCursorScreenPos(pos);
 
                         // Draw box
                         ImVec2 box_min(pos.x - 1, pos.y - 1);
-                        ImVec2 box_max(box_min.x + item_size.x + 2, box_min.y + item_size.y + 2);
+                        ImVec2 box_max(box_min.x + LayoutItemSize.x + 2, box_min.y + LayoutItemSize.y + 2);
                         draw_list->AddRect(box_min, box_max, IM_COL32(90, 90, 90, 255));
 
                         ImGui::SetNextItemSelectionUserData(item_idx);
                         bool item_is_selected = Selection.Contains((ImGuiID)item_data->ID);
-                        ImGui::Selectable("", item_is_selected, ImGuiSelectableFlags_None, item_size);
+                        ImGui::Selectable("", item_is_selected, ImGuiSelectableFlags_None, LayoutItemSize);
 
                         // Update our selection state immediately (without waiting for EndMultiSelect() requests)
                         // because we use this to alter the color of our text/icon.
@@ -9865,25 +9888,40 @@ struct ExampleAssetsBrowser
 
             // FIXME-MULTISELECT: Find a way to expose this in public API. This currently requires "imgui_internal.h"
             //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
-        }
 
-        // Zooming with CTRL+Wheel
-        // FIXME-MULTISELECT: Try to maintain scroll.
-        ImGuiIO& io = ImGui::GetIO();
-        if (ImGui::IsWindowAppearing())
-            ZoomWheelAccum = 0.0f;
-        if (ImGui::IsWindowHovered() && io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)
-        {
-            ZoomWheelAccum += io.MouseWheel;
-            if (fabsf(ZoomWheelAccum) >= 1.0f)
+            // Zooming with CTRL+Wheel
+            if (ImGui::IsWindowAppearing())
+                ZoomWheelAccum = 0.0f;
+            if (ImGui::IsWindowHovered() && io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)
             {
-                IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
-                IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
-                ZoomWheelAccum -= (int)ZoomWheelAccum;
+                ZoomWheelAccum += io.MouseWheel;
+                if (fabsf(ZoomWheelAccum) >= 1.0f)
+                {
+                    // Calculate hovered item index from mouse location
+                    // FIXME: Locking aiming on 'hovered_item_idx' (with a cool-down timer) would ensure zoom keeps on it.
+                    const float hovered_item_nx = (io.MousePos.x - start_pos.x + LayoutItemSpacing * 0.5f) / LayoutItemStep.x;
+                    const float hovered_item_ny = (io.MousePos.y - start_pos.y + LayoutItemSpacing * 0.5f) / LayoutItemStep.y;
+                    const int hovered_item_idx = ((int)hovered_item_ny * LayoutColumnCount) + (int)hovered_item_nx;
+                    //ImGui::SetTooltip("%f,%f -> item %d", hovered_item_nx, hovered_item_ny, hovered_item_idx); // Move those 4 lines in block above for easy debugging
+
+                    // Zoom
+                    IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
+                    IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
+                    ZoomWheelAccum -= (int)ZoomWheelAccum;
+                    UpdateLayoutSizes(avail_width);
+
+                    // Manipulate scroll to that we will land at the same Y location of currently hovered item.
+                    // - Calculate next frame position of item under mouse
+                    // - Set new scroll position to be used in next ImGui::BeginChild() call.
+                    float hovered_item_rel_pos_y = ((float)(hovered_item_idx / LayoutColumnCount) + fmodf(hovered_item_ny, 1.0f)) * LayoutItemStep.y;
+                    hovered_item_rel_pos_y += ImGui::GetStyle().WindowPadding.y;
+                    float mouse_local_y = io.MousePos.y - ImGui::GetWindowPos().y;
+                    ImGui::SetScrollY(hovered_item_rel_pos_y - mouse_local_y);
+                }
             }
         }
-
         ImGui::EndChild();
+
         ImGui::Text("Selected: %d/%d items", Selection.Size, Items.Size);
         ImGui::End();
     }
