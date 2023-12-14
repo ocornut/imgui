@@ -2427,14 +2427,13 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     if (!temp_input_is_active)
     {
         // Tabbing or CTRL-clicking on Drag turns it into an InputText
-        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = hovered && IsMouseClicked(0, id);
         const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2 && TestKeyOwner(ImGuiKey_MouseLeft, id));
-        const bool make_active = (input_requested_by_tabbing || clicked || double_clicked || g.NavActivateId == id);
+        const bool make_active = (clicked || double_clicked || g.NavActivateId == id);
         if (make_active && (clicked || double_clicked))
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         if (make_active && temp_input_allowed)
-            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || double_clicked || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
+            if ((clicked && g.IO.KeyCtrl) || double_clicked || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
                 temp_input_is_active = true;
 
         // (Optional) simple click (without moving) turns Drag into an InputText
@@ -3019,13 +3018,12 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     if (!temp_input_is_active)
     {
         // Tabbing or CTRL-clicking on Slider turns it into an input box
-        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = hovered && IsMouseClicked(0, id);
-        const bool make_active = (input_requested_by_tabbing || clicked || g.NavActivateId == id);
+        const bool make_active = (clicked || g.NavActivateId == id);
         if (make_active && clicked)
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         if (make_active && temp_input_allowed)
-            if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
+            if ((clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
                 temp_input_is_active = true;
 
         if (make_active && !temp_input_is_active)
@@ -4178,7 +4176,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (is_resizable)
         IM_ASSERT(callback != NULL); // Must provide a callback if you set the ImGuiInputTextFlags_CallbackResize flag!
 
-    const bool input_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
     const bool input_requested_by_nav = (g.ActiveId != id) && ((g.NavActivateId == id) && ((g.NavActivateFlags & ImGuiActivateFlags_PreferInput) || (g.NavInputSource == ImGuiInputSource_Keyboard)));
 
     const bool user_clicked = hovered && io.MouseClicked[0];
@@ -4190,7 +4187,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     float scroll_y = is_multiline ? draw_window->Scroll.y : FLT_MAX;
 
     const bool init_changed_specs = (state != NULL && state->Stb.single_line != !is_multiline); // state != NULL means its our state.
-    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_tabbing);
+    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav);
     const bool init_state = (init_make_active || user_scroll_active);
     if ((init_state && g.ActiveId != id) || init_changed_specs)
     {
@@ -4240,7 +4237,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 select_all = true;
             if (input_requested_by_nav && (!recycle_state || !(g.NavActivateFlags & ImGuiActivateFlags_TryToPreserveState)))
                 select_all = true;
-            if (input_requested_by_tabbing || (user_clicked && io.KeyCtrl))
+            if (user_clicked && io.KeyCtrl)
                 select_all = true;
         }
 
