@@ -4403,7 +4403,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         // We expect backends to emit a Tab key but some also emit a Tab character which we ignore (#2467, #1336)
         // (For Tab and Enter: Win32/SFML/Allegro are sending both keys and chars, GLFW and SDL are only sending keys. For Space they all send all threes)
-        if ((flags & ImGuiInputTextFlags_AllowTabInput) && Shortcut(ImGuiKey_Tab, id) && !is_readonly)
+        if ((flags & ImGuiInputTextFlags_AllowTabInput) && Shortcut(ImGuiKey_Tab, id, ImGuiInputFlags_Repeat) && !is_readonly)
         {
             unsigned int c = '\t'; // Insert TAB
             if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
