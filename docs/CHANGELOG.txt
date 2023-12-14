@@ -42,20 +42,41 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
+  stack when number of components is 1. [#7095] [@Nahor]
+- imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
+  Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
+- Removed CalcListClipping() marked obsolete in 1.86. (#3841)
+  Prefer using ImGuiListClipper which can return non-contiguous ranges.
+- Internals, Columns: commented out legacy ImGuiColumnsFlags_XXX symbols redirecting
+  to ImGuiOldColumnsFlags_XXX, obsoleted from imgui_internal.h in 1.80.
+
 Other changes:
 
 - Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
   minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+- Windows: Fixed some auto-resizing path using style.WindowMinSize.x (instead of x/y)
+  for both axises since 1.90. (#7106) [@n0bodysec]
+- Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
+  speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
 - Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
   navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
 - Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
   (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
   all columns. (#7049, #4281, #3272)
+- InputTextMultiline: Fixed Tab character input not repeating (1.89.4 regression).
+- InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
+  (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
+  to allow passing through multiple widgets easily. (#3092, #5759, #787)
+- DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
+  width computation to better distribute the error. (#7120, #7121) [@Nahor]
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
   IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
+- Misc: Rework debug display of texture id in Metrics window to avoid compile-error when
+  ImTextureID is defined to be larger than 64-bits. (#7090)
 - Misc: Added extra courtesy ==/!= operators when IMGUI_DEFINE_MATH_OPERATORS is defined.
 - Misc: Fixed text functions fast-path for handling "%s" and "%.*s" to handle null pointers gracefully,
   like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
@@ -3850,6 +3871,8 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 
 Breaking Changes:
 
+- Tabs: Added ImGuiTabItemFlags_NoAssumedClosure to enable app to react on closure attempt, without having to draw
+  an unsaved document marker (ImGuiTabItemFlags_UnsavedDocument sets _NoAssumedClosure automatically). (#7084)
 - DragInt(): The default compile-time format string has been changed from "%.0f" to "%d", as we are not using integers internally
   any more. If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
   To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d,
