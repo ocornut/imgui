@@ -4111,7 +4111,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     ImGuiWindow* draw_window = window;
     ImVec2 inner_size = frame_size;
-    ImGuiItemStatusFlags item_status_flags = 0;
     ImGuiLastItemData item_data_backup;
     if (is_multiline)
     {
@@ -4122,7 +4121,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             EndGroup();
             return false;
         }
-        item_status_flags = g.LastItemData.StatusFlags;
         item_data_backup = g.LastItemData;
         window->DC.CursorPos = backup_pos;
 
@@ -4162,7 +4160,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (!(flags & ImGuiInputTextFlags_MergedItem))
             if (!ItemAdd(total_bb, id, &frame_bb, ImGuiItemFlags_Inputable))
                 return false;
-        item_status_flags = g.LastItemData.StatusFlags;
     }
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
     if (hovered)
