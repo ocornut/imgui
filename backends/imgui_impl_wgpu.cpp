@@ -826,6 +826,7 @@ static void ImGui_ImplWGPU_CreateWindow(ImGuiViewport* viewport)
 
     WGPUChainedStruct chainedDescriptor = {};
     // ------ ISSUE unknown for linux and apple -------------
+#ifndef __EMSCRIPTEN__
 #ifdef _WIN32
     chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
     std::unique_ptr<WGPUSurfaceDescriptorFromWindowsHWND> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromWindowsHWND>();
@@ -860,7 +861,7 @@ static void ImGui_ImplWGPU_CreateWindow(ImGuiViewport* viewport)
     surfaceDescriptor.nextInChain = &surfaceDescFromHandle->chain;
 
     vd->Window.surface = wgpuInstanceCreateSurface(bd->wgpuInstance, &surfaceDescriptor);
-
+#endif
     WGPUSwapChainDescriptor swapDescriptor = {};
     swapDescriptor.usage = WGPUTextureUsage_RenderAttachment;
     swapDescriptor.format = bd->renderTargetFormat;
