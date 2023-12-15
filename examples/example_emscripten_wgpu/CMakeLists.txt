@@ -27,7 +27,7 @@ if(EMSCRIPTEN)
 else()
 	# Dawn wgpu desktop
 	set(DAWN_FETCH_DEPENDENCIES ON)
-	add_subdirectory("E:/Repos/BasicEngine/Resources/Libraries/dawn" dawn EXCLUDE_FROM_ALL) # point this to up to date dawn repo
+	add_subdirectory("external/libraries/dawn" dawn EXCLUDE_FROM_ALL) # point this to up to date dawn repo
 	set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
 endif()
 
