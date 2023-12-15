@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-12-12: Add support for multi viewports.
 //  2023-07-13: Use WGPUShaderModuleWGSLDescriptor's code instead of source. use WGPUMipmapFilterMode_Linear instead of WGPUFilterMode_Linear. (#6602)
 //  2023-04-11: Align buffer sizes. Use WGSL shaders instead of precompiled SPIR-V.
 //  2023-04-11: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -88,6 +89,7 @@ struct ImGui_ImplWGPU_ViewportData
 
 struct ImGui_ImplWGPU_Data
 {
+    WGPUInstance        wgpuInstance = nullptr;
     WGPUDevice          wgpuDevice = nullptr;
     WGPUQueue           defaultQueue = nullptr;
     WGPUTextureFormat   renderTargetFormat = WGPUTextureFormat_Undefined;
@@ -736,7 +738,6 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendRendererName = "imgui_impl_webgpu";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #ifndef __EMSCRIPTEN__
-    IM_ASSERT(instance == nullptr && "WGPUInstance required for multi viewport!");
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // Enable multiviewport on desktop.
 #endif
 
@@ -771,7 +772,10 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     }
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        IM_ASSERT(instance != nullptr && "WGPUInstance required for multi viewport!");
         ImGui_ImplWGPU_InitPlatformInterface();
+    }
 
     return true;
 }
