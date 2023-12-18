@@ -61,6 +61,7 @@ Other changes:
   speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
 - Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
   navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
+- Nav: Activation can also be performed with Keypad Enter. (#5606)
 - Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
   (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
   all columns. (#7049, #4281, #3272)
