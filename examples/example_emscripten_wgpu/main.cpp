@@ -41,13 +41,10 @@ int main(int, char**)
     if (!glfwInit())
         return 1;
 
-    double canvas_width, canvas_height;
-    emscripten_get_element_css_size(canvas_selector, &canvas_width, &canvas_height);
-
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow((int)canvas_width, (int)canvas_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (!window)
     {
         glfwTerminate();
