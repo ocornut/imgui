@@ -26,12 +26,8 @@
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/html5.h>
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
-
-const char* canvas_selector = "#canvas";
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -89,7 +85,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 #ifdef __EMSCRIPTEN__
-    ImGui_ImplGlfw_SetEmscriptenCanvasSelector(canvas_selector);
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
 #endif
     ImGui_ImplOpenGL3_Init(glsl_version);
 

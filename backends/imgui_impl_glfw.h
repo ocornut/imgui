@@ -32,7 +32,7 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_NewFrame();
 
 // Emscripten related initialization phase methods
 #ifdef __EMSCRIPTEN__
-IMGUI_IMPL_API void     ImGui_ImplGlfw_SetEmscriptenCanvasSelector(const char* canvas_selector);
+IMGUI_IMPL_API void     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector);
 #endif
 
 // GLFW callbacks install

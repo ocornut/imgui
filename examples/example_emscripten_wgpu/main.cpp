@@ -26,8 +26,6 @@ static WGPUSwapChain     wgpu_swap_chain = nullptr;
 static int               wgpu_swap_chain_width = 0;
 static int               wgpu_swap_chain_height = 0;
 
-const char* canvas_selector = "#canvas";
-
 // Forward declarations
 static void MainLoopStep(void* window);
 static bool InitWGPU();
@@ -78,7 +76,7 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
-    ImGui_ImplGlfw_SetEmscriptenCanvasSelector(canvas_selector);
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
     ImGui_ImplWGPU_Init(wgpu_device, 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined);
 
     // Load Fonts
