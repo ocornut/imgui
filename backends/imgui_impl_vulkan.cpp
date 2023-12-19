@@ -784,7 +784,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     err = vkQueueSubmit(v->Queue, 1, &end_info, VK_NULL_HANDLE);
     check_vk_result(err);
 
-    err = vkDeviceWaitIdle(v->Device);
+    err = vkQueueWaitIdle(v->Queue);
     check_vk_result(err);
 
     vkDestroyBuffer(v->Device, upload_buffer, v->Allocator);
