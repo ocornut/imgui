@@ -6,7 +6,6 @@
     <title>Dear ImGui Emscripten example</title>
     <style>
         body { margin: 0; background-color: black }
-        /* FIXME: with our GLFW example this block seems to break resizing and io.DisplaySize gets stuck */
         .emscripten {
             position: absolute;
             top: 0px;
@@ -26,39 +25,58 @@
             image-rendering: pixelated;
             -ms-interpolation-mode: nearest-neighbor;
         }
+        /* prevent ugly blue border in the event the canvas get focus */
+        #canvas:focus {
+          outline: none;
+        }
     </style>
   </head>
   <body>
-    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <div class="emscripten" id="canvas-container">
+      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
     <script type='text/javascript'>
-      var Module = {
-        preRun: [],
-        postRun: [],
-        print: (function() {
+      var Module;
+      (async () => {
+        Module = {
+          preRun: [],
+          postRun: [],
+          print: (function() {
             return function(text) {
-                text = Array.prototype.slice.call(arguments).join(' ');
-                console.log(text);
+              text = Array.prototype.slice.call(arguments).join(' ');
+              console.log(text);
             };
-        })(),
-        printErr: function(text) {
+          })(),
+          printErr: function(text) {
             text = Array.prototype.slice.call(arguments).join(' ');
             console.error(text);
-        },
-        canvas: (function() {
+          },
+          canvas: (function() {
             var canvas = document.getElementById('canvas');
             //canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
             return canvas;
-        })(),
-        setStatus: function(text) {
+          })(),
+          setStatus: function(text) {
             console.log("status: " + text);
-        },
-        monitorRunDependencies: function(left) {
+          },
+          monitorRunDependencies: function(left) {
             // no run dependencies to log
+          }
+        };
+        window.onerror = function() {
+          console.log("onerror: " + event);
+        };
+
+#if USE_WEBGPU
+        // Initialize the graphics adapter
+        {
+          const adapter = await navigator.gpu.requestAdapter();
+          const device = await adapter.requestDevice();
+          Module.preinitializedWebGPUDevice = device;
         }
-      };
-      window.onerror = function() {
-        console.log("onerror: " + event);
-      };
+#endif
+      })();
+
     </script>
     {{{ SCRIPT }}}
   </body>

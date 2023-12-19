@@ -16,7 +16,7 @@
 CC = emcc
 CXX = em++
 WEB_DIR = web
-EXE = $(WEB_DIR)/index.js
+EXE = $(WEB_DIR)/index.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -56,7 +56,7 @@ endif
 CPPFLAGS += -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 #CPPFLAGS += -g
 CPPFLAGS += -Wall -Wformat -Os $(EMS)
-#LDFLAGS += --shell-file shell_minimal.html
+LDFLAGS += --shell-file ../libs/emscripten/shell_minimal.html
 LDFLAGS += $(EMS)
 
 ##---------------------------------------------------------------------
