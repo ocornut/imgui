@@ -42,6 +42,8 @@ int main(int, char**)
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    // Enable 4k/retina support (since emscripten 3.1.51)
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (!window)
     {
@@ -76,7 +78,7 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
-    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas-container");
     ImGui_ImplWGPU_Init(wgpu_device, 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined);
 
     // Load Fonts

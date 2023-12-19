@@ -25,10 +25,16 @@
             image-rendering: pixelated;
             -ms-interpolation-mode: nearest-neighbor;
         }
+        /* prevent ugly blue border in the event the canvas get focus */
+        #canvas:focus {
+          outline: none;
+        }
     </style>
   </head>
   <body>
-    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <div class="emscripten" id="canvas-container">
+      <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
     <script type='text/javascript'>
       var Module;
       (async () => {
