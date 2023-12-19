@@ -50,6 +50,7 @@ Breaking changes:
   Prefer using ImGuiListClipper which can return non-contiguous ranges.
 - Internals, Columns: commented out legacy ImGuiColumnsFlags_XXX symbols redirecting
   to ImGuiOldColumnsFlags_XXX, obsoleted from imgui_internal.h in 1.80.
+- Commented out obsolete ImGuiKey_KeyPadEnter redirection to ImGuiKey_KeypadEnter. (#2625, #7143)
 
 Other changes:
 
