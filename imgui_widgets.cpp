@@ -5128,8 +5128,6 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     const ImGuiStyle& style = g.Style;
     const float square_sz = GetFrameHeight();
     const float w_full = CalcItemWidth();
-    const float w_button = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (square_sz + style.ItemInnerSpacing.x);
-    const float w_inputs = w_full - w_button;
     const char* label_display_end = FindRenderedTextEnd(label);
     g.NextItemData.ClearFlags();
 
@@ -5164,6 +5162,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     const bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
     const bool hdr = (flags & ImGuiColorEditFlags_HDR) != 0;
     const int components = alpha ? 4 : 3;
+    const float w_button = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (square_sz + style.ItemInnerSpacing.x);
+    const float w_inputs = ImMax(w_full - w_button, 1.0f * components);
 
     // Convert to the formats we need
     float f[4] = { col[0], col[1], col[2], alpha ? col[3] : 1.0f };
@@ -5211,7 +5211,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             if (n > 0)
                 SameLine(0, style.ItemInnerSpacing.x);
             float next_split = IM_TRUNC(w_items * (n + 1) / components);
-            SetNextItemWidth(next_split - prev_split);
+            SetNextItemWidth(ImMax(next_split - prev_split, 1.0f));
             prev_split = next_split;
 
             // FIXME: When ImGuiColorEditFlags_HDR flag is passed HS values snap in weird ways when SV values go below 0.

@@ -9872,10 +9872,10 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
     for (int i = components - 1; i > 0; i--)
     {
         float next_split = IM_TRUNC(w_items * i / components);
-        window->DC.ItemWidthStack.push_back(prev_split - next_split);
+        window->DC.ItemWidthStack.push_back(ImMax(prev_split - next_split, 1.0f));
         prev_split = next_split;
     }
-    window->DC.ItemWidth = prev_split;
+    window->DC.ItemWidth = ImMax(prev_split, 1.0f);
     g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
 }
 
