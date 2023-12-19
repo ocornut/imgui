@@ -7293,7 +7293,10 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
 
 // Return ImGuiMultiSelectIO structure.
 // Lifetime: don't hold on ImGuiMultiSelectIO* pointers over multiple frames or past any subsequent call to BeginMultiSelect() or EndMultiSelect().
-ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
+// Passing 'current_selection_size' is currently optional:
+// - it is useful for shortcut routing with ImGuiMultiSelectFlags_ClearOnEscape: so we can have Escape be used to clear selection THEN to exit child window.
+// - if it is costly for you to compute, but can easily tell if your selection is empty or not, you may alter the ImGuiMultiSelectFlags_ClearOnEscape flag based on that.
+ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int current_selection_size)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7360,9 +7363,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     if (ms->IsFocused)
     {
         // Shortcut: Clear selection (Escape)
-        // FIXME-MULTISELECT: Only hog shortcut if selection is not null, meaning we need "has selection or "selection size" data here.
-        // Otherwise may be done by caller but it means Shortcut() needs to be exposed.
-        if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
+        // Only claim shortcut if selection is not empty, allowing further presses on Escape to e.g. leave current child window.
+        if ((flags & ImGuiMultiSelectFlags_ClearOnEscape) && (current_selection_size != 0))
             if (Shortcut(ImGuiKey_Escape))
                 request_clear = true;
 
