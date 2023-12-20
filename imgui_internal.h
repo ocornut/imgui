@@ -1721,6 +1721,7 @@ struct ImGuiBoxSelectState
     ImGuiKeyChord           KeyMods : 16;       // Latched key-mods for box-select logic.
     ImVec2                  StartPosRel;        // Start position in window-contents relative space (to support scrolling)
     ImVec2                  EndPosRel;          // End position in window-contents relative space
+    ImVec2                  ScrollAccum;        // Scrolling accumulator (to behave at high-frame spaces)
     ImGuiWindow*            Window;
 
     // Temporary/Transient data

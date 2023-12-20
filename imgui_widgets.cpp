@@ -7127,11 +7127,14 @@ static void BoxSelectStart(ImGuiID id, ImGuiSelectionUserData clicked_item)
     bs->IsStartedFromVoid = (clicked_item == ImGuiSelectionUserData_Invalid);
     bs->KeyMods = g.IO.KeyMods;
     bs->StartPosRel = bs->EndPosRel = ImGui::WindowPosAbsToRel(g.CurrentWindow, g.IO.MousePos);
+    bs->ScrollAccum = ImVec2(0.0f, 0.0f);
 }
 
 static void BoxSelectScrollWithMouseDrag(ImGuiWindow* window, const ImRect& inner_r)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiBoxSelectState* bs = &g.BoxSelectState;
+    IM_ASSERT(bs->Window == window);
     for (int n = 0; n < 2; n++) // each axis
     {
         const float mouse_pos = g.IO.MousePos[n];
@@ -7139,12 +7142,20 @@ static void BoxSelectScrollWithMouseDrag(ImGuiWindow* window, const ImRect& inne
         const float scroll_curr = window->Scroll[n];
         if (dist == 0.0f || (dist < 0.0f && scroll_curr < 0.0f) || (dist > 0.0f && scroll_curr >= window->ScrollMax[n]))
             continue;
+
         const float speed_multiplier = ImLinearRemapClamp(g.FontSize, g.FontSize * 5.0f, 1.0f, 4.0f, ImAbs(dist)); // x1 to x4 depending on distance
-        const float scroll_step = IM_ROUND(g.FontSize * 35.0f * speed_multiplier * ImSign(dist) * g.IO.DeltaTime);
+        const float scroll_step = g.FontSize * 35.0f * speed_multiplier * ImSign(dist) * g.IO.DeltaTime;
+        bs->ScrollAccum[n] += scroll_step;
+
+        // Accumulate into a stored value so we can handle high-framerate
+        const float scroll_step_i = ImFloor(bs->ScrollAccum[n]);
+        if (scroll_step_i == 0.0f)
+            continue;
         if (n == 0)
-            ImGui::SetScrollX(window, scroll_curr + scroll_step);
+            ImGui::SetScrollX(window, scroll_curr + scroll_step_i);
         else
-            ImGui::SetScrollY(window, scroll_curr + scroll_step);
+            ImGui::SetScrollY(window, scroll_curr + scroll_step_i);
+        bs->ScrollAccum[n] -= scroll_step_i;
     }
 }
 
