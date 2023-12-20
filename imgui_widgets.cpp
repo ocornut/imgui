@@ -7113,12 +7113,15 @@ void ImGui::DebugNodeTypingSelectState(ImGuiTypingSelectState* data)
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: Box-Select support
+// This has been extracted away from Multi-Select logic in the hope that it could eventually be used elsewhere, but hasn't been yet.
 //-------------------------------------------------------------------------
-// - BoxSelectStart() [Internal]
+// - BoxSelectStartDrag() [Internal]
 // - BoxSelectScrollWithMouseDrag() [Internal]
+// - BeginBoxSelect() [Internal]
+// - EndBoxSelect() [Internal]
 //-------------------------------------------------------------------------
 
-static void BoxSelectStart(ImGuiID id, ImGuiSelectionUserData clicked_item)
+static void BoxSelectStartDrag(ImGuiID id, ImGuiSelectionUserData clicked_item)
 {
     ImGuiContext& g = *GImGui;
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
@@ -7159,6 +7162,91 @@ static void BoxSelectScrollWithMouseDrag(ImGuiWindow* window, const ImRect& inne
     }
 }
 
+bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiBoxSelectState* bs = &g.BoxSelectState;
+    KeepAliveID(box_select_id);
+    if (bs->ID != box_select_id)
+        return false;
+
+    bs->UnclipMode = false;
+    bs->RequestClear = false;
+
+    // IsStarting is set by MultiSelectItemFooter() when considering a possible box-select. We validate it here and lock geometry.
+    if (bs->IsStarting && IsMouseDragPastThreshold(0))
+    {
+        bs->IsActive = true;
+        bs->Window = window;
+        bs->IsStarting = false;
+        SetActiveID(bs->ID, window);
+        if (bs->IsStartedFromVoid && (bs->KeyMods & ImGuiMod_Shift) == 0)
+            bs->RequestClear = true;
+    }
+    else if ((bs->IsStarting || bs->IsActive) && g.IO.MouseDown[0] == false)
+    {
+        bs->IsActive = bs->IsStarting = false;
+        if (g.ActiveId == bs->ID)
+            ClearActiveID();
+        bs->ID = 0;
+    }
+    if (!bs->IsActive)
+        return false;
+
+    // Current frame absolute prev/current rectangles are used to toggle selection.
+    // They are derived from positions relative to scrolling space.
+    const ImRect scope_rect = window->InnerClipRect;
+    ImVec2 start_pos_abs = WindowPosRelToAbs(window, bs->StartPosRel);
+    ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, bs->EndPosRel); // Clamped already
+    ImVec2 curr_end_pos_abs = g.IO.MousePos;
+    if (ms_flags & ImGuiMultiSelectFlags_ScopeWindow)  // Box-select scrolling only happens with ScopeWindow
+        curr_end_pos_abs = ImClamp(curr_end_pos_abs, scope_rect.Min, scope_rect.Max);
+    bs->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
+    bs->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
+    bs->BoxSelectRectCurr.Min = ImMin(start_pos_abs, curr_end_pos_abs);
+    bs->BoxSelectRectCurr.Max = ImMax(start_pos_abs, curr_end_pos_abs);
+
+    // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
+    // Storing an extra rect used by widgets supporting box-select.
+    if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
+        if (bs->BoxSelectRectPrev.Min.x != bs->BoxSelectRectCurr.Min.x || bs->BoxSelectRectPrev.Max.x != bs->BoxSelectRectCurr.Max.x)
+        {
+            bs->UnclipRect = bs->BoxSelectRectPrev;
+            bs->UnclipRect.Add(bs->BoxSelectRectCurr);
+            bs->UnclipMode = true;
+        }
+
+    //GetForegroundDrawList()->AddRect(bs->UnclipRect.Min, bs->UnclipRect.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectPrev.Min, bs->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+    //GetForegroundDrawList()->AddRect(bs->BoxSelectRectCurr.Min, bs->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
+    return true;
+}
+
+void ImGui::EndBoxSelect(const ImRect& scope_rect, bool enable_scroll)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiBoxSelectState* bs = &g.BoxSelectState;
+    IM_ASSERT(bs->IsActive);
+    bs->UnclipMode = false;
+
+    // Render selection rectangle
+    bs->EndPosRel = WindowPosAbsToRel(window, ImClamp(g.IO.MousePos, scope_rect.Min, scope_rect.Max)); // Clamp stored position according to current scrolling view
+    ImRect box_select_r = bs->BoxSelectRectCurr;
+    box_select_r.ClipWith(scope_rect);
+    window->DrawList->AddRectFilled(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_SeparatorHovered, 0.30f)); // FIXME-MULTISELECT: Styling
+    window->DrawList->AddRect(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_NavHighlight)); // FIXME-MULTISELECT: Styling
+
+    // Scroll
+    if (enable_scroll)
+    {
+        ImRect scroll_r = scope_rect;
+        scroll_r.Expand(-g.FontSize);
+        //GetForegroundDrawList()->AddRect(scroll_r.Min, scroll_r.Max, IM_COL32(0, 255, 0, 255));
+        if (!scroll_r.Contains(g.IO.MousePos))
+            BoxSelectScrollWithMouseDrag(window, scroll_r);
+    }
+}
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: Multi-Select support
@@ -7268,59 +7356,9 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     if (flags & ImGuiMultiSelectFlags_BoxSelect)
     {
         ms->BoxSelectId = GetID("##BoxSelect");
-        KeepAliveID(ms->BoxSelectId);
-    }
-    if ((flags & ImGuiMultiSelectFlags_BoxSelect) && ms->BoxSelectId == bs->ID)
-    {
-        bs->UnclipMode = false;
-
-        // BoxSelectStarting is set by MultiSelectItemFooter() when considering a possible box-select. We validate it here and lock geometry.
-        if (bs->IsStarting && IsMouseDragPastThreshold(0))
-        {
-            bs->IsActive = true;
-            bs->Window = ms->Storage->Window;
-            bs->IsStarting = false;
-            SetActiveID(ms->BoxSelectId, window);
-            if (bs->IsStartedFromVoid && (bs->KeyMods & ImGuiMod_Shift) == 0)
-                request_clear = true;
-        }
-        else if ((bs->IsStarting || bs->IsActive) && g.IO.MouseDown[0] == false)
-        {
-            bs->ID = 0;
-            bs->IsActive = bs->IsStarting = false;
-            if (g.ActiveId == ms->BoxSelectId)
-                ClearActiveID();
-        }
-        if (bs->IsActive)
-        {
-            // Current frame absolute prev/current rectangles are used to toggle selection.
-            // They are derived from positions relative to scrolling space.
-            const ImRect scope_rect = window->InnerClipRect;
-            ImVec2 start_pos_abs = WindowPosRelToAbs(window, bs->StartPosRel);
-            ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, bs->EndPosRel); // Clamped already
-            ImVec2 curr_end_pos_abs = g.IO.MousePos;
-            if (ms->Flags & ImGuiMultiSelectFlags_ScopeWindow)  // Box-select scrolling only happens with ScopeWindow
-                curr_end_pos_abs = ImClamp(curr_end_pos_abs, scope_rect.Min, scope_rect.Max);
-            bs->LastSubmittedItem = ImGuiSelectionUserData_Invalid;
-            bs->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
-            bs->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
-            bs->BoxSelectRectCurr.Min = ImMin(start_pos_abs, curr_end_pos_abs);
-            bs->BoxSelectRectCurr.Max = ImMax(start_pos_abs, curr_end_pos_abs);
-
-            // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
-            // Storing an extra rect used by widgets supporting box-select.
-            if (flags & ImGuiMultiSelectFlags_BoxSelect2d)
-                if (bs->BoxSelectRectPrev.Min.x != bs->BoxSelectRectCurr.Min.x || bs->BoxSelectRectPrev.Max.x != bs->BoxSelectRectCurr.Max.x)
-                {
-                    bs->UnclipRect = bs->BoxSelectRectPrev;
-                    bs->UnclipRect.Add(bs->BoxSelectRectCurr);
-                    bs->UnclipMode = true;
-                }
-
-            //GetForegroundDrawList()->AddRect(ms->BoxSelectNoClipRect.Min, ms->BoxSelectNoClipRect.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
-            //GetForegroundDrawList()->AddRect(ms->BoxSelectRectPrev.Min, ms->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
-            //GetForegroundDrawList()->AddRect(ms->BoxSelectRectCurr.Min, ms->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
-        }
+        ms->BoxSelectLastitem = ImGuiSelectionUserData_Invalid;
+        if (BeginBoxSelect(window, ms->BoxSelectId, flags))
+            request_clear |= bs->RequestClear;
     }
 
     if (request_clear || request_select_all)
@@ -7364,24 +7402,10 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
             storage->NavIdSelected = -1;
         }
 
-        ImGuiBoxSelectState* bs = GetBoxSelectState(ms->BoxSelectId);
-        if ((ms->Flags & ImGuiMultiSelectFlags_BoxSelect) && bs != NULL)
+        if ((ms->Flags & ImGuiMultiSelectFlags_BoxSelect) && GetBoxSelectState(ms->BoxSelectId))
         {
-            // Box-select: render selection rectangle
-            bs->EndPosRel = WindowPosAbsToRel(window, ImClamp(g.IO.MousePos, scope_rect.Min, scope_rect.Max)); // Clamp stored position according to current scrolling view
-            ImRect box_select_r = bs->BoxSelectRectCurr;
-            box_select_r.ClipWith(scope_rect);
-            window->DrawList->AddRectFilled(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_SeparatorHovered, 0.30f)); // FIXME-MULTISELECT: Styling
-            window->DrawList->AddRect(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_NavHighlight)); // FIXME-MULTISELECT: Styling
-
-            // Box-select: scroll
-            ImRect scroll_r = scope_rect;
-            scroll_r.Expand(-g.FontSize);
-            //GetForegroundDrawList()->AddRect(scroll_r.Min, scroll_r.Max, IM_COL32(0, 255, 0, 255));
-            if ((ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0 && !scroll_r.Contains(g.IO.MousePos))
-                BoxSelectScrollWithMouseDrag(window, scroll_r);
-
-            bs->UnclipMode = false;
+            bool enable_scroll = (ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0;
+            EndBoxSelect(scope_rect, enable_scroll);
         }
     }
 
@@ -7395,7 +7419,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     {
         if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
             if (!g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && g.IO.MouseClickedCount[0] == 1)
-                BoxSelectStart(ms->BoxSelectId, ImGuiSelectionUserData_Invalid);
+                BoxSelectStartDrag(ms->BoxSelectId, ImGuiSelectionUserData_Invalid);
 
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
@@ -7544,7 +7568,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             selected = pressed = true;
     }
 
-    // Box-select handling
+    // Box-select toggle handling
     if (ImGuiBoxSelectState* bs = GetBoxSelectState(ms->BoxSelectId))
     {
         const bool rect_overlap_curr = bs->BoxSelectRectCurr.Overlaps(g.LastItemData.Rect);
@@ -7554,12 +7578,12 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             selected = !selected;
             ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
             ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-            if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == bs->LastSubmittedItem && prev_req->RangeSelected == selected)
+            if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->RangeSelected == selected)
                 prev_req->RangeLastItem = item_data; // Merge span into same request
             else
                 ms->IO.Requests.push_back(req);
         }
-        bs->LastSubmittedItem = item_data;
+        ms->BoxSelectLastitem = item_data;
     }
 
     // Right-click handling: this could be moved at the Selectable() level.
@@ -7588,7 +7612,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
         if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
             if (selected == false && !g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && input_source == ImGuiInputSource_Mouse && g.IO.MouseClickedCount[0] == 1)
-                BoxSelectStart(ms->BoxSelectId, item_data);
+                BoxSelectStartDrag(ms->BoxSelectId, item_data);
 
         //----------------------------------------------------------------------------------------
         // ACTION                      | Begin  | Pressed/Activated  | End

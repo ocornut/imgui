@@ -14997,8 +14997,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Details for MultiSelect
     if (TreeNode("MultiSelect", "MultiSelect (%d)", g.MultiSelectStorage.GetAliveCount()))
     {
-        ImGuiBoxSelectState* ms = &g.BoxSelectState;
-        Text("BoxSelect ID=0x%08X, Starting = %d, Active %d", ms->ID, ms->IsStarting, ms->IsActive);
+        ImGuiBoxSelectState* bs = &g.BoxSelectState;
+        BulletText("BoxSelect ID=0x%08X, Starting = %d, Active %d", bs->ID, bs->IsStarting, bs->IsActive);
         for (int n = 0; n < g.MultiSelectStorage.GetMapSize(); n++)
             if (ImGuiMultiSelectState* state = g.MultiSelectStorage.TryGetMapData(n))
                 DebugNodeMultiSelectState(state);
