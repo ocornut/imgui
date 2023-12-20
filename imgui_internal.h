@@ -22,6 +22,7 @@ Index of this file:
 // [SECTION] Navigation support
 // [SECTION] Typing-select support
 // [SECTION] Columns support
+// [SECTION] Box-select support
 // [SECTION] Multi-select support
 // [SECTION] Docking support
 // [SECTION] Viewport support
@@ -123,6 +124,7 @@ struct ImBitVector;                 // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
+struct ImGuiBoxSelectState;         // Box-selection state (currently used by multi-selection, could potentially be used by others)
 struct ImGuiColorMod;               // Stacked color modifier, backup of modified data so we can restore it
 struct ImGuiContext;                // Main Dear ImGui context
 struct ImGuiContextHook;            // Hook for extensions like ImGuiTestEngine
@@ -1706,6 +1708,32 @@ struct ImGuiOldColumns
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Box-select support
+//-----------------------------------------------------------------------------
+
+struct ImGuiBoxSelectState
+{
+    // Active box-selection data (persistent, 1 active at a time)
+    ImGuiID                 BoxSelectId;
+    bool                    BoxSelectActive;
+    bool                    BoxSelectStarting;
+    bool                    BoxSelectFromVoid;
+    ImGuiKeyChord           BoxSelectKeyMods : 16;  // Latched key-mods for box-select logic.
+    ImVec2                  BoxSelectStartPosRel;   // Start position in window-relative space (to support scrolling)
+    ImVec2                  BoxSelectEndPosRel;     // End position in window-relative space
+    ImGuiWindow*            BoxSelectWindow;
+
+    // Temporary/Transient data
+    bool                    BoxSelectUnclipMode;    // Set/cleared by the BeginMultiSelect()/EndMultiSelect() owning active box-select.
+    ImRect                  BoxSelectRectPrev;      // Selection rectangle in absolute coordinates (derived every frame from BoxSelectStartPosRel and MousePos)
+    ImRect                  BoxSelectRectCurr;
+    ImRect                  BoxSelectUnclipRect;    // Rectangle where ItemAdd() clipping may be temporarily disabled. Need support by multi-select supporting widgets.
+    ImGuiSelectionUserData  BoxSelectLastitem;
+
+    ImGuiBoxSelectState()   { memset(this, 0, sizeof(*this)); }
+};
+
+//-----------------------------------------------------------------------------
 // [SECTION] Multi-select support
 //-----------------------------------------------------------------------------
 
@@ -1724,12 +1752,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImVec2                  ScopeRectMin;
     ImVec2                  BackupCursorMaxPos;
     ImGuiID                 BoxSelectId;
-    ImRect                  BoxSelectRectPrev;
-    ImRect                  BoxSelectRectCurr;  // Selection rectangle in absolute coordinates (derived every frame from Storage->BoxSelectStartPosRel + MousePos)
-    ImRect                  BoxSelectUnclipRect;// Rectangle where ItemAdd() clipping may be temporarily disabled. Need support by multi-select supporting widgets.
-    ImGuiSelectionUserData  BoxSelectLastitem;
     ImGuiKeyChord           KeyMods;
-    bool                    BoxSelectUnclipMode;
     bool                    LoopRequestClear;
     bool                    LoopRequestSelectAll;
     bool                    IsEndIO;            // Set when switching IO from BeginMultiSelect() to EndMultiSelect() state.
@@ -1740,7 +1763,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
 
     ImGuiMultiSelectTempData()  { Clear(); }
-    void Clear()            { size_t io_sz = sizeof(IO); ClearIO(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); BoxSelectLastitem = -1; } // Zero-clear except IO as we preserve IO.Requests[] buffer allocation.
+    void Clear()            { size_t io_sz = sizeof(IO); ClearIO(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); } // Zero-clear except IO as we preserve IO.Requests[] buffer allocation.
     void ClearIO()          { IO.Requests.resize(0); IO.RangeSrcItem = IO.NavIdItem = (ImGuiSelectionUserData)-1; IO.NavIdSelected = IO.RangeSrcReset = false; }
 };
 
@@ -1755,15 +1778,7 @@ struct IMGUI_API ImGuiMultiSelectState
     ImGuiSelectionUserData  RangeSrcItem;       //
     ImGuiSelectionUserData  NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
 
-    bool                    BoxSelectActive;
-    bool                    BoxSelectStarting;
-    bool                    BoxSelectFromVoid;
-    ImGuiKeyChord           BoxSelectKeyMods : 16; // Latched key-mods for box-select logic.
-    ImVec2                  BoxSelectStartPosRel;  // Start position in window-relative space (to support scrolling)
-    ImVec2                  BoxSelectEndPosRel;    // End position in window-relative space
-
-    ImGuiMultiSelectState() { Init(0); }
-    void Init(ImGuiID id)   { Window = NULL; ID = id; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; BoxSelectActive = BoxSelectStarting = BoxSelectFromVoid = false; BoxSelectKeyMods = 0; }
+    ImGuiMultiSelectState() { Window = NULL; ID = 0; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
@@ -2203,6 +2218,7 @@ struct ImGuiContext
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Multi-Select state
+    ImGuiBoxSelectState             BoxSelectState;
     ImGuiMultiSelectTempData*       CurrentMultiSelect;
     int                             MultiSelectTempDataStacked; // Temporary multi-select data size (because we leave previous instances undestructed, we generally don't use MultiSelectTempData.Size)
     ImVector<ImGuiMultiSelectTempData> MultiSelectTempData;
@@ -3389,6 +3405,7 @@ namespace ImGui
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
     IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
+    inline ImGuiBoxSelectState* GetBoxSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.BoxSelectId == id && g.BoxSelectState.BoxSelectActive) ? &g.BoxSelectState : NULL; }
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);

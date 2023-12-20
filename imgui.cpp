@@ -3083,8 +3083,8 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             float max_y = window->ClipRect.Max.y;
 
             // Add box selection range
-            if (ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect)
-                if (ms->Storage->Window == window && ms->Storage->BoxSelectActive)
+            if (ImGuiBoxSelectState* bs = &g.BoxSelectState)
+                if (bs->BoxSelectActive && bs->BoxSelectWindow == window)
                 {
                     // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
                     // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
@@ -3093,8 +3093,8 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                     max_y += g.Style.ItemSpacing.y;
 
                     // Box-select on 2D area requires different clipping.
-                    if (ms->BoxSelectUnclipMode)
-                        data->Ranges.push_back(ImGuiListClipperRange::FromPositions(ms->BoxSelectUnclipRect.Min.y, ms->BoxSelectUnclipRect.Max.y, 0, 0));
+                    if (bs->BoxSelectUnclipMode)
+                        data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->BoxSelectUnclipRect.Min.y, bs->BoxSelectUnclipRect.Max.y, 0, 0));
                 }
 
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
@@ -14997,6 +14997,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Details for MultiSelect
     if (TreeNode("MultiSelect", "MultiSelect (%d)", g.MultiSelectStorage.GetAliveCount()))
     {
+        ImGuiBoxSelectState* ms = &g.BoxSelectState;
+        Text("BoxSelect ID=0x%08X, Starting = %d, Active %d", ms->BoxSelectId, ms->BoxSelectStarting, ms->BoxSelectActive);
         for (int n = 0; n < g.MultiSelectStorage.GetMapSize(); n++)
             if (ImGuiMultiSelectState* state = g.MultiSelectStorage.TryGetMapData(n))
                 DebugNodeMultiSelectState(state);
