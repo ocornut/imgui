@@ -72,6 +72,7 @@ Other changes:
   to allow passing through multiple widgets easily. (#3092, #5759, #787)
 - DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
   width computation to better distribute the error. (#7120, #7121) [@Nahor]
+- ColorEdit4: Layout tweaks for very small sizes. (#7120, #7121)
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
