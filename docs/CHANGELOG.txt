@@ -76,6 +76,7 @@ Other changes:
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
+- Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
   IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
 - Misc: Rework debug display of texture id in Metrics window to avoid compile-error when
