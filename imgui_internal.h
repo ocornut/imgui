@@ -1714,21 +1714,21 @@ struct ImGuiOldColumns
 struct ImGuiBoxSelectState
 {
     // Active box-selection data (persistent, 1 active at a time)
-    ImGuiID                 BoxSelectId;
-    bool                    BoxSelectActive;
-    bool                    BoxSelectStarting;
-    bool                    BoxSelectFromVoid;
-    ImGuiKeyChord           BoxSelectKeyMods : 16;  // Latched key-mods for box-select logic.
-    ImVec2                  BoxSelectStartPosRel;   // Start position in window-relative space (to support scrolling)
-    ImVec2                  BoxSelectEndPosRel;     // End position in window-relative space
-    ImGuiWindow*            BoxSelectWindow;
+    ImGuiID                 ID;
+    bool                    IsActive;
+    bool                    IsStarting;
+    bool                    IsStartedFromVoid;  // Starting click was not from an item.
+    ImGuiKeyChord           KeyMods : 16;       // Latched key-mods for box-select logic.
+    ImVec2                  StartPosRel;        // Start position in window-contents relative space (to support scrolling)
+    ImVec2                  EndPosRel;          // End position in window-contents relative space
+    ImGuiWindow*            Window;
 
     // Temporary/Transient data
-    bool                    BoxSelectUnclipMode;    // Set/cleared by the BeginMultiSelect()/EndMultiSelect() owning active box-select.
-    ImRect                  BoxSelectRectPrev;      // Selection rectangle in absolute coordinates (derived every frame from BoxSelectStartPosRel and MousePos)
+    bool                    UnclipMode;         // (Temp/Transient, here in hot area). Set/cleared by the BeginMultiSelect()/EndMultiSelect() owning active box-select.
+    ImRect                  UnclipRect;         // Rectangle where ItemAdd() clipping may be temporarily disabled. Need support by multi-select supporting widgets.
+    ImRect                  BoxSelectRectPrev;  // Selection rectangle in absolute coordinates (derived every frame from BoxSelectStartPosRel and MousePos)
     ImRect                  BoxSelectRectCurr;
-    ImRect                  BoxSelectUnclipRect;    // Rectangle where ItemAdd() clipping may be temporarily disabled. Need support by multi-select supporting widgets.
-    ImGuiSelectionUserData  BoxSelectLastitem;
+    ImGuiSelectionUserData  LastSubmittedItem;  // Copy of last submitted item data, used to merge output ranges.
 
     ImGuiBoxSelectState()   { memset(this, 0, sizeof(*this)); }
 };
@@ -3405,7 +3405,7 @@ namespace ImGui
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
     IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
-    inline ImGuiBoxSelectState* GetBoxSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.BoxSelectId == id && g.BoxSelectState.BoxSelectActive) ? &g.BoxSelectState : NULL; }
+    inline ImGuiBoxSelectState* GetBoxSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.ID == id && g.BoxSelectState.IsActive) ? &g.BoxSelectState : NULL; }
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);

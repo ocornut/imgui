@@ -3083,19 +3083,19 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             float max_y = window->ClipRect.Max.y;
 
             // Add box selection range
-            if (ImGuiBoxSelectState* bs = &g.BoxSelectState)
-                if (bs->BoxSelectActive && bs->BoxSelectWindow == window)
-                {
-                    // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
-                    // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
-                    // As a workaround we currently half ItemSpacing worth on each side.
-                    min_y -= g.Style.ItemSpacing.y;
-                    max_y += g.Style.ItemSpacing.y;
+            ImGuiBoxSelectState* bs = &g.BoxSelectState;
+            if (bs->IsActive && bs->Window == window)
+            {
+                // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
+                // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
+                // As a workaround we currently half ItemSpacing worth on each side.
+                min_y -= g.Style.ItemSpacing.y;
+                max_y += g.Style.ItemSpacing.y;
 
-                    // Box-select on 2D area requires different clipping.
-                    if (bs->BoxSelectUnclipMode)
-                        data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->BoxSelectUnclipRect.Min.y, bs->BoxSelectUnclipRect.Max.y, 0, 0));
-                }
+                // Box-select on 2D area requires different clipping.
+                if (bs->UnclipMode)
+                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
+            }
 
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
@@ -14998,7 +14998,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (TreeNode("MultiSelect", "MultiSelect (%d)", g.MultiSelectStorage.GetAliveCount()))
     {
         ImGuiBoxSelectState* ms = &g.BoxSelectState;
-        Text("BoxSelect ID=0x%08X, Starting = %d, Active %d", ms->BoxSelectId, ms->BoxSelectStarting, ms->BoxSelectActive);
+        Text("BoxSelect ID=0x%08X, Starting = %d, Active %d", ms->ID, ms->IsStarting, ms->IsActive);
         for (int n = 0; n < g.MultiSelectStorage.GetMapSize(); n++)
             if (ImGuiMultiSelectState* state = g.MultiSelectStorage.TryGetMapData(n))
                 DebugNodeMultiSelectState(state);
