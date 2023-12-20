@@ -9622,7 +9622,7 @@ struct ExampleAssetsBrowser
     // Options
     bool            ShowTypeOverlay = true;
     bool            AllowDragUnselected = false;
-    bool            AllowBoxSelect = false;     // Unsupported for 2D selection for now.
+    bool            AllowBoxSelect = true;
     float           IconSize = 32.0f;
     int             IconSpacing = 10;
     int             IconHitSpacing = 4;         // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
@@ -9726,9 +9726,7 @@ struct ExampleAssetsBrowser
 
                 ImGui::SeparatorText("Selection Behavior");
                 ImGui::Checkbox("Allow dragging unselected item", &AllowDragUnselected);
-                ImGui::BeginDisabled(); // Unsupported for 2D selection for now.
                 ImGui::Checkbox("Allow box-selection", &AllowBoxSelect);
-                ImGui::EndDisabled();
 
                 ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
@@ -9778,7 +9776,7 @@ struct ExampleAssetsBrowser
             if (AllowDragUnselected)
                 ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
             if (AllowBoxSelect)
-                ms_flags |= ImGuiMultiSelectFlags_BoxSelect; // FIXME-MULTISELECT: Box-select not yet supported for 2D selection when using clipper.
+                ms_flags |= ImGuiMultiSelectFlags_BoxSelect2d; // Enable box-select in 2D mode.
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags);
 
             // Use custom selection adapter: store ID in selection (recommended)
@@ -9798,7 +9796,6 @@ struct ExampleAssetsBrowser
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(LayoutSelectableSpacing, LayoutSelectableSpacing));
 
             // Rendering parameters
-            const ImU32 icon_bg_color = IM_COL32(48, 48, 48, 128);
             const ImU32 icon_type_overlay_colors[3] = { 0, IM_COL32(200, 70, 70, 255), IM_COL32(70, 170, 70, 255) };
             const ImVec2 icon_type_overlay_size = ImVec2(4.0f, 4.0f);
             const bool display_label = (LayoutItemSize.x >= ImGui::CalcTextSize("999").x);
@@ -9825,13 +9822,9 @@ struct ExampleAssetsBrowser
                         ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * LayoutItemStep.x, start_pos.y + line_idx * LayoutItemStep.y);
                         ImGui::SetCursorScreenPos(pos);
 
-                        // Draw box
-                        ImVec2 box_min(pos.x - 1, pos.y - 1);
-                        ImVec2 box_max(box_min.x + LayoutItemSize.x + 2, box_min.y + LayoutItemSize.y + 2);
-                        draw_list->AddRect(box_min, box_max, IM_COL32(90, 90, 90, 255));
-
                         ImGui::SetNextItemSelectionUserData(item_idx);
                         bool item_is_selected = Selection.Contains((ImGuiID)item_data->ID);
+                        bool item_is_visible = ImGui::IsRectVisible(LayoutItemSize);
                         ImGui::Selectable("", item_is_selected, ImGuiSelectableFlags_None, LayoutItemSize);
 
                         // Update our selection state immediately (without waiting for EndMultiSelect() requests)
@@ -9856,19 +9849,26 @@ struct ExampleAssetsBrowser
                             ImGui::EndDragDropSource();
                         }
 
-                        // A real app would likely display an image/thumbnail here.
-                        draw_list->AddRectFilled(box_min, box_max, icon_bg_color);
-                        if (ShowTypeOverlay && item_data->Type != 0)
+                        // Render icon (a real app would likely display an image/thumbnail here)
+                        // Because we use ImGuiMultiSelectFlags_BoxSelect2d mode,
+                        // clipping vertical range may occasionally be larger so we coarse-clip our rendering.
+                        if (item_is_visible)
                         {
-                            ImU32 type_col = icon_type_overlay_colors[item_data->Type % IM_ARRAYSIZE(icon_type_overlay_colors)];
-                            draw_list->AddRectFilled(ImVec2(box_max.x - 2 - icon_type_overlay_size.x, box_min.y + 2), ImVec2(box_max.x - 2, box_min.y + 2 + icon_type_overlay_size.y), type_col);
-                        }
-                        if (display_label)
-                        {
-                            ImU32 label_col = item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-                            char label[32];
-                            sprintf(label, "%d", item_data->ID);
-                            draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), label_col, label);
+                            ImVec2 box_min(pos.x - 1, pos.y - 1);
+                            ImVec2 box_max(box_min.x + LayoutItemSize.x + 2, box_min.y + LayoutItemSize.y + 2); // Dubious
+                            draw_list->AddRectFilled(box_min, box_max, IM_COL32(48, 48, 48, 200)); // Background color
+                            if (ShowTypeOverlay && item_data->Type != 0)
+                            {
+                                ImU32 type_col = icon_type_overlay_colors[item_data->Type % IM_ARRAYSIZE(icon_type_overlay_colors)];
+                                draw_list->AddRectFilled(ImVec2(box_max.x - 2 - icon_type_overlay_size.x, box_min.y + 2), ImVec2(box_max.x - 2, box_min.y + 2 + icon_type_overlay_size.y), type_col);
+                            }
+                            if (display_label)
+                            {
+                                ImU32 label_col = item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+                                char label[32];
+                                sprintf(label, "%d", item_data->ID);
+                                draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), label_col, label);
+                            }
                         }
 
                         ImGui::PopID();
@@ -9893,7 +9893,8 @@ struct ExampleAssetsBrowser
             if (want_delete)
                 Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
 
-            // FIXME-MULTISELECT: Find a way to expose this in public API. This currently requires "imgui_internal.h"
+            // Keyboard/Gamepad Wrapping
+            // FIXME-MULTISELECT: Currently an imgui_internal.h API. Find a design/way to expose this in public API.
             //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
 
             // Zooming with CTRL+Wheel

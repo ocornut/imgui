@@ -1726,8 +1726,10 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImGuiID                 BoxSelectId;
     ImRect                  BoxSelectRectPrev;
     ImRect                  BoxSelectRectCurr;  // Selection rectangle in absolute coordinates (derived every frame from Storage->BoxSelectStartPosRel + MousePos)
+    ImRect                  BoxSelectUnclipRect;// Rectangle where ItemAdd() clipping may be temporarily disabled. Need support by multi-select supporting widgets.
     ImGuiSelectionUserData  BoxSelectLastitem;
     ImGuiKeyChord           KeyMods;
+    bool                    BoxSelectUnclipMode;
     bool                    LoopRequestClear;
     bool                    LoopRequestSelectAll;
     bool                    IsEndIO;            // Set when switching IO from BeginMultiSelect() to EndMultiSelect() state.

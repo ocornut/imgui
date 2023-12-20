@@ -6775,7 +6775,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     const bool disabled_item = (flags & ImGuiSelectableFlags_Disabled) != 0;
     const bool is_multi_select = (g.NextItemData.ItemFlags & ImGuiItemFlags_IsMultiSelect) != 0; // Before ItemAdd()
-    const bool item_add = ItemAdd(bb, id, NULL, disabled_item ? (ImGuiItemFlags)ImGuiItemFlags_Disabled : ImGuiItemFlags_None);
+    const bool is_visible = ItemAdd(bb, id, NULL, disabled_item ? (ImGuiItemFlags)ImGuiItemFlags_Disabled : ImGuiItemFlags_None);
 
     if (span_all_columns)
     {
@@ -6783,8 +6783,14 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         window->ClipRect.Max.x = backup_clip_rect_max_x;
     }
 
-    if (!item_add)
-        return false;
+    if (!is_visible)
+    {
+        if (!is_multi_select)
+            return false;
+        // Extra layer of "no logic clip" for box-select support
+        if (!g.CurrentMultiSelect->BoxSelectUnclipMode || !g.CurrentMultiSelect->BoxSelectUnclipRect.Overlaps(bb))
+            return false;
+    }
 
     const bool disabled_global = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     if (disabled_item && !disabled_global) // Only testing this as an optimization
@@ -6857,22 +6863,25 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
-    if (hovered || selected)
+    if (is_visible)
     {
-        // FIXME-MULTISELECT: Styling: Color for 'selected' elements? ImGuiCol_HeaderSelected
-        ImU32 col;
-        if (selected && !hovered)
-            col = GetColorU32(ImLerp(GetStyleColorVec4(ImGuiCol_Header), GetStyleColorVec4(ImGuiCol_HeaderHovered), 0.5f));
-        else
-            col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-        RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
-    }
-    if (g.NavId == id)
-    {
-        ImGuiNavHighlightFlags nav_highlight_flags = ImGuiNavHighlightFlags_Compact | ImGuiNavHighlightFlags_NoRounding;
-        if (is_multi_select)
-            nav_highlight_flags |= ImGuiNavHighlightFlags_AlwaysDraw; // Always show the nav rectangle
-        RenderNavHighlight(bb, id, nav_highlight_flags);
+        if (hovered || selected)
+        {
+            // FIXME-MULTISELECT: Styling: Color for 'selected' elements? ImGuiCol_HeaderSelected
+            ImU32 col;
+            if (selected && !hovered)
+                col = GetColorU32(ImLerp(GetStyleColorVec4(ImGuiCol_Header), GetStyleColorVec4(ImGuiCol_HeaderHovered), 0.5f));
+            else
+                col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+            RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+        }
+        if (g.NavId == id)
+        {
+            ImGuiNavHighlightFlags nav_highlight_flags = ImGuiNavHighlightFlags_Compact | ImGuiNavHighlightFlags_NoRounding;
+            if (is_multi_select)
+                nav_highlight_flags |= ImGuiNavHighlightFlags_AlwaysDraw; // Always show the nav rectangle
+            RenderNavHighlight(bb, id, nav_highlight_flags);
+        }
     }
 
     if (span_all_columns)
@@ -6883,7 +6892,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
             PopColumnsBackground();
     }
 
-    RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
+    if (is_visible)
+        RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.InFlags & ImGuiItemFlags_AutoClosePopups))
@@ -7169,7 +7179,9 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     if ((flags & (ImGuiMultiSelectFlags_ScopeWindow | ImGuiMultiSelectFlags_ScopeRect)) == 0)
         flags |= ImGuiMultiSelectFlags_ScopeWindow;
     if (flags & ImGuiMultiSelectFlags_SingleSelect)
-        flags &= ~ImGuiMultiSelectFlags_BoxSelect;
+        flags &= ~(ImGuiMultiSelectFlags_BoxSelect | ImGuiMultiSelectFlags_BoxSelect2d);
+    if (flags & ImGuiMultiSelectFlags_BoxSelect2d)
+        flags |= ImGuiMultiSelectFlags_BoxSelect;
 
     // FIXME: BeginFocusScope()
     const ImGuiID id = window->IDStack.back();
@@ -7233,6 +7245,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     }
 
     // Box-select handling: update active state.
+    ms->BoxSelectUnclipMode = false;
     if (flags & ImGuiMultiSelectFlags_BoxSelect)
     {
         ms->BoxSelectId = GetID("##BoxSelect");
@@ -7267,6 +7280,18 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
             ms->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
             ms->BoxSelectRectCurr.Min = ImMin(start_pos_abs, curr_end_pos_abs);
             ms->BoxSelectRectCurr.Max = ImMax(start_pos_abs, curr_end_pos_abs);
+
+            // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
+            // Storing an extra rect used by widgets supporting box-select.
+            if (flags & ImGuiMultiSelectFlags_BoxSelect2d)
+                if (ms->BoxSelectRectPrev.Min.x != ms->BoxSelectRectCurr.Min.x || ms->BoxSelectRectPrev.Max.x != ms->BoxSelectRectCurr.Max.x)
+                {
+                    ms->BoxSelectUnclipRect = ms->BoxSelectRectPrev;
+                    ms->BoxSelectUnclipRect.Add(ms->BoxSelectRectCurr);
+                    ms->BoxSelectUnclipMode = true;
+                }
+
+            //GetForegroundDrawList()->AddRect(ms->BoxSelectNoClipRect.Min, ms->BoxSelectNoClipRect.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
             //GetForegroundDrawList()->AddRect(ms->BoxSelectRectPrev.Min, ms->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
             //GetForegroundDrawList()->AddRect(ms->BoxSelectRectCurr.Min, ms->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
         }

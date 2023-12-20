@@ -3091,6 +3091,10 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                     // As a workaround we currently half ItemSpacing worth on each side.
                     min_y -= g.Style.ItemSpacing.y;
                     max_y += g.Style.ItemSpacing.y;
+
+                    // Box-select on 2D area requires different clipping.
+                    if (ms->BoxSelectUnclipMode)
+                        data->Ranges.push_back(ImGuiListClipperRange::FromPositions(ms->BoxSelectUnclipRect.Min.y, ms->BoxSelectUnclipRect.Max.y, 0, 0));
                 }
 
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
