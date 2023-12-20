@@ -76,6 +76,7 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
     ImGui_ImplWGPU_Init(wgpu_device, 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined);
 
     // Load Fonts
