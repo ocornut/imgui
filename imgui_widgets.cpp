@@ -6749,6 +6749,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     const ImVec2 text_max(min_x + size.x, pos.y + size.y);
 
     // Selectables are meant to be tightly packed together with no click-gap, so we extend their box to cover spacing between selectable.
+    // FIXME: Not part of layout so not included in clipper calculation, but ItemSize currenty doesn't allow offsetting CursorPos.
     ImRect bb(min_x, pos.y, text_max.x, text_max.y);
     if ((flags & ImGuiSelectableFlags_NoPadWithHalfSpacing) == 0)
     {
@@ -7135,20 +7136,22 @@ static void BoxSelectStart(ImGuiMultiSelectState* storage, ImGuiSelectionUserDat
     storage->BoxSelectStartPosRel = storage->BoxSelectEndPosRel = ImGui::WindowPosAbsToRel(g.CurrentWindow, g.IO.MousePos);
 }
 
-static void BoxSelectScrollWithMouseDrag(ImGuiWindow* window, const ImRect& r)
+static void BoxSelectScrollWithMouseDrag(ImGuiWindow* window, const ImRect& inner_r)
 {
     ImGuiContext& g = *GImGui;
-    for (int n = 0; n < 2; n++)
+    for (int n = 0; n < 2; n++) // each axis
     {
-        float dist = (g.IO.MousePos[n] > r.Max[n]) ? g.IO.MousePos[n] - r.Max[n] : (g.IO.MousePos[n] < r.Min[n]) ? g.IO.MousePos[n] - r.Min[n] : 0.0f;
-        if (dist == 0.0f || (dist < 0.0f && window->Scroll[n] < 0.0f) || (dist > 0.0f && window->Scroll[n] >= window->ScrollMax[n]))
+        const float mouse_pos = g.IO.MousePos[n];
+        const float dist = (mouse_pos > inner_r.Max[n]) ? mouse_pos - inner_r.Max[n] : (mouse_pos < inner_r.Min[n]) ? mouse_pos - inner_r.Min[n] : 0.0f;
+        const float scroll_curr = window->Scroll[n];
+        if (dist == 0.0f || (dist < 0.0f && scroll_curr < 0.0f) || (dist > 0.0f && scroll_curr >= window->ScrollMax[n]))
             continue;
-        float speed_multiplier = ImLinearRemapClamp(g.FontSize, g.FontSize * 5.0f, 1.0f, 4.0f, ImAbs(dist)); // x1 to x4 depending on distance
-        float scroll_step = IM_ROUND(g.FontSize * 35.0f * speed_multiplier * ImSign(dist) * g.IO.DeltaTime);
+        const float speed_multiplier = ImLinearRemapClamp(g.FontSize, g.FontSize * 5.0f, 1.0f, 4.0f, ImAbs(dist)); // x1 to x4 depending on distance
+        const float scroll_step = IM_ROUND(g.FontSize * 35.0f * speed_multiplier * ImSign(dist) * g.IO.DeltaTime);
         if (n == 0)
-            ImGui::SetScrollX(window, window->Scroll[n] + scroll_step);
+            ImGui::SetScrollX(window, scroll_curr + scroll_step);
         else
-            ImGui::SetScrollY(window, window->Scroll[n] + scroll_step);
+            ImGui::SetScrollY(window, scroll_curr + scroll_step);
     }
 }
 
@@ -7165,6 +7168,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
     g.CurrentMultiSelect = ms;
     if ((flags & (ImGuiMultiSelectFlags_ScopeWindow | ImGuiMultiSelectFlags_ScopeRect)) == 0)
         flags |= ImGuiMultiSelectFlags_ScopeWindow;
+    if (flags & ImGuiMultiSelectFlags_SingleSelect)
+        flags &= ~ImGuiMultiSelectFlags_BoxSelect;
 
     // FIXME: BeginFocusScope()
     const ImGuiID id = window->IDStack.back();
@@ -7250,12 +7255,20 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
         }
         if (storage->BoxSelectActive)
         {
+            // Current frame absolute prev/current rectangles are used to toggle selection.
+            // They are derived from positions relative to scrolling space.
+            const ImRect scope_rect = window->InnerClipRect;
             ImVec2 start_pos_abs = WindowPosRelToAbs(window, storage->BoxSelectStartPosRel);
-            ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, storage->BoxSelectEndPosRel);
+            ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, storage->BoxSelectEndPosRel); // Clamped already
+            ImVec2 curr_end_pos_abs = g.IO.MousePos;
+            if (ms->Flags & ImGuiMultiSelectFlags_ScopeWindow)  // Box-select scrolling only happens with ScopeWindow
+                curr_end_pos_abs = ImClamp(curr_end_pos_abs, scope_rect.Min, scope_rect.Max);
             ms->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
             ms->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
-            ms->BoxSelectRectCurr.Min = ImMin(start_pos_abs, g.IO.MousePos);
-            ms->BoxSelectRectCurr.Max = ImMax(start_pos_abs, g.IO.MousePos);
+            ms->BoxSelectRectCurr.Min = ImMin(start_pos_abs, curr_end_pos_abs);
+            ms->BoxSelectRectCurr.Max = ImMax(start_pos_abs, curr_end_pos_abs);
+            //GetForegroundDrawList()->AddRect(ms->BoxSelectRectPrev.Min, ms->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+            //GetForegroundDrawList()->AddRect(ms->BoxSelectRectCurr.Min, ms->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
         }
     }
 
@@ -7303,7 +7316,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if ((ms->Flags & ImGuiMultiSelectFlags_BoxSelect) && storage->BoxSelectActive)
         {
             // Box-select: render selection rectangle
-            ms->Storage->BoxSelectEndPosRel = WindowPosAbsToRel(window, g.IO.MousePos);
+            ms->Storage->BoxSelectEndPosRel = WindowPosAbsToRel(window, ImClamp(g.IO.MousePos, scope_rect.Min, scope_rect.Max)); // Clamp stored position according to current scrolling view
             ImRect box_select_r = ms->BoxSelectRectCurr;
             box_select_r.ClipWith(scope_rect);
             window->DrawList->AddRectFilled(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_SeparatorHovered, 0.30f)); // FIXME-MULTISELECT: Styling
@@ -7311,8 +7324,9 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
             // Box-select: scroll
             ImRect scroll_r = scope_rect;
-            scroll_r.Expand(g.Style.FramePadding);
-            if ((ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_NoBoxSelectScroll) == 0 && !scroll_r.Contains(g.IO.MousePos))
+            scroll_r.Expand(-g.FontSize);
+            //GetForegroundDrawList()->AddRect(scroll_r.Min, scroll_r.Max, IM_COL32(0, 255, 0, 255));
+            if ((ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0 && !scroll_r.Contains(g.IO.MousePos))
                 BoxSelectScrollWithMouseDrag(window, scroll_r);
         }
     }

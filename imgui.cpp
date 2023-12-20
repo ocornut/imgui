@@ -3079,9 +3079,23 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
             // Add visible range
+            float min_y = window->ClipRect.Min.y;
+            float max_y = window->ClipRect.Max.y;
+
+            // Add box selection range
+            if (ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect)
+                if (ms->Storage->Window == window && ms->Storage->BoxSelectActive)
+                {
+                    // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
+                    // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
+                    // As a workaround we currently half ItemSpacing worth on each side.
+                    min_y -= g.Style.ItemSpacing.y;
+                    max_y += g.Style.ItemSpacing.y;
+                }
+
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
-            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(window->ClipRect.Min.y, window->ClipRect.Max.y, off_min, off_max));
+            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(min_y, max_y, off_min, off_max));
         }
 
         // Convert position ranges to item index ranges
@@ -13438,7 +13452,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 
     IM_ASSERT(g.DragDropWithinTarget == false && g.DragDropWithinSource == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()
     g.DragDropTargetRect = bb;
-    g.DragDropTargetClipRect = window->ClipRect; // May want to be overriden by user depending on use case?
+    g.DragDropTargetClipRect = window->ClipRect; // May want to be overridden by user depending on use case?
     g.DragDropTargetId = id;
     g.DragDropWithinTarget = true;
     return true;

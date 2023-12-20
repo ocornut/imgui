@@ -1724,8 +1724,8 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImVec2                  ScopeRectMin;
     ImVec2                  BackupCursorMaxPos;
     ImGuiID                 BoxSelectId;
-    ImRect                  BoxSelectRectCurr;  // Selection rectangle in absolute coordinates (derived from Storage->BoxSelectStartPosRel + MousePos)
     ImRect                  BoxSelectRectPrev;
+    ImRect                  BoxSelectRectCurr;  // Selection rectangle in absolute coordinates (derived every frame from Storage->BoxSelectStartPosRel + MousePos)
     ImGuiSelectionUserData  BoxSelectLastitem;
     ImGuiKeyChord           KeyMods;
     bool                    LoopRequestClear;
@@ -3102,7 +3102,7 @@ namespace ImGui
     inline ImRect           WindowRectAbsToRel(ImGuiWindow* window, const ImRect& r) { ImVec2 off = window->DC.CursorStartPos; return ImRect(r.Min.x - off.x, r.Min.y - off.y, r.Max.x - off.x, r.Max.y - off.y); }
     inline ImRect           WindowRectRelToAbs(ImGuiWindow* window, const ImRect& r) { ImVec2 off = window->DC.CursorStartPos; return ImRect(r.Min.x + off.x, r.Min.y + off.y, r.Max.x + off.x, r.Max.y + off.y); }
     inline ImVec2           WindowPosRelToAbs(ImGuiWindow* window, const ImVec2& p)  { ImVec2 off = window->DC.CursorStartPos; return ImVec2(p.x + off.x, p.y + off.y); }
-    inline ImVec2           WindowPosAbsToRel(ImGuiWindow* window, const ImVec2& p) { ImVec2 off = window->DC.CursorStartPos; return ImVec2(p.x - off.x, p.y - off.y); }
+    inline ImVec2           WindowPosAbsToRel(ImGuiWindow* window, const ImVec2& p)  { ImVec2 off = window->DC.CursorStartPos; return ImVec2(p.x - off.x, p.y - off.y); }
 
     // Windows: Display Order and Focus Order
     IMGUI_API void          FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags = 0);

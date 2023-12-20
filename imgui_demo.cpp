@@ -3031,6 +3031,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::BulletText("Shift modifier for range selection.");
             ImGui::BulletText("CTRL+A to select all.");
             ImGui::BulletText("Escape to clear selection.");
+            ImGui::BulletText("Click and drag to box-select.");
             ImGui::Text("Tip: Use 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.");
 
             // Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -3041,7 +3042,7 @@ static void ShowDemoWindowMultiSelect()
             // The BeginListBox() has no actual purpose for selection logic (other that offering a scrolling region).
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
@@ -3076,7 +3077,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::Text("Selection: %d/%d", selection.Size, ITEMS_COUNT);
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
@@ -3142,7 +3143,7 @@ static void ShowDemoWindowMultiSelect()
 
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, items.Size);
 
@@ -3259,7 +3260,7 @@ static void ShowDemoWindowMultiSelect()
             static bool use_drag_drop = true;
             static bool show_in_table = false;
             static bool show_color_button = false;
-            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
             static WidgetType widget_type = WidgetType_Selectable;
 
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
@@ -3273,7 +3274,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoBoxSelectScroll", &flags, ImGuiMultiSelectFlags_NoBoxSelectScroll);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelectNoScroll", &flags, ImGuiMultiSelectFlags_BoxSelectNoScroll);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
@@ -9621,6 +9622,7 @@ struct ExampleAssetsBrowser
     // Options
     bool            ShowTypeOverlay = true;
     bool            AllowDragUnselected = false;
+    bool            AllowBoxSelect = false;     // Unsupported for 2D selection for now.
     float           IconSize = 32.0f;
     int             IconSpacing = 10;
     int             IconHitSpacing = 4;         // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
@@ -9724,6 +9726,9 @@ struct ExampleAssetsBrowser
 
                 ImGui::SeparatorText("Selection Behavior");
                 ImGui::Checkbox("Allow dragging unselected item", &AllowDragUnselected);
+                ImGui::BeginDisabled(); // Unsupported for 2D selection for now.
+                ImGui::Checkbox("Allow box-selection", &AllowBoxSelect);
+                ImGui::EndDisabled();
 
                 ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
@@ -9772,6 +9777,8 @@ struct ExampleAssetsBrowser
             ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickVoid;
             if (AllowDragUnselected)
                 ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
+            if (AllowBoxSelect)
+                ms_flags |= ImGuiMultiSelectFlags_BoxSelect; // FIXME-MULTISELECT: Box-select not yet supported for 2D selection when using clipper.
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags);
 
             // Use custom selection adapter: store ID in selection (recommended)
