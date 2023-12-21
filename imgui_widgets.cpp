@@ -7730,7 +7730,7 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io, int it
             Clear();
         if (req.Type == ImGuiSelectionRequestType_SelectAll)
         {
-            Storage.Data.resize(0);
+            Clear();
             Storage.Data.reserve(items_count);
             for (int idx = 0; idx < items_count; idx++)
                 AddItem(AdapterIndexToStorageId(this, idx));
