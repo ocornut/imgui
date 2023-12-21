@@ -2977,14 +2977,16 @@ struct ExampleDualListBox
     }
 };
 
-
+// Multi-selection demos
+// Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
 static void ShowDemoWindowMultiSelect()
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
     if (ImGui::TreeNode("Selection State & Multi-Select"))
     {
-        HelpMarker("Selections can be built under Selectable(), TreeNode() or other widgets. Selection state is owned by application code/data.");
+        HelpMarker("Selections can be built using Selectable(), TreeNode() or other widgets. Selection state is owned by application code/data.");
 
+        // Without any fancy API: manage single-selection yourself.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Single-Select");
         if (ImGui::TreeNode("Single-Select"))
         {
@@ -3020,8 +3022,9 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        // Demonstrate holding/updating multi-selection data using the BeginMultiSelect/EndMultiSelect API.
+        // Demonstrate handling proper multi-selection using the BeginMultiSelect/EndMultiSelect API.
         // SHIFT+Click w/ CTRL and other standard features are supported.
+        // We use the ImGuiSelectionBasicStorage helper which you may freely reimplement.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select");
         if (ImGui::TreeNode("Multi-Select"))
         {
@@ -3105,8 +3108,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
-        // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API + support dynamic item list and deletion.
-        // SHIFT+Click w/ CTRL and other standard features are supported.
+        // Demonstrate dynamic item list + deletion support using the BeginMultiSelect/EndMultiSelect API.
         // In order to support Deletion without any glitches you need to:
         // - (1) If items are submitted in their own scrolling area, submit contents size SetNextWindowContentSize() ahead of time to prevent one-frame readjustment of scrolling.
         // - (2) Items needs to have persistent ID Stack identifier = ID needs to not depends on their index. PushID(index) = KO. PushID(item_id) = OK. This is in order to focus items reliably after a selection.
@@ -3263,29 +3265,33 @@ static void ShowDemoWindowMultiSelect()
             static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
             static WidgetType widget_type = WidgetType_Selectable;
 
-            if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
-            ImGui::Checkbox("Enable clipper", &use_clipper);
-            ImGui::Checkbox("Enable deletion", &use_deletion);
-            ImGui::Checkbox("Enable drag & drop", &use_drag_drop);
-            ImGui::Checkbox("Show in a table", &show_in_table);
-            ImGui::Checkbox("Show color button", &show_color_button);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelectNoScroll", &flags, ImGuiMultiSelectFlags_BoxSelectNoScroll);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
-            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
-                flags &= ~ImGuiMultiSelectFlags_ScopeRect;
-            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
-                flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
-            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClick", &flags, ImGuiMultiSelectFlags_SelectOnClick) && (flags & ImGuiMultiSelectFlags_SelectOnClick))
-                flags &= ~ImGuiMultiSelectFlags_SelectOnClickRelease;
-            if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease) && (flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
-                flags &= ~ImGuiMultiSelectFlags_SelectOnClick;
-            ImGui::SameLine(); HelpMarker("Allow dragging an unselected item without altering selection.");
+            if (ImGui::TreeNode("Options"))
+            {
+                if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
+                ImGui::Checkbox("Enable clipper", &use_clipper);
+                ImGui::Checkbox("Enable deletion", &use_deletion);
+                ImGui::Checkbox("Enable drag & drop", &use_drag_drop);
+                ImGui::Checkbox("Show in a table", &show_in_table);
+                ImGui::Checkbox("Show color button", &show_color_button);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelectNoScroll", &flags, ImGuiMultiSelectFlags_BoxSelectNoScroll);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeWindow", &flags, ImGuiMultiSelectFlags_ScopeWindow) && (flags & ImGuiMultiSelectFlags_ScopeWindow))
+                    flags &= ~ImGuiMultiSelectFlags_ScopeRect;
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
+                    flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClick", &flags, ImGuiMultiSelectFlags_SelectOnClick) && (flags & ImGuiMultiSelectFlags_SelectOnClick))
+                    flags &= ~ImGuiMultiSelectFlags_SelectOnClickRelease;
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease) && (flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
+                    flags &= ~ImGuiMultiSelectFlags_SelectOnClick;
+                ImGui::SameLine(); HelpMarker("Allow dragging an unselected item without altering selection.");
+                ImGui::TreePop();
+            }
 
             // Initialize default list with 1000 items.
             // Use default selection.Adapter: Pass index to SetNextItemSelectionUserData(), store index in Selection
@@ -9797,6 +9803,7 @@ struct ExampleAssetsBrowser
 
             // Rendering parameters
             const ImU32 icon_type_overlay_colors[3] = { 0, IM_COL32(200, 70, 70, 255), IM_COL32(70, 170, 70, 255) };
+            const ImU32 icon_bg_color = ImGui::GetColorU32(ImGuiCol_MenuBarBg);
             const ImVec2 icon_type_overlay_size = ImVec2(4.0f, 4.0f);
             const bool display_label = (LayoutItemSize.x >= ImGui::CalcTextSize("999").x);
 
@@ -9856,7 +9863,7 @@ struct ExampleAssetsBrowser
                         {
                             ImVec2 box_min(pos.x - 1, pos.y - 1);
                             ImVec2 box_max(box_min.x + LayoutItemSize.x + 2, box_min.y + LayoutItemSize.y + 2); // Dubious
-                            draw_list->AddRectFilled(box_min, box_max, IM_COL32(48, 48, 48, 200)); // Background color
+                            draw_list->AddRectFilled(box_min, box_max, icon_bg_color); // Background color
                             if (ShowTypeOverlay && item_data->Type != 0)
                             {
                                 ImU32 type_col = icon_type_overlay_colors[item_data->Type % IM_ARRAYSIZE(icon_type_overlay_colors)];
@@ -9864,7 +9871,7 @@ struct ExampleAssetsBrowser
                             }
                             if (display_label)
                             {
-                                ImU32 label_col = item_is_selected ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+                                ImU32 label_col = ImGui::GetColorU32(item_is_selected ? ImGuiCol_Text : ImGuiCol_TextDisabled);
                                 char label[32];
                                 sprintf(label, "%d", item_data->ID);
                                 draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), label_col, label);
