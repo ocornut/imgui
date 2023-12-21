@@ -75,6 +75,8 @@ Other changes:
 - ColorEdit4: Layout tweaks for very small sizes. (#7120, #7121)
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
+- Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
+  grip without moving it.
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
 - Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
