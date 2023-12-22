@@ -70,6 +70,8 @@ Other changes:
 - InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
   (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
   to allow passing through multiple widgets easily. (#3092, #5759, #787)
+- Drags, Sliders, Inputs: removed all attempts to filter non-numerical characters during text
+  editing. Invalid inputs not applied to value, visibly reverted after validation. (#6810, #7096)
 - DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
   width computation to better distribute the error. (#7120, #7121) [@Nahor]
 - ColorEdit4: Layout tweaks for very small sizes. (#7120, #7121)
