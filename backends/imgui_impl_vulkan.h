@@ -54,24 +54,26 @@
 #endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
+// NOTE: VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance                      Instance;
-    VkPhysicalDevice                PhysicalDevice;
-    VkDevice                        Device;
-    uint32_t                        QueueFamily;
-    VkQueue                         Queue;
-    VkPipelineCache                 PipelineCache;
-    VkDescriptorPool                DescriptorPool;
-    uint32_t                        Subpass;
-    uint32_t                        MinImageCount;          // >= 2
-    uint32_t                        ImageCount;             // >= MinImageCount
-    VkSampleCountFlagBits           MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT (0 -> default to VK_SAMPLE_COUNT_1_BIT)
+    VkInstance                       Instance;
+    VkPhysicalDevice                 PhysicalDevice;
+    VkDevice                         Device;
+    uint32_t                         QueueFamily;
+    VkQueue                          Queue;
+    VkPipelineCache                  PipelineCache;                // (Optional)
+    VkDescriptorPool                 DescriptorPool;               // Requirements in NOTE above
+    uint32_t                         Subpass;                      // (Optional)
+    uint32_t                         MinImageCount;                // >= 2
+    uint32_t                         ImageCount;                   // >= MinImageCount
+    VkSampleCountFlagBits            MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 
-    // Dynamic Rendering (Optional)
-    bool                            UseDynamicRendering;    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
-    VkFormat                        ColorAttachmentFormat;  // Required for dynamic rendering
+    // (Optional) Dynamic Rendering
+    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
+    bool                             UseDynamicRendering;
+    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
 
     // Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
