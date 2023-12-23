@@ -39,6 +39,13 @@ HOW TO UPDATE?
  VERSION 1.90.3 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+- Backends: Vulkan: Using dynamic rendering now require filling the PipelineRenderingCreateInfo
+  structure in ImGui_ImplVulkan_InitInfo, allowing to configure color/depth/stencil formats.
+  Removed ColorAttachmentFormat field previously provided for dynamic rendering.
+  (#7166, #6855, #5446, #5037) [@shawnhatori]
+
 Other changes:
 
 - Menus, Popups: fixed menus and popups with child window flag erroneously not displaying
