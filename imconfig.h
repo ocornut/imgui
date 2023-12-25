@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include "../../include/opencv2/core/cvdef.h"
 #include "../../include/opencv2/v4d/detail/imguicontext.hpp"
 
 //---- Define assertion handler. Defaults to calling assert().
