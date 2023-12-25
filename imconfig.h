@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "../../include/opencv2/v4d/detail/imguicontext.hpp"
+#include "opencv2/v4d/detail/imguicontext.hpp"
 
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
