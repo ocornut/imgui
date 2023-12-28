@@ -33,6 +33,7 @@ static int                 wgpu_swap_chain_height = 720;
 
 // Forward declarations
 static void MainLoopStep(void* window);
+static void SetupAndRun();
 static void InitWGPU(void (*callback)(wgpu::Device));
 static bool CreateWGPUSurface(GLFWwindow* window);
 static void CreateSwapChain(int width, int height);
@@ -40,117 +41,106 @@ static void print_glfw_error(int error, const char* description);
 static void print_wgpu_error(WGPUErrorType error_type, const char* message, void*);
 static void RequestDeviceCallback(WGPURequestDeviceStatus status, WGPUDevice cDevice, const char* message, void* userdata);
 static void RequestAdapterCallback(WGPURequestAdapterStatus status, WGPUAdapter cAdapter,const char* message, void* userdata);
-// ------ Remove pending https://github.com/ocornut/imgui/pull/6751
-// glfwGetFramebufferSize not reporting changes in size
-#if defined(__EMSCRIPTEN__)
-EM_JS(int, canvas_get_width, (), {
-  return document.getElementById('canvas').width;
-});
-
-EM_JS(int, canvas_get_height, (), {
-  return document.getElementById('canvas').height;
-});
-#endif
-// -------------------------------
 
 // Main code
 int main(int, char**)
 {
+    // Async Get Instance, Adapter and device
+    // Init and run everything once these have been obtained.
     InitWGPU([](wgpu::Device device) {
         wgpu_device = device;
-
-        glfwSetErrorCallback(print_glfw_error);
-        if (!glfwInit())
-            exit(1);
-
-#if defined(__EMSCRIPTEN__)
-        wgpu_swap_chain_width = canvas_get_width();
-        wgpu_swap_chain_height = canvas_get_height();
-#endif
-        // Make sure GLFW does not initialize any graphics context.
-        // This needs to be done explicitly later.
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        GLFWwindow* window = glfwCreateWindow(wgpu_swap_chain_width, wgpu_swap_chain_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
-        if (!window)
-        {
-            glfwTerminate();
-            exit(1);
-        }
-
-        // Initialize the WebGPU surface
-        if (!CreateWGPUSurface(window))
-        {
-            if (window)
-                glfwDestroyWindow(window);
-            glfwTerminate();
-            exit(1);
-        }
-
-        glfwShowWindow(window);
-
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO(); (void)io;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multiviewport for docking branch 
-
-        // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
-        // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
-#if defined(__EMSCRIPTEN__)
-        io.IniFilename = nullptr;
-#endif
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-        //ImGui::StyleColorsLight();
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplGlfw_InitForOther(window, true);
-        ImGui_ImplWGPU_Init(wgpu_device.Get(), 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined, wgpu_instance.Get());
-
-        CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
-
-        // Load Fonts
-        // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-        // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-        // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-        // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-        // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-        // - Read 'docs/FONTS.md' for more instructions and details.
-        // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-        // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
-        //io.Fonts->AddFontDefault();
-#ifndef IMGUI_DISABLE_FILE_FUNCTIONS
-        //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
-        io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
-        //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
-        //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
-        //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
-        //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-        //IM_ASSERT(font != nullptr);
-#endif
-
-        // This function will directly return and exit the main function.
-        // Make sure that no required objects get cleaned up.
-        // This way we can use the browsers 'requestAnimationFrame' to control the rendering.
-#if defined(__EMSCRIPTEN__)
-        emscripten_set_main_loop_arg(MainLoopStep, window, 0, false);
-#else
-        while (!glfwWindowShouldClose(window)) {
-            MainLoopStep(window);
-            wgpuSwapChainPresent(wgpu_swap_chain);
-            if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                ImGui::UpdatePlatformWindows();
-                ImGui::RenderPlatformWindowsDefault();
-            }
-        }
-#endif
+        SetupAndRun();
     });
-
     return 0;
+}
+
+static void SetupAndRun()
+{
+    glfwSetErrorCallback(print_glfw_error);
+    if (!glfwInit())
+        exit(1);
+
+    // Make sure GLFW does not initialize any graphics context.
+    // This needs to be done explicitly later.
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    GLFWwindow* window = glfwCreateWindow(wgpu_swap_chain_width, wgpu_swap_chain_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+    if (!window)
+    {
+        glfwTerminate();
+        exit(1);
+    }
+
+    // Initialize the WebGPU surface
+    if (!CreateWGPUSurface(window))
+    {
+        if (window)
+            glfwDestroyWindow(window);
+        glfwTerminate();
+        exit(1);
+    }
+
+    glfwShowWindow(window);
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multiviewport for docking branch
+
+    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
+    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
+#if defined(__EMSCRIPTEN__)
+    io.IniFilename = nullptr;
+#endif
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOther(window, true);
+    ImGui_ImplWGPU_Init(wgpu_device.Get(), 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined, wgpu_instance.Get());
+
+    CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
+
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
+    //io.Fonts->AddFontDefault();
+#ifndef IMGUI_DISABLE_FILE_FUNCTIONS
+    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //IM_ASSERT(font != nullptr);
+#endif
+
+    // This function will directly return and exit the main function.
+    // Make sure that no required objects get cleaned up.
+    // This way we can use the browsers 'requestAnimationFrame' to control the rendering.
+#if defined(__EMSCRIPTEN__)
+    emscripten_set_main_loop_arg(MainLoopStep, window, 0, false);
+#else
+    while (!glfwWindowShouldClose(window)) {
+        MainLoopStep(window);
+        wgpuSwapChainPresent(wgpu_swap_chain);
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
+    }
+#endif
 }
 
 static void RequestDeviceCallback(WGPURequestDeviceStatus status, WGPUDevice cDevice, const char* message, void* userdata)
@@ -307,6 +297,11 @@ static void MainLoopStep(void* window)
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
     WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device.Get());
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
+
+    wgpuTextureViewRelease(color_attachments.view);
+    wgpuRenderPassEncoderRelease(pass);
+    wgpuCommandEncoderRelease(encoder);
+    wgpuCommandBufferRelease(cmd_buffer);
 }
 
 static void print_glfw_error(int error, const char* description)
