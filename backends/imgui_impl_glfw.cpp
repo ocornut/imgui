@@ -483,6 +483,7 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
 static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (!bd) { return DefWindowProc(hWnd, msg, wParam, lParam); }
     switch (msg)
     {
     case WM_MOUSEMOVE: case WM_NCMOUSEMOVE:
