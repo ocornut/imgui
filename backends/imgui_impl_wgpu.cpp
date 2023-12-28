@@ -227,6 +227,25 @@ static void SafeRelease(WGPUTexture& res)
         wgpuTextureRelease(res);
     res = nullptr;
 }
+static void SafeRelease(WGPURenderPassEncoder& res)
+{
+    if (res)
+        wgpuRenderPassEncoderRelease(res);
+    res = nullptr;
+}
+static void SafeRelease(WGPUCommandBuffer& res)
+{
+    if (res)
+        wgpuCommandBufferRelease(res);
+    res = nullptr;
+}
+static void SafeRelease(WGPUCommandEncoder& res)
+{
+    if (res)
+        wgpuCommandEncoderRelease(res);
+    res = nullptr;
+}
+
 
 static void SafeRelease(RenderResources& res)
 {
@@ -898,7 +917,7 @@ static void ImGui_ImplWGPU_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 	swapDescriptor.width = size.x;
 	swapDescriptor.height = size.y;
 	swapDescriptor.presentMode = WGPUPresentMode_Fifo;
-    
+
     vd->Window.swapChain = wgpuDeviceCreateSwapChain(bd->wgpuDevice, vd->Window.surface, &swapDescriptor);
 }
 
@@ -930,6 +949,11 @@ static void ImGui_ImplWGPU_RenderWindow(ImGuiViewport* viewport, void*)
     WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
     WGPUQueue queue = wgpuDeviceGetQueue(bd->wgpuDevice);
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
+
+    SafeRelease(backBuffer);
+    SafeRelease(pass);
+    SafeRelease(encoder);
+    SafeRelease(cmd_buffer);
 }
 
 static void ImGui_ImplWGPU_SwapBuffers(ImGuiViewport* viewport, void*)
