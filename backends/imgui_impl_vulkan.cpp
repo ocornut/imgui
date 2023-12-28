@@ -812,7 +812,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     err = vkQueueSubmit(v->Queue, 1, &end_info, VK_NULL_HANDLE);
     check_vk_result(err);
 
-    err = vkDeviceWaitIdle(v->Device);
+    err = vkQueueWaitIdle(v->Queue);
     check_vk_result(err);
 
     vkDestroyBuffer(v->Device, upload_buffer, v->Allocator);
@@ -1049,6 +1049,7 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(v->Device, v->Allocator);
     ImGui_ImplVulkan_DestroyFontsTexture();
 
+    if (bd->FontCommandBuffer)    { vkFreeCommandBuffers(v->Device, bd->FontCommandPool, 1, &bd->FontCommandBuffer); bd->FontCommandBuffer = VK_NULL_HANDLE; }
     if (bd->FontCommandPool)      { vkDestroyCommandPool(v->Device, bd->FontCommandPool, v->Allocator); bd->FontCommandPool = VK_NULL_HANDLE; }
     if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
     if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }

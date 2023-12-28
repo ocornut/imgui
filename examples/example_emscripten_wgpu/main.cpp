@@ -101,6 +101,9 @@ static void SetupAndRun()
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
+#if defined(__EMSCRIPTEN__)
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
+#endif
     ImGui_ImplWGPU_Init(wgpu_device.Get(), 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined, wgpu_instance.Get());
 
     CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
