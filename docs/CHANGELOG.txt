@@ -92,6 +92,8 @@ Other changes:
   on a codebase where another copy of the library is used.
 - Backends: GLFW, Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
   register canvas selector and auto-resize GLFW window. (#6751) [@Traveller23, @ypujante]
+- Backends: GLFW: Fixed Windows specific hooks to use Unicode version of WndProc even when
+  compiling in MBCS mode. (#7174) [@kimidaisuki22]
 - Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
   vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
 - Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
