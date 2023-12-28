@@ -950,7 +950,7 @@ static void ImGui_ImplWGPU_RenderWindow(ImGuiViewport* viewport, void*)
     WGPUQueue queue = wgpuDeviceGetQueue(bd->wgpuDevice);
     wgpuQueueSubmit(queue, 1, &cmd_buffer);
 
-    SafeRelease(backBuffer);
+    SafeRelease(color_attachments.view);
     SafeRelease(pass);
     SafeRelease(encoder);
     SafeRelease(cmd_buffer);
