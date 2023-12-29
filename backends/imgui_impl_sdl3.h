@@ -26,6 +26,7 @@
 
 struct SDL_Window;
 struct SDL_Renderer;
+struct SDL_Gamepad;
 typedef union SDL_Event SDL_Event;
 
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForOpenGL(SDL_Window* window, void* sdl_gl_context);
@@ -37,5 +38,5 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForOther(SDL_Window* window);
 IMGUI_IMPL_API void     ImGui_ImplSDL3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL3_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event);
-
+IMGUI_IMPL_API void     ImGui_ImplSDL3_SetGamepad(SDL_Gamepad* gamepad);
 #endif // #ifndef IMGUI_DISABLE
