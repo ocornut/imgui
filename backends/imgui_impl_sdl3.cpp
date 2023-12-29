@@ -71,7 +71,7 @@ struct ImGui_ImplSDL3_Data
     int             PendingMouseLeaveFrame;
     char*           ClipboardTextData;
     bool            MouseCanUseGlobalState;
-
+    ImVec2          RenderScale() const { ImVec2 res; SDL_GetRenderScale(Renderer, &res.x, &res.y); return res;}
     ImGui_ImplSDL3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
@@ -264,19 +264,20 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         {
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
+            mouse_pos /= bd->RenderScale();
             io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
             return true;
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
-            float wheel_x = -event->wheel.x;
-            float wheel_y = event->wheel.y;
+            ImVec2 wheel(-event->wheel.x, event->wheel.y);
     #ifdef __EMSCRIPTEN__
-            wheel_x /= 100.0f;
+            wheel.x /= 100.0f;
     #endif
             io.AddMouseSourceEvent(event->wheel.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
-            io.AddMouseWheelEvent(wheel_x, wheel_y);
+            wheel /= bd->RenderScale();
+            io.AddMouseWheelEvent(wheel.x, wheel.y);
             return true;
         }
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -488,11 +489,14 @@ static void ImGui_ImplSDL3_UpdateMouseData()
         if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-            float mouse_x_global, mouse_y_global;
+            ImVec2  mouse_global;
             int window_x, window_y;
-            SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
+            SDL_GetGlobalMouseState(&mouse_global.x, &mouse_global.y);
             SDL_GetWindowPosition(focused_window, &window_x, &window_y);
-            io.AddMousePosEvent(mouse_x_global - window_x, mouse_y_global - window_y);
+            mouse_global.x -= window_x;
+            mouse_global.y -= window_y;
+            mouse_global /= bd->RenderScale();
+            io.AddMousePosEvent(mouse_global.x, mouse_global.y);
         }
     }
 }
