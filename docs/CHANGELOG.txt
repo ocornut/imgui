@@ -97,6 +97,7 @@ Docking+Viewports Branch:
 
 - Backends: DX12: Changed swapchain scaling mode to DXGI_SCALING_NONE to reduce artifacts as
   queued frames aren't synchronized with platform window resizes. (#7152, #7153) [@SuperWangKai]
+- Windows: Fixed ImGuiCol_TitleBg/Active alpha being used for viewport-owned windows. (#7181) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------
