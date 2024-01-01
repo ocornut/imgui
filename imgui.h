@@ -2698,6 +2698,9 @@ struct ImGuiListClipper
 #define IMGUI_DEFINE_MATH_OPERATORS_IMPLEMENTED
 IM_MSVC_RUNTIME_CHECKS_OFF
 static inline ImVec2  operator*(const ImVec2& lhs, const float rhs)     { return ImVec2(lhs.x * rhs, lhs.y * rhs); }
+static inline ImVec2  operator*(const float lhs, const ImVec2& rhs)     { return ImVec2(rhs.x * lhs, rhs.y * lhs); }
+static inline ImVec2  operator+(const ImVec2& lhs, const float rhs)     { return ImVec2(lhs.x + rhs, lhs.y + rhs); }
+static inline ImVec2  operator+(const float lhs, const ImVec2& rhs)     { return ImVec2(rhs.x + lhs, rhs.y + lhs); }
 static inline ImVec2  operator/(const ImVec2& lhs, const float rhs)     { return ImVec2(lhs.x / rhs, lhs.y / rhs); }
 static inline ImVec2  operator+(const ImVec2& lhs, const ImVec2& rhs)   { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2  operator-(const ImVec2& lhs, const ImVec2& rhs)   { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
