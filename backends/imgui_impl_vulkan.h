@@ -71,6 +71,7 @@ struct ImGui_ImplVulkan_InitInfo
     // Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
+    VkDeviceSize                    MinAllocationSize;
 };
 
 // Called by user code
