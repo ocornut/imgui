@@ -96,6 +96,8 @@ Other changes:
   compiling in MBCS mode. (#7174) [@kimidaisuki22]
 - Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
   vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
+- Backends: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
+  "best practice" validation layer. (#7189, #4238) [@philae-ael]
 - Backends: WebGPU: Fixed wgpuRenderPassEncoderSetScissorRect() crash when rendering modal
   window's dimming layer, which has an unclipped value in ImDrawCmd::ClipRect. (#7191) [@aparis69]
 - Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
