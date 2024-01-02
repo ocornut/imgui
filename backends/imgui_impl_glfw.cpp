@@ -69,6 +69,8 @@
 //  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
+#include <map>
+#include <queue>
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_glfw.h"
@@ -497,21 +499,192 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
 }
 #endif
 
+namespace ImGui_ImplGlfw_Event
+{
+    struct Event {
+        enum TYPE {
+            WINDOW_FOCUS,
+            CURSOR_ENTER,
+            CURSOR_POS,
+            MOUSE_BUTTON,
+            SCROLL,
+            KEY,
+            CHAR,
+            WINDOW_CLOSE
+        };
+        TYPE type;
+        GLFWwindow *window;
+        union {
+            int focused;// used in WINDOW_FOCUS
+            int entered; // used in CURSOR_ENTER
+            struct {
+                double x;
+                double y;
+            } cursorPos; // used in CURSOR_POS
+            struct {
+                int button;
+                int action;
+                int mods;
+            } mouseButton; // used in MOUSE_BUTTON
+            struct {
+                double xoffset;
+                double yoffset;
+            } scroll; // used in SCROLL
+            struct {
+                int key;
+                int scancode;
+                int action;
+                int mods;
+            } key; // used in KEY
+            unsigned int c; // used in CHAR
+        };
+
+        void process() const {
+            switch (type) {
+                case WINDOW_FOCUS:
+                    ImGui_ImplGlfw_WindowFocusCallback(window, focused);
+                    break;
+                case CURSOR_ENTER:
+                    ImGui_ImplGlfw_CursorEnterCallback(window, entered);
+                    break;
+                case CURSOR_POS:
+                    ImGui_ImplGlfw_CursorPosCallback(window, cursorPos.x, cursorPos.y);
+                    break;
+                case MOUSE_BUTTON:
+                    ImGui_ImplGlfw_MouseButtonCallback(window, mouseButton.button, mouseButton.action, mouseButton.mods);
+                    break;
+                case SCROLL:
+                    ImGui_ImplGlfw_ScrollCallback(window, scroll.xoffset, scroll.yoffset);
+                    break;
+                case KEY:
+                    ImGui_ImplGlfw_KeyCallback(window, key.key, key.scancode, key.action, key.mods);
+                    break;
+                case CHAR:
+                    ImGui_ImplGlfw_CharCallback(window, c);
+                    break;
+                case WINDOW_CLOSE:
+                    // MAYBE NOT NEEDED
+                    break;
+            }
+        }
+    };
+
+    std::map<GLFWwindow *, ImGuiContext *> window2ctx;
+    std::map<ImGuiContext *, std::queue<Event>> evtQueue;
+
+    std::queue<Event> *GetQueue(ImGuiContext *ctx) {
+        auto it = evtQueue.find(ctx);
+        if (it == evtQueue.end()) {
+            auto *queue = new std::queue<Event>();
+            evtQueue[ctx] = *queue;
+            return queue;
+        } else {
+            return &it->second;
+        }
+    }
+
+    std::queue<Event> *GetQueue(GLFWwindow *window) {
+        auto it = window2ctx.find(window);
+        return it == window2ctx.end() ? nullptr : GetQueue(it->second);
+    }
+
+
+    void WindowFocusCallback(GLFWwindow *window, int focused) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::WINDOW_FOCUS, .window = window, .focused = focused};
+        queue->push(evt);
+    }
+
+    void CursorEnterCallback(GLFWwindow *window, int entered) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::CURSOR_ENTER, .window = window, .entered = entered};
+        queue->push(evt);
+    }
+
+    void CursorPosCallback(GLFWwindow *window, double xpos, double ypos) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::CURSOR_POS, .window = window, .cursorPos = {xpos, ypos}};
+        queue->push(evt);
+    }
+
+    void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::MOUSE_BUTTON, .window = window, .mouseButton = {button, action, mods}};
+        queue->push(evt);
+    }
+
+    void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::SCROLL, .window = window, .scroll = {xoffset, yoffset}};
+        queue->push(evt);
+    }
+
+    void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::KEY, .window = window, .key = {key, scancode, action, mods}};
+        queue->push(evt);
+    }
+
+    void CharCallback(GLFWwindow *window, unsigned int c) {
+        auto queue = GetQueue(window);
+        if (!queue) return;
+        Event evt{.type = Event::CHAR, .window = window, .c = c};
+        queue->push(evt);
+    }
+
+    void OnWindowClose(GLFWwindow *window) {
+        auto it = window2ctx.find(window);
+        if (it == window2ctx.end())return;
+        auto ctx = it->second;
+        window2ctx.erase(it);
+        auto it2 = evtQueue.find(ctx);
+        if (it2 == evtQueue.end())return;
+        evtQueue.erase(it2);
+    }
+
+
+    void InstallCallbacks(GLFWwindow *window) {
+        ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+        IM_ASSERT(bd->InstalledCallbacks == false && "Callbacks already installed!");
+        IM_ASSERT(bd->Window == window);
+
+        IM_ASSERT(window2ctx.find(window) == window2ctx.end() && "Window already registered an ImGui context");
+        auto ctx = ImGui::GetCurrentContext();
+        window2ctx[window] = ctx;
+        glfwSetWindowCloseCallback(window, OnWindowClose);
+        bd->PrevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, WindowFocusCallback);
+        bd->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, CursorEnterCallback);
+        bd->PrevUserCallbackCursorPos = glfwSetCursorPosCallback(window, CursorPosCallback);
+        bd->PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, MouseButtonCallback);
+        bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ScrollCallback);
+        bd->PrevUserCallbackKey = glfwSetKeyCallback(window, KeyCallback);
+        bd->PrevUserCallbackChar = glfwSetCharCallback(window, CharCallback);
+
+        bd->InstalledCallbacks = true;
+    }
+
+    void FlushEvent() {
+        auto ctx = ImGui::GetCurrentContext();
+        auto pair = evtQueue.find(ctx);
+        if (pair == evtQueue.end()) return;
+        auto &queue = pair->second;
+        while (!queue.empty()) {
+            auto evt = queue.front();
+            queue.pop();
+            evt.process();
+        }
+    }
+}
+
 void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
 {
-    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
-    IM_ASSERT(bd->InstalledCallbacks == false && "Callbacks already installed!");
-    IM_ASSERT(bd->Window == window);
-
-    bd->PrevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, ImGui_ImplGlfw_WindowFocusCallback);
-    bd->PrevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, ImGui_ImplGlfw_CursorEnterCallback);
-    bd->PrevUserCallbackCursorPos = glfwSetCursorPosCallback(window, ImGui_ImplGlfw_CursorPosCallback);
-    bd->PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
-    bd->PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-    bd->PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
-    bd->PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
-    bd->PrevUserCallbackMonitor = glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
-    bd->InstalledCallbacks = true;
+    ImGui_ImplGlfw_Event::InstallCallbacks(window);
 }
 
 void ImGui_ImplGlfw_RestoreCallbacks(GLFWwindow* window)
@@ -783,6 +956,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
 
 void ImGui_ImplGlfw_NewFrame()
 {
+    ImGui_ImplGlfw_Event::FlushEvent();
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplGlfw_InitForXXX()?");
