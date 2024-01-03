@@ -70,11 +70,16 @@ Other changes:
 - InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
   (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
   to allow passing through multiple widgets easily. (#3092, #5759, #787)
+- Drags, Sliders, Inputs: removed all attempts to filter non-numerical characters during text
+  editing. Invalid inputs not applied to value, visibly reverted after validation. (#6810, #7096)
+- Drags, Sliders, Inputs: removal of filter means that "nan" and "inf" values may be input. (#7096)
 - DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
   width computation to better distribute the error. (#7120, #7121) [@Nahor]
 - ColorEdit4: Layout tweaks for very small sizes. (#7120, #7121)
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
+- Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
+  grip without moving it.
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
 - Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
@@ -86,10 +91,20 @@ Other changes:
   like most printf implementations. (#7016, #3466, #6846) [@codefrog2002]
 - Misc: Renamed some defines in imstb_textedit.h to avoid conflicts when using unity/jumbo builds
   on a codebase where another copy of the library is used.
+- Misc: During shutdown, check that io.BackendPlatformUserData and io.BackendRendererUserData are NULL
+  in order to catch cases where backend was not shut down. (#7175)
 - Backends: GLFW, Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
   register canvas selector and auto-resize GLFW window. (#6751) [@Traveller23, @ypujante]
+- Backends: GLFW: Fixed Windows specific hooks to use Unicode version of WndProc even when
+  compiling in MBCS mode. (#7174) [@kimidaisuki22]
 - Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
   vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
+- Backends: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
+  "best practice" validation layer. (#7189, #4238) [@philae-ael]
+- Backends: Vulkan: Stopped creating command pools with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+  as we don't reset them.
+- Backends: WebGPU: Fixed wgpuRenderPassEncoderSetScissorRect() crash when rendering modal
+  window's dimming layer, which has an unclipped value in ImDrawCmd::ClipRect. (#7191) [@aparis69]
 - Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
   (#6751) [@Traveller23, @ypujante]
 
