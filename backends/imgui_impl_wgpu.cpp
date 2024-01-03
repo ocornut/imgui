@@ -450,6 +450,14 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
+				
+                // When opening a popup, the clip_min/clip_max are 1-pixel bigger which causes an issue in the wgpuRenderPassEncoderSetScissorRect later.
+                // Clamping to the framebuffer size does the trick.
+                ImVec2 FramebufferSize(draw_data->DisplaySize.x * draw_data->FramebufferScale.x, draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+                if (clip_min.x < 0) clip_min.x = 0;
+                if (clip_min.y < 0) clip_min.y = 0;
+                if (clip_max.x > FramebufferSize.x) clip_max.x = FramebufferSize.x;
+                if (clip_max.y > FramebufferSize.y) clip_max.y = FramebufferSize.y;
 
                 // Apply scissor/clipping rectangle, Draw
                 wgpuRenderPassEncoderSetScissorRect(pass_encoder, (uint32_t)clip_min.x, (uint32_t)clip_min.y, (uint32_t)(clip_max.x - clip_min.x), (uint32_t)(clip_max.y - clip_min.y));
