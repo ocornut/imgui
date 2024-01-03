@@ -98,6 +98,8 @@ Other changes:
   vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
 - Backends: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
   "best practice" validation layer. (#7189, #4238) [@philae-ael]
+- Backends: Vulkan: Stopped creating command pools with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+  as we don't reset them.
 - Backends: WebGPU: Fixed wgpuRenderPassEncoderSetScissorRect() crash when rendering modal
   window's dimming layer, which has an unclipped value in ImDrawCmd::ClipRect. (#7191) [@aparis69]
 - Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
