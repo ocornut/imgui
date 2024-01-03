@@ -90,61 +90,9 @@
 #pragma warning (disable: 4127) // condition expression is constant
 #endif
 
-// Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
-// [Please zero-clear before use!]
-struct ImGui_ImplVulkanH_FrameRenderBuffers
-{
-    VkDeviceMemory      VertexBufferMemory;
-    VkDeviceMemory      IndexBufferMemory;
-    VkDeviceSize        VertexBufferSize;
-    VkDeviceSize        IndexBufferSize;
-    VkBuffer            VertexBuffer;
-    VkBuffer            IndexBuffer;
-};
-
-// Each viewport will hold 1 ImGui_ImplVulkanH_WindowRenderBuffers
-// [Please zero-clear before use!]
-struct ImGui_ImplVulkanH_WindowRenderBuffers
-{
-    uint32_t            Index;
-    uint32_t            Count;
-    ImGui_ImplVulkanH_FrameRenderBuffers*   FrameRenderBuffers;
-};
-
-// Vulkan data
-struct ImGui_ImplVulkan_Data
-{
-    ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
-    VkRenderPass                RenderPass;
-    VkDeviceSize                BufferMemoryAlignment;
-    VkPipelineCreateFlags       PipelineCreateFlags;
-    VkDescriptorSetLayout       DescriptorSetLayout;
-    VkPipelineLayout            PipelineLayout;
-    VkPipeline                  Pipeline;
-    uint32_t                    Subpass;
-    VkShaderModule              ShaderModuleVert;
-    VkShaderModule              ShaderModuleFrag;
-
-    // Font data
-    VkSampler                   FontSampler;
-    VkDeviceMemory              FontMemory;
-    VkImage                     FontImage;
-    VkImageView                 FontView;
-    VkDescriptorSet             FontDescriptorSet;
-    VkCommandPool               FontCommandPool;
-    VkCommandBuffer             FontCommandBuffer;
-
-    // Render buffers for main window
-    ImGui_ImplVulkanH_WindowRenderBuffers MainWindowRenderBuffers;
-
-    ImGui_ImplVulkan_Data()
-    {
-        memset((void*)this, 0, sizeof(*this));
-        BufferMemoryAlignment = 256;
-    }
-};
-
 // Forward Declarations
+struct ImGui_ImplVulkanH_FrameRenderBuffers;
+struct ImGui_ImplVulkanH_WindowRenderBuffers;
 bool ImGui_ImplVulkan_CreateDeviceObjects();
 void ImGui_ImplVulkan_DestroyDeviceObjects();
 void ImGui_ImplVulkanH_DestroyFrame(VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
@@ -240,11 +188,65 @@ static PFN_vkCmdBeginRenderingKHR   ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR;
 static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
 #endif
 
+// Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
+// [Please zero-clear before use!]
+struct ImGui_ImplVulkanH_FrameRenderBuffers
+{
+    VkDeviceMemory      VertexBufferMemory;
+    VkDeviceMemory      IndexBufferMemory;
+    VkDeviceSize        VertexBufferSize;
+    VkDeviceSize        IndexBufferSize;
+    VkBuffer            VertexBuffer;
+    VkBuffer            IndexBuffer;
+};
+
+// Each viewport will hold 1 ImGui_ImplVulkanH_WindowRenderBuffers
+// [Please zero-clear before use!]
+struct ImGui_ImplVulkanH_WindowRenderBuffers
+{
+    uint32_t            Index;
+    uint32_t            Count;
+    ImGui_ImplVulkanH_FrameRenderBuffers* FrameRenderBuffers;
+};
+
+// Vulkan data
+struct ImGui_ImplVulkan_Data
+{
+    ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
+    VkRenderPass                RenderPass;
+    VkDeviceSize                BufferMemoryAlignment;
+    VkPipelineCreateFlags       PipelineCreateFlags;
+    VkDescriptorSetLayout       DescriptorSetLayout;
+    VkPipelineLayout            PipelineLayout;
+    VkPipeline                  Pipeline;
+    uint32_t                    Subpass;
+    VkShaderModule              ShaderModuleVert;
+    VkShaderModule              ShaderModuleFrag;
+
+    // Font data
+    VkSampler                   FontSampler;
+    VkDeviceMemory              FontMemory;
+    VkImage                     FontImage;
+    VkImageView                 FontView;
+    VkDescriptorSet             FontDescriptorSet;
+    VkCommandPool               FontCommandPool;
+    VkCommandBuffer             FontCommandBuffer;
+
+    // Render buffers for main window
+    ImGui_ImplVulkanH_WindowRenderBuffers MainWindowRenderBuffers;
+
+    ImGui_ImplVulkan_Data()
+    {
+        memset((void*)this, 0, sizeof(*this));
+        BufferMemoryAlignment = 256;
+    }
+};
+
 //-----------------------------------------------------------------------------
 // SHADERS
 //-----------------------------------------------------------------------------
 
-// glsl_shader.vert, compiled with:
+// backends/vulkan/glsl_shader.vert, compiled with:
 // # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
 /*
 #version 450 core
@@ -308,7 +310,7 @@ static uint32_t __glsl_shader_vert_spv[] =
     0x0000002d,0x0000002c,0x000100fd,0x00010038
 };
 
-// glsl_shader.frag, compiled with:
+// backends/vulkan/glsl_shader.frag, compiled with:
 // # glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
 /*
 #version 450 core
