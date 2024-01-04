@@ -9737,6 +9737,7 @@ struct ExampleAssetsBrowser
 
                 ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
+                ImGui::SameLine(); HelpMarker("Use CTRL+Wheel to zoom");
                 ImGui::SliderInt("Icon Spacing", &IconSpacing, 0, 32);
                 ImGui::SliderInt("Icon Hit Spacing", &IconHitSpacing, 0, 32);
                 ImGui::Checkbox("Stretch Spacing", &StretchSpacing);

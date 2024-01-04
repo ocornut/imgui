@@ -7180,7 +7180,7 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
         bs->Window = window;
         bs->IsStarting = false;
         SetActiveID(bs->ID, window);
-        if (bs->IsStartedFromVoid && (bs->KeyMods & ImGuiMod_Shift) == 0)
+        if (bs->IsStartedFromVoid && (bs->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             bs->RequestClear = true;
     }
     else if ((bs->IsStarting || bs->IsActive) && g.IO.MouseDown[0] == false)
