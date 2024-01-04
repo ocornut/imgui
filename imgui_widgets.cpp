@@ -7303,6 +7303,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
     ms->KeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
+    if (flags & ImGuiMultiSelectFlags_NoRangeSelect)
+        ms->KeyMods &= ~ImGuiMod_Shift;
 
     // Bind storage
     ImGuiMultiSelectState* storage = g.MultiSelectStorage.GetOrAddByKey(id);
@@ -7416,7 +7418,9 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
-    const bool scope_hovered = (ms->Flags & ImGuiMultiSelectFlags_ScopeRect) ? scope_rect.Contains(g.IO.MousePos) : IsWindowHovered();
+    bool scope_hovered = IsWindowHovered();
+    if (scope_hovered && (ms->Flags & ImGuiMultiSelectFlags_ScopeRect))
+        scope_hovered &= scope_rect.Contains(g.IO.MousePos);
     if (scope_hovered && g.HoveredId == 0 && g.ActiveId == 0)
     {
         if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
