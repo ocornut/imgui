@@ -3086,7 +3086,7 @@ static void ShowDemoWindowMultiSelect()
 
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
-                if (ms_io->RangeSrcItem > 0)
+                if (ms_io->RangeSrcItem != -1)
                     clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
                 while (clipper.Step())
                 {
@@ -3210,6 +3210,7 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
                 flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
 
             for (int selection_scope_n = 0; selection_scope_n < SCOPES_COUNT; selection_scope_n++)
             {
@@ -3336,7 +3337,7 @@ static void ShowDemoWindowMultiSelect()
                     clipper.Begin(items.Size);
                     if (item_curr_idx_to_focus != -1)
                         clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped.
-                    if (ms_io->RangeSrcItem > 0)
+                    if (ms_io->RangeSrcItem != -1)
                         clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
                 }
 

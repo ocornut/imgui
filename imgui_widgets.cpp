@@ -7176,6 +7176,7 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
     // IsStarting is set by MultiSelectItemFooter() when considering a possible box-select. We validate it here and lock geometry.
     if (bs->IsStarting && IsMouseDragPastThreshold(0))
     {
+        IMGUI_DEBUG_LOG_SELECTION("[selection] BeginBoxSelect() 0X%08X: Started.\n", box_select_id);
         bs->IsActive = true;
         bs->Window = window;
         bs->IsStarting = false;
@@ -7187,7 +7188,10 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
     {
         bs->IsActive = bs->IsStarting = false;
         if (g.ActiveId == bs->ID)
+        {
+            IMGUI_DEBUG_LOG_SELECTION("[selection] BeginBoxSelect() 0X%08X: Ended.\n", box_select_id);
             ClearActiveID();
+        }
         bs->ID = 0;
     }
     if (!bs->IsActive)
@@ -7424,8 +7428,13 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     if (scope_hovered && g.HoveredId == 0 && g.ActiveId == 0)
     {
         if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
+        {
             if (!g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && g.IO.MouseClickedCount[0] == 1)
                 BoxSelectStartDrag(ms->BoxSelectId, ImGuiSelectionUserData_Invalid);
+            SetHoveredID(ms->BoxSelectId);
+            if (ms->Flags & ImGuiMultiSelectFlags_ScopeRect)
+                SetNavID(0, ImGuiNavLayer_Main, ms->FocusScopeId, ImRect(g.IO.MousePos, g.IO.MousePos)); // Automatically switch FocusScope for initial click from outside to box-select.
+        }
 
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
