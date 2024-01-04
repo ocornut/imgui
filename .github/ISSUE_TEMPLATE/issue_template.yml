@@ -16,6 +16,8 @@ body:
         - I have read [Contributing Guidelines -> General Advices](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md#getting-started--general-advice).
         - I have read [Contributing Guidelines -> How to open an Issue](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md#how-to-open-an-issue).
         - I have searched [Github Issues and PR](https://github.com/ocornut/imgui/issues?q=) for discussion of similar topics.
+
+        ----
   - type: input
     id: specs_version
     attributes:
@@ -62,7 +64,7 @@ body:
     attributes:
       label: "Full config/build information:"
       placeholder: |
-        "If you can run, you may go to 'Demo->Tools->About Dear ImGui->Config/Build Info' to obtain detailed information that you can paste here."
+        (If you can run, you may go to 'Demo->Tools->About Dear ImGui->Config/Build Info' to obtain detailed information that you can paste here)
     validations:
       required: false
   - type: textarea
