@@ -42,8 +42,6 @@ HOW TO UPDATE?
 
 Breaking changes:
 
-- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
-  stack when number of components is 1. [#7095] [@Nahor]
 - imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81.
   Prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
 - Removed CalcListClipping() marked obsolete in 1.86. (#3841)
@@ -72,12 +70,15 @@ Other changes:
 - InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
   (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
   to allow passing through multiple widgets easily. (#3092, #5759, #787)
+- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
+  stack when number of components is 1. [#7095] [@Nahor]
 - Drags, Sliders, Inputs: removed all attempts to filter non-numerical characters during text
   editing. Invalid inputs not applied to value, visibly reverted after validation. (#6810, #7096)
 - Drags, Sliders, Inputs: removal of filter means that "nan" and "inf" values may be input. (#7096)
 - DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
   width computation to better distribute the error. (#7120, #7121) [@Nahor]
-- ColorEdit4: Layout tweaks for very small sizes. (#7120, #7121)
+- ColorEdit: Layout tweaks for very small sizes. (#7120, #7121)
+- ColorPicker: Fixed saturation/value cursor radius not scaling properly.
 - Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
