@@ -426,7 +426,7 @@ Finally, you may call `ImGui::ShowMetricsWindow()` to explore/visualize/understa
 
 ### Q: How can I use maths operators with ImVec2?
 
-We do not export maths operators by default in imgui.h in order to not conflict with the use of your own maths types and maths operators. As a convenience, you may use `#defne IMGUI_DEFINE_MATH_OPERATORS` + `#include "imgui.h"` to access our basic maths operators.
+We do not export maths operators by default in imgui.h in order to not conflict with the use of your own maths types and maths operators. As a convenience, you may use `#define IMGUI_DEFINE_MATH_OPERATORS` + `#include "imgui.h"` to access our basic maths operators.
 
 ##### [Return to Index](#index)
 
