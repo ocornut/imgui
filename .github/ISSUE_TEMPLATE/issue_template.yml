@@ -28,35 +28,19 @@ body:
     validations:
       required: true
   - type: input
-    id: specs_backend_platform
+    id: specs_backend
     attributes:
-      label: "Platform back-end:"
-      description: (or specify if using a custom engine/back-end)
-      value: "imgui_impl_XXX.cpp"
-      placeholder: "imgui_impl_XXX.cpp or n/a"
+      label: "Back-ends:"
+      description: (or specify when using custom engine/back-ends)
+      value: "imgui_impl_XXX.cpp + imgui_impl_XXX.cpp"
+      placeholder: "imgui_impl_XXX.cpp  + imgui_impl_XXX.cpp or n/a"
     validations:
       required: true
   - type: input
-    id: specs_backend_rendering
+    id: specs_compiler_os
     attributes:
-      label: "Rendering back-end:"
-      description: (or specify if using a custom engine/back-end)
-      value: "imgui_impl_XXX.cpp"
-      placeholder: "imgui_impl_XXX.cpp or n/a"
-    validations:
-      required: true
-  - type: input
-    id: specs_compiler
-    attributes:
-      label: "Compiler:"
-      placeholder: "e.g. MSVC 2022, GCC, Clang 12.0 etc."
-    validations:
-      required: true
-  - type: input
-    id: specs_os
-    attributes:
-      label: "Operating System:"
-      placeholder: "e.g. Windows 11, macOS, Android, GNU/Linux etc."
+      label: "Compiler, OS:"
+      placeholder: "e.g. Windows 11 + MSVC 2022, macOS + Clang 12, Linux + GCC etc."
     validations:
       required: true
   - type: textarea
