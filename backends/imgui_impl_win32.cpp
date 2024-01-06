@@ -531,6 +531,7 @@ static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
         case VK_F24: return ImGuiKey_F24;
         case VK_BROWSER_BACK: return ImGuiKey_AppBack;
         case VK_BROWSER_FORWARD: return ImGuiKey_AppForward;
+        case VK_OEM_8: return ImGuiKey_ExtraISOKey;
         default: return ImGuiKey_None;
     }
 }

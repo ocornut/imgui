@@ -1347,6 +1347,7 @@ enum ImGuiKey : int
     ImGuiKey_Backslash,         // \ (this text inhibit multiline comment caused by backslash)
     ImGuiKey_RightBracket,      // ]
     ImGuiKey_GraveAccent,       // `
+    ImGuiKey_ExtraISOKey,       // Extra key on an ISO-type keyboard, not present on US layout keyboards, and not necessarily reported by all backends
     ImGuiKey_CapsLock,
     ImGuiKey_ScrollLock,
     ImGuiKey_NumLock,
