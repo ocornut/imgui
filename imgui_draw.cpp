@@ -8,7 +8,7 @@ Index of this file:
 // [SECTION] STB libraries implementation
 // [SECTION] Style functions
 // [SECTION] ImDrawList
-// [SECTION] ImDrawList concave polygon fill
+// [SECTION] ImTriangulator, ImDrawList concave polygon fill
 // [SECTION] ImDrawListSplitter
 // [SECTION] ImDrawData
 // [SECTION] Helpers ShadeVertsXXX functions
@@ -1702,200 +1702,130 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImDrawList concave polygon fill
+// [SECTION] ImTriangulator, ImDrawList concave polygon fill
+//-----------------------------------------------------------------------------
+// Triangulate concave polygons. Based on "Triangulation by Ear Clipping" paper, O(N^2) complexity.
+// Reference: https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
+// Provided as a convenience for user but not used by main library.
+//-----------------------------------------------------------------------------
+// - ImTriangulator [Internal]
+// - AddConcavePolyFilled()
 //-----------------------------------------------------------------------------
 
-static bool ImPathIsConvex(const ImVec2& a, const ImVec2& b, const ImVec2& c)
+enum ImTriangulatorNodeType
 {
-    const float dx0 = b.x - a.x;
-    const float dy0 = b.y - a.y;
+    ImTriangulatorNodeType_Convex,
+    ImTriangulatorNodeType_Ear,
+    ImTriangulatorNodeType_Reflex
+};
 
-    const float dx1 = c.x - b.x;
-    const float dy1 = c.y - b.y;
+struct ImTriangulatorNode
+{
+    ImTriangulatorNodeType  Type;
+    int                     Index;
+    ImVec2                  Pos;
+    ImTriangulatorNode*     Next;
+    ImTriangulatorNode*     Prev;
 
-    return dx0 * dy1 - dx1 * dy0 > 0.0f;
-}
+    void    Unlink()        { Next->Prev = Prev; Prev->Next = Next; }
+};
+
+struct ImTriangulatorNodeSpan
+{
+    ImTriangulatorNode**    Data = NULL;
+    int                     Size = 0;
+
+    void    push_back(ImTriangulatorNode* node) { Data[Size++] = node; }
+    void    find_erase_unsorted(int idx)        { for (int i = Size - 1; i >= 0; i--) if (Data[i]->Index == idx) { Data[i] = Data[Size - 1]; Size--; return; } }
+};
 
 struct ImTriangulator
 {
-    struct Triangle { int Index[3]; };
+    static int EstimateTriangleCount(int points_count)      { return (points_count < 3) ? 0 : points_count - 2; }
+    static int EstimateScratchBufferSize(int points_count)  { return sizeof(ImTriangulatorNode) * points_count + sizeof(ImTriangulatorNode*) * points_count * 2; }
 
-    static int EstimateTriangleCount(int points_count);
-    static int EstimateScratchBufferSize(int points_count);
+    void    Init(const ImVec2* points, int points_count, void* scratch_buffer);
+    void    GetNextTriangle(unsigned int out_triangle[3]);     // Return relative indexes for next triangle
 
-    ImTriangulator(const ImVec2* points, int points_count, void* scratch_buffer);
-    ImTriangulator(const ImVec2* points, int points_count, int points_stride_bytes, void* scratch_buffer);
+    // Internal functions
+    void    BuildNodes(const ImVec2* points, int points_count);
+    void    BuildReflexes();
+    void    BuildEars();
+    void    FlipNodeList();
+    bool    IsEar(int i0, int i1, int i2, const ImVec2& v0, const ImVec2& v1, const ImVec2& v2) const;
+    void    ReclassifyNode(ImTriangulatorNode* node);
 
-    bool HasNext() const;
-
-    Triangle Next();
-
-private:
-    enum Type { Convex, Ear, Reflex };
-
-    struct Node;
-    struct alignas(void*) Span
-    {
-        Node**  Data = nullptr;
-        int     Size = 0;
-
-        void PushBack(Node* node);
-        void RemoveByIndex(int index);
-    };
-
-    void BuildNodes();
-    void BuildReflexes();
-    void BuildEars();
-    void FlipNodeList();
-    bool IsEar(const Node* node, int i0, int i1, int i2, const ImVec2& v0, const ImVec2& v1, const ImVec2& v2) const;
-    Type ClassifyNode(const Node* node) const;
-    void ReclasifyNode(Node* node);
-
-    const ImVec2*   _Points = nullptr;
-    int             _PointsCount = 0;
-    int             _PointsStrideBytes = 0;
-    int             _TrianglesLeft = 0;
-
-    Node*           _Nodes = nullptr;
-    Span            _Ears;
-    Span            _Reflexes;
+    // Internal members
+    int                     _TrianglesLeft = 0;
+    ImTriangulatorNode*     _Nodes = NULL;
+    ImTriangulatorNodeSpan  _Ears;
+    ImTriangulatorNodeSpan  _Reflexes;
 };
 
-struct alignas(void*) ImTriangulator::Node
+// Distribute storage for nodes, ears and reflexes.
+// FIXME-OPT: if everything is convex, we could report it to caller and let it switch to an convex renderer
+// (this would require first building reflexes to bail to convex if empty, without even building nodes)
+void ImTriangulator::Init(const ImVec2* points, int points_count, void* scratch_buffer)
 {
-    Type          Type  = Convex;
-    int           Index = 0;
-    const ImVec2* Point = nullptr;
-    Node*         Next  = nullptr;
-    Node*         Prev  = nullptr;
-
-    void Unlink()
-    {
-        Next->Prev = Prev;
-        Prev->Next = Next;
-    }
-};
-
-int ImTriangulator::EstimateTriangleCount(int points_count)
-{
-    if (points_count < 3)
-        return 0;
-
-    return points_count - 2;
-}
-
-int ImTriangulator::EstimateScratchBufferSize(int points_count)
-{
-    return sizeof(Node*) * points_count * 2 + sizeof(Node) * points_count;
-}
-
-ImTriangulator::ImTriangulator(const ImVec2* points, int points_count, void* scratch_buffer)
-    : ImTriangulator(points, points_count, sizeof(ImVec2), scratch_buffer)
-{
-}
-
-ImTriangulator::ImTriangulator(const ImVec2* points, int points_count, int points_stride_bytes, void* scratch_buffer)
-    : _Points(points)
-    , _PointsCount(points_count)
-    , _PointsStrideBytes(points_stride_bytes)
-    , _TrianglesLeft(EstimateTriangleCount(points_count))
-{
-    IM_ASSERT(scratch_buffer != nullptr && "Must provide scratch buffer.");
-    IM_ASSERT(points_count >= 3);
-
-    // Disable triangulator if scratch buffer isn't provided.
-    if (scratch_buffer == nullptr)
-    {
-        _TrianglesLeft = 0;
-        points_count = 0;
-        return;
-    }
-
-    // Distribute storage for nodes, ears and reflexes.
-    _Nodes         = reinterpret_cast<Node*>(scratch_buffer);
-    _Ears.Data     = reinterpret_cast<Node**>(_Nodes + points_count);
-    _Reflexes.Data = _Ears.Data + points_count;
-
-    BuildNodes();
+    IM_ASSERT(scratch_buffer != NULL && points_count >= 3);
+    _TrianglesLeft = EstimateTriangleCount(points_count);
+    _Nodes         = (ImTriangulatorNode*)scratch_buffer;                          // points_count x Node
+    _Ears.Data     = (ImTriangulatorNode**)(_Nodes + points_count);                // points_count x Node*
+    _Reflexes.Data = (ImTriangulatorNode**)(_Nodes + points_count) + points_count; // points_count x Node*
+    BuildNodes(points, points_count);
     BuildReflexes();
     BuildEars();
 }
 
-void ImTriangulator::BuildNodes()
+void ImTriangulator::BuildNodes(const ImVec2* points, int points_count)
 {
-# define IM_POINT_PTR(idx)     reinterpret_cast<const ImVec2*>(reinterpret_cast<const ImU8*>(_Points) + (idx) * _PointsStrideBytes)
-
-    for (int i = 0; i < _PointsCount; ++i)
+    for (int i = 0; i < points_count; i++)
     {
-        _Nodes[i].Type  = Convex;
-        _Nodes[i].Index = static_cast<int>(i);
-        _Nodes[i].Point = IM_POINT_PTR(i);
-        _Nodes[i].Next  = _Nodes + i + 1;
-        _Nodes[i].Prev  = _Nodes + i - 1;
+        _Nodes[i].Type = ImTriangulatorNodeType_Convex;
+        _Nodes[i].Index = i;
+        _Nodes[i].Pos = points[i];
+        _Nodes[i].Next = _Nodes + i + 1;
+        _Nodes[i].Prev = _Nodes + i - 1;
     }
-    _Nodes[0].Prev  = _Nodes + _PointsCount - 1;
-    _Nodes[_PointsCount - 1].Next = _Nodes;
-
-# undef IM_POINT_PTR
+    _Nodes[0].Prev = _Nodes + points_count - 1;
+    _Nodes[points_count - 1].Next = _Nodes;
 }
 
 void ImTriangulator::BuildReflexes()
 {
-    Node* node = _Nodes;
-    for (int i = 0; i < _TrianglesLeft; ++i, node = node->Next)
+    ImTriangulatorNode* n1 = _Nodes;
+    for (int i = _TrianglesLeft; i >= 0; i--, n1 = n1->Next)
     {
-        const ImVec2& v0 = *node->Prev->Point;
-        const ImVec2& v1 = *node->Point;
-        const ImVec2& v2 = *node->Next->Point;
-
-        if (ImPathIsConvex(v0, v1, v2))
+        if (ImTriangleIsClockwise(n1->Prev->Pos, n1->Pos, n1->Next->Pos))
             continue;
-
-        node->Type = Reflex;
-        _Reflexes.PushBack(node);
+        n1->Type = ImTriangulatorNodeType_Reflex;
+        _Reflexes.push_back(n1);
     }
 }
 
 void ImTriangulator::BuildEars()
 {
-    Node* node = _Nodes;
-    for (int i = 0; i < _TrianglesLeft; ++i, node = node->Next)
+    ImTriangulatorNode* n1 = _Nodes;
+    for (int i = _TrianglesLeft; i >= 0; i--, n1 = n1->Next)
     {
-        if (node->Type != Convex)
+        if (n1->Type != ImTriangulatorNodeType_Convex)
             continue;
-
-        const int i0 = node->Prev->Index;
-        const int i1 = node->Index;
-        const int i2 = node->Next->Index;
-
-        const ImVec2& v0 = *node->Prev->Point;
-        const ImVec2& v1 = *node->Point;
-        const ImVec2& v2 = *node->Next->Point;
-
-        if (!IsEar(node, i0, i1, i2, v0, v1, v2))
+        if (!IsEar(n1->Prev->Index, n1->Index, n1->Next->Index, n1->Prev->Pos, n1->Pos, n1->Next->Pos))
             continue;
-
-        node->Type = Ear;
-        _Ears.PushBack(node);
+        n1->Type = ImTriangulatorNodeType_Ear;
+        _Ears.push_back(n1);
     }
 }
 
-bool ImTriangulator::HasNext() const
+void ImTriangulator::GetNextTriangle(unsigned int out_triangle[3])
 {
-    return _TrianglesLeft > 0;
-}
-
-ImTriangulator::Triangle ImTriangulator::Next()
-{
-    IM_ASSERT(_TrianglesLeft > 0 && "Do not call Next() until HasNext() return true");
-
     if (_Ears.Size == 0)
     {
         FlipNodeList();
 
-        Node* node = _Nodes;
-        for (int i = 0; i < _TrianglesLeft; ++i, node = node->Next)
-            node->Type = Convex;
+        ImTriangulatorNode* node = _Nodes;
+        for (int i = _TrianglesLeft; i >= 0; i--, node = node->Next)
+            node->Type = ImTriangulatorNodeType_Convex;
         _Reflexes.Size = 0;
         BuildReflexes();
         BuildEars();
@@ -1903,59 +1833,34 @@ ImTriangulator::Triangle ImTriangulator::Next()
         // If we still don't have ears, it means geometry is degenerated.
         if (_Ears.Size == 0)
         {
-            IM_ASSERT(_TrianglesLeft > 0 && "Geometry is degenerated");
-
             // Return first triangle available, mimicking the behavior of convex fill.
+            IM_ASSERT(_TrianglesLeft > 0); // Geometry is degenerated
             _Ears.Data[0] = _Nodes;
             _Ears.Size    = 1;
         }
     }
 
-    Node* ear = _Ears.Data[--_Ears.Size];
-
-    const int i0 = ear->Prev->Index;
-    const int i1 = ear->Index;
-    const int i2 = ear->Next->Index;
+    ImTriangulatorNode* ear = _Ears.Data[--_Ears.Size];
+    out_triangle[0] = ear->Prev->Index;
+    out_triangle[1] = ear->Index;
+    out_triangle[2] = ear->Next->Index;
 
     ear->Unlink();
     if (ear == _Nodes)
         _Nodes = ear->Next;
 
-    ReclasifyNode(ear->Prev);
-    ReclasifyNode(ear->Next);
-
-    --_TrianglesLeft;
-
-    return Triangle{ { i0, i1, i2 } };
-}
-
-void ImTriangulator::Span::PushBack(Node* node)
-{
-    Data[Size++] = node;
-}
-
-void ImTriangulator::Span::RemoveByIndex(int index)
-{
-    for (int i = Size - 1; i >= 0; --i)
-    {
-        if (Data[i]->Index == index)
-        {
-            Data[i] = Data[Size - 1];
-            --Size;
-            break;
-        }
-    }
+    ReclassifyNode(ear->Prev);
+    ReclassifyNode(ear->Next);
+    _TrianglesLeft--;
 }
 
 void ImTriangulator::FlipNodeList()
 {
-    Node* prev = _Nodes;
-    Node* temp = _Nodes;
-    Node* current = _Nodes->Next;
-
+    ImTriangulatorNode* prev = _Nodes;
+    ImTriangulatorNode* temp = _Nodes;
+    ImTriangulatorNode* current = _Nodes->Next;
     prev->Next = prev;
     prev->Prev = prev;
-
     while (current != _Nodes)
     {
         temp = current->Next;
@@ -1968,97 +1873,69 @@ void ImTriangulator::FlipNodeList()
         prev = current;
         current = temp;
     }
-
     _Nodes = prev;
 }
 
-bool ImTriangulator::IsEar(const Node* node, int i0, int i1, int i2, const ImVec2& v0, const ImVec2& v1, const ImVec2& v2) const
+// A triangle is an ear is no other vertex is inside it. We can test reflexes vertices only (see reference algorithm)
+bool ImTriangulator::IsEar(int i0, int i1, int i2, const ImVec2& v0, const ImVec2& v1, const ImVec2& v2) const
 {
-    for (int i = 0; i < _Reflexes.Size; ++i)
+    ImTriangulatorNode** p_end = _Reflexes.Data + _Reflexes.Size;
+    for (ImTriangulatorNode** p = _Reflexes.Data; p < p_end; p++)
     {
-        Node* reflex = _Reflexes.Data[i];
-
-        if (reflex->Index == i0 || reflex->Index == i1 || reflex->Index == i2)
-            continue;
-
-        if (ImTriangleContainsPoint(v0, v1, v2, *reflex->Point))
-            return false;
+        ImTriangulatorNode* reflex = *p;
+        if (reflex->Index != i0 && reflex->Index != i1 && reflex->Index != i2)
+            if (ImTriangleContainsPoint(v0, v1, v2, reflex->Pos))
+                return false;
     }
-
     return true;
 }
 
-ImTriangulator::Type ImTriangulator::ClassifyNode(const Node* node) const
+void ImTriangulator::ReclassifyNode(ImTriangulatorNode* n1)
 {
-    const int i0 = node->Prev->Index;
-    const int i1 = node->Index;
-    const int i2 = node->Next->Index;
-
-    const ImVec2& v0 = *node->Prev->Point;
-    const ImVec2& v1 = *node->Point;
-    const ImVec2& v2 = *node->Next->Point;
-
-    if (ImPathIsConvex(v0, v1, v2))
-    {
-        if (IsEar(node, i0, i1, i2, v0, v1, v2))
-            return Ear;
-        else
-            return Convex;
-    }
+    // Classify node
+    ImTriangulatorNodeType type;
+    const ImTriangulatorNode* n0 = n1->Prev;
+    const ImTriangulatorNode* n2 = n1->Next;
+    if (!ImTriangleIsClockwise(n0->Pos, n1->Pos, n2->Pos))
+        type = ImTriangulatorNodeType_Reflex;
+    else if (IsEar(n0->Index, n1->Index, n2->Index, n0->Pos, n1->Pos, n2->Pos))
+        type = ImTriangulatorNodeType_Ear;
     else
-    {
-        return Reflex;
-    }
-}
+        type = ImTriangulatorNodeType_Convex;
 
-void ImTriangulator::ReclasifyNode(Node* node)
-{
-    Type type = ClassifyNode(node);
-
-    if (type == node->Type)
+    // Update lists when a type changes
+    if (type == n1->Type)
         return;
-
-    if (node->Type == Reflex)
-        _Reflexes.RemoveByIndex(node->Index);
-    else if (node->Type == Ear)
-        _Ears.RemoveByIndex(node->Index);
-
-    if (type == Reflex)
-        _Reflexes.PushBack(node);
-    else if (type == Ear)
-        _Ears.PushBack(node);
-
-    node->Type = type;
+    if (n1->Type == ImTriangulatorNodeType_Reflex)
+        _Reflexes.find_erase_unsorted(n1->Index);
+    else if (n1->Type == ImTriangulatorNodeType_Ear)
+        _Ears.find_erase_unsorted(n1->Index);
+    if (type == ImTriangulatorNodeType_Reflex)
+        _Reflexes.push_back(n1);
+    else if (type == ImTriangulatorNodeType_Ear)
+        _Ears.push_back(n1);
+    n1->Type = type;
 }
 
+// Use ear-clipping algorithm to triangulate a simple polygon (no self-interaction, no holes).
+// (Reminder: we don't perform any coarse clipping/culling in ImDrawList layer!
+// It is up to caller to ensure not making costly calls that will be outside of visible area.
+// As concave fill is noticeably more expensive than other primitives, be mindful of this...
+// Caller can build AABB of points, and avoid filling if 'draw_list->_CmdHeader.ClipRect.Overlays(points_bb) == false')
 void ImDrawList::AddConcavePolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
     if (points_count < 3 || (col & IM_COL32_A_MASK) == 0)
         return;
 
-    // coarse culling against viewport to avoid processing triangles outside of the visible area
-    ImVec2 bounds_min = ImVec2(FLT_MAX, FLT_MAX);
-    ImVec2 bounds_max = ImVec2(-FLT_MAX, -FLT_MAX);
-
-    for (int i = 0; i < points_count; ++i)
-    {
-        const ImVec2& pos = points[i];
-
-        bounds_min = ImMin(bounds_min, pos);
-        bounds_max = ImMax(bounds_max, pos);
-    }
-
-    if (!ImRect(_ClipRectStack.back()).Overlaps(ImRect(bounds_min, bounds_max)))
-        return;
-
     const ImVec2 uv = _Data->TexUvWhitePixel;
-
+    ImTriangulator triangulator;
+    unsigned int triangle[3];
     if (Flags & ImDrawListFlags_AntiAliasedFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = _FringeScale;
         const ImU32 col_trans = col & ~IM_COL32_A_MASK;
-        const int idx_count = (points_count - 2)*3 + points_count * 6;
+        const int idx_count = (points_count - 2) * 3 + points_count * 6;
         const int vtx_count = (points_count * 2);
         PrimReserve(idx_count, vtx_count);
 
@@ -2067,11 +1944,11 @@ void ImDrawList::AddConcavePolyFilled(const ImVec2* points, const int points_cou
         unsigned int vtx_outer_idx = _VtxCurrentIdx + 1;
 
         _Data->TempBuffer.reserve_discard((ImTriangulator::EstimateScratchBufferSize(points_count) + sizeof(ImVec2)) / sizeof(ImVec2));
-        ImTriangulator triangulator = ImTriangulator(points, points_count, _Data->TempBuffer.Data);
-        while (triangulator.HasNext())
+        triangulator.Init(points, points_count, _Data->TempBuffer.Data);
+        while (triangulator._TrianglesLeft > 0)
         {
-            ImTriangulator::Triangle triangle = triangulator.Next();
-            _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx + (triangle.Index[0] << 1)); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + (triangle.Index[1] << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + (triangle.Index[2] << 1));
+            triangulator.GetNextTriangle(triangle);
+            _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx + (triangle[0] << 1)); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + (triangle[1] << 1)); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + (triangle[2] << 1));
             _IdxWritePtr += 3;
         }
 
@@ -2115,7 +1992,7 @@ void ImDrawList::AddConcavePolyFilled(const ImVec2* points, const int points_cou
     else
     {
         // Non Anti-aliased Fill
-        const int idx_count = (points_count - 2)*3;
+        const int idx_count = (points_count - 2) * 3;
         const int vtx_count = points_count;
         PrimReserve(idx_count, vtx_count);
         for (int i = 0; i < vtx_count; i++)
@@ -2124,11 +2001,11 @@ void ImDrawList::AddConcavePolyFilled(const ImVec2* points, const int points_cou
             _VtxWritePtr++;
         }
         _Data->TempBuffer.reserve_discard((ImTriangulator::EstimateScratchBufferSize(points_count) + sizeof(ImVec2)) / sizeof(ImVec2));
-        ImTriangulator triangulator = ImTriangulator(points, points_count, _Data->TempBuffer.Data);
-        while (triangulator.HasNext())
+        triangulator.Init(points, points_count, _Data->TempBuffer.Data);
+        while (triangulator._TrianglesLeft > 0)
         {
-            ImTriangulator::Triangle triangle = triangulator.Next();
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + triangle.Index[0]); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + triangle.Index[1]); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx + triangle.Index[2]);
+            triangulator.GetNextTriangle(triangle);
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + triangle[0]); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + triangle[1]); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx + triangle[2]);
             _IdxWritePtr += 3;
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
