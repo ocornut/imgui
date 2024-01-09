@@ -9405,7 +9405,7 @@ static void ImGui::UpdateKeyboardInputs()
         key_data->DownDuration = key_data->Down ? (key_data->DownDuration < 0.0f ? 0.0f : key_data->DownDuration + io.DeltaTime) : -1.0f;
         if (key_data->DownDuration == 0.0f)
         {
-            ImGuiKey key = (ImGuiKey)(ImGuiKey_NamedKey_BEGIN + i);
+            ImGuiKey key = (ImGuiKey)(ImGuiKey_KeysData_OFFSET + i);
             if (IsKeyboardKey(key))
                 g.LastKeyboardKeyPressTime = g.Time;
             else if (key == ImGuiKey_ReservedForModCtrl || key == ImGuiKey_ReservedForModShift || key == ImGuiKey_ReservedForModAlt || key == ImGuiKey_ReservedForModSuper)
