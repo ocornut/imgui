@@ -482,7 +482,7 @@ Some fonts files are available in the `misc/fonts/` folder:
 #### MONOSPACE FONTS
 
 Pixel Perfect:
-- Proggy Fonts, by Tristan Grimmer http://www.proggyfonts.net or http://upperbounds.net
+- Proggy Fonts, by Tristan Grimmer http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
 - Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A) https://github.com/kmar/Sweet16Font (also include an .inl file to use directly in dear imgui.)
 
 Regular:
