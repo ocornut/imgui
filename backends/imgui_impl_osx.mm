@@ -141,12 +141,28 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 - (void)updateImePosWithView:(NSView *)view
 {
-    NSWindow *window = view.window;
+    NSWindow* window = view.window;
     if (!window)
         return;
-    NSRect contentRect = [window contentRectForFrameRect:window.frame];
-    NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
-    _imeRect = [window convertRectToScreen:rect];
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        NSRect frame = window.frame;
+        NSRect contentRect = window.contentLayoutRect;
+        if (window.styleMask & NSWindowStyleMaskFullSizeContentView) // No title bar windows should be considered.
+            contentRect = frame;
+
+        NSRect firstScreenFrame = NSScreen.screens[0].frame;
+        _imeRect = NSMakeRect(_posX, _posY, 0, 0);
+        _imeRect.origin.y = firstScreenFrame.size.height - _imeRect.size.height - _imeRect.origin.y; // Opposite of ConvertNSRect()
+    }
+    else
+    {
+        NSRect contentRect = [window contentRectForFrameRect:window.frame];
+        NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
+        _imeRect = [window convertRectToScreen:rect];
+    }
 }
 
 - (void)viewDidMoveToWindow

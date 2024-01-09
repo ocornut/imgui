@@ -115,6 +115,7 @@ Docking+Viewports Branch:
   queued frames aren't synchronized with platform window resizes. (#7152, #7153) [@SuperWangKai]
 - Backends: OSX: Fixed monitor and window position by correctly transforming Y origin on multi-viewports
   multi-monitor setups. (#7028, #7101, #6009, #6432) [@dmirty-kuzmenko, @734vin] 
+- Backends: OSX: Fixed IME position in multi-monitor　multi-viewports setups. (#7028) [@734vin]
 
 
 -----------------------------------------------------------------------
