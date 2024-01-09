@@ -787,8 +787,18 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
 #endif
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
-    vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+
+    static const char* title = "No Title Yet";
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetStringProperty(props, "title", title);
+    SDL_SetNumberProperty(props, "x", (int64_t)viewport->Pos.x);
+    SDL_SetNumberProperty(props, "y", (int64_t)viewport->Pos.y);
+    SDL_SetNumberProperty(props, "width", (int64_t)viewport->Size.x);
+    SDL_SetNumberProperty(props, "height", (int64_t)viewport->Size.y);
+    SDL_SetNumberProperty(props, "flags", sdl_flags);
+    vd->Window  = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
+    
     vd->WindowOwned = true;
     if (use_opengl)
     {
