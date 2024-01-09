@@ -101,6 +101,8 @@ Other changes:
   register canvas selector and auto-resize GLFW window. (#6751) [@Traveller23, @ypujante]
 - Backends: GLFW: Fixed Windows specific hooks to use Unicode version of WndProc even when
   compiling in MBCS mode. (#7174) [@kimidaisuki22]
+- Backends: OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load libGL.so variants in
+  case of missing symlink. Fix 1.90 regression for some distros. (#6983)
 - Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
   vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
 - Backends: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
