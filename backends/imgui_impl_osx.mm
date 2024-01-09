@@ -10,7 +10,8 @@
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: IME support.
-//  [X] Platform: Multi-viewport / platform windows.
+//  [x] Platform: Multi-viewport / platform windows.
+//  - [ ] Window size not correctly reported when enabling io.ConfigViewportsNoDecoration
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -862,9 +863,11 @@ struct ImGuiViewportDataOSX
 
 @end
 
-static void ConvertNSRect(NSScreen* screen, NSRect* r)
+static void ConvertNSRect(NSRect* r)
 {
-    r->origin.y = screen.frame.size.height - r->origin.y - r->size.height;
+    NSRect firstScreenFrame = NSScreen.screens[0].frame;
+    IM_ASSERT(firstScreenFrame.origin.x == 0 && firstScreenFrame.origin.y == 0);
+    r->origin.y = firstScreenFrame.size.height - r->origin.y - r->size.height;
 }
 
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
@@ -875,7 +878,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
 
     NSScreen* screen = bd->Window.screen;
     NSRect rect = NSMakeRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y);
-    ConvertNSRect(screen, &rect);
+    ConvertNSRect(&rect);
 
     NSWindowStyleMask styleMask = 0;
     if (viewport->Flags & ImGuiViewportFlags_NoDecoration)
@@ -945,11 +948,13 @@ static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
     IM_ASSERT(data->Window != 0);
 
     NSWindow* window = data->Window;
-    NSScreen* screen = window.screen;
-    NSSize size = screen.frame.size;
     NSRect frame = window.frame;
-    NSRect rect = window.contentLayoutRect;
-    return ImVec2(frame.origin.x, size.height - frame.origin.y - rect.size.height);
+    NSRect contentRect = window.contentLayoutRect;
+    if (window.styleMask & NSWindowStyleMaskFullSizeContentView) // No title bar windows should be considered.
+        contentRect = frame;
+
+    NSRect firstScreenFrame = NSScreen.screens[0].frame;
+    return ImVec2(frame.origin.x, firstScreenFrame.size.height - frame.origin.y - contentRect.size.height);
 }
 
 static void ImGui_ImplOSX_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
@@ -961,7 +966,7 @@ static void ImGui_ImplOSX_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
     NSSize size = window.frame.size;
 
     NSRect r = NSMakeRect(pos.x, pos.y, size.width, size.height);
-    ConvertNSRect(window.screen, &r);
+    ConvertNSRect(&r);
     [window setFrameOrigin:r.origin];
 }
 
@@ -1042,10 +1047,15 @@ static void ImGui_ImplOSX_UpdateMonitors()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
 
+    NSRect firstScreenFrame = NSScreen.screens[0].frame;
+    IM_ASSERT(firstScreenFrame.origin.x == 0 && firstScreenFrame.origin.y == 0);
+
     for (NSScreen* screen in NSScreen.screens)
     {
         NSRect frame = screen.frame;
         NSRect visibleFrame = screen.visibleFrame;
+        ConvertNSRect(&frame);
+        ConvertNSRect(&visibleFrame);
 
         ImGuiPlatformMonitor imgui_monitor;
         imgui_monitor.MainPos = ImVec2(frame.origin.x, frame.origin.y);

@@ -110,9 +110,11 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Windows: Fixed ImGuiCol_TitleBg/Active alpha being used for viewport-owned windows. (#7181) [@PathogenDavid]
 - Backends: DX12: Changed swapchain scaling mode to DXGI_SCALING_NONE to reduce artifacts as
   queued frames aren't synchronized with platform window resizes. (#7152, #7153) [@SuperWangKai]
-- Windows: Fixed ImGuiCol_TitleBg/Active alpha being used for viewport-owned windows. (#7181) [@PathogenDavid]
+- Backends: OSX: Fixed monitor and window position by correctly transforming Y origin on multi-viewports
+  multi-monitor setups. (#7028, #7101, #6009, #6432) [@dmirty-kuzmenko, @734vin] 
 
 
 -----------------------------------------------------------------------
