@@ -6390,28 +6390,40 @@ static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
 
+static void RenderWindowOuterSingleBorder(ImGuiWindow* window, int border_n, ImU32 border_col, float border_size)
+{
+    const ImGuiResizeBorderDef& def = resize_border_def[border_n];
+    const float rounding = window->WindowRounding;
+    const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
+    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
+    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
+    window->DrawList->PathStroke(border_col, ImDrawFlags_None, border_size);
+}
+
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    float rounding = window->WindowRounding;
-    float border_size = window->WindowBorderSize;
-    if (border_size > 0.0f && !(window->Flags & ImGuiWindowFlags_NoBackground))
-        window->DrawList->AddRect(window->Pos, window->Pos + window->Size, GetColorU32(ImGuiCol_Border), rounding, 0, border_size);
-
+    const float border_size = window->WindowBorderSize;
+    const ImU32 border_col = GetColorU32(ImGuiCol_Border);
+    if (border_size > 0.0f && (window->Flags & ImGuiWindowFlags_NoBackground) == 0)
+        window->DrawList->AddRect(window->Pos, window->Pos + window->Size, border_col, window->WindowRounding, 0, window->WindowBorderSize);
+    else if (border_size > 0.0f)
+    {
+        if (window->ChildFlags & ImGuiChildFlags_ResizeX) // Similar code as 'resize_border_mask' computation in UpdateWindowManualResize() but we specifically only always draw explicit child resize border.
+            RenderWindowOuterSingleBorder(window, 1, border_col, border_size);
+        if (window->ChildFlags & ImGuiChildFlags_ResizeY)
+            RenderWindowOuterSingleBorder(window, 3, border_col, border_size);
+    }
     if (window->ResizeBorderHovered != -1 || window->ResizeBorderHeld != -1)
     {
         const int border_n = (window->ResizeBorderHeld != -1) ? window->ResizeBorderHeld : window->ResizeBorderHovered;
-        const ImGuiResizeBorderDef& def = resize_border_def[border_n];
-        const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
-        const ImU32 border_col = GetColorU32((window->ResizeBorderHeld != -1) ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
-        window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
-        window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
-        window->DrawList->PathStroke(border_col, 0, ImMax(2.0f, border_size)); // Thicker than usual
+        const ImU32 border_col_resizing = GetColorU32((window->ResizeBorderHeld != -1) ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
+        RenderWindowOuterSingleBorder(window, border_n, border_col_resizing, ImMax(2.0f, window->WindowBorderSize)); // Thicker than usual
     }
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar) && !window->DockIsActive)
     {
         float y = window->Pos.y + window->TitleBarHeight() - 1;
-        window->DrawList->AddLine(ImVec2(window->Pos.x + border_size, y), ImVec2(window->Pos.x + window->Size.x - border_size, y), GetColorU32(ImGuiCol_Border), g.Style.FrameBorderSize);
+        window->DrawList->AddLine(ImVec2(window->Pos.x + border_size, y), ImVec2(window->Pos.x + window->Size.x - border_size, y), border_col, g.Style.FrameBorderSize);
     }
 }
 
@@ -9016,13 +9028,28 @@ bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags)
     if (t < 0.0f)
         return false;
     IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByIsKeyPressed) == 0); // Passing flags not supported by this function!
+    if (flags & (ImGuiInputFlags_RepeatRateMask_ | ImGuiInputFlags_RepeatUntilMask_)) // Setting any _RepeatXXX option enables _Repeat
+        flags |= ImGuiInputFlags_Repeat;
 
     bool pressed = (t == 0.0f);
-    if (!pressed && ((flags & ImGuiInputFlags_Repeat) != 0))
+    if (!pressed && (flags & ImGuiInputFlags_Repeat) != 0)
     {
         float repeat_delay, repeat_rate;
         GetTypematicRepeatRate(flags, &repeat_delay, &repeat_rate);
         pressed = (t > repeat_delay) && GetKeyPressedAmount(key, repeat_delay, repeat_rate) > 0;
+        if (pressed && (flags & ImGuiInputFlags_RepeatUntilMask_))
+        {
+            // Slightly bias 'key_pressed_time' as DownDuration is an accumulation of DeltaTime which we compare to an absolute time value.
+            // Ideally we'd replace DownDuration with KeyPressedTime but it would break user's code.
+            ImGuiContext& g = *GImGui;
+            double key_pressed_time = g.Time - t + 0.00001f;
+            if ((flags & ImGuiInputFlags_RepeatUntilKeyModsChange) && (g.LastKeyModsChangeTime > key_pressed_time))
+                pressed = false;
+            if ((flags & ImGuiInputFlags_RepeatUntilKeyModsChangeFromNone) && (g.LastKeyModsChangeFromNoneTime > key_pressed_time))
+                pressed = false;
+            if ((flags & ImGuiInputFlags_RepeatUntilOtherKeyPress) && (g.LastKeyboardKeyPressTime > key_pressed_time))
+                pressed = false;
+        }
     }
     if (!pressed)
         return false;
@@ -9074,7 +9101,7 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInput
     const float t = g.IO.MouseDownDuration[button];
     if (t < 0.0f)
         return false;
-    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByIsKeyPressed) == 0); // Passing flags not supported by this function!
+    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByIsMouseClicked) == 0); // Passing flags not supported by this function! // FIXME: Could support RepeatRate and RepeatUntil flags here.
 
     const bool repeat = (flags & ImGuiInputFlags_Repeat) != 0;
     const bool pressed = (t == 0.0f) || (repeat && t > g.IO.KeyRepeatDelay && CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0);
@@ -9314,7 +9341,9 @@ static void ImGui::UpdateKeyboardInputs()
             GetKeyData(ImGuiMod_Super)->Down = io.KeySuper;
         }
     }
+#endif
 
+    // Import legacy ImGuiNavInput_ io inputs and convert to gamepad keys
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     if (io.BackendUsingLegacyNavInputArray && nav_gamepad_active)
@@ -9338,7 +9367,6 @@ static void ImGui::UpdateKeyboardInputs()
         #undef NAV_MAP_KEY
     }
 #endif
-#endif
 
     // Update aliases
     for (int n = 0; n < ImGuiMouseButton_COUNT; n++)
@@ -9346,15 +9374,20 @@ static void ImGui::UpdateKeyboardInputs()
     UpdateAliasKey(ImGuiKey_MouseWheelX, io.MouseWheelH != 0.0f, io.MouseWheelH);
     UpdateAliasKey(ImGuiKey_MouseWheelY, io.MouseWheel != 0.0f, io.MouseWheel);
 
-    // Synchronize io.KeyMods and io.KeyXXX values.
+    // Synchronize io.KeyMods and io.KeyCtrl/io.KeyShift/etc. values.
     // - New backends (1.87+): send io.AddKeyEvent(ImGuiMod_XXX) ->                                      -> (here) deriving io.KeyMods + io.KeyXXX from key array.
     // - Legacy backends:      set io.KeyXXX bools               -> (above) set key array from io.KeyXXX -> (here) deriving io.KeyMods + io.KeyXXX from key array.
     // So with legacy backends the 4 values will do a unnecessary back-and-forth but it makes the code simpler and future facing.
+    const ImGuiKeyChord prev_key_mods = io.KeyMods;
     io.KeyMods = GetMergedModsFromKeys();
     io.KeyCtrl = (io.KeyMods & ImGuiMod_Ctrl) != 0;
     io.KeyShift = (io.KeyMods & ImGuiMod_Shift) != 0;
     io.KeyAlt = (io.KeyMods & ImGuiMod_Alt) != 0;
     io.KeySuper = (io.KeyMods & ImGuiMod_Super) != 0;
+    if (prev_key_mods != io.KeyMods)
+        g.LastKeyModsChangeTime = g.Time;
+    if (prev_key_mods != io.KeyMods && prev_key_mods == 0)
+        g.LastKeyModsChangeFromNoneTime = g.Time;
 
     // Clear gamepad data if disabled
     if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
@@ -9370,6 +9403,14 @@ static void ImGui::UpdateKeyboardInputs()
         ImGuiKeyData* key_data = &io.KeysData[i];
         key_data->DownDurationPrev = key_data->DownDuration;
         key_data->DownDuration = key_data->Down ? (key_data->DownDuration < 0.0f ? 0.0f : key_data->DownDuration + io.DeltaTime) : -1.0f;
+        if (key_data->DownDuration == 0.0f)
+        {
+            ImGuiKey key = (ImGuiKey)(ImGuiKey_NamedKey_BEGIN + i);
+            if (IsKeyboardKey(key))
+                g.LastKeyboardKeyPressTime = g.Time;
+            else if (key == ImGuiKey_ReservedForModCtrl || key == ImGuiKey_ReservedForModShift || key == ImGuiKey_ReservedForModAlt || key == ImGuiKey_ReservedForModSuper)
+                g.LastKeyboardKeyPressTime = g.Time;
+        }
     }
 
     // Update keys/input owner (named keys only): one entry per key
@@ -9383,6 +9424,7 @@ static void ImGui::UpdateKeyboardInputs()
         owner_data->LockThisFrame = owner_data->LockUntilRelease = owner_data->LockUntilRelease && key_data->Down;  // Clear LockUntilRelease when key is not Down anymore
     }
 
+    // Update key routing (for e.g. shortcuts)
     UpdateKeyRoutingTable(&g.KeysRoutingTable);
 }
 
@@ -9899,7 +9941,7 @@ bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiIn
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
     if (key == ImGuiKey_None)
         key = ConvertSingleModFlagToKey(&g, mods);
-    if (!IsKeyPressed(key, owner_id, (flags & (ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateMask_))))
+    if (!IsKeyPressed(key, owner_id, (flags & ImGuiInputFlags_RepeatMask_)))
         return false;
     return true;
 }
@@ -9911,6 +9953,11 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
         flags |= ImGuiInputFlags_RouteFocused;
     if (!SetShortcutRouting(key_chord, owner_id, flags))
         return false;
+
+    // Default repeat behavior for Shortcut()
+    // So e.g. pressing Ctrl+W and releasing Ctrl while holding W will not trigger the W shortcut.
+    if ((flags & ImGuiInputFlags_RepeatUntilMask_) == 0)
+        flags |= ImGuiInputFlags_RepeatUntilKeyModsChange;
 
     if (!IsKeyChordPressed(key_chord, owner_id, flags))
         return false;
@@ -12502,7 +12549,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         g.NavMoveScrollFlags = ImGuiScrollFlags_None;
         if (window && !g.NavWindowingTarget && !(window->Flags & ImGuiWindowFlags_NoNavInputs))
         {
-            const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateNavMove;
+            const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateNavMove;
             if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Left; }
             if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Right; }
             if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Up; }

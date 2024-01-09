@@ -110,7 +110,7 @@ Reading the changelogs is a good way to keep up to date with the things Dear ImG
 Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing a variety of features and examples. The code is always available for reference in `imgui_demo.cpp`. [Here's how the demo looks](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/v167-misc.png).
 
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20230704.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20230704.zip) (Windows, 1.89.7, built 2023/07/04, master) or [older binaries](https://www.dearimgui.com/binaries).
+- [imgui-demo-binaries-20240105.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20240105.zip) (Windows, 1.90.1 WIP, built 2024/01/05, master) or [older binaries](https://www.dearimgui.com/binaries).
 
 The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at a different scale and scale your style with `style.ScaleAllSizes()` (see [FAQ](https://www.dearimgui.com/faq)).
 
@@ -207,7 +207,7 @@ Sponsoring, maintenance/support contracts and other B2B transactions are hosted 
 
 Omar: "I first discovered the IMGUI paradigm at [Q-Games](https://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it."
 
-Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
+Embeds [ProggyClean.ttf](https://www.proggyfonts.net) font by Tristan Grimmer (MIT license).
 <br>Embeds [stb_textedit.h, stb_truetype.h, stb_rect_pack.h](https://github.com/nothings/stb/) by Sean Barrett (public domain).
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. Also thank you to everyone posting feedback, questions and patches on GitHub.
