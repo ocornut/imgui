@@ -37,8 +37,10 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.90.1 WIP (In Progress)
+ VERSION 1.90.1 (Released 2024-01-10)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.1
 
 Breaking changes:
 
@@ -52,39 +54,56 @@ Breaking changes:
 
 Other changes:
 
-- Windows: BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
-  minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
-- Windows: BeginChild(): Resize borders rendered even when ImGuiWindowFlags_NoBackground
-  is specified. (#1710, #7194)
-- Windows: Fixed some auto-resizing path using style.WindowMinSize.x (instead of x/y)
-  for both axises since 1.90. (#7106) [@n0bodysec]
-- Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
-  speed asymetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
-- Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overrided back to true when
-  navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
-- Nav: Activation can also be performed with Keypad Enter. (#5606)
-- Drag and Drop: Fixed drop target highlight on items temporarily pushing a widened clip rect
-  (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
-  all columns. (#7049, #4281, #3272)
-- InputTextMultiline: Fixed Tab character input not repeating (1.89.4 regression).
-- InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
-  (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
-  to allow passing through multiple widgets easily. (#3092, #5759, #787)
-- DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
-  stack when number of components is 1. [#7095] [@Nahor]
-- Drags, Sliders, Inputs: removed all attempts to filter non-numerical characters during text
-  editing. Invalid inputs not applied to value, visibly reverted after validation. (#6810, #7096)
-- Drags, Sliders, Inputs: removal of filter means that "nan" and "inf" values may be input. (#7096)
-- DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
-  width computation to better distribute the error. (#7120, #7121) [@Nahor]
-- ColorEdit: Layout tweaks for very small sizes. (#7120, #7121)
-- ColorPicker: Fixed saturation/value cursor radius not scaling properly.
-- Menus: Tweaked hover slack logic, adding a timer to avoid situations where a slow vertical
-  movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
+- Windows:
+  - BeginChild(): Fixed auto-resizing erroneously limiting size to host viewport
+    minus padding. There are no limit to a child width/height. (#7063) [@Devyre]
+  - BeginChild(): Resize borders rendered even when ImGuiWindowFlags_NoBackground
+    is specified. (#1710, #7194)
+  - Fixed some auto-resizing path using style.WindowMinSize.x (instead of x/y)
+    for both axises since 1.90. (#7106) [@n0bodysec]
+  - Scrolling: internal scrolling value is rounded instead of truncated, as a way to reduce
+    speed asymmetry when (incorrectly) attempting to scroll by non-integer amount. (#6677)
+- Navigation (Keyboard/gamepad):
+  - Nav, IO: SetNextFrameWantCaptureKeyboard(false) calls are not overridden back to true when
+    navigation is enabled. SetNextFrameWantCaptureKeyboard() is always higher priority. (#6997)
+  - Nav: Activation can also be performed with Keypad Enter. (#5606)
+- Drag and Drop:
+  - Fixed drop target highlight on items temporarily pushing a widened clip rect
+    (namely Selectables and Treenodes using SpanAllColumn flag) so the highlight properly covers
+    all columns. (#7049, #4281, #3272)
+- InputText:
+  - InputTextMultiline: Fixed Tab character input not repeating (1.89.4 regression).
+  - InputTextMultiline: Tabbing through a multi-line text editor which allows Tab character inputs
+    (using the ImGuiInputTextFlags_AllowTabInput flag) doesn't automatically activate it, in order
+    to allow passing through multiple widgets easily. (#3092, #5759, #787)
+- Drags, Sliders, Inputs:
+  - DragScalarN, SliderScalarN, InputScalarN: Fixed incorrect pushes into ItemWidth
+    stack when number of components is 1. [#7095] [@Nahor]
+  - Drags, Sliders, Inputs: removed all attempts to filter non-numerical characters during text
+    editing. Invalid inputs not applied to value, visibly reverted after validation. (#6810, #7096)
+  - Drags, Sliders, Inputs: removal of filter means that "nan" and "inf" values may be input. (#7096)
+  - DragScalarN, SliderScalarN, InputScalarN, PushMultiItemsWidths: improve multi-components
+    width computation to better distribute the error. (#7120, #7121) [@Nahor]
+- Menus:
+  - Tweaked hover slack logic, adding an extra timeout to avoid situations where a slow vertical
+    movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
+- Color Editors:
+  - ColorEdit: Layout tweaks for very small sizes. (#7120, #7121)
+  - ColorPicker: Fixed saturation/value cursor radius not scaling properly.
+- Debug Tools:
+  - Added io.ConfigDebugIsDebuggerPresent option. When enabled, this adds buttons in various
+    locations of Metrics/Debugger to manually request a debugger break:
+    - Request a debug break in a Begin() call.
+    - Request a debug break in a ItemAdd() call via debug log and hovering 0xXXXXXX identifiers.
+    - Request a debug break in a BeginTable() call.
+    - Request a debug break in a SetShortcutRouting()/Shortcut() call. [Internal]
+  - Metrics: Reorganize Tools menu.
+  - Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
+  - Debug Log: Hide its own clipper log to reduce noise in the output. (#5855)
+  - Debug Log: Clicking any filter with SHIFT held enables it for 2 frames only,
+    making it easier when dealing with spammy logs. (#5855)
 - Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
   grip without moving it.
-- Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
-- Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
   IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
 - Misc: Rework debug display of texture id in Metrics window to avoid compile-error when
@@ -96,21 +115,26 @@ Other changes:
   on a codebase where another copy of the library is used.
 - Misc: During shutdown, check that io.BackendPlatformUserData and io.BackendRendererUserData are NULL
   in order to catch cases where backend was not shut down. (#7175)
-- Misc: Reworked Issue Template to with a shinier and better form. (#5927) [@Panquesito7, @PathogenDavid, @ocornut]
-- Backends: GLFW, Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
-  register canvas selector and auto-resize GLFW window. (#6751) [@Traveller23, @ypujante]
-- Backends: GLFW: Fixed Windows specific hooks to use Unicode version of WndProc even when
-  compiling in MBCS mode. (#7174) [@kimidaisuki22]
-- Backends: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
-  vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
-- Backends: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
-  "best practice" validation layer. (#7189, #4238) [@philae-ael]
-- Backends: Vulkan: Stopped creating command pools with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-  as we don't reset them.
-- Backends: WebGPU: Fixed wgpuRenderPassEncoderSetScissorRect() crash when rendering modal
-  window's dimming layer, which has an unclipped value in ImDrawCmd::ClipRect. (#7191) [@aparis69]
-- Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
-  (#6751) [@Traveller23, @ypujante]
+- Misc: Reworked Issue Template to a shinier and better form. (#5927) [@Panquesito7, @PathogenDavid, @ocornut]
+- Backends:
+  - GLFW, Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
+    register canvas selector and auto-resize GLFW window. (#6751) [@Traveller23, @ypujante]
+  - GLFW: Fixed Windows specific hooks to use Unicode version of WndProc even when
+    compiling in MBCS mode. (#7174) [@kimidaisuki22]
+  - OpenGL3: Update GL3W based imgui_impl_opengl3_loader.h to load libGL.so variants in
+    case of missing symlink. Fix 1.90 regression for some distros. (#6983)
+  - Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs
+    vkDestroyCommandPool(). (#7075) [@FoonTheRaccoon]
+  - Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous
+    "best practice" validation layer. (#7189, #4238) [@philae-ael]
+  - Vulkan: Stopped creating command pools with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+    as we don't reset them.
+  - WebGPU: Fixed wgpuRenderPassEncoderSetScissorRect() crash when rendering modal window's
+    dimming layer, which has an unclipped value in ImDrawCmd::ClipRect. (#7191) [@aparis69]
+- Examples:
+  - Examples: GLFW+Emscripten: Fixed examples not consistently resizing according to host canvas.
+    (#6751) [@Traveller23, @ypujante]
+  - Examples: SDL3: Minor fixes following recent SDL3 in-progress development.
 
 Docking+Viewports Branch:
 
@@ -119,12 +143,14 @@ Docking+Viewports Branch:
   queued frames aren't synchronized with platform window resizes. (#7152, #7153) [@SuperWangKai]
 - Backends: OSX: Fixed monitor and window position by correctly transforming Y origin on multi-viewports
   multi-monitor setups. (#7028, #7101, #6009, #6432) [@dmirty-kuzmenko, @734vin] 
-- Backends: OSX: Fixed IME position in multi-monitor　multi-viewports setups. (#7028) [@734vin]
+- Backends: OSX: Fixed IME position in multi-monitor multi-viewports setups. (#7028) [@734vin]
 
 
 -----------------------------------------------------------------------
  VERSION 1.90.0 (Released 2023-11-15)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90
 
 Breaking changes:
 
