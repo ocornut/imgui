@@ -1780,17 +1780,18 @@ struct ImGuiLocEntry
 enum ImGuiDebugLogFlags_
 {
     // Event types
-    ImGuiDebugLogFlags_None             = 0,
-    ImGuiDebugLogFlags_EventActiveId    = 1 << 0,
-    ImGuiDebugLogFlags_EventFocus       = 1 << 1,
-    ImGuiDebugLogFlags_EventPopup       = 1 << 2,
-    ImGuiDebugLogFlags_EventNav         = 1 << 3,
-    ImGuiDebugLogFlags_EventClipper     = 1 << 4,
-    ImGuiDebugLogFlags_EventSelection   = 1 << 5,
-    ImGuiDebugLogFlags_EventIO          = 1 << 6,
-    ImGuiDebugLogFlags_EventMask_       = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO,
-    ImGuiDebugLogFlags_OutputToTTY        = 1 << 10,  // Also send output to TTY
-    ImGuiDebugLogFlags_OutputToTestEngine = 1 << 11,  // Also send output to Test Engine
+    ImGuiDebugLogFlags_None                 = 0,
+    ImGuiDebugLogFlags_EventActiveId        = 1 << 0,
+    ImGuiDebugLogFlags_EventFocus           = 1 << 1,
+    ImGuiDebugLogFlags_EventPopup           = 1 << 2,
+    ImGuiDebugLogFlags_EventNav             = 1 << 3,
+    ImGuiDebugLogFlags_EventClipper         = 1 << 4,
+    ImGuiDebugLogFlags_EventSelection       = 1 << 5,
+    ImGuiDebugLogFlags_EventIO              = 1 << 6,
+
+    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO,
+    ImGuiDebugLogFlags_OutputToTTY          = 1 << 20,  // Also send output to TTY
+    ImGuiDebugLogFlags_OutputToTestEngine   = 1 << 21,  // Also send output to Test Engine
 };
 
 struct ImGuiDebugAllocEntry
@@ -2161,7 +2162,8 @@ struct ImGuiContext
     ImGuiDebugLogFlags      DebugLogFlags;
     ImGuiTextBuffer         DebugLogBuf;
     ImGuiTextIndex          DebugLogIndex;
-    ImU8                    DebugLogClipperAutoDisableFrames;
+    ImGuiDebugLogFlags      DebugLogAutoDisableFlags;
+    ImU8                    DebugLogAutoDisableFrames;
     ImU8                    DebugLocateFrames;                  // For DebugLocateItemOnHover(). This is used together with DebugLocateId which is in a hot/cached spot above.
     ImS8                    DebugBeginReturnValueCullDepth;     // Cycle between 0..9 then wrap around.
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
@@ -2347,7 +2349,8 @@ struct ImGuiContext
 
         DebugLogFlags = ImGuiDebugLogFlags_OutputToTTY;
         DebugLocateId = 0;
-        DebugLogClipperAutoDisableFrames = 0;
+        DebugLogAutoDisableFlags = ImGuiDebugLogFlags_None;
+        DebugLogAutoDisableFrames = 0;
         DebugLocateFrames = 0;
         DebugBeginReturnValueCullDepth = -1;
         DebugItemPickerActive = false;

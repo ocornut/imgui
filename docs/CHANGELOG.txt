@@ -84,7 +84,9 @@ Other changes:
 - Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
   grip without moving it.
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
-- Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output.
+- Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output. (#5855)
+- Debug Tools: Debug Log: Clicking any filter with SHIFT held enables it for 2 frames only,
+  making it easier when dealing with spammy logs. (#5855)
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
   IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
 - Misc: Rework debug display of texture id in Metrics window to avoid compile-error when
