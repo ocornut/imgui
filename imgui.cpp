@@ -13863,14 +13863,15 @@ static void RenderViewportsThumbnails()
 // Draw an arbitrary US keyboard layout to visualize translated keys
 void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 {
-    const ImVec2 key_size = ImVec2(35.0f, 35.0f);
-    const float  key_rounding = 3.0f;
-    const ImVec2 key_face_size = ImVec2(25.0f, 25.0f);
-    const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f);
-    const float  key_face_rounding = 2.0f;
-    const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f);
+    const float scale = ImGui::GetFontSize() / 13.0f;
+    const ImVec2 key_size = ImVec2(35.0f, 35.0f) * scale;
+    const float  key_rounding = 3.0f * scale;
+    const ImVec2 key_face_size = ImVec2(25.0f, 25.0f) * scale;
+    const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f) * scale;
+    const float  key_face_rounding = 2.0f * scale;
+    const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f) * scale;
     const ImVec2 key_step = ImVec2(key_size.x - 1.0f, key_size.y - 1.0f);
-    const float  key_row_offset = 9.0f;
+    const float  key_row_offset = 9.0f * scale;
 
     ImVec2 board_min = GetCursorScreenPos();
     ImVec2 board_max = ImVec2(board_min.x + 3 * key_step.x + 2 * key_row_offset + 10.0f, board_min.y + 3 * key_step.y + 10.0f);
