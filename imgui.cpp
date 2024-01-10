@@ -4787,7 +4787,10 @@ void ImGui::NewFrame()
     UpdateDebugToolStackQueries();
     UpdateDebugToolFlashStyleColor();
     if (g.DebugLocateFrames > 0 && --g.DebugLocateFrames == 0)
+    {
         g.DebugLocateId = 0;
+        g.DebugBreakInLocateId = false;
+    }
     if (g.DebugLogAutoDisableFrames > 0 && --g.DebugLogAutoDisableFrames == 0)
     {
         DebugLog("(Debug Log: Auto-disabled some ImGuiDebugLogFlags after 2 frames)\n");
@@ -6371,6 +6374,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     const bool window_just_created = (window == NULL);
     if (window_just_created)
         window = CreateNewWindow(name, flags);
+
+    // [DEBUG] Debug break requested by user
+    if (g.DebugBreakInWindow == window->ID)
+        IM_DEBUG_BREAK();
 
     // Automatically disable manual moving/resizing when NoInputs is set
     if ((flags & ImGuiWindowFlags_NoInputs) == ImGuiWindowFlags_NoInputs)
@@ -8364,6 +8371,10 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         flags |= ImGuiInputFlags_RouteGlobalHigh; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
+
+    // [DEBUG] Debug break requested by user
+    if (g.DebugBreakInShortcutRouting == key_chord)
+        IM_DEBUG_BREAK();
 
     if (flags & ImGuiInputFlags_RouteUnlessBgFocused)
         if (g.NavWindow == NULL)
@@ -14013,6 +14024,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
+    // [DEBUG] Clear debug breaks hooks after exactly one cycle.
+    DebugBreakClearData();
+
     // Basic info
     Text("Dear ImGui %s", GetVersion());
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -14072,13 +14086,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Tools
     if (TreeNode("Tools"))
     {
-        SeparatorText("Debug breaks");
-
+        // Debug Break features
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
-        if (Checkbox("Show Item Picker", &g.DebugItemPickerActive) && g.DebugItemPickerActive)
-            DebugStartItemPicker();
+        SeparatorTextEx(0, "Debug breaks", NULL, CalcTextSize("(?)").x + g.Style.SeparatorTextPadding.x);
         SameLine();
         MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
+        if (Checkbox("Show Item Picker", &g.DebugItemPickerActive) && g.DebugItemPickerActive)
+            DebugStartItemPicker();
+        Checkbox("Show \"Debug Break\" buttons in other sections", &g.IO.ConfigDebugIsDebuggerPresent);
 
         SeparatorText("Visualize");
 
@@ -14166,7 +14181,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             static char buf[64] = "";
             SetNextItemWidth(-FLT_MIN);
-            InputText("##Text", buf, IM_ARRAYSIZE(buf));
+            InputText("##DebugTextEncodingBuf", buf, IM_ARRAYSIZE(buf));
             if (buf[0] != 0)
                 DebugTextEncoding(buf);
         }
@@ -14434,6 +14449,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         ImGuiKeyChord key_chord = key | routing_data->Mods;
                         Text("%s: 0x%08X", GetKeyChordName(key_chord, key_chord_name, IM_ARRAYSIZE(key_chord_name)), routing_data->RoutingCurr);
                         DebugLocateItemOnHover(routing_data->RoutingCurr);
+                        if (g.IO.ConfigDebugIsDebuggerPresent)
+                        {
+                            SameLine();
+                            if (DebugBreakButton("**DebugBreak**", "in SetShortcutRouting() for this KeyChord"))
+                                g.DebugBreakInShortcutRouting = key_chord;
+                        }
                         idx = routing_data->NextEntryIndex;
                     }
                 }
@@ -14543,6 +14564,64 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #endif // #ifdef IMGUI_HAS_DOCK
 
     End();
+}
+
+void ImGui::DebugBreakClearData()
+{
+    // Those fields are scattered in their respective subsystem to stay in hot-data locations
+    ImGuiContext& g = *GImGui;
+    g.DebugBreakInWindow = 0;
+    g.DebugBreakInTable = 0;
+    g.DebugBreakInShortcutRouting = ImGuiKey_None;
+}
+
+void ImGui::DebugBreakButtonTooltip(bool keyboard_only, const char* description_of_location)
+{
+    if (!BeginItemTooltip())
+        return;
+    Text("To call IM_DEBUG_BREAK() %s:", description_of_location);
+    Separator();
+    TextUnformatted(keyboard_only ? "- Press 'Pause/Break' on keyboard." : "- Press 'Pause/Break' on keyboard.\n- or Click (may alter focus/active id).\n- or navigate using keyboard and press space.");
+    Separator();
+    TextUnformatted("Choose one way that doesn't interfere with what you are trying to debug!\nYou need a debugger attached or this will crash!");
+    EndTooltip();
+}
+
+// Special button that doesn't take focus, doesn't take input owner, and can be activated without a click etc.
+// In order to reduce interferences with the contents we are trying to debug into.
+bool ImGui::DebugBreakButton(const char* label, const char* description_of_location)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    ImVec2 pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrLineTextBaseOffset);
+    ImVec2 size = ImVec2(label_size.x + g.Style.FramePadding.x * 2.0f, label_size.y);
+
+    const ImRect bb(pos, pos + size);
+    ItemSize(size, 0.0f);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    // WE DO NOT USE ButtonEx() or ButtonBehavior() in order to reduce our side-effects.
+    bool hovered = ItemHoverable(bb, id, g.CurrentItemFlags);
+    bool pressed = hovered && (IsKeyChordPressed(g.DebugBreakKeyChord) || IsMouseClicked(0) || g.NavActivateId == id);
+    DebugBreakButtonTooltip(false, description_of_location);
+
+    ImVec4 col4f = GetStyleColorVec4(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    ImVec4 hsv;
+    ColorConvertRGBtoHSV(col4f.x, col4f.y, col4f.z, hsv.x, hsv.y, hsv.z);
+    ColorConvertHSVtoRGB(hsv.x + 0.20f, hsv.y, hsv.z, col4f.x, col4f.y, col4f.z);
+
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, GetColorU32(col4f), true, g.Style.FrameRounding);
+    RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, g.Style.ButtonTextAlign, &bb);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    return pressed;
 }
 
 // [DEBUG] Display contents of Columns
@@ -14883,6 +14962,9 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
     if (window->MemoryCompacted)
         TextDisabled("Note: some memory buffers have been compacted/freed.");
 
+    if (g.IO.ConfigDebugIsDebuggerPresent && DebugBreakButton("**DebugBreak**", "in Begin()"))
+        g.DebugBreakInWindow = window->ID;
+
     ImGuiWindowFlags flags = window->Flags;
     DebugNodeDrawList(window, window->Viewport, window->DrawList, "DrawList");
     BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), ContentSize (%.1f,%.1f) Ideal (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->ContentSize.x, window->ContentSize.y, window->ContentSizeIdeal.x, window->ContentSizeIdeal.y);
@@ -15117,6 +15199,7 @@ void ImGui::DebugLocateItem(ImGuiID target_id)
     ImGuiContext& g = *GImGui;
     g.DebugLocateId = target_id;
     g.DebugLocateFrames = 2;
+    g.DebugBreakInLocateId = false;
 }
 
 void ImGui::DebugLocateItemOnHover(ImGuiID target_id)
@@ -15126,11 +15209,24 @@ void ImGui::DebugLocateItemOnHover(ImGuiID target_id)
     ImGuiContext& g = *GImGui;
     DebugLocateItem(target_id);
     GetForegroundDrawList(g.CurrentWindow)->AddRect(g.LastItemData.Rect.Min - ImVec2(3.0f, 3.0f), g.LastItemData.Rect.Max + ImVec2(3.0f, 3.0f), DEBUG_LOCATE_ITEM_COLOR);
+
+    // Can't easily use a context menu here because it will mess with focus, active id etc.
+    if (g.IO.ConfigDebugIsDebuggerPresent && g.MouseStationaryTimer > 1.0f)
+    {
+        DebugBreakButtonTooltip(false, "in ItemAdd()");
+        if (IsKeyChordPressed(g.DebugBreakKeyChord))
+            g.DebugBreakInLocateId = true;
+    }
 }
 
 void ImGui::DebugLocateItemResolveWithLastItem()
 {
     ImGuiContext& g = *GImGui;
+
+    // [DEBUG] Debug break requested by user
+    if (g.DebugBreakInLocateId)
+        IM_DEBUG_BREAK();
+
     ImGuiLastItemData item_data = g.LastItemData;
     g.DebugLocateId = 0;
     ImDrawList* draw_list = GetForegroundDrawList(g.CurrentWindow);

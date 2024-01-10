@@ -1907,6 +1907,7 @@ struct ImGuiContext
     ImGuiStorage            WindowsById;                        // Map window's ImGuiID to ImGuiWindow*
     int                     WindowsActiveCount;                 // Number of unique windows submitted by frame
     ImVec2                  WindowsHoverPadding;                // Padding around resizable windows for which hovering on counts as hovering the window == ImMax(style.TouchExtraPadding, WINDOWS_HOVER_PADDING)
+    ImGuiID                 DebugBreakInWindow;                 // Set to break in Begin() call.
     ImGuiWindow*            CurrentWindow;                      // Window being drawn into
     ImGuiWindow*            HoveredWindow;                      // Window the mouse is hovering. Will typically catch mouse inputs.
     ImGuiWindow*            HoveredWindowUnderMovingWindow;     // Hovered window ignoring MovingWindow. Only set if MovingWindow is set.
@@ -1958,6 +1959,7 @@ struct ImGuiContext
     ImGuiKeyRoutingTable    KeysRoutingTable;
     ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
     bool                    ActiveIdUsingAllKeyboardKeys;       // Active widget will want to read all keyboard keys inputs. (FIXME: This is a shortcut for not taking ownership of 100+ keys but perhaps best to not have the inconsistency)
+    ImGuiKeyChord           DebugBreakInShortcutRouting;        // Set to break in SetShortcutRouting()/Shortcut() calls.
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
     ImU32                   ActiveIdUsingNavInputMask;          // If you used this. Since (IMGUI_VERSION_NUM >= 18804) : 'g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);' becomes 'SetKeyOwner(ImGuiKey_Escape, g.ActiveId) and/or SetKeyOwner(ImGuiKey_NavGamepadCancel, g.ActiveId);'
 #endif
@@ -2074,6 +2076,7 @@ struct ImGuiContext
 
     // Tables
     ImGuiTable*                     CurrentTable;
+    ImGuiID                         DebugBreakInTable;          // Set to break in BeginTable() call.
     int                             TablesTempDataStacked;      // Temporary table data size (because we leave previous instances undestructed, we generally don't use TablesTempData.Size)
     ImVector<ImGuiTableTempData>    TablesTempData;             // Temporary table data (buffers reused/shared across instances, support nesting)
     ImPool<ImGuiTable>              Tables;                     // Persistent table data
@@ -2166,6 +2169,8 @@ struct ImGuiContext
     ImGuiDebugLogFlags      DebugLogAutoDisableFlags;
     ImU8                    DebugLogAutoDisableFrames;
     ImU8                    DebugLocateFrames;                  // For DebugLocateItemOnHover(). This is used together with DebugLocateId which is in a hot/cached spot above.
+    bool                    DebugBreakInLocateId;               // Debug break in ItemAdd() call for g.DebugLocateId.
+    ImGuiKeyChord           DebugBreakKeyChord;                 // = ImGuiKey_Pause
     ImS8                    DebugBeginReturnValueCullDepth;     // Cycle between 0..9 then wrap around.
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
     ImU8                    DebugItemPickerMouseButton;
@@ -2359,6 +2364,13 @@ struct ImGuiContext
         DebugItemPickerBreakId = 0;
         DebugFlashStyleColorTime = 0.0f;
         DebugFlashStyleColorIdx = ImGuiCol_COUNT;
+
+        // Same as DebugBreakClearData(). Those fields are scattered in their respective subsystem to stay in hot-data locations
+        DebugBreakInWindow = 0;
+        DebugBreakInTable = 0;
+        DebugBreakInLocateId = false;
+        DebugBreakKeyChord = ImGuiKey_Pause;
+        DebugBreakInShortcutRouting = ImGuiKey_None;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = FramerateSecPerFrameCount = 0;
@@ -3406,6 +3418,9 @@ namespace ImGui
     IMGUI_API void          DebugLocateItem(ImGuiID target_id);                     // Call sparingly: only 1 at the same time!
     IMGUI_API void          DebugLocateItemOnHover(ImGuiID target_id);              // Only call on reaction to a mouse Hover: because only 1 at the same time!
     IMGUI_API void          DebugLocateItemResolveWithLastItem();
+    IMGUI_API void          DebugBreakClearData();
+    IMGUI_API bool          DebugBreakButton(const char* label, const char* description_of_location);
+    IMGUI_API void          DebugBreakButtonTooltip(bool keyboard_only, const char* description_of_location);
     inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
     IMGUI_API void          ShowFontAtlas(ImFontAtlas* atlas);
     IMGUI_API void          DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end);

@@ -83,11 +83,17 @@ Other changes:
   movements toward another parent BeginMenu() can keep the wrong child menu open. (#6671, #6926)
 - Settings: Fixed an issue marking settings as dirty when merely clicking on a border or resize
   grip without moving it.
+- Debug Tools: Added io.ConfigDebugIsDebuggerPresent option. When enabled, this adds buttons
+  in various locations of Metrics/Debugger to manually break in debugger in selected places:
+  - Request a debug break in a Begin() call.
+  - Request a debug break in a ItemAdd() call via debug log and hovering 0xXXXXXX identifiers.
+  - Request a debug break in a BeginTable() call.
+  - Request a debug break in a SetShortcutRouting()/Shortcut() call. [Internal]
+- Debug Tools: Metrics: Reorganize Tools menu.
 - Debug Tools: Added DebugFlashStyleColor() to identify a style color. Added to Style Editor.
 - Debug Tools: Debug Log: Hide its own clipper log to reduce noise in the output. (#5855)
 - Debug Tools: Debug Log: Clicking any filter with SHIFT held enables it for 2 frames only,
   making it easier when dealing with spammy logs. (#5855)
-- Debug Tools: Metrics: Reorganize Tools menu.
 - Misc: Added IMGUI_USER_H_FILENAME to change the path included when using
   IMGUI_INCLUDE_IMGUI_USER_H. (#7039) [@bryceberger]
 - Misc: Rework debug display of texture id in Metrics window to avoid compile-error when
