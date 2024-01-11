@@ -35,6 +35,14 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.90.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.1 (Released 2024-01-10)
