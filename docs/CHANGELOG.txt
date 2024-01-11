@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Backends: Vulkan: Fixed handling of ImGui_ImplVulkan_InitInfo::MinAllocationSize field. (#7189, #4238)
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.1 (Released 2024-01-10)
