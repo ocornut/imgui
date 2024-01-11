@@ -43,6 +43,7 @@ Breaking changes:
 
 Other changes:
 
+- Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)
 - Backends: Vulkan: Fixed handling of ImGui_ImplVulkan_InitInfo::MinAllocationSize field. (#7189, #4238)
 
 

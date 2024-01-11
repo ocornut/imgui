@@ -33,7 +33,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-01-11: Vulkan: Fixed MinAllocationSize handing. (#7189)
+//  2024-01-11: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size (#3957). Fixed MinAllocationSize handing (#7189).
 //  2024-01-03: Vulkan: Added MinAllocationSize field in ImGui_ImplVulkan_InitInfo to workaround zealous "best practice" validation layer. (#7189, #4238)
 //  2024-01-03: Vulkan: Stoped creating command pools with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT as we don't reset them.
 //  2023-11-29: Vulkan: Fixed mismatching allocator passed to vkCreateCommandPool() vs vkDestroyCommandPool(). (#7075)
@@ -386,7 +386,13 @@ static void check_vk_result(VkResult err)
         v->CheckVkResultFn(err);
 }
 
-static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
+// Same as IM_MEMALIGN(). 'alignment' must be a power of two.
+static inline VkDeviceSize AlignBufferSize(VkDeviceSize size, VkDeviceSize alignment)
+{
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+
+static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
@@ -396,10 +402,10 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     if (buffer_memory != VK_NULL_HANDLE)
         vkFreeMemory(v->Device, buffer_memory, v->Allocator);
 
-    VkDeviceSize vertex_buffer_size_aligned = ((IM_MAX(v->MinAllocationSize, new_size) - 1) / bd->BufferMemoryAlignment + 1) * bd->BufferMemoryAlignment;
+    VkDeviceSize buffer_size_aligned = AlignBufferSize(IM_MAX(v->MinAllocationSize, new_size), bd->BufferMemoryAlignment);
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_info.size = vertex_buffer_size_aligned;
+    buffer_info.size = buffer_size_aligned;
     buffer_info.usage = usage;
     buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &buffer);
@@ -417,7 +423,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
 
     err = vkBindBufferMemory(v->Device, buffer, buffer_memory, 0);
     check_vk_result(err);
-    p_buffer_size = vertex_buffer_size_aligned;
+    buffer_size = buffer_size_aligned;
 }
 
 static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkanH_FrameRenderBuffers* rb, int fb_width, int fb_height)
@@ -494,8 +500,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     if (draw_data->TotalVtxCount > 0)
     {
         // Create or resize the vertex/index buffers
-        size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
-        size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+        size_t vertex_size = AlignBufferSize(draw_data->TotalVtxCount * sizeof(ImDrawVert), bd->BufferMemoryAlignment);
+        size_t index_size = AlignBufferSize(draw_data->TotalIdxCount * sizeof(ImDrawIdx), bd->BufferMemoryAlignment);
         if (rb->VertexBuffer == VK_NULL_HANDLE || rb->VertexBufferSize < vertex_size)
             CreateOrResizeBuffer(rb->VertexBuffer, rb->VertexBufferMemory, rb->VertexBufferSize, vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         if (rb->IndexBuffer == VK_NULL_HANDLE || rb->IndexBufferSize < index_size)
@@ -504,9 +510,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         // Upload vertex/index data into a single contiguous GPU buffer
         ImDrawVert* vtx_dst = nullptr;
         ImDrawIdx* idx_dst = nullptr;
-        VkResult err = vkMapMemory(v->Device, rb->VertexBufferMemory, 0, rb->VertexBufferSize, 0, (void**)&vtx_dst);
+        VkResult err = vkMapMemory(v->Device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)&vtx_dst);
         check_vk_result(err);
-        err = vkMapMemory(v->Device, rb->IndexBufferMemory, 0, rb->IndexBufferSize, 0, (void**)&idx_dst);
+        err = vkMapMemory(v->Device, rb->IndexBufferMemory, 0, index_size, 0, (void**)&idx_dst);
         check_vk_result(err);
         for (int n = 0; n < draw_data->CmdListsCount; n++)
         {
