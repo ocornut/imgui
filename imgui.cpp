@@ -8931,7 +8931,7 @@ static int CalcRoutingScore(ImGuiWindow* location, ImGuiID owner_id, ImGuiInputF
             return 1;
 
         // Early out when not in focus stack
-        if (focused == NULL || focused->RootWindow != location->RootWindow)
+        if (focused == NULL || focused->RootWindowDockTree != location->RootWindowDockTree)
             return 255;
 
         // Score based on distance to focused window (lower is better)
@@ -8947,7 +8947,7 @@ static int CalcRoutingScore(ImGuiWindow* location, ImGuiID owner_id, ImGuiInputF
                 IM_ASSERT(next_score < 255);
                 return next_score;
             }
-            focused = (focused->RootWindow != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
+            focused = (focused->RootWindowDockTree != focused) ? focused->ParentWindow : NULL; // FIXME: This could be later abstracted as a focus path
         }
         return 255;
     }
