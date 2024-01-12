@@ -6471,6 +6471,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
     {
         // Handle multi-select + alter button flags for it
         MultiSelectItemHeader(id, &selected, &button_flags);
+        if (is_mouse_x_over_arrow)
+            button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
 
         // We absolutely need to distinguish open vs select so comes by default
         flags |= ImGuiTreeNodeFlags_OpenOnArrow;
