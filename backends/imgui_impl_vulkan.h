@@ -54,7 +54,7 @@
 #endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
-// NOTE: VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
+// NOTE: VkDescriptorPool must contain a pool size large enough to hold an extra descriptor set and VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
