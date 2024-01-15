@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Commented out ImGuiIO::ImeWindowHandle obsoleted in 1.87 in favor of writing
+  to 'void* ImGuiViewport::PlatformHandleRaw'.
+
 Other changes:
 
 - Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)

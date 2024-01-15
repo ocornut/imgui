@@ -424,6 +424,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2024/01/15 (1.90.2) - commented out obsolete ImGuiIO::ImeWindowHandle marked obsolete in 1.87, favor of writing to 'void* ImGuiViewport::PlatformHandleRaw'.
  - 2023/12/19 (1.90.1) - commented out obsolete ImGuiKey_KeyPadEnter redirection to ImGuiKey_KeypadEnter.
  - 2023/11/06 (1.90.1) - removed CalcListClipping() marked obsolete in 1.86. Prefer using ImGuiListClipper which can return non-contiguous ranges.
  - 2023/11/05 (1.90.1) - imgui_freetype: commented out ImGuiFreeType::BuildFontAtlas() obsoleted in 1.81. prefer using #define IMGUI_ENABLE_FREETYPE or see commented code for manual calls.
@@ -5028,18 +5029,7 @@ void ImGui::EndFrame()
     {
         IMGUI_DEBUG_LOG_IO("[io] Calling io.SetPlatformImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f)\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y);
         ImGuiViewport* viewport = GetMainViewport();
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        if (viewport->PlatformHandleRaw == NULL && g.IO.ImeWindowHandle != NULL)
-        {
-            viewport->PlatformHandleRaw = g.IO.ImeWindowHandle;
-            g.IO.SetPlatformImeDataFn(viewport, ime_data);
-            viewport->PlatformHandleRaw = NULL;
-        }
-        else
-#endif
-        {
-            g.IO.SetPlatformImeDataFn(viewport, ime_data);
-        }
+        g.IO.SetPlatformImeDataFn(viewport, ime_data);
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
