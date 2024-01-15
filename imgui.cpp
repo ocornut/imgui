@@ -15375,8 +15375,11 @@ static int StackToolFormatLevelInfo(ImGuiIDStackTool* tool, int n, bool format_f
     if (tool->StackLevel < tool->Results.Size)                                  // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
         return (*buf = 0);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    if (const char* label = ImGuiTestEngine_FindItemDebugLabel(GImGui, info->ID))   // Source: ImGuiTestEngine's ItemInfo()
-        return ImFormatString(buf, buf_size, format_for_ui ? "??? \"%s\"" : "%s", label);
+    if (GImGui->TestEngine != nullptr)
+    {
+        if (const char* label = ImGuiTestEngine_FindItemDebugLabel(GImGui, info->ID))   // Source: ImGuiTestEngine's ItemInfo()
+            return ImFormatString(buf, buf_size, format_for_ui ? "??? \"%s\"" : "%s", label);
+    }
 #endif
     return ImFormatString(buf, buf_size, "???");
 }
@@ -15398,7 +15401,10 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
     const ImGuiID active_id = g.ActiveId;
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    Text("HoveredId: 0x%08X (\"%s\"), ActiveId:  0x%08X (\"%s\")", hovered_id, hovered_id ? ImGuiTestEngine_FindItemDebugLabel(&g, hovered_id) : "", active_id, active_id ? ImGuiTestEngine_FindItemDebugLabel(&g, active_id) : "");
+    if (g.TestEngine != nullptr)
+        Text("HoveredId: 0x%08X (\"%s\"), ActiveId:  0x%08X (\"%s\")", hovered_id, hovered_id ? ImGuiTestEngine_FindItemDebugLabel(&g, hovered_id) : "", active_id, active_id ? ImGuiTestEngine_FindItemDebugLabel(&g, active_id) : "");
+    else
+        Text("HoveredId: 0x%08X, ActiveId:  0x%08X", hovered_id, active_id);
 #else
     Text("HoveredId: 0x%08X, ActiveId:  0x%08X", hovered_id, active_id);
 #endif
