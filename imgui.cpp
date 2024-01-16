@@ -8400,6 +8400,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     if (flags & ImGuiInputFlags_RouteUnlessBgFocused)
         if (g.NavWindow == NULL)
             return false;
+
     // Note how ImGuiInputFlags_RouteAlways won't set routing and thus won't set owner. May want to rework this?
     if (flags & ImGuiInputFlags_RouteAlways)
     {
