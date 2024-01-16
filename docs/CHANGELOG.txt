@@ -53,6 +53,12 @@ Other changes:
 - Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)
 - Backends: Vulkan: Fixed handling of ImGui_ImplVulkan_InitInfo::MinAllocationSize field. (#7189, #4238)
 
+Docking+Viewports Branch:
+
+- Added ImGuiWindowClass::FocusRouteParentWindowId as a way to connect the focus route between
+  a tool window to a parent document window, so that Shortcuts in the documents are routed when the
+  tool is focused (regardless of whether the tool is docked or in a floating viewport, etc.) (#6798)
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.1 (Released 2024-01-10)

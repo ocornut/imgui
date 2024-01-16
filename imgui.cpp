@@ -6840,9 +6840,17 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         UpdateWindowParentAndRootLinks(window, flags, parent_window);
         window->ParentWindowInBeginStack = parent_window_in_stack;
 
+        // Focus route
         // There's little point to expose a flag to set this: because the interesting cases won't be using parent_window_in_stack,
-        // e.g. linking a tool window in a standalone viewport to a document window, regardless of their Begin() stack parenting. (#6798)
+        // Use for e.g. linking a tool window in a standalone viewport to a document window, regardless of their Begin() stack parenting. (#6798)
         window->ParentWindowForFocusRoute = (window->RootWindow != window) ? parent_window_in_stack : NULL;
+
+        // Override with SetNextWindowClass() field or direct call to SetWindowParentWindowForFocusRoute()
+        if (window->WindowClass.FocusRouteParentWindowId != 0)
+        {
+            window->ParentWindowForFocusRoute = FindWindowByID(window->WindowClass.FocusRouteParentWindowId);
+            IM_ASSERT(window->ParentWindowForFocusRoute != 0); // Invalid value for FocusRouteParentWindowId.
+        }
     }
 
     // Add to focus scope stack
