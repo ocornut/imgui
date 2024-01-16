@@ -58,6 +58,9 @@ Docking+Viewports Branch:
 - Added ImGuiWindowClass::FocusRouteParentWindowId as a way to connect the focus route between
   a tool window to a parent document window, so that Shortcuts in the documents are routed when the
   tool is focused (regardless of whether the tool is docked or in a floating viewport, etc.) (#6798)
+- Added ImGuiDockNodeFlags_DockedWindowsInFocusRoute to automatically make a dockspace connect
+  the focus route of its docked window. This is provided a convenience in case you have windows
+  where a connection is not explicit. (#6798)
 
 
 -----------------------------------------------------------------------
