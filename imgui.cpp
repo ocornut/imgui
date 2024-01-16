@@ -7824,7 +7824,7 @@ void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
 {
     ImGuiContext& g = *GImGui;
     g.NavFocusScopeId = focus_scope_id;
-    g.NavFocusScopePath.resize(0); // Invalidate
+    g.NavFocusRoute.resize(0); // Invalidate
     if (focus_scope_id == 0)
         return;
     IM_ASSERT(g.NavWindow != NULL);
@@ -7834,17 +7834,17 @@ void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
     {
         // Top of focus stack contains local focus scopes inside current window
         for (int n = g.FocusScopeStack.Size - 1; n >= 0 && g.FocusScopeStack.Data[n].WindowID == g.CurrentWindow->ID; n--)
-            g.NavFocusScopePath.push_back(g.FocusScopeStack.Data[n]);
+            g.NavFocusRoute.push_back(g.FocusScopeStack.Data[n]);
     }
     else if (focus_scope_id == g.NavWindow->NavRootFocusScopeId)
-        g.NavFocusScopePath.push_back({ focus_scope_id, g.NavWindow->ID });
+        g.NavFocusRoute.push_back({ focus_scope_id, g.NavWindow->ID });
     else
         return;
 
     // Then follow on manually set ParentWindowForFocusRoute field (#6798)
     for (ImGuiWindow* window = g.NavWindow->ParentWindowForFocusRoute; window != NULL; window = window->ParentWindowForFocusRoute)
-        g.NavFocusScopePath.push_back({ window->NavRootFocusScopeId, window->ID });
-    IM_ASSERT(g.NavFocusScopePath.Size < 100); // Maximum depth is technically 251 as per CalcRoutingScore(): 254 - 3
+        g.NavFocusRoute.push_back({ window->NavRootFocusScopeId, window->ID });
+    IM_ASSERT(g.NavFocusRoute.Size < 100); // Maximum depth is technically 251 as per CalcRoutingScore(): 254 - 3
 }
 
 // Focus = move navigation cursor, set scrolling, set focus window.
@@ -8360,10 +8360,11 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
         // - When Window/ChildB is focused -> Window scores 4,        Window/ChildB scores 3 (best)
         // Assuming only WindowA is submitting a routing request,
         // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
+        // This essentially follow the window->ParentWindowForFocusRoute chain.
         if (focus_scope_id == 0)
             return 255;
-        for (int index_in_focus_path = 0; index_in_focus_path < g.NavFocusScopePath.Size; index_in_focus_path++)
-            if (g.NavFocusScopePath.Data[index_in_focus_path].ID == focus_scope_id)
+        for (int index_in_focus_path = 0; index_in_focus_path < g.NavFocusRoute.Size; index_in_focus_path++)
+            if (g.NavFocusRoute.Data[index_in_focus_path].ID == focus_scope_id)
                 return 3 + index_in_focus_path;
 
         return 255;
@@ -14531,10 +14532,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavActivateFlags: %04X", g.NavActivateFlags);
         Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
         Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
-        Text("NavFocusScopePath[] = ");
-        for (int path_n = g.NavFocusScopePath.Size - 1; path_n >= 0; path_n--)
+        Text("NavFocusRoute[] = ");
+        for (int path_n = g.NavFocusRoute.Size - 1; path_n >= 0; path_n--)
         {
-            const ImGuiFocusScopeData& focus_scope = g.NavFocusScopePath[path_n];
+            const ImGuiFocusScopeData& focus_scope = g.NavFocusRoute[path_n];
             SameLine(0.0f, 0.0f);
             Text("0x%08X/", focus_scope.ID);
             SetItemTooltip("In window \"%s\"", FindWindowByID(focus_scope.WindowID)->Name);
