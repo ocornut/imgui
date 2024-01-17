@@ -46,6 +46,7 @@ Breaking changes:
 
 Other changes:
 
+- Nav: keyboard/gamepad activation mark widgets as held to give better visual feedback.
 - Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
