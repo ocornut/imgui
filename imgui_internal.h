@@ -1192,9 +1192,9 @@ typedef ImS64 ImGuiSelectionUserData;
 
 enum ImGuiNextItemDataFlags_
 {
-    ImGuiNextItemDataFlags_None     = 0,
-    ImGuiNextItemDataFlags_HasWidth = 1 << 0,
-    ImGuiNextItemDataFlags_HasOpen  = 1 << 1,
+    ImGuiNextItemDataFlags_None         = 0,
+    ImGuiNextItemDataFlags_HasWidth     = 1 << 0,
+    ImGuiNextItemDataFlags_HasOpen      = 1 << 1,
 };
 
 struct ImGuiNextItemData
@@ -1202,10 +1202,10 @@ struct ImGuiNextItemData
     ImGuiNextItemDataFlags      Flags;
     ImGuiItemFlags              ItemFlags;          // Currently only tested/used for ImGuiItemFlags_AllowOverlap.
     // Non-flags members are NOT cleared by ItemAdd() meaning they are still valid during NavProcessItem()
-    float                       Width;              // Set by SetNextItemWidth()
     ImGuiSelectionUserData      SelectionUserData;  // Set by SetNextItemSelectionUserData() (note that NULL/0 is a valid value, we use -1 == ImGuiSelectionUserData_Invalid to mark invalid values)
-    ImGuiCond                   OpenCond;
+    float                       Width;              // Set by SetNextItemWidth()
     bool                        OpenVal;            // Set by SetNextItemOpen()
+    ImGuiCond                   OpenCond : 8;
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!

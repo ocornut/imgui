@@ -968,7 +968,6 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
 
         // Click position in scrollbar normalized space (0.0f->1.0f)
         const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
-        SetHoveredID(id);
 
         bool seek_absolute = false;
         if (g.ActiveIdIsJustActivated)

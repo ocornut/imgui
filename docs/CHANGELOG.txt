@@ -49,7 +49,7 @@ Other changes:
 - Nav: keyboard/gamepad activation mark widgets as held to give better visual feedback.
 - Nav: tweak to logic marking navigated item as hovered when using keyboard, allowing
   the hover highlight to stay even while another item is activated.
-- Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
+- Nav: Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
