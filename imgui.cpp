@@ -75,6 +75,7 @@ CODE
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
 // [SECTION] INPUTS
 // [SECTION] ERROR CHECKING
+// [SECTION] ITEM SUBMISSION
 // [SECTION] LAYOUT
 // [SECTION] SCROLLING
 // [SECTION] TOOLTIPS
@@ -3922,17 +3923,6 @@ ImGuiID ImGui::GetHoveredID()
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredId ? g.HoveredId : g.HoveredIdPreviousFrame;
-}
-
-// This is called by ItemAdd().
-// Code not using ItemAdd() may need to call this manually otherwise ActiveId will be cleared. In IMGUI_VERSION_NUM < 18717 this was called by GetID().
-void ImGui::KeepAliveID(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.ActiveId == id)
-        g.ActiveIdIsAlive = id;
-    if (g.ActiveIdPreviousFrame == id)
-        g.ActiveIdPreviousFrameIsAlive = true;
 }
 
 void ImGui::MarkItemEdited(ImGuiID id)
@@ -9728,12 +9718,46 @@ void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
     IM_ASSERT(SizeOfFocusScopeStack == g.FocusScopeStack.Size   && "PushFocusScope/PopFocusScope Mismatch!");
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] ITEM SUBMISSION
+//-----------------------------------------------------------------------------
+// - KeepAliveID()
+// - ItemAdd()
+//-----------------------------------------------------------------------------
+
+// Code not using ItemAdd() may need to call this manually otherwise ActiveId will be cleared. In IMGUI_VERSION_NUM < 18717 this was called by GetID().
+void ImGui::KeepAliveID(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId == id)
+        g.ActiveIdIsAlive = id;
+    if (g.ActiveIdPreviousFrame == id)
+        g.ActiveIdPreviousFrameIsAlive = true;
+}
+
+/*
+
+// Declare item bounding box for clipping and interaction.
+// Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
+// declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
+// THIS IS IN THE PERFORMANCE CRITICAL PATH (UNTIL THE CLIPPING TEST AND EARLY-RETURN)
+bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemFlags extra_flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    ...
+
+    return true;
+}
+
+*/
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] LAYOUT
 //-----------------------------------------------------------------------------
 // - ItemSize()
-// - ItemAdd()
 // - SameLine()
 // - GetCursorScreenPos()
 // - SetCursorScreenPos()
@@ -9801,10 +9825,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
         SameLine();
 }
 
-// Declare item bounding box for clipping and interaction.
-// Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
-// declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
-// THIS IS IN THE PERFORMANCE CRITICAL PATH (UNTIL THE CLIPPING TEST AND EARLY-RETURN)
+
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
