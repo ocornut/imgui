@@ -9432,7 +9432,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
 
     // Default repeat behavior for Shortcut()
     // So e.g. pressing Ctrl+W and releasing Ctrl while holding W will not trigger the W shortcut.
-    if ((flags & ImGuiInputFlags_RepeatUntilMask_) == 0)
+    if ((flags & ImGuiInputFlags_Repeat) != 0 && (flags & ImGuiInputFlags_RepeatUntilMask_) == 0)
         flags |= ImGuiInputFlags_RepeatUntilKeyModsChange;
 
     if (!IsKeyChordPressed(key_chord, owner_id, flags))
