@@ -9735,97 +9735,10 @@ void ImGui::KeepAliveID(ImGuiID id)
         g.ActiveIdPreviousFrameIsAlive = true;
 }
 
-/*
-
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
 // THIS IS IN THE PERFORMANCE CRITICAL PATH (UNTIL THE CLIPPING TEST AND EARLY-RETURN)
-bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemFlags extra_flags)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    ...
-
-    return true;
-}
-
-*/
-
-
-//-----------------------------------------------------------------------------
-// [SECTION] LAYOUT
-//-----------------------------------------------------------------------------
-// - ItemSize()
-// - SameLine()
-// - GetCursorScreenPos()
-// - SetCursorScreenPos()
-// - GetCursorPos(), GetCursorPosX(), GetCursorPosY()
-// - SetCursorPos(), SetCursorPosX(), SetCursorPosY()
-// - GetCursorStartPos()
-// - Indent()
-// - Unindent()
-// - SetNextItemWidth()
-// - PushItemWidth()
-// - PushMultiItemsWidths()
-// - PopItemWidth()
-// - CalcItemWidth()
-// - CalcItemSize()
-// - GetTextLineHeight()
-// - GetTextLineHeightWithSpacing()
-// - GetFrameHeight()
-// - GetFrameHeightWithSpacing()
-// - GetContentRegionMax()
-// - GetContentRegionMaxAbs() [Internal]
-// - GetContentRegionAvail(),
-// - GetWindowContentRegionMin(), GetWindowContentRegionMax()
-// - BeginGroup()
-// - EndGroup()
-// Also see in imgui_widgets: tab bars, and in imgui_tables: tables, columns.
-//-----------------------------------------------------------------------------
-
-// Advance cursor given item size for layout.
-// Register minimum needed size so it can extend the bounding box used for auto-fit calculation.
-// See comments in ItemAdd() about how/why the size provided to ItemSize() vs ItemAdd() may often different.
-// THIS IS IN THE PERFORMANCE CRITICAL PATH.
-void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    if (window->SkipItems)
-        return;
-
-    // We increase the height in this function to accommodate for baseline offset.
-    // In theory we should be offsetting the starting position (window->DC.CursorPos), that will be the topic of a larger refactor,
-    // but since ItemSize() is not yet an API that moves the cursor (to handle e.g. wrapping) enlarging the height has the same effect.
-    const float offset_to_match_baseline_y = (text_baseline_y >= 0) ? ImMax(0.0f, window->DC.CurrLineTextBaseOffset - text_baseline_y) : 0.0f;
-
-    const float line_y1 = window->DC.IsSameLine ? window->DC.CursorPosPrevLine.y : window->DC.CursorPos.y;
-    const float line_height = ImMax(window->DC.CurrLineSize.y, /*ImMax(*/window->DC.CursorPos.y - line_y1/*, 0.0f)*/ + size.y + offset_to_match_baseline_y);
-
-    // Always align ourselves on pixel boundaries
-    //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
-    window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x + size.x;
-    window->DC.CursorPosPrevLine.y = line_y1;
-    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);    // Next line
-    window->DC.CursorPos.y = IM_TRUNC(line_y1 + line_height + g.Style.ItemSpacing.y);                       // Next line
-    window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
-    window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y - g.Style.ItemSpacing.y);
-    //if (g.IO.KeyAlt) window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // [DEBUG]
-
-    window->DC.PrevLineSize.y = line_height;
-    window->DC.CurrLineSize.y = 0.0f;
-    window->DC.PrevLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, text_baseline_y);
-    window->DC.CurrLineTextBaseOffset = 0.0f;
-    window->DC.IsSameLine = window->DC.IsSetPos = false;
-
-    // Horizontal layout mode
-    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
-        SameLine();
-}
-
-
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
@@ -9908,6 +9821,78 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     if (IsMouseHoveringRect(bb.Min, bb.Max))
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect;
     return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// [SECTION] LAYOUT
+//-----------------------------------------------------------------------------
+// - ItemSize()
+// - SameLine()
+// - GetCursorScreenPos()
+// - SetCursorScreenPos()
+// - GetCursorPos(), GetCursorPosX(), GetCursorPosY()
+// - SetCursorPos(), SetCursorPosX(), SetCursorPosY()
+// - GetCursorStartPos()
+// - Indent()
+// - Unindent()
+// - SetNextItemWidth()
+// - PushItemWidth()
+// - PushMultiItemsWidths()
+// - PopItemWidth()
+// - CalcItemWidth()
+// - CalcItemSize()
+// - GetTextLineHeight()
+// - GetTextLineHeightWithSpacing()
+// - GetFrameHeight()
+// - GetFrameHeightWithSpacing()
+// - GetContentRegionMax()
+// - GetContentRegionMaxAbs() [Internal]
+// - GetContentRegionAvail(),
+// - GetWindowContentRegionMin(), GetWindowContentRegionMax()
+// - BeginGroup()
+// - EndGroup()
+// Also see in imgui_widgets: tab bars, and in imgui_tables: tables, columns.
+//-----------------------------------------------------------------------------
+
+// Advance cursor given item size for layout.
+// Register minimum needed size so it can extend the bounding box used for auto-fit calculation.
+// See comments in ItemAdd() about how/why the size provided to ItemSize() vs ItemAdd() may often different.
+// THIS IS IN THE PERFORMANCE CRITICAL PATH.
+void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
+        return;
+
+    // We increase the height in this function to accommodate for baseline offset.
+    // In theory we should be offsetting the starting position (window->DC.CursorPos), that will be the topic of a larger refactor,
+    // but since ItemSize() is not yet an API that moves the cursor (to handle e.g. wrapping) enlarging the height has the same effect.
+    const float offset_to_match_baseline_y = (text_baseline_y >= 0) ? ImMax(0.0f, window->DC.CurrLineTextBaseOffset - text_baseline_y) : 0.0f;
+
+    const float line_y1 = window->DC.IsSameLine ? window->DC.CursorPosPrevLine.y : window->DC.CursorPos.y;
+    const float line_height = ImMax(window->DC.CurrLineSize.y, /*ImMax(*/window->DC.CursorPos.y - line_y1/*, 0.0f)*/ + size.y + offset_to_match_baseline_y);
+
+    // Always align ourselves on pixel boundaries
+    //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
+    window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x + size.x;
+    window->DC.CursorPosPrevLine.y = line_y1;
+    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);    // Next line
+    window->DC.CursorPos.y = IM_TRUNC(line_y1 + line_height + g.Style.ItemSpacing.y);                       // Next line
+    window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+    window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y - g.Style.ItemSpacing.y);
+    //if (g.IO.KeyAlt) window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // [DEBUG]
+
+    window->DC.PrevLineSize.y = line_height;
+    window->DC.CurrLineSize.y = 0.0f;
+    window->DC.PrevLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, text_baseline_y);
+    window->DC.CurrLineTextBaseOffset = 0.0f;
+    window->DC.IsSameLine = window->DC.IsSetPos = false;
+
+    // Horizontal layout mode
+    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
+        SameLine();
 }
 
 // Gets back to previous line and continue with horizontal layout
