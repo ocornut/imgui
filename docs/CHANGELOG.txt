@@ -46,12 +46,17 @@ Breaking changes:
 
 Other changes:
 
-- Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
+- Nav: keyboard/gamepad activation mark widgets as held to give better visual feedback.
+- Nav: tweak to logic marking navigated item as hovered when using keyboard, allowing
+  the hover highlight to stay even while another item is activated.
+- Nav: Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)
 - Backends: Vulkan: Fixed handling of ImGui_ImplVulkan_InitInfo::MinAllocationSize field. (#7189, #4238)
+- Backends: WebGPU: Filling all WGPUDepthStencilState fields explicitly as a recent Dawn
+  update stopped setting default values. (#7232) [@GrigoryGraborenko]
 
 Docking+Viewports Branch:
 
