@@ -1,0 +1,5 @@
+module CSDL {
+  umbrella header "include/csdl.h"
+  link "SDL2"
+  export *
+}
