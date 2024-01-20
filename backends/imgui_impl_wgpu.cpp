@@ -18,6 +18,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2024-01-22: Added configurable PipelineMultisampleState struct. (#7240)
 //  2024-01-22: (Breaking) ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure instead of variety of parameters, allowing for easier further changes.
+//  2024-01-22: Fixed pipeline layout leak. (#7245)
 //  2024-01-17: Explicitly fill all of WGPUDepthStencilState since standard removed defaults.
 //  2023-07-13: Use WGPUShaderModuleWGSLDescriptor's code instead of source. use WGPUMipmapFilterMode_Linear instead of WGPUFilterMode_Linear. (#6602)
 //  2023-04-11: Align buffer sizes. Use WGSL shaders instead of precompiled SPIR-V.
@@ -181,6 +182,12 @@ static void SafeRelease(WGPUBuffer& res)
 {
     if (res)
         wgpuBufferRelease(res);
+    res = nullptr;
+}
+static void SafeRelease(WGPUPipelineLayout& res)
+{
+    if (res)
+        wgpuPipelineLayoutRelease(res);
     res = nullptr;
 }
 static void SafeRelease(WGPURenderPipeline& res)
@@ -692,6 +699,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
+    SafeRelease(graphics_pipeline_desc.layout);
     SafeRelease(bg_layouts[0]);
 
     return true;

@@ -63,6 +63,7 @@ Other changes:
 - Backends: WebGPU: Added ImGui_ImplWGPU_InitInfo::PipelineMultisampleState. (#7240)
 - Backends: WebGPU: Filling all WGPUDepthStencilState fields explicitly as a recent Dawn
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
+- Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
 
 
 -----------------------------------------------------------------------
