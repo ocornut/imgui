@@ -180,6 +180,12 @@ static void SafeRelease(WGPUBuffer& res)
         wgpuBufferRelease(res);
     res = nullptr;
 }
+static void SafeRelease(WGPUPipelineLayout& res)
+{
+    if (res)
+        wgpuPipelineLayoutRelease(res);
+    res = nullptr;
+}
 static void SafeRelease(WGPURenderPipeline& res)
 {
     if (res)
@@ -691,6 +697,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
+    SafeRelease(graphics_pipeline_desc.layout);
     SafeRelease(bg_layouts[0]);
 
     return true;
