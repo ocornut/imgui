@@ -64,6 +64,7 @@ Other changes:
 - Backends: WebGPU: Filling all WGPUDepthStencilState fields explicitly as a recent Dawn
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
 - Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
+- Backends: OpenGL3: Backup and restore GL_PIXEL_UNPACK_BUFFER. (#7253)
 
 
 -----------------------------------------------------------------------
