@@ -1047,6 +1047,8 @@ CODE
 static const float NAV_WINDOWING_HIGHLIGHT_DELAY            = 0.20f;    // Time before the highlight and screen dimming starts fading in
 static const float NAV_WINDOWING_LIST_APPEAR_DELAY          = 0.15f;    // Time before the window list starts to appear
 
+static const float NAV_ACTIVATE_HIGHLIGHT_TIMER             = 0.10f;    // Time to highlight an item activated by a shortcut.
+
 // Window resizing from edges (when io.ConfigWindowsResizeFromEdges = true and ImGuiBackendFlags_HasMouseCursors is set in io.BackendFlags by backend)
 static const float WINDOWS_HOVER_PADDING                    = 4.0f;     // Extend outside window for hovering/resizing (maxxed with TouchPadding) and inside windows for borders. Affect FindHoveredWindow().
 static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
@@ -11169,6 +11171,13 @@ void ImGui::SetNavWindow(ImGuiWindow* window)
     NavUpdateAnyRequestFlag();
 }
 
+void ImGui::NavHighlightActivated(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavHighlightActivatedId = id;
+    g.NavHighlightActivatedTimer = NAV_ACTIVATE_HIGHLIGHT_TIMER;
+}
+
 void ImGui::NavClearPreferredPosForAxis(ImGuiAxis axis)
 {
     ImGuiContext& g = *GImGui;
@@ -11849,12 +11858,21 @@ static void ImGui::NavUpdate()
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && (activate_down || input_down))
             g.NavActivateDownId = g.NavId;
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && (activate_pressed || input_pressed))
+        {
             g.NavActivatePressedId = g.NavId;
+            NavHighlightActivated(g.NavId);
+        }
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         g.NavDisableHighlight = true;
     if (g.NavActivateId != 0)
         IM_ASSERT(g.NavActivateDownId == g.NavActivateId);
+
+    // Highlight
+    if (g.NavHighlightActivatedTimer > 0.0f)
+        g.NavHighlightActivatedTimer = ImMax(0.0f, g.NavHighlightActivatedTimer - io.DeltaTime);
+    if (g.NavHighlightActivatedTimer == 0.0f)
+        g.NavHighlightActivatedId = 0;
 
     // Process programmatic activation request
     // FIXME-NAV: Those should eventually be queued (unlike focus they don't cancel each others)

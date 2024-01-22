@@ -675,6 +675,10 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             g.ActiveIdHasBeenPressedBefore = true;
     }
 
+    // Activation highlight
+    if (g.NavHighlightActivatedId == id)
+        hovered = true;
+
     if (out_hovered) *out_hovered = hovered;
     if (out_held) *out_held = held;
 

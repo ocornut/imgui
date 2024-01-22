@@ -2026,6 +2026,8 @@ struct ImGuiContext
     ImGuiID                 NavActivateDownId;                  // ~~ IsKeyDown(ImGuiKey_Space) || IsKeyDown(ImGuiKey_Enter) || IsKeyDown(ImGuiKey_NavGamepadActivate) ? NavId : 0
     ImGuiID                 NavActivatePressedId;               // ~~ IsKeyPressed(ImGuiKey_Space) || IsKeyPressed(ImGuiKey_Enter) || IsKeyPressed(ImGuiKey_NavGamepadActivate) ? NavId : 0 (no repeat)
     ImGuiActivateFlags      NavActivateFlags;
+    ImGuiID                 NavHighlightActivatedId;
+    float                   NavHighlightActivatedTimer;
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest).
     ImGuiID                 NavJustMovedToFocusScopeId;         // Just navigated to this focus scope id (result of a successfully MoveRequest).
     ImGuiKeyChord           NavJustMovedToKeyMods;
@@ -2293,6 +2295,8 @@ struct ImGuiContext
         NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = 0;
         NavJustMovedToId = NavJustMovedToFocusScopeId = NavNextActivateId = 0;
         NavActivateFlags = NavNextActivateFlags = ImGuiActivateFlags_None;
+        NavHighlightActivatedId = 0;
+        NavHighlightActivatedTimer = 0.0f;
         NavJustMovedToKeyMods = ImGuiMod_None;
         NavInputSource = ImGuiInputSource_Keyboard;
         NavLayer = ImGuiNavLayer_Main;
@@ -3127,6 +3131,7 @@ namespace ImGui
     IMGUI_API void          NavMoveRequestCancel();
     IMGUI_API void          NavMoveRequestApplyResult();
     IMGUI_API void          NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags);
+    IMGUI_API void          NavHighlightActivated(ImGuiID id);
     IMGUI_API void          NavClearPreferredPosForAxis(ImGuiAxis axis);
     IMGUI_API void          NavRestoreHighlightAfterMove();
     IMGUI_API void          NavUpdateCurrentWindowIsScrollPushableX();
