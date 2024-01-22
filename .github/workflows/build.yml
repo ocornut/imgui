@@ -494,7 +494,7 @@ jobs:
         pushd emsdk-master
         source ./emsdk_env.sh
         popd
-        make -C examples/example_emscripten_wgpu
+        make -C examples/example_emscripten_wgpu -f Makefile.emscripten
 
   Android:
     runs-on: ubuntu-22.04
