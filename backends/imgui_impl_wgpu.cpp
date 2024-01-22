@@ -18,6 +18,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-01-22: Added configurable PipelineMultisampleState struct. (#7240)
+//  2024-01-22: (Breaking) ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure instead of variety of parameters, allowing for easier further changes.
+//  2024-01-22: Fixed pipeline layout leak. (#7245)
 //  2024-01-17: Explicitly fill all of WGPUDepthStencilState since standard removed defaults.
 //  2023-07-13: Use WGPUShaderModuleWGSLDescriptor's code instead of source. use WGPUMipmapFilterMode_Linear instead of WGPUFilterMode_Linear. (#6602)
 //  2023-04-11: Align buffer sizes. Use WGSL shaders instead of precompiled SPIR-V.
@@ -75,16 +78,17 @@ struct Uniforms
 
 struct ImGui_ImplWGPU_Data
 {
-    WGPUDevice          wgpuDevice = nullptr;
-    WGPUQueue           defaultQueue = nullptr;
-    WGPUTextureFormat   renderTargetFormat = WGPUTextureFormat_Undefined;
-    WGPUTextureFormat   depthStencilFormat = WGPUTextureFormat_Undefined;
-    WGPURenderPipeline  pipelineState = nullptr;
+    ImGui_ImplWGPU_InitInfo initInfo;
+    WGPUDevice              wgpuDevice = nullptr;
+    WGPUQueue               defaultQueue = nullptr;
+    WGPUTextureFormat       renderTargetFormat = WGPUTextureFormat_Undefined;
+    WGPUTextureFormat       depthStencilFormat = WGPUTextureFormat_Undefined;
+    WGPURenderPipeline      pipelineState = nullptr;
 
-    RenderResources     renderResources;
-    FrameResources*     pFrameResources = nullptr;
-    unsigned int        numFramesInFlight = 0;
-    unsigned int        frameIndex = UINT_MAX;
+    RenderResources         renderResources;
+    FrameResources*         pFrameResources = nullptr;
+    unsigned int            numFramesInFlight = 0;
+    unsigned int            frameIndex = UINT_MAX;
 };
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
@@ -180,6 +184,12 @@ static void SafeRelease(WGPUBuffer& res)
 {
     if (res)
         wgpuBufferRelease(res);
+    res = nullptr;
+}
+static void SafeRelease(WGPUPipelineLayout& res)
+{
+    if (res)
+        wgpuPipelineLayoutRelease(res);
     res = nullptr;
 }
 static void SafeRelease(WGPURenderPipeline& res)
@@ -568,9 +578,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
     graphics_pipeline_desc.primitive.frontFace = WGPUFrontFace_CW;
     graphics_pipeline_desc.primitive.cullMode = WGPUCullMode_None;
-    graphics_pipeline_desc.multisample.count = 1;
-    graphics_pipeline_desc.multisample.mask = UINT_MAX;
-    graphics_pipeline_desc.multisample.alphaToCoverageEnabled = false;
+    graphics_pipeline_desc.multisample = bd->initInfo.PipelineMultisampleState;
 
     // Bind group layouts
     WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};
@@ -693,6 +701,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
+    SafeRelease(graphics_pipeline_desc.layout);
     SafeRelease(bg_layouts[0]);
 
     return true;
@@ -714,7 +723,7 @@ void ImGui_ImplWGPU_InvalidateDeviceObjects()
         SafeRelease(bd->pFrameResources[i]);
 }
 
-bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format, WGPUTextureFormat depth_format)
+bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
@@ -725,11 +734,12 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     io.BackendRendererName = "imgui_impl_webgpu";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-    bd->wgpuDevice = device;
+    bd->initInfo = *init_info;
+    bd->wgpuDevice = init_info->Device;
     bd->defaultQueue = wgpuDeviceGetQueue(bd->wgpuDevice);
-    bd->renderTargetFormat = rt_format;
-    bd->depthStencilFormat = depth_format;
-    bd->numFramesInFlight = num_frames_in_flight;
+    bd->renderTargetFormat = init_info->RenderTargetFormat;
+    bd->depthStencilFormat = init_info->DepthStencilFormat;
+    bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->frameIndex = UINT_MAX;
 
     bd->renderResources.FontTexture = nullptr;
@@ -742,8 +752,8 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     bd->renderResources.ImageBindGroupLayout = nullptr;
 
     // Create buffers with a default size (they will later be grown as needed)
-    bd->pFrameResources = new FrameResources[num_frames_in_flight];
-    for (int i = 0; i < num_frames_in_flight; i++)
+    bd->pFrameResources = new FrameResources[bd->numFramesInFlight];
+    for (int i = 0; i < bd->numFramesInFlight; i++)
     {
         FrameResources* fr = &bd->pFrameResources[i];
         fr->IndexBuffer = nullptr;

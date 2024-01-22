@@ -43,6 +43,8 @@ Breaking changes:
 
 - Commented out ImGuiIO::ImeWindowHandle obsoleted in 1.87 in favor of writing
   to 'void* ImGuiViewport::PlatformHandleRaw'.
+- Backends: WebGPU: ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure
+  instead of variety of parameters, allowing for easier further changes. (#7240)
 
 Other changes:
 
@@ -51,14 +53,17 @@ Other changes:
   the hover highlight to stay even while another item is activated.
 - Nav: Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
+- Nav: Fixed pressing Escape while in a child window with _NavFlattened flag. (#7237)
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Backends: Vulkan: Fixed vkAcquireNextImageKHR() validation errors in VulkanSDK 1.3.275 by
   allocating one extra semaphore than in-flight frames. (#7236) [@mklefrancois]
 - Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)
 - Backends: Vulkan: Fixed handling of ImGui_ImplVulkan_InitInfo::MinAllocationSize field. (#7189, #4238)
+- Backends: WebGPU: Added ImGui_ImplWGPU_InitInfo::PipelineMultisampleState. (#7240)
 - Backends: WebGPU: Filling all WGPUDepthStencilState fields explicitly as a recent Dawn
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
+- Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
 
 Docking+Viewports Branch:
 

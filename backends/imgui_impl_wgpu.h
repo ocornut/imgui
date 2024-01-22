@@ -22,7 +22,24 @@
 
 #include <webgpu/webgpu.h>
 
-IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextureFormat rt_format, WGPUTextureFormat depth_format = WGPUTextureFormat_Undefined);
+// Initialization data, for ImGui_ImplWGPU_Init()
+struct ImGui_ImplWGPU_InitInfo
+{
+    WGPUDevice              Device;
+    int                     NumFramesInFlight = 3;
+    WGPUTextureFormat       RenderTargetFormat = WGPUTextureFormat_Undefined;
+    WGPUTextureFormat       DepthStencilFormat = WGPUTextureFormat_Undefined;
+    WGPUMultisampleState    PipelineMultisampleState = {};
+
+    ImGui_ImplWGPU_InitInfo()
+    {
+        PipelineMultisampleState.count = 1;
+        PipelineMultisampleState.mask = -1u;
+        PipelineMultisampleState.alphaToCoverageEnabled = false;
+    }
+};
+
+IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info);
 IMGUI_IMPL_API void ImGui_ImplWGPU_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplWGPU_NewFrame();
 IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder pass_encoder);

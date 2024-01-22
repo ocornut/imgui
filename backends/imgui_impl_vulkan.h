@@ -47,7 +47,12 @@
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
 #endif
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(NOMINMAX)
+#define NOMINMAX
 #include <vulkan/vulkan.h>
+#else
+#include <vulkan/vulkan.h>
+#endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
