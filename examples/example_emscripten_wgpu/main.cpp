@@ -96,7 +96,12 @@ int main(int, char**)
 #ifdef __EMSCRIPTEN__
     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
 #endif
-    ImGui_ImplWGPU_Init(wgpu_device, 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined);
+    ImGui_ImplWGPU_InitInfo init_info;
+    init_info.Device = wgpu_device;
+    init_info.NumFramesInFlight = 3;
+    init_info.RenderTargetFormat = wgpu_preferred_fmt;
+    init_info.DepthStencilFormat = WGPUTextureFormat_Undefined;
+    ImGui_ImplWGPU_Init(&init_info);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.

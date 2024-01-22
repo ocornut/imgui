@@ -43,6 +43,8 @@ Breaking changes:
 
 - Commented out ImGuiIO::ImeWindowHandle obsoleted in 1.87 in favor of writing
   to 'void* ImGuiViewport::PlatformHandleRaw'.
+- Backends: WebGPU: ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure
+  instead of variety of parameters, allowing for easier further changes. (#7240)
 
 Other changes:
 
