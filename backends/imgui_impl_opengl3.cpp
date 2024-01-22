@@ -191,6 +191,11 @@
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
 #endif
 
+// Desktop GL and GL ES 3.0+ have glBindBuffer() with GL_PIXEL_UNPACK_BUFFER target.
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_BUFFER_PIXEL_UNPACK
+#endif
+
 // Desktop GL 3.1+ has GL_PRIMITIVE_RESTART state
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && defined(GL_VERSION_3_1)
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
@@ -747,8 +752,11 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GLint last_texture, last_array_buffer;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_BUFFER_PIXEL_UNPACK
+    GLint last_pixel_unpack_buffer;
     glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_pixel_unpack_buffer);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+#endif
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GLint last_vertex_array;
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
@@ -922,7 +930,9 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Restore modified GL state
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_BUFFER_PIXEL_UNPACK
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_pixel_unpack_buffer);
+#endif
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     glBindVertexArray(last_vertex_array);
 #endif
