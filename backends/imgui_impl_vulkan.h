@@ -46,7 +46,15 @@
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
 #endif
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(NOMINMAX)
+#define NOMINMAX
+#define IMGUI_IMPL_VULKAN_NOMINMAX // Only undefine NOMINMAX if it wasn't already defined to avoid side effects
+#endif
 #include <vulkan/vulkan.h>
+#ifdef IMGUI_IMPL_VULKAN_NOMINMAX 
+#undef NOMINMAX
+#undef IMGUI_IMPL_VULKAN_NOMINMAX
+#endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
