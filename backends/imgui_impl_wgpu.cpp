@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-01-22: Added configurable PipelineMultisampleState struct. (#7240)
 //  2024-01-22: (Breaking) ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure instead of variety of parameters, allowing for easier further changes.
 //  2024-01-17: Explicitly fill all of WGPUDepthStencilState since standard removed defaults.
 //  2023-07-13: Use WGPUShaderModuleWGSLDescriptor's code instead of source. use WGPUMipmapFilterMode_Linear instead of WGPUFilterMode_Linear. (#6602)
@@ -568,9 +569,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
     graphics_pipeline_desc.primitive.frontFace = WGPUFrontFace_CW;
     graphics_pipeline_desc.primitive.cullMode = WGPUCullMode_None;
-    graphics_pipeline_desc.multisample.count = 1;
-    graphics_pipeline_desc.multisample.mask = UINT_MAX;
-    graphics_pipeline_desc.multisample.alphaToCoverageEnabled = false;
+    graphics_pipeline_desc.multisample = bd->initInfo.PipelineMultisampleState;
 
     // Bind group layouts
     WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};

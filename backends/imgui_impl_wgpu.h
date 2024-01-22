@@ -27,6 +27,14 @@ struct ImGui_ImplWGPU_InitInfo
     int                     NumFramesInFlight = 3;
     WGPUTextureFormat       RenderTargetFormat = WGPUTextureFormat_Undefined;
     WGPUTextureFormat       DepthStencilFormat = WGPUTextureFormat_Undefined;
+    WGPUMultisampleState    PipelineMultisampleState = {};
+
+    ImGui_ImplWGPU_InitInfo()
+    {
+        PipelineMultisampleState.count = 1;
+        PipelineMultisampleState.mask = -1u;
+        PipelineMultisampleState.alphaToCoverageEnabled = false;
+    }
 };
 
 IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info);
