@@ -15,6 +15,8 @@ Index of this file:
 // [SECTION] Generic helpers
 // [SECTION] ImDrawList support
 // [SECTION] Widgets support: flags, enums, data structures
+// [SECTION] Data types support
+// [SECTION] Popup support
 // [SECTION] Inputs support
 // [SECTION] Clipper support
 // [SECTION] Navigation support
@@ -983,43 +985,6 @@ enum ImGuiPlotType
     ImGuiPlotType_Histogram,
 };
 
-enum ImGuiPopupPositionPolicy
-{
-    ImGuiPopupPositionPolicy_Default,
-    ImGuiPopupPositionPolicy_ComboBox,
-    ImGuiPopupPositionPolicy_Tooltip,
-};
-
-struct ImGuiDataVarInfo
-{
-    ImGuiDataType   Type;
-    ImU32           Count;      // 1+
-    ImU32           Offset;     // Offset in parent structure
-    void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
-};
-
-struct ImGuiDataTypeTempStorage
-{
-    ImU8        Data[8];        // Can fit any data up to ImGuiDataType_COUNT
-};
-
-// Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
-struct ImGuiDataTypeInfo
-{
-    size_t      Size;           // Size in bytes
-    const char* Name;           // Short descriptive name for the type, for debugging
-    const char* PrintFmt;       // Default printf format for the type
-    const char* ScanFmt;        // Default scanf format for the type
-};
-
-// Extend ImGuiDataType_
-enum ImGuiDataTypePrivate_
-{
-    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
-    ImGuiDataType_Pointer,
-    ImGuiDataType_ID,
-};
-
 // Stacked color modifier, backup of modified data so we can restore it
 struct ImGuiColorMod
 {
@@ -1131,21 +1096,6 @@ struct IMGUI_API ImGuiInputTextState
     int         GetSelectionStart() const   { return Stb.select_start; }
     int         GetSelectionEnd() const     { return Stb.select_end; }
     void        SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
-};
-
-// Storage for current popup stack
-struct ImGuiPopupData
-{
-    ImGuiID             PopupId;        // Set on OpenPopup()
-    ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
-    ImGuiWindow*        BackupNavWindow;// Set on OpenPopup(), a NavWindow that will be restored on popup close
-    int                 ParentNavLayer; // Resolved on BeginPopup(). Actually a ImGuiNavLayer type (declared down below), initialized to -1 which is not part of an enum, but serves well-enough as "not any of layers" value
-    int                 OpenFrameCount; // Set on OpenPopup()
-    ImGuiID             OpenParentId;   // Set on OpenPopup(), we need this to differentiate multiple menu sets from each others (e.g. inside menu bar vs loose menu items)
-    ImVec2              OpenPopupPos;   // Set on OpenPopup(), preferred popup position (typically == OpenMousePos when using mouse)
-    ImVec2              OpenMousePos;   // Set on OpenPopup(), copy of mouse position at the time of opening popup
-
-    ImGuiPopupData()    { memset(this, 0, sizeof(*this)); ParentNavLayer = OpenFrameCount = -1; }
 };
 
 enum ImGuiNextWindowDataFlags_
@@ -1275,6 +1225,66 @@ struct ImGuiPtrOrIndex
 
     ImGuiPtrOrIndex(void* ptr)  { Ptr = ptr; Index = -1; }
     ImGuiPtrOrIndex(int index)  { Ptr = NULL; Index = index; }
+};
+
+//-----------------------------------------------------------------------------
+// [SECTION] Data types support
+//-----------------------------------------------------------------------------
+
+struct ImGuiDataVarInfo
+{
+    ImGuiDataType   Type;
+    ImU32           Count;      // 1+
+    ImU32           Offset;     // Offset in parent structure
+    void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
+};
+
+struct ImGuiDataTypeTempStorage
+{
+    ImU8        Data[8];        // Can fit any data up to ImGuiDataType_COUNT
+};
+
+// Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
+struct ImGuiDataTypeInfo
+{
+    size_t      Size;           // Size in bytes
+    const char* Name;           // Short descriptive name for the type, for debugging
+    const char* PrintFmt;       // Default printf format for the type
+    const char* ScanFmt;        // Default scanf format for the type
+};
+
+// Extend ImGuiDataType_
+enum ImGuiDataTypePrivate_
+{
+    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
+    ImGuiDataType_Pointer,
+    ImGuiDataType_ID,
+};
+
+//-----------------------------------------------------------------------------
+// [SECTION] Popup support
+//-----------------------------------------------------------------------------
+
+enum ImGuiPopupPositionPolicy
+{
+    ImGuiPopupPositionPolicy_Default,
+    ImGuiPopupPositionPolicy_ComboBox,
+    ImGuiPopupPositionPolicy_Tooltip,
+};
+
+// Storage for popup stacks (g.OpenPopupStack and g.BeginPopupStack)
+struct ImGuiPopupData
+{
+    ImGuiID             PopupId;        // Set on OpenPopup()
+    ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
+    ImGuiWindow*        BackupNavWindow;// Set on OpenPopup(), a NavWindow that will be restored on popup close
+    int                 ParentNavLayer; // Resolved on BeginPopup(). Actually a ImGuiNavLayer type (declared down below), initialized to -1 which is not part of an enum, but serves well-enough as "not any of layers" value
+    int                 OpenFrameCount; // Set on OpenPopup()
+    ImGuiID             OpenParentId;   // Set on OpenPopup(), we need this to differentiate multiple menu sets from each others (e.g. inside menu bar vs loose menu items)
+    ImVec2              OpenPopupPos;   // Set on OpenPopup(), preferred popup position (typically == OpenMousePos when using mouse)
+    ImVec2              OpenMousePos;   // Set on OpenPopup(), copy of mouse position at the time of opening popup
+
+    ImGuiPopupData()    { memset(this, 0, sizeof(*this)); ParentNavLayer = OpenFrameCount = -1; }
 };
 
 //-----------------------------------------------------------------------------
