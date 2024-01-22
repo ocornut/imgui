@@ -128,7 +128,7 @@ static bool InitWGPU()
     wgpu::Surface surface = instance.CreateSurface(&surface_desc);
     wgpu::Adapter adapter = {};
     wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
-    wgpu_surface = surface.Release();
+    wgpu_surface = surface.MoveToCHandle();
 
     return true;
 }
