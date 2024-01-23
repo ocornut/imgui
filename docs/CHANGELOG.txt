@@ -73,6 +73,8 @@ Docking+Viewports Branch:
 - Added ImGuiDockNodeFlags_DockedWindowsInFocusRoute to automatically make a dockspace connect
   the focus route of its docked window. This is provided a convenience in case you have windows
   where a connection is not explicit. (#6798)
+- Backends: OSX: Fixed not submitting Monitors info when viewports are not enabled, leading to
+  missing e.g. DpiScale info. (#7257) [@actboy168]
 
 
 -----------------------------------------------------------------------
