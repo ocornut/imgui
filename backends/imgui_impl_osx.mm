@@ -435,6 +435,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     bd->Window = view.window ?: NSApp.orderedWindows.firstObject;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
+    ImGui_ImplOSX_UpdateMonitors();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOSX_InitPlatformInterface();
 
@@ -1088,7 +1089,6 @@ static void ImGui_ImplOSX_UpdateMonitors()
 static void ImGui_ImplOSX_InitPlatformInterface()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
-    ImGui_ImplOSX_UpdateMonitors();
 
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
