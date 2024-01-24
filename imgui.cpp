@@ -8438,17 +8438,20 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         return true;
     }
 
-    // Specific culling for shortcuts with no modifiers when there's an active id.
-    // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
-    // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
-    // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
-    // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
-    if ((flags & ImGuiInputFlags_RouteFocused) && (g.ActiveId != 0 && g.ActiveId != owner_id))
-        if (g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
+    // Specific culling when there's an active.
+    if (g.ActiveId != 0 && g.ActiveId != owner_id)
+    {
+        // Cull shortcuts with no modifiers when it could generate a character.
+        // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
+        // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
+        // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
+        // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
+        if ((flags & ImGuiInputFlags_RouteFocused) && g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
         {
             IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> filtered as potential char input\n", GetKeyChordName(key_chord), owner_id, flags);
             return false;
         }
+    }
 
     // FIXME-SHORTCUT: A way to configure the location/focus-scope to test would render this more flexible.
     const int score = CalcRoutingScore(g.CurrentFocusScopeId, owner_id, flags);
