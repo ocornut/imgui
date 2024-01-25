@@ -12627,28 +12627,33 @@ static void ImGui::NavUpdateWindowing()
     }
 
     // Keyboard: Press and Release ALT to toggle menu layer
-    // - Testing that only Alt is tested prevents Alt+Shift or AltGR from toggling menu layer.
-    // - AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl). But even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
-    if (nav_keyboard_active && IsKeyPressed(ImGuiMod_Alt, ImGuiKeyOwner_None))
-    {
-        g.NavWindowingToggleLayer = true;
-        g.NavInputSource = ImGuiInputSource_Keyboard;
-    }
+    const ImGuiKey windowing_toggle_keys[] = { ImGuiKey_LeftAlt, ImGuiKey_RightAlt };
+    for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
+        if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, ImGuiKeyOwner_None))
+        {
+            g.NavWindowingToggleLayer = true;
+            g.NavWindowingToggleKey = windowing_toggle_key;
+            g.NavInputSource = ImGuiInputSource_Keyboard;
+            break;
+        }
     if (g.NavWindowingToggleLayer && g.NavInputSource == ImGuiInputSource_Keyboard)
     {
         // We cancel toggling nav layer when any text has been typed (generally while holding Alt). (See #370)
         // We cancel toggling nav layer when other modifiers are pressed. (See #4439)
+        // - AltGR is Alt+Ctrl on some layout but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl).
         // We cancel toggling nav layer if an owner has claimed the key.
-        if (io.InputQueueCharacters.Size > 0 || io.KeyCtrl || io.KeyShift || io.KeySuper || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_None) == false)
+        if (io.InputQueueCharacters.Size > 0 || io.KeyCtrl || io.KeyShift || io.KeySuper)
+            g.NavWindowingToggleLayer = false;
+        if (TestKeyOwner(g.NavWindowingToggleKey, ImGuiKeyOwner_None) == false || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_None) == false)
             g.NavWindowingToggleLayer = false;
 
-        // Apply layer toggle on release
+        // Apply layer toggle on Alt release
         // Important: as before version <18314 we lacked an explicit IO event for focus gain/loss, we also compare mouse validity to detect old backends clearing mouse pos on focus loss.
-        if (IsKeyReleased(ImGuiMod_Alt) && g.NavWindowingToggleLayer)
+        if (IsKeyReleased(g.NavWindowingToggleKey) && g.NavWindowingToggleLayer)
             if (g.ActiveId == 0 || g.ActiveIdAllowOverlap)
                 if (IsMousePosValid(&io.MousePos) == IsMousePosValid(&io.MousePosPrev))
                     apply_toggle_layer = true;
-        if (!IsKeyDown(ImGuiMod_Alt))
+        if (!IsKeyDown(g.NavWindowingToggleKey))
             g.NavWindowingToggleLayer = false;
     }
 

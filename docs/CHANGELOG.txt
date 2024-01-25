@@ -54,6 +54,8 @@ Other changes:
 - Nav: Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Nav: Fixed pressing Escape while in a child window with _NavFlattened flag. (#7237)
+- Nav: Improve handling of Alt key to toggle menu so that key ownership may be claimed on
+  indiviudal left/right alt key without intefering with the other.
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Debug Tools: Added "nop" to IM_DEBUG_BREAK macro on GCC to work around GDB bug (#7266) [@Peter0x44]

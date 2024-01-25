@@ -2078,6 +2078,7 @@ struct ImGuiContext
     float                   NavWindowingTimer;
     float                   NavWindowingHighlightAlpha;
     bool                    NavWindowingToggleLayer;
+    ImGuiKey                NavWindowingToggleKey;
     ImVec2                  NavWindowingAccumDeltaPos;
     ImVec2                  NavWindowingAccumDeltaSize;
 
@@ -2329,6 +2330,7 @@ struct ImGuiContext
         NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
+        NavWindowingToggleKey = ImGuiKey_None;
 
         DimBgRatio = 0.0f;
 
