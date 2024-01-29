@@ -1,7 +1,7 @@
 # Example usage:
 #  mkdir build
 #  cd build
-#  cmake -g Ninja -DCMAKE_BUILD_TYPE=Release ..
+#  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 
 cmake_minimum_required(VERSION 3.28)
 project(imgui_example_glfw_opengl3 CXX)
