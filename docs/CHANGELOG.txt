@@ -68,7 +68,7 @@ Other changes:
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
 - Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
 - Backends: OpenGL3: Backup and restore GL_PIXEL_UNPACK_BUFFER. (#7253)
-- Internals: Various improvements related to yet unpublicized shortcut routing and input ownerhip
+- Internals: Various improvements related to yet unpublicized shortcut routing and input ownership
   systems.
 
 
