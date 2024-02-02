@@ -6,7 +6,7 @@
 
 - You may also refer to our [Continuous Integration setup](https://github.com/ocornut/imgui/tree/master/.github/workflows) for Emscripten setup.
 
-- Then build using `make` while in the `example_emscripten_wgpu/` directory.
+- Then build using `make -f Makefile.emscripten` while in the `example_emscripten_wgpu/` directory.
 
 - Requires recent Emscripten as WGPU is still a work-in-progress API.
 

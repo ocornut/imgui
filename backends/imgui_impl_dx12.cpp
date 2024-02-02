@@ -899,7 +899,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.SampleDesc.Quality = 0;
     sd1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     sd1.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    sd1.Scaling = DXGI_SCALING_STRETCH;
+    sd1.Scaling = DXGI_SCALING_NONE;
     sd1.Stereo = FALSE;
 
     IDXGIFactory4* dxgi_factory = nullptr;
