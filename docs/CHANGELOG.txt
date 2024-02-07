@@ -68,8 +68,10 @@ Other changes:
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
 - Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
 - Backends: OpenGL3: Backup and restore GL_PIXEL_UNPACK_BUFFER. (#7253)
-- Internals: Various improvements related to yet unpublicized shortcut routing and input ownership
-  systems.
+- Internals: Many improvements related to yet unpublicized shortcut routing and input ownership systems.
+- Internals: InputText: Add way to force reload of user-buf when active. (#2890) [@kudaba, @ocornut]
+  Often requested in some form (#6962, #5219, #3290, #4627, #5054, #3878, #2881, #1506, #1216, #968),
+  and useful for interactive completion/suggestions popups (#2057, #718)
 
 
 -----------------------------------------------------------------------
