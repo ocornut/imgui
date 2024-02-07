@@ -54,8 +54,11 @@ Other changes:
 - Nav: Fixed SetKeyboardFocusHere() not working when current nav focus is in different scope,
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Nav: Fixed pressing Escape while in a child window with _NavFlattened flag. (#7237)
+- Nav: Improve handling of Alt key to toggle menu so that key ownership may be claimed on
+  indiviudal left/right alt key without intefering with the other.
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
+- Debug Tools: Added "nop" to IM_DEBUG_BREAK macro on GCC to work around GDB bug (#7266) [@Peter0x44]
 - Backends: Vulkan: Fixed vkAcquireNextImageKHR() validation errors in VulkanSDK 1.3.275 by
   allocating one extra semaphore than in-flight frames. (#7236) [@mklefrancois]
 - Backends: Vulkan: Fixed vkMapMemory() calls unnecessarily using full buffer size. (#3957)
@@ -64,6 +67,11 @@ Other changes:
 - Backends: WebGPU: Filling all WGPUDepthStencilState fields explicitly as a recent Dawn
   update stopped setting default values. (#7232) [@GrigoryGraborenko]
 - Backends: WebGPU: Fixed pipeline layout leak. (#7245) [@rajveermalviya]
+- Backends: OpenGL3: Backup and restore GL_PIXEL_UNPACK_BUFFER. (#7253)
+- Internals: Many improvements related to yet unpublicized shortcut routing and input ownership systems.
+- Internals: InputText: Add way to force reload of user-buf when active. (#2890) [@kudaba, @ocornut]
+  Often requested in some form (#6962, #5219, #3290, #4627, #5054, #3878, #2881, #1506, #1216, #968),
+  and useful for interactive completion/suggestions popups (#2057, #718)
 
 Docking+Viewports Branch:
 

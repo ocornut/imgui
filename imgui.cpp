@@ -8729,6 +8729,26 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 // - Shortcut() [Internal]
 //-----------------------------------------------------------------------------
 
+ImGuiKeyChord ImGui::FixupKeyChord(ImGuiContext* ctx, ImGuiKeyChord key_chord)
+{
+    // Convert ImGuiMod_Shortcut and add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
+    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    if (IsModKey(key))
+    {
+        if (key == ImGuiKey_LeftCtrl || key == ImGuiKey_RightCtrl)
+            key_chord |= ImGuiMod_Ctrl;
+        if (key == ImGuiKey_LeftShift || key == ImGuiKey_RightShift)
+            key_chord |= ImGuiMod_Shift;
+        if (key == ImGuiKey_LeftAlt || key == ImGuiKey_RightAlt)
+            key_chord |= ImGuiMod_Alt;
+        if (key == ImGuiKey_LeftSuper || key == ImGuiKey_RightSuper)
+            key_chord |= ImGuiMod_Super;
+    }
+    if (key_chord & ImGuiMod_Shortcut)
+        return (key_chord & ~ImGuiMod_Shortcut) | (ctx->IO.ConfigMacOSXBehaviors ? ImGuiMod_Super : ImGuiMod_Ctrl);
+    return key_chord;
+}
+
 ImGuiKeyData* ImGui::GetKeyData(ImGuiContext* ctx, ImGuiKey key)
 {
     ImGuiContext& g = *ctx;
@@ -8812,8 +8832,7 @@ const char* ImGui::GetKeyName(ImGuiKey key)
 const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
 {
     ImGuiContext& g = *GImGui;
-    if (key_chord & ImGuiMod_Shortcut)
-        key_chord = ConvertShortcutMod(key_chord);
+    key_chord = FixupKeyChord(&g, key_chord);
     ImFormatString(g.TempKeychordName, IM_ARRAYSIZE(g.TempKeychordName), "%s%s%s%s%s",
         (key_chord & ImGuiMod_Ctrl) ? "Ctrl+" : "",
         (key_chord & ImGuiMod_Shift) ? "Shift+" : "",
@@ -9034,8 +9053,8 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_None);
 
-    if (key_chord & ImGuiMod_Shortcut)
-        key_chord = ConvertShortcutMod(key_chord);
+    // Convert ImGuiMod_Shortcut and add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
+    key_chord = FixupKeyChord(&g, key_chord);
 
     // [DEBUG] Debug break requested by user
     if (g.DebugBreakInShortcutRouting == key_chord)
@@ -9052,17 +9071,30 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         return true;
     }
 
-    // Specific culling for shortcuts with no modifiers when there's an active id.
-    // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
-    // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
-    // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
-    // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
-    if ((flags & ImGuiInputFlags_RouteFocused) && (g.ActiveId != 0 && g.ActiveId != owner_id))
-        if (g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
+    // Specific culling when there's an active.
+    if (g.ActiveId != 0 && g.ActiveId != owner_id)
+    {
+        // Cull shortcuts with no modifiers when it could generate a character.
+        // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
+        // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
+        // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
+        // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
+        if ((flags & ImGuiInputFlags_RouteFocused) && g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
         {
             IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> filtered as potential char input\n", GetKeyChordName(key_chord), owner_id, flags);
             return false;
         }
+
+        // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
+        if ((flags & ImGuiInputFlags_RouteGlobalHigh) == 0 && g.ActiveIdUsingAllKeyboardKeys)
+        {
+            ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+            if (key == ImGuiKey_None)
+                key = ConvertSingleModFlagToKey(&g, (ImGuiKey)(key_chord & ImGuiMod_Mask_));
+            if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
+                return false;
+        }
+    }
 
     // FIXME-SHORTCUT: A way to configure the location/focus-scope to test would render this more flexible.
     const int score = CalcRoutingScore(g.CurrentFocusScopeId, owner_id, flags);
@@ -9090,9 +9122,9 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
 // Note: this cannot be turned into GetShortcutRouting() because we do the owner_id->routing_id translation, name would be more misleading.
 bool ImGui::TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id)
 {
+    ImGuiContext& g = *GImGui;
     const ImGuiID routing_id = GetRoutingIdFromOwnerId(owner_id);
-    if (key_chord & ImGuiMod_Shortcut)
-        key_chord = ConvertShortcutMod(key_chord);
+    key_chord = FixupKeyChord(&g, key_chord);
     ImGuiKeyRoutingData* routing_data = GetShortcutRoutingData(key_chord); // FIXME: Could avoid creating entry.
     return routing_data->RoutingCurr == routing_id;
 }
@@ -10033,8 +10065,7 @@ bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord)
 bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (key_chord & ImGuiMod_Shortcut)
-        key_chord = ConvertShortcutMod(key_chord);
+    key_chord = FixupKeyChord(&g, key_chord);
     ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
     if (g.IO.KeyMods != mods)
         return false;
@@ -12904,6 +12935,8 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavWindow = result->Window;
         g.NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
     }
+
+    // FIXME: Could become optional e.g. ImGuiNavMoveFlags_NoClearActiveId if we later want to apply navigation requests without altering active input.
     if (g.ActiveId != result->ID)
         ClearActiveID();
 
@@ -13274,28 +13307,33 @@ static void ImGui::NavUpdateWindowing()
     }
 
     // Keyboard: Press and Release ALT to toggle menu layer
-    // - Testing that only Alt is tested prevents Alt+Shift or AltGR from toggling menu layer.
-    // - AltGR is normally Alt+Ctrl but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl). But even on keyboards without AltGR we don't want Alt+Ctrl to open menu anyway.
-    if (nav_keyboard_active && IsKeyPressed(ImGuiMod_Alt, ImGuiKeyOwner_None))
-    {
-        g.NavWindowingToggleLayer = true;
-        g.NavInputSource = ImGuiInputSource_Keyboard;
-    }
+    const ImGuiKey windowing_toggle_keys[] = { ImGuiKey_LeftAlt, ImGuiKey_RightAlt };
+    for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
+        if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, ImGuiKeyOwner_None))
+        {
+            g.NavWindowingToggleLayer = true;
+            g.NavWindowingToggleKey = windowing_toggle_key;
+            g.NavInputSource = ImGuiInputSource_Keyboard;
+            break;
+        }
     if (g.NavWindowingToggleLayer && g.NavInputSource == ImGuiInputSource_Keyboard)
     {
         // We cancel toggling nav layer when any text has been typed (generally while holding Alt). (See #370)
         // We cancel toggling nav layer when other modifiers are pressed. (See #4439)
+        // - AltGR is Alt+Ctrl on some layout but we can't reliably detect it (not all backends/systems/layout emit it as Alt+Ctrl).
         // We cancel toggling nav layer if an owner has claimed the key.
-        if (io.InputQueueCharacters.Size > 0 || io.KeyCtrl || io.KeyShift || io.KeySuper || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_None) == false)
+        if (io.InputQueueCharacters.Size > 0 || io.KeyCtrl || io.KeyShift || io.KeySuper)
+            g.NavWindowingToggleLayer = false;
+        if (TestKeyOwner(g.NavWindowingToggleKey, ImGuiKeyOwner_None) == false || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_None) == false)
             g.NavWindowingToggleLayer = false;
 
-        // Apply layer toggle on release
+        // Apply layer toggle on Alt release
         // Important: as before version <18314 we lacked an explicit IO event for focus gain/loss, we also compare mouse validity to detect old backends clearing mouse pos on focus loss.
-        if (IsKeyReleased(ImGuiMod_Alt) && g.NavWindowingToggleLayer)
+        if (IsKeyReleased(g.NavWindowingToggleKey) && g.NavWindowingToggleLayer)
             if (g.ActiveId == 0 || g.ActiveIdAllowOverlap)
                 if (IsMousePosValid(&io.MousePos) == IsMousePosValid(&io.MousePosPrev))
                     apply_toggle_layer = true;
-        if (!IsKeyDown(ImGuiMod_Alt))
+        if (!IsKeyDown(g.NavWindowingToggleKey))
             g.NavWindowingToggleLayer = false;
     }
 
@@ -20566,10 +20604,12 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
 
 static void FormatTextureIDForDebugDisplay(char* buf, int buf_size, ImTextureID tex_id)
 {
+    union { void* ptr; int integer; } tex_id_opaque;
+    memcpy(&tex_id_opaque, &tex_id, ImMin(sizeof(void*), sizeof(tex_id)));
     if (sizeof(tex_id) >= sizeof(void*))
-        ImFormatString(buf, buf_size, "0x%p", (void*)*(intptr_t*)(void*)&tex_id);
+        ImFormatString(buf, buf_size, "0x%p", tex_id_opaque.ptr);
     else
-        ImFormatString(buf, buf_size, "0x%04X", *(int*)(void*)&tex_id);
+        ImFormatString(buf, buf_size, "0x%04X", tex_id_opaque.integer);
 }
 
 // [DEBUG] Display contents of ImDrawList

@@ -260,6 +260,8 @@ typedef khronos_intptr_t GLintptr;
 #define GL_ARRAY_BUFFER_BINDING           0x8894
 #define GL_ELEMENT_ARRAY_BUFFER_BINDING   0x8895
 #define GL_STREAM_DRAW                    0x88E0
+#define GL_PIXEL_UNPACK_BUFFER            0x88EC
+#define GL_PIXEL_UNPACK_BUFFER_BINDING    0x88EF
 typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
 typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);

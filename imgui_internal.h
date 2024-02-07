@@ -310,11 +310,11 @@ namespace ImStb
 #elif defined(__clang__)
 #define IM_DEBUG_BREAK()    __builtin_debugtrap()
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
-#define IM_DEBUG_BREAK()    __asm__ volatile("int $0x03")
+#define IM_DEBUG_BREAK()    __asm__ volatile("int3;nop")
 #elif defined(__GNUC__) && defined(__thumb__)
 #define IM_DEBUG_BREAK()    __asm__ volatile(".inst 0xde01")
 #elif defined(__GNUC__) && defined(__arm__) && !defined(__thumb__)
-#define IM_DEBUG_BREAK()    __asm__ volatile(".inst 0xe7f001f0");
+#define IM_DEBUG_BREAK()    __asm__ volatile(".inst 0xe7f001f0")
 #else
 #define IM_DEBUG_BREAK()    IM_ASSERT(0)    // It is expected that you define IM_DEBUG_BREAK() into something that will break nicely in a debugger!
 #endif
@@ -1089,6 +1089,9 @@ struct IMGUI_API ImGuiInputTextState
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
     ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
+    bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
+    int                     ReloadSelectionEnd;
 
     ImGuiInputTextState()                   { memset(this, 0, sizeof(*this)); }
     void        ClearText()                 { CurLenW = CurLenA = 0; TextW[0] = 0; TextA[0] = 0; CursorClamp(); }
@@ -1106,6 +1109,16 @@ struct IMGUI_API ImGuiInputTextState
     int         GetSelectionStart() const   { return Stb.select_start; }
     int         GetSelectionEnd() const     { return Stb.select_end; }
     void        SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
+
+    // Reload user buf (WIP #2890)
+    // If you modify underlying user-passed const char* while active you need to call this (InputText V2 may lift this)
+    //   strcpy(my_buf, "hello");
+    //   if (ImGuiInputTextState* state = ImGui::GetInputTextState(id)) // id may be ImGui::GetItemID() is last item
+    //       state->ReloadUserBufAndSelectAll();
+    void        ReloadUserBufAndSelectAll()     { ReloadUserBuf = true; ReloadSelectionStart = 0; ReloadSelectionEnd = INT_MAX; }
+    void        ReloadUserBufAndKeepSelection() { ReloadUserBuf = true; ReloadSelectionStart = Stb.select_start; ReloadSelectionEnd = Stb.select_end; }
+    void        ReloadUserBufAndMoveToEnd()     { ReloadUserBuf = true; ReloadSelectionStart = ReloadSelectionEnd = INT_MAX; }
+
 };
 
 enum ImGuiNextWindowDataFlags_
@@ -1482,7 +1495,7 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteFocused        = 1 << 12,  // (Default) Honor focus route: Accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
     ImGuiInputFlags_RouteGlobalLow      = 1 << 13,  // Register route globally (lowest priority: unless a focused window or active item registered the route) -> recommended Global priority IF you need a Global priority.
     ImGuiInputFlags_RouteGlobal         = 1 << 14,  // Register route globally (medium priority: unless an active item registered the route, e.g. CTRL+A registered by InputText will take priority over this).
-    ImGuiInputFlags_RouteGlobalHigh     = 1 << 15,  // Register route globally (higher priority: unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overiden by this)
+    ImGuiInputFlags_RouteGlobalHigh     = 1 << 15,  // Register route globally (higher priority: unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overriden by this)
     ImGuiInputFlags_RouteAlways         = 1 << 16,  // Do not register route, poll keys directly.
     // Routing polices: extra options
     ImGuiInputFlags_RouteUnlessBgFocused= 1 << 17,  // Global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
@@ -2278,6 +2291,7 @@ struct ImGuiContext
     float                   NavWindowingTimer;
     float                   NavWindowingHighlightAlpha;
     bool                    NavWindowingToggleLayer;
+    ImGuiKey                NavWindowingToggleKey;
     ImVec2                  NavWindowingAccumDeltaPos;
     ImVec2                  NavWindowingAccumDeltaSize;
 
@@ -2544,6 +2558,7 @@ struct ImGuiContext
         NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
+        NavWindowingToggleKey = ImGuiKey_None;
 
         DimBgRatio = 0.0f;
 
@@ -3408,7 +3423,8 @@ namespace ImGui
     inline bool             IsGamepadKey(ImGuiKey key)                                  { return key >= ImGuiKey_Gamepad_BEGIN && key < ImGuiKey_Gamepad_END; }
     inline bool             IsMouseKey(ImGuiKey key)                                    { return key >= ImGuiKey_Mouse_BEGIN && key < ImGuiKey_Mouse_END; }
     inline bool             IsAliasKey(ImGuiKey key)                                    { return key >= ImGuiKey_Aliases_BEGIN && key < ImGuiKey_Aliases_END; }
-    inline ImGuiKeyChord    ConvertShortcutMod(ImGuiKeyChord key_chord)                 { ImGuiContext& g = *GImGui; IM_ASSERT_PARANOID(key_chord & ImGuiMod_Shortcut); return (key_chord & ~ImGuiMod_Shortcut) | (g.IO.ConfigMacOSXBehaviors ? ImGuiMod_Super : ImGuiMod_Ctrl); }
+    inline bool             IsModKey(ImGuiKey key)                                      { return key >= ImGuiKey_LeftCtrl && key <= ImGuiKey_RightSuper; }
+    ImGuiKeyChord           FixupKeyChord(ImGuiContext* ctx, ImGuiKeyChord key_chord);
     inline ImGuiKey         ConvertSingleModFlagToKey(ImGuiContext* ctx, ImGuiKey key)
     {
         ImGuiContext& g = *ctx;

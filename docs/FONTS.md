@@ -53,7 +53,7 @@ All loaded fonts glyphs are rendered into a single texture atlas ahead of time. 
 This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty black or white rectangle.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
 Some solutions:
-- You may reduce oversampling, e.g. `font_config.OversampleH = 1`, this will half your texture size for a quality looss.
+- You may reduce oversampling, e.g. `font_config.OversampleH = 1`, this will half your texture size for a quality loss.
   Note that while OversampleH = 2 looks visibly very close to 3 in most situations, with OversampleH = 1 the quality drop will be noticeable. Read about oversampling [here](https://github.com/nothings/stb/blob/master/tests/oversample).
 - Reduce glyphs ranges by calculating them from source localization data.
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
