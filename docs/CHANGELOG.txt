@@ -58,7 +58,8 @@ Other changes:
   indiviudal left/right alt key without intefering with the other.
 - Nav, Menus: Fixed click on a BeginMenu() followed by right-arrow from making the child menu
   reopen and flicker (using ImGuiPopupFlags_NoReopen).
-- OpenPopup(): Added ImGuiPopupFlags_NoReopen flag to specifically not close nd reopen a popup
+- Nav: ImGuiWindowFlags_NoNavInputs is tested during scoring so NavFlattened windows can use it.
+- OpenPopup(): Added ImGuiPopupFlags_NoReopen flag to specifically not close and reopen a popup
   when it is already open. (#1497, #1533)
   (Note that this differs from specific handling we already have in place for the case of calling
   OpenPopup() repeatedly every frame: we already didn't reopen in that specific situation, otherwise
