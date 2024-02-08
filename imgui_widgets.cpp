@@ -4199,11 +4199,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Backup state of deactivating item so they'll have a chance to do a write to output buffer on the same frame they report IsItemDeactivatedAfterEdit (#4714)
         InputTextDeactivateHook(state->ID);
 
-        // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
-        // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
+        // From the moment we focused we are normally ignoring the content of 'buf' (unless we are in read-only mode)
         const int buf_len = (int)strlen(buf);
-        state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
-        memcpy(state->InitialTextA.Data, buf, buf_len + 1);
+        //if (!init_reload_from_user_buf)
+        {
+            // Take a copy of the initial buffer value.
+            state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
+            memcpy(state->InitialTextA.Data, buf, buf_len + 1);
+        }
 
         // Preserve cursor position and undo/redo stack if we come back to same widget
         // FIXME: Since we reworked this on 2022/06, may want to differentiate recycle_cursor vs recycle_undostate?
