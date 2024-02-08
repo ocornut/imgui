@@ -59,11 +59,13 @@ Other changes:
 - Nav, Menus: Fixed click on a BeginMenu() followed by right-arrow from making the child menu
   reopen and flicker (using ImGuiPopupFlags_NoReopen).
 - Nav: ImGuiWindowFlags_NoNavInputs is tested during scoring so NavFlattened windows can use it.
-- OpenPopup(): Added ImGuiPopupFlags_NoReopen flag to specifically not close and reopen a popup
-  when it is already open. (#1497, #1533)
+- Popups: OpenPopup(): added ImGuiPopupFlags_NoReopen flag to specifically not close and reopen
+  a popup when it is already open. (#1497, #1533)
   (Note that this differs from specific handling we already have in place for the case of calling
   OpenPopup() repeatedly every frame: we already didn't reopen in that specific situation, otherwise
   the effect would be very disastrous in term of confusion, as reopening would steal focus).
+- Popups: Slight change to popup closing logic (e.g. after focusing another window) which skipped
+  over popups that are also child windows.
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Debug Tools: Added "nop" to IM_DEBUG_BREAK macro on GCC to work around GDB bug (#7266) [@Peter0x44]
