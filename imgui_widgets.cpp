@@ -4201,7 +4201,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         // From the moment we focused we are normally ignoring the content of 'buf' (unless we are in read-only mode)
         const int buf_len = (int)strlen(buf);
-        //if (!init_reload_from_user_buf)
+        if (!init_reload_from_user_buf)
         {
             // Take a copy of the initial buffer value.
             state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
