@@ -7518,6 +7518,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         PopItemFlag();
 
     bool want_open = false;
+    bool want_open_nav_init = false;
     bool want_close = false;
     if (window->DC.LayoutType == ImGuiLayoutType_Vertical) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
@@ -7560,8 +7561,9 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
             want_open = true;
         if (g.NavId == id && g.NavMoveDir == ImGuiDir_Right) // Nav-Right to open
         {
-            want_open = true;
+            want_open = want_open_nav_init = true;
             NavMoveRequestCancel();
+            NavRestoreHighlightAfterMove();
         }
     }
     else
@@ -7593,13 +7595,13 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     if (want_open && !menu_is_open && g.OpenPopupStack.Size > g.BeginPopupStack.Size)
     {
-        // Don't reopen/recycle same menu level in the same frame, first close the other menu and yield for a frame.
+        // Don't reopen/recycle same menu level in the same frame if it is a different menu ID, first close the other menu and yield for a frame.
         OpenPopup(label);
     }
     else if (want_open)
     {
         menu_is_open = true;
-        OpenPopup(label);
+        OpenPopup(label, ImGuiPopupFlags_NoReopen);// | (want_open_nav_init ? ImGuiPopupFlags_NoReopenAlwaysNavInit : 0));
     }
 
     if (menu_is_open)
@@ -7611,6 +7613,14 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         PopStyleVar();
         if (menu_is_open)
         {
+            // Implement what ImGuiPopupFlags_NoReopenAlwaysNavInit would do:
+            // Perform an init request in the case the popup was already open (via a previous mouse hover)
+            if (want_open && want_open_nav_init && !g.NavInitRequest)
+            {
+                FocusWindow(g.CurrentWindow, ImGuiFocusRequestFlags_UnlessBelowModal);
+                NavInitWindow(g.CurrentWindow, false);
+            }
+
             // Restore LastItemData so IsItemXXXX functions can work after BeginMenu()/EndMenu()
             // (This fixes using IsItemClicked() and IsItemHovered(), but IsItemHovered() also relies on its support for ImGuiItemFlags_NoWindowHoverableCheck)
             g.LastItemData = last_item_in_parent;

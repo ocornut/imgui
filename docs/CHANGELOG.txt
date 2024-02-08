@@ -56,6 +56,13 @@ Other changes:
 - Nav: Fixed pressing Escape while in a child window with _NavFlattened flag. (#7237)
 - Nav: Improve handling of Alt key to toggle menu so that key ownership may be claimed on
   indiviudal left/right alt key without intefering with the other.
+- Nav, Menus: Fixed click on a BeginMenu() followed by right-arrow from making the child menu
+  reopen and flicker (using ImGuiPopupFlags_NoReopen).
+- OpenPopup(): Added ImGuiPopupFlags_NoReopen flag to specifically not close nd reopen a popup
+  when it is already open. (#1497, #1533)
+  (Note that this differs from specific handling we already have in place for the case of calling
+  OpenPopup() repeatedly every frame: we already didn't reopen in that specific situation, otherwise
+  the effect would be very disastrous in term of confusion, as reopening would steal focus).
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Debug Tools: Added "nop" to IM_DEBUG_BREAK macro on GCC to work around GDB bug (#7266) [@Peter0x44]
