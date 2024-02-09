@@ -1126,6 +1126,7 @@ static void             RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, 
 static void             RenderDimmedBackgrounds();
 
 // Viewports
+const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHashStr("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
 static void             UpdateViewportsNewFrame();
 
 }
@@ -3596,6 +3597,7 @@ void ImGui::Initialize()
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
+    viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     g.Viewports.push_back(viewport);
     g.TempBuffer.resize(1024 * 3 + 1, 0);
 
@@ -13975,7 +13977,7 @@ static void SetPlatformImeDataFn_DefaultImpl(ImGuiViewport*, ImGuiPlatformImeDat
 //-----------------------------------------------------------------------------
 // [SECTION] METRICS/DEBUGGER WINDOW
 //-----------------------------------------------------------------------------
-// - RenderViewportThumbnail() [Internal]
+// - DebugRenderViewportThumbnail() [Internal]
 // - RenderViewportsThumbnails() [Internal]
 // - DebugTextEncoding()
 // - MetricsHelpMarker() [Internal]
@@ -14014,7 +14016,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         ImRect thumb_r = thumb_window->Rect();
         ImRect title_r = thumb_window->TitleBarRect();
         thumb_r = ImRect(ImTrunc(off + thumb_r.Min * scale), ImTrunc(off +  thumb_r.Max * scale));
-        title_r = ImRect(ImTrunc(off + title_r.Min * scale), ImTrunc(off +  ImVec2(title_r.Max.x, title_r.Min.y) * scale) + ImVec2(0,5)); // Exaggerate title bar height
+        title_r = ImRect(ImTrunc(off + title_r.Min * scale), ImTrunc(off +  ImVec2(title_r.Max.x, title_r.Min.y + title_r.GetHeight() * 3.0f) * scale)); // Exaggerate title bar height
         thumb_r.ClipWithFull(bb);
         title_r.ClipWithFull(bb);
         const bool window_is_focused = (g.NavWindow && thumb_window->RootWindowForTitleBarHighlight == g.NavWindow->RootWindowForTitleBarHighlight);
@@ -14024,6 +14026,8 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
         window->DrawList->AddText(g.Font, g.FontSize * 1.0f, title_r.Min, GetColorU32(ImGuiCol_Text, alpha_mul), thumb_window->Name, FindRenderedTextEnd(thumb_window->Name));
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul));
+    if (viewport->ID == g.DebugMetricsConfig.HighlightViewportID)
+        window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
 }
 
 static void RenderViewportsThumbnails()
@@ -14031,13 +14035,12 @@ static void RenderViewportsThumbnails()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    // We don't display full monitor bounds (we could, but it often looks awkward), instead we display just enough to cover all of our viewports.
     float SCALE = 1.0f / 8.0f;
-    ImRect bb_full(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (ImGuiViewportP* viewport : g.Viewports)
-        bb_full.Add(viewport->GetMainRect());
+    ImRect bb_full(g.Viewports[0]->Pos, g.Viewports[0]->Pos + g.Viewports[0]->Size);
     ImVec2 p = window->DC.CursorPos;
     ImVec2 off = p - bb_full.Min * SCALE;
+
+    // Draw viewports
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         ImRect viewport_draw_bb(off + (viewport->Pos) * SCALE, off + (viewport->Pos + viewport->Size) * SCALE);
@@ -14280,7 +14283,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
         if (Checkbox("Show Item Picker", &g.DebugItemPickerActive) && g.DebugItemPickerActive)
             DebugStartItemPicker();
-        Checkbox("Show \"Debug Break\" buttons in other sections", &g.IO.ConfigDebugIsDebuggerPresent);
+        Checkbox("Show \"Debug Break\" buttons in other sections (io.ConfigDebugIsDebuggerPresent)", &g.IO.ConfigDebugIsDebuggerPresent);
 
         SeparatorText("Visualize");
 
@@ -14416,9 +14419,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Viewports
     if (TreeNode("Viewports", "Viewports (%d)", g.Viewports.Size))
     {
-        Indent(GetTreeNodeToLabelSpacing());
-        RenderViewportsThumbnails();
-        Unindent(GetTreeNodeToLabelSpacing());
+        SetNextItemOpen(true, ImGuiCond_Once);
+        if (TreeNode("Windows Minimap"))
+        {
+            RenderViewportsThumbnails();
+            TreePop();
+        }
+        cfg->HighlightViewportID = 0;
+
         for (ImGuiViewportP* viewport : g.Viewports)
             DebugNodeViewport(viewport);
         TreePop();
@@ -15120,8 +15128,12 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
 
 void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
 {
+    ImGuiContext& g = *GImGui;
     SetNextItemOpen(true, ImGuiCond_Once);
-    if (TreeNode("viewport0", "Viewport #%d", 0))
+    bool open = TreeNode("viewport0", "Viewport #%d", 0);
+    if (IsItemHovered())
+        g.DebugMetricsConfig.HighlightViewportID = viewport->ID;
+    if (open)
     {
         ImGuiWindowFlags flags = viewport->Flags;
         BulletText("Main Pos: (%.0f,%.0f), Size: (%.0f,%.0f)\nWorkArea Offset Left: %.0f Top: %.0f, Right: %.0f, Bottom: %.0f",

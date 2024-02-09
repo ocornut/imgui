@@ -1865,6 +1865,8 @@ struct ImGuiMetricsConfig
     bool        ShowAtlasTintedWithTextColor = false;
     int         ShowWindowsRectsType = -1;
     int         ShowTablesRectsType = -1;
+    int         HighlightMonitorIdx = -1;
+    ImGuiID     HighlightViewportID = 0;
 };
 
 struct ImGuiStackLevelInfo
