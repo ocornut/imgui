@@ -2230,6 +2230,7 @@ struct ImGuiContext
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more) + honoring the _NoInputs flag.
     ImGuiID                 PlatformLastFocusedViewportId;
     ImGuiPlatformMonitor    FallbackMonitor;                    // Virtual monitor used as fallback if backend doesn't provide monitor information.
+    ImRect                  PlatformMonitorsFullWorkRect;       // Bounding box of all platform monitors
     int                     ViewportCreatedCount;               // Unique sequential creation counter (mostly for testing/debugging)
     int                     PlatformWindowsCreatedCount;        // Unique sequential creation counter (mostly for testing/debugging)
     int                     ViewportFocusedStampCount;          // Every time the front-most window changes, we stamp its viewport with an incrementing counter

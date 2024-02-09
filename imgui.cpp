@@ -7172,10 +7172,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
             else if (window->ViewportOwned && g.PlatformIO.Monitors.Size > 0)
             {
-                // Lost windows (e.g. a monitor disconnected) will naturally moved to the fallback/dummy monitor aka the main viewport.
-                const ImGuiPlatformMonitor* monitor = GetViewportPlatformMonitor(window->Viewport);
-                visibility_rect.Min = monitor->WorkPos + visibility_padding;
-                visibility_rect.Max = monitor->WorkPos + monitor->WorkSize - visibility_padding;
+                if (g.MovingWindow != NULL && window->RootWindowDockTree == g.MovingWindow->RootWindowDockTree)
+                {
+                    // While moving windows we allow them to straddle monitors (#7299, #3071)
+                    visibility_rect = g.PlatformMonitorsFullWorkRect;
+                }
+                else
+                {
+                    // When not moving ensure visible in its monitor
+                    // Lost windows (e.g. a monitor disconnected) will naturally moved to the fallback/dummy monitor aka the main viewport.
+                    const ImGuiPlatformMonitor* monitor = GetViewportPlatformMonitor(window->Viewport);
+                    visibility_rect = ImRect(monitor->WorkPos, monitor->WorkPos + monitor->WorkSize);
+                }
+                visibility_rect.Expand(-visibility_padding);
                 ClampWindowPos(window, visibility_rect);
             }
         }
@@ -14818,6 +14827,7 @@ static void ImGui::UpdateViewportsNewFrame()
     }
 
     // Update fallback monitor
+    g.PlatformMonitorsFullWorkRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
     if (g.PlatformIO.Monitors.Size == 0)
     {
         ImGuiPlatformMonitor* monitor = &g.FallbackMonitor;
@@ -14826,6 +14836,13 @@ static void ImGui::UpdateViewportsNewFrame()
         monitor->WorkPos = main_viewport->WorkPos;
         monitor->WorkSize = main_viewport->WorkSize;
         monitor->DpiScale = main_viewport->DpiScale;
+        g.PlatformMonitorsFullWorkRect.Add(monitor->WorkPos);
+        g.PlatformMonitorsFullWorkRect.Add(monitor->WorkPos + monitor->WorkSize);
+    }
+    for (ImGuiPlatformMonitor& monitor : g.PlatformIO.Monitors)
+    {
+        g.PlatformMonitorsFullWorkRect.Add(monitor.WorkPos);
+        g.PlatformMonitorsFullWorkRect.Add(monitor.WorkPos + monitor.WorkSize);
     }
 
     if (!viewports_enabled)
