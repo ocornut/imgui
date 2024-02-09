@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.2 WIP (In Progress)
+ VERSION 1.90.2 (Released 2024-01-09)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.2
 
 Breaking changes:
 
@@ -55,7 +57,7 @@ Other changes:
   regression from 1.90.1 related to code scoping Tab presses to local scope. (#7226) [@bratpilz]
 - Nav: Fixed pressing Escape while in a child window with _NavFlattened flag. (#7237)
 - Nav: Improve handling of Alt key to toggle menu so that key ownership may be claimed on
-  indiviudal left/right alt key without intefering with the other.
+  individual left/right alt key without interfering with the other.
 - Nav, Menus: Fixed click on a BeginMenu() followed by right-arrow from making the child menu
   reopen and flicker (using ImGuiPopupFlags_NoReopen).
 - Nav: ImGuiWindowFlags_NoNavInputs is tested during scoring so NavFlattened windows can use it.
