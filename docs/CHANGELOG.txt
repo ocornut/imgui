@@ -66,6 +66,7 @@ Other changes:
   the effect would be very disastrous in term of confusion, as reopening would steal focus).
 - Popups: Slight change to popup closing logic (e.g. after focusing another window) which skipped
   over popups that are also child windows.
+- Combo: Fixed not reusing windows optimally when used inside a popup stack.
 - Debug Tools: Metrics: Fixed debug break in SetShortcutRouting() not handling ImGuiMod_Shortcut redirect.
 - Debug Tools: Debug Log: Added "Input Routing" logging.
 - Debug Tools: Added "nop" to IM_DEBUG_BREAK macro on GCC to work around GDB bug (#7266) [@Peter0x44]
