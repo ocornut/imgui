@@ -43,6 +43,8 @@ Breaking changes:
 
 - Backends: SDL2: removed obsolete ImGui_ImplSDL2_NewFrame(SDL_Window*) signature which
   was obsoleted in 1.84. Calling ImGui_ImplSDL2_NewFrame() is fine.
+- Backends: Vulkan: Moved RenderPass parameter from ImGui_ImplVulkan_Init() function to
+  ImGui_ImplVulkan_InitInfo structure. Not required when using dynamic rendering. (#7308) [@shawnhatori]
 - Backends: Vulkan: Using dynamic rendering now require filling the PipelineRenderingCreateInfo
   structure in ImGui_ImplVulkan_InitInfo, allowing to configure color/depth/stencil formats.
   Removed ColorAttachmentFormat field previously provided for dynamic rendering.

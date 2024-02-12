@@ -69,6 +69,7 @@ struct ImGui_ImplVulkan_InitInfo
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
     VkDescriptorPool                DescriptorPool;               // See requirements in note above
+    VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
     uint32_t                        MinImageCount;                // >= 2
     uint32_t                        ImageCount;                   // >= MinImageCount
     VkSampleCountFlagBits           MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
@@ -91,7 +92,7 @@ struct ImGui_ImplVulkan_InitInfo
 };
 
 // Called by user code
-IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
+IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void         ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
