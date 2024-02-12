@@ -41,6 +41,10 @@ HOW TO UPDATE?
 
 Other changes:
 
+- Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
+  a wrong viewport if none was initially set.
+
+
 -----------------------------------------------------------------------
  VERSION 1.90.2 (Released 2024-01-09)
 -----------------------------------------------------------------------
