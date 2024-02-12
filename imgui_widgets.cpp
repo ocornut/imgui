@@ -1995,7 +1995,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*old_getter)(void*
 // - DataTypeGetInfo()
 // - DataTypeFormatString()
 // - DataTypeApplyOp()
-// - DataTypeApplyOpFromText()
+// - DataTypeApplyFromText()
 // - DataTypeCompare()
 // - DataTypeClamp()
 // - GetMinimumStepAtDecimalPrecision
