@@ -41,6 +41,8 @@ HOW TO UPDATE?
 
 Other changes:
 
+- Menus, Popups: fixed menus and popups with child window flag erroneously not displaying
+  a scrollbar when contents is over parent viewport size. (#7287, #7063) [@ZingBallyhoo]
 - Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
   a wrong viewport if none was initially set.
 
