@@ -51,9 +51,10 @@ Other changes:
 - Menus, Popups: fixed menus and popups with child window flag erroneously not displaying
   a scrollbar when contents is over parent viewport size. (#7287, #7063) [@ZingBallyhoo]
 - Backends: SDL2: Handle gamepad disconnection + fixed increasing gamepad reference counter
-  continuously. Added ImGui_ImplSDL2_SelectGamepadAuto()/ImGui_ImplSDL2_SelectGamepadExplicit()
-  functions to respectively select automatic selection or provide a gamepad to use.
-  (#3884, #6559, #6890) [@lethal-guitar, @wn2000, @ocornut, @bog-dan-ro]
+  continuously. Added support for multiple simultaneous gamepads.
+  Added ImGui_ImplSDL2_SetGamepadModeXXX() functions to select whether to automatically pick
+  first available gamepad, all gamepads, or specific gamepads.
+  (#3884, #6559, #6890) [@ocornut, @lethal-guitar, @wn2000, @bog-dan-ro]
 - Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
   a wrong viewport if none was initially set.
 - Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side

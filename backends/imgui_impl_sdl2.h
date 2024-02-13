@@ -38,9 +38,10 @@ IMGUI_IMPL_API void     ImGui_ImplSDL2_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
 
 // Gamepad selection automatically starts in Auto mode, picking first available SDL_GameController. You may override this.
-// When using Explicit selection, caller is responsible for opening/closing gamepad.
-IMGUI_IMPL_API void     ImGui_ImplSDL2_SelectGamepadAuto();
-IMGUI_IMPL_API void     ImGui_ImplSDL2_SelectGamepadExplicit(struct _SDL_GameController* gamepad);
+// When using manual mode, caller is responsible for opening/closing gamepad.
+IMGUI_IMPL_API void     ImGui_ImplSDL2_SetGamepadModeAutoFirst();   // Use first available gamepad (default)
+IMGUI_IMPL_API void     ImGui_ImplSDL2_SetGamepadModeAutoAll();
+IMGUI_IMPL_API void     ImGui_ImplSDL2_SetGamepadModeManual(struct _SDL_GameController** gamepads_array, int gamepads_count);
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 static inline void      ImGui_ImplSDL2_NewFrame(SDL_Window*) { ImGui_ImplSDL2_NewFrame(); } // 1.84: removed unnecessary parameter
