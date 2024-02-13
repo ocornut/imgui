@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-02-13: Inputs: Handle gamepad disconnection. Added ImGui_ImplSDL2_SelectGamepadAuto()/ImGui_ImplSDL2_SelectGamepadExplicit().
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
 //  2023-04-06: Inputs: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
@@ -115,6 +116,11 @@ struct ImGui_ImplSDL2_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MouseLastLeaveFrame;
     bool                    MouseCanUseGlobalState;
+
+    // Gamepad handling
+    SDL_GameController*     Gamepad;
+    bool                    GamepadSelectAuto;
+    bool                    WantRefreshGamepads;    // Refresh gamepad list
 
     ImGui_ImplSDL2_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -380,6 +386,12 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
                 io.AddFocusEvent(false);
             return true;
         }
+        case SDL_CONTROLLERDEVICEADDED:
+        case SDL_CONTROLLERDEVICEREMOVED:
+        {
+            bd->WantRefreshGamepads = true;
+            return true;
+        }
     }
     return false;
 }
@@ -415,6 +427,11 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer)
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = nullptr;
     io.SetPlatformImeDataFn = ImGui_ImplSDL2_SetPlatformImeData;
+
+    // Gamepad handling
+    bd->Gamepad = NULL;
+    bd->GamepadSelectAuto = true;
+    bd->WantRefreshGamepads = true;
 
     // Load mouse cursors
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
@@ -521,6 +538,24 @@ void ImGui_ImplSDL2_Shutdown()
     IM_DELETE(bd);
 }
 
+void ImGui_ImplSDL2_SelectGamepadAuto()
+{
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    if (bd->GamepadSelectAuto == false)
+        bd->Gamepad = NULL;
+    bd->GamepadSelectAuto = true;
+    bd->WantRefreshGamepads = true;
+}
+
+void ImGui_ImplSDL2_SelectGamepadExplicit(SDL_GameController* gamepad)
+{
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    if (bd->GamepadSelectAuto == true && bd->Gamepad != NULL)
+        SDL_GameControllerClose(bd->Gamepad);
+    bd->Gamepad = gamepad;
+    bd->GamepadSelectAuto = false;
+}
+
 static void ImGui_ImplSDL2_UpdateMouseData()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -580,21 +615,44 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
 
 static void ImGui_ImplSDL2_UpdateGamepads()
 {
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
+
+    // Select a new controller
+    if (bd->WantRefreshGamepads && bd->GamepadSelectAuto)
+    {
+        SDL_GameController* old_gamepad = bd->Gamepad;
+        SDL_GameController* new_gamepad = NULL;
+        int joystick_count = SDL_NumJoysticks();
+        for (int n = 0; n < joystick_count; n++)
+            if (SDL_IsGameController(n))
+                if (SDL_GameController* gamepad = SDL_GameControllerOpen(n))
+                {
+                    new_gamepad = gamepad;
+                    break;
+                }
+
+        //IMGUI_DEBUG_LOG("ImGui_ImplSDL2_UpdateGamepads(): Gamepad change %p -> %p\n", old_gamepad, new_gamepad);
+        if (old_gamepad != NULL && new_gamepad != NULL)
+            SDL_GameControllerClose(old_gamepad);
+        bd->Gamepad = new_gamepad;
+        bd->WantRefreshGamepads = false;
+    }
+
+    // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
+    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
 
     // Get gamepad
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-    SDL_GameController* game_controller = SDL_GameControllerOpen(0);
-    if (!game_controller)
+    if (bd->Gamepad == NULL)
         return;
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
     // Update gamepad inputs
     #define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
-    #define MAP_BUTTON(KEY_NO, BUTTON_NO)       { io.AddKeyEvent(KEY_NO, SDL_GameControllerGetButton(game_controller, BUTTON_NO) != 0); }
-    #define MAP_ANALOG(KEY_NO, AXIS_NO, V0, V1) { float vn = (float)(SDL_GameControllerGetAxis(game_controller, AXIS_NO) - V0) / (float)(V1 - V0); vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn); }
+    #define MAP_BUTTON(KEY_NO, BUTTON_NO)       { io.AddKeyEvent(KEY_NO, SDL_GameControllerGetButton(bd->Gamepad, BUTTON_NO) != 0); }
+    #define MAP_ANALOG(KEY_NO, AXIS_NO, V0, V1) { float vn = (float)(SDL_GameControllerGetAxis(bd->Gamepad, AXIS_NO) - V0) / (float)(V1 - V0); vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn); }
     const int thumb_dead_zone = 8000;           // SDL_gamecontroller.h suggests using this value.
     MAP_BUTTON(ImGuiKey_GamepadStart,           SDL_CONTROLLER_BUTTON_START);
     MAP_BUTTON(ImGuiKey_GamepadBack,            SDL_CONTROLLER_BUTTON_BACK);
