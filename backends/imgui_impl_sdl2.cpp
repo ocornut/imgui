@@ -103,16 +103,18 @@
 // SDL Data
 struct ImGui_ImplSDL2_Data
 {
-    SDL_Window*     Window;
-    SDL_Renderer*   Renderer;
-    Uint64          Time;
-    Uint32          MouseWindowID;
-    int             MouseButtonsDown;
-    SDL_Cursor*     MouseCursors[ImGuiMouseCursor_COUNT];
-    SDL_Cursor*     LastMouseCursor;
-    int             PendingMouseLeaveFrame;
-    char*           ClipboardTextData;
-    bool            MouseCanUseGlobalState;
+    SDL_Window*             Window;
+    SDL_Renderer*           Renderer;
+    Uint64                  Time;
+    char*                   ClipboardTextData;
+
+    // Mouse handling
+    Uint32                  MouseWindowID;
+    int                     MouseButtonsDown;
+    SDL_Cursor*             MouseCursors[ImGuiMouseCursor_COUNT];
+    SDL_Cursor*             MouseLastCursor;
+    int                     MouseLastLeaveFrame;
+    bool                    MouseCanUseGlobalState;
 
     ImGui_ImplSDL2_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -368,10 +370,10 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             if (window_event == SDL_WINDOWEVENT_ENTER)
             {
                 bd->MouseWindowID = event->window.windowID;
-                bd->PendingMouseLeaveFrame = 0;
+                bd->MouseLastLeaveFrame = 0;
             }
             if (window_event == SDL_WINDOWEVENT_LEAVE)
-                bd->PendingMouseLeaveFrame = ImGui::GetFrameCount() + 1;
+                bd->MouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
             else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
@@ -511,7 +513,7 @@ void ImGui_ImplSDL2_Shutdown()
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_FreeCursor(bd->MouseCursors[cursor_n]);
-    bd->LastMouseCursor = nullptr;
+    bd->MouseLastCursor = nullptr;
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -567,10 +569,10 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
     {
         // Show OS mouse cursor
         SDL_Cursor* expected_cursor = bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow];
-        if (bd->LastMouseCursor != expected_cursor)
+        if (bd->MouseLastCursor != expected_cursor)
         {
             SDL_SetCursor(expected_cursor); // SDL function doesn't have an early out (see #6113)
-            bd->LastMouseCursor = expected_cursor;
+            bd->MouseLastCursor = expected_cursor;
         }
         SDL_ShowCursor(SDL_TRUE);
     }
@@ -651,10 +653,10 @@ void ImGui_ImplSDL2_NewFrame()
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    if (bd->PendingMouseLeaveFrame && bd->PendingMouseLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
+    if (bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
     {
         bd->MouseWindowID = 0;
-        bd->PendingMouseLeaveFrame = 0;
+        bd->MouseLastLeaveFrame = 0;
         io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
     }
 

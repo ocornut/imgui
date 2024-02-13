@@ -61,16 +61,18 @@
 // SDL Data
 struct ImGui_ImplSDL3_Data
 {
-    SDL_Window*     Window;
-    SDL_Renderer*   Renderer;
-    Uint64          Time;
-    Uint32          MouseWindowID;
-    int             MouseButtonsDown;
-    SDL_Cursor*     MouseCursors[ImGuiMouseCursor_COUNT];
-    SDL_Cursor*     LastMouseCursor;
-    int             PendingMouseLeaveFrame;
-    char*           ClipboardTextData;
-    bool            MouseCanUseGlobalState;
+    SDL_Window*             Window;
+    SDL_Renderer*           Renderer;
+    Uint64                  Time;
+    char*                   ClipboardTextData;
+
+    // Mouse handling
+    Uint32                  MouseWindowID;
+    int                     MouseButtonsDown;
+    SDL_Cursor*             MouseCursors[ImGuiMouseCursor_COUNT];
+    SDL_Cursor*             MouseLastCursor;
+    int                     MousePendingLeaveFrame;
+    bool                    MouseCanUseGlobalState;
 
     ImGui_ImplSDL3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -312,7 +314,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
             bd->MouseWindowID = event->window.windowID;
-            bd->PendingMouseLeaveFrame = 0;
+            bd->MousePendingLeaveFrame = 0;
             return true;
         }
         // - In some cases, when detaching a window from main viewport SDL may send SDL_WINDOWEVENT_ENTER one frame too late,
@@ -321,7 +323,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         // FIXME: Unconfirmed whether this is still needed with SDL3.
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         {
-            bd->PendingMouseLeaveFrame = ImGui::GetFrameCount() + 1;
+            bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
             return true;
         }
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
@@ -455,7 +457,7 @@ void ImGui_ImplSDL3_Shutdown()
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_DestroyCursor(bd->MouseCursors[cursor_n]);
-    bd->LastMouseCursor = nullptr;
+    bd->MouseLastCursor = nullptr;
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -514,10 +516,10 @@ static void ImGui_ImplSDL3_UpdateMouseCursor()
     {
         // Show OS mouse cursor
         SDL_Cursor* expected_cursor = bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow];
-        if (bd->LastMouseCursor != expected_cursor)
+        if (bd->MouseLastCursor != expected_cursor)
         {
             SDL_SetCursor(expected_cursor); // SDL function doesn't have an early out (see #6113)
-            bd->LastMouseCursor = expected_cursor;
+            bd->MouseLastCursor = expected_cursor;
         }
         SDL_ShowCursor();
     }
@@ -595,10 +597,10 @@ void ImGui_ImplSDL3_NewFrame()
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    if (bd->PendingMouseLeaveFrame && bd->PendingMouseLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
+    if (bd->MousePendingLeaveFrame && bd->MousePendingLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)
     {
         bd->MouseWindowID = 0;
-        bd->PendingMouseLeaveFrame = 0;
+        bd->MousePendingLeaveFrame = 0;
         io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
     }
 
