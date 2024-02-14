@@ -59,6 +59,8 @@ Other changes:
   a wrong viewport if none was initially set.
 - Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side
   conversion. (#6575) [@Demonese]
+- Internals: Fixed ImFileOpen not working before context is created, preventing creation
+  of a font atlas before main context creation. (#7314, #7315) [@PathogenDavid, @ocornut]
 
 
 -----------------------------------------------------------------------
