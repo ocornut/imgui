@@ -36,7 +36,42 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.2 (Released 2024-01-09)
+ VERSION 1.90.3 (Released 2024-02-14)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.3
+
+Breaking changes:
+
+- Backends: SDL2: Removed obsolete ImGui_ImplSDL2_NewFrame(SDL_Window*) signature which
+  was obsoleted in 1.84. Calling ImGui_ImplSDL2_NewFrame() is fine.
+- Backends: Vulkan: Moved RenderPass parameter from ImGui_ImplVulkan_Init() function to
+  ImGui_ImplVulkan_InitInfo structure. Not required when using dynamic rendering. (#7308) [@shawnhatori]
+- Backends: Vulkan: Using dynamic rendering now require filling the PipelineRenderingCreateInfo
+  structure in ImGui_ImplVulkan_InitInfo, allowing to configure color/depth/stencil formats.
+  Removed ColorAttachmentFormat field previously provided for dynamic rendering.
+  (#7166, #6855, #5446, #5037) [@shawnhatori]
+
+Other changes:
+
+- Menus, Popups: Fixed menus and popups with ChildWindow flag erroneously not displaying
+  a scrollbar when contents is over parent viewport size. (#7287, #7063) [@ZingBallyhoo]
+- Backends: SDL2, SDL3: Handle gamepad disconnection + fixed increasing gamepad reference
+  counter continuously. Added support for multiple simultaneous gamepads.
+  Added ImGui_ImplSDL2_SetGamepadMode()) function to select whether to automatically pick
+  first available gamepad, all gamepads, or specific gamepads.
+  (#3884, #6559, #6890, #7180) [@ocornut, @lethal-guitar, @wn2000, @bog-dan-ro]
+- BackendsL SDL3: Fixed gamepad handling. (#7180) [@bog-dan-ro]
+- Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
+  a wrong viewport if none was initially set.
+- Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side
+  conversion. (#6575) [@Demonese]
+- Internals: Fixed ImFileOpen not working before context is created, preventing creation
+  of a font atlas before main context creation. (#7314, #7315) [@PathogenDavid, @ocornut]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.90.2 (Released 2024-02-09)
 -----------------------------------------------------------------------
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.2
