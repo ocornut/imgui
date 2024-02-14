@@ -21,7 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-02-13: Inputs: Handle gamepad disconnection. Added ImGui_ImplSDL2_SetGamepadModeAutoFirst(), ImGui_ImplSDL2_SetGamepadModeAutoAll(), ImGui_ImplSDL2_SetGamepadModeManual().
+//  2024-02-14: Inputs: Handle gamepad disconnection. Added ImGui_ImplSDL2_SetGamepadMode().
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
 //  2023-04-06: Inputs: Avoid calling SDL_StartTextInput()/SDL_StopTextInput() as they don't only pertain to IME. It's unclear exactly what their relation is to IME. (#6306)
 //  2023-04-04: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_TouchScreen. (#2702)
@@ -102,13 +102,6 @@
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 
 // SDL Data
-enum ImGui_ImplSDL2_GamepadMode
-{
-    ImGui_ImplSDL2_GamepadMode_AutoFirst,   // (Default) Use first available gamepad
-    ImGui_ImplSDL2_GamepadMode_AutoAll,     // Use all available gamepad
-    ImGui_ImplSDL2_GamepadMode_Manual,
-};
-
 struct ImGui_ImplSDL2_Data
 {
     SDL_Window*             Window;
@@ -612,29 +605,22 @@ static void ImGui_ImplSDL2_CloseGamepads()
     bd->Gamepads.resize(0);
 }
 
-void ImGui_ImplSDL2_SetGamepadModeAutoFirst()
+void ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, struct _SDL_GameController** manual_gamepads_array, int manual_gamepads_count)
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGui_ImplSDL2_CloseGamepads();
-    bd->GamepadMode = ImGui_ImplSDL2_GamepadMode_AutoFirst;
-    bd->WantUpdateGamepadsList = true;
-}
-
-void ImGui_ImplSDL2_SetGamepadModeAutoAll()
-{
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    ImGui_ImplSDL2_CloseGamepads();
-    bd->GamepadMode = ImGui_ImplSDL2_GamepadMode_AutoAll;
-    bd->WantUpdateGamepadsList = true;
-}
-
-void ImGui_ImplSDL2_SetGamepadModeManual(struct _SDL_GameController** gamepads_array, int gamepads_count)
-{
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    ImGui_ImplSDL2_CloseGamepads();
-    for (int n = 0; n < gamepads_count; n++)
-        bd->Gamepads.push_back(gamepads_array[n]);
-    bd->GamepadMode = ImGui_ImplSDL2_GamepadMode_Manual;
+    if (mode == ImGui_ImplSDL2_GamepadMode_Manual)
+    {
+        IM_ASSERT(manual_gamepads_array != nullptr && manual_gamepads_count > 0);
+        for (int n = 0; n < manual_gamepads_count; n++)
+            bd->Gamepads.push_back(manual_gamepads_array[n]);
+    }
+    else
+    {
+        IM_ASSERT(manual_gamepads_array == nullptr && manual_gamepads_count <= 0);
+        bd->WantUpdateGamepadsList = true;
+    }
+    bd->GamepadMode = mode;
 }
 
 static void ImGui_ImplSDL2_UpdateGamepadButton(ImGui_ImplSDL2_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GameControllerButton button_no)
@@ -645,13 +631,13 @@ static void ImGui_ImplSDL2_UpdateGamepadButton(ImGui_ImplSDL2_Data* bd, ImGuiIO&
     io.AddKeyEvent(key, merged_value);
 }
 
+static inline float Saturate(float v) { return v < 0.0f ? 0.0f : v  > 1.0f ? 1.0f : v; }
 static void ImGui_ImplSDL2_UpdateGamepadAnalog(ImGui_ImplSDL2_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GameControllerAxis axis_no, float v0, float v1)
 {
     float merged_value = 0.0f;
     for (SDL_GameController* gamepad : bd->Gamepads)
     {
-        float vn = (float)(SDL_GameControllerGetAxis(gamepad, axis_no) - v0) / (float)(v1 - v0);
-        vn = (vn < 0.0f) ? 0.0f : (vn > 1.0f) ? 1.0f : vn;
+        float vn = Saturate((float)(SDL_GameControllerGetAxis(gamepad, axis_no) - v0) / (float)(v1 - v0));
         if (merged_value < vn)
             merged_value = vn;
     }
@@ -682,8 +668,6 @@ static void ImGui_ImplSDL2_UpdateGamepads()
     // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
         return;
-
-    // Get gamepad
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
     if (bd->Gamepads.Size == 0)
         return;
