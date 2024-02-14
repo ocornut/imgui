@@ -54,7 +54,8 @@ Other changes:
   continuously. Added support for multiple simultaneous gamepads.
   Added ImGui_ImplSDL2_SetGamepadMode()) function to select whether to automatically pick
   first available gamepad, all gamepads, or specific gamepads.
-  (#3884, #6559, #6890) [@ocornut, @lethal-guitar, @wn2000, @bog-dan-ro]
+  (#3884, #6559, #6890, #7180) [@ocornut, @lethal-guitar, @wn2000, @bog-dan-ro]
+- BackendsL SDL3: Fixed gamepad handling. (#7180) [@bog-dan-ro]
 - Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
   a wrong viewport if none was initially set.
 - Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side
