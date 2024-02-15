@@ -36,6 +36,22 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.90.4 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+Docking+Viewports Branch:
+
+- Backends: GLFW: enable ImGuiBackendFlags_HasMouseHoveredViewport support with GLFW 3.3.x,
+  as required specs for it was relaxed in 1.87. This enable better viewport hovering detection
+  without GLFW 3.4's GLFW_MOUSE_PASSTHROUGH, with less reliance on dear imgui's own heuristic
+  of platform windows order. (#7316)
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.3 (Released 2024-02-14)
 -----------------------------------------------------------------------
 
