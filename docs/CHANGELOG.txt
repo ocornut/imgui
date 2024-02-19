@@ -43,6 +43,10 @@ Breaking changes:
 
 Other changes:
 
+- Tables: Angled headers: fixed support for multi-line labels. (#6917)
+- Tables: Angled headers: various fixes to accurately handle CellPadding changes. (#6917)
+- Tables: Angled headers: properly registers horizontal component of angled headers
+  for auto-resizing of columns. (#6917)
 - Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
   drawn too low, particularly visible with tables that have no scrolling. (#6917)
 

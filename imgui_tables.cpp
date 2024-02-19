@@ -2962,7 +2962,7 @@ float ImGui::TableGetHeaderAngledMaxLabelWidth()
         if (IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             if (table->Columns[column_n].Flags & ImGuiTableColumnFlags_AngledHeader)
                 width = ImMax(width, CalcTextSize(TableGetColumnName(table, column_n), NULL, true).x);
-    return width + g.Style.CellPadding.x * 2.0f;
+    return width + g.Style.CellPadding.y * 2.0f; // Swap padding
 }
 
 // [Public] This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
@@ -3215,6 +3215,7 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
 
     // Draw background and labels in first pass, then all borders.
     float max_x = 0.0f;
+    ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
     for (int pass = 0; pass < 2; pass++)
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
@@ -3236,33 +3237,43 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                 draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableHeaderBg));
                 if (column_n == highlight_column_n)
                     draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_Header)); // Highlight on hover
-                //draw_list->AddQuad(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableBorderLight), 1.0f);
                 max_x = ImMax(max_x, bg_shape[3].x);
 
-                // Draw label (first draw at an offset where RenderTextXXX() function won't meddle with applying current ClipRect, then transform to final offset)
-                // FIXME: May be worth tidying up all those operations to make them easier to understand.
+                // Draw label
+                // - First draw at an offset where RenderTextXXX() function won't meddle with applying current ClipRect, then transform to final offset.
+                // - Handle multiple lines manually, as we want each lines to follow on the horizontal border, rather than see a whole block rotated.
                 const char* label_name = TableGetColumnName(table, column_n);
-                const float clip_width = max_label_width - (sin_a * table->RowCellPaddingY);
-                ImRect label_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width + (flip_label ? 0.0f : table->CellPaddingX), header_height + table->RowCellPaddingY));
-                ImVec2 label_size = CalcTextSize(label_name, NULL, true);
-                ImVec2 label_off = ImVec2(flip_label ? ImMax(0.0f, max_label_width - label_size.x - table->CellPaddingX) : table->CellPaddingX, table->RowCellPaddingY);
-                int vtx_idx_begin = draw_list->_VtxCurrentIdx;
-                RenderTextEllipsis(draw_list, label_r.Min + label_off, label_r.Max, label_r.Max.x, label_r.Max.x, label_name, NULL, &label_size);
-                int vtx_idx_end = draw_list->_VtxCurrentIdx;
-
-                // Rotate and offset label
-                ImVec2 pivot_in = label_r.GetBL();
-                ImVec2 pivot_out = ImVec2(column->WorkMinX, row_r.Max.y) + (flip_label ? (unit_right * clip_width) : ImVec2(header_height, 0.0f));
-                ShadeVertsTransformPos(draw_list, vtx_idx_begin, vtx_idx_end, pivot_in, label_cos_a, label_sin_a, pivot_out); // Rotate and offset
-
-                // Debug draw
-                /*if (g.IO.KeyShift)
+                const char* label_name_end = FindRenderedTextEnd(label_name);
+                const float line_off_step_x = g.FontSize / -sin_a;
+                float line_off_curr_x = 0.0f;
+                while (label_name < label_name_end)
                 {
-                    vtx_idx_begin = GetForegroundDrawList()->_VtxCurrentIdx;
-                    GetForegroundDrawList()->AddRect(label_r.Min, label_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f);
-                    vtx_idx_end = GetForegroundDrawList()->_VtxCurrentIdx;
-                    ShadeVertsTransformPos(GetForegroundDrawList(), vtx_idx_begin, vtx_idx_end, pivot_in, label_cos_a, label_sin_a, pivot_out); // Rotate and offset
-                }*/
+                    const char* label_name_eol = strchr(label_name, '\n');
+                    if (label_name_eol == NULL)
+                        label_name_eol = label_name_end;
+
+                    ImVec2 label_size = CalcTextSize(label_name, label_name_eol);
+                    float clip_width = max_label_width - padding.y; // Using padding.y*2.0f would be symetrical but hide more text.
+                    ImRect clip_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width, label_size.y));
+                    int vtx_idx_begin = draw_list->_VtxCurrentIdx;
+                    RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, clip_r.Max.x, label_name, label_name_eol, &label_size);
+                    int vtx_idx_end = draw_list->_VtxCurrentIdx;
+
+                    // Rotate and offset label
+                    ImVec2 pivot_in = ImVec2(window->ClipRect.Min.x, window->ClipRect.Min.y + label_size.y);
+                    ImVec2 pivot_out = ImVec2(column->WorkMinX, row_r.Max.y);
+                    line_off_curr_x += line_off_step_x;
+                    pivot_out += unit_right * padding.y;
+                    if (flip_label)
+                        pivot_out += unit_right * (clip_width - ImMax(0.0f, clip_width - label_size.x));
+                    pivot_out.x += flip_label ? line_off_curr_x - line_off_step_x : line_off_curr_x;
+                    ShadeVertsTransformPos(draw_list, vtx_idx_begin, vtx_idx_end, pivot_in, label_cos_a, label_sin_a, pivot_out); // Rotate and offset
+                    //if (g.IO.KeyShift) { ImDrawList* fg_dl = GetForegroundDrawList(); vtx_idx_begin = fg_dl->_VtxCurrentIdx; fg_dl->AddRect(clip_r.Min, clip_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f); ShadeVertsTransformPos(fg_dl, vtx_idx_begin, fg_dl->_VtxCurrentIdx, pivot_in, label_cos_a, label_sin_a, pivot_out); }
+
+                    // Register header width
+                    column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(line_off_curr_x);
+                    label_name = label_name_eol + 1;
+                }
             }
             if (pass == 1)
             {
