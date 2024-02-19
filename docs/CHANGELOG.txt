@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
+  drawn too low, particularly visible with tables that have no scrolling. (#6917)
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.3 (Released 2024-02-14)
@@ -355,7 +358,7 @@ Other changes:
     with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
 - Tables:
   - Added angled headers support. You need to set ImGuiTableColumnFlags_AngledHeader on selected
-    columns and call TableAngledHeadersRow(). Added style.TableAngledHeadersAngle style option.
+    columns and call TableAngledHeadersRow(). Added style.TableAngledHeadersAngle style option. (#6917)
   - Added ImGuiTableFlags_HighlightHoveredColumn flag, currently highlighting column header.
   - Fixed an edge-case when no columns are visible + table scrollbar is visible + user
     code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
