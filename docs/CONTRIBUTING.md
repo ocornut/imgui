@@ -58,7 +58,7 @@ Steps:
 - Be mindful that messages are being sent to the mailbox of "Watching" users. Try to proofread your messages before sending them. Edits are not seen by those users unless they browse the site.
 
 **Some unfortunate words of warning**
-- If you are involved in cheating schemes (e.g. DLL injection) for competitive online multiplayer games, please don't post here. We won't answer and you will be blocked. It doesn't matter if your question relates to said project. We've had too many of you and need to project our time and sanity.
+- If you are involved in cheating schemes (e.g. DLL injection) for competitive online multiplayer games, please don't post here. We won't answer and you will be blocked. It doesn't matter if your question relates to said project. We've had too many of you and need to protect our time and sanity.
 - Due to frequent abuse of this service from the aforementioned users, if your GitHub account is anonymous and was created five minutes ago please understand that your post will receive more scrutiny and incomplete questions will be harshly dismissed.
 
 If you have been using Dear ImGui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fulfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information is useful in a given context.

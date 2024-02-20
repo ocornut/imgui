@@ -36,12 +36,23 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.4 (In Progress)
+ VERSION 1.90.4 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
 Other changes:
+
+- Menus, Popups: Fixed an issue where hovering a parent-menu upward would
+  erroneously close the window. (#7325, #7287, #7063)
+- Popups: Fixed resizable popup minimum size being too small. Standardized minimum
+  size logic. (#7329).
+- Tables: Angled headers: fixed support for multi-line labels. (#6917)
+- Tables: Angled headers: various fixes to accurately handle CellPadding changes. (#6917)
+- Tables: Angled headers: properly registers horizontal component of angled headers
+  for auto-resizing of columns. (#6917)
+- Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
+  drawn too low, particularly visible with tables that have no scrolling. (#6917)
 
 Docking+Viewports Branch:
 
@@ -260,7 +271,7 @@ Docking+Viewports Branch:
 - Backends: DX12: Changed swapchain scaling mode to DXGI_SCALING_NONE to reduce artifacts as
   queued frames aren't synchronized with platform window resizes. (#7152, #7153) [@SuperWangKai]
 - Backends: OSX: Fixed monitor and window position by correctly transforming Y origin on multi-viewports
-  multi-monitor setups. (#7028, #7101, #6009, #6432) [@dmirty-kuzmenko, @734vin] 
+  multi-monitor setups. (#7028, #7101, #6009, #6432) [@dmirty-kuzmenko, @734vin]
 - Backends: OSX: Fixed IME position in multi-monitor multi-viewports setups. (#7028) [@734vin]
 
 
@@ -383,7 +394,7 @@ Other changes:
     with ImGuiDragDropFlags_AcceptNoPreviewTooltip and submitting a tooltip manually.
 - Tables:
   - Added angled headers support. You need to set ImGuiTableColumnFlags_AngledHeader on selected
-    columns and call TableAngledHeadersRow(). Added style.TableAngledHeadersAngle style option.
+    columns and call TableAngledHeadersRow(). Added style.TableAngledHeadersAngle style option. (#6917)
   - Added ImGuiTableFlags_HighlightHoveredColumn flag, currently highlighting column header.
   - Fixed an edge-case when no columns are visible + table scrollbar is visible + user
     code is always testing return value of TableSetColumnIndex() to coarse clip. With an active
