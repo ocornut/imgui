@@ -55,6 +55,9 @@ Other changes:
   drawn too low, particularly visible with tables that have no scrolling. (#6917)
 - ProgressBar: Fixed a minor tesselation issue when rendering rounded progress bars,
   where in some situations the rounded section wouldn't follow regular tesselation rules.
+- Debug Tools: Item Picker: Promoted ImGui::DebugStartItemPicker() to public API. (#2673)
+- Debug Tools: Item Picker: Menu entry visible in Demo->Tools but greyed out unless
+  io.ConfigDebugIsDebuggerPresent is set. (#2673)
 - Demo: Custom Rendering: better demonstrate PathArcTo(), PathBezierQuadraticCurveTo(),
   PathBezierCubicCurveTo(), PathStroke(), PathFillConvex() functions.
 
