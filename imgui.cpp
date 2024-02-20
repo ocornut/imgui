@@ -10797,7 +10797,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
         else
         {
             // Reopen: close child popups if any, then flag popup for open/reopen (set position, focus, init navigation)
-            ClosePopupToLevel(current_stack_size, false);
+            ClosePopupToLevel(current_stack_size, true);
             g.OpenPopupStack.push_back(popup_ref);
         }
 

@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Menus, Popups: Fixed an issue where hovering a parent-menu upward would
+  erroneously close the window. (#7325, #7287, #7063)
 - Tables: Angled headers: fixed support for multi-line labels. (#6917)
 - Tables: Angled headers: various fixes to accurately handle CellPadding changes. (#6917)
 - Tables: Angled headers: properly registers horizontal component of angled headers
