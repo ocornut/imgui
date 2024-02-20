@@ -4205,7 +4205,8 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
 
     if (g.HoveredId != 0 && g.HoveredId != id && !g.HoveredIdAllowOverlap)
         return false;
-    if (g.ActiveId != 0 && g.ActiveId != id && !g.ActiveIdAllowOverlap)
+
+    if (g.ActiveId != 0 && g.ActiveId != id && !g.ActiveIdAllowOverlap && !(item_flags & ImGuiItemFlags_AllowOverlap))
         if (!g.ActiveIdFromShortcut)
             return false;
 
@@ -4213,7 +4214,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     if (!(item_flags & ImGuiItemFlags_NoWindowHoverableCheck) && !IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
     {
         g.HoveredIdDisabled = true;
-        return false;
+        return true;
     }
 
     // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
@@ -4222,7 +4223,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     {
         // Drag source doesn't report as hovered
         if (g.DragDropActive && g.DragDropPayload.SourceId == id && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoDisableHover))
-            return false;
+            return true;
 
         SetHoveredID(id);
 
@@ -4232,7 +4233,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
         {
             g.HoveredIdAllowOverlap = true;
             if (g.HoveredIdPreviousFrame != id)
-                return false;
+                return true;
         }
     }
 
@@ -4243,7 +4244,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
         if (g.ActiveId == id && id != 0)
             ClearActiveID();
         g.HoveredIdDisabled = true;
-        return false;
+        return true;
     }
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
@@ -4261,7 +4262,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
 #endif
 
     if (g.NavDisableMouseHover)
-        return false;
+        return true;
 
     return true;
 }
