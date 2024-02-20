@@ -53,6 +53,8 @@ Other changes:
   for auto-resizing of columns. (#6917)
 - Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
   drawn too low, particularly visible with tables that have no scrolling. (#6917)
+- ProgressBar: Fixed a minor tesselation issue when rendering rounded progress bars,
+  where in some situations the rounded section wouldn't follow regular tesselation rules.
 
 
 -----------------------------------------------------------------------
