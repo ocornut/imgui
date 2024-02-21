@@ -488,7 +488,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     // Default only reacts to left mouse button
     if ((flags & ImGuiButtonFlags_MouseButtonMask_) == 0)
         flags |= ImGuiButtonFlags_MouseButtonDefault_;
-    
     // Default behavior requires click + release inside bounding box
     if ((flags & ImGuiButtonFlags_PressedOnMask_) == 0)
         flags |= ImGuiButtonFlags_PressedOnDefault_;
@@ -3101,13 +3100,8 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     // Default format string when passing NULL
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    //else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
-    //    format = PatchFormatStringFloatToInt(format);
-
-    // Tabbing or CTRL-clicking on Slider turns it into an input box
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
-
     if (!temp_input_is_active)
     {
         // Tabbing or CTRL-clicking on Slider turns it into an input box
@@ -3124,8 +3118,6 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            //if (temp_input_allowed && (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
-            //    temp_input_is_active = true;
         }
     }
 
@@ -3161,7 +3153,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0));
     return value_changed;
 }
 
@@ -3250,7 +3242,7 @@ bool ImGui::SliderScalarM(const char* label, ImGuiDataType data_type, void* p_da
     //if (label_size.x > 0.0f)
         //RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, _ID, g.LastItemData.StatusFlags);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0));
     return value_changed;
 }
 
@@ -3313,13 +3305,6 @@ bool ImGui::SliderScalarNM(const char* label, ImGuiDataType data_type, void* v, 
         v = (void*)((char*)v + type_size);
     }
     PopID();
-
-    //const char* label_end = FindRenderedTextEnd(label);
-    //if (label != label_end)
-    //{
-    //	SameLine(0, g.Style.ItemInnerSpacing.x);
-    //	TextEx(label, label_end);
-    //}
 
     EndGroup();
     return value_changed;
