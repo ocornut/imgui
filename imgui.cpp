@@ -1,4 +1,4 @@
-// dear imgui, v1.90.4 WIP
+// dear imgui, v1.90.4
 // (main code and documentation)
 
 // Help:
@@ -3105,13 +3105,14 @@ const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
     return style.Colors[idx];
 }
 
-ImU32 ImGui::GetColorU32(ImU32 col)
+ImU32 ImGui::GetColorU32(ImU32 col, float alpha_mul)
 {
     ImGuiStyle& style = GImGui->Style;
-    if (style.Alpha >= 1.0f)
+    alpha_mul *= style.Alpha;
+    if (alpha_mul >= 1.0f)
         return col;
     ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (ImU32)(a * style.Alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
+    a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
@@ -5228,7 +5229,7 @@ static void ImGui::RenderDimmedBackgrounds()
     {
         // Draw dimming behind modal or a begin stack child, whichever comes first in draw order.
         ImGuiWindow* dim_behind_window = FindBottomMostVisibleWindowWithinBeginStack(modal_window);
-        RenderDimmedBackgroundBehindWindow(dim_behind_window, GetColorU32(ImGuiCol_ModalWindowDimBg, g.DimBgRatio));
+        RenderDimmedBackgroundBehindWindow(dim_behind_window, GetColorU32(modal_window->DC.ModalDimBgColor, g.DimBgRatio));
         viewports_already_dimmed[0] = modal_window->Viewport;
     }
     else if (dim_bg_for_window_list)
@@ -7455,6 +7456,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.TextWrapPos = -1.0f; // disabled
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
+        if (flags & ImGuiWindowFlags_Modal)
+            window->DC.ModalDimBgColor = ColorConvertFloat4ToU32(GetStyleColorVec4(ImGuiCol_ModalWindowDimBg));
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -12202,25 +12205,28 @@ static void ImGui::NavProcessItem()
 
     // Process Move Request (scoring for navigation)
     // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRect + scoring from a rect wrapped according to current wrapping policy)
-    if (g.NavMoveScoringItems && (item_flags & ImGuiItemFlags_Disabled) == 0 && (window->Flags & ImGuiWindowFlags_NoNavInputs) == 0)
+    if (g.NavMoveScoringItems && (item_flags & ImGuiItemFlags_Disabled) == 0)
     {
-        const bool is_tabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) != 0;
-        if (is_tabbing)
+        if ((g.NavMoveFlags & ImGuiNavMoveFlags_FocusApi) || (window->Flags & ImGuiWindowFlags_NoNavInputs) == 0)
         {
-            NavProcessItemForTabbingRequest(id, item_flags, g.NavMoveFlags);
-        }
-        else if (g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId))
-        {
-            ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-            if (NavScoreItem(result))
-                NavApplyItemToResult(result);
+            const bool is_tabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) != 0;
+            if (is_tabbing)
+            {
+                NavProcessItemForTabbingRequest(id, item_flags, g.NavMoveFlags);
+            }
+            else if (g.NavId != id || (g.NavMoveFlags & ImGuiNavMoveFlags_AllowCurrentNavId))
+            {
+                ImGuiNavItemData* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+                if (NavScoreItem(result))
+                    NavApplyItemToResult(result);
 
-            // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
-            const float VISIBLE_RATIO = 0.70f;
-            if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
-                if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
-                    if (NavScoreItem(&g.NavMoveResultLocalVisible))
-                        NavApplyItemToResult(&g.NavMoveResultLocalVisible);
+                // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
+                const float VISIBLE_RATIO = 0.70f;
+                if ((g.NavMoveFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
+                    if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
+                        if (NavScoreItem(&g.NavMoveResultLocalVisible))
+                            NavApplyItemToResult(&g.NavMoveResultLocalVisible);
+            }
         }
     }
 
@@ -21296,6 +21302,12 @@ void ImGui::DebugLocateItemResolveWithLastItem()
     draw_list->AddLine(p1, p2, DEBUG_LOCATE_ITEM_COLOR);
 }
 
+void ImGui::DebugStartItemPicker()
+{
+    ImGuiContext& g = *GImGui;
+    g.DebugItemPickerActive = true;
+}
+
 // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
 void ImGui::UpdateDebugToolItemPicker()
 {
@@ -21464,7 +21476,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     Checkbox("Ctrl+C: copy path to clipboard", &tool->CopyToClipboardOnCtrlC);
     SameLine();
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
-    if (tool->CopyToClipboardOnCtrlC && IsKeyDown(ImGuiMod_Ctrl) && IsKeyPressed(ImGuiKey_C))
+    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0, ImGuiInputFlags_RouteGlobal))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
         char* p = g.TempBuffer.Data;
@@ -21531,6 +21543,7 @@ void ImGui::DebugLog(const char*, ...) {}
 void ImGui::DebugLogV(const char*, va_list) {}
 void ImGui::ShowDebugLogWindow(bool*) {}
 void ImGui::ShowIDStackToolWindow(bool*) {}
+void ImGui::DebugStartItemPicker() {}
 void ImGui::DebugHookIdInfo(ImGuiID, ImGuiDataType, const void*, const void*) {}
 
 #endif // #ifndef IMGUI_DISABLE_DEBUG_TOOLS

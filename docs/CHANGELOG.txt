@@ -36,23 +36,36 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.4 WIP (In Progress)
+ VERSION 1.90.4 (Released 2024-02-22)
 -----------------------------------------------------------------------
 
-Breaking changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.4
 
 Other changes:
 
+- Nav: Fixed SetKeyboardFocusHere() or programmatic tabbing API from not working on
+  windows with the ImGuiWindowFlags_NoNavInputs flag (regression in 1.90.2, which
+  among other things broke imgui_memory_editor).
 - Menus, Popups: Fixed an issue where hovering a parent-menu upward would
   erroneously close the window. (#7325, #7287, #7063)
 - Popups: Fixed resizable popup minimum size being too small. Standardized minimum
   size logic. (#7329).
+- Modals: Temporary changes of ImGuiCol_ModalWindowDimBg are properly handled by
+  BeginPopupModal(). (#7340)
 - Tables: Angled headers: fixed support for multi-line labels. (#6917)
 - Tables: Angled headers: various fixes to accurately handle CellPadding changes. (#6917)
 - Tables: Angled headers: properly registers horizontal component of angled headers
   for auto-resizing of columns. (#6917)
 - Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
   drawn too low, particularly visible with tables that have no scrolling. (#6917)
+- ProgressBar: Fixed a minor tesselation issue when rendering rounded progress bars,
+  where in some situations the rounded section wouldn't follow regular tesselation rules.
+- Debug Tools: Item Picker: Promoted ImGui::DebugStartItemPicker() to public API. (#2673)
+- Debug Tools: Item Picker: Menu entry visible in Demo->Tools but greyed out unless
+  io.ConfigDebugIsDebuggerPresent is set. (#2673)
+- Misc: Added optional alpha multiplier parameter to GetColorU32(ImU32) variant.
+- Demo: Custom Rendering: better demonstrate PathArcTo(), PathBezierQuadraticCurveTo(),
+  PathBezierCubicCurveTo(), PathStroke(), PathFillConvex() functions.
 
 Docking+Viewports Branch:
 
@@ -88,7 +101,7 @@ Other changes:
   Added ImGui_ImplSDL2_SetGamepadMode()) function to select whether to automatically pick
   first available gamepad, all gamepads, or specific gamepads.
   (#3884, #6559, #6890, #7180) [@ocornut, @lethal-guitar, @wn2000, @bog-dan-ro]
-- BackendsL SDL3: Fixed gamepad handling. (#7180) [@bog-dan-ro]
+- Backends: SDL3: Fixed gamepad handling. (#7180) [@bog-dan-ro]
 - Backends: SDLRenderer3: query newly added SDL_RenderViewportSet() to not restore
   a wrong viewport if none was initially set.
 - Backends: DirectX9: Using RGBA format when allowed by the driver to avoid CPU side
