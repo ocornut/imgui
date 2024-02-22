@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Nav: Fixed SetKeyboardFocusHere() or programmatic tabbing API from not working on
+  windows with the ImGuiWindowFlags_NoNavInputs flag (regression in 1.90.2, which
+  among other things broke imgui_memory_editor).
 - Menus, Popups: Fixed an issue where hovering a parent-menu upward would
   erroneously close the window. (#7325, #7287, #7063)
 - Popups: Fixed resizable popup minimum size being too small. Standardized minimum
