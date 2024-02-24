@@ -1234,6 +1234,9 @@ ImGuiStyle::ImGuiStyle()
 
     // Default theme
     ImGui::StyleColorsDark(this);
+
+    // Smooth Scrolling
+    ScrollSmooth            = 1.00f;            // Disabled by default. It's just inmediate jump from ScrollExpected to the visual Scroll
 }
 
 // To scale your entire UI (e.g. if you want your app to use High DPI or generally be DPI aware) you may use this helper function. Scaling the fonts is done separately and is up to you.
@@ -3129,6 +3132,7 @@ static const ImGuiDataVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, SeparatorTextBorderSize)},// ImGuiStyleVar_SeparatorTextBorderSize
     { ImGuiDataType_Float, 2, (ImU32)offsetof(ImGuiStyle, SeparatorTextAlign) },    // ImGuiStyleVar_SeparatorTextAlign
     { ImGuiDataType_Float, 2, (ImU32)offsetof(ImGuiStyle, SeparatorTextPadding) },  // ImGuiStyleVar_SeparatorTextPadding
+    { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, ScrollSmooth) },          // ImGuiStyleVar_ScrollSmooth
 };
 
 const ImGuiDataVarInfo* ImGui::GetStyleVarInfo(ImGuiStyleVar idx)
@@ -3750,6 +3754,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NUL
     IDStack.push_back(ID);
     MoveId = GetID("#MOVE");
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
+    ScrollExpected = ImVec2(0,0);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
     AutoFitFramesX = AutoFitFramesY = -1;
     AutoPosLastDirection = ImGuiDir_None;
@@ -9166,7 +9171,7 @@ void ImGui::UpdateMouseWheel()
                 LockWheelingWindow(window, wheel.x);
                 float max_step = window->InnerRect.GetWidth() * 0.67f;
                 float scroll_step = ImTrunc(ImMin(2 * window->CalcFontSize(), max_step));
-                SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
+                SetScrollX(window, window->ScrollExpected.x - wheel.x * scroll_step);
                 g.WheelingWindowScrolledFrame = g.FrameCount;
             }
             if (do_scroll[ImGuiAxis_Y])
@@ -9174,7 +9179,7 @@ void ImGui::UpdateMouseWheel()
                 LockWheelingWindow(window, wheel.y);
                 float max_step = window->InnerRect.GetHeight() * 0.67f;
                 float scroll_step = ImTrunc(ImMin(5 * window->CalcFontSize(), max_step));
-                SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
+                SetScrollY(window, window->ScrollExpected.y - wheel.y * scroll_step);
                 g.WheelingWindowScrolledFrame = g.FrameCount;
             }
         }
@@ -10364,21 +10369,51 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
     ImVec2 decoration_size(window->DecoOuterSizeX1 + window->DecoInnerSizeX1 + window->DecoOuterSizeX2, window->DecoOuterSizeY1 + window->DecoInnerSizeY1 + window->DecoOuterSizeY2);
     for (int axis = 0; axis < 2; axis++)
     {
-        if (window->ScrollTarget[axis] < FLT_MAX)
-        {
+        if (window->ScrollTarget[axis] < FLT_MAX) {   
             float center_ratio = window->ScrollTargetCenterRatio[axis];
             float scroll_target = window->ScrollTarget[axis];
-            if (window->ScrollTargetEdgeSnapDist[axis] > 0.0f)
-            {
+            if (window->ScrollTargetEdgeSnapDist[axis] > 0.0f) {
                 float snap_min = 0.0f;
                 float snap_max = window->ScrollMax[axis] + window->SizeFull[axis] - decoration_size[axis];
                 scroll_target = CalcScrollEdgeSnap(scroll_target, snap_min, snap_max, window->ScrollTargetEdgeSnapDist[axis], center_ratio);
             }
-            scroll[axis] = scroll_target - center_ratio * (window->SizeFull[axis] - decoration_size[axis]);
+            window->ScrollExpected[axis] = scroll_target - center_ratio * (window->SizeFull[axis] - decoration_size[axis]);
         }
-        scroll[axis] = IM_ROUND(ImMax(scroll[axis], 0.0f));
-        if (!window->Collapsed && !window->SkipItems)
-            scroll[axis] = ImMin(scroll[axis], window->ScrollMax[axis]);
+        //
+        // Smooth scroll.
+        // Instead use "Scroll" value in the window, all setters that sets the scroll absolutely now points to "ScrollExpected"
+        // Here, we take from ScrollTarget (from some functions like ScrollHere + mouse wheel) to set the ScrollExpected value
+        // Also, Scroll var in window is processed to meet ScrollExpected Value
+        // 
+        // The formula is pretty simple to generate a smooth scrolling that can be tweaked just by one float value.
+        //
+        // The Float is "ImGuiStyleVar_ScrollSmooth". Can be set on the style or via PushStyleVar.
+        // A Value of 1.0f is just inmediate (transported from ScrollExpected to Scroll).
+        // A Value higher of 1.0f will make the scrolling smoother. 
+        // 
+        // The ScrollExpected is also clamped (as previously the "Scroll" value) from 0 to sScrollMax
+        //
+        // The approach is frame bounded and not time bounded.
+        // It should be prefereable use a time bounded approach but this is pretty simple so we don't need to add extra vars
+        // to save a scrolling "start" time to have a delta / deal with posible increments during the scrolling itself (restar timer)
+        // Anyway it should not be complicated to add but this approach is small, simple, can be user or not and works pretty well
+        //
+        window->ScrollExpected[axis] = IM_ROUND(ImMax(window->ScrollExpected[axis], 0.0f));
+        if (!window->Collapsed && !window->SkipItems) {
+            window->ScrollExpected[axis] = ImMin(window->ScrollExpected[axis], window->ScrollMax[axis]);
+        }
+        ImGuiContext& g = *GImGui;
+        ImGuiStyle& style = g.Style;
+        {
+            if (scroll[axis] != window->ScrollExpected[axis]) {
+                float diff = window->ScrollExpected[axis] - scroll[axis];
+                if (diff > 0) {
+                    scroll[axis] += ImMin(diff, (diff / style.ScrollSmooth));
+                } else {
+                    scroll[axis] -= ImMin(-diff, (-diff / style.ScrollSmooth));
+                }
+            }
+        }
     }
     return scroll;
 }
@@ -10471,13 +10506,13 @@ ImVec2 ImGui::ScrollToRectEx(ImGuiWindow* window, const ImRect& item_rect, ImGui
 float ImGui::GetScrollX()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->Scroll.x;
+    return window->ScrollExpected.x;
 }
 
 float ImGui::GetScrollY()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->Scroll.y;
+    return window->ScrollExpected.y;
 }
 
 float ImGui::GetScrollMaxX()
