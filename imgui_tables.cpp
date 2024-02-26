@@ -1890,7 +1890,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
     if (is_visible)
     {
         // Update data for TableGetHoveredRow()
-        if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2)
+        if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2 && table_instance->HoveredRowNext < 0)
             table_instance->HoveredRowNext = table->CurrentRow;
 
         // Decide of background color for the row
