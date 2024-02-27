@@ -46,6 +46,11 @@ Other changes:
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
 
+Docking+Viewports Branch:
+
+- Backends: Win32: made it so that an appearing viewport showing up doesn't bring
+  its parent to front. (#7354)
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.4 (Released 2024-02-22)
