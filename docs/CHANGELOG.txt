@@ -36,6 +36,18 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.90.5 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other changes:
+
+- Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
+  frames would erroneously close the window. While it is technically a popup issue
+  it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
+  (#7325, #7287, #7063)
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.4 (Released 2024-02-22)
 -----------------------------------------------------------------------
 
