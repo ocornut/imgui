@@ -47,6 +47,12 @@ Other changes:
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
+- Docs: added more wiki links to headers of imgui.h/imgui.cpp to facilitate discovery
+  of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
+  - This is the main wiki: https://github.com/ocornut/imgui/wiki
+  - This is the crawlable version: https://github-wiki-see.page/m/ocornut/imgui/wiki
+    Adding a link to the crawlable version, even though it is not indended for humans,
+    to increase its search rank.
 
 
 -----------------------------------------------------------------------

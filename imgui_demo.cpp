@@ -7,7 +7,7 @@
 // - Need help integrating Dear ImGui in your codebase?
 //   - Read Getting Started https://github.com/ocornut/imgui/wiki/Getting-Started
 //   - Read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
-// Read imgui.cpp for more details, documentation and comments.
+// Read top of imgui.cpp and imgui.h for many details, documentation, comments, links.
 // Get the latest version at https://github.com/ocornut/imgui
 
 //---------------------------------------------------
