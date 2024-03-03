@@ -17,6 +17,7 @@ examples/*/x64/*
 ## Visual Studio artifacts
 .vs
 ipch
+*.vcxproj
 *.opensdf
 *.log
 *.pdb
