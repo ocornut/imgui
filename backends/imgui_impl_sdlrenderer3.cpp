@@ -20,6 +20,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2024-02-12: Amend to query SDL_RenderViewportSet() and restore viewport accordingly.
 //  2023-05-30: Initial version.
 
 #include "imgui.h"
@@ -129,10 +130,12 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data)
     struct BackupSDLRendererState
     {
         SDL_Rect    Viewport;
+        bool        ViewportEnabled;
         bool        ClipEnabled;
         SDL_Rect    ClipRect;
     };
     BackupSDLRendererState old = {};
+    old.ViewportEnabled = SDL_RenderViewportSet(bd->SDLRenderer) == SDL_TRUE;
     old.ClipEnabled = SDL_RenderClipEnabled(bd->SDLRenderer) == SDL_TRUE;
     SDL_GetRenderViewport(bd->SDLRenderer, &old.Viewport);
     SDL_GetRenderClipRect(bd->SDLRenderer, &old.ClipRect);
@@ -178,11 +181,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data)
 
                 const float* xy = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, pos));
                 const float* uv = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, uv));
-#if SDL_VERSION_ATLEAST(2,0,19)
                 const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
-#else
-                const int* color = (const int*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.17 and 2.0.18
-#endif
 
                 // Bind texture, Draw
 				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
@@ -197,7 +196,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Restore modified SDL_Renderer state
-    SDL_SetRenderViewport(bd->SDLRenderer, &old.Viewport);
+    SDL_SetRenderViewport(bd->SDLRenderer, old.ViewportEnabled ? &old.Viewport : nullptr);
     SDL_SetRenderClipRect(bd->SDLRenderer, old.ClipEnabled ? &old.ClipRect : nullptr);
 }
 
