@@ -43,6 +43,7 @@ Other changes:
 
 - Windows: Scrollbar visibility decision uses current size when both size and contents
   size are submitted by API. (#7252)
+- Windows: Double-click to collapse may be disabled via key-ownership mechanism. (#7369)
 - Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
