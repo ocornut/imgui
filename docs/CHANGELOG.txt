@@ -41,10 +41,21 @@ HOW TO UPDATE?
 
 Other changes:
 
+- Windows: Scrollbar visibility decision uses current size when both size and contents
+  size are submitted by API. (#7252)
+- Windows: Double-click to collapse may be disabled via key-ownership mechanism. (#7369)
 - Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
+- DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
+  Note that only simple polygons (no self-intersections, no holes) are supported.
+- Docs: added more wiki links to headers of imgui.h/imgui.cpp to facilitate discovery
+  of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
+  - This is the main wiki: https://github.com/ocornut/imgui/wiki
+  - This is the crawlable version: https://github-wiki-see.page/m/ocornut/imgui/wiki
+    Adding a link to the crawlable version, even though it is not indended for humans,
+    to increase its search rank.
 
 Docking+Viewports Branch:
 
