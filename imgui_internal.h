@@ -1754,8 +1754,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImVec2                  BackupCursorMaxPos;
     ImGuiID                 BoxSelectId;
     ImGuiKeyChord           KeyMods;
-    bool                    LoopRequestClear;
-    bool                    LoopRequestSelectAll;
+    ImS8                    LoopRequestSetAll;  // -1: no operation, 0: clear all, 1: select all.
     bool                    IsEndIO;            // Set when switching IO from BeginMultiSelect() to EndMultiSelect() state.
     bool                    IsFocused;          // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
     bool                    IsSetRange;         // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.

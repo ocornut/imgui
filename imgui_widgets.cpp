@@ -7272,9 +7272,8 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
     ImGuiContext& g = *GImGui;
     for (const ImGuiSelectionRequest& req : io->Requests)
     {
-        if (req.Type == ImGuiSelectionRequestType_Clear)     IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: Clear\n", function);
-        if (req.Type == ImGuiSelectionRequestType_SelectAll) IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SelectAll\n", function);
-        if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.RangeSelected);
+        if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
+        if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected);
     }
 }
 
@@ -7372,11 +7371,10 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
 
     if (request_clear || request_select_all)
     {
-        ImGuiSelectionRequest req = { request_select_all ? ImGuiSelectionRequestType_SelectAll : ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
+        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
         ms->IO.Requests.push_back(req);
     }
-    ms->LoopRequestClear = request_clear;
-    ms->LoopRequestSelectAll = request_select_all;
+    ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
         DebugLogMultiSelectRequests("BeginMultiSelect", &ms->IO);
@@ -7441,7 +7439,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
+                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
                 ms->IO.Requests.resize(0);
                 ms->IO.Requests.push_back(req);
             }
@@ -7494,13 +7492,11 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
         ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
         IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
 
-        // Apply Clear/SelectAll requests requested by BeginMultiSelect().
+        // Apply SetAll (Clear/SelectAll )requests requested by BeginMultiSelect().
         // This is only useful if the user hasn't processed them already, and this only works if the user isn't using the clipper.
-        // If you are using a clipper (aka not submitting every element of the list) you need to process the Clear/SelectAll request after calling BeginMultiSelect()
-        if (ms->LoopRequestClear)
-            selected = false;
-        else if (ms->LoopRequestSelectAll)
-            selected = true;
+        // If you are using a clipper you need to process the SetAll request after calling BeginMultiSelect()
+        if (ms->LoopRequestSetAll != -1)
+            selected = (ms->LoopRequestSetAll == 1);
 
         // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
         // For this to work, we need someone to set 'RangeSrcPassedBy = true' at some point (either clipper either SetNextItemSelectionUserData() function)
@@ -7595,7 +7591,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             selected = !selected;
             ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
             ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-            if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->RangeSelected == selected)
+            if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
                 prev_req->RangeLastItem = item_data; // Merge span into same request
             else
                 ms->IO.Requests.push_back(req);
@@ -7657,7 +7653,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
         if (request_clear)
         {
-            ImGuiSelectionRequest req = { ImGuiSelectionRequestType_Clear, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
+            ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
             ms->IO.Requests.resize(0);
             ms->IO.Requests.push_back(req);
         }
@@ -7734,27 +7730,25 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 // The most simple implementation (using indices everywhere) would look like:
 //   for (ImGuiSelectionRequest& req : ms_io->Requests)
 //   {
-//      if (req.Type == ImGuiSelectionRequestType_Clear)     { Clear(); }
-//      if (req.Type == ImGuiSelectionRequestType_SelectAll) { Clear(); for (int n = 0; n < items_count; n++) { AddItem(n); } }
-//      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->RangeSelected); } }
+//      if (req.Type == ImGuiSelectionRequestType_SetAll)    { Clear(); if (req.Selected) { for (int n = 0; n < items_count; n++) { AddItem(n); } }
+//      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->Selected); } }
 //   }
 void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count)
 {
     IM_ASSERT(AdapterIndexToStorageId != NULL);
     for (ImGuiSelectionRequest& req : ms_io->Requests)
     {
-        if (req.Type == ImGuiSelectionRequestType_Clear)
+        if (req.Type == ImGuiSelectionRequestType_SetAll)
             Clear();
-        if (req.Type == ImGuiSelectionRequestType_SelectAll)
+        if (req.Type == ImGuiSelectionRequestType_SetAll && req.Selected)
         {
-            Clear();
             Storage.Data.reserve(items_count);
             for (int idx = 0; idx < items_count; idx++)
                 AddItem(AdapterIndexToStorageId(this, idx));
         }
         if (req.Type == ImGuiSelectionRequestType_SetRange)
             for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
-                UpdateItem(AdapterIndexToStorageId(this, idx), req.RangeSelected);
+                UpdateItem(AdapterIndexToStorageId(this, idx), req.Selected);
     }
 }
 

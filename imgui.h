@@ -2744,11 +2744,11 @@ struct ImColor
 // - Store and maintain actual selection data using persistent object identifiers.
 // - Usage flow:
 //     BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
-//           - (2) [If using clipper] Honor request list (Clear/SelectAll/SetRange requests) by updating your selection data. Same code as Step 6.
+//           - (2) [If using clipper] Honor request list (SetAll/SetRange requests) by updating your selection data. Same code as Step 6.
 //           - (3) [If using clipper] You need to make sure RangeSrcItem is always submitted. Calculate its index and pass to clipper.IncludeItemByIndex(). If storing indices in ImGuiSelectionUserData, a simple clipper.IncludeItemByIndex(ms_io->RangeSrcItem) call will work.
 //     LOOP  - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //     END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
-//           - (6) Honor request list (Clear/SelectAll/SetRange requests) by updating your selection data. Same code as Step 2.
+//           - (6) Honor request list (SetAll/SetRange requests) by updating your selection data. Same code as Step 2.
 //     If you submit all items (no clipper), Step 2 and 3 are optional and will be handled by each item themselves. It is fine to always honor those steps.
 // About ImGuiSelectionUserData:
 // - For each item is it submitted by your call to SetNextItemSelectionUserData().
@@ -2771,7 +2771,7 @@ enum ImGuiMultiSelectFlags_
 {
     ImGuiMultiSelectFlags_None                  = 0,
     ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to share same code/logic if desired. It essentially disables the main purpose of BeginMultiSelect() tho!
-    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut sending a SelectAll request.
+    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to select all.
     ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 2,   // Disable Shift+Click/Shift+Keyboard handling (useful for unordered 2D selection).
     ImGuiMultiSelectFlags_BoxSelect             = 1 << 3,   // Enable box-selection (only supporting 1D list when using clipper, not 2D grids). Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
     ImGuiMultiSelectFlags_BoxSelect2d           = 1 << 4,   // Enable box-selection with 2D layout/grid support. This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items.
@@ -2803,9 +2803,8 @@ struct ImGuiMultiSelectIO
 enum ImGuiSelectionRequestType
 {
     ImGuiSelectionRequestType_None = 0,
-    ImGuiSelectionRequestType_Clear,            // Request app to clear selection.
-    ImGuiSelectionRequestType_SelectAll,        // Request app to select all.
-    ImGuiSelectionRequestType_SetRange,         // Request app to select/unselect [RangeFirstItem..RangeLastItem] items based on 'bool RangeSelected'. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
+    ImGuiSelectionRequestType_SetAll,           // Request app to clear selection (if Selected==false) or select all items (if Selected==true)
+    ImGuiSelectionRequestType_SetRange,         // Request app to select/unselect [RangeFirstItem..RangeLastItem] items (inclusive) based on value of Selected. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
 };
 
 // Selection request item
@@ -2813,7 +2812,7 @@ struct ImGuiSelectionRequest
 {
     //------------------------------------------// BeginMultiSelect / EndMultiSelect
     ImGuiSelectionRequestType   Type;           //  ms:w, app:r     /  ms:w, app:r   // Request type. You'll most often receive 1 Clear + 1 SetRange with a single-item range.
-    bool                        RangeSelected;  //                  /  ms:w, app:r   // Parameter for SetRange request (true = select range, false = unselect range)
+    bool                        Selected;       //                  /  ms:w, app:r   // Parameter for SetAll/SetRange requests (true = select, false = unselect)
     ImGuiSelectionUserData      RangeFirstItem; //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
     ImGuiSelectionUserData      RangeLastItem;  //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
 };
