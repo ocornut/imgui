@@ -201,6 +201,7 @@ int main(int, char**)
         ImGui::Render();
 
         WGPURenderPassColorAttachment color_attachments = {};
+        color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
         color_attachments.loadOp = WGPULoadOp_Clear;
         color_attachments.storeOp = WGPUStoreOp_Store;
         color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
