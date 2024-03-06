@@ -2832,7 +2832,7 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
         // Update selection
         Clear();
         if (item_next_idx_to_select != -1 && ms_io->NavIdSelected)
-            AddItem(AdapterIndexToStorageId(this, item_next_idx_to_select));
+            SetItemSelected(AdapterIndexToStorageId(this, item_next_idx_to_select), true);
     }
 };
 
@@ -3137,7 +3137,7 @@ static void ShowDemoWindowMultiSelect()
                     items.push_back(items_next_id++);
             if (ImGui::SmallButton("Add 20 items"))     { for (int n = 0; n < 20; n++) { items.push_back(items_next_id++); } }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.RemoveItem(items.back()); items.pop_back(); } }
+            if (ImGui::SmallButton("Remove 20 items"))  { for (int n = IM_MIN(20, items.Size); n > 0; n--) { selection.SetItemSelected(items.back(), false); items.pop_back(); } }
 
             // (1) Extra to support deletion: Submit scrolling range to avoid glitches on deletion
             const float items_height = ImGui::GetTextLineHeightWithSpacing();

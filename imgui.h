@@ -2823,16 +2823,16 @@ struct ImGuiSelectionRequest
 // To store a multi-selection, in your application you could:
 // - A) Use this helper as a convenience. We use our simple key->value ImGuiStorage as a std::set<ImGuiID> replacement.
 // - B) Use your own external storage: e.g. std::set<MyObjectId>, std::vector<MyObjectId>, interval trees, etc.
-// - C) Use intrusively stored selection (e.g. 'bool IsSelected' inside objects). Not recommended because you can't have multiple views
-//      over same objects. Also some features requires to provide selection _size_, which with this strategy requires additional work.
+// - C) Use intrusively stored selection (e.g. 'bool IsSelected' inside objects). Doing that, you can't have multiple views over
+//      your objects. Also, some features requires to provide selection _size_, which with this strategy requires additional work.
 // In ImGuiSelectionBasicStorage we:
 // - always use indices in the multi-selection API (passed to SetNextItemSelectionUserData(), retrieved in ImGuiMultiSelectIO)
-// - use the AdapterIndexToStorageId() indirection layer to abstract how persistent selection data is derived from an index.
-//   - so this helper can be used regardless of your object storage/types, and without using templates or virtual functions.
+// - use the AdapterIndexToStorageId() indirection layer to abstract how persistent selection data is derived from an index,
+//   so this helper can be used regardless of your object storage/types (it is analogous to using a virtual function):
 //   - in some cases we read an ID from some custom item data structure (similar to what you would do in your codebase)
 //   - in some cases we use Index as custom identifier (default implementation returns Index cast as Identifier): only OK for a never changing item list.
 // Many combinations are possible depending on how you prefer to store your items and how you prefer to store your selection.
-// When your application settles on a choice, you may want to get rid of this indirection layer and do your own thing.
+// Large applications are likely to eventually want to get rid of this indirection layer and do their own thing.
 // See https://github.com/ocornut/imgui/wiki/Multi-Select for minimum pseudo-code example using this helper.
 // (In theory, for maximum abstraction, this class could contains AdapterIndexToUserData() and AdapterUserDataToIndex() functions as well,
 // but because we always use indices in SetNextItemSelectionUserData() in the demo, we omit that indirection for clarity.)
@@ -2844,17 +2844,15 @@ struct ImGuiSelectionBasicStorage
     void*           AdapterData;    // Adapter to convert item index to item identifier     // e.g. selection.AdapterData = (void*)my_items;
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->AdapterData)[idx]->ID; };
 
+    // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions
+    IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count);
+
     // Methods: selection storage
     ImGuiSelectionBasicStorage()                { Clear(); AdapterData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
     void    Clear()                             { Storage.Data.resize(0); Size = 0; }
     void    Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); }
-    bool    Contains(ImGuiID key) const         { return Storage.GetInt(key, 0) != 0; }
-    void    AddItem(ImGuiID key)                { int* p_int = Storage.GetIntRef(key, 0); if (*p_int != 0) return; *p_int = 1; Size++; }
-    void    RemoveItem(ImGuiID key)             { int* p_int = Storage.GetIntRef(key, 0); if (*p_int == 0) return; *p_int = 0; Size--; }
-    void    UpdateItem(ImGuiID key, bool v)     { if (v) { AddItem(key); } else { RemoveItem(key); } }
-
-    // Methods: apply selection requests (that are coming from BeginMultiSelect() and EndMultiSelect() functions)
-    IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count);
+    bool    Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }
+    void    SetItemSelected(ImGuiID id, bool v) { int* p_int = Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
 };
 
 //-----------------------------------------------------------------------------
