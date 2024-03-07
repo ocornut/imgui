@@ -2744,7 +2744,7 @@ struct ImColor
 // - Store and maintain actual selection data using persistent object identifiers.
 // - Usage flow:
 //     BEGIN - (1) Call BeginMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
-//           - (2) [If using clipper] Honor request list (SetAll/SetRange requests) by updating your selection data. Same code as Step 6.
+//           - (2) Honor request list (SetAll/SetRange requests) by updating your selection data. Same code as Step 6.
 //           - (3) [If using clipper] You need to make sure RangeSrcItem is always submitted. Calculate its index and pass to clipper.IncludeItemByIndex(). If storing indices in ImGuiSelectionUserData, a simple clipper.IncludeItemByIndex(ms_io->RangeSrcItem) call will work.
 //     LOOP  - (4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //     END   - (5) Call EndMultiSelect() and retrieve the ImGuiMultiSelectIO* result.
@@ -2773,15 +2773,17 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to share same code/logic if desired. It essentially disables the main purpose of BeginMultiSelect() tho!
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to select all.
     ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 2,   // Disable Shift+Click/Shift+Keyboard handling (useful for unordered 2D selection).
-    ImGuiMultiSelectFlags_BoxSelect             = 1 << 3,   // Enable box-selection (only supporting 1D list when using clipper, not 2D grids). Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
-    ImGuiMultiSelectFlags_BoxSelect2d           = 1 << 4,   // Enable box-selection with 2D layout/grid support. This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items.
-    ImGuiMultiSelectFlags_BoxSelectNoScroll     = 1 << 5,   // Disable scrolling when box-selecting near edges of scope.
-    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 6,   // Clear selection when pressing Escape while scope is focused.
-    ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 7,   // Clear selection when clicking on empty location within scope.
-    ImGuiMultiSelectFlags_ScopeWindow           = 1 << 8,   // Use if BeginMultiSelect() covers a whole window (Default): Scope for _ClearOnClickVoid and _BoxSelect is whole window (Default).
-    ImGuiMultiSelectFlags_ScopeRect             = 1 << 9,   // Use if multiple BeginMultiSelect() are used in the same host window: Scope for _ClearOnClickVoid and _BoxSelect is rectangle covering submitted items.
-    ImGuiMultiSelectFlags_SelectOnClick         = 1 << 10,  // Apply selection on mouse down when clicking on unselected item. (Default)
-    ImGuiMultiSelectFlags_SelectOnClickRelease  = 1 << 11,  // Apply selection on mouse release when clicking an unselected item. Allow dragging an unselected item without altering selection.
+    ImGuiMultiSelectFlags_NoAutoSelect          = 1 << 3,   // Disable selecting items when navigating (useful for e.g. supporting range-select in a list of checkboxes)
+    ImGuiMultiSelectFlags_NoAutoClear           = 1 << 4,   // Disable clearing other items when navigating or selecting another one (generally used with ImGuiMultiSelectFlags_NoAutoSelect. useful for e.g. supporting range-select in a list of checkboxes)
+    ImGuiMultiSelectFlags_BoxSelect             = 1 << 5,   // Enable box-selection (only supporting 1D list when using clipper, not 2D grids). Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
+    ImGuiMultiSelectFlags_BoxSelect2d           = 1 << 6,   // Enable box-selection with 2D layout/grid support. This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items.
+    ImGuiMultiSelectFlags_BoxSelectNoScroll     = 1 << 7,   // Disable scrolling when box-selecting near edges of scope.
+    ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 8,   // Clear selection when pressing Escape while scope is focused.
+    ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 9,   // Clear selection when clicking on empty location within scope.
+    ImGuiMultiSelectFlags_ScopeWindow           = 1 << 10,  // Use if BeginMultiSelect() covers a whole window (Default): Scope for _ClearOnClickVoid and _BoxSelect is whole window (Default).
+    ImGuiMultiSelectFlags_ScopeRect             = 1 << 11,  // Use if multiple BeginMultiSelect() are used in the same host window: Scope for _ClearOnClickVoid and _BoxSelect is rectangle covering submitted items.
+    ImGuiMultiSelectFlags_SelectOnClick         = 1 << 12,  // Apply selection on mouse down when clicking on unselected item. (Default)
+    ImGuiMultiSelectFlags_SelectOnClickRelease  = 1 << 13,  // Apply selection on mouse release when clicking an unselected item. Allow dragging an unselected item without altering selection.
 };
 
 // Main IO structure returned by BeginMultiSelect()/EndMultiSelect().
@@ -2803,7 +2805,7 @@ struct ImGuiMultiSelectIO
 enum ImGuiSelectionRequestType
 {
     ImGuiSelectionRequestType_None = 0,
-    ImGuiSelectionRequestType_SetAll,           // Request app to clear selection (if Selected==false) or select all items (if Selected==true)
+    ImGuiSelectionRequestType_SetAll,           // Request app to clear selection (if Selected==false) or select all items (if Selected==true). We cannot set RangeFirstItem/RangeLastItem as its contents is entirely up to user (not necessarily an index)
     ImGuiSelectionRequestType_SetRange,         // Request app to select/unselect [RangeFirstItem..RangeLastItem] items (inclusive) based on value of Selected. Only EndMultiSelect() request this, app code can read after BeginMultiSelect() and it will always be false.
 };
 

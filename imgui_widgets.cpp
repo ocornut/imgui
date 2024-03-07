@@ -1141,11 +1141,25 @@ bool ImGui::Checkbox(const char* label, bool* v)
         return false;
     }
 
+    // Range-Selection/Multi-selection support (header)
+    bool checked = *v;
+    const bool is_multi_select = (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) != 0;
+    if (is_multi_select)
+        MultiSelectItemHeader(id, &checked, NULL);
+
     bool hovered, held;
     bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
-    if (pressed)
+
+    // Range-Selection/Multi-selection support (footer)
+    if (is_multi_select)
+        MultiSelectItemFooter(id, &checked, &pressed);
+    else if (pressed)
+        checked = !checked;
+
+    if (*v != checked)
     {
-        *v = !(*v);
+        *v = checked;
+        pressed = true; // return value
         MarkItemEdited(id);
     }
 
@@ -7333,13 +7347,13 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags)
             ms->IsKeyboardSetRange = true;
         if (ms->IsKeyboardSetRange)
             IM_ASSERT(storage->RangeSrcItem != ImGuiSelectionUserData_Invalid); // Not ready -> could clear?
-        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
+        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0 && (flags & (ImGuiMultiSelectFlags_NoAutoClear | ImGuiMultiSelectFlags_NoAutoSelect)) == 0)
             request_clear = true;
     }
     else if (g.NavJustMovedFromFocusScopeId == ms->FocusScopeId)
     {
         // Also clear on leaving scope (may be optional?)
-        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
+        if ((ms->KeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0 && (flags & (ImGuiMultiSelectFlags_NoAutoClear | ImGuiMultiSelectFlags_NoAutoSelect)) == 0)
             request_clear = true;
     }
 
@@ -7517,11 +7531,15 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
             const bool is_range_src = storage->RangeSrcItem == item_data;
             if (is_range_src || is_range_dst || ms->RangeSrcPassedBy != ms->RangeDstPassedBy)
             {
+                // Apply range-select value to visible items
                 IM_ASSERT(storage->RangeSrcItem != ImGuiSelectionUserData_Invalid && storage->RangeSelected != -1);
                 selected = (storage->RangeSelected != 0);
             }
-            else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0)
+            else if ((ms->KeyMods & ImGuiMod_Ctrl) == 0 && (ms->Flags & ImGuiMultiSelectFlags_NoAutoClear) == 0)
+            {
+                // Clear other items
                 selected = false;
+            }
         }
         *p_selected = selected;
     }
@@ -7529,13 +7547,16 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
     // Alter button behavior flags
     // To handle drag and drop of multiple items we need to avoid clearing selection on click.
     // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
-    ImGuiButtonFlags button_flags = *p_button_flags;
-    button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
-    if ((!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore)) && !(ms->Flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
-        button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
-    else
-        button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
-    *p_button_flags = button_flags;
+    if (p_button_flags != NULL)
+    {
+        ImGuiButtonFlags button_flags = *p_button_flags;
+        button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
+        if ((!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore)) && !(ms->Flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
+            button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
+        else
+            button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
+        *p_button_flags = button_flags;
+    }
 }
 
 // In charge of:
@@ -7570,11 +7591,10 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
     bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
 
+    bool apply_to_range_src = false;
+
     if (g.NavId == id && storage->RangeSrcItem == ImGuiSelectionUserData_Invalid)
-    {
-        storage->RangeSrcItem = item_data;
-        storage->RangeSelected = selected; // Will be updated at the end of this function anyway.
-    }
+        apply_to_range_src = true;
     if (ms->IsEndIO == false)
     {
         ms->IO.Requests.resize(0);
@@ -7584,10 +7604,27 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
     {
-        if (is_ctrl && is_shift)
-            pressed = true;
-        else if (!is_ctrl)
-            selected = pressed = true;
+        if ((flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
+        {
+            if (is_ctrl && is_shift)
+                pressed = true;
+            else if (!is_ctrl)
+                selected = pressed = true;
+        }
+        else
+        {
+            // With NoAutoSelect, using Shift+keyboard performs a write/copy
+            if (is_shift)
+                pressed = true;
+            else if (!is_ctrl)
+                apply_to_range_src = true; // Since if (pressed) {} main block is not running we update this
+        }
+    }
+
+    if (apply_to_range_src)
+    {
+        storage->RangeSrcItem = item_data;
+        storage->RangeSelected = selected; // Will be updated at the end of this function anyway.
     }
 
     // Box-select toggle handling
@@ -7608,9 +7645,9 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         ms->BoxSelectLastitem = item_data;
     }
 
-    // Right-click handling: this could be moved at the Selectable() level.
-    // FIXME-MULTISELECT: See https://github.com/ocornut/imgui/pull/5816
-    if (hovered && IsMouseClicked(1))
+    // Right-click handling.
+    // FIXME-MULTISELECT: Currently filtered out by ImGuiMultiSelectFlags_NoAutoSelect but maybe should be moved to Selectable(). See https://github.com/ocornut/imgui/pull/5816
+    if (hovered && IsMouseClicked(1) && (flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
     {
         if (g.ActiveId != 0 && g.ActiveId != id)
             ClearActiveID();
@@ -7653,36 +7690,54 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         // Mouse Pressed:  Ctrl+Shift  | n/a    | Dst=item, Sel=!Sel =>         SetRange Src-Dst
         //----------------------------------------------------------------------------------------
 
-        bool request_clear = false;
-        if (is_singleselect)
-            request_clear = true;
-        else if ((input_source == ImGuiInputSource_Mouse || g.NavActivateId == id) && !is_ctrl)
-            request_clear = true;
-        else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
-            request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
-        if (request_clear)
+        if ((flags & ImGuiMultiSelectFlags_NoAutoClear) == 0)
         {
-            ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, (ImGuiSelectionUserData)-1, (ImGuiSelectionUserData)-1 };
-            ms->IO.Requests.resize(0);
-            ms->IO.Requests.push_back(req);
+            bool request_clear = false;
+            if (is_singleselect)
+                request_clear = true;
+            else if ((input_source == ImGuiInputSource_Mouse || g.NavActivateId == id) && !is_ctrl)
+                request_clear = true;
+            else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
+                request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
+            if (request_clear)
+            {
+                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+                ms->IO.Requests.resize(0);
+                ms->IO.Requests.push_back(req);
+            }
         }
 
         int range_direction;
         bool range_selected;
         if (is_shift && !is_singleselect)
         {
-            // Shift+Arrow always select
-            // Ctrl+Shift+Arrow copy source selection state (already stored by BeginMultiSelect() in storage->RangeSelected)
             //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
             if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid)
                 storage->RangeSrcItem = item_data;
-            range_selected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
+            if ((flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
+            {
+                // Shift+Arrow always select
+                // Ctrl+Shift+Arrow copy source selection state (already stored by BeginMultiSelect() in storage->RangeSelected)
+                range_selected = (is_ctrl && storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
+            }
+            else
+            {
+                // Shift+Arrow copy source selection state
+                // Shift+Click always copy from target selection state
+                if (ms->IsKeyboardSetRange)
+                    range_selected = (storage->RangeSelected != -1) ? (storage->RangeSelected != 0) : true;
+                else
+                    range_selected = !selected;
+            }
             range_direction = ms->RangeSrcPassedBy ? +1 : -1;
         }
         else
         {
             // Ctrl inverts selection, otherwise always select
-            selected = is_ctrl ? !selected : true;
+            if ((flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
+                selected = is_ctrl ? !selected : true;
+            else
+                selected = !selected;
             storage->RangeSrcItem = item_data;
             range_selected = selected;
             range_direction = +1;

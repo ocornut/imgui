@@ -3205,6 +3205,55 @@ static void ShowDemoWindowMultiSelect()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (checkboxes)");
+        if (ImGui::TreeNode("Multi-Select (checkboxes)"))
+        {
+            ImGui::Text("In a list of checkboxes (not selectable):");
+            ImGui::BulletText("Using _NoAutoSelect + _NoAutoClear flags.");
+            ImGui::BulletText("Shift+Click to check multiple boxes.");
+            ImGui::BulletText("Shift+Keyboard to copy current value to other boxes.");
+
+            static bool values[20] = {};
+            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_NoAutoSelect | ImGuiMultiSelectFlags_NoAutoClear | ImGuiMultiSelectFlags_ClearOnEscape;
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoSelect", &flags, ImGuiMultiSelectFlags_NoAutoSelect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoClear", &flags, ImGuiMultiSelectFlags_NoAutoClear);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
+
+            struct Funcs
+            {
+                static void ApplyMultiSelectRequestsToBoolArray(ImGuiMultiSelectIO* ms_io, bool items[], int items_count)
+                {
+                    for (ImGuiSelectionRequest& req : ms_io->Requests)
+                    {
+                        if (req.Type == ImGuiSelectionRequestType_SetAll)
+                            for (int n = 0; n < items_count; n++)
+                                items[n] = req.Selected;
+                        else if (req.Type == ImGuiSelectionRequestType_SetRange)
+                            for (int n = (int)req.RangeFirstItem; n <= (int)req.RangeLastItem; n++)
+                                items[n] = req.Selected;
+                    }
+                }
+            };
+
+            if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+            {
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
+                Funcs::ApplyMultiSelectRequestsToBoolArray(ms_io, values, IM_ARRAYSIZE(values)); //// By specs, it could be optional to apply requests from BeginMultiSelect() if not using a clipper.
+                for (int n = 0; n < 20; n++)
+                {
+                    char label[32];
+                    sprintf(label, "Item %d", n);
+                    ImGui::SetNextItemSelectionUserData(n);
+                    ImGui::Checkbox(label, &values[n]);
+                }
+                ms_io = ImGui::EndMultiSelect();
+                Funcs::ApplyMultiSelectRequestsToBoolArray(ms_io, values, IM_ARRAYSIZE(values));
+            }
+            ImGui::EndChild();
+
+            ImGui::TreePop();
+        }
+
         // Demonstrate individual selection scopes in same window
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (multiple scopes)");
         if (ImGui::TreeNode("Multi-Select (multiple scopes)"))
@@ -3290,6 +3339,8 @@ static void ShowDemoWindowMultiSelect()
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SingleSelect", &flags, ImGuiMultiSelectFlags_SingleSelect);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoSelectAll", &flags, ImGuiMultiSelectFlags_NoSelectAll);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoRangeSelect", &flags, ImGuiMultiSelectFlags_NoRangeSelect);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoSelect", &flags, ImGuiMultiSelectFlags_NoAutoSelect);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoClear", &flags, ImGuiMultiSelectFlags_NoAutoClear);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelectNoScroll", &flags, ImGuiMultiSelectFlags_BoxSelectNoScroll);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
