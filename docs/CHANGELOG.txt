@@ -74,6 +74,8 @@ Other changes:
   (#7325, #7287, #7063)
 - ProgressBar: Fixed passing fraction==NaN from leading to a crash. (#7451)
 - ListBox: Fixed text-baseline offset when using SameLine()+Text() after a labeled ListBox().
+- Drags, Sliders, Inputs: Fixed io.PlatformLocaleDecimalPoint decimal point localization
+  feature not working regression from 1.90.1. (#7389, #6719, #2278) [@GamingMinds-DanielC]
 - Style: Added ImGuiStyleVar_TabBorderSize, ImGuiStyleVar_TableAngledHeadersAngle for
   consistency. (#7411) [@cfillion]
 - DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
