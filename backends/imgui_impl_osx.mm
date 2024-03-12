@@ -625,8 +625,18 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     // Setup display size
     if (view)
     {
-        const float dpi = (float)[view.window backingScaleFactor];
-        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [bd->exclusive.lock lock];
+            bd->exclusive.backingScaleFactor = view.window.backingScaleFactor;
+            bd->exclusive.bounds = view.bounds;
+            [bd->exclusive.lock unlock];
+        });
+
+        [bd->exclusive.lock lock];
+        const float dpi = (float) bd->exclusive.backingScaleFactor;
+        io.DisplaySize = ImVec2((float) bd->exclusive.bounds.size.width, bd->exclusive.bounds.size.height);
+        [bd->exclusive.lock unlock];
+
         io.DisplayFramebufferScale = ImVec2(dpi, dpi);
     }
 
