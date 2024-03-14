@@ -523,7 +523,6 @@ bool ImGui_ImplOSX_Init(NSView* view)
     return true;
 }
 
-
 void ImGui_ImplOSX_Shutdown()
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
@@ -699,7 +698,6 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
     }
 }
 
-
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
@@ -709,8 +707,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     ScopedLock *sclock = [[ScopedLock alloc] init:ImGui_IO_lock];
 
-    bool WantCaptureMouse = io.WantCaptureMouse;
-
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
@@ -719,7 +715,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.AddMouseSourceEvent(GetMouseSource(event));
             io.AddMouseButtonEvent(button, true);
         }
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
@@ -730,7 +726,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.AddMouseSourceEvent(GetMouseSource(event));
             io.AddMouseButtonEvent(button, false);
         }
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged || event.type == NSEventTypeRightMouseDragged || event.type == NSEventTypeOtherMouseDragged)
@@ -746,7 +742,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.AddMouseSourceEvent(GetMouseSource(event));
         io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
 
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeScrollWheel)
@@ -791,14 +787,14 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if (wheel_dx != 0.0 || wheel_dy != 0.0)
             io.AddMouseWheelEvent((float)wheel_dx, (float)wheel_dy);
 
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
     {
         if ([event isARepeat])
         {
-            return WantCaptureMouse;
+            return io.WantCaptureMouse;
         }
 
         int key_code = (int)[event keyCode];
@@ -806,7 +802,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
 
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeFlagsChanged)
@@ -839,14 +835,14 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
                 default:
                 {
                     [ImGui_IO_lock unlock];
-                    return WantCaptureMouse;
+                    return io.WantCaptureMouse;
                 }
             }
             io.AddKeyEvent(key, (modifier_flags & mask) != 0);
             io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
 
-        return WantCaptureMouse;
+        return io.WantCaptureMouse;
     }
 
     return false;
