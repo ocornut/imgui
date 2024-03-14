@@ -43,8 +43,11 @@ Breaking changes:
 
 Other changes:
 
+- Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
+  It is possible that some prior manual use of ImFontConfig::GlyphOffset may become
+  duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
-  mitigitate issues with reading vertex indexing limits with 16-bit indices.
+  mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
   as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
 
