@@ -402,12 +402,33 @@ IMGUI_IMPL_API void ImGui_ImplOSX_NewFrame(void* _Nullable view) {
 #endif
 
 
+
 NSLock *ImGui_IO_lock;
+
+
+@interface ScopedLock : NSObject
+@property (strong) NSLock *lockptr;
+@end
+
+@implementation ScopedLock
+
+- (id)init:(NSLock *)incoming
+{
+    _lockptr = incoming;
+    [_lockptr lock];
+    return self;
+}
+
+- (void)dealloc {
+    [_lockptr unlock];
+}
+@end
+
 
 bool ImGui_ImplOSX_Init(NSView* view)
 {
     ImGui_IO_lock = [[NSLock alloc] init];
-    
+
     ImGuiIO& io = ImGui::GetIO();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     IMGUI_CHECKVERSION();
@@ -501,6 +522,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
 
     return true;
 }
+
 
 void ImGui_ImplOSX_Shutdown()
 {
@@ -685,7 +707,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         return false;
     ImGuiIO& io = ImGui::GetIO();
 
-    [ImGui_IO_lock lock];
+    ScopedLock *sclock = [[ScopedLock alloc] init:ImGui_IO_lock];
 
     bool WantCaptureMouse = io.WantCaptureMouse;
 
@@ -697,7 +719,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.AddMouseSourceEvent(GetMouseSource(event));
             io.AddMouseButtonEvent(button, true);
         }
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
@@ -709,7 +730,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.AddMouseSourceEvent(GetMouseSource(event));
             io.AddMouseButtonEvent(button, false);
         }
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
@@ -726,7 +746,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.AddMouseSourceEvent(GetMouseSource(event));
         io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
 
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
@@ -746,7 +765,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         // it appears to jump up or down. It can be observed in Preview, various JetBrains IDEs and here.
         if (event.phase == NSEventPhaseCancelled)
         {
-            [ImGui_IO_lock unlock];
             return false;
         }
 
@@ -773,7 +791,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if (wheel_dx != 0.0 || wheel_dy != 0.0)
             io.AddMouseWheelEvent((float)wheel_dx, (float)wheel_dy);
 
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
@@ -781,7 +798,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     {
         if ([event isARepeat])
         {
-            [ImGui_IO_lock unlock];
             return WantCaptureMouse;
         }
 
@@ -790,7 +806,6 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
         io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
 
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
@@ -831,11 +846,9 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
 
-        [ImGui_IO_lock unlock];
         return WantCaptureMouse;
     }
 
-    [ImGui_IO_lock unlock];
     return false;
 }
 
