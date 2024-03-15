@@ -170,11 +170,21 @@
   <ItemGroup>
     <None Include="..\..\misc\debuggers\imgui.natstepfilter" />
     <None Include="..\README.txt" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\misc\debuggers\imgui.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\sdl2.nuget.redist.2.30.0\build\native\sdl2.nuget.redist.targets" Condition="Exists('..\packages\sdl2.nuget.redist.2.30.0\build\native\sdl2.nuget.redist.targets')" />
+    <Import Project="..\packages\sdl2.nuget.2.30.0\build\native\sdl2.nuget.targets" Condition="Exists('..\packages\sdl2.nuget.2.30.0\build\native\sdl2.nuget.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\sdl2.nuget.redist.2.30.0\build\native\sdl2.nuget.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\sdl2.nuget.redist.2.30.0\build\native\sdl2.nuget.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\sdl2.nuget.2.30.0\build\native\sdl2.nuget.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\sdl2.nuget.2.30.0\build\native\sdl2.nuget.targets'))" />
+  </Target>
 </Project>

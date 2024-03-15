@@ -56,6 +56,7 @@
     <None Include="..\..\misc\debuggers\imgui.natstepfilter">
       <Filter>imgui</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\misc\debuggers\imgui.natvis">
