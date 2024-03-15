@@ -60,3 +60,6 @@ examples/example_sdl2_sdlrenderer/example_sdl2_sdlrenderer
 
 ## VS Code Settings
 .vscode/settings.json
+
+## Nuget Packages
+examples/packages/*
