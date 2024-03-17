@@ -1576,7 +1576,9 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
     ImGuiStyleVar_GrabRounding,        // float     GrabRounding
     ImGuiStyleVar_TabRounding,         // float     TabRounding
+    ImGuiStyleVar_TabBorderSize,       // float     TabBorderSize
     ImGuiStyleVar_TabBarBorderSize,    // float     TabBarBorderSize
+    ImGuiStyleVar_TableAngledHeadersAngle,// float  TableAngledHeadersAngle
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_SelectableTextAlign, // ImVec2    SelectableTextAlign
     ImGuiStyleVar_SeparatorTextBorderSize,// float  SeparatorTextBorderSize
