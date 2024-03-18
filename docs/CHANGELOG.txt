@@ -45,6 +45,10 @@ Breaking changes:
   It has been unnecessary and a no-op since 1.87 (it returns the same value as passed
   when used with a 1.87+ backend using io.AddKeyEvent() function). (#4921)
   - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) --> IsKeyPressed(ImGuiKey_XXX)
+- ImDrawList: Merged the radius_x/radius_y parameters in AddEllipse(), AddEllipseFilled()
+  and PathEllipticalArcTo() into a single ImVec2 parameter. Exceptionally, because those
+  functions were added in 1.90, we are not adding inline redirection functions.
+  The transition is easy and should affect few users. (#2743, #7417) [@cfillion]
 
 Other changes:
 
