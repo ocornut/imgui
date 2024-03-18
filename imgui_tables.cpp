@@ -498,6 +498,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->DeclColumnsCount = table->AngledHeadersCount = 0;
     if (previous_frame_active + 1 < g.FrameCount)
         table->IsActiveIdInTable = false;
+    table->AngledHeadersHeight = 0.0f;
     temp_data->AngledHeadersExtraWidth = 0.0f;
 
     // Using opaque colors facilitate overlapping lines of the grid, otherwise we'd need to improve TableDrawBorders()

@@ -57,6 +57,8 @@ Other changes:
 - Windows: Double-click to collapse may be disabled via key-ownership mechanism. (#7369)
 - Tables: Angled headers: fixed border hit box extending beyond when used within
   non-scrollable tables. (#7416) [@cfillion]
+- Tables: Angled headers: fixed borders not moving back up after TableAngleHeadersRow()
+  stops being called. (#7416) [@cfillion]
 - Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
