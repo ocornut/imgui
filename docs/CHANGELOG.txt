@@ -59,6 +59,8 @@ Other changes:
   non-scrollable tables. (#7416) [@cfillion]
 - Tables: Angled headers: fixed borders not moving back up after TableAngleHeadersRow()
   stops being called. (#7416) [@cfillion]
+- Tables: Angled headers: rounding header size to nearest integers, fixes some issues
+  when using clipper.
 - Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
