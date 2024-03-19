@@ -701,6 +701,7 @@ static void ImGui_ImplSDL3_UpdateGamepads()
                 if (bd->GamepadMode == ImGui_ImplSDL3_GamepadMode_AutoFirst)
                     break;
             }
+        SDL_free(sdl_gamepads);
         bd->WantUpdateGamepadsList = false;
     }
 

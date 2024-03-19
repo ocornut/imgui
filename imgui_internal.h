@@ -1371,7 +1371,6 @@ enum ImGuiInputSource
     ImGuiInputSource_Mouse,         // Note: may be Mouse or TouchScreen or Pen. See io.MouseSource to distinguish them.
     ImGuiInputSource_Keyboard,
     ImGuiInputSource_Gamepad,
-    ImGuiInputSource_Clipboard,     // Currently only used by InputText()
     ImGuiInputSource_COUNT
 };
 
