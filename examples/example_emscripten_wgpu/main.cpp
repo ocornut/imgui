@@ -113,6 +113,7 @@ int main(int, char**)
         glfwTerminate();
         return 1;
     }
+    CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
     glfwShowWindow(window);
 
     // Setup Dear ImGui context
@@ -241,9 +242,7 @@ int main(int, char**)
 #endif
 
         WGPURenderPassColorAttachment color_attachments = {};
-#ifndef __EMSCRIPTEN__
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif
         color_attachments.loadOp = WGPULoadOp_Clear;
         color_attachments.storeOp = WGPUStoreOp_Store;
         color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
