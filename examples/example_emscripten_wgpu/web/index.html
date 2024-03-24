@@ -3,10 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
-    <title>Dear ImGui Emscripten example</title>
+    <title>Dear ImGui Emscripten+WebGPU example</title>
     <style>
         body { margin: 0; background-color: black }
-        /* FIXME: with our GLFW example this block seems to break resizing and io.DisplaySize gets stuck */
         .emscripten {
             position: absolute;
             top: 0px;
@@ -31,35 +30,55 @@
   <body>
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     <script type='text/javascript'>
-      var Module = {
-        preRun: [],
-        postRun: [],
-        print: (function() {
-            return function(text) {
-                text = Array.prototype.slice.call(arguments).join(' ');
-                console.log(text);
-            };
-        })(),
-        printErr: function(text) {
-            text = Array.prototype.slice.call(arguments).join(' ');
-            console.error(text);
-        },
-        canvas: (function() {
-            var canvas = document.getElementById('canvas');
-            //canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
-            return canvas;
-        })(),
-        setStatus: function(text) {
-            console.log("status: " + text);
-        },
-        monitorRunDependencies: function(left) {
-            // no run dependencies to log
-        }
-      };
-      window.onerror = function() {
-        console.log("onerror: " + event);
-      };
+      var Module;
+      (async () => {
+        Module = {
+          preRun: [],
+          postRun: [],
+          print: (function() {
+              return function(text) {
+                  text = Array.prototype.slice.call(arguments).join(' ');
+                  console.log(text);
+              };
+          })(),
+          printErr: function(text) {
+              text = Array.prototype.slice.call(arguments).join(' ');
+              console.error(text);
+          },
+          canvas: (function() {
+              var canvas = document.getElementById('canvas');
+              //canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
+              return canvas;
+          })(),
+          setStatus: function(text) {
+              console.log("status: " + text);
+          },
+          monitorRunDependencies: function(left) {
+              // no run dependencies to log
+          }
+        };
+        window.onerror = function() {
+          console.log("onerror: " + event);
+        };
+
+      // Initialize the graphics adapter
+      {
+          if (!navigator.gpu) {
+            throw Error("WebGPU not supported.");
+          }
+
+          const adapter = await navigator.gpu.requestAdapter();
+          const device = await adapter.requestDevice();
+          Module.preinitializedWebGPUDevice = device;
+      }
+
+      {
+          const js = document.createElement('script');
+          js.async = true;
+          js.src = "index.js";
+          document.body.appendChild(js);
+      }
+      })();
     </script>
-    <script async type="text/javascript" src="index.js"></script>
   </body>
 </html>

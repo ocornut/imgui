@@ -1,7 +1,19 @@
-# Building:
+# Building for desktop (WebGPU-native) with Dawn:
+#
 #  git clone https://github.com/google/dawn dawn
 #  cmake -B build -DIMGUI_DAWN_DIR=dawn
 #  cmake --build build
+#
+# The resulting binary will be found at one of the following locations:
+#   * build/Debug/example_emscripten_wgpu[.exe]
+#   * build/example_emscripten_wgpu[.exe]
+
+# Building for Emscripten:
+#
+#  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
+#  2. emcmake cmake -B build
+#  3. cmake --build build
+#  4. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.10.2)
 project(imgui_example_emscripten_wgpu C CXX)
@@ -11,12 +23,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
-
-# set(BUILD_TESTING OFF)
-# set(BUILD_TESTING_STATIC OFF)
-# set(BUILD_TESTING_SHARED OFF)
 
 # Dear ImGui
 set(IMGUI_DIR ../../)
@@ -29,6 +35,9 @@ else()
 	# Dawn wgpu desktop
 	set(DAWN_FETCH_DEPENDENCIES ON)
   set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
+  if (NOT IMGUI_DAWN_DIR)
+    message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
+  endif()
   add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn")
 	set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
 endif()
@@ -50,13 +59,10 @@ target_include_directories(example_emscripten_wgpu PUBLIC
     ${IMGUI_DIR}/backends
 )
 
-# Libraries
-if(EMSCRIPTEN)
-	set_target_properties(example_emscripten_wgpu PROPERTIES OUTPUT_NAME "index")
-	set_target_properties(example_emscripten_wgpu PROPERTIES SUFFIX ".html")
-	set_target_properties(example_emscripten_wgpu PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/web)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --shell-file ${CMAKE_SOURCE_DIR}/../libs/emscripten/shell_minimal.html")
+target_link_libraries(example_emscripten_wgpu PUBLIC ${LIBRARIES})
 
+# Emscripten settings
+if(EMSCRIPTEN)
 	target_link_options(example_emscripten_wgpu PRIVATE
 		"-sUSE_WEBGPU=1"
 		"-sUSE_GLFW=3"
@@ -66,8 +72,10 @@ if(EMSCRIPTEN)
 		"-sASSERTIONS=1"
 		"-sDISABLE_EXCEPTION_CATCHING=1"
 		"-sNO_FILESYSTEM=1"
-    "-sASYNCIFY=1" # Required by WebGPU-C++
 	)
+  set_target_properties(example_emscripten_wgpu PROPERTIES OUTPUT_NAME "index")
+  # copy our custom index.html to build directory
+  add_custom_command(TARGET example_emscripten_wgpu POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_emscripten_wgpu>
+  )
 endif()
-
-target_link_libraries(example_emscripten_wgpu ${LIBRARIES})
