@@ -4223,6 +4223,18 @@ void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir d
         b = ImVec2(-0.750f, +0.866f) * r;
         c = ImVec2(-0.750f, -0.866f) * r;
         break;
+    case ImGuiDir_UpLeft:
+    case ImGuiDir_UpRight:    
+        a = ImVec2(-0.866f, -0.866f) * r;
+        b = ImVec2(+0.866f, -0.866f) * r;        
+        c = (dir == ImGuiDir_UpLeft) ? c = ImVec2(-0.866f, +0.866f) * r : c = ImVec2(+0.866f, +0.866f) * r;
+        break;
+    case ImGuiDir_DownLeft:
+    case ImGuiDir_DownRight:
+        a = ImVec2(+0.866f, +0.866f) * r;
+        b = ImVec2(-0.866f, +0.866f) * r;
+        c = (dir == ImGuiDir_DownLeft) ? c = ImVec2(-0.866f, -0.866f) * r : c = ImVec2(+0.866f, -0.866f) * r;        
+        break;        
     case ImGuiDir_None:
     case ImGuiDir_COUNT:
         IM_ASSERT(0);
