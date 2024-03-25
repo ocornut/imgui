@@ -32,7 +32,7 @@ struct ImGui_ImplWGPU_InitInfo
     ImGui_ImplWGPU_InitInfo()
     {
         PipelineMultisampleState.count = 1;
-        PipelineMultisampleState.mask = -1u;
+        PipelineMultisampleState.mask = UINT32_MAX;
         PipelineMultisampleState.alphaToCoverageEnabled = false;
     }
 };
