@@ -179,17 +179,22 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUnmapMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets)
+#endif // VK_NO_PROTOTYPES
 
+struct ImGui_ImplVulkan_Functions
+{
+#ifdef VK_NO_PROTOTYPES
 // Define function pointers
-#define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
-IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
+#define IMGUI_VULKAN_FUNC_DEF(func) PFN_##func pfn_##func;
+    IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
 #undef IMGUI_VULKAN_FUNC_DEF
 #endif // VK_NO_PROTOTYPES
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-static PFN_vkCmdBeginRenderingKHR   ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR;
-static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
+    PFN_vkCmdBeginRenderingKHR  pfn_vkCmdBeginRenderingKHR;
+    PFN_vkCmdEndRenderingKHR    pfn_vkCmdEndRenderingKHR;
 #endif
+};
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
 // [Please zero-clear before use!]
@@ -236,12 +241,90 @@ struct ImGui_ImplVulkan_Data
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
 
+    ImGui_ImplVulkan_Functions  Functions;
+
     ImGui_ImplVulkan_Data()
     {
         memset((void*)this, 0, sizeof(*this));
         BufferMemoryAlignment = 256;
     }
 };
+
+// Globally available function pointers used for initialization of the backend data
+static ImGui_ImplVulkan_Functions g_Functions;
+
+// Shortcuts to the dynamically loaded function pointers
+// imvkFunctions must be a ImGui_ImplVulkan_Functions or an expression that resolves to an instance of this structure
+#ifdef VK_NO_PROTOTYPES
+#define vkAllocateCommandBuffers imvkFunctions.pfn_vkAllocateCommandBuffers
+#define vkAllocateDescriptorSets imvkFunctions.pfn_vkAllocateDescriptorSets
+#define vkAllocateMemory imvkFunctions.pfn_vkAllocateMemory
+#define vkBeginCommandBuffer imvkFunctions.pfn_vkBeginCommandBuffer
+#define vkBindBufferMemory imvkFunctions.pfn_vkBindBufferMemory
+#define vkBindImageMemory imvkFunctions.pfn_vkBindImageMemory
+#define vkCmdBindDescriptorSets imvkFunctions.pfn_vkCmdBindDescriptorSets
+#define vkCmdBindIndexBuffer imvkFunctions.pfn_vkCmdBindIndexBuffer
+#define vkCmdBindPipeline imvkFunctions.pfn_vkCmdBindPipeline
+#define vkCmdBindVertexBuffers imvkFunctions.pfn_vkCmdBindVertexBuffers
+#define vkCmdCopyBufferToImage imvkFunctions.pfn_vkCmdCopyBufferToImage
+#define vkCmdDrawIndexed imvkFunctions.pfn_vkCmdDrawIndexed
+#define vkCmdPipelineBarrier imvkFunctions.pfn_vkCmdPipelineBarrier
+#define vkCmdPushConstants imvkFunctions.pfn_vkCmdPushConstants
+#define vkCmdSetScissor imvkFunctions.pfn_vkCmdSetScissor
+#define vkCmdSetViewport imvkFunctions.pfn_vkCmdSetViewport
+#define vkCreateBuffer imvkFunctions.pfn_vkCreateBuffer
+#define vkCreateCommandPool imvkFunctions.pfn_vkCreateCommandPool
+#define vkCreateDescriptorSetLayout imvkFunctions.pfn_vkCreateDescriptorSetLayout
+#define vkCreateFence imvkFunctions.pfn_vkCreateFence
+#define vkCreateFramebuffer imvkFunctions.pfn_vkCreateFramebuffer
+#define vkCreateGraphicsPipelines imvkFunctions.pfn_vkCreateGraphicsPipelines
+#define vkCreateImage imvkFunctions.pfn_vkCreateImage
+#define vkCreateImageView imvkFunctions.pfn_vkCreateImageView
+#define vkCreatePipelineLayout imvkFunctions.pfn_vkCreatePipelineLayout
+#define vkCreateRenderPass imvkFunctions.pfn_vkCreateRenderPass
+#define vkCreateSampler imvkFunctions.pfn_vkCreateSampler
+#define vkCreateSemaphore imvkFunctions.pfn_vkCreateSemaphore
+#define vkCreateShaderModule imvkFunctions.pfn_vkCreateShaderModule
+#define vkCreateSwapchainKHR imvkFunctions.pfn_vkCreateSwapchainKHR
+#define vkDestroyBuffer imvkFunctions.pfn_vkDestroyBuffer
+#define vkDestroyCommandPool imvkFunctions.pfn_vkDestroyCommandPool
+#define vkDestroyDescriptorSetLayout imvkFunctions.pfn_vkDestroyDescriptorSetLayout
+#define vkDestroyFence imvkFunctions.pfn_vkDestroyFence
+#define vkDestroyFramebuffer imvkFunctions.pfn_vkDestroyFramebuffer
+#define vkDestroyImage imvkFunctions.pfn_vkDestroyImage
+#define vkDestroyImageView imvkFunctions.pfn_vkDestroyImageView
+#define vkDestroyPipeline imvkFunctions.pfn_vkDestroyPipeline
+#define vkDestroyPipelineLayout imvkFunctions.pfn_vkDestroyPipelineLayout
+#define vkDestroyRenderPass imvkFunctions.pfn_vkDestroyRenderPass
+#define vkDestroySampler imvkFunctions.pfn_vkDestroySampler
+#define vkDestroySemaphore imvkFunctions.pfn_vkDestroySemaphore
+#define vkDestroyShaderModule imvkFunctions.pfn_vkDestroyShaderModule
+#define vkDestroySurfaceKHR imvkFunctions.pfn_vkDestroySurfaceKHR
+#define vkDestroySwapchainKHR imvkFunctions.pfn_vkDestroySwapchainKHR
+#define vkDeviceWaitIdle imvkFunctions.pfn_vkDeviceWaitIdle
+#define vkEndCommandBuffer imvkFunctions.pfn_vkEndCommandBuffer
+#define vkFlushMappedMemoryRanges imvkFunctions.pfn_vkFlushMappedMemoryRanges
+#define vkFreeCommandBuffers imvkFunctions.pfn_vkFreeCommandBuffers
+#define vkFreeDescriptorSets imvkFunctions.pfn_vkFreeDescriptorSets
+#define vkFreeMemory imvkFunctions.pfn_vkFreeMemory
+#define vkGetBufferMemoryRequirements imvkFunctions.pfn_vkGetBufferMemoryRequirements
+#define vkGetImageMemoryRequirements imvkFunctions.pfn_vkGetImageMemoryRequirements
+#define vkGetPhysicalDeviceMemoryProperties imvkFunctions.pfn_vkGetPhysicalDeviceMemoryProperties
+#define vkGetPhysicalDeviceSurfaceCapabilitiesKHR imvkFunctions.pfn_vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+#define vkGetPhysicalDeviceSurfaceFormatsKHR imvkFunctions.pfn_vkGetPhysicalDeviceSurfaceFormatsKHR
+#define vkGetPhysicalDeviceSurfacePresentModesKHR imvkFunctions.pfn_vkGetPhysicalDeviceSurfacePresentModesKHR
+#define vkGetSwapchainImagesKHR imvkFunctions.pfn_vkGetSwapchainImagesKHR
+#define vkMapMemory imvkFunctions.pfn_vkMapMemory
+#define vkQueueSubmit imvkFunctions.pfn_vkQueueSubmit
+#define vkQueueWaitIdle imvkFunctions.pfn_vkQueueWaitIdle
+#define vkResetCommandPool imvkFunctions.pfn_vkResetCommandPool
+#define vkUnmapMemory imvkFunctions.pfn_vkUnmapMemory
+#define vkUpdateDescriptorSets imvkFunctions.pfn_vkUpdateDescriptorSets
+#endif // VK_NO_PROTOTYPES
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+#define vkCmdBeginRenderingKHR imvkFunctions.pfn_vkCmdBeginRenderingKHR
+#define vkCmdEndRenderingKHR imvkFunctions.pfn_vkCmdEndRenderingKHR
+#endif
 
 //-----------------------------------------------------------------------------
 // SHADERS
@@ -355,6 +438,9 @@ static uint32_t __glsl_shader_frag_spv[] =
 //-----------------------------------------------------------------------------
 // FUNCTIONS
 //-----------------------------------------------------------------------------
+
+// Always use the current backend's functions in public interface
+#define imvkFunctions bd->Functions
 
 // Backend data stored in io.BackendRendererUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
@@ -1051,16 +1137,16 @@ bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const ch
     // But this would be equivalent to not setting VK_NO_PROTOTYPES.
 #ifdef VK_NO_PROTOTYPES
 #define IMGUI_VULKAN_FUNC_LOAD(func) \
-    func = reinterpret_cast<decltype(func)>(loader_func(#func, user_data)); \
-    if (func == nullptr)   \
+    g_Functions.pfn_##func = reinterpret_cast<decltype(g_Functions.pfn_##func)>(loader_func(#func, user_data)); \
+    if (g_Functions.pfn_##func == nullptr)   \
         return false;
     IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_LOAD)
 #undef IMGUI_VULKAN_FUNC_LOAD
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     // Manually load those two (see #5446)
-    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
-    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+    g_Functions.pfn_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
+    g_Functions.pfn_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
 #endif
 #else
     IM_UNUSED(loader_func);
@@ -1079,11 +1165,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     {
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #ifndef VK_NO_PROTOTYPES
-        ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdBeginRenderingKHR"));
-        ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdEndRenderingKHR"));
+        g_Functions.pfn_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdBeginRenderingKHR"));
+        g_Functions.pfn_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdEndRenderingKHR"));
 #endif
-        IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR != nullptr);
-        IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);
+        IM_ASSERT(g_Functions.pfn_vkCmdBeginRenderingKHR != nullptr);
+        IM_ASSERT(g_Functions.pfn_vkCmdEndRenderingKHR != nullptr);
 #else
         IM_ASSERT(0 && "Can't use dynamic rendering when neither VK_VERSION_1_3 or VK_KHR_dynamic_rendering is defined.");
 #endif
@@ -1109,6 +1195,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->RenderPass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+    bd->Functions = g_Functions;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
 
@@ -1196,6 +1283,8 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
 {
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    IM_UNUSED(bd); // May be unused
     if (buffers->VertexBuffer) { vkDestroyBuffer(device, buffers->VertexBuffer, allocator); buffers->VertexBuffer = VK_NULL_HANDLE; }
     if (buffers->VertexBufferMemory) { vkFreeMemory(device, buffers->VertexBufferMemory, allocator); buffers->VertexBufferMemory = VK_NULL_HANDLE; }
     if (buffers->IndexBuffer) { vkDestroyBuffer(device, buffers->IndexBuffer, allocator); buffers->IndexBuffer = VK_NULL_HANDLE; }
@@ -1229,6 +1318,10 @@ void ImGui_ImplVulkan_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVulk
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
 // (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
+
+// Use global function pointers
+#undef imvkFunctions
+#define imvkFunctions g_Functions
 
 VkSurfaceFormatKHR ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space)
 {
