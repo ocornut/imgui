@@ -323,24 +323,15 @@ namespace
         {
         case FT_PIXEL_MODE_GRAY: // Grayscale image, 1 byte per pixel.
             {
-                if (multiply_table == nullptr)
-                {
-                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
-                        for (uint32_t x = 0; x < w; x++)
-                            dst[x] = IM_COL32(255, 255, 255, src[x]);
-                }
-                else
-                {
-                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
-                        for (uint32_t x = 0; x < w; x++)
-                            dst[x] = IM_COL32(255, 255, 255, multiply_table[src[x]]);
-                }
+                for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                    for (uint32_t x = 0; x < w; x++)
+                        dst[x] = IM_COL32(255, 255, 255, multiply_table[src[x]]);
                 break;
             }
         case FT_PIXEL_MODE_MONO: // Monochrome image, 1 bit per pixel. The bits in each byte are ordered from MSB to LSB.
             {
-                uint8_t color0 = multiply_table ? multiply_table[0] : 0;
-                uint8_t color1 = multiply_table ? multiply_table[255] : 255;
+                uint8_t color0 = multiply_table[0];
+                uint8_t color1 = multiply_table[255];
                 for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
                 {
                     uint8_t bits = 0;
@@ -358,24 +349,12 @@ namespace
             {
                 // FIXME: Converting pre-multiplied alpha to straight. Doesn't smell good.
                 #define DE_MULTIPLY(color, alpha) (ImU32)(255.0f * (float)color / (float)alpha + 0.5f)
-                if (multiply_table == nullptr)
+                for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
                 {
-                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
-                        for (uint32_t x = 0; x < w; x++)
-                        {
-                            uint8_t r = src[x * 4 + 2], g = src[x * 4 + 1], b = src[x * 4], a = src[x * 4 + 3];
-                            dst[x] = IM_COL32(DE_MULTIPLY(r, a), DE_MULTIPLY(g, a), DE_MULTIPLY(b, a), a);
-                        }
-                }
-                else
-                {
-                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                    for (uint32_t x = 0; x < w; x++)
                     {
-                        for (uint32_t x = 0; x < w; x++)
-                        {
-                            uint8_t r = src[x * 4 + 2], g = src[x * 4 + 1], b = src[x * 4], a = src[x * 4 + 3];
-                            dst[x] = IM_COL32(multiply_table[DE_MULTIPLY(r, a)], multiply_table[DE_MULTIPLY(g, a)], multiply_table[DE_MULTIPLY(b, a)], multiply_table[a]);
-                        }
+                        uint8_t r = src[x * 4 + 2], g = src[x * 4 + 1], b = src[x * 4], a = src[x * 4 + 3];
+                        dst[x] = IM_COL32(multiply_table[DE_MULTIPLY(r, a)], multiply_table[DE_MULTIPLY(g, a)], multiply_table[DE_MULTIPLY(b, a)], multiply_table[a]);
                     }
                 }
                 #undef DE_MULTIPLY
@@ -572,10 +551,8 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         buf_rects_out_n += src_tmp.GlyphsCount;
 
         // Compute multiply table if requested
-        const bool multiply_enabled = (cfg.RasterizerMultiply != 1.0f);
         unsigned char multiply_table[256];
-        if (multiply_enabled)
-            ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
+        ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
 
         // Gather the sizes of all rectangles we will need to pack
         const int padding = atlas->TexGlyphPadding;
@@ -604,7 +581,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             // Blit rasterized pixels to our temporary buffer and keep a pointer to it.
             src_glyph.BitmapData = (unsigned int*)(buf_bitmap_buffers.back() + buf_bitmap_current_used_bytes);
             buf_bitmap_current_used_bytes += bitmap_size_in_bytes;
-            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width, multiply_enabled ? multiply_table : nullptr);
+            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width, multiply_table);
 
             src_tmp.Rects[glyph_i].w = (stbrp_coord)(src_glyph.Info.Width + padding);
             src_tmp.Rects[glyph_i].h = (stbrp_coord)(src_glyph.Info.Height + padding);

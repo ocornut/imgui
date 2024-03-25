@@ -9,13 +9,6 @@ Build font atlases using FreeType instead of stb_truetype (which is the default 
 2. Add imgui_freetype.h/cpp alongside your project files.
 3. Add `#define IMGUI_ENABLE_FREETYPE` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file
 
-### About Gamma Correct Blending
-
-FreeType assumes blending in linear space rather than gamma space.
-See FreeType note for [FT_Render_Glyph](https://freetype.org/freetype2/docs/reference/ft2-glyph_retrieval.html#ft_render_glyph).
-For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
-The default Dear ImGui styles will be impacted by this change (alpha values will need tweaking).
-
 ### Testbed for toying with settings (for developers)
 
 See https://gist.github.com/ocornut/b3a9ecf13502fd818799a452969649ad

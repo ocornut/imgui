@@ -256,7 +256,6 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 - There is an implementation of the ImFontAtlas builder using FreeType that you can use in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
 - FreeType supports auto-hinting which tends to improve the readability of small fonts.
 - Read documentation in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
-- Correct sRGB space blending will have an important effect on your font rendering quality.
 
 ##### [Return to Index](#index)
 
