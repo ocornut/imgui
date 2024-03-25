@@ -6029,7 +6029,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             {
                 ImGuiWindow* parent_window = window->ParentWindow;
                 ImGuiWindowFlags parent_flags = parent_window->Flags;
-                const ImRect &parent_rect = parent_window->InnerClipRect;
+                const ImRect &parent_rect = parent_window->WorkRect;
                 if ((parent_flags & (ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar)) == 0 || (parent_flags & ImGuiWindowFlags_NoScrollbar))
                     border_target.x = ImClamp(border_target.x, parent_rect.Min.x, parent_rect.Max.x);
                 if (parent_flags & ImGuiWindowFlags_NoScrollbar)
