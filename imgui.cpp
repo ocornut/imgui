@@ -1165,6 +1165,7 @@ static void             UpdateViewportsNewFrame();
 #ifndef GImGui
 ImGuiContext*   GImGui = NULL;
 #endif
+ImVector<ImGuiContextHook> ImGuiContext::InitializeHooks = ImVector<ImGuiContextHook>();
 
 // Memory Allocator functions. Use SetAllocatorFunctions() to change them.
 // - You probably don't want to modify that mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
@@ -3629,6 +3630,8 @@ void ImGui::Initialize()
 #endif
 
     g.Initialized = true;
+
+    CallContextHooks(&g, ImGuiContextHookType_Initialize);
 }
 
 // This function is merely here to free heap allocations.
@@ -3713,6 +3716,24 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
+// Allow for global callback when a new context gets initialized
+ImGuiID ImGui::AddOnContextInitializeHook(const ImGuiContextHook* hook)
+{
+    static ImGuiID InitializeHookIDNext = 0;
+    IM_ASSERT(hook->Callback != NULL && hook->HookId == 0 && hook->Type == ImGuiContextHookType_Initialize);
+    ImGuiContext::InitializeHooks.push_back(*hook);
+    ImGuiContext::InitializeHooks.back().HookId = ++InitializeHookIDNext;
+    return InitializeHookIDNext;
+}
+
+void ImGui::RemoveOnContextInitializeHook(ImGuiID hook_id)
+{
+    IM_ASSERT(hook_id != 0);
+    for (ImGuiContextHook& hook : ImGuiContext::InitializeHooks)
+        if (hook.HookId == hook_id)
+            hook.Type = ImGuiContextHookType_PendingRemoval_;
+}
+
 // No specific ordering/dependency support, will see as needed
 ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
 {
@@ -3738,9 +3759,17 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 {
     ImGuiContext& g = *ctx;
-    for (ImGuiContextHook& hook : g.Hooks)
-        if (hook.Type == hook_type)
+    if (hook_type == ImGuiContextHookType_Initialize)
+    {
+        for (ImGuiContextHook& hook : ImGuiContext::InitializeHooks)
             hook.Callback(&g, &hook);
+    }
+    else
+    {
+        for (ImGuiContextHook& hook : g.Hooks)
+            if (hook.Type == hook_type)
+                hook.Callback(&g, &hook);
+    }
 }
 
 
@@ -4569,6 +4598,10 @@ void ImGui::NewFrame()
 
     // Remove pending delete hooks before frame start.
     // This deferred removal avoid issues of removal while iterating the hook vector
+    for (int n = ImGuiContext::InitializeHooks.Size - 1; n >= 0; n--)
+        if (ImGuiContext::InitializeHooks[n].Type == ImGuiContextHookType_PendingRemoval_)
+            ImGuiContext::InitializeHooks.erase(&ImGuiContext::InitializeHooks[n]);
+
     for (int n = g.Hooks.Size - 1; n >= 0; n--)
         if (g.Hooks[n].Type == ImGuiContextHookType_PendingRemoval_)
             g.Hooks.erase(&g.Hooks[n]);
