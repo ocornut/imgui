@@ -2194,7 +2194,6 @@ struct ImGuiContext
     ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
     ImGuiID                             HookIdNext;             // Next available HookId
-    static ImVector<ImGuiContextHook>   InitializeHooks;        // Hooks for when a new context gets initialized
 
     // Localization
     const char*             LocalizationTable[ImGuiLocKey_COUNT];
