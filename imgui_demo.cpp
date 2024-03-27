@@ -260,6 +260,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // Most functions would normally just assert/crash if the context is missing.
     IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing Dear ImGui context. Refer to examples app!");
 
+    ShowFontDemoWindow();
+
     // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
@@ -515,6 +517,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors",      &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
             ImGui::CheckboxFlags("io.BackendFlags: HasSetMousePos",       &io.BackendFlags, ImGuiBackendFlags_HasSetMousePos);
             ImGui::CheckboxFlags("io.BackendFlags: RendererHasVtxOffset", &io.BackendFlags, ImGuiBackendFlags_RendererHasVtxOffset);
+            ImGui::CheckboxFlags("io.BackendFlags: RendererHasTexReload", &io.BackendFlags, ImGuiBackendFlags_RendererHasTexReload);
             ImGui::EndDisabled();
             ImGui::TreePop();
             ImGui::Spacing();
@@ -1134,9 +1137,9 @@ static void ShowDemoWindowWidgets()
         // - Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
         // - Read https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
         // - Read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-        ImTextureID my_tex_id = io.Fonts->TexID;
-        float my_tex_w = (float)io.Fonts->TexWidth;
-        float my_tex_h = (float)io.Fonts->TexHeight;
+        ImTextureID my_tex_id = io.Fonts->GetTexID();
+        float my_tex_w = (float)io.Fonts->TexData.TexWidth;
+        float my_tex_h = (float)io.Fonts->TexData.TexHeight;
         {
             static bool use_text_color_for_tint = false;
             ImGui::Checkbox("Use Text Color for Tint", &use_text_color_for_tint);
@@ -6460,7 +6463,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos)         ImGui::Text(" HasSetMousePos");
         if (io.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)   ImGui::Text(" RendererHasVtxOffset");
         ImGui::Separator();
-        ImGui::Text("io.Fonts: %d fonts, Flags: 0x%08X, TexSize: %d,%d", io.Fonts->Fonts.Size, io.Fonts->Flags, io.Fonts->TexWidth, io.Fonts->TexHeight);
+        ImGui::Text("io.Fonts: %d fonts, Flags: 0x%08X, TexSize: %d,%d", io.Fonts->Fonts.Size, io.Fonts->Flags, io.Fonts->TexData.TexWidth, io.Fonts->TexData.TexHeight);
         ImGui::Text("io.DisplaySize: %.2f,%.2f", io.DisplaySize.x, io.DisplaySize.y);
         ImGui::Text("io.DisplayFramebufferScale: %.2f,%.2f", io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
         ImGui::Separator();
@@ -8549,6 +8552,143 @@ void ShowExampleAppDocuments(bool* p_open)
 
     ImGui::End();
 }
+
+#include "imgui_internal.h"
+
+static const char* font_path_prefix = "../../misc/fonts/";
+static const char* fonts[] =
+{
+    "Default (built-in)",
+    "Roboto-Medium.ttf",
+    "Cousine-Regular.ttf",
+    "DroidSans.ttf",
+    "ProggyTiny.ttf",
+};
+
+struct FontDemoState
+{
+    bool    want_rebuild;
+    int     font_index;
+    float   font_size;
+
+    FontDemoState()
+    {
+        want_rebuild = true;
+        font_index = 0;
+        font_size = 13.0f;
+    }
+};
+
+static FontDemoState font_demo_state1;
+static FontDemoState font_demo_state2;
+
+static void RebuildAtlas(FontDemoState& state)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (!state.want_rebuild)
+        return;
+    state.want_rebuild = false;
+
+    io.Fonts->Locked = false; // FIXME-TEXUPDATE: #thedmd: remove this
+    io.Fonts->PushTexPage();
+    io.Fonts->Clear();
+
+    ImFontConfig cfg;
+    cfg.SizePixels = state.font_size;
+    cfg.OversampleH = cfg.OversampleV = 1;
+
+    if (state.font_index == 0)
+    {
+        io.Fonts->AddFontDefault(&cfg);
+    }
+    else
+    {
+        char path[256];
+        sprintf(path, "%s%s", font_path_prefix, fonts[state.font_index]);
+        io.Fonts->AddFontFromFileTTF(path, 0.0f, &cfg);
+    }
+    io.Fonts->Build();
+    io.Fonts->Locked = true; // FIXME-TEXUPDATE: #thedmd: remove this
+}
+
+static void ShowFontDemo(FontDemoState& state)
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    RebuildAtlas(state);
+
+    // FIXME-TEXUPDATE: What is this doing?
+    ImGui::SetCurrentFont(ImGui::GetDefaultFont());
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTextureID();
+
+    draw_list = ImGui::GetForegroundDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTextureID();
+
+    draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->_CmdHeader.Texture = ImTexture(io.Fonts);
+    draw_list->_OnChangedTextureID();
+
+    if (ImGui::BeginCombo("Font", fonts[state.font_index]))
+    {
+        for (int i = 0; i < IM_ARRAYSIZE(fonts); ++i)
+        {
+            if (ImGui::Selectable(fonts[i]))
+            {
+                state.font_index = i;
+                state.want_rebuild = true;
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::SliderFloat("Size", &state.font_size, 6.0f, 48.0f, "%.0f"))
+        state.want_rebuild = true;
+
+    ImFontAtlas* atlas = io.Fonts;
+    //if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+    ImGui::Text("Atlas texture (%dx%d pixels)", atlas->TexData.TexWidth, atlas->TexData.TexHeight);
+    {
+        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImGui::Image(ImTexture(atlas), ImVec2((float)atlas->TexData.TexWidth, (float)atlas->TexData.TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
+        //ImGui::TreePop();
+    }
+}
+
+void ImGui::ShowFontDemoWindow()
+{
+    if (ImGui::Begin("Font Test"))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGuiBackendFlags backend_flags = io.BackendFlags;
+        ImGui::Text("Backends: '%s' + '%s'", io.BackendPlatformName ? io.BackendPlatformName : "", io.BackendRendererName ? io.BackendRendererName : "");
+        ImGui::CheckboxFlags("io.BackendFlags: RendererHasTexReload", &backend_flags, ImGuiBackendFlags_RendererHasTexReload);
+        static bool always_rebuild = true;
+
+        ImGui::Checkbox("Rebuild every frame", &always_rebuild);
+        if (always_rebuild)
+            font_demo_state1.want_rebuild = font_demo_state2.want_rebuild = true;
+        ImGui::SameLine(); HelpMarker("Otherwise last rebuilt will be applied to current atlas.");
+
+        ImGui::Separator();
+
+        ImGui::PushID("state1");
+        ShowFontDemo(font_demo_state1);
+        ImGui::PopID();
+
+        ImGui::PushID("state2");
+        ShowFontDemo(font_demo_state2);
+        ImGui::PopID();
+
+        ImGui::End();
+    }
+}
+
 
 // End of Demo code
 #else

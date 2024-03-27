@@ -443,6 +443,8 @@ int main(int, char**)
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info);
 
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // Set flag to indicate that we can reload textures when requested.
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -487,6 +489,19 @@ int main(int, char**)
                 g_SwapChainRebuild = false;
             }
         }
+
+#if 1
+        if (ImGui::IsKeyPressed(ImGuiKey_KeypadAdd))
+        {
+            static float size = 13.0f;
+            size += 1.0f;
+            ImFontConfig cfg;
+            cfg.SizePixels = size;
+            io.Fonts->Clear();
+            io.Fonts->AddFontDefault(&cfg);
+            io.Fonts->MarkDirty();
+        }
+#endif
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();

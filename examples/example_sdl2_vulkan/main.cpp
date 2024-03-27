@@ -419,6 +419,7 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;// ???
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -496,6 +497,19 @@ int main(int, char**)
                 g_SwapChainRebuild = false;
             }
         }
+
+#if 1
+        if (ImGui::IsKeyPressed(ImGuiKey_KeypadAdd))
+        {
+            static float size = 13.0f;
+            size += 1.0f;
+            ImFontConfig cfg;
+            cfg.SizePixels = size;
+            io.Fonts->Clear();
+            io.Fonts->AddFontDefault(&cfg);
+            io.Fonts->MarkDirty();
+        }
+#endif
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();

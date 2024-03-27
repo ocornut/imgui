@@ -99,6 +99,8 @@ int main(int, char**)
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;  // Set flag to indicate that we can reload textures when requested.
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -140,6 +142,14 @@ int main(int, char**)
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
+
+        // Upload Fonts
+        if (io.Fonts->IsDirty())
+        {
+            WaitForLastSubmittedFrame();
+            ImGui_ImplDX12_UpdateFontsTexture();
+        }
+
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).

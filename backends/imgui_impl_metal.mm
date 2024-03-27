@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2023-XX-XX: Metal: Add support for ImGuiBackendFlags_RendererHasTexReload.
 //  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.
@@ -68,6 +69,8 @@
 @property (nonatomic, strong, nullable) id<MTLTexture>      fontTexture;
 @property (nonatomic, strong) NSMutableArray<MetalBuffer*>* bufferCache;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
+- (void)makeFontTextureWithDevice:(id<MTLDevice>)device;
+- (void)updateFontTexture;
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
 @end
@@ -130,6 +133,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTexReload;
 
     bd->SharedMetalContext = [[MetalContext alloc] init];
     bd->SharedMetalContext.device = device;
@@ -158,6 +162,13 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.Fonts->IsDirty())
+    {
+        [bd->SharedMetalContext updateFontTexture];
+        io.Fonts->SetTexID((__bridge void *)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
+    }
 }
 
 static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer,
@@ -323,29 +334,10 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
 bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
+    [bd->SharedMetalContext makeFontTextureWithDevice:device];
 
-    // We are retrieving and uploading the font atlas as a 4-channels RGBA texture here.
-    // In theory we could call GetTexDataAsAlpha8() and upload a 1-channel texture to save on memory access bandwidth.
-    // However, using a shader designed for 1-channel texture would make it less obvious to use the ImTextureID facility to render users own textures.
-    // You can make that change in your implementation.
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                                                                                 width:(NSUInteger)width
-                                                                                                height:(NSUInteger)height
-                                                                                             mipmapped:NO];
-    textureDescriptor.usage = MTLTextureUsageShaderRead;
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    textureDescriptor.storageMode = MTLStorageModeManaged;
-#else
-    textureDescriptor.storageMode = MTLStorageModeShared;
-#endif
-    id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
-    [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
-    bd->SharedMetalContext.fontTexture = texture;
-    io.Fonts->SetTexID((__bridge void*)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->SetTexID((__bridge void *)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
 
     return (bd->SharedMetalContext.fontTexture != nil);
 }
@@ -451,6 +443,47 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         _lastBufferCachePurge = GetMachAbsoluteTimeInSeconds();
     }
     return self;
+}
+
+- (void)makeFontTextureWithDevice:(id<MTLDevice>)device
+{
+    ImGuiIO &io = ImGui::GetIO();
+
+    // We are retrieving and uploading the font atlas as a 4-channels RGBA texture here.
+    // In theory we could call GetTexDataAsAlpha8() and upload a 1-channel texture to save on memory access bandwidth.
+    // However, using a shader designed for 1-channel texture would make it less obvious to use the ImTextureID facility to render users own textures.
+    // You can make that change in your implementation.
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                                                                 width:(NSUInteger)width
+                                                                                                height:(NSUInteger)height
+                                                                                             mipmapped:NO];
+    textureDescriptor.usage = MTLTextureUsageShaderRead;
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+    textureDescriptor.storageMode = MTLStorageModeManaged;
+#else
+    textureDescriptor.storageMode = MTLStorageModeShared;
+#endif
+    id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
+    self.fontTexture = texture;
+
+    [self updateFontTexture];
+}
+
+- (void)updateFontTexture
+{
+    ImGuiIO &io = ImGui::GetIO();
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    io.Fonts->MarkClean();
+
+    if (!self.fontTexture || width != self.fontTexture.width || height != self.fontTexture.height)
+        [self makeFontTextureWithDevice:self.fontTexture.device];
+
+    [self.fontTexture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
 }
 
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device

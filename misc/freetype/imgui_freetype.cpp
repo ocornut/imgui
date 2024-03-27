@@ -437,8 +437,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
-    atlas->TexID = 0;
-    atlas->TexWidth = atlas->TexHeight = 0;
+    atlas->TexData = ImTextureData();
     atlas->TexUvScale = ImVec2(0.0f, 0.0f);
     atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     atlas->ClearTexData();
@@ -616,20 +615,20 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
     // The exact width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
     // User can override TexDesiredWidth and TexGlyphPadding if they wish, otherwise we use a simple heuristic to select the width based on expected surface.
     const int surface_sqrt = (int)ImSqrt((float)total_surface) + 1;
-    atlas->TexHeight = 0;
+    atlas->TexData.TexHeight = 0;
     if (atlas->TexDesiredWidth > 0)
-        atlas->TexWidth = atlas->TexDesiredWidth;
+        atlas->TexData.TexWidth = atlas->TexDesiredWidth;
     else
-        atlas->TexWidth = (surface_sqrt >= 4096 * 0.7f) ? 4096 : (surface_sqrt >= 2048 * 0.7f) ? 2048 : (surface_sqrt >= 1024 * 0.7f) ? 1024 : 512;
+        atlas->TexData.TexWidth = (surface_sqrt >= 4096 * 0.7f) ? 4096 : (surface_sqrt >= 2048 * 0.7f) ? 2048 : (surface_sqrt >= 1024 * 0.7f) ? 1024 : 512;
 
     // 5. Start packing
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     const int TEX_HEIGHT_MAX = 1024 * 32;
-    const int num_nodes_for_packing_algorithm = atlas->TexWidth - atlas->TexGlyphPadding;
+    const int num_nodes_for_packing_algorithm = atlas->TexData.TexWidth - atlas->TexGlyphPadding;
     ImVector<stbrp_node> pack_nodes;
     pack_nodes.resize(num_nodes_for_packing_algorithm);
     stbrp_context pack_context;
-    stbrp_init_target(&pack_context, atlas->TexWidth - atlas->TexGlyphPadding, TEX_HEIGHT_MAX - atlas->TexGlyphPadding, pack_nodes.Data, pack_nodes.Size);
+    stbrp_init_target(&pack_context, atlas->TexData.TexWidth - atlas->TexGlyphPadding, TEX_HEIGHT_MAX - atlas->TexGlyphPadding, pack_nodes.Data, pack_nodes.Size);
     ImFontAtlasBuildPackCustomRects(atlas, &pack_context);
 
     // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
@@ -645,28 +644,17 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         // FIXME: We are not handling packing failure here (would happen if we got off TEX_HEIGHT_MAX or if a single if larger than TexWidth?)
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
             if (src_tmp.Rects[glyph_i].was_packed)
-                atlas->TexHeight = ImMax(atlas->TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
+                atlas->TexData.TexHeight = ImMax(atlas->TexData.TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
     }
 
     // 7. Allocate texture
-    atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
-    atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
-    if (src_load_color)
-    {
-        size_t tex_size = (size_t)atlas->TexWidth * atlas->TexHeight * 4;
-        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(tex_size);
-        memset(atlas->TexPixelsRGBA32, 0, tex_size);
-    }
-    else
-    {
-        size_t tex_size = (size_t)atlas->TexWidth * atlas->TexHeight * 1;
-        atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(tex_size);
-        memset(atlas->TexPixelsAlpha8, 0, tex_size);
-    }
+    atlas->TexData.TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexData.TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexData.TexHeight);
+    atlas->TexUvScale = ImVec2(1.0f / atlas->TexData.TexWidth, 1.0f / atlas->TexData.TexHeight);
+    atlas->TexData.AllocatePixels(atlas->TexData.TexWidth, atlas->TexData.TexHeight,
+        src_load_color ? ImTextureFormat_RGBA32 : ImTextureFormat_Alpha8);
 
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
-    bool tex_use_colors = false;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
@@ -705,31 +693,31 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             float y0 = info.OffsetY * src_tmp.Font.InvRasterizationDensity + font_off_y;
             float x1 = x0 + info.Width * src_tmp.Font.InvRasterizationDensity;
             float y1 = y0 + info.Height * src_tmp.Font.InvRasterizationDensity;
-            float u0 = (tx) / (float)atlas->TexWidth;
-            float v0 = (ty) / (float)atlas->TexHeight;
-            float u1 = (tx + info.Width) / (float)atlas->TexWidth;
-            float v1 = (ty + info.Height) / (float)atlas->TexHeight;
+            float u0 = (tx) / (float)atlas->TexData.TexWidth;
+            float v0 = (ty) / (float)atlas->TexData.TexHeight;
+            float u1 = (tx + info.Width) / (float)atlas->TexData.TexWidth;
+            float v1 = (ty + info.Height) / (float)atlas->TexData.TexHeight;
             dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX * src_tmp.Font.InvRasterizationDensity);
 
             ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
             IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
             if (src_glyph.Info.IsColored)
-                dst_glyph->Colored = tex_use_colors = true;
+                atlas->TexData.EnsureFormat(ImTextureFormat_RGBA32);
 
             // Blit from temporary buffer to final texture
             size_t blit_src_stride = (size_t)src_glyph.Info.Width;
-            size_t blit_dst_stride = (size_t)atlas->TexWidth;
+            size_t blit_dst_stride = (size_t)atlas->TexData.TexWidth;
             unsigned int* blit_src = src_glyph.BitmapData;
-            if (atlas->TexPixelsAlpha8 != nullptr)
+            if (atlas->TexData.TexFormat == ImTextureFormat_Alpha8)
             {
-                unsigned char* blit_dst = atlas->TexPixelsAlpha8 + (ty * blit_dst_stride) + tx;
+                unsigned char* blit_dst = (unsigned char*)atlas->TexData.TexPixels + (ty * blit_dst_stride) + tx;
                 for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
                     for (int x = 0; x < info.Width; x++)
                         blit_dst[x] = (unsigned char)((blit_src[x] >> IM_COL32_A_SHIFT) & 0xFF);
             }
             else
             {
-                unsigned int* blit_dst = atlas->TexPixelsRGBA32 + (ty * blit_dst_stride) + tx;
+                unsigned int* blit_dst = (unsigned int*)atlas->TexData.TexPixels + (ty * blit_dst_stride) + tx;
                 for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
                     for (int x = 0; x < info.Width; x++)
                         blit_dst[x] = blit_src[x];
@@ -738,7 +726,6 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
 
         src_tmp.Rects = nullptr;
     }
-    atlas->TexPixelsUseColors = tex_use_colors;
 
     // Cleanup
     for (int buf_i = 0; buf_i < buf_bitmap_buffers.Size; buf_i++)
