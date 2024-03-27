@@ -69,6 +69,7 @@ Other changes:
   consistency. (#7411) [@cfillion]
 - DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
   Note that only simple polygons (no self-intersections, no holes) are supported.
+- DrawList: Allow AddText() to accept null ranges. (#3615, 7391)
 - Docs: added more wiki links to headers of imgui.h/imgui.cpp to facilitate discovery
   of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
   - This is the main wiki: https://github.com/ocornut/imgui/wiki

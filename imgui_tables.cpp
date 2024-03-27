@@ -26,7 +26,7 @@ Index of this file:
 // Navigating this file:
 // - In Visual Studio: CTRL+comma ("Edit.GoToAll") can follow symbols inside comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
 // - In Visual Studio w/ Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
-// - In Visual Studio Code: CTRL+click can follow symbols inside comments.
+// - In VS Code, CLion, etc.: CTRL+click can follow symbols inside comments.
 
 //-----------------------------------------------------------------------------
 // [SECTION] Commentary
