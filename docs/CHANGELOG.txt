@@ -55,10 +55,11 @@ Other changes:
 - Windows: Scrollbar visibility decision uses current size when both size and contents
   size are submitted by API. (#7252)
 - Windows: Double-click to collapse may be disabled via key-ownership mechanism. (#7369)
-- Windows: Extend outer resize borders to the edges when there are no corner grips.
-  Essentially affects resizable child windows. (#7440, #1710) [@cfillion]
-- Windows: Resizing logic for child windows evaluates whether per-axis clamping should be
-  applied based on parent scrollbars, not child scrollbars. (#7440, #1710) [@cfillion]
+- Windows: BeginChild(): Extend outer resize borders to the edges when there are no corner
+  grips. Essentially affects resizable child windows. (#7440, #1710) [@cfillion]
+- Windows: BeginChild(): Resizing logic for child windows evaluates whether per-axis clamping
+  should be applied based on parent scrollbars, not child scrollbars. (#7440, #1710) [@cfillion]
+  Adjust those resizing limits to match window padding rather than inner clipping rectangle.
 - Tables: Angled headers: fixed border hit box extending beyond when used within
   non-scrollable tables. (#7416) [@cfillion]
 - Tables: Angled headers: fixed borders not moving back up after TableAngleHeadersRow()

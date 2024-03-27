@@ -6030,11 +6030,12 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             if (flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
             {
                 ImGuiWindowFlags parent_flags = window->ParentWindow->Flags;
-                const ImRect parent_rect = window->ParentWindow->InnerClipRect;
+                ImRect border_limit_rect = window->ParentWindow->InnerRect;
+                border_limit_rect.Expand(ImVec2(-ImMax(window->WindowPadding.x, window->WindowBorderSize), -ImMax(window->WindowPadding.y, window->WindowBorderSize)));
                 if ((parent_flags & (ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar)) == 0 || (parent_flags & ImGuiWindowFlags_NoScrollbar))
-                    border_target.x = ImClamp(border_target.x, parent_rect.Min.x, parent_rect.Max.x);
+                    border_target.x = ImClamp(border_target.x, border_limit_rect.Min.x, border_limit_rect.Max.x);
                 if (parent_flags & ImGuiWindowFlags_NoScrollbar)
-                    border_target.y = ImClamp(border_target.y, parent_rect.Min.y, parent_rect.Max.y);
+                    border_target.y = ImClamp(border_target.y, border_limit_rect.Min.y, border_limit_rect.Max.y);
             }
             if (!ignore_resize)
                 CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
