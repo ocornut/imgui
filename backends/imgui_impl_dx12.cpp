@@ -523,6 +523,17 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
                 return false;
         }
 
+#ifdef __MINGW32__
+        PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignatureFn =
+            (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeVersionedRootSignature");
+        if (D3D12SerializeVersionedRootSignatureFn == nullptr)
+            return false;
+
+        ID3DBlob* blob = nullptr;
+        D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_desc = {.Version = D3D_ROOT_SIGNATURE_VERSION_1_0, .Desc_1_0 = desc};
+        if (D3D12SerializeVersionedRootSignatureFn(&versioned_desc, &blob, nullptr) != S_OK)
+            return false;
+#else
         PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
         if (D3D12SerializeRootSignatureFn == nullptr)
             return false;
@@ -530,6 +541,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         ID3DBlob* blob = nullptr;
         if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr) != S_OK)
             return false;
+#endif
 
         bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
         blob->Release();
