@@ -42,6 +42,8 @@ examples/*.out.wasm
 examples/example_glfw_opengl3/web/*
 examples/example_sdl2_opengl3/web/*
 examples/example_emscripten_wgpu/web/*
+## Dawn build dependencies
+examples/example_emscripten_wgpu/external/*
 
 ## JetBrains IDE artifacts
 .idea

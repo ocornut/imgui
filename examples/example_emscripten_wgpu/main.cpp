@@ -1,4 +1,6 @@
-// Dear ImGui: standalone example application for Emscripten, using GLFW + WebGPU
+// Dear ImGui: standalone example application for using GLFW + WebGPU
+// Dawn is used as a WebGPU implementation on desktop and Emscripten is supported for
+// publishing on web.
 // (Emscripten is a C++-to-javascript compiler, used to publish executables for the web. See https://emscripten.org/)
 
 // Learn about Dear ImGui:
@@ -10,12 +12,17 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_wgpu.h"
+
 #include <stdio.h>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/html5_webgpu.h>
+#else
+#include <webgpu/webgpu_glfw.h>
 #endif
+
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.h>
 #include <webgpu/webgpu_cpp.h>
@@ -26,15 +33,16 @@
 #endif
 
 // Global WebGPU required states
+static WGPUInstance      wgpu_instance = nullptr;
 static WGPUDevice        wgpu_device = nullptr;
 static WGPUSurface       wgpu_surface = nullptr;
 static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
 static WGPUSwapChain     wgpu_swap_chain = nullptr;
-static int               wgpu_swap_chain_width = 0;
-static int               wgpu_swap_chain_height = 0;
+static int               wgpu_swap_chain_width = 1280;
+static int               wgpu_swap_chain_height = 720;
 
 // Forward declarations
-static bool InitWGPU();
+static bool InitWGPU(GLFWwindow* window);
 static void CreateSwapChain(int width, int height);
 
 static void glfw_error_callback(int error, const char* description)
@@ -56,6 +64,33 @@ static void wgpu_error_callback(WGPUErrorType error_type, const char* message, v
     printf("%s error: %s\n", error_type_lbl, message);
 }
 
+static WGPUAdapter requestAdapter(WGPUInstance instance) {
+    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const* message, void* pUserData) {
+        if (status == WGPURequestAdapterStatus_Success) {
+            *static_cast<WGPUAdapter*>(pUserData) = adapter;
+        } else {
+            printf("Could not get WebGPU adapter: %s\n", message);
+        }
+    };
+    WGPUAdapter adapter;
+    wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
+    return adapter;
+}
+
+static WGPUDevice requestDevice(WGPUAdapter& adapter) {
+    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const* message, void* pUserData) {
+        if (status == WGPURequestDeviceStatus_Success) {
+            *static_cast<WGPUDevice*>(pUserData) = device;
+        } else {
+            printf("Could not get WebGPU device: %s\n", message);
+        }
+    };
+
+    WGPUDevice device;
+    wgpuAdapterRequestDevice(adapter, nullptr, onDeviceRequestEnded, (void*)&device);
+    return device;
+}
+
 // Main code
 int main(int, char**)
 {
@@ -66,18 +101,19 @@ int main(int, char**)
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(wgpu_swap_chain_width, wgpu_swap_chain_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (window == nullptr)
         return 1;
 
     // Initialize the WebGPU environment
-    if (!InitWGPU())
+    if (!InitWGPU(window))
     {
         if (window)
             glfwDestroyWindow(window);
         glfwTerminate();
         return 1;
     }
+    CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
     glfwShowWindow(window);
 
     // Setup Dear ImGui context
@@ -115,7 +151,7 @@ int main(int, char**)
     //io.Fonts->AddFontDefault();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
     //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
-    io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
+    // io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
@@ -200,6 +236,11 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
 
+#ifndef __EMSCRIPTEN__
+        // Tick needs to be called in Dawn to display validation errors
+        wgpuDeviceTick(wgpu_device);
+#endif
+
         WGPURenderPassColorAttachment color_attachments = {};
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
         color_attachments.loadOp = WGPULoadOp_Clear;
@@ -223,6 +264,15 @@ int main(int, char**)
         WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
         WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
         wgpuQueueSubmit(queue, 1, &cmd_buffer);
+
+#ifndef __EMSCRIPTEN__
+        wgpuSwapChainPresent(wgpu_swap_chain);
+#endif
+
+        wgpuTextureViewRelease(color_attachments.view);
+        wgpuRenderPassEncoderRelease(pass);
+        wgpuCommandEncoderRelease(encoder);
+        wgpuCommandBufferRelease(cmd_buffer);
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
@@ -239,28 +289,41 @@ int main(int, char**)
     return 0;
 }
 
-static bool InitWGPU()
+static bool InitWGPU(GLFWwindow* window)
 {
+    wgpu::Instance instance = wgpuCreateInstance(nullptr);
+
+#ifdef __EMSCRIPTEN__
     wgpu_device = emscripten_webgpu_get_device();
     if (!wgpu_device)
         return false;
+#else
+    WGPUAdapter adapter = requestAdapter(instance.Get());
+    if (!adapter)
+        return false;
+    wgpu_device = requestDevice(adapter);
+#endif
 
-    wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
-
-    // Use C++ wrapper due to misbehavior in Emscripten.
-    // Some offset computation for wgpuInstanceCreateSurface in JavaScript
-    // seem to be inline with struct alignments in the C++ structure
+#ifdef __EMSCRIPTEN__
     wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
     html_surface_desc.selector = "#canvas";
-
     wgpu::SurfaceDescriptor surface_desc = {};
     surface_desc.nextInChain = &html_surface_desc;
-
-    wgpu::Instance instance = wgpuCreateInstance(nullptr);
     wgpu::Surface surface = instance.CreateSurface(&surface_desc);
+
     wgpu::Adapter adapter = {};
     wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
+#else
+    wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
+    if (!surface)
+        return false;
+    wgpu_preferred_fmt = WGPUTextureFormat_BGRA8Unorm;
+#endif
+
+    wgpu_instance = instance.MoveToCHandle();
     wgpu_surface = surface.MoveToCHandle();
+
+    wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
 
     return true;
 }
