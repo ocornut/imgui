@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-03-24: Inputs: Re-enable calling SDL_StartTextInput()/SDL_StopTextInput() as SDL3 no longer enables it by default and should play nicer with IME.
 //  2024-02-13: Inputs: Fixed gamepad support. Handle gamepad disconnection. Added ImGui_ImplSDL3_SetGamepadMode().
 //  2023-11-13: Updated for recent SDL3 API changes.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -117,6 +118,9 @@ static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeDa
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
+        SDL_StartTextInput();
+    } else {
+        SDL_StopTextInput();
     }
 }
 
