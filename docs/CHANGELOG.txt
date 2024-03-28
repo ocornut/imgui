@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
+  as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.5 (Released 2024-04-11)
