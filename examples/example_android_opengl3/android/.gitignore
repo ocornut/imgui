@@ -10,3 +10,11 @@ local.properties
 # Android Studio puts a Gradle wrapper here, that we don't want:
 gradle/
 gradlew*
+
+app/jni/src
+app/jni/SDL*
+app/jni/Android.mk
+app/jni/Application.mk
+app/src/main/res
+app/src/main/java/com
+app/src/main/java/org

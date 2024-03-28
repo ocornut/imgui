@@ -2,17 +2,27 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.2"
-    ndkVersion "25.2.9519653"
+    compileSdkVersion 34
+    buildToolsVersion "34.0.0"
 
     defaultConfig {
         applicationId "imgui.example.android"
         namespace "imgui.example.android"
-        minSdkVersion 24
-        targetSdkVersion 33
+        minSdkVersion 19
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_PLATFORM=android-19"
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+                }
+            // cmake {
+            //     path "../../CMakeLists.txt"
+            //     version '3.22.1'
+            // }
+        }
+        ndkVersion "25.2.9519653"
     }
 
     buildTypes {
@@ -31,11 +41,19 @@ android {
         jvmTarget="11"
     }
 
-    externalNativeBuild {
-        cmake {
-            path "../../CMakeLists.txt"
-            version '3.22.1'
+    if (!project.hasProperty('EXCLUDE_NATIVE_LIBS')) {
+        sourceSets.main {
+            jniLibs.srcDir 'libs'
         }
+        externalNativeBuild {
+            ndkBuild {
+                path 'jni/Android.mk'
+            }
+            // cmake {
+            //     path 'jni/CMakeLists.txt'
+            // }
+        }
+       
     }
 }
 repositories {
