@@ -1068,6 +1068,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // - ClipRect.Max.x: using WorkMaxX instead of MaxX (aka including padding) makes things more consistent when resizing down, tho slightly detrimental to visibility in very-small column.
         // - ClipRect.Max.x: using MaxX makes it easier for header to receive hover highlight with no discontinuity and display sorting arrow.
         // - FIXME-TABLE: We want equal width columns to have equal (ClipRect.Max.x - WorkMinX) width, which means ClipRect.max.x cannot stray off host_clip_rect.Max.x else right-most column may appear shorter.
+        const float previous_instance_work_min_x = column->WorkMinX;
         column->WorkMinX = column->MinX + table->CellPaddingX + table->CellSpacingX1;
         column->WorkMaxX = column->MaxX - table->CellPaddingX - table->CellSpacingX2; // Expected max
         column->ItemWidth = ImTrunc(column->WidthGiven * 0.65f);
@@ -1120,8 +1121,22 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         //    column->WorkMinX = ImLerp(column->WorkMinX, ImMax(column->StartX, column->MaxX - column->ContentWidthRowsUnfrozen), 0.5f);
 
         // Reset content width variables
-        column->ContentMaxXFrozen = column->ContentMaxXUnfrozen = column->WorkMinX;
-        column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX;
+        if (table->InstanceCurrent == 0)
+        {
+            column->ContentMaxXFrozen = column->WorkMinX;
+            column->ContentMaxXUnfrozen = column->WorkMinX;
+            column->ContentMaxXHeadersUsed = column->WorkMinX;
+            column->ContentMaxXHeadersIdeal = column->WorkMinX;
+        }
+        else
+        {
+            // As we store an absolute value to make per-cell updates faster, we need to offset values used for width computation.
+            const float offset_from_previous_instance = column->WorkMinX - previous_instance_work_min_x;
+            column->ContentMaxXFrozen += offset_from_previous_instance;
+            column->ContentMaxXUnfrozen += offset_from_previous_instance;
+            column->ContentMaxXHeadersUsed += offset_from_previous_instance;
+            column->ContentMaxXHeadersIdeal += offset_from_previous_instance;
+        }
 
         // Don't decrement auto-fit counters until container window got a chance to submit its items
         if (table->HostSkipItems == false)

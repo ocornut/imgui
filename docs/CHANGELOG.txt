@@ -60,6 +60,8 @@ Other changes:
 - Windows: BeginChild(): Resizing logic for child windows evaluates whether per-axis clamping
   should be applied based on parent scrollbars, not child scrollbars. (#7440, #1710) [@cfillion]
   Adjust those resizing limits to match window padding rather than inner clipping rectangle.
+- Tables: Fixed auto-width columns when using synced-instances of same table, width of
+  one instance would bleed into next one instead of sharing their widths. (#7218)
 - Tables: Angled headers: fixed border hit box extending beyond when used within
   non-scrollable tables. (#7416) [@cfillion]
 - Tables: Angled headers: fixed borders not moving back up after TableAngleHeadersRow()
