@@ -39,6 +39,17 @@ HOW TO UPDATE?
  VERSION 1.90.5 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+- More formally obsoleted GetKeyIndex() when IMGUI_DISABLE_OBSOLETE_FUNCTIONS is set.
+  It has been unnecessary and a no-op since 1.87 (it returns the same value as passed
+  when used with a 1.87+ backend using io.AddKeyEvent() function). (#4921)
+  - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) --> IsKeyPressed(ImGuiKey_XXX)
+- ImDrawList: Merged the radius_x/radius_y parameters in AddEllipse(), AddEllipseFilled()
+  and PathEllipticalArcTo() into a single ImVec2 parameter. Exceptionally, because those
+  functions were added in 1.90, we are not adding inline redirection functions.
+  The transition is easy and should affect few users. (#2743, #7417) [@cfillion]
+
 Other changes:
 
 - Windows: Scrollbar visibility decision uses current size when both size and contents
@@ -86,8 +97,8 @@ Other changes:
   for auto-resizing of columns. (#6917)
 - Tables: Angled headers: fixed TableAngledHeadersRow() incorrect background fill
   drawn too low, particularly visible with tables that have no scrolling. (#6917)
-- ProgressBar: Fixed a minor tesselation issue when rendering rounded progress bars,
-  where in some situations the rounded section wouldn't follow regular tesselation rules.
+- ProgressBar: Fixed a minor tessellation issue when rendering rounded progress bars,
+  where in some situations the rounded section wouldn't follow regular tessellation rules.
 - Debug Tools: Item Picker: Promoted ImGui::DebugStartItemPicker() to public API. (#2673)
 - Debug Tools: Item Picker: Menu entry visible in Demo->Tools but greyed out unless
   io.ConfigDebugIsDebuggerPresent is set. (#2673)
