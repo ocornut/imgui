@@ -772,6 +772,12 @@ void ImGui_ImplGlfw_NewFrame()
 }
 
 #ifdef __EMSCRIPTEN__
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
+{
+  auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
+  ImGui_ImplGlfw_EmscriptenCanvasSetup(window, true, true);
+}
+
 void ImGui_ImplGlfw_EmscriptenCanvasSetup(GLFWwindow *window, bool full_window, bool hi_dpi_aware)
 {
     if(full_window)
@@ -779,11 +785,8 @@ void ImGui_ImplGlfw_EmscriptenCanvasSetup(GLFWwindow *window, bool full_window, 
         // make the canvas occupy the full window
         emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
     }
-    if(hi_dpi_aware)
-    {
-        // make the window hi dpi aware
-        glfwSetWindowAttrib(window, GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE);
-    }
+    // make the window hi dpi aware
+    glfwSetWindowAttrib(window, GLFW_SCALE_FRAMEBUFFER, hi_dpi_aware);
 }
 #endif
 
