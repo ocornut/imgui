@@ -22,7 +22,7 @@ project "ImGui"
 
 	filter "system:windows"
 		systemversion "latest"
-		cppdialect "C++14"
+		cppdialect "C++17"
 		staticruntime "On"
 
 	filter "configurations:Debug"
