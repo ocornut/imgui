@@ -11,11 +11,11 @@ Dear ImGui
 
 Businesses: support continued development and maintenance via invoiced sponsoring/support contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot com_
-<br>Individuals: support continued development and maintenance [here](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S). Also see [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors) page.
+<br>Individuals: support continued development and maintenance [here](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S). Also see [Funding](https://github.com/ocornut/imgui/wiki/Funding) page.
 
 | [The Pitch](#the-pitch) - [Usage](#usage) - [How it works](#how-it-works) - [Releases & Changelogs](#releases--changelogs) - [Demo](#demo) - [Integration](#integration) |
 :----------------------------------------------------------: |
-| [Gallery](#gallery) - [Support, FAQ](#support-frequently-asked-questions-faq) -  [How to help](#how-to-help) - [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors) - [Credits](#credits) - [License](#license) |
+| [Gallery](#gallery) - [Support, FAQ](#support-frequently-asked-questions-faq) -  [How to help](#how-to-help) - **[Funding & Sponsors](https://github.com/ocornut/imgui/wiki/Funding)** - [Credits](#credits) - [License](#license) |
 | [Wiki](https://github.com/ocornut/imgui/wiki) - [Extensions](https://github.com/ocornut/imgui/wiki/Useful-Extensions) - [Languages bindings & frameworks backends](https://github.com/ocornut/imgui/wiki/Bindings) - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) - [User quotes](https://github.com/ocornut/imgui/wiki/Quotes) |
 
 ### The Pitch
@@ -162,6 +162,8 @@ See: [Upcoming Changes](https://github.com/ocornut/imgui/wiki/Upcoming-Changes).
 
 See: [Dear ImGui Test Engine + Test Suite](https://github.com/ocornut/imgui_test_engine) for Automation & Testing.
 
+For the purposes of getting search engines to crawl the wiki, here's a link to the [Crawable Wiki](https://github-wiki-see.page/m/ocornut/imgui/wiki) (not for humans, [here's why](https://github-wiki-see.page/)).
+
 Getting started? For first-time users having issues compiling/linking/running or issues loading fonts, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions). For ANY other questions, bug reports, requests, feedback, please post on [GitHub Issues](https://github.com/ocornut/imgui/issues). Please read and fill the New Issue template carefully.
 
 Private support is available for paying business customers (E-mail: _contact @ dearimgui dot com_).
@@ -172,7 +174,7 @@ We occasionally tag [Releases](https://github.com/ocornut/imgui/releases) (with 
 
 **Who uses Dear ImGui?**
 
-See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes), [Sponsors](https://github.com/ocornut/imgui/wiki/Sponsors), and [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for an idea of who is using Dear ImGui. Please add your game/software if you can! Also, see the [Gallery Threads](https://github.com/ocornut/imgui/issues/6897)!
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes), [Funding & Sponsors](https://github.com/ocornut/imgui/wiki/Funding), and [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for an idea of who is using Dear ImGui. Please add your game/software if you can! Also, see the [Gallery Threads](https://github.com/ocornut/imgui/issues/6897)!
 
 How to help
 -----------
@@ -182,13 +184,13 @@ How to help
 - See [GitHub Forum/Issues](https://github.com/ocornut/imgui/issues).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest of the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
-- Be a [sponsor](https://github.com/ocornut/imgui/wiki/Sponsors)! Have your company financially support this project via invoiced sponsors/maintenance or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: omar AT dearimgui DOT com).
+- Be a [Funding Supporter](https://github.com/ocornut/imgui/wiki/Funding)! Have your company financially support this project via invoiced sponsors/maintenance or by buying a license for [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine) (please reach out: omar AT dearimgui DOT com).
 
 Sponsors
 --------
 
 Ongoing Dear ImGui development is and has been financially supported by users and private sponsors.
-<BR>Please see the **[detailed list of current and past Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors)** for details.
+<BR>Please see the **[detailed list of current and past Dear ImGui funding supporters and sponsors](https://github.com/ocornut/imgui/wiki/Funding)** for details.
 <BR>From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations.
 
 **THANK YOU to all past and present supporters for helping to keep this project alive and thriving!**
@@ -205,7 +207,7 @@ Developed by [Omar Cornut](https://www.miracleworld.net) and every direct or ind
 
 Recurring contributors include Rokas Kupstys [@rokups](https://github.com/rokups) (2020-2022): a good portion of work on automation system and regression tests now available in [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
-Sponsoring, maintenance/support contracts and other B2B transactions are hosted and handled by [Disco Hello](https://www.discohello.com).
+Maintenance/support contracts, sponsoring invoices and other B2B transactions are hosted and handled by [Disco Hello](https://www.discohello.com).
 
 Omar: "I first discovered the IMGUI paradigm at [Q-Games](https://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it."
 
