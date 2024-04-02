@@ -1337,6 +1337,17 @@ ImGuiIO::ImGuiIO()
     AppAcceptingEvents = true;
     BackendUsingLegacyKeyArrays = (ImS8)-1;
     BackendUsingLegacyNavInputArray = true; // assume using legacy array until proven wrong
+	PreEditText[0] = NULL;
+}
+
+void ImGuiIO::SetPreEditText(const char *str)
+{
+    strcpy(PreEditText, str);
+}
+
+void ImGuiIO::ClearPreEditText()
+{
+    PreEditText[0] = NULL;
 }
 
 // Pass in translated ASCII characters for text input.
