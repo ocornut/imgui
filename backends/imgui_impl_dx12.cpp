@@ -56,6 +56,10 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
+#ifdef DCOMP
+#include <dcomp.h>
+#endif
+
 // DirectX data
 struct ImGui_ImplDX12_Data
 {
@@ -68,6 +72,10 @@ struct ImGui_ImplDX12_Data
     D3D12_GPU_DESCRIPTOR_HANDLE hFontSrvGpuDescHandle;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
     UINT                        numFramesInFlight;
+
+#ifdef DCOMP
+    IDCompositionDevice*        pDCompDevice;
+#endif
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -112,6 +120,11 @@ struct ImGui_ImplDX12_ViewportData
     UINT                            NumFramesInFlight;
     ImGui_ImplDX12_FrameContext*    FrameCtx;
 
+#ifdef DCOMP
+    IDCompositionVisual*            DCompVisual;
+    IDCompositionTarget*            DCompTarget;
+#endif
+
     // Render buffers
     UINT                            FrameIndex;
     ImGui_ImplDX12_RenderBuffers*   FrameRenderBuffers;
@@ -141,6 +154,11 @@ struct ImGui_ImplDX12_ViewportData
             FrameRenderBuffers[i].VertexBufferSize = 5000;
             FrameRenderBuffers[i].IndexBufferSize = 10000;
         }
+
+#ifdef DCOMP
+        DCompVisual = nullptr;
+        DCompTarget = nullptr;
+#endif
     }
     ~ImGui_ImplDX12_ViewportData()
     {
@@ -155,6 +173,11 @@ struct ImGui_ImplDX12_ViewportData
             IM_ASSERT(FrameCtx[i].CommandAllocator == nullptr && FrameCtx[i].RenderTarget == nullptr);
             IM_ASSERT(FrameRenderBuffers[i].IndexBuffer == nullptr && FrameRenderBuffers[i].VertexBuffer == nullptr);
         }
+
+#ifdef DCOMP
+        IM_ASSERT(DCompVisual == nullptr);
+        IM_ASSERT(DCompTarget == nullptr);
+#endif
 
         delete[] FrameCtx; FrameCtx = nullptr;
         delete[] FrameRenderBuffers; FrameRenderBuffers = nullptr;
@@ -803,6 +826,20 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     return true;
 }
 
+#ifdef DCOMP
+bool ImGui_ImplDX12_InitDComp(IDCompositionDevice* device) {
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.BackendRendererUserData != nullptr && "InitDComp expects standard Init to have been called.");
+
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTransparentViewports;
+
+    ImGui_ImplDX12_Data* bd = (ImGui_ImplDX12_Data*)io.BackendRendererUserData;
+    bd->pDCompDevice = device;
+
+    return true;
+}
+#endif
+
 void ImGui_ImplDX12_Shutdown()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -903,12 +940,52 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.Stereo = FALSE;
 
     IDXGIFactory4* dxgi_factory = nullptr;
-    res = ::CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
+    res = ::CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgi_factory));
     IM_ASSERT(res == S_OK);
 
     IDXGISwapChain1* swap_chain = nullptr;
+#ifndef DCOMP
     res = dxgi_factory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
     IM_ASSERT(res == S_OK);
+#else
+    IM_ASSERT(bd->pDCompDevice != nullptr && "Call ImGui_ImplDX12_InitDComp after ImGui_ImplDX12_Init.");
+
+    // Microsoft Learn:
+    // You must specify the DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL value in the SwapEffect member of
+    // DXGI_SWAP_CHAIN_DESC1 because CreateSwapChainForComposition supports only flip presentation model.
+    sd1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+
+    // DXGI debug output:
+    // Composition SwapChains do not support the DXGI_ALPHA_MODE_STRAIGHT AlphaMode.
+    sd1.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+
+    // DXGI debug output:
+    // Composition SwapChains only support the DXGI_SCALING_STRETCH Scaling.
+    sd1.Scaling = DXGI_SCALING_STRETCH;
+
+    res = dxgi_factory->CreateSwapChainForComposition(vd->CommandQueue, &sd1, nullptr, &swap_chain);
+    IM_ASSERT(res == S_OK);
+
+    // Turn a window into a DirectComposition draw target.
+    res = bd->pDCompDevice->CreateTargetForHwnd(hwnd, TRUE, &vd->DCompTarget);
+    IM_ASSERT(res == S_OK);
+
+    // Create a "Visual Object" that causes the contents of a window to change.
+    res = bd->pDCompDevice->CreateVisual(&vd->DCompVisual);
+    IM_ASSERT(res == S_OK);
+
+    // The visual must be added as a child of another visual, or as the root of a composition target,
+    // before it can affect the appearance of a window.
+    res = vd->DCompTarget->SetRoot(vd->DCompVisual);
+    IM_ASSERT(res == S_OK);
+
+    // Make the visual host a swap chain created from above.
+    res = vd->DCompVisual->SetContent(swap_chain);
+    IM_ASSERT(res == S_OK);
+
+    res = bd->pDCompDevice->Commit();
+    IM_ASSERT(res == S_OK);
+#endif
 
     dxgi_factory->Release();
 
@@ -981,6 +1058,11 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
         ::CloseHandle(vd->FenceEvent);
         vd->FenceEvent = nullptr;
 
+#ifdef DCOMP
+        SafeRelease(vd->DCompTarget);
+        SafeRelease(vd->DCompVisual);
+#endif
+
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
             SafeRelease(vd->FrameCtx[i].RenderTarget);
@@ -1023,7 +1105,11 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplDX12_FrameContext* frame_context = &vd->FrameCtx[vd->FrameIndex % bd->numFramesInFlight];
     UINT back_buffer_idx = vd->SwapChain->GetCurrentBackBufferIndex();
 
+#ifndef DCOMP
     const ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+#else
+    const ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+#endif
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;

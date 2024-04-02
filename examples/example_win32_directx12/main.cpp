@@ -26,6 +26,11 @@
 #pragma comment(lib, "dxguid.lib")
 #endif
 
+#ifdef DCOMP
+#include <dcomp.h>
+#pragma comment(lib, "dcomp.lib")
+#endif
+
 struct FrameContext
 {
     ID3D12CommandAllocator* CommandAllocator;
@@ -51,6 +56,10 @@ static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
 
+#ifdef DCOMP
+static IDCompositionDevice*         g_pDCompDevice = NULL;
+#endif
+
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
@@ -69,7 +78,7 @@ int main(int, char**)
     ::RegisterClassExW(&wc);
     HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX12 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
-    // Initialize Direct3D
+    // Initialize Direct3D (and DComposition, if enabled)
     if (!CreateDeviceD3D(hwnd))
     {
         CleanupDeviceD3D();
@@ -110,6 +119,10 @@ int main(int, char**)
         DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+
+#ifdef DCOMP
+    ImGui_ImplDX12_InitDComp(g_pDCompDevice);
+#endif
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -364,6 +377,11 @@ bool CreateDeviceD3D(HWND hWnd)
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
+#ifdef DCOMP
+    if (DCompositionCreateDevice(NULL, IID_PPV_ARGS(&g_pDCompDevice)) != S_OK)
+        return false;
+#endif
+
     CreateRenderTarget();
     return true;
 }
@@ -390,6 +408,10 @@ void CleanupDeviceD3D()
         pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY);
         pDebug->Release();
     }
+#endif
+
+#ifdef DCOMP
+    if (g_pDCompDevice) { g_pDCompDevice->Release(); g_pDCompDevice = NULL; }
 #endif
 }
 

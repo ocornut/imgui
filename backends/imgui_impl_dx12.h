@@ -42,4 +42,12 @@ IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
 
+// Extras if you want transparent backgrounds on viewport windows.
+#ifdef DCOMP
+struct IDCompositionDevice;
+
+// Call after calling ImGui_ImplDX12_Init.
+IMGUI_IMPL_API bool     ImGui_ImplDX12_InitDComp(IDCompositionDevice* device);
+#endif
+
 #endif // #ifndef IMGUI_DISABLE
