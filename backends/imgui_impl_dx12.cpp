@@ -940,7 +940,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.Stereo = FALSE;
 
     IDXGIFactory4* dxgi_factory = nullptr;
-    res = ::CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgi_factory));
+    res = ::CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
     IM_ASSERT(res == S_OK);
 
     IDXGISwapChain1* swap_chain = nullptr;
