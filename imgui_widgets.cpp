@@ -2103,12 +2103,6 @@ static ImStrv Items_CharArrayGetter(void* data, int idx)
     return items[idx];
 }
 
-static ImStrv Items_StrvArrayGetter(void* data, int idx)
-{
-    ImStrv const* items = (ImStrv const*)data;
-    return items[idx];
-}
-
 // Getter for the old Combo() API: "item1\0item2\0item3\0"
 static ImStrv Items_SingleStringGetter(void* data, int idx)
 {
@@ -2174,11 +2168,6 @@ bool ImGui::Combo(ImStrv label, int* current_item, ImStrv (*getter)(void* user_d
 }
 
 // Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_in_items)
-{
-    return Combo(label, current_item, Items_StrvArrayGetter, (void*)items, items_count, height_in_items);
-}
-
 // We cannot easily obsolete the 'const char* []' version as this would be stored on user side..
 bool ImGui::Combo(ImStrv label, int* current_item, const char* const items[], int items_count, int height_in_items)
 {
@@ -8641,11 +8630,7 @@ void ImGui::EndListBox()
     EndGroup(); // This is only required to be able to do IsItemXXX query on the whole ListBox including label
 }
 
-bool ImGui::ListBox(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_items)
-{
-    return ListBox(label, current_item, Items_StrvArrayGetter, (void*)items, items_count, height_items);
-}
-
+// List box helper allowing to pass an array of strings.
 // We cannot easily obsolete the 'const char* []' version as this would be stored on user side..
 bool ImGui::ListBox(ImStrv label, int* current_item, const char* const items[], int items_count, int height_items)
 {

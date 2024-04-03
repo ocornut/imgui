@@ -677,7 +677,6 @@ namespace ImGui
     IMGUI_API bool          BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags = 0);
     IMGUI_API void          EndCombo(); // only call EndCombo() if BeginCombo() returns true!
     IMGUI_API bool          Combo(ImStrv label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1);
-    IMGUI_API bool          Combo(ImStrv label, int* current_item, ImStrv const items[], int items_count, int popup_max_height_in_items = -1);
     IMGUI_API bool          Combo(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items = -1);
     IMGUI_API bool          Combo(ImStrv label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1);      // Separate items with \0 within a string, end item-list with \0\0. e.g. "One\0Two\0Three\0"
 
@@ -805,7 +804,6 @@ namespace ImGui
     IMGUI_API bool          BeginListBox(ImStrv label, const ImVec2& size = ImVec2(0, 0)); // open a framed scrolling region
     IMGUI_API void          EndListBox();                                                       // only call EndListBox() if BeginListBox() returned true!
     IMGUI_API bool          ListBox(ImStrv label, int* current_item, const char* const items[], int items_count, int height_in_items = -1);
-    IMGUI_API bool          ListBox(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBox(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items = -1);
 
     // Widgets: Data Plotting
