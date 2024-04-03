@@ -2096,15 +2096,21 @@ void ImGui::EndComboPreview()
     preview_data->PreviewRect = ImRect();
 }
 
-// Getter for the old Combo() API: const char*[]
-static const char* Items_ArrayGetter(void* data, int idx)
+// Getter for the old Combo()/ListBox() API: const char*[]
+static ImStrv Items_CharArrayGetter(void* data, int idx)
 {
     const char* const* items = (const char* const*)data;
     return items[idx];
 }
 
+static ImStrv Items_StrvArrayGetter(void* data, int idx)
+{
+    ImStrv const* items = (ImStrv const*)data;
+    return items[idx];
+}
+
 // Getter for the old Combo() API: "item1\0item2\0item3\0"
-static const char* Items_SingleStringGetter(void* data, int idx)
+static ImStrv Items_SingleStringGetter(void* data, int idx)
 {
     const char* items_separated_by_zeros = (const char*)data;
     int items_count = 0;
@@ -2112,20 +2118,20 @@ static const char* Items_SingleStringGetter(void* data, int idx)
     while (*p)
     {
         if (idx == items_count)
-            break;
+            return p;
         p += ImStrlen(p) + 1;
         items_count++;
     }
-    return *p ? p : NULL;
+    return NULL;
 }
 
 // Old API, prefer using BeginCombo() nowadays if you can.
-bool ImGui::Combo(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
+bool ImGui::Combo(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
 {
     ImGuiContext& g = *GImGui;
 
     // Call the getter to obtain the preview string which is a parameter to BeginCombo()
-    const char* preview_value = NULL;
+    ImStrv preview_value = NULL;
     if (*current_item >= 0 && *current_item < items_count)
         preview_value = getter(user_data, *current_item);
 
@@ -2144,8 +2150,8 @@ bool ImGui::Combo(ImStrv label, int* current_item, const char* (*getter)(void* u
     while (clipper.Step())
         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         {
-            const char* item_text = getter(user_data, i);
-            if (item_text == NULL)
+            ImStrv item_text = getter(user_data, i);
+            if (!item_text)
                 item_text = "*Unknown item*";
 
             PushID(i);
@@ -2168,24 +2174,46 @@ bool ImGui::Combo(ImStrv label, int* current_item, const char* (*getter)(void* u
 }
 
 // Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(ImStrv label, int* current_item, const char* const items[], int items_count, int height_in_items)
+bool ImGui::Combo(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_in_items)
 {
-    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
-    return value_changed;
+    return Combo(label, current_item, Items_StrvArrayGetter, (void*)items, items_count, height_in_items);
 }
 
+// We cannot easily obsolete the 'const char* []' version as this would be stored on user side..
+bool ImGui::Combo(ImStrv label, int* current_item, const char* const items[], int items_count, int height_in_items)
+{
+    return Combo(label, current_item, Items_CharArrayGetter, (void*)items, items_count, height_in_items);
+}
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+struct GetterProxyData { void* UserData; const char* (*UserGetter)(void* user_data, int idx); };
+static ImStrv ConstCharToStrvProxy(void* user_data, int idx)
+{
+    GetterProxyData* p_proxy_data = (GetterProxyData*)user_data;
+    return ImStrv(p_proxy_data->UserGetter(p_proxy_data->UserData, idx));
+}
+bool ImGui::Combo(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items)
+{
+    // Convert 'const char*' getter to ImStrv version via a proxy. Cumbersome but no way out.
+    GetterProxyData proxy_data = { user_data, getter };
+    return Combo(label, current_item, ConstCharToStrvProxy, &proxy_data, items_count, popup_max_height_in_items);
+}
+#endif
+
 // Combo box helper allowing to pass all items in a single string literal holding multiple zero-terminated items "item1\0item2\0"
+// We don't support an ImStrv version of this, because passing the typical "hello\0world" to a ImStrv constructor wouldn't yield the expected result.
+// FIXME-OPT: Avoid computing count, or at least only when combo is open
+// FIXME-OPT: The dual pass is stupid, at least could build an index on first pass.
 bool ImGui::Combo(ImStrv label, int* current_item, const char* items_separated_by_zeros, int height_in_items)
 {
     int items_count = 0;
-    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this, or at least only when combo is open
+    const char* p = items_separated_by_zeros;
     while (*p)
     {
         p += ImStrlen(p) + 1;
         items_count++;
     }
-    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
-    return value_changed;
+    return Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -8613,15 +8641,20 @@ void ImGui::EndListBox()
     EndGroup(); // This is only required to be able to do IsItemXXX query on the whole ListBox including label
 }
 
+bool ImGui::ListBox(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_items)
+{
+    return ListBox(label, current_item, Items_StrvArrayGetter, (void*)items, items_count, height_items);
+}
+
+// We cannot easily obsolete the 'const char* []' version as this would be stored on user side..
 bool ImGui::ListBox(ImStrv label, int* current_item, const char* const items[], int items_count, int height_items)
 {
-    const bool value_changed = ListBox(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_items);
-    return value_changed;
+    return ListBox(label, current_item, Items_CharArrayGetter, (void*)items, items_count, height_items);
 }
 
 // This is merely a helper around BeginListBox(), EndListBox().
 // Considering using those directly to submit custom data or store selection differently.
-bool ImGui::ListBox(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items)
+bool ImGui::ListBox(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items)
 {
     ImGuiContext& g = *GImGui;
 
@@ -8643,8 +8676,8 @@ bool ImGui::ListBox(ImStrv label, int* current_item, const char* (*getter)(void*
     while (clipper.Step())
         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         {
-            const char* item_text = getter(user_data, i);
-            if (item_text == NULL)
+            ImStrv item_text = getter(user_data, i);
+            if (!item_text)
                 item_text = "*Unknown item*";
 
             PushID(i);
@@ -8665,6 +8698,15 @@ bool ImGui::ListBox(ImStrv label, int* current_item, const char* (*getter)(void*
 
     return value_changed;
 }
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+bool ImGui::ListBox(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items)
+{
+    // Convert 'const char*' getter to ImStrv version via a proxy. Cumbersome but no way out.
+    GetterProxyData proxy_data = { user_data, getter };
+    return ListBox(label, current_item, ConstCharToStrvProxy, &proxy_data, items_count, height_in_items);
+}
+#endif
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: PlotLines, PlotHistogram
