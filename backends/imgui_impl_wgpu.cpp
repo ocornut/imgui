@@ -536,9 +536,9 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         sampler_desc.minFilter = WGPUFilterMode_Linear;
         sampler_desc.magFilter = WGPUFilterMode_Linear;
         sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
-        sampler_desc.addressModeU = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeV = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+        sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
         sampler_desc.maxAnisotropy = 1;
         bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
     }
