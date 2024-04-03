@@ -73,6 +73,7 @@ Other changes:
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
 - ProgressBar: Fixed passing fraction==NaN from leading to a crash. (#7451)
+- ListBox: Fixed text-baseline offset when using SameLine()+Text() after a labeled ListBox().
 - Style: Added ImGuiStyleVar_TabBorderSize, ImGuiStyleVar_TableAngledHeadersAngle for
   consistency. (#7411) [@cfillion]
 - DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
