@@ -593,8 +593,9 @@ namespace ImGui
     IMGUI_API bool          BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags = 0);
     IMGUI_API void          EndCombo(); // only call EndCombo() if BeginCombo() returns true!
     IMGUI_API bool          Combo(ImStrv label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1);
+    IMGUI_API bool          Combo(ImStrv label, int* current_item, ImStrv const items[], int items_count, int popup_max_height_in_items = -1);
+    IMGUI_API bool          Combo(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items = -1);
     IMGUI_API bool          Combo(ImStrv label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1);      // Separate items with \0 within a string, end item-list with \0\0. e.g. "One\0Two\0Three\0"
-    IMGUI_API bool          Combo(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items = -1);
 
     // Widgets: Drag Sliders
     // - CTRL+Click on any drag box to turn them into an input box. Manually input values aren't clamped by default and can go off-bounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
@@ -719,7 +720,8 @@ namespace ImGui
     IMGUI_API bool          BeginListBox(ImStrv label, const ImVec2& size = ImVec2(0, 0)); // open a framed scrolling region
     IMGUI_API void          EndListBox();                                                       // only call EndListBox() if BeginListBox() returned true!
     IMGUI_API bool          ListBox(ImStrv label, int* current_item, const char* const items[], int items_count, int height_in_items = -1);
-    IMGUI_API bool          ListBox(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items = -1);
+    IMGUI_API bool          ListBox(ImStrv label, int* current_item, ImStrv const items[], int items_count, int height_in_items = -1);
+    IMGUI_API bool          ListBox(ImStrv label, int* current_item, ImStrv (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items = -1);
 
     // Widgets: Data Plotting
     // - Consider using ImPlot (https://github.com/epezent/implot) which is much better!
@@ -3648,6 +3650,8 @@ namespace ImGui
     inline ImGuiID      GetID(const char* str_id_begin, const char* str_id_end) { return GetID(ImStrv(str_id_begin, str_id_end)); }
     inline void         TextUnformatted(const char* text, const char* text_end) { TextUnformatted(ImStrv(text, text_end)); }
     inline ImVec2       CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash = false, float wrap_width = -1.0f) { return CalcTextSize(ImStrv(text, text_end), hide_text_after_double_hash, wrap_width); }
+    IMGUI_API bool      Combo(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items = -1);
+    IMGUI_API bool      ListBox(ImStrv label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items = -1);
     // OBSOLETED in 1.91.0 (from July 2024)
     static inline void  PushButtonRepeat(bool repeat)                           { PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat); }
     static inline void  PopButtonRepeat()                                       { PopItemFlag(); }
