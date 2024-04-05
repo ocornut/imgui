@@ -184,7 +184,7 @@ int main(int, char**)
         // React to changes in screen size
         int width, height;
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
-        if (width != wgpu_swap_chain_width && height != wgpu_swap_chain_height)
+        if (width != wgpu_swap_chain_width || height != wgpu_swap_chain_height)
         {
             ImGui_ImplWGPU_InvalidateDeviceObjects();
             CreateSwapChain(width, height);
