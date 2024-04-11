@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.5 WIP (In Progress)
+ VERSION 1.90.5 (Released 2024-04-11)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.5
 
 Breaking changes:
 
@@ -47,7 +49,7 @@ Breaking changes:
   - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) --> IsKeyPressed(ImGuiKey_XXX)
 - ImDrawList: Merged the radius_x/radius_y parameters in AddEllipse(), AddEllipseFilled()
   and PathEllipticalArcTo() into a single ImVec2 parameter. Exceptionally, because those
-  functions were added in 1.90, we are not adding inline redirection functions.
+  functions were added recently in 1.90, we are not adding inline redirection functions.
   The transition is easy and should affect few users. (#2743, #7417) [@cfillion]
 
 Other changes:
@@ -55,17 +57,37 @@ Other changes:
 - Windows: Scrollbar visibility decision uses current size when both size and contents
   size are submitted by API. (#7252)
 - Windows: Double-click to collapse may be disabled via key-ownership mechanism. (#7369)
+- Windows: BeginChild(): Extend outer resize borders to the edges when there are no corner
+  grips. Essentially affects resizable child windows. (#7440, #1710) [@cfillion]
+- Windows: BeginChild(): Resizing logic for child windows evaluates whether per-axis clamping
+  should be applied based on parent scrollbars, not child scrollbars. (#7440, #1710) [@cfillion]
+  Adjust those resizing limits to match window padding rather than inner clipping rectangle.
+- Tables: Fixed auto-width columns when using synced-instances of same table, width of
+  one instance would bleed into next one instead of sharing their widths. (#7218)
+- Tables: Angled headers: fixed border hit box extending beyond when used within
+  non-scrollable tables. (#7416) [@cfillion]
+- Tables: Angled headers: fixed borders not moving back up after TableAngleHeadersRow()
+  stops being called. (#7416) [@cfillion]
+- Tables: Angled headers: rounding header size to nearest integers, fixes some issues
+  when using clipper.
 - Menus, Popups: Fixed an issue where sibling menu popups re-opening in successive
   frames would erroneously close the window. While it is technically a popup issue
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
+- ProgressBar: Fixed passing fraction==NaN from leading to a crash. (#7451)
+- ListBox: Fixed text-baseline offset when using SameLine()+Text() after a labeled ListBox().
+- Drags, Sliders, Inputs: Fixed io.PlatformLocaleDecimalPoint decimal point localization
+  feature not working regression from 1.90.1. (#7389, #6719, #2278) [@GamingMinds-DanielC]
+- Style: Added ImGuiStyleVar_TabBorderSize, ImGuiStyleVar_TableAngledHeadersAngle for
+  consistency. (#7411) [@cfillion]
 - DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
   Note that only simple polygons (no self-intersections, no holes) are supported.
+- DrawList: Allow AddText() to accept null ranges. (#3615, 7391)
 - Docs: added more wiki links to headers of imgui.h/imgui.cpp to facilitate discovery
   of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
   - This is the main wiki: https://github.com/ocornut/imgui/wiki
   - This is the crawlable version: https://github-wiki-see.page/m/ocornut/imgui/wiki
-    Adding a link to the crawlable version, even though it is not indended for humans,
+    Adding a link to the crawlable version, even though it is not intended for humans,
     to increase its search rank.
 
 Docking+Viewports Branch:

@@ -1,4 +1,4 @@
-// dear imgui, v1.90.5 WIP
+// dear imgui, v1.90.5
 // (drawing and font code)
 
 /*
@@ -1619,10 +1619,11 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    // Accept null ranges
+    if (text_begin == text_end || text_begin[0] == 0)
+        return;
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
-    if (text_begin == text_end)
-        return;
 
     // Pull default font/size from the shared ImDrawListSharedData instance
     if (font == NULL)
