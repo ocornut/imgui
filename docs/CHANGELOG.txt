@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.5 WIP (In Progress)
+ VERSION 1.90.5 (Released 2024-04-11)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.5
 
 Breaking changes:
 
@@ -47,7 +49,7 @@ Breaking changes:
   - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) --> IsKeyPressed(ImGuiKey_XXX)
 - ImDrawList: Merged the radius_x/radius_y parameters in AddEllipse(), AddEllipseFilled()
   and PathEllipticalArcTo() into a single ImVec2 parameter. Exceptionally, because those
-  functions were added in 1.90, we are not adding inline redirection functions.
+  functions were added recently in 1.90, we are not adding inline redirection functions.
   The transition is easy and should affect few users. (#2743, #7417) [@cfillion]
 
 Other changes:
@@ -85,7 +87,7 @@ Other changes:
   of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
   - This is the main wiki: https://github.com/ocornut/imgui/wiki
   - This is the crawlable version: https://github-wiki-see.page/m/ocornut/imgui/wiki
-    Adding a link to the crawlable version, even though it is not indended for humans,
+    Adding a link to the crawlable version, even though it is not intended for humans,
     to increase its search rank.
 
 
