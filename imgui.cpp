@@ -4525,6 +4525,27 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
+// Calling SetupDrawListSharedData() is followed by SetCurrentFont() which sets up the remaining data.
+static void SetupDrawListSharedData()
+{
+    ImGuiContext& g = *GImGui;
+    ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
+    for (ImGuiViewportP* viewport : g.Viewports)
+        virtual_space.Add(viewport->GetMainRect());
+    g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
+    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
+    g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
+    g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
+    if (g.Style.AntiAliasedLines)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
+    if (g.Style.AntiAliasedLinesUseTex && !(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines))
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTex;
+    if (g.Style.AntiAliasedFill)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
+    if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -4567,23 +4588,9 @@ void ImGui::NewFrame()
 
     // Setup current font and draw list shared data
     g.IO.Fonts->Locked = true;
+    SetupDrawListSharedData();
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
-    ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (ImGuiViewportP* viewport : g.Viewports)
-        virtual_space.Add(viewport->GetMainRect());
-    g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
-    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
-    g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
-    g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
-    if (g.Style.AntiAliasedLines)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
-    if (g.Style.AntiAliasedLinesUseTex && !(g.Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoBakedLines))
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTex;
-    if (g.Style.AntiAliasedFill)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
-    if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (ImGuiViewportP* viewport : g.Viewports)
