@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Text, DrawList: Improved handling of long single-line wrapped text. Faster and
+  mitigitate issues with reading vertex indexing limits with 16-bit indices.
 - Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
   as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
 
