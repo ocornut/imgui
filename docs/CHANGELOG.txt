@@ -36,6 +36,20 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.90.6 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+Docking+Viewports Branch:
+
+- Docking: when io.ConfigDockingWithShift is enabled, fixed help tooltip erroneously
+  reading SetNextWindowXXX() data. (#6709, #4643, #7491) [@ocornut, @cfillion]
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.5 (Released 2024-04-11)
 -----------------------------------------------------------------------
 
