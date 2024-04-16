@@ -3,8 +3,8 @@
 #  2. cmake -B build -DIMGUI_DAWN_DIR=dawn
 #  3. cmake --build build
 # The resulting binary will be found at one of the following locations:
-#   * build/Debug/example_emscripten_wgpu[.exe]
-#   * build/example_emscripten_wgpu[.exe]
+#   * build/Debug/example_glfw_wgpu[.exe]
+#   * build/example_glfw_wgpu[.exe]
 
 # Building for Emscripten:
 #  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
@@ -14,7 +14,7 @@
 #  4. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.10.2)
-project(imgui_example_emscripten_wgpu C CXX)
+project(imgui_example_glfw_wgpu C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -61,7 +61,7 @@ else()
   set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
 endif()
 
-add_executable(example_emscripten_wgpu
+add_executable(example_glfw_wgpu
   main.cpp
   # backend files
   ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
@@ -73,16 +73,16 @@ add_executable(example_emscripten_wgpu
   ${IMGUI_DIR}/imgui_tables.cpp
   ${IMGUI_DIR}/imgui_widgets.cpp
 )
-target_include_directories(example_emscripten_wgpu PUBLIC
+target_include_directories(example_glfw_wgpu PUBLIC
   ${IMGUI_DIR}
   ${IMGUI_DIR}/backends
 )
 
-target_link_libraries(example_emscripten_wgpu PUBLIC ${LIBRARIES})
+target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
 
 # Emscripten settings
 if(EMSCRIPTEN)
-  target_link_options(example_emscripten_wgpu PRIVATE
+  target_link_options(example_glfw_wgpu PRIVATE
     "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"
     "-sWASM=1"
@@ -92,9 +92,9 @@ if(EMSCRIPTEN)
     "-sDISABLE_EXCEPTION_CATCHING=1"
     "-sNO_FILESYSTEM=1"
   )
-  set_target_properties(example_emscripten_wgpu PROPERTIES OUTPUT_NAME "index")
+  set_target_properties(example_glfw_wgpu PROPERTIES OUTPUT_NAME "index")
   # copy our custom index.html to build directory
-  add_custom_command(TARGET example_emscripten_wgpu POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_emscripten_wgpu>
+  add_custom_command(TARGET example_glfw_wgpu POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_glfw_wgpu>
   )
 endif()
