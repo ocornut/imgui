@@ -1,15 +1,12 @@
 # Building for desktop (WebGPU-native) with Dawn:
-#
-#  git clone https://github.com/google/dawn dawn
-#  cmake -B build -DIMGUI_DAWN_DIR=dawn
-#  cmake --build build
-#
+#  1. git clone https://github.com/google/dawn dawn
+#  2. cmake -B build -DIMGUI_DAWN_DIR=dawn
+#  3. cmake --build build
 # The resulting binary will be found at one of the following locations:
 #   * build/Debug/example_emscripten_wgpu[.exe]
 #   * build/example_emscripten_wgpu[.exe]
 
 # Building for Emscripten:
-#
 #  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
 #  2. Install Ninja build system
 #  3. emcmake cmake -G Ninja -B build
@@ -39,9 +36,9 @@ else()
   if (NOT IMGUI_DAWN_DIR)
     message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
   endif()
-  
+
   option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
-  
+
   # Dawn builds many things by default - disable things we don't need
   option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)
   option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" OFF)
@@ -58,9 +55,9 @@ else()
     option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" OFF)
     option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
   endif()
-  
+
   add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
-  
+
   set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
 endif()
 

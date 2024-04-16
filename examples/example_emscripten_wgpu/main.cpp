@@ -1,7 +1,6 @@
 // Dear ImGui: standalone example application for using GLFW + WebGPU
-// Dawn is used as a WebGPU implementation on desktop and Emscripten is supported for
-// publishing on web.
-// (Emscripten is a C++-to-javascript compiler, used to publish executables for the web. See https://emscripten.org/)
+// - Emscripten is supported for publishing on web. See https://emscripten.org.
+// - Dawn is used as a WebGPU implementation on desktop.
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -12,7 +11,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_wgpu.h"
-
 #include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
@@ -62,33 +60,6 @@ static void wgpu_error_callback(WGPUErrorType error_type, const char* message, v
     default:                        error_type_lbl = "Unknown";
     }
     printf("%s error: %s\n", error_type_lbl, message);
-}
-
-static WGPUAdapter requestAdapter(WGPUInstance instance) {
-    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const* message, void* pUserData) {
-        if (status == WGPURequestAdapterStatus_Success) {
-            *static_cast<WGPUAdapter*>(pUserData) = adapter;
-        } else {
-            printf("Could not get WebGPU adapter: %s\n", message);
-        }
-    };
-    WGPUAdapter adapter;
-    wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
-    return adapter;
-}
-
-static WGPUDevice requestDevice(WGPUAdapter& adapter) {
-    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const* message, void* pUserData) {
-        if (status == WGPURequestDeviceStatus_Success) {
-            *static_cast<WGPUDevice*>(pUserData) = device;
-        } else {
-            printf("Could not get WebGPU device: %s\n", message);
-        }
-    };
-
-    WGPUDevice device;
-    wgpuAdapterRequestDevice(adapter, nullptr, onDeviceRequestEnded, (void*)&device);
-    return device;
 }
 
 // Main code
@@ -151,7 +122,7 @@ int main(int, char**)
     //io.Fonts->AddFontDefault();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
     //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
-    // io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
@@ -289,6 +260,36 @@ int main(int, char**)
     return 0;
 }
 
+#ifndef __EMSCRIPTEN__
+static WGPUAdapter RequestAdapter(WGPUInstance instance)
+{
+    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* pUserData)
+    {
+        if (status == WGPURequestAdapterStatus_Success)
+            *(WGPUAdapter*)(pUserData) = adapter;
+        else
+            printf("Could not get WebGPU adapter: %s\n", message);
+};
+    WGPUAdapter adapter;
+    wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
+    return adapter;
+}
+
+static WGPUDevice RequestDevice(WGPUAdapter& adapter)
+{
+    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* pUserData)
+    {
+        if (status == WGPURequestDeviceStatus_Success)
+            *(WGPUDevice*)(pUserData) = device;
+        else
+            printf("Could not get WebGPU device: %s\n", message);
+    };
+    WGPUDevice device;
+    wgpuAdapterRequestDevice(adapter, nullptr, onDeviceRequestEnded, (void*)&device);
+    return device;
+}
+#endif
+
 static bool InitWGPU(GLFWwindow* window)
 {
     wgpu::Instance instance = wgpuCreateInstance(nullptr);
@@ -298,10 +299,10 @@ static bool InitWGPU(GLFWwindow* window)
     if (!wgpu_device)
         return false;
 #else
-    WGPUAdapter adapter = requestAdapter(instance.Get());
+    WGPUAdapter adapter = RequestAdapter(instance.Get());
     if (!adapter)
         return false;
-    wgpu_device = requestDevice(adapter);
+    wgpu_device = RequestDevice(adapter);
 #endif
 
 #ifdef __EMSCRIPTEN__
