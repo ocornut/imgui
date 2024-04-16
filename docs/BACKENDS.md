@@ -79,14 +79,14 @@ List of Renderer Backends:
     imgui_impl_sdlrenderer2.cpp ; SDL_Renderer (optional component of SDL2 available from SDL 2.0.18+)
     imgui_impl_sdlrenderer3.cpp ; SDL_Renderer (optional component of SDL3 available from SDL 3.0.0+)
     imgui_impl_vulkan.cpp     ; Vulkan
-    imgui_impl_wgpu.cpp       ; WebGPU
+    imgui_impl_wgpu.cpp       ; WebGPU (web and desktop)
 
 List of high-level Frameworks Backends (combining Platform + Renderer):
 
     imgui_impl_allegro5.cpp
 
 Emscripten is also supported!
-The SDL+GL, GLFW+GL and SDL+WebGPU examples are all ready to build and run with Emscripten.
+The SDL+GL, GLFW+GL and GLFW+WebGPU examples are all ready to build and run with Emscripten.
 
 ### Backends for third-party frameworks, graphics API or other languages
 
