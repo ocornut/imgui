@@ -36,8 +36,31 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.5 WIP (In Progress)
+ VERSION 1.90.6 WIP (In Progress)
 -----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
+  It is possible that some prior manual use of ImFontConfig::GlyphOffset may become
+  duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
+- Text, DrawList: Improved handling of long single-line wrapped text. Faster and
+  mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
+- Backends: OpenGL: Detect ES3 contexts on desktop based on version string,
+  to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
+- Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
+  as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
+- Examples: GLFW+WebGPU: Added support for WebGPU-native/Dawn (#7435, #7132) [@eliasdaler, @Zelif]
+- Examples: GLFW+WebGPU: Renamed example_emscripten_wgpu/ to example_glfw_wgpu/. (#7435, #7132)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.90.5 (Released 2024-04-11)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.5
 
 Breaking changes:
 
@@ -47,7 +70,7 @@ Breaking changes:
   - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) --> IsKeyPressed(ImGuiKey_XXX)
 - ImDrawList: Merged the radius_x/radius_y parameters in AddEllipse(), AddEllipseFilled()
   and PathEllipticalArcTo() into a single ImVec2 parameter. Exceptionally, because those
-  functions were added in 1.90, we are not adding inline redirection functions.
+  functions were added recently in 1.90, we are not adding inline redirection functions.
   The transition is easy and should affect few users. (#2743, #7417) [@cfillion]
 
 Other changes:
@@ -73,6 +96,9 @@ Other changes:
   it would generally manifest when fast moving the mouse bottom to top in a sub-menu.
   (#7325, #7287, #7063)
 - ProgressBar: Fixed passing fraction==NaN from leading to a crash. (#7451)
+- ListBox: Fixed text-baseline offset when using SameLine()+Text() after a labeled ListBox().
+- Drags, Sliders, Inputs: Fixed io.PlatformLocaleDecimalPoint decimal point localization
+  feature not working regression from 1.90.1. (#7389, #6719, #2278) [@GamingMinds-DanielC]
 - Style: Added ImGuiStyleVar_TabBorderSize, ImGuiStyleVar_TableAngledHeadersAngle for
   consistency. (#7411) [@cfillion]
 - DrawList: Added AddConcavePolyFilled(), PathFillConcave() concave filling. (#760) [@thedmd]
@@ -82,7 +108,7 @@ Other changes:
   of interesting resources, because github doesn't allow Wiki to be crawled by search engines.
   - This is the main wiki: https://github.com/ocornut/imgui/wiki
   - This is the crawlable version: https://github-wiki-see.page/m/ocornut/imgui/wiki
-    Adding a link to the crawlable version, even though it is not indended for humans,
+    Adding a link to the crawlable version, even though it is not intended for humans,
     to increase its search rank.
 
 

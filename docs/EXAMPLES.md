@@ -104,8 +104,8 @@ OSX + OpenGL2 example. <BR>
 (NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
  You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
-[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
-Emcripten + GLFW + WebGPU example. <BR>
+[example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
+GLFW + WebGPU example. Supports Emscripten (web) or Dawn (desktop) <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
 Note that the 'example_glfw_opengl3' and 'example_sdl2_opengl3' examples also supports Emscripten!
 

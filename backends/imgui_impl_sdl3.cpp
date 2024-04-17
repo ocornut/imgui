@@ -10,7 +10,7 @@
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 // Missing features:
-//  [x] Platform: Basic IME support. Position somehow broken in SDL3 + app needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
+//  [ ] Platform: IME SUPPORT IS BROKEN IN SDL3 BECAUSE INPUTS GETS SENT TO BOTH APP AND IME + app needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-04-15: Inputs: Re-enable calling SDL_StartTextInput()/SDL_StopTextInput() as SDL3 no longer enables it by default and should play nicer with IME.
 //  2024-02-13: Inputs: Fixed gamepad support. Handle gamepad disconnection. Added ImGui_ImplSDL3_SetGamepadMode().
 //  2023-11-13: Updated for recent SDL3 API changes.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -117,6 +118,11 @@ static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeDa
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
+        SDL_StartTextInput();
+    }
+    else
+    {
+        SDL_StopTextInput();
     }
 }
 

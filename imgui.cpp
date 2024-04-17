@@ -1,4 +1,4 @@
-// dear imgui, v1.90.5 WIP
+// dear imgui, v1.90.6 WIP
 // (main code and documentation)
 
 // Help:
@@ -77,6 +77,7 @@ CODE
 // [SECTION] RENDER HELPERS
 // [SECTION] INITIALIZATION, SHUTDOWN
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
+// [SECTION] ID STACK
 // [SECTION] INPUTS
 // [SECTION] ERROR CHECKING
 // [SECTION] ITEM SUBMISSION
@@ -1033,6 +1034,7 @@ CODE
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
 #pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"            // warning: 'xxx' is an unsafe pointer used for buffer access
 #elif defined(__GNUC__)
 // We disable -Wpragmas because GCC doesn't provide a has_warning equivalent and some forks/patches may not follow the warning/version association.
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
@@ -1203,7 +1205,7 @@ ImGuiStyle::ImGuiStyle()
     FrameBorderSize         = 0.0f;             // Thickness of border around frames. Generally set to 0.0f or 1.0f. Other values not well tested.
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
-    CellPadding             = ImVec2(4,2);      // Padding within a table cell. CellPadding.y may be altered between different rows.
+    CellPadding             = ImVec2(4,2);      // Padding within a table cell. Cellpadding.x is locked for entire table. CellPadding.y may be altered between different rows.
     TouchExtraPadding       = ImVec2(0,0);      // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
     IndentSpacing           = 21.0f;            // Horizontal spacing when e.g. entering a tree node. Generally == (FontSize + FramePadding.x*2).
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns. Preferably > (FramePadding.x + 1).
@@ -3786,45 +3788,6 @@ ImGuiWindow::~ImGuiWindow()
     ColumnsStorage.clear_destruct();
 }
 
-ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
-    ImGuiContext& g = *Ctx;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
-    return id;
-}
-
-ImGuiID ImGuiWindow::GetID(const void* ptr)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
-    ImGuiContext& g = *Ctx;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
-    return id;
-}
-
-ImGuiID ImGuiWindow::GetID(int n)
-{
-    ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHashData(&n, sizeof(n), seed);
-    ImGuiContext& g = *Ctx;
-    if (g.DebugHookIdInfo == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
-    return id;
-}
-
-// This is only used in rare/specific situations to manufacture an ID out of nowhere.
-ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
-{
-    ImGuiID seed = IDStack.back();
-    ImRect r_rel = ImGui::WindowRectAbsToRel(this, r_abs);
-    ImGuiID id = ImHashData(&r_rel, sizeof(r_rel), seed);
-    return id;
-}
-
 static void SetCurrentWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -4567,6 +4530,27 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
+// Calling SetupDrawListSharedData() is followed by SetCurrentFont() which sets up the remaining data.
+static void SetupDrawListSharedData()
+{
+    ImGuiContext& g = *GImGui;
+    ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
+    for (ImGuiViewportP* viewport : g.Viewports)
+        virtual_space.Add(viewport->GetMainRect());
+    g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
+    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
+    g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
+    g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
+    if (g.Style.AntiAliasedLines)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
+    if (g.Style.AntiAliasedLinesUseTex && !(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines))
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTex;
+    if (g.Style.AntiAliasedFill)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
+    if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -4609,23 +4593,9 @@ void ImGui::NewFrame()
 
     // Setup current font and draw list shared data
     g.IO.Fonts->Locked = true;
+    SetupDrawListSharedData();
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
-    ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (ImGuiViewportP* viewport : g.Viewports)
-        virtual_space.Add(viewport->GetMainRect());
-    g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
-    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
-    g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
-    g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
-    if (g.Style.AntiAliasedLines)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
-    if (g.Style.AntiAliasedLinesUseTex && !(g.Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoBakedLines))
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTex;
-    if (g.Style.AntiAliasedFill)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
-    if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (ImGuiViewportP* viewport : g.Viewports)
@@ -7988,6 +7958,69 @@ ImGuiStorage* ImGui::GetStateStorage()
     return window->DC.StateStorage;
 }
 
+bool ImGui::IsRectVisible(const ImVec2& size)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
+}
+
+bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ClipRect.Overlaps(ImRect(rect_min, rect_max));
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] ID STACK
+//-----------------------------------------------------------------------------
+
+// This is one of the very rare legacy case where we use ImGuiWindow methods,
+// it should ideally be flattened at some point but it's been used a lots by widgets.
+ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
+{
+    ImGuiID seed = IDStack.back();
+    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    ImGuiContext& g = *Ctx;
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
+#endif
+    return id;
+}
+
+ImGuiID ImGuiWindow::GetID(const void* ptr)
+{
+    ImGuiID seed = IDStack.back();
+    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    ImGuiContext& g = *Ctx;
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_Pointer, ptr, NULL);
+#endif
+    return id;
+}
+
+ImGuiID ImGuiWindow::GetID(int n)
+{
+    ImGuiID seed = IDStack.back();
+    ImGuiID id = ImHashData(&n, sizeof(n), seed);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    ImGuiContext& g = *Ctx;
+    if (g.DebugHookIdInfo == id)
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
+#endif
+    return id;
+}
+
+// This is only used in rare/specific situations to manufacture an ID out of nowhere.
+ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
+{
+    ImGuiID seed = IDStack.back();
+    ImRect r_rel = ImGui::WindowRectAbsToRel(this, r_abs);
+    ImGuiID id = ImHashData(&r_rel, sizeof(r_rel), seed);
+    return id;
+}
+
 void ImGui::PushID(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
@@ -8025,8 +8058,10 @@ void ImGui::PushOverrideID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (g.DebugHookIdInfo == id)
         DebugHookIdInfo(id, ImGuiDataType_ID, NULL, NULL);
+#endif
     window->IDStack.push_back(id);
 }
 
@@ -8036,18 +8071,22 @@ void ImGui::PushOverrideID(ImGuiID id)
 ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed)
 {
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *GImGui;
     if (g.DebugHookIdInfo == id)
         DebugHookIdInfo(id, ImGuiDataType_String, str, str_end);
+#endif
     return id;
 }
 
 ImGuiID ImGui::GetIDWithSeed(int n, ImGuiID seed)
 {
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *GImGui;
     if (g.DebugHookIdInfo == id)
         DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
+#endif
     return id;
 }
 
@@ -8075,19 +8114,6 @@ ImGuiID ImGui::GetID(const void* ptr_id)
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(ptr_id);
 }
-
-bool ImGui::IsRectVisible(const ImVec2& size)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
-}
-
-bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ClipRect.Overlaps(ImRect(rect_min, rect_max));
-}
-
 
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
