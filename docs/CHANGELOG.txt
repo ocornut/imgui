@@ -41,6 +41,19 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- TreeNode: Fixed a layout inconsistency when using a empty/hidden label followed
+  by a SameLine() call. (#7505, #282)
+     Before: TreeNode("##Hidden"); SameLine(); Text("Hello");
+             // This was actually incorrect! BUT appeared to look ok with the default style
+             // where ItemSpacing.x == FramePadding.x * 2 (it didn't look aligned otherwise).
+     After:  TreeNode("##Hidden"); SameLine(0, 0); Text("Hello");
+             // This is correct for all values in style.
+  With the fix, IF you were successfully using TreeNode("")+SameLine(); you will now
+  have extra spacing between your TreeNode and the following item. You'll need to change
+  the SameLine() call to SameLine(0,0) to remove this extraneous spacing.
+  This seemed like the more sensible fix that's not making things less consistent.
+  (Note: when using this idiom you are likely to also use ImGuiTreeNodeFlags_SpanAvailWidth).
+
 Other changes:
 
 - Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
