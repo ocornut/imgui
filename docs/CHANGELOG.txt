@@ -56,6 +56,9 @@ Breaking changes:
 
 Other changes:
 
+- Windows: Fixed subsequent Begin() append calls from setting last item information
+  for title bar, making it impossible to use IsItemHovered() on a Begin()-to-append,
+  and causing issue bypassing hover detection on collapsed windows. (#7506, #823)
 - Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
   It is possible that some prior manual use of ImFontConfig::GlyphOffset may become
   duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
