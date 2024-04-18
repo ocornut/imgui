@@ -41,13 +41,31 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- TreeNode: Fixed a layout inconsistency when using a empty/hidden label followed
+  by a SameLine() call. (#7505, #282)
+     Before: TreeNode("##Hidden"); SameLine(); Text("Hello");
+             // This was actually incorrect! BUT appeared to look ok with the default style
+             // where ItemSpacing.x == FramePadding.x * 2 (it didn't look aligned otherwise).
+     After:  TreeNode("##Hidden"); SameLine(0, 0); Text("Hello");
+             // This is correct for all values in style.
+  With the fix, IF you were successfully using TreeNode("")+SameLine(); you will now
+  have extra spacing between your TreeNode and the following item. You'll need to change
+  the SameLine() call to SameLine(0,0) to remove this extraneous spacing.
+  This seemed like the more sensible fix that's not making things less consistent.
+  (Note: when using this idiom you are likely to also use ImGuiTreeNodeFlags_SpanAvailWidth).
+
 Other changes:
 
+- Windows: Fixed subsequent Begin() append calls from setting last item information
+  for title bar, making it impossible to use IsItemHovered() on a Begin()-to-append,
+  and causing issue bypassing hover detection on collapsed windows. (#7506, #823)
 - Fonts: Fixed font ascent and descent calculation when a font hits exact integer values.
   It is possible that some prior manual use of ImFontConfig::GlyphOffset may become
   duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
+- Backends: OpenGL: Detect ES3 contexts on desktop based on version string,
+  to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
 - Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
   as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
 - Examples: GLFW+WebGPU: Added support for WebGPU-native/Dawn (#7435, #7132) [@eliasdaler, @Zelif]
