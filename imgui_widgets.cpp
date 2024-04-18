@@ -7435,7 +7435,8 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
     // Clear selection when clicking void?
     // We specifically test for IsMouseDragPastThreshold(0) == false to allow box-selection!
-    bool scope_hovered = IsWindowHovered();
+    // The InnerRect test is necessary for non-child/decorated windows.
+    bool scope_hovered = IsWindowHovered() && window->InnerRect.Contains(g.IO.MousePos);
     if (scope_hovered && (ms->Flags & ImGuiMultiSelectFlags_ScopeRect))
         scope_hovered &= scope_rect.Contains(g.IO.MousePos);
     if (scope_hovered && g.HoveredId == 0 && g.ActiveId == 0)
@@ -7443,10 +7444,13 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
         {
             if (!g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && g.IO.MouseClickedCount[0] == 1)
+            {
                 BoxSelectStartDrag(ms->BoxSelectId, ImGuiSelectionUserData_Invalid);
-            SetHoveredID(ms->BoxSelectId);
-            if (ms->Flags & ImGuiMultiSelectFlags_ScopeRect)
-                SetNavID(0, ImGuiNavLayer_Main, ms->FocusScopeId, ImRect(g.IO.MousePos, g.IO.MousePos)); // Automatically switch FocusScope for initial click from outside to box-select.
+                FocusWindow(window, ImGuiFocusRequestFlags_UnlessBelowModal);
+                SetHoveredID(ms->BoxSelectId);
+                if (ms->Flags & ImGuiMultiSelectFlags_ScopeRect)
+                    SetNavID(0, ImGuiNavLayer_Main, ms->FocusScopeId, ImRect(g.IO.MousePos, g.IO.MousePos)); // Automatically switch FocusScope for initial click from void to box-select.
+            }
         }
 
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
