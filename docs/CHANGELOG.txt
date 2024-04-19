@@ -66,8 +66,12 @@ Other changes:
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: OpenGL: Detect ES3 contexts on desktop based on version string,
   to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
+- Backends: Vulkan: Added convenience support for Volk via IMGUI_IMPL_VULKAN_USE_VOLK define.
+  (you could always use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + ImGui_ImplVulkan_LoadFunctions() as well).
+  (#6582, #4854) [@adalsteinnh, @kennyalive, @ocornut]
 - Backends: SDL3: Fixed text inputs. Re-enable calling SDL_StartTextInput()/SDL_StopTextInput()
   as SDL3 no longer enables it by default. (#7452, #6306, #6071, #1953) [@Green-Sky]
+- Examples: GLFW+Vulkan, SDL+Vulkan: Added optional support for Volk. (#6582, #4854)
 - Examples: GLFW+WebGPU: Added support for WebGPU-native/Dawn (#7435, #7132) [@eliasdaler, @Zelif]
 - Examples: GLFW+WebGPU: Renamed example_emscripten_wgpu/ to example_glfw_wgpu/. (#7435, #7132)
 

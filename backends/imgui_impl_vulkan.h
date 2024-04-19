@@ -42,13 +42,20 @@
 // If you have no idea what this is, leave it alone!
 //#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
 
-// Vulkan includes
+// Convenience support for Volk
+// (you can also technically use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + wrap Volk via ImGui_ImplVulkan_LoadFunctions().)
+//#define IMGUI_IMPL_VULKAN_USE_VOLK
+
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
 #endif
 #if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(NOMINMAX)
 #define NOMINMAX
-#include <vulkan/vulkan.h>
+#endif
+
+// Vulkan includes
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+#include <Volk/volk.h>
 #else
 #include <vulkan/vulkan.h>
 #endif
