@@ -82,9 +82,12 @@ target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
 
 # Emscripten settings
 if(EMSCRIPTEN)
+  target_compile_options(example_glfw_wgpu PUBLIC
+    "--use-port=contrib.glfw3"
+  )
   target_link_options(example_glfw_wgpu PRIVATE
     "-sUSE_WEBGPU=1"
-    "-sUSE_GLFW=3"
+    "--use-port=contrib.glfw3"
     "-sWASM=1"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=0"
