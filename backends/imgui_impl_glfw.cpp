@@ -96,7 +96,6 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <GLFW/emscripten_glfw3.h>
 #endif
 
 // We gather version tests as define in order to easily see which features are version-dependent.
@@ -774,9 +773,12 @@ void ImGui_ImplGlfw_NewFrame()
 #ifdef __EMSCRIPTEN__
 void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
 {
+  static_assert(GLFW_VERSION_COMBINED >= 3400, "Make sure you use --use-port=contrib.glfw3 instead of -sUSE_GLFW=3");
   auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
   ImGui_ImplGlfw_EmscriptenCanvasSetup(window, true, true);
 }
+
+extern int emscripten_glfw_make_canvas_resizable(GLFWwindow *window, char const *canvasResizeSelector, char const *handleSelector);
 
 void ImGui_ImplGlfw_EmscriptenCanvasSetup(GLFWwindow *window, bool full_window, bool hi_dpi_aware)
 {
