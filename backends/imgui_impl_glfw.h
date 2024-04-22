@@ -32,9 +32,7 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_NewFrame();
 
 // Emscripten related initialization phase methods
 #ifdef __EMSCRIPTEN__
-[[deprecated("Use ImGui_ImplGlfw_EmscriptenCanvasSetup instead")]]
-IMGUI_IMPL_API void     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector);
-IMGUI_IMPL_API void     ImGui_ImplGlfw_EmscriptenCanvasSetup(GLFWwindow* window, bool full_window = true, bool hi_dpi_aware = true);
+IMGUI_IMPL_API void     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector, bool disable_warning = false);
 #endif
 
 // GLFW callbacks install

@@ -96,7 +96,14 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <cstdio>
+#define EMSCRIPTEN_VERSION_COMBINED (__EMSCRIPTEN_major__ * 1000 + __EMSCRIPTEN_minor__ * 100 + __EMSCRIPTEN_tiny__)
+#define EMSCRIPTEN_CAN_USE_PORT_CONTRIB_GLFW3 (EMSCRIPTEN_VERSION_COMBINED >= 3158)
+#ifndef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+#define EMSCRIPTEN_USE_BUILTIN_GLFW3
+#else
 #include <GLFW/emscripten_glfw3.h>
+#endif
 #endif
 
 // We gather version tests as define in order to easily see which features are version-dependent.
@@ -128,6 +135,9 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+    const char*             CanvasSelector;
+#endif
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     GLFWwindowfocusfun      PrevUserCallbackWindowFocus;
@@ -329,13 +339,18 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
     if (bd->PrevUserCallbackScroll != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackScroll(window, xoffset, yoffset);
 
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+    // Ignore GLFW events: will be processed in ImGui_ImplEmscripten_WheelCallback().
+    return;
+#endif
+
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
 }
 
 static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
 {
-#if GLFW_HAS_GETKEYNAME
+#if GLFW_HAS_GETKEYNAME && !defined(EMSCRIPTEN_USE_BUILTIN_GLFW3)
     // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
     // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
     // See https://github.com/glfw/glfw/issues/1502 for details.
@@ -346,7 +361,7 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     const char* key_name = glfwGetKeyName(key, scancode);
     glfwSetErrorCallback(prev_error_callback);
-#if GLFW_HAS_GETERROR // Eat errors (see #5908)
+#if GLFW_HAS_GETERROR && !defined(EMSCRIPTEN_USE_BUILTIN_GLFW3) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
     if (key_name && key_name[0] != 0 && key_name[1] == 0)
@@ -442,6 +457,24 @@ void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 {
 	// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
 }
+
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+static EM_BOOL ImGui_ImplEmscripten_WheelCallback(int, const EmscriptenWheelEvent* ev, void*)
+{
+    // Mimic Emscripten_HandleWheel() in SDL.
+    // Corresponding equivalent in GLFW JS emulation layer has incorrect quantizing preventing small values. See #6096
+    float multiplier = 0.0f;
+    if (ev->deltaMode == DOM_DELTA_PIXEL)       { multiplier = 1.0f / 100.0f; } // 100 pixels make up a step.
+    else if (ev->deltaMode == DOM_DELTA_LINE)   { multiplier = 1.0f / 3.0f; }   // 3 lines make up a step.
+    else if (ev->deltaMode == DOM_DELTA_PAGE)   { multiplier = 80.0f; }         // A page makes up 80 steps.
+    float wheel_x = ev->deltaX * -multiplier;
+    float wheel_y = ev->deltaY * -multiplier;
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseWheelEvent(wheel_x, wheel_y);
+    //IMGUI_DEBUG_LOG("[Emsc] mode %d dx: %.2f, dy: %.2f, dz: %.2f --> feed %.2f %.2f\n", (int)ev->deltaMode, ev->deltaX, ev->deltaY, ev->deltaZ, wheel_x, wheel_y);
+    return EM_TRUE;
+}
+#endif
 
 #ifdef _WIN32
 // GLFW doesn't allow to distinguish Mouse vs TouchScreen vs Pen.
@@ -566,13 +599,19 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
     glfwSetErrorCallback(prev_error_callback);
-#if GLFW_HAS_GETERROR // Eat errors (see #5908)
+#if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     if (install_callbacks)
         ImGui_ImplGlfw_InstallCallbacks(window);
+    // Register Emscripten Wheel callback to workaround issue in Emscripten GLFW Emulation (#6096)
+    // We intentionally do not check 'if (install_callbacks)' here, as some users may set it to false and call GLFW callback themselves.
+    // FIXME: May break chaining in case user registered their own Emscripten callback?
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+    emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, false, ImGui_ImplEmscripten_WheelCallback);
+#endif
 
     // Set platform dependent data in viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -618,6 +657,9 @@ void ImGui_ImplGlfw_Shutdown()
 
     if (bd->InstalledCallbacks)
         ImGui_ImplGlfw_RestoreCallbacks(bd->Window);
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+    emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, false, nullptr);
+#endif
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         glfwDestroyCursor(bd->MouseCursors[cursor_n]);
@@ -643,7 +685,11 @@ static void ImGui_ImplGlfw_UpdateMouseData()
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
         GLFWwindow* window = bd->Window;
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+        const bool is_window_focused = true;
+#else
         const bool is_window_focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
+#endif
         if (is_window_focused)
         {
             // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
@@ -697,7 +743,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         return;
 
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-#if GLFW_HAS_GAMEPAD_API
+#if GLFW_HAS_GAMEPAD_API && !defined(EMSCRIPTEN_USE_BUILTIN_GLFW3)
     GLFWgamepadstate gamepad;
     if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))
         return;
@@ -771,22 +817,52 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateGamepads();
 }
 
-#ifdef __EMSCRIPTEN__
-void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
+#ifdef EMSCRIPTEN_USE_BUILTIN_GLFW3
+static EM_BOOL ImGui_ImplGlfw_OnCanvasSizeChange(int event_type, const EmscriptenUiEvent* event, void* user_data)
 {
-  auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
-  ImGui_ImplGlfw_EmscriptenCanvasSetup(window, true, true);
+    ImGui_ImplGlfw_Data* bd = (ImGui_ImplGlfw_Data*)user_data;
+    double canvas_width, canvas_height;
+    emscripten_get_element_css_size(bd->CanvasSelector, &canvas_width, &canvas_height);
+    glfwSetWindowSize(bd->Window, (int)canvas_width, (int)canvas_height);
+    return true;
 }
 
-void ImGui_ImplGlfw_EmscriptenCanvasSetup(GLFWwindow *window, bool full_window, bool hi_dpi_aware)
+static EM_BOOL ImGui_ImplEmscripten_FullscreenChangeCallback(int event_type, const EmscriptenFullscreenChangeEvent* event, void* user_data)
 {
-    if(full_window)
-    {
-        // make the canvas occupy the full window
-        emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
-    }
-    // make the window hi dpi aware
-    glfwSetWindowAttrib(window, GLFW_SCALE_FRAMEBUFFER, hi_dpi_aware);
+    ImGui_ImplGlfw_Data* bd = (ImGui_ImplGlfw_Data*)user_data;
+    double canvas_width, canvas_height;
+    emscripten_get_element_css_size(bd->CanvasSelector, &canvas_width, &canvas_height);
+    glfwSetWindowSize(bd->Window, (int)canvas_width, (int)canvas_height);
+    return true;
+}
+
+// 'canvas_selector' is a CSS selector. The event listener is applied to the first element that matches the query.
+// STRING MUST PERSIST FOR THE APPLICATION DURATION. PLEASE USE A STRING LITERAL OR ENSURE POINTER WILL STAY VALID.
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector, bool disable_warning)
+{
+#ifdef EMSCRIPTEN_CAN_USE_PORT_CONTRIB_GLFW3
+    if(!disable_warning)
+        printf("You are currently using -sUSE_GLFW=3. It is recommended to switch to --use-port=contrib.glfw3 (check example_glfw_wgpu for usage)\n");
+#endif
+    IM_ASSERT(canvas_selector != nullptr);
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplGlfw_InitForXXX()?");
+
+    bd->CanvasSelector = canvas_selector;
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, bd, false, ImGui_ImplGlfw_OnCanvasSizeChange);
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, bd, false, ImGui_ImplEmscripten_FullscreenChangeCallback);
+
+    // Change the size of the GLFW window according to the size of the canvas
+    ImGui_ImplGlfw_OnCanvasSizeChange(EMSCRIPTEN_EVENT_RESIZE, {}, bd);
+}
+#endif
+#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector, bool disable_warning)
+{
+    if(!disable_warning)
+        printf("[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead\n");
+    auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
+    emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
 }
 #endif
 

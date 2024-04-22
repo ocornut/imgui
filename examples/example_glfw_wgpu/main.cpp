@@ -101,7 +101,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
 #ifdef __EMSCRIPTEN__
-    ImGui_ImplGlfw_EmscriptenCanvasSetup(window);
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
 #endif
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;
