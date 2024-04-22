@@ -489,12 +489,12 @@ jobs:
         popd
         make -C examples/example_sdl2_opengl3 -f Makefile.emscripten
 
-    - name: Build example_emscripten_wgpu
+    - name: Build example_glfw_wgpu
       run: |
         pushd emsdk-master
         source ./emsdk_env.sh
         popd
-        make -C examples/example_emscripten_wgpu -f Makefile.emscripten
+        make -C examples/example_glfw_wgpu -f Makefile.emscripten
 
   Android:
     runs-on: ubuntu-22.04
