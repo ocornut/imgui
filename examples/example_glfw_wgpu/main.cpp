@@ -154,6 +154,16 @@ int main(int, char**)
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
+        // Poll WebGPU events
+#if defined(WEBGPU_BACKEND_DAWN)
+        // Tick needs to be called in Dawn to display validation errors
+        wgpuDeviceTick(wgpu_device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+        wgpuDevicePoll(wgpu_device, false, nullptr);
+#elif defined(__EMSCRIPTEN__)
+        // Nothing to do
+#endif
+
         // React to changes in screen size
         int width, height;
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
@@ -208,15 +218,6 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-
-#if defined(WEBGPU_BACKEND_DAWN)
-        // Tick needs to be called in Dawn to display validation errors
-        wgpuDeviceTick(wgpu_device);
-#elif defined(WEBGPU_BACKEND_WGPU)
-        wgpuDevicePoll(wgpu_device, false, nullptr);
-#elif defined(__EMSCRIPTEN__)
-        // Nothing to do
-#endif
 
         WGPURenderPassColorAttachment color_attachments = {};
 #ifndef WEBGPU_BACKEND_WGPU // not supported yet by wgpu-native
