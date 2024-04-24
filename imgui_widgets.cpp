@@ -1291,27 +1291,47 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     if (!ItemAdd(bb, 0))
         return;
 
+    // Fraction < 0.0f will display an indeterminate progress bar animation
+    // The value must be animated along with time, so e.g. passing '-1.0f * ImGui::GetTime()' as fraction works.
+    const bool is_indeterminate = (fraction < 0.0f);
+    if (!is_indeterminate)
+        fraction = ImSaturate(fraction);
+
     // Out of courtesy we accept a NaN fraction without crashing
-    fraction = ImSaturate(fraction);
-    const float fraction_not_nan = (fraction == fraction) ? fraction : 0.0f;
+    float fill_n0 = 0.0f;
+    float fill_n1 = (fraction == fraction) ? fraction : 0.0f;
+
+    if (is_indeterminate)
+    {
+        const float fill_width_n = 0.2f;
+        fill_n0 = ImFmod(-fraction, 1.0f) * (1.0f + fill_width_n) - fill_width_n;
+        fill_n1 = ImSaturate(fill_n0 + fill_width_n);
+        fill_n0 = ImSaturate(fill_n0);
+    }
 
     // Render
     RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
     bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
-    const ImVec2 fill_br = ImVec2(ImLerp(bb.Min.x, bb.Max.x, fraction_not_nan), bb.Max.y);
-    RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), 0.0f, fraction_not_nan, style.FrameRounding);
+    RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), fill_n0, fill_n1, style.FrameRounding);
 
     // Default displaying the fraction as percentage string, but user can override it
-    char overlay_buf[32];
-    if (!overlay)
+    // Don't display text for indeterminate bars by default
+    if (!is_indeterminate || overlay != NULL)
     {
-        ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
-        overlay = overlay_buf;
-    }
+        char overlay_buf[32];
+        if (!overlay)
+        {
+            ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
+            overlay = overlay_buf;
+        }
 
-    ImVec2 overlay_size = CalcTextSize(overlay, NULL);
-    if (overlay_size.x > 0.0f)
-        RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
+        ImVec2 overlay_size = CalcTextSize(overlay, NULL);
+        if (overlay_size.x > 0.0f)
+        {
+            float text_x = is_indeterminate ? (bb.Min.x + bb.Max.x - overlay_size.x) * 0.5f : ImLerp(bb.Min.x, bb.Max.x, fill_n1) + style.ItemSpacing.x;
+            RenderTextClipped(ImVec2(ImClamp(text_x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
+        }
+    }
 }
 
 void ImGui::Bullet()
