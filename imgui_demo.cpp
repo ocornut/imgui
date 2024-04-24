@@ -1835,7 +1835,6 @@ static void ShowDemoWindowWidgets()
         ImGui::Checkbox("Animate", &animate);
 
         // Plot as lines and plot as histogram
-        IMGUI_DEMO_MARKER("Widgets/Plotting/PlotLines, PlotHistogram");
         static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0, 80.0f));
@@ -1889,15 +1888,17 @@ static void ShowDemoWindowWidgets()
         ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
         ImGui::Separator();
 
+        ImGui::TreePop();
+    }
+
+    IMGUI_DEMO_MARKER("Widgets/Progress Bars");
+    if (ImGui::TreeNode("Progress Bars"))
+    {
         // Animate a simple progress bar
-        IMGUI_DEMO_MARKER("Widgets/Plotting/ProgressBar");
         static float progress = 0.0f, progress_dir = 1.0f;
-        if (animate)
-        {
-            progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
-            if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
-            if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
-        }
+        progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
+        if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
+        if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
 
         // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width,
         // or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
@@ -1910,6 +1911,8 @@ static void ShowDemoWindowWidgets()
         sprintf(buf, "%d/%d", (int)(progress_saturated * 1753), 1753);
         ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
 
+        // Pass an animated negative value, e.g. -1.0f * (float)ImGui::GetTime() is the recommended value.
+        // Adjust the factor if you want to adjust the animation speed.
         ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Searching..");
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Text("Indeterminate");
