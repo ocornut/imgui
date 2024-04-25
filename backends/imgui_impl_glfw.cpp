@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-04-25: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
 //  2023-12-19: Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to register canvas selector and auto-resize GLFW window.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys.
 //  2023-07-18: Inputs: Revert ignoring mouse data on GLFW_CURSOR_DISABLED as it can be used differently. User may set ImGuiConfigFLags_NoMouse if desired. (#5625, #6609)
@@ -97,12 +98,10 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <cstdio>
-#define EMSCRIPTEN_VERSION_COMBINED (__EMSCRIPTEN_major__ * 1000 + __EMSCRIPTEN_minor__ * 100 + __EMSCRIPTEN_tiny__)
-#define EMSCRIPTEN_CAN_USE_PORT_CONTRIB_GLFW3 (EMSCRIPTEN_VERSION_COMBINED >= 3158)
-#ifndef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
-#define EMSCRIPTEN_USE_BUILTIN_GLFW3
-#else
+#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
 #include <GLFW/emscripten_glfw3.h>
+#else
+#define EMSCRIPTEN_USE_BUILTIN_GLFW3
 #endif
 #endif
 
@@ -838,12 +837,8 @@ static EM_BOOL ImGui_ImplEmscripten_FullscreenChangeCallback(int event_type, con
 
 // 'canvas_selector' is a CSS selector. The event listener is applied to the first element that matches the query.
 // STRING MUST PERSIST FOR THE APPLICATION DURATION. PLEASE USE A STRING LITERAL OR ENSURE POINTER WILL STAY VALID.
-void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector, bool disable_warning)
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
 {
-#ifdef EMSCRIPTEN_CAN_USE_PORT_CONTRIB_GLFW3
-    if(!disable_warning)
-        printf("You are currently using -sUSE_GLFW=3. It is recommended to switch to --use-port=contrib.glfw3 (check example_glfw_wgpu for usage)\n");
-#endif
     IM_ASSERT(canvas_selector != nullptr);
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplGlfw_InitForXXX()?");
@@ -855,12 +850,10 @@ void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_sel
     // Change the size of the GLFW window according to the size of the canvas
     ImGui_ImplGlfw_OnCanvasSizeChange(EMSCRIPTEN_EVENT_RESIZE, {}, bd);
 }
-#endif
-#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
-void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector, bool disable_warning)
+#else
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
 {
-    if(!disable_warning)
-        printf("[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead\n");
+    printf("[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead\n");
     auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
     emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
 }
