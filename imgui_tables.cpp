@@ -3252,9 +3252,13 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     ButtonBehavior(row_r, row_id, NULL, NULL);
     KeepAliveID(row_id);
 
+    const float ascent_scaled = g.Font->Ascent * (g.FontSize / g.Font->FontSize); // FIXME: Standardize those scaling factors better
+    const float line_off_for_ascent_x = (ImMax((g.FontSize - ascent_scaled) * 0.5f, 0.0f) / -sin_a) * (flip_label ? -1.0f : 1.0f);
+    const ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
+    const ImVec2 align = g.Style.TableAngledHeadersTextAlign;
+
     // Draw background and labels in first pass, then all borders.
     float max_x = 0.0f;
-    ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
     for (int pass = 0; pass < 2; pass++)
         for (int order_n = 0; order_n < data_count; order_n++)
         {
@@ -3279,8 +3283,17 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                 // - Handle multiple lines manually, as we want each lines to follow on the horizontal border, rather than see a whole block rotated.
                 const char* label_name = TableGetColumnName(table, column_n);
                 const char* label_name_end = FindRenderedTextEnd(label_name);
-                const float line_off_step_x = (g.FontSize / -sin_a) * (flip_label ? -1.0f : 1.0f);
-                float line_off_curr_x = flip_label ? (ImTextCountLines(label_name, label_name_end) - 1) * -line_off_step_x : 0.0f;
+                const float line_off_step_x = (g.FontSize / -sin_a);
+                const int label_lines = ImTextCountLines(label_name, label_name_end);
+
+                // Left<>Right alignment
+                float line_off_curr_x = flip_label ? (label_lines - 1) * line_off_step_x : 0.0f;
+                float line_off_for_align_x = ImMax((((column->MaxX - column->MinX) - padding.x * 2.0f) - (label_lines * line_off_step_x)), 0.0f) * align.x;
+                line_off_curr_x += line_off_for_align_x - line_off_for_ascent_x;
+
+                // Register header width
+                column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(label_lines * line_off_step_x - line_off_for_align_x);
+
                 while (label_name < label_name_end)
                 {
                     const char* label_name_eol = strchr(label_name, '\n');
@@ -3298,19 +3311,21 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                     PopStyleColor();
                     int vtx_idx_end = draw_list->_VtxCurrentIdx;
 
+                    // Up<>Down alignment
+                    const float available_space = ImMax(clip_width - label_size.x + ImAbs(padding.x * cos_a) * 2.0f - ImAbs(padding.y * sin_a) * 2.0f, 0.0f);
+                    const float vertical_offset = available_space * align.y * (flip_label ? -1.0f : 1.0f);
+
                     // Rotate and offset label
-                    ImVec2 pivot_in = ImVec2(window->ClipRect.Min.x, window->ClipRect.Min.y + label_size.y);
+                    ImVec2 pivot_in = ImVec2(window->ClipRect.Min.x - vertical_offset, window->ClipRect.Min.y + label_size.y);
                     ImVec2 pivot_out = ImVec2(column->WorkMinX, row_r.Max.y);
-                    line_off_curr_x += line_off_step_x;
+                    line_off_curr_x += flip_label ? -line_off_step_x : line_off_step_x;
                     pivot_out += unit_right * padding.y;
                     if (flip_label)
                         pivot_out += unit_right * (clip_width - ImMax(0.0f, clip_width - label_size.x));
-                    pivot_out.x += flip_label ? line_off_curr_x - line_off_step_x : line_off_curr_x;
+                    pivot_out.x += flip_label ? line_off_curr_x + line_off_step_x : line_off_curr_x;
                     ShadeVertsTransformPos(draw_list, vtx_idx_begin, vtx_idx_end, pivot_in, label_cos_a, label_sin_a, pivot_out); // Rotate and offset
-                    //if (g.IO.KeyShift) { ImDrawList* fg_dl = GetForegroundDrawList(); vtx_idx_begin = fg_dl->_VtxCurrentIdx; fg_dl->AddRect(clip_r.Min, clip_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f); ShadeVertsTransformPos(fg_dl, vtx_idx_begin, fg_dl->_VtxCurrentIdx, pivot_in, label_cos_a, label_sin_a, pivot_out); }
+                    //if (g.IO.KeyShift) { ImDrawList* fg_dl = GetForegroundDrawList(); vtx_idx_begin = fg_dl->_VtxCurrentIdx; fg_dl->AddRect(clip_r.Min, clip_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 1.0f); ShadeVertsTransformPos(fg_dl, vtx_idx_begin, fg_dl->_VtxCurrentIdx, pivot_in, label_cos_a, label_sin_a, pivot_out); }
 
-                    // Register header width
-                    column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(line_off_curr_x);
                     label_name = label_name_eol + 1;
                 }
             }
