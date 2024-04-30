@@ -1316,9 +1316,9 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
 
     // Default displaying the fraction as percentage string, but user can override it
     // Don't display text for indeterminate bars by default
+    char overlay_buf[32];
     if (!is_indeterminate || overlay != NULL)
     {
-        char overlay_buf[32];
         if (!overlay)
         {
             ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
