@@ -3171,15 +3171,43 @@ void ImGui::TableHeader(const char* label)
 }
 
 // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
-// FIXME: highlight without ImGuiTableFlags_HighlightHoveredColumn
 // FIXME: No hit-testing/button on the angled header.
 void ImGui::TableAngledHeadersRow()
 {
     ImGuiContext& g = *GImGui;
-    TableAngledHeadersRowEx(g.Style.TableAngledHeadersAngle, 0.0f);
+    ImGuiTable* table = g.CurrentTable;
+    ImGuiTableTempData* temp_data = table->TempData;
+    temp_data->AngledHeadersRequests.resize(0);
+    temp_data->AngledHeadersRequests.reserve(table->ColumnsEnabledCount);
+
+    // Which column needs highlight?
+    const ImGuiID row_id = GetID("##AngledHeaders");
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    int highlight_column_n = table->HighlightColumnHeader;
+    if (highlight_column_n == -1 && table->HoveredColumnBody != -1)
+        if (table_instance->HoveredRowLast == 0 && table->HoveredColumnBorder == -1 && (g.ActiveId == 0 || g.ActiveId == row_id || (table->IsActiveIdInTable || g.DragDropActive)))
+            highlight_column_n = table->HoveredColumnBody;
+
+    // Build up request
+    ImU32 col_header_bg = GetColorU32(ImGuiCol_TableHeaderBg);
+    ImU32 col_text = GetColorU32(ImGuiCol_Text);
+    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+        if (IM_BITARRAY_TESTBIT(table->EnabledMaskByDisplayOrder, order_n))
+        {
+            const int column_n = table->DisplayOrderToIndex[order_n];
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if ((column->Flags & ImGuiTableColumnFlags_AngledHeader) == 0) // Note: can't rely on ImGuiTableColumnFlags_IsVisible test here.
+                continue;
+            ImGuiTableHeaderData request = { (ImGuiTableColumnIdx)column_n, col_text, col_header_bg, (column_n == highlight_column_n) ? GetColorU32(ImGuiCol_Header) : 0 };
+            temp_data->AngledHeadersRequests.push_back(request);
+        }
+
+    // Render row
+    TableAngledHeadersRowEx(row_id, g.Style.TableAngledHeadersAngle, 0.0f, temp_data->AngledHeadersRequests.Data, temp_data->AngledHeadersRequests.Size);
 }
 
-void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
+// Important: data must be fed left to right
+void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, const ImGuiTableHeaderData* data, int data_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -3221,28 +3249,18 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
     draw_list->AddRectFilled(ImVec2(table->BgClipRect.Min.x, row_r.Min.y), ImVec2(table->BgClipRect.Max.x, row_r.Max.y), GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
     PushClipRect(ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
 
-    const ImGuiID row_id = GetID("##AngledHeaders");
     ButtonBehavior(row_r, row_id, NULL, NULL);
     KeepAliveID(row_id);
-
-    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
-    int highlight_column_n = table->HighlightColumnHeader;
-    if (highlight_column_n == -1 && table->HoveredColumnBody != -1)
-        if (table_instance->HoveredRowLast == 0 && table->HoveredColumnBorder == -1 && (g.ActiveId == 0 || g.ActiveId == row_id || (table->IsActiveIdInTable || g.DragDropActive)))
-            highlight_column_n = table->HoveredColumnBody;
 
     // Draw background and labels in first pass, then all borders.
     float max_x = 0.0f;
     ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
     for (int pass = 0; pass < 2; pass++)
-        for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+        for (int order_n = 0; order_n < data_count; order_n++)
         {
-            if (!IM_BITARRAY_TESTBIT(table->EnabledMaskByDisplayOrder, order_n))
-                continue;
-            const int column_n = table->DisplayOrderToIndex[order_n];
+            const ImGuiTableHeaderData* request = &data[order_n];
+            const int column_n = request->Index;
             ImGuiTableColumn* column = &table->Columns[column_n];
-            if ((column->Flags & ImGuiTableColumnFlags_AngledHeader) == 0) // Note: can't rely on ImGuiTableColumnFlags_IsVisible test here.
-                continue;
 
             ImVec2 bg_shape[4];
             bg_shape[0] = ImVec2(column->MaxX, row_r.Max.y);
@@ -3252,9 +3270,8 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
             if (pass == 0)
             {
                 // Draw shape
-                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableHeaderBg));
-                if (column_n == highlight_column_n)
-                    draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_Header)); // Highlight on hover
+                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], request->BgColor0);
+                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], request->BgColor1); // Optional highlight
                 max_x = ImMax(max_x, bg_shape[3].x);
 
                 // Draw label
@@ -3276,7 +3293,9 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                     float clip_height = ImMin(label_size.y, column->ClipRect.Max.x - column->WorkMinX - line_off_curr_x);
                     ImRect clip_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width, clip_height));
                     int vtx_idx_begin = draw_list->_VtxCurrentIdx;
+                    PushStyleColor(ImGuiCol_Text, request->TextColor);
                     RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, clip_r.Max.x, label_name, label_name_eol, &label_size);
+                    PopStyleColor();
                     int vtx_idx_end = draw_list->_VtxCurrentIdx;
 
                     // Rotate and offset label
