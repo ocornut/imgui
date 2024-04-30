@@ -918,9 +918,9 @@ void ImGui::Scrollbar(ImGuiAxis axis)
     }
     float size_avail = window->InnerRect.Max[axis] - window->InnerRect.Min[axis];
     float size_contents = window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f;
-    ImS64 scroll = (ImS64)window->Scroll[axis];
+    ImS64 scroll = (ImS64)window->ScrollExpected[axis];
     ScrollbarEx(bb, id, axis, &scroll, (ImS64)size_avail, (ImS64)size_contents, rounding_corners);
-    window->Scroll[axis] = (float)scroll;
+    window->ScrollExpected[axis] = (float)scroll;
 }
 
 // Vertical/Horizontal scrollbar

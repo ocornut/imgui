@@ -3303,6 +3303,50 @@ static void ShowDemoWindowLayout()
         }
         ImGui::PopID();
 
+        // Smooth scroll functions
+        IMGUI_DEMO_MARKER("Smooth Scrolling");
+        HelpMarker("Use ImGuiStyleVar_ScrollSmooth to enable and define the amount of smooth scrolling. Move the scrolls with the same controls as the previous example to check the difference.");
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollSmooth,20.0f);
+        ImGui::PushID("##SmoothScrolling");
+        for (int i = 0; i < 5; i++) {
+            if (i > 0) ImGui::SameLine();
+            ImGui::BeginGroup();
+            const char* names[] = { "Top", "25%", "Center", "75%", "Bottom" };
+            ImGui::TextUnformatted(names[i]);
+
+            const ImGuiWindowFlags child_flags = enable_extra_decorations ? ImGuiWindowFlags_MenuBar : 0;
+            const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)i);
+            const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(child_w, 200.0f), ImGuiChildFlags_Border, child_flags);
+            if (ImGui::BeginMenuBar()) {
+                ImGui::TextUnformatted("abc");
+                ImGui::EndMenuBar();
+            }
+            if (scroll_to_off)
+                ImGui::SetScrollY(scroll_to_off_px);
+            if (scroll_to_pos)
+                ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_pos_px, i * 0.25f);
+            if (child_is_visible) // Avoid calling SetScrollHereY when running with culled items
+            {
+                for (int item = 0; item < 100; item++) {
+                    if (enable_track && item == track_item) {
+                        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Item %d", item);
+                        ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+                    } else {
+                        ImGui::Text("Item %d", item);
+                    }
+                }
+            }
+            float scroll_y = ImGui::GetScrollY();
+            float scroll_max_y = ImGui::GetScrollMaxY();
+            ImGui::EndChild();
+            ImGui::Text("%.0f/%.0f", scroll_y, scroll_max_y);
+            ImGui::EndGroup();
+        }
+        ImGui::PopID();
+        ImGui::PopStyleVar();
+
+
         // Horizontal scroll functions
         IMGUI_DEMO_MARKER("Layout/Scrolling/Horizontal");
         ImGui::Spacing();

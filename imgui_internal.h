@@ -2520,7 +2520,8 @@ struct IMGUI_API ImGuiWindow
     int                     NameBufLen;                         // Size of buffer storing Name. May be larger than strlen(Name)!
     ImGuiID                 MoveId;                             // == window->GetID("#MOVE")
     ImGuiID                 ChildId;                            // ID of corresponding item in parent window (for navigation to return from child window to parent window)
-    ImVec2                  Scroll;
+    ImVec2                  Scroll;                             // Current Visible Scroll position
+    ImVec2                  ScrollExpected;                     // Current Expected Scroll position   
     ImVec2                  ScrollMax;
     ImVec2                  ScrollTarget;                       // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     ImVec2                  ScrollTargetCenterRatio;            // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
