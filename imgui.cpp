@@ -19031,6 +19031,13 @@ static ImGuiDockNode* ImGui::DockContextBindNodeToWindow(ImGuiContext* ctx, ImGu
     return node;
 }
 
+static void StoreDockStyleForWindow(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+        window->DockStyle.Colors[color_n] = ImGui::ColorConvertFloat4ToU32(g.Style.Colors[GWindowDockStyleColors[color_n]]);
+}
+
 void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 {
     ImGuiContext& g = *GImGui;
@@ -19094,8 +19101,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Store style overrides
-    for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
-        window->DockStyle.Colors[color_n] = ColorConvertFloat4ToU32(g.Style.Colors[GWindowDockStyleColors[color_n]]);
+    StoreDockStyleForWindow(window);
 
     // Fast path return. It is common for windows to hold on a persistent DockId but be the only visible window,
     // and never create neither a host window neither a tab bar.
@@ -19185,10 +19191,7 @@ void ImGui::BeginDockableDragDropSource(ImGuiWindow* window)
     {
         SetDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, &window, sizeof(window));
         EndDragDropSource();
-
-        // Store style overrides
-        for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
-            window->DockStyle.Colors[color_n] = ColorConvertFloat4ToU32(g.Style.Colors[GWindowDockStyleColors[color_n]]);
+        StoreDockStyleForWindow(window); // Store style overrides while dragging (even when not docked) because docking preview may need it.
     }
 }
 

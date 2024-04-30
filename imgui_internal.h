@@ -161,6 +161,7 @@ struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
 struct ImGuiTypingSelectState;      // Storage for GetTypingSelectRequest()
 struct ImGuiTypingSelectRequest;    // Storage for GetTypingSelectRequest() (aimed to be public)
 struct ImGuiWindow;                 // Storage for one window
+struct ImGuiWindowDockStyle;        // Storage for window-style data which needs to be stored for docking purpose
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
 
@@ -1872,6 +1873,7 @@ enum ImGuiWindowDockStyleCol
     ImGuiWindowDockStyleCol_COUNT
 };
 
+// We don't store style.Alpha: dock_node->LastBgColor embeds it and otherwise it would only affect the docking tab, which intuitively I would say we don't want to.
 struct ImGuiWindowDockStyle
 {
     ImU32 Colors[ImGuiWindowDockStyleCol_COUNT];
