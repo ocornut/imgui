@@ -66,6 +66,7 @@ Other changes:
   cover the label. (#6937) [@dimateos]
 - ProgressBar: Added support for indeterminate progress bar by passing an animated
   negative fraction, e.g. ProgressBar(-1.0f * GetTime()). (#5316, #5370, #1901)[@gan74]
+- Tables: Angled headers: fixed multi-line label display when angle is flipped. (#6917)
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: OpenGL: Detect ES3 contexts on desktop based on version string,

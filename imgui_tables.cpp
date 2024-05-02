@@ -3279,8 +3279,8 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                 // - Handle multiple lines manually, as we want each lines to follow on the horizontal border, rather than see a whole block rotated.
                 const char* label_name = TableGetColumnName(table, column_n);
                 const char* label_name_end = FindRenderedTextEnd(label_name);
-                const float line_off_step_x = g.FontSize / -sin_a;
-                float line_off_curr_x = 0.0f;
+                const float line_off_step_x = (g.FontSize / -sin_a) * (flip_label ? -1.0f : 1.0f);
+                float line_off_curr_x = flip_label ? (ImTextCountLines(label_name, label_name_end) - 1) * -line_off_step_x : 0.0f;
                 while (label_name < label_name_end)
                 {
                     const char* label_name_eol = strchr(label_name, '\n');
