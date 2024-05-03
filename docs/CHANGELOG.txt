@@ -56,6 +56,12 @@ Breaking changes:
 
 Other changes:
 
+- Windows: Changed default ClipRect to extend to windows' left and right borders,
+  instead of adding arbitrary WindowPadding.x * 0.5f space on left and right.
+  That ClipRect half-padding was arbitrary/confusing and inconsistent with Y axis.
+  It also made it harder to draw items covering whole window without pushing an
+  extended ClipRect. Some items near windows left and right edge that used to be clipped
+  may be partly more visible. (#3312, #7540, #3756, #6170, #6365)
 - Windows: Fixed subsequent Begin() append calls from setting last item information
   for title bar, making it impossible to use IsItemHovered() on a Begin()-to-append,
   and causing issue bypassing hover detection on collapsed windows. (#7506, #823)
