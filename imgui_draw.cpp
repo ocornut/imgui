@@ -385,6 +385,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 }
 
 // Initialize before use in a new frame. We always have a command ready in the buffer.
+// In the majority of cases, you would want to call PushClipRect() and PushTextureID() after this.
 void ImDrawList::_ResetForNewFrame()
 {
     // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.

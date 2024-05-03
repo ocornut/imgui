@@ -6334,6 +6334,30 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     }
 }
 
+// [EXPERIMENTAL] Called by Begin(). NextWindowData is valid at this point.
+// This is designed as a toy/test-bed for
+void ImGui::UpdateWindowSkipRefresh(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    window->SkipRefresh = false;
+    if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasRefreshPolicy) == 0)
+        return;
+    if (g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_TryToAvoidRefresh)
+    {
+        // FIXME-IDLE: Tests for e.g. mouse clicks or keyboard while focused.
+        if (window->Appearing) // If currently appearing
+            return;
+        if (window->Hidden) // If was hidden (previous frame)
+            return;
+        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnHover) && g.HoveredWindow && window->RootWindow == g.HoveredWindow->RootWindow)
+            return;
+        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnFocus) && g.NavWindow && window->RootWindow == g.NavWindow->RootWindow)
+            return;
+        window->DrawList = NULL;
+        window->SkipRefresh = true;
+    }
+}
+
 // When a modal popup is open, newly created windows that want focus (i.e. are not popups and do not specify ImGuiWindowFlags_NoFocusOnAppearing)
 // should be positioned behind that modal window, unless the window was created inside the modal begin-stack.
 // In case of multiple stacked modals newly created window honors begin stack order and does not go below its own modal parent.
@@ -6532,11 +6556,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
+    // [EXPERIMENTAL] Skip Refresh mode
+    UpdateWindowSkipRefresh(window);
+
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindow = NULL;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
-    if (first_begin_of_the_frame)
+    if (first_begin_of_the_frame && !window->SkipRefresh)
     {
         // Initialize
         const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
@@ -7027,12 +7054,17 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     else
     {
+        // Skip refresh always mark active
+        if (window->SkipRefresh)
+            window->Active = true;
+
         // Append
         SetCurrentWindow(window);
         SetLastItemDataForWindow(window, window->TitleBarRect());
     }
 
-    PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
+    if (!window->SkipRefresh)
+        PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
 
     // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
     window->WriteAccessed = false;
@@ -7040,7 +7072,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     g.NextWindowData.ClearFlags();
 
     // Update visibility
-    if (first_begin_of_the_frame)
+    if (first_begin_of_the_frame && !window->SkipRefresh)
     {
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ChildMenu))
         {
@@ -7086,6 +7118,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 skip_items = true;
         window->SkipItems = skip_items;
     }
+    else if (first_begin_of_the_frame)
+    {
+        // Skip refresh mode
+        window->SkipItems = true;
+    }
 
     // [DEBUG] io.ConfigDebugBeginReturnValue override return value to test Begin/End and BeginChild/EndChild behaviors.
     // (The implicit fallback window is NOT automatically ended allowing it to always be able to receive commands without crashing)
@@ -7128,8 +7165,15 @@ void ImGui::End()
     // Close anything that is open
     if (window->DC.CurrentColumns)
         EndColumns();
-    PopClipRect();   // Inner window clip rectangle
+    if (!window->SkipRefresh)
+        PopClipRect();   // Inner window clip rectangle
     PopFocusScope();
+
+    if (window->SkipRefresh)
+    {
+        IM_ASSERT(window->DrawList == NULL);
+        window->DrawList = &window->DrawListInst;
+    }
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
@@ -7813,6 +7857,14 @@ void ImGui::SetNextWindowBgAlpha(float alpha)
     ImGuiContext& g = *GImGui;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasBgAlpha;
     g.NextWindowData.BgAlphaVal = alpha;
+}
+
+// This is experimental and meant to be a toy for exploring a future/wider range of features.
+void ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasRefreshPolicy;
+    g.NextWindowData.RefreshFlagsVal = flags;
 }
 
 ImDrawList* ImGui::GetWindowDrawList()
