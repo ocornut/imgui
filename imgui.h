@@ -323,7 +323,7 @@ struct ImStrv
     const char* End;
     ImStrv()                            { Begin = End = NULL; }
     ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
-    ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b + strlen(b); }
+    ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b ? b + strlen(b) : NULL; }
     inline size_t length() const        { return (size_t)(End - Begin); }
     inline bool empty() const           { return Begin == End; }    // == "" or == NULL
     inline operator bool() const        { return Begin != NULL; }   // return true when valid ("" is valid, NULL construction is not)
