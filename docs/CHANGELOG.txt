@@ -56,6 +56,12 @@ Breaking changes:
 
 Other changes:
 
+- Windows: Changed default ClipRect to extend to windows' left and right borders,
+  instead of adding arbitrary WindowPadding.x * 0.5f space on left and right.
+  That ClipRect half-padding was arbitrary/confusing and inconsistent with Y axis.
+  It also made it harder to draw items covering whole window without pushing an
+  extended ClipRect. Some items near windows left and right edge that used to be clipped
+  may be partly more visible. (#3312, #7540, #3756, #6170, #6365)
 - Windows: Fixed subsequent Begin() append calls from setting last item information
   for title bar, making it impossible to use IsItemHovered() on a Begin()-to-append,
   and causing issue bypassing hover detection on collapsed windows. (#7506, #823)
@@ -66,6 +72,10 @@ Other changes:
   cover the label. (#6937) [@dimateos]
 - ProgressBar: Added support for indeterminate progress bar by passing an animated
   negative fraction, e.g. ProgressBar(-1.0f * GetTime()). (#5316, #5370, #1901)[@gan74]
+- Tables: Angled headers: fixed multi-line label display when angle is flipped. (#6917)
+- Tables: Angled headers: added style.TableAngledHeadersTextAlign and corresponding
+  ImGuiStyleVar_TableAngledHeadersTextAlign variable. Default to horizontal center. (#6917)
+  [@thedmd, @ocornut]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: OpenGL: Detect ES3 contexts on desktop based on version string,

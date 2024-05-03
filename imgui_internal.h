@@ -153,6 +153,7 @@ struct ImGuiStyleMod;               // Stacked style modifier, backup of modifie
 struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiTable;                  // Storage for a table
+struct ImGuiTableHeaderData;        // Storage for TableAngledHeadersRow()
 struct ImGuiTableColumn;            // Storage for one column of a table
 struct ImGuiTableInstanceData;      // Storage for one instance of a same table
 struct ImGuiTableTempData;          // Temporary storage for one table (one per table in the stack), shared between tables.
@@ -418,6 +419,7 @@ IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char
 IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                             // return number of bytes to express one char in UTF-8
 IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                        // return number of bytes to express string in UTF-8
 IMGUI_API const char*   ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr);                   // return previous UTF-8 code-point.
+IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_text_end);                                         // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
 
 // Helpers: File System
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
@@ -3019,11 +3021,22 @@ struct ImGuiTableColumn
 };
 
 // Transient cell data stored per row.
-// sizeof() ~ 6
+// sizeof() ~ 6 bytes
 struct ImGuiTableCellData
 {
     ImU32                       BgColor;    // Actual color
     ImGuiTableColumnIdx         Column;     // Column number
+};
+
+// Parameters for TableAngledHeadersRowEx()
+// This may end up being refactored for more general purpose.
+// sizeof() ~ 12 bytes
+struct ImGuiTableHeaderData
+{
+    ImGuiTableColumnIdx         Index;      // Column index
+    ImU32                       TextColor;
+    ImU32                       BgColor0;
+    ImU32                       BgColor1;
 };
 
 // Per-instance data that needs preserving across frames (seemingly most others do not need to be preserved aside from debug needs. Does that means they could be moved to ImGuiTableTempData?)
@@ -3111,7 +3124,7 @@ struct IMGUI_API ImGuiTable
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImGuiTableColumnIdx         SortSpecsCount;
     ImGuiTableColumnIdx         ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
-    ImGuiTableColumnIdx         ColumnsEnabledFixedCount;   // Number of enabled columns (<= ColumnsCount)
+    ImGuiTableColumnIdx         ColumnsEnabledFixedCount;   // Number of enabled columns using fixed width (<= ColumnsCount)
     ImGuiTableColumnIdx         DeclColumnsCount;           // Count calls to TableSetupColumn()
     ImGuiTableColumnIdx         AngledHeadersCount;         // Count columns with angled headers
     ImGuiTableColumnIdx         HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
@@ -3164,12 +3177,13 @@ struct IMGUI_API ImGuiTable
 // Transient data that are only needed between BeginTable() and EndTable(), those buffers are shared (1 per level of stacked table).
 // - Accessing those requires chasing an extra pointer so for very frequently used data we leave them in the main table structure.
 // - We also leave out of this structure data that tend to be particularly useful for debugging/metrics.
-// sizeof() ~ 120 bytes.
+// sizeof() ~ 136 bytes.
 struct IMGUI_API ImGuiTableTempData
 {
     int                         TableIndex;                 // Index in g.Tables.Buf[] pool
     float                       LastTimeActive;             // Last timestamp this structure was used
     float                       AngledHeadersExtraWidth;    // Used in EndTable()
+    ImVector<ImGuiTableHeaderData> AngledHeadersRequests;   // Used in TableAngledHeadersRow()
 
     ImVec2                      UserOuterSize;              // outer_size.x passed to BeginTable()
     ImDrawListSplitter          DrawSplitter;
@@ -3613,7 +3627,7 @@ namespace ImGui
     IMGUI_API float         TableGetHeaderAngledMaxLabelWidth();
     IMGUI_API void          TablePushBackgroundChannel();
     IMGUI_API void          TablePopBackgroundChannel();
-    IMGUI_API void          TableAngledHeadersRowEx(float angle, float max_label_width = 0.0f);
+    IMGUI_API void          TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, const ImGuiTableHeaderData* data, int data_count);
 
     // Tables: Internals
     inline    ImGuiTable*   GetCurrentTable() { ImGuiContext& g = *GImGui; return g.CurrentTable; }

@@ -3171,15 +3171,43 @@ void ImGui::TableHeader(const char* label)
 }
 
 // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
-// FIXME: highlight without ImGuiTableFlags_HighlightHoveredColumn
 // FIXME: No hit-testing/button on the angled header.
 void ImGui::TableAngledHeadersRow()
 {
     ImGuiContext& g = *GImGui;
-    TableAngledHeadersRowEx(g.Style.TableAngledHeadersAngle, 0.0f);
+    ImGuiTable* table = g.CurrentTable;
+    ImGuiTableTempData* temp_data = table->TempData;
+    temp_data->AngledHeadersRequests.resize(0);
+    temp_data->AngledHeadersRequests.reserve(table->ColumnsEnabledCount);
+
+    // Which column needs highlight?
+    const ImGuiID row_id = GetID("##AngledHeaders");
+    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
+    int highlight_column_n = table->HighlightColumnHeader;
+    if (highlight_column_n == -1 && table->HoveredColumnBody != -1)
+        if (table_instance->HoveredRowLast == 0 && table->HoveredColumnBorder == -1 && (g.ActiveId == 0 || g.ActiveId == row_id || (table->IsActiveIdInTable || g.DragDropActive)))
+            highlight_column_n = table->HoveredColumnBody;
+
+    // Build up request
+    ImU32 col_header_bg = GetColorU32(ImGuiCol_TableHeaderBg);
+    ImU32 col_text = GetColorU32(ImGuiCol_Text);
+    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+        if (IM_BITARRAY_TESTBIT(table->EnabledMaskByDisplayOrder, order_n))
+        {
+            const int column_n = table->DisplayOrderToIndex[order_n];
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if ((column->Flags & ImGuiTableColumnFlags_AngledHeader) == 0) // Note: can't rely on ImGuiTableColumnFlags_IsVisible test here.
+                continue;
+            ImGuiTableHeaderData request = { (ImGuiTableColumnIdx)column_n, col_text, col_header_bg, (column_n == highlight_column_n) ? GetColorU32(ImGuiCol_Header) : 0 };
+            temp_data->AngledHeadersRequests.push_back(request);
+        }
+
+    // Render row
+    TableAngledHeadersRowEx(row_id, g.Style.TableAngledHeadersAngle, 0.0f, temp_data->AngledHeadersRequests.Data, temp_data->AngledHeadersRequests.Size);
 }
 
-void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
+// Important: data must be fed left to right
+void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, const ImGuiTableHeaderData* data, int data_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -3221,28 +3249,22 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
     draw_list->AddRectFilled(ImVec2(table->BgClipRect.Min.x, row_r.Min.y), ImVec2(table->BgClipRect.Max.x, row_r.Max.y), GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
     PushClipRect(ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
 
-    const ImGuiID row_id = GetID("##AngledHeaders");
     ButtonBehavior(row_r, row_id, NULL, NULL);
     KeepAliveID(row_id);
 
-    ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
-    int highlight_column_n = table->HighlightColumnHeader;
-    if (highlight_column_n == -1 && table->HoveredColumnBody != -1)
-        if (table_instance->HoveredRowLast == 0 && table->HoveredColumnBorder == -1 && (g.ActiveId == 0 || g.ActiveId == row_id || (table->IsActiveIdInTable || g.DragDropActive)))
-            highlight_column_n = table->HoveredColumnBody;
+    const float ascent_scaled = g.Font->Ascent * (g.FontSize / g.Font->FontSize); // FIXME: Standardize those scaling factors better
+    const float line_off_for_ascent_x = (ImMax((g.FontSize - ascent_scaled) * 0.5f, 0.0f) / -sin_a) * (flip_label ? -1.0f : 1.0f);
+    const ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
+    const ImVec2 align = g.Style.TableAngledHeadersTextAlign;
 
     // Draw background and labels in first pass, then all borders.
     float max_x = 0.0f;
-    ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
     for (int pass = 0; pass < 2; pass++)
-        for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+        for (int order_n = 0; order_n < data_count; order_n++)
         {
-            if (!IM_BITARRAY_TESTBIT(table->EnabledMaskByDisplayOrder, order_n))
-                continue;
-            const int column_n = table->DisplayOrderToIndex[order_n];
+            const ImGuiTableHeaderData* request = &data[order_n];
+            const int column_n = request->Index;
             ImGuiTableColumn* column = &table->Columns[column_n];
-            if ((column->Flags & ImGuiTableColumnFlags_AngledHeader) == 0) // Note: can't rely on ImGuiTableColumnFlags_IsVisible test here.
-                continue;
 
             ImVec2 bg_shape[4];
             bg_shape[0] = ImVec2(column->MaxX, row_r.Max.y);
@@ -3252,9 +3274,8 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
             if (pass == 0)
             {
                 // Draw shape
-                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_TableHeaderBg));
-                if (column_n == highlight_column_n)
-                    draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], GetColorU32(ImGuiCol_Header)); // Highlight on hover
+                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], request->BgColor0);
+                draw_list->AddQuadFilled(bg_shape[0], bg_shape[1], bg_shape[2], bg_shape[3], request->BgColor1); // Optional highlight
                 max_x = ImMax(max_x, bg_shape[3].x);
 
                 // Draw label
@@ -3262,8 +3283,17 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                 // - Handle multiple lines manually, as we want each lines to follow on the horizontal border, rather than see a whole block rotated.
                 const char* label_name = TableGetColumnName(table, column_n);
                 const char* label_name_end = FindRenderedTextEnd(label_name);
-                const float line_off_step_x = g.FontSize / -sin_a;
-                float line_off_curr_x = 0.0f;
+                const float line_off_step_x = (g.FontSize / -sin_a);
+                const int label_lines = ImTextCountLines(label_name, label_name_end);
+
+                // Left<>Right alignment
+                float line_off_curr_x = flip_label ? (label_lines - 1) * line_off_step_x : 0.0f;
+                float line_off_for_align_x = ImMax((((column->MaxX - column->MinX) - padding.x * 2.0f) - (label_lines * line_off_step_x)), 0.0f) * align.x;
+                line_off_curr_x += line_off_for_align_x - line_off_for_ascent_x;
+
+                // Register header width
+                column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(label_lines * line_off_step_x - line_off_for_align_x);
+
                 while (label_name < label_name_end)
                 {
                     const char* label_name_eol = strchr(label_name, '\n');
@@ -3276,22 +3306,26 @@ void ImGui::TableAngledHeadersRowEx(float angle, float max_label_width)
                     float clip_height = ImMin(label_size.y, column->ClipRect.Max.x - column->WorkMinX - line_off_curr_x);
                     ImRect clip_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width, clip_height));
                     int vtx_idx_begin = draw_list->_VtxCurrentIdx;
+                    PushStyleColor(ImGuiCol_Text, request->TextColor);
                     RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, clip_r.Max.x, label_name, label_name_eol, &label_size);
+                    PopStyleColor();
                     int vtx_idx_end = draw_list->_VtxCurrentIdx;
 
+                    // Up<>Down alignment
+                    const float available_space = ImMax(clip_width - label_size.x + ImAbs(padding.x * cos_a) * 2.0f - ImAbs(padding.y * sin_a) * 2.0f, 0.0f);
+                    const float vertical_offset = available_space * align.y * (flip_label ? -1.0f : 1.0f);
+
                     // Rotate and offset label
-                    ImVec2 pivot_in = ImVec2(window->ClipRect.Min.x, window->ClipRect.Min.y + label_size.y);
+                    ImVec2 pivot_in = ImVec2(window->ClipRect.Min.x - vertical_offset, window->ClipRect.Min.y + label_size.y);
                     ImVec2 pivot_out = ImVec2(column->WorkMinX, row_r.Max.y);
-                    line_off_curr_x += line_off_step_x;
+                    line_off_curr_x += flip_label ? -line_off_step_x : line_off_step_x;
                     pivot_out += unit_right * padding.y;
                     if (flip_label)
                         pivot_out += unit_right * (clip_width - ImMax(0.0f, clip_width - label_size.x));
-                    pivot_out.x += flip_label ? line_off_curr_x - line_off_step_x : line_off_curr_x;
+                    pivot_out.x += flip_label ? line_off_curr_x + line_off_step_x : line_off_curr_x;
                     ShadeVertsTransformPos(draw_list, vtx_idx_begin, vtx_idx_end, pivot_in, label_cos_a, label_sin_a, pivot_out); // Rotate and offset
-                    //if (g.IO.KeyShift) { ImDrawList* fg_dl = GetForegroundDrawList(); vtx_idx_begin = fg_dl->_VtxCurrentIdx; fg_dl->AddRect(clip_r.Min, clip_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 2.0f); ShadeVertsTransformPos(fg_dl, vtx_idx_begin, fg_dl->_VtxCurrentIdx, pivot_in, label_cos_a, label_sin_a, pivot_out); }
+                    //if (g.IO.KeyShift) { ImDrawList* fg_dl = GetForegroundDrawList(); vtx_idx_begin = fg_dl->_VtxCurrentIdx; fg_dl->AddRect(clip_r.Min, clip_r.Max, IM_COL32(0, 255, 0, 255), 0.0f, 0, 1.0f); ShadeVertsTransformPos(fg_dl, vtx_idx_begin, fg_dl->_VtxCurrentIdx, pivot_in, label_cos_a, label_sin_a, pivot_out); }
 
-                    // Register header width
-                    column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(line_off_curr_x);
                     label_name = label_name_eol + 1;
                 }
             }

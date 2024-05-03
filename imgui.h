@@ -28,7 +28,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.90.6 WIP"
-#define IMGUI_VERSION_NUM   19053
+#define IMGUI_VERSION_NUM   19054
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -1637,39 +1637,40 @@ enum ImGuiCol_
 // - When changing this enum, you need to update the associated internal table GStyleVarInfo[] accordingly. This is where we link enum values to members offset/type.
 enum ImGuiStyleVar_
 {
-    // Enum name --------------------- // Member in ImGuiStyle structure (see ImGuiStyle for descriptions)
-    ImGuiStyleVar_Alpha,               // float     Alpha
-    ImGuiStyleVar_DisabledAlpha,       // float     DisabledAlpha
-    ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
-    ImGuiStyleVar_WindowRounding,      // float     WindowRounding
-    ImGuiStyleVar_WindowBorderSize,    // float     WindowBorderSize
-    ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
-    ImGuiStyleVar_WindowTitleAlign,    // ImVec2    WindowTitleAlign
-    ImGuiStyleVar_ChildRounding,       // float     ChildRounding
-    ImGuiStyleVar_ChildBorderSize,     // float     ChildBorderSize
-    ImGuiStyleVar_PopupRounding,       // float     PopupRounding
-    ImGuiStyleVar_PopupBorderSize,     // float     PopupBorderSize
-    ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
-    ImGuiStyleVar_FrameRounding,       // float     FrameRounding
-    ImGuiStyleVar_FrameBorderSize,     // float     FrameBorderSize
-    ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
-    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2    ItemInnerSpacing
-    ImGuiStyleVar_IndentSpacing,       // float     IndentSpacing
-    ImGuiStyleVar_CellPadding,         // ImVec2    CellPadding
-    ImGuiStyleVar_ScrollbarSize,       // float     ScrollbarSize
-    ImGuiStyleVar_ScrollbarRounding,   // float     ScrollbarRounding
-    ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
-    ImGuiStyleVar_GrabRounding,        // float     GrabRounding
-    ImGuiStyleVar_TabRounding,         // float     TabRounding
-    ImGuiStyleVar_TabBorderSize,       // float     TabBorderSize
-    ImGuiStyleVar_TabBarBorderSize,    // float     TabBarBorderSize
-    ImGuiStyleVar_TableAngledHeadersAngle,// float  TableAngledHeadersAngle
-    ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
-    ImGuiStyleVar_SelectableTextAlign, // ImVec2    SelectableTextAlign
-    ImGuiStyleVar_SeparatorTextBorderSize,// float  SeparatorTextBorderSize
-    ImGuiStyleVar_SeparatorTextAlign,  // ImVec2    SeparatorTextAlign
-    ImGuiStyleVar_SeparatorTextPadding,// ImVec2    SeparatorTextPadding
-    ImGuiStyleVar_DockingSeparatorSize,// float     DockingSeparatorSize
+    // Enum name -------------------------- // Member in ImGuiStyle structure (see ImGuiStyle for descriptions)
+    ImGuiStyleVar_Alpha,                    // float     Alpha
+    ImGuiStyleVar_DisabledAlpha,            // float     DisabledAlpha
+    ImGuiStyleVar_WindowPadding,            // ImVec2    WindowPadding
+    ImGuiStyleVar_WindowRounding,           // float     WindowRounding
+    ImGuiStyleVar_WindowBorderSize,         // float     WindowBorderSize
+    ImGuiStyleVar_WindowMinSize,            // ImVec2    WindowMinSize
+    ImGuiStyleVar_WindowTitleAlign,         // ImVec2    WindowTitleAlign
+    ImGuiStyleVar_ChildRounding,            // float     ChildRounding
+    ImGuiStyleVar_ChildBorderSize,          // float     ChildBorderSize
+    ImGuiStyleVar_PopupRounding,            // float     PopupRounding
+    ImGuiStyleVar_PopupBorderSize,          // float     PopupBorderSize
+    ImGuiStyleVar_FramePadding,             // ImVec2    FramePadding
+    ImGuiStyleVar_FrameRounding,            // float     FrameRounding
+    ImGuiStyleVar_FrameBorderSize,          // float     FrameBorderSize
+    ImGuiStyleVar_ItemSpacing,              // ImVec2    ItemSpacing
+    ImGuiStyleVar_ItemInnerSpacing,         // ImVec2    ItemInnerSpacing
+    ImGuiStyleVar_IndentSpacing,            // float     IndentSpacing
+    ImGuiStyleVar_CellPadding,              // ImVec2    CellPadding
+    ImGuiStyleVar_ScrollbarSize,            // float     ScrollbarSize
+    ImGuiStyleVar_ScrollbarRounding,        // float     ScrollbarRounding
+    ImGuiStyleVar_GrabMinSize,              // float     GrabMinSize
+    ImGuiStyleVar_GrabRounding,             // float     GrabRounding
+    ImGuiStyleVar_TabRounding,              // float     TabRounding
+    ImGuiStyleVar_TabBorderSize,            // float     TabBorderSize
+    ImGuiStyleVar_TabBarBorderSize,         // float     TabBarBorderSize
+    ImGuiStyleVar_TableAngledHeadersAngle,  // float     TableAngledHeadersAngle
+    ImGuiStyleVar_TableAngledHeadersTextAlign,// ImVec2  TableAngledHeadersTextAlign
+    ImGuiStyleVar_ButtonTextAlign,          // ImVec2    ButtonTextAlign
+    ImGuiStyleVar_SelectableTextAlign,      // ImVec2    SelectableTextAlign
+    ImGuiStyleVar_SeparatorTextBorderSize,  // float     SeparatorTextBorderSize
+    ImGuiStyleVar_SeparatorTextAlign,       // ImVec2    SeparatorTextAlign
+    ImGuiStyleVar_SeparatorTextPadding,     // ImVec2    SeparatorTextPadding
+    ImGuiStyleVar_DockingSeparatorSize,     // float     DockingSeparatorSize
     ImGuiStyleVar_COUNT
 };
 
@@ -2098,6 +2099,7 @@ struct ImGuiStyle
     float       TabMinWidthForCloseButton;  // Minimum width for close button to appear on an unselected tab when hovered. Set to 0.0f to always show when hovering, set to FLT_MAX to never show close button unless selected.
     float       TabBarBorderSize;           // Thickness of tab-bar separator, which takes on the tab active color to denote focus.
     float       TableAngledHeadersAngle;    // Angle of angled headers (supported values range from -50.0f degrees to +50.0f degrees).
+    ImVec2      TableAngledHeadersTextAlign;// Alignment of angled headers within the cell
     ImGuiDir    ColorButtonPosition;        // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
     ImVec2      SelectableTextAlign;        // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
