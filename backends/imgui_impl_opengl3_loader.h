@@ -668,8 +668,11 @@ static GL3WglProc (*glx_get_proc_address)(const GLubyte *);
 
 static int open_libgl(void)
 {
+    // Modern post-X11 GLVN-based OpenGL implementation on GNU/Linux uses libOpenGL.so instead of libGL.so used by legacy GLX.
     // While most systems use libGL.so.1, NetBSD seems to use that libGL.so.3. See https://github.com/ocornut/imgui/issues/6983
-    libgl = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
+    libgl = dlopen("libOpenGL.so", RTLD_LAZY | RTLD_LOCAL);
+    if (!libgl)
+        libgl = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
         libgl = dlopen("libGL.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
@@ -684,8 +687,11 @@ static void close_libgl(void) { dlclose(libgl); }
 
 static GL3WglProc get_proc(const char *proc)
 {
-    GL3WglProc res;
-    res = glx_get_proc_address((const GLubyte *)proc);
+    GL3WglProc res = NULL;
+    // Modern post-X11 GLVN-based OpenGL implementation on GNU/Linux doesn't have glxGetProcAddress,
+    // so watch out for null function pointer. 
+    if (glx_get_proc_address)
+        res = glx_get_proc_address((const GLubyte *)proc);
     if (!res)
         *(void **)(&res) = dlsym(libgl, proc);
     return res;
