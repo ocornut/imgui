@@ -95,6 +95,8 @@ Docking+Viewports Branch:
   reading SetNextWindowXXX() data. (#6709, #4643, #7491) [@ocornut, @cfillion]
 - Viewports: fixed outer-right edge of MenuBar clipping rectangle off by one when window
   is located on a monitor with negative coordinates. (#6861, #2884) [@cfillion]
+- Backends: Vulkan: reworked swap-chain resize handling for secondary viewports, fix for
+  typical Linux setups. (#2626, #3390, #3758, #7508, #7513) [@RoryO, @InsideBSITheSecond]
 - Backends: Vulkan: create a custom pipeline for secondary viewports. Fixes issues
   when user created main viewport uses a different renderpass. (#6325, #6305, #7398,
   #3459, #3253, #3522) [@skaman, @FunMiles]
