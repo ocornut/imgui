@@ -665,31 +665,123 @@ static GL3WglProc get_proc(const char *proc)
 #else
 #include <dlfcn.h>
 
-static void *libgl;
-static GL3WglProc (*glx_get_proc_address)(const GLubyte *);
+static void* libgl;  // OpenGL library
+static void* libglx;  // GLX library
+static void* libegl;  // EGL library
+static GL3WGetProcAddressProc gl_get_proc_address;
 
-static int open_libgl(void)
+static void close_libgl(void)
 {
+    if (libgl) {
+        dlclose(libgl);
+        libgl = NULL;
+    }
+    if (libegl) {
+        dlclose(libegl);
+        libegl = NULL;
+    }
+    if (libglx) {
+        dlclose(libglx);
+        libglx = NULL;
+    }
+}
+
+static int is_library_loaded(const char* name, void** lib)
+{
+    *lib = dlopen(name, RTLD_LAZY | RTLD_LOCAL | RTLD_NOLOAD);
+    return *lib != NULL;
+}
+
+static int open_libs(void)
+{
+    // On Linux we have two APIs to get process addresses: EGL and GLX.
+    // EGL is supported under both X11 and Wayland, whereas GLX is X11-specific.
+
+    libgl = NULL;
+    libegl = NULL;
+    libglx = NULL;
+
+    // First check what's already loaded, the windowing library might have
+    // already loaded either EGL or GLX and we want to use the same one.
+
+    if (is_library_loaded("libEGL.so.1", &libegl) ||
+        is_library_loaded("libGLX.so.0", &libglx)) {
+        libgl = dlopen("libOpenGL.so.0", RTLD_LAZY | RTLD_LOCAL);
+        if (libgl)
+            return GL3W_OK;
+        else
+            close_libgl();
+    }
+
+    if (is_library_loaded("libGL.so", &libgl))
+        return GL3W_OK;
+    if (is_library_loaded("libGL.so.1", &libgl))
+        return GL3W_OK;
+    if (is_library_loaded("libGL.so.3", &libgl))
+        return GL3W_OK;
+
+    // Neither is already loaded, so we have to load one.  Try EGL first
+    // because it is supported under both X11 and Wayland.
+
+    // Load OpenGL + EGL
+    libgl = dlopen("libOpenGL.so.0", RTLD_LAZY | RTLD_LOCAL);
+    libegl = dlopen("libEGL.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (libgl && libegl)
+        return GL3W_OK;
+    else
+        close_libgl();
+
+    // Fall back to legacy libGL, which includes GLX
     // While most systems use libGL.so.1, NetBSD seems to use that libGL.so.3. See https://github.com/ocornut/imgui/issues/6983
     libgl = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
         libgl = dlopen("libGL.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
         libgl = dlopen("libGL.so.3", RTLD_LAZY | RTLD_LOCAL);
-    if (!libgl)
+
+    if (libgl)
+        return GL3W_OK;
+
+    return GL3W_ERROR_LIBRARY_OPEN;
+}
+
+static int open_libgl(void)
+{
+    int res = open_libs();
+    if (res)
+        return res;
+
+    if (libegl)
+        *(void**)(&gl_get_proc_address) = dlsym(libegl, "eglGetProcAddress");
+    else if (libglx)
+        *(void**)(&gl_get_proc_address) = dlsym(libglx, "glXGetProcAddressARB");
+    else
+        *(void**)(&gl_get_proc_address) = dlsym(libgl, "glXGetProcAddressARB");
+
+    if (!gl_get_proc_address) {
+        close_libgl();
         return GL3W_ERROR_LIBRARY_OPEN;
-    *(void **)(&glx_get_proc_address) = dlsym(libgl, "glXGetProcAddressARB");
+    }
+
     return GL3W_OK;
 }
 
-static void close_libgl(void) { dlclose(libgl); }
-
-static GL3WglProc get_proc(const char *proc)
+static GL3WglProc get_proc(const char* proc)
 {
-    GL3WglProc res;
-    res = glx_get_proc_address((const GLubyte *)proc);
+    GL3WglProc res = NULL;
+
+    // Before EGL version 1.5, eglGetProcAddress doesn't support querying core
+    // functions and may return a dummy function if we try, so try to load the
+    // function from the GL library directly first.
+    if (libegl)
+        *(void**)(&res) = dlsym(libgl, proc);
+
     if (!res)
-        *(void **)(&res) = dlsym(libgl, proc);
+        res = gl_get_proc_address(proc);
+
+    if (!libegl && !res)
+        *(void**)(&res) = dlsym(libgl, proc);
+
     return res;
 }
 #endif

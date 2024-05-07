@@ -80,6 +80,7 @@ Other changes:
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
 - Backends: OpenGL3: Detect ES3 contexts on desktop based on version string,
   to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
+- Backends: OpenGL3: Update loader for Linux to support EGL/GLVND. (#7562) [@ShadowNinja, @vanfanel]
 - Backends: Vulkan: Added convenience support for Volk via IMGUI_IMPL_VULKAN_USE_VOLK define.
   (you could always use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + ImGui_ImplVulkan_LoadFunctions() as well).
   (#6582, #4854) [@adalsteinnh, @kennyalive, @ocornut]
