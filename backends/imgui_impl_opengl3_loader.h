@@ -18,7 +18,7 @@
 // WILL NOT BE USING OUR LOADER, AND INSTEAD EXPECT ANOTHER/YOUR LOADER TO BE AVAILABLE IN THE COMPILATION UNIT.
 //
 // Regenerate with:
-//   python gl3w_gen.py --output ../imgui/backends/imgui_impl_opengl3_loader.h --ref ../imgui/backends/imgui_impl_opengl3.cpp ./extra_symbols.txt
+//   python3 gl3w_gen.py --output ../imgui/backends/imgui_impl_opengl3_loader.h --ref ../imgui/backends/imgui_impl_opengl3.cpp ./extra_symbols.txt
 //
 // More info:
 //   https://github.com/dearimgui/gl3w_stripped
@@ -118,7 +118,7 @@ extern "C" {
 ** included as <GL/glcorearb.h>.
 **
 ** glcorearb.h includes only APIs in the latest OpenGL core profile
-** implementation together with APIs in newer ARB extensions which
+** implementation together with APIs in newer ARB extensions which 
 ** can be supported by the core profile. It does not, and never will
 ** include functionality removed from the core profile, such as
 ** fixed-function vertex and fragment processing.
@@ -260,8 +260,6 @@ typedef khronos_intptr_t GLintptr;
 #define GL_ARRAY_BUFFER_BINDING           0x8894
 #define GL_ELEMENT_ARRAY_BUFFER_BINDING   0x8895
 #define GL_STREAM_DRAW                    0x88E0
-#define GL_PIXEL_UNPACK_BUFFER            0x88EC
-#define GL_PIXEL_UNPACK_BUFFER_BINDING    0x88EF
 typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
 typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
@@ -348,6 +346,10 @@ GLAPI void APIENTRY glUniformMatrix4fv (GLint location, GLsizei count, GLboolean
 GLAPI void APIENTRY glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
 #endif
 #endif /* GL_VERSION_2_0 */
+#ifndef GL_VERSION_2_1
+#define GL_PIXEL_UNPACK_BUFFER            0x88EC
+#define GL_PIXEL_UNPACK_BUFFER_BINDING    0x88EF
+#endif /* GL_VERSION_2_1 */
 #ifndef GL_VERSION_3_0
 typedef khronos_uint16_t GLhalf;
 #define GL_MAJOR_VERSION                  0x821B
