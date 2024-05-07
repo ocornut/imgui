@@ -78,9 +78,6 @@ Other changes:
   negative fraction, e.g. ProgressBar(-1.0f * GetTime()). (#5316, #5370, #1901)[@gan74]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
   mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
-- Backends: Win32: Removed silent return when calling ImGui_ImplWin32_WndProcHandler() with
-  no active context! If you don't always have an active context, you can check that
-  ImGui::GetCurrentContext() != nullptr before calling ImGui_ImplWin32_WndProcHandler(). (#6275)
 - Backends: OpenGL3: Detect ES3 contexts on desktop based on version string,
   to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
 - Backends: Vulkan: Added convenience support for Volk via IMGUI_IMPL_VULKAN_USE_VOLK define.

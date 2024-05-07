@@ -21,7 +21,6 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-05-07: Removed silent return when calling ImGui_ImplWin32_WndProcHandler() with no active context! If you don't always have an active context, check that ImGui::GetCurrentContext() != nullptr before calling this.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
 //  2023-09-25: Inputs: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit it (same behavior as GLFW/SDL).
 //  2023-09-07: Inputs: Added support for keyboard codepage conversion for when application is compiled in MBCS mode and using a non-Unicode window.
@@ -581,9 +580,10 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
 
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Before 2024-05-07 we were silently returning if ImGui::GetCurrentContext() == nullptr,
-    // which was inconsistent with other backends. Make sure you call this after initializing the imgui context,
-    // other add an 'if (ImGui::GetCurrentContext() != NULL)` check before calling ImGui_ImplWin32_WndProcHandler().
+    // Most backends don't have silent checks like this one, but we need it because WndProc are called early in CreateWindow().
+    if (ImGui::GetCurrentContext() == nullptr)
+        return 0;
+
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplWin32_Init()?");
     ImGuiIO& io = ImGui::GetIO();
