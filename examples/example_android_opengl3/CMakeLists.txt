@@ -7,6 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../backends/imgui_impl_android.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../backends/imgui_impl_opengl3.cpp
+  ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c
+)
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_demo.cpp
@@ -16,7 +20,6 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
   ${CMAKE_CURRENT_SOURCE_DIR}/../../backends/imgui_impl_android.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../backends/imgui_impl_opengl3.cpp
   ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c
-)
 
 set(CMAKE_SHARED_LINKER_FLAGS
   "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate"
