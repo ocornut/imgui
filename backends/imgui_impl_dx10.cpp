@@ -588,7 +588,7 @@ void ImGui_ImplDX10_Shutdown()
 void ImGui_ImplDX10_NewFrame()
 {
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
-    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplDX10_Init()?");
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX10_Init()?");
 
     if (!bd->pFontSampler)
         ImGui_ImplDX10_CreateDeviceObjects();

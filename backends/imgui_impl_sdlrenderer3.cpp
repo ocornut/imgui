@@ -102,7 +102,7 @@ static void ImGui_ImplSDLRenderer3_SetupRenderState()
 void ImGui_ImplSDLRenderer3_NewFrame()
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
-    IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplSDLRenderer3_Init()?");
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDLRenderer3_Init()?");
 
     if (!bd->FontTexture)
         ImGui_ImplSDLRenderer3_CreateDeviceObjects();

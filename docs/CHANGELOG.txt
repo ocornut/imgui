@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.6 WIP (In Progress)
+ VERSION 1.90.6 (Released 2024-05-08)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.6
 
 Breaking changes:
 
@@ -70,16 +72,17 @@ Other changes:
   duplicate with this fix. (#7399, #7404) [@GamingMinds-DanielC]
 - TreeNode: Added ImGuiTreeNodeFlags_SpanTextWidth to make hitbox and highlight only
   cover the label. (#6937) [@dimateos]
-- ProgressBar: Added support for indeterminate progress bar by passing an animated
-  negative fraction, e.g. ProgressBar(-1.0f * GetTime()). (#5316, #5370, #1901)[@gan74]
 - Tables: Angled headers: fixed multi-line label display when angle is flipped. (#6917)
 - Tables: Angled headers: added style.TableAngledHeadersTextAlign and corresponding
   ImGuiStyleVar_TableAngledHeadersTextAlign variable. Default to horizontal center. (#6917)
   [@thedmd, @ocornut]
+- ProgressBar: Added support for indeterminate progress bar by passing an animated
+  negative fraction, e.g. ProgressBar(-1.0f * GetTime()). (#5316, #5370, #1901)[@gan74]
 - Text, DrawList: Improved handling of long single-line wrapped text. Faster and
-  mitigitate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
-- Backends: OpenGL: Detect ES3 contexts on desktop based on version string,
+  mitigate issues with reading vertex indexing limits with 16-bit indices. (#7496, #5720)
+- Backends: OpenGL3: Detect ES3 contexts on desktop based on version string,
   to e.g. avoid calling glPolygonMode() on them. (#7447) [@afraidofdark, @ocornut]
+- Backends: OpenGL3: Update loader for Linux to support EGL/GLVND. (#7562) [@ShadowNinja, @vanfanel]
 - Backends: Vulkan: Added convenience support for Volk via IMGUI_IMPL_VULKAN_USE_VOLK define.
   (you could always use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + ImGui_ImplVulkan_LoadFunctions() as well).
   (#6582, #4854) [@adalsteinnh, @kennyalive, @ocornut]
