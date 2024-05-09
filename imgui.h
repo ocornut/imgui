@@ -550,7 +550,7 @@ namespace ImGui
     // Widgets: Combo Box (Dropdown)
     // - The BeginCombo()/EndCombo() api allows you to manage your contents and selection state however you want it, by creating e.g. Selectable() items.
     // - The old Combo() api are helpers over BeginCombo()/EndCombo() which are kept available for convenience purpose. This is analogous to how ListBox are created.
-    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0);
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0, ImGuiButtonFlags button_flags = 0);
     IMGUI_API void          EndCombo(); // only call EndCombo() if BeginCombo() returns true!
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1);
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1);      // Separate items with \0 within a string, end item-list with \0\0. e.g. "One\0Two\0Three\0"
@@ -1596,14 +1596,21 @@ enum ImGuiStyleVar_
 // Flags for InvisibleButton() [extended in imgui_internal.h]
 enum ImGuiButtonFlags_
 {
-    ImGuiButtonFlags_None                   = 0,
-    ImGuiButtonFlags_MouseButtonLeft        = 1 << 0,   // React on left mouse button (default)
-    ImGuiButtonFlags_MouseButtonRight       = 1 << 1,   // React on right mouse button
-    ImGuiButtonFlags_MouseButtonMiddle      = 1 << 2,   // React on center mouse button
+    ImGuiButtonFlags_None                  = 0,
+    ImGuiButtonFlags_MouseButtonLeft       = 1 << 0, // React on left mouse button (default)
+    ImGuiButtonFlags_MouseButtonRight      = 1 << 1, // React on right mouse button
+    ImGuiButtonFlags_MouseButtonMiddle     = 1 << 2, // React on center mouse button
+
+    ImGuiButtonFlags_PressedOnClick        = 1 << 4, // return true on click (mouse down event)
+    ImGuiButtonFlags_PressedOnClickRelease = 1 << 5, // [Default] return true on click + release on same item <-- this is what the majority of Button are using
+    ImGuiButtonFlags_PressedOnClickReleaseAnywhere = 1 << 6, // return true on click + release even if the release event is not done while hovering the item
+    ImGuiButtonFlags_PressedOnRelease      = 1 << 7, // return true on release (default requires click+release)
+    ImGuiButtonFlags_PressedOnDoubleClick  = 1 << 8, // return true on double-click (default requires click+release)
+    ImGuiButtonFlags_PressedOnDragDropHold = 1 << 9, // return true when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
 
     // [Internal]
-    ImGuiButtonFlags_MouseButtonMask_       = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle,
-    ImGuiButtonFlags_MouseButtonDefault_    = ImGuiButtonFlags_MouseButtonLeft,
+    ImGuiButtonFlags_MouseButtonMask_      = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle,
+    ImGuiButtonFlags_MouseButtonDefault_   = ImGuiButtonFlags_MouseButtonLeft,
 };
 
 // Flags for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
