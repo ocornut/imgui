@@ -16,7 +16,9 @@ on:
 
 jobs:
   Windows:
-    runs-on: windows-2019
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Windows
     env:
       VS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
       MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
@@ -197,7 +199,9 @@ jobs:
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
   Linux:
-    runs-on: ubuntu-20.04
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     steps:
     - uses: actions/checkout@v2
 
@@ -436,7 +440,9 @@ jobs:
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
   Emscripten:
-    runs-on: ubuntu-18.04
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     steps:
     - uses: actions/checkout@v2
 
@@ -463,7 +469,9 @@ jobs:
         make -C examples/example_emscripten_wgpu
 
   Android:
-    runs-on: ubuntu-18.04
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     steps:
     - uses: actions/checkout@v2
 
@@ -473,7 +481,9 @@ jobs:
         gradle assembleDebug
 
   Discord-CI:
-    runs-on: ubuntu-18.04
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     if: always()
     needs: [Windows, Linux, MacOS, iOS, Emscripten, Android]
     steps:

@@ -10,7 +10,9 @@ on:
 
 jobs:
   PVS-Studio:
-    runs-on: ubuntu-18.04
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     steps:
       - uses: actions/checkout@v1
         with:

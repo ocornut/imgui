@@ -10,6 +10,8 @@ on:
 
 jobs:
   scheduled:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - 1ES.Pool=MC-Runner-1ES-Linux
     steps:
       - run: exit 0
