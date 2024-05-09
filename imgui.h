@@ -1601,16 +1601,19 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_MouseButtonRight      = 1 << 1, // React on right mouse button
     ImGuiButtonFlags_MouseButtonMiddle     = 1 << 2, // React on center mouse button
 
-    ImGuiButtonFlags_PressedOnClick        = 1 << 4, // return true on click (mouse down event)
-    ImGuiButtonFlags_PressedOnClickRelease = 1 << 5, // [Default] return true on click + release on same item <-- this is what the majority of Button are using
-    ImGuiButtonFlags_PressedOnClickReleaseAnywhere = 1 << 6, // return true on click + release even if the release event is not done while hovering the item
-    ImGuiButtonFlags_PressedOnRelease      = 1 << 7, // return true on release (default requires click+release)
-    ImGuiButtonFlags_PressedOnDoubleClick  = 1 << 8, // return true on double-click (default requires click+release)
-    ImGuiButtonFlags_PressedOnDragDropHold = 1 << 9, // return true when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
+    ImGuiButtonFlags_PressedOnClick        = 1 << 4, // React on click (mouse down event)
+    ImGuiButtonFlags_PressedOnClickRelease = 1 << 5, // [Default] React on click + release on the same item. This is default behavior for many buttons 
+    ImGuiButtonFlags_PressedOnClickReleaseAnywhere = 1 << 6, // React on click + release even if the release event is not done while hovering the item
+    ImGuiButtonFlags_PressedOnRelease      = 1 << 7, // React on release (default requires click+release)
+    ImGuiButtonFlags_PressedOnDoubleClick  = 1 << 8, // React on double-click (default requires click+release)
+    ImGuiButtonFlags_PressedOnDragDropHold = 1 << 9, // React when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
 
     // [Internal]
     ImGuiButtonFlags_MouseButtonMask_      = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle,
     ImGuiButtonFlags_MouseButtonDefault_   = ImGuiButtonFlags_MouseButtonLeft,
+
+    ImGuiButtonFlags_PressedOnMask_        = ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold,
+    ImGuiButtonFlags_PressedOnDefault_     = ImGuiButtonFlags_PressedOnClickRelease,
 };
 
 // Flags for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
