@@ -35,6 +35,7 @@ static WGPUInstance      wgpu_instance = nullptr;
 static WGPUDevice        wgpu_device = nullptr;
 static WGPUSurface       wgpu_surface = nullptr;
 static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
+static WGPUPresentMode   wgpu_present_mode = WGPUPresentMode_Fifo;
 static WGPUSwapChain     wgpu_swap_chain = nullptr;
 static int               wgpu_swap_chain_width = 1280;
 static int               wgpu_swap_chain_height = 720;
@@ -93,6 +94,7 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -108,6 +110,10 @@ int main(int, char**)
     init_info.NumFramesInFlight = 3;
     init_info.RenderTargetFormat = wgpu_preferred_fmt;
     init_info.DepthStencilFormat = WGPUTextureFormat_Undefined;
+    init_info.ViewportPresentMode = wgpu_present_mode;
+    init_info.CreateViewportWindowFn = [](ImGuiViewport* viewport) {
+        return wgpu::glfw::CreateSurfaceForWindow(wgpu_instance, (GLFWwindow*) viewport->PlatformHandle).MoveToCHandle();
+    };
     ImGui_ImplWGPU_Init(&init_info);
 
     // Load Fonts
@@ -236,6 +242,12 @@ int main(int, char**)
         WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
         wgpuQueueSubmit(queue, 1, &cmd_buffer);
 
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
+
 #ifndef __EMSCRIPTEN__
         wgpuSwapChainPresent(wgpu_swap_chain);
 #endif
@@ -269,7 +281,7 @@ static WGPUAdapter RequestAdapter(WGPUInstance instance)
             *(WGPUAdapter*)(pUserData) = adapter;
         else
             printf("Could not get WebGPU adapter: %s\n", message);
-};
+    };
     WGPUAdapter adapter;
     wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
     return adapter;
@@ -318,7 +330,10 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
     if (!surface)
         return false;
-    wgpu_preferred_fmt = WGPUTextureFormat_BGRA8Unorm;
+    wgpu::SurfaceCapabilities capabilities;
+    surface.GetCapabilities(adapter, &capabilities);
+    wgpu_preferred_fmt = (WGPUTextureFormat) capabilities.formats[0];
+    wgpu_present_mode = (WGPUPresentMode) capabilities.presentModes[0];
 #endif
 
     wgpu_instance = instance.MoveToCHandle();
