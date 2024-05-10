@@ -106,12 +106,14 @@ int main(int, char**)
     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
 #endif
     ImGui_ImplWGPU_InitInfo init_info;
-    init_info.Instance = wgpu_instance;
     init_info.Device = wgpu_device;
     init_info.NumFramesInFlight = 3;
     init_info.RenderTargetFormat = wgpu_preferred_fmt;
     init_info.DepthStencilFormat = WGPUTextureFormat_Undefined;
     init_info.ViewportPresentMode = wgpu_present_mode;
+    init_info.CreateViewportWindowFn = [](ImGuiViewport* viewport) {
+        return wgpu::glfw::CreateSurfaceForWindow(wgpu_instance, (GLFWwindow*) viewport->PlatformHandle).MoveToCHandle();
+    };
     ImGui_ImplWGPU_Init(&init_info);
 
     // Load Fonts

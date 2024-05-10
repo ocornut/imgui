@@ -25,13 +25,13 @@
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo
 {
-    WGPUInstance            Instance;
     WGPUDevice              Device;
     int                     NumFramesInFlight = 3;
     WGPUTextureFormat       RenderTargetFormat = WGPUTextureFormat_Undefined;
     WGPUTextureFormat       DepthStencilFormat = WGPUTextureFormat_Undefined;
     WGPUMultisampleState    PipelineMultisampleState = {};
     WGPUPresentMode         ViewportPresentMode = {};
+    WGPUSurface             (*CreateViewportWindowFn)(ImGuiViewport* viewport) = nullptr;
 
     ImGui_ImplWGPU_InitInfo()
     {
