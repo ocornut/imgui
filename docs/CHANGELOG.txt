@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.6 (Released 2024-05-08)
