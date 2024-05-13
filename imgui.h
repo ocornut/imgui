@@ -465,12 +465,16 @@ namespace ImGui
     // - GetCursorScreenPos() = GetCursorPos() + GetWindowPos(). GetWindowPos() is almost only ever useful to convert from window-local to absolute coordinates.
     IMGUI_API ImVec2        GetCursorScreenPos();                                           // cursor position in absolute coordinates (prefer using this, also more useful to work with ImDrawList API).
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                          // cursor position in absolute coordinates
+    IMGUI_API void          MoveCursorScreenPos(const ImVec2& delta_pos);                   // cursor position in absolute coordinates
     IMGUI_API ImVec2        GetCursorPos();                                                 // [window-local] cursor position in window coordinates (relative to window position)
     IMGUI_API float         GetCursorPosX();                                                // [window-local] "
     IMGUI_API float         GetCursorPosY();                                                // [window-local] "
     IMGUI_API void          SetCursorPos(const ImVec2& local_pos);                          // [window-local] "
     IMGUI_API void          SetCursorPosX(float local_x);                                   // [window-local] "
     IMGUI_API void          SetCursorPosY(float local_y);                                   // [window-local] "
+    IMGUI_API void          MoveCursorPos(const ImVec2& delta_pos);                         // [window-local] "
+    IMGUI_API void          MoveCursorPosX(float delta_x);                                  // [window-local] "
+    IMGUI_API void          MoveCursorPosY(float delta_y);                                  // [window-local] "
     IMGUI_API ImVec2        GetCursorStartPos();                                            // [window-local] initial cursor position, in window coordinates
 
     // Other layout functions

@@ -2874,7 +2874,7 @@ static void ShowDemoWindowLayout()
             if (child_flags & ImGuiChildFlags_FrameStyle)
                 override_bg_color = false;
 
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
+            ImGui::MoveCursorPosX((float)offset_x);
             if (override_bg_color)
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
             ImGui::BeginChild("Red", ImVec2(200, 100), child_flags, ImGuiWindowFlags_None);
@@ -4034,7 +4034,7 @@ static void EditTableSizingFlags(ImGuiTableFlags* p_flags)
             ImGui::Separator();
             ImGui::Text("%s:", policies[m].Name);
             ImGui::Separator();
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().IndentSpacing * 0.5f);
+            ImGui::MoveCursorPosX(ImGui::GetStyle().IndentSpacing * 0.5f);
             ImGui::TextUnformatted(policies[m].Tooltip);
         }
         ImGui::PopTextWrapPos();

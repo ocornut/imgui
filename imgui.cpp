@@ -10045,8 +10045,10 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 // - SameLine()
 // - GetCursorScreenPos()
 // - SetCursorScreenPos()
+// - MoveCursorScreenPos()
 // - GetCursorPos(), GetCursorPosX(), GetCursorPosY()
 // - SetCursorPos(), SetCursorPosX(), SetCursorPosY()
+// - MoveCursorPos(), MoveCursorPosX(), MoveCursorPosY()
 // - GetCursorStartPos()
 // - Indent()
 // - Unindent()
@@ -10154,6 +10156,11 @@ void ImGui::SetCursorScreenPos(const ImVec2& pos)
     window->DC.IsSetPos = true;
 }
 
+void ImGui::MoveCursorScreenPos(const ImVec2& delta_pos)
+{
+    ImGui::SetCursorScreenPos(ImGui::GetCursorScreenPos() + delta_pos);
+}
+
 // User generally sees positions in window coordinates. Internally we store CursorPos in absolute screen coordinates because it is more convenient.
 // Conversion happens as we pass the value to user, but it makes our naming convention confusing because GetCursorPos() == (DC.CursorPos - window.Pos). May want to rename 'DC.CursorPos'.
 ImVec2 ImGui::GetCursorPos()
@@ -10196,6 +10203,21 @@ void ImGui::SetCursorPosY(float y)
     window->DC.CursorPos.y = window->Pos.y - window->Scroll.y + y;
     //window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
     window->DC.IsSetPos = true;
+}
+
+void ImGui::MoveCursorPos(const ImVec2& delta_pos)
+{
+    ImGui::SetCursorPos(ImGui::GetCursorPos() + delta_pos);
+}
+
+void ImGui::MoveCursorPosX(float delta_x)
+{
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + delta_x);
+}
+
+void ImGui::MoveCursorPosY(float delta_y)
+{
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + delta_y);
 }
 
 ImVec2 ImGui::GetCursorStartPos()
