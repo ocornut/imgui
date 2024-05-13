@@ -400,6 +400,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
     // Check and store if we are on a SDL backend that supports global mouse position

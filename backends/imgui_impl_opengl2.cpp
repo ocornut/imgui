@@ -83,6 +83,7 @@ static ImGui_ImplOpenGL2_Data* ImGui_ImplOpenGL2_GetBackendData()
 bool    ImGui_ImplOpenGL2_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags

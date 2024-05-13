@@ -146,6 +146,7 @@ static void ImGui_ImplWin32_UpdateKeyboardCodePage()
 static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
     INT64 perf_frequency, perf_counter;
