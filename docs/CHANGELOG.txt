@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
+  Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
 - Backends: all backends + demo now call IMGUI_CHECKVERSION() to verify ABI compatibility between caller
   code and compiled version of Dear ImGui. If you get an assert it most likely mean you have a build issue,
