@@ -204,6 +204,37 @@ ctx->RSSetScissorRects(1, &r);
 ### Q: How can I have multiple widgets with the same label?
 ### Q: How can I have multiple windows with the same label?
 
+**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE:**
+<table>
+<tr>
+<td><img src="https://github.com/ocornut/imgui/assets/8225057/76eb9467-74d1-4e95-9f56-be81c6dd029d"></td>
+<td>
+<pre lang="cpp">
+ImGui::Begin("Incorrect!");
+ImGui::DragFloat2("My value", &objects[0]->pos.x);
+ImGui::DragFloat2("My value", &objects[1]->pos.x);
+ImGui::DragFloat2("My value", &objects[2]->pos.x);
+ImGui::End();
+&nbsp;
+ImGui::Begin("Correct!");
+ImGui::DragFloat2("My value", &objects[0]->pos.x);
+ImGui::DragFloat2("My value##2", &objects[1]->pos.x);
+ImGui::DragFloat2("My value##3", &objects[2]->pos.x);
+ImGui::End();
+&nbsp;
+ImGui::Begin("Also Correct!");
+for (int n = 0; n < 3; n++)
+{
+    ImGui::PushID(n);
+    ImGui::DragFloat2("My value", &objects[n]->pos.x);
+    ImGui::PopID();
+}
+ImGui::End();
+</pre>
+</td>
+</tr>    
+</table>
+
 A primer on labels and the ID Stack...
 
 Dear ImGui internally needs to uniquely identify UI elements.
