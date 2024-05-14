@@ -23,7 +23,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[About the ID Stack system..<br>Why is my widget not reacting when I click on it?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>How can I have multiple windows with the same label?](#q-about-the-id-stack-system)** |
+| **[About the ID Stack system..<br>Why is my widget not reacting when I click on it?<br>Why is the wrong widget reacting when I click on one?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>How can I have multiple windows with the same label?](#q-about-the-id-stack-system)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use maths operators with ImVec2?](#q-how-can-i-use-maths-operators-with-imvec2) |
 | [How can I use my own maths types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-maths-types-instead-of-imvec2imvec4) |
@@ -199,9 +199,41 @@ ctx->RSSetScissorRects(1, &r);
 
 ### Q: About the ID Stack system...
 ### Q: Why is my widget not reacting when I click on it?
+### Q: Why is the wrong widget reacting when I click on one?
 ### Q: How can I have widgets with an empty label?
 ### Q: How can I have multiple widgets with the same label?
 ### Q: How can I have multiple windows with the same label?
+
+**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE:**
+<table>
+<tr>
+<td><img src="https://github.com/ocornut/imgui/assets/8225057/76eb9467-74d1-4e95-9f56-be81c6dd029d"></td>
+<td>
+<pre lang="cpp">
+ImGui::Begin("Incorrect!");
+ImGui::DragFloat2("My value", &objects[0]->pos.x);
+ImGui::DragFloat2("My value", &objects[1]->pos.x);
+ImGui::DragFloat2("My value", &objects[2]->pos.x);
+ImGui::End();
+&nbsp;
+ImGui::Begin("Correct!");
+ImGui::DragFloat2("My value", &objects[0]->pos.x);
+ImGui::DragFloat2("My value##2", &objects[1]->pos.x);
+ImGui::DragFloat2("My value##3", &objects[2]->pos.x);
+ImGui::End();
+&nbsp;
+ImGui::Begin("Also Correct!");
+for (int n = 0; n < 3; n++)
+{
+    ImGui::PushID(n);
+    ImGui::DragFloat2("My value", &objects[n]->pos.x);
+    ImGui::PopID();
+}
+ImGui::End();
+</pre>
+</td>
+</tr>    
+</table>
 
 A primer on labels and the ID Stack...
 

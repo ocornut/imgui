@@ -264,6 +264,8 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
 
 bool ImGui_ImplAndroid_Init(ANativeWindow* window)
 {
+    IMGUI_CHECKVERSION();
+
     g_Window = window;
     g_Time = 0.0;
 

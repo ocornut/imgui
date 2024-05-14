@@ -540,6 +540,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
 bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags

@@ -36,6 +36,30 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.90.7 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
+  Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
+- Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
+- Backends: all backends + demo now call IMGUI_CHECKVERSION() to verify ABI compatibility between caller
+  code and compiled version of Dear ImGui. If you get an assert it most likely mean you have a build issue,
+  read comments near the assert. (#7568)
+- Backends: Win32: undo an assert introduced in 1.90.6 which didn't allow WndProc
+  handler to be called before backend initialization. Because of how ::CreateWindow()
+  calls in WndProc this is facilitating. (#6275) [@MennoVink]
+
+
+Docking+Viewports Branch:
+
+- Tables: resizing border hit-rect scales according to current monitor dpi scale.
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.6 (Released 2024-05-08)
 -----------------------------------------------------------------------
 

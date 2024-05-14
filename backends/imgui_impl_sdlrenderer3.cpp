@@ -61,6 +61,7 @@ static ImGui_ImplSDLRenderer3_Data* ImGui_ImplSDLRenderer3_GetBackendData()
 bool ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
     IM_ASSERT(renderer != nullptr && "SDL_Renderer not initialized!");
 
