@@ -49,6 +49,9 @@ Other changes:
 - Backends: all backends + demo now call IMGUI_CHECKVERSION() to verify ABI compatibility between caller
   code and compiled version of Dear ImGui. If you get an assert it most likely mean you have a build issue,
   read comments near the assert. (#7568)
+- Backends: Win32: undo an assert introduced in 1.90.6 which didn't allow WndProc
+  handler to be called before backend initialization. Because of how ::CreateWindow()
+  calls in WndProc this is facilitating. (#6275) [@MennoVink]
 
 
 -----------------------------------------------------------------------
