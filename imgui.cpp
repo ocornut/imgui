@@ -1077,7 +1077,6 @@ static const ImVec2 TOOLTIP_DEFAULT_OFFSET = ImVec2(16, 10);            // Multi
 //-------------------------------------------------------------------------
 
 static void             SetCurrentWindow(ImGuiWindow* window);
-static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
@@ -3811,7 +3810,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
-    g.DpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
+    g.CurrentDpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
@@ -5223,10 +5222,10 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 void ImGui::FindHoveredWindowEx(const ImVec2& pos, bool find_first_and_in_any_viewport, ImGuiWindow** out_hovered_window, ImGuiWindow** out_hovered_window_under_moving_window)
 {
     ImGuiContext& g = *GImGui;
-
     ImGuiWindow* hovered_window = NULL;
     ImGuiWindow* hovered_window_under_moving_window = NULL;
-    if (g.MovingWindow && !(g.MovingWindow->Flags & ImGuiWindowFlags_NoMouseInputs))
+
+    if (find_first_and_in_any_viewport == false && g.MovingWindow && !(g.MovingWindow->Flags & ImGuiWindowFlags_NoMouseInputs))
         hovered_window = g.MovingWindow;
 
     ImVec2 padding_regular = g.Style.TouchExtraPadding;
