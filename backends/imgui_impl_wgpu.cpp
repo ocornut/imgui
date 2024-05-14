@@ -42,12 +42,6 @@
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
 #include <webgpu/webgpu.h>
-// Only Needed for Create window
-#define GLFW_EXPOSE_NATIVE_X11
-#include <webgpu/webgpu_glfw.h>
-#include <GLFW/glfw3.h>
-#include <X11/Xlib.h>
-#include <GLFW/glfw3native.h>
 
 // Dear ImGui prototypes from imgui_internal.h
 extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
@@ -85,7 +79,6 @@ struct Uniforms
 struct ImGui_ImplWGPU_Data
 {
     ImGui_ImplWGPU_InitInfo initInfo;
-    WGPUInstance            wgpuInstance = nullptr;
     WGPUDevice              wgpuDevice = nullptr;
     WGPUQueue               defaultQueue = nullptr;
     WGPUTextureFormat       renderTargetFormat = WGPUTextureFormat_Undefined;
@@ -782,7 +775,6 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
 #endif
 
     bd->initInfo = *init_info;
-    bd->wgpuInstance = init_info->Instance;
     bd->wgpuDevice = init_info->Device;
     bd->defaultQueue = wgpuDeviceGetQueue(bd->wgpuDevice);
     bd->renderTargetFormat = init_info->RenderTargetFormat;
@@ -815,7 +807,7 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
-        IM_ASSERT(init_info->Instance != nullptr && "WGPUInstance required for multi viewport!");
+        IM_ASSERT(init_info->CreateViewportWindowFn != nullptr && "Window creation callback required for multi viewport!");
         IM_ASSERT(init_info->ViewportPresentMode != 0 && "WGPUPresentMode required to be set for multi viewport!");
         ImGui_ImplWGPU_InitPlatformInterface();
     }
@@ -867,45 +859,8 @@ static void ImGui_ImplWGPU_CreateWindow(ImGuiViewport* viewport)
 	ImGui_ImplWGPU_ViewportData* vd = IM_NEW(ImGui_ImplWGPU_ViewportData)();
 	viewport->RendererUserData = vd;
 
-    WGPUChainedStruct chainedDescriptor = {};
-    // ------ ISSUE unknown for linux(wayland) and apple -------------
-#ifndef __EMSCRIPTEN__
-#ifdef _WIN32
-    chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
-    std::unique_ptr<WGPUSurfaceDescriptorFromWindowsHWND> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromWindowsHWND>();
-    surfaceDescFromHandle->hwnd = viewport->PlatformHandleRaw;
-#elif defined(__APPLE__)
-    chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromMetalLayer;
-    std::unique_ptr<WGPUSurfaceDescriptorFromMetalLayer> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromMetalLayer>();
-    NSWindow* ns_window = viewport->PlatformHandleRaw;
-    [ns_window.contentView setWantsLayer : YES];
-    metal_layer = [CAMetalLayer layer];
-    [ns_window.contentView setLayer : metal_layer] ;
-    surfaceDescFromHandle->layer = metal_layer;
-// #elif defined(DAWN_USE_WAYLAND)
-//     struct wl_display* wayland_display = glfwGetWaylandDisplay();
-//     struct wl_surface* wayland_surface = glfwGetWaylandWindow(window);
-//     chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
-//     std::unique_ptr<WGPUSurfaceDescriptorFromWaylandSurface> surfaceDescFromHandle = std::make_unique<WGPUSurfaceDescriptorFromWaylandSurface>();
-//     surfaceDescFromHandle->display = wayland_display;
-//     surfaceDescFromHandle->surface = wayland_surface;
-#else
-    Display* x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window((GLFWwindow*) viewport->PlatformHandle);
-    chainedDescriptor.sType = WGPUSType_SurfaceDescriptorFromXlibWindow;
-    WGPUSurfaceDescriptorFromXlibWindow surfaceDescFromHandle = WGPUSurfaceDescriptorFromXlibWindow();
-    surfaceDescFromHandle.display = x11_display;
-    surfaceDescFromHandle.window = x11_window;
-#endif
-    // ------------------------------------------------------
+    vd->wgpu_surface = bd->initInfo.CreateViewportWindowFn(viewport);
 
-    surfaceDescFromHandle.chain = chainedDescriptor;
-    WGPUSurfaceDescriptor surfaceDescriptor = {};
-    surfaceDescriptor.nextInChain = &surfaceDescFromHandle.chain;
-
-    vd->wgpu_surface = wgpuInstanceCreateSurface(bd->wgpuInstance, &surfaceDescriptor);
-
-#endif
     WGPUSurfaceConfiguration surfaceConfig = {};
     surfaceConfig.device = bd->wgpuDevice;
     surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
@@ -922,6 +877,7 @@ static void ImGui_ImplWGPU_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData)
     {
+        wgpuSurfaceUnconfigure(vd->wgpu_surface);
         SafeRelease(vd->wgpu_surface);
         IM_DELETE(vd);
     }
