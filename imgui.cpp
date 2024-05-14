@@ -3811,6 +3811,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
+    g.DpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
@@ -4477,6 +4478,9 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
 {
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
+
+    // FIXME-DPI: This storage was added on 2021/03/31 for test engine, but if we want to multiply WINDOWS_HOVER_PADDING
+    // by DpiScale, we need to make this window-agnostic anyhow, maybe need storing inside ImGuiWindow.
     g.WindowsHoverPadding = ImMax(g.Style.TouchExtraPadding, ImVec2(WINDOWS_HOVER_PADDING, WINDOWS_HOVER_PADDING));
 
     // Find the window hovered by mouse:
