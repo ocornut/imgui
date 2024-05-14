@@ -28,7 +28,7 @@ struct SDL_Renderer;
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer);
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer);
 
 // Called by Init/NewFrame/Shutdown
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_CreateFontsTexture();

@@ -41,6 +41,10 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
+  ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
+  overlooked from the API but it will facilitate eventual support for multi-viewports.
+
 Other changes:
 
 - Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
