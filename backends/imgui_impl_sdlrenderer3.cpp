@@ -50,6 +50,9 @@ struct ImGui_ImplSDLRenderer3_Data
 {
     SDL_Renderer*   Renderer;       // Main viewport's renderer
     SDL_Texture*    FontTexture;
+
+    ImVector<ImVec2>    PosBuffer;  // Transformed pos buffer (for multi-viewports only)
+
     ImGui_ImplSDLRenderer3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
@@ -121,6 +124,8 @@ void ImGui_ImplSDLRenderer3_NewFrame()
 
 void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer)
 {
+    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+
 	// If there's a scale factor set by the user, use that instead
     // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
     // to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
@@ -191,13 +196,32 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 SDL_SetRenderClipRect(renderer, &r);
 
                 const float* xy = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, pos));
+                int xy_stride = (int)sizeof(ImDrawVert);
                 const float* uv = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, uv));
                 const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
+
+                // FIXME-OPT: Transform position manually
+                // FIXME-OPT: Note that SDL_RenderGeometryRaw() does another transform for colors..
+                if (draw_data->DisplayPos.x != 0.0f || draw_data->DisplayPos.y != 0.0f)
+                {
+                    const float off_x = draw_data->DisplayPos.x;
+                    const float off_y = draw_data->DisplayPos.y;
+                    bd->PosBuffer.resize(pcmd->ElemCount);
+                    const ImDrawVert* p_in = vtx_buffer + pcmd->VtxOffset;
+                    ImVec2* p_out = bd->PosBuffer.Data;
+                    for (int remaining = pcmd->ElemCount; remaining > 0; remaining--, p_out++, p_in++)
+                    {
+                        p_out->x = p_in->pos.x - off_x;
+                        p_out->y = p_in->pos.y - off_y;
+                    }
+                    xy = (const float*)bd->PosBuffer.Data;
+                    xy_stride = (int)sizeof(ImVec2);
+                }
 
                 // Bind texture, Draw
 				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
                 SDL_RenderGeometryRaw(renderer, tex,
-                    xy, (int)sizeof(ImDrawVert),
+                    xy, xy_stride,
                     color, (int)sizeof(ImDrawVert),
                     uv, (int)sizeof(ImDrawVert),
                     cmd_list->VtxBuffer.Size - pcmd->VtxOffset,
