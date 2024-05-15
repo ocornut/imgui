@@ -41,12 +41,24 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Inputs: removed ImGuiMod_Shortcut which was previously dynamically remapping to Ctrl or Cmd/Super,
+  it is now unnecessary to specific cross-platform idiomatic shortcuts. (#2343, #4084, #5923, #456)
+  Kept symbols redirecting ImGuiMod_Shortcut to ImGuiMod_Ctrl (will obsolete).
 - Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
   ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
   overlooked from the API but it will facilitate eventual support for multi-viewports.
 
 Other changes:
 
+- Inputs: on macOS X, Cmd and Ctrl keys are now automatically swapped by io.AddKeyEvent(). 
+  (#2343, #4084, #5923, #456)
+  - Effectively it means that e.g. ImGuiMod_Ctrl | ImGuiKey_C is a valid idiomatic shortcut
+    for both Windows and Mac style users.
+  - Removed ImGuiMod_Shortcut which was previously dynamically mapping to Ctrl or Cmd/Super,
+    it now always redirect to Ctrl (kept redirection enum).
+  - Fixes variety of code which inconsistently required using Ctrl instead of Cmd,
+    e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
+  - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
 - Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
   Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
