@@ -41,8 +41,24 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Inputs: on macOS X, Cmd and Ctrl keys are now automatically swapped by io.AddKeyEvent(),
+  as this naturally align with how macOS X uses those keys. (#2343, #4084, #5923, #456)
+  - Effectively it means that e.g. ImGuiMod_Ctrl | ImGuiKey_C is a valid idiomatic shortcut
+    for both Windows and Mac style users.
+  - It shouldn't really affect your code unless you had explicit/custom shortcut swapping in
+    place for macOS X apps in your input logic.
+  - Removed ImGuiMod_Shortcut which was previously dynamically remapping to Ctrl or Cmd/Super.
+    It is now unnecessary to specific cross-platform idiomatic shortcuts.
+    Kept symbols redirecting ImGuiMod_Shortcut to ImGuiMod_Ctrl (will obsolete).
+- Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
+  ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
+  overlooked from the API but it will facilitate eventual support for multi-viewports.
+
 Other changes:
 
+- Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
+  - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
+  - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
 - Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
   Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
@@ -52,6 +68,7 @@ Other changes:
 - Backends: Win32: undo an assert introduced in 1.90.6 which didn't allow WndProc
   handler to be called before backend initialization. Because of how ::CreateWindow()
   calls in WndProc this is facilitating. (#6275) [@MennoVink]
+- Backends, Examples: SDL3: updates for latest SDL3 API changes. (#7580) [@kuvaus, @ocornut]
 
 
 Docking+Viewports Branch:
@@ -948,7 +965,7 @@ Breaking changes:
    - ListBoxFooter()  -> use EndListBox()
    - Note how two variants of ListBoxHeader() existed. Check commented versions in imgui.h for refeence.
 - Backends: SDL_Renderer: Renamed 'imgui_impl_sdlrenderer.h/cpp' to 'imgui_impl_sdlrenderer2.h/cpp',
-  in order to accomodate for upcoming SDL3 and change in its SDL_Renderer API. (#6286)
+  in order to accommodate for upcoming SDL3 and change in its SDL_Renderer API. (#6286)
 - Backends: GLUT: Removed call to ImGui::NewFrame() from ImGui_ImplGLUT_NewFrame().
   It needs to be called from the main app loop, like with every other backends. (#6337) [@GereonV]
 
@@ -1558,7 +1575,7 @@ Other Changes:
 - Backends: Metal: Use __bridge for ARC based systems. (#5403) [@stack]
 - Backends: Metal: Add dispatch synchronization. (#5447) [@luigifcruz]
 - Backends: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'. (#5603) [@dcvz]
-- Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symetry. (#914, #5738).
+- Backends: Vulkan: Added experimental ImGui_ImplVulkan_RemoveTexture() for api symmetry. (#914, #5738).
 - Backends: WebGPU: fixed rendering when a depth buffer is enabled. (#5869) [@brainlag]
 
 Docking+Viewports Branch:
@@ -2471,7 +2488,7 @@ Other Changes:
   alpha compositing and transparent windows. (#2766, #3447 etc.).
 - Backends: OpenGL, Vulkan, DX9, DX10, DX11, DX12, Metal, WebGPU, Allegro: Rework blending equation to
   preserve alpha in output buffer (using SrcBlendAlpha = ONE, DstBlendAlpha = ONE_MINUS_SRC_ALPHA consistently
-  accross all backends), facilitating compositing of the output buffer with another buffer.
+  across all backends), facilitating compositing of the output buffer with another buffer.
   (#2693, #2764, #2766, #2873, #3447, #3813, #3816) [@ocornut, @thedmd, @ShawnM427, @Ubpa, @aiekick]
 - Backends: DX9: Fix to support IMGUI_USE_BGRA_PACKED_COLOR. (#3844) [@Xiliusha]
 - Backends: DX9: Fix to support colored glyphs, using newly introduced 'TexPixelsUseColors' info. (#3844)
