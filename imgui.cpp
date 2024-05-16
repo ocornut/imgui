@@ -552,7 +552,7 @@ CODE
                         - Backend writing to io.MouseHoveredViewport   -> backend should call io.AddMouseViewportEvent() [Docking branch w/ multi-viewports only]
                        note: for all calls to IO new functions, the Dear ImGui context should be bound/current.
                        read https://github.com/ocornut/imgui/issues/4921 for details.
- - 2022/01/10 (1.87) - inputs: reworked keyboard IO. Removed io.KeyMap[], io.KeysDown[] in favor of calling io.AddKeyEvent(). Removed GetKeyIndex(), now unecessary. All IsKeyXXX() functions now take ImGuiKey values. All features are still functional until IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Read Changelog and Release Notes for details.
+ - 2022/01/10 (1.87) - inputs: reworked keyboard IO. Removed io.KeyMap[], io.KeysDown[] in favor of calling io.AddKeyEvent(). Removed GetKeyIndex(), now unnecessary. All IsKeyXXX() functions now take ImGuiKey values. All features are still functional until IMGUI_DISABLE_OBSOLETE_KEYIO is defined. Read Changelog and Release Notes for details.
                         - IsKeyPressed(MY_NATIVE_KEY_XXX)              -> use IsKeyPressed(ImGuiKey_XXX)
                         - IsKeyPressed(GetKeyIndex(ImGuiKey_XXX))      -> use IsKeyPressed(ImGuiKey_XXX)
                         - Backend writing to io.KeyMap[],io.KeysDown[] -> backend should call io.AddKeyEvent() (+ call io.SetKeyEventNativeData() if you want legacy user code to stil function with legacy key codes).
@@ -6386,7 +6386,7 @@ void ImGui::UpdateWindowSkipRefresh(ImGuiWindow* window)
 //            - WindowE //                  .. returns NULL
 // Notes:
 // - FindBlockingModal(NULL) == NULL is generally equivalent to GetTopMostPopupModal() == NULL.
-//   Only difference is here we check for ->Active/WasActive but it may be unecessary.
+//   Only difference is here we check for ->Active/WasActive but it may be unnecessary.
 ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -6693,7 +6693,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // SIZE
 
         // Outer Decoration Sizes
-        // (we need to clear ScrollbarSize immediatly as CalcWindowAutoFitSize() needs it and can be called from other locations).
+        // (we need to clear ScrollbarSize immediately as CalcWindowAutoFitSize() needs it and can be called from other locations).
         const ImVec2 scrollbar_sizes_from_last_frame = window->ScrollbarSizes;
         window->DecoOuterSizeX1 = 0.0f;
         window->DecoOuterSizeX2 = 0.0f;
@@ -7599,7 +7599,7 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 
     // When changing hovered window we requires a bit of stationary delay before activating hover timer.
     // FIXME: We don't support delay other than stationary one for now, other delay would need a way
-    // to fullfill the possibility that multiple IsWindowHovered() with varying flag could return true
+    // to fulfill the possibility that multiple IsWindowHovered() with varying flag could return true
     // for different windows of the hierarchy. Possibly need a Hash(Current+Flags) ==> (Timer) cache.
     // We can implement this for _Stationary because the data is linked to HoveredWindow rather than CurrentWindow.
     if (flags & ImGuiHoveredFlags_ForTooltip)
