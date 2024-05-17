@@ -8534,11 +8534,11 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
 }
 
 // Current score encoding (lower is highest priority):
-//  -   0: ImGuiInputFlags_RouteGlobalHigh
+//  -   0: ImGuiInputFlags_RouteGlobalHighest
 //  -   1: ImGuiInputFlags_RouteFocused (if item active)
-//  -   2: ImGuiInputFlags_RouteGlobal
+//  -   2: ImGuiInputFlags_RouteGlobalOverFocused
 //  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
-//  - 254: ImGuiInputFlags_RouteGlobalLow
+//  - 254: ImGuiInputFlags_RouteGlobal
 //  - 255: never route
 // 'flags' should include an explicit routing policy
 static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInputFlags flags)
@@ -8568,10 +8568,10 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
         return 255;
     }
 
-    // ImGuiInputFlags_RouteGlobalHigh is default, so calls without flags are not conditional
-    if (flags & ImGuiInputFlags_RouteGlobal)
+    // ImGuiInputFlags_RouteGlobalHighest is default, so calls without flags are not conditional
+    if (flags & ImGuiInputFlags_RouteGlobalOverFocused)
         return 2;
-    if (flags & ImGuiInputFlags_RouteGlobalLow)
+    if (flags & ImGuiInputFlags_RouteGlobal)
         return 254;
     return 0;
 }
@@ -8603,7 +8603,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
 {
     ImGuiContext& g = *GImGui;
     if ((flags & ImGuiInputFlags_RouteMask_) == 0)
-        flags |= ImGuiInputFlags_RouteGlobalHigh; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
+        flags |= ImGuiInputFlags_RouteGlobalHighest; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_None);
@@ -8622,7 +8622,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     // Note how ImGuiInputFlags_RouteAlways won't set routing and thus won't set owner. May want to rework this?
     if (flags & ImGuiInputFlags_RouteAlways)
     {
-        IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> always\n", GetKeyChordName(key_chord), owner_id, flags);
+        IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> always, no register\n", GetKeyChordName(key_chord), owner_id, flags);
         return true;
     }
 
@@ -8641,7 +8641,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         }
 
         // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
-        if ((flags & ImGuiInputFlags_RouteGlobalHigh) == 0 && g.ActiveIdUsingAllKeyboardKeys)
+        if ((flags & ImGuiInputFlags_RouteGlobalHighest) == 0 && g.ActiveIdUsingAllKeyboardKeys)
         {
             ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
             if (key == ImGuiKey_None)
@@ -12766,7 +12766,7 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
 
-            // Register ownership of our mods. Using ImGuiInputFlags_RouteGlobalHigh in the Shortcut() calls instead would probably be correct but may have more side-effects.
+            // Manually register ownership of our mods. Using ImGuiInputFlags_RouteGlobalHighest in the Shortcut() calls instead would probably be correct but may have more side-effects.
             if (keyboard_next_window || keyboard_prev_window)
                 SetKeyOwnersForKeyChord((g.ConfigNavWindowingKeyNext | g.ConfigNavWindowingKeyPrev) & ImGuiMod_Mask_, owner_id);
         }
@@ -15802,7 +15802,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     Checkbox("Ctrl+C: copy path to clipboard", &tool->CopyToClipboardOnCtrlC);
     SameLine();
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
-    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0, ImGuiInputFlags_RouteGlobal))
+    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0, ImGuiInputFlags_RouteGlobalOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
         char* p = g.TempBuffer.Data;
