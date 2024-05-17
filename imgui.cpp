@@ -8420,18 +8420,19 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
 {
     ImGuiContext& g = *GImGui;
 
-    // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
     const ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
     if (IsModKey(key))
-        key_chord &= ~GetModForModKey(key);
+        key_chord &= ~GetModForModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
     ImFormatString(g.TempKeychordName, IM_ARRAYSIZE(g.TempKeychordName), "%s%s%s%s%s",
         (key_chord & ImGuiMod_Ctrl) ? "Ctrl+" : "",
         (key_chord & ImGuiMod_Shift) ? "Shift+" : "",
         (key_chord & ImGuiMod_Alt) ? "Alt+" : "",
         (key_chord & ImGuiMod_Super) ? "Super+" : "",
         (key != ImGuiKey_None || key_chord == ImGuiKey_None) ? GetKeyName(key) : "");
-    if (key == ImGuiKey_None && key_chord != 0 && g.TempKeychordName[0]) // Remove trailing '+'
-        g.TempKeychordName[strlen(g.TempKeychordName) - 1] = 0;
+    size_t len;
+    if (key == ImGuiKey_None && key_chord != 0)
+        if ((len = strlen(g.TempKeychordName)) != 0) // Remove trailing '+'
+            g.TempKeychordName[len - 1] = 0;
     return g.TempKeychordName;
 }
 
