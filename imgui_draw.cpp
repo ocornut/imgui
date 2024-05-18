@@ -2503,7 +2503,7 @@ void ImFontAtlas::PrepareFontTexture() {
         //Set the first column to the same width as the mouse cursors and the baked lines to obtain more optimal texture usage
         IM_ASSERT(FontTextures.Size);
         IM_ASSERT(FontTextures.front()->FontTexRows.Size);
-        FontTextures.front()->ColumnWidth = FontTextures.front()->FontTexRows.front().X;
+        FontTextures.front()->ColumnWidth = FontTextures.front()->FontTexRows.front().ColumnWidth = FontTextures.front()->FontTexRows.front().X;
     }
 }
 
