@@ -1,7 +1,11 @@
 # See http://editorconfig.org to read about the EditorConfig format.
 # - In theory automatically supported by VS2017+ and most common IDE or text editors.
-# - In practice VS2019 stills gets trailing whitespaces wrong :(
-#   - Suggest install to trim whitespaces: https://marketplace.visualstudio.com/items?itemName=MadsKristensen.TrailingWhitespaceVisualizer
+# - In practice VS2019-VS2022 stills don't trim trailing whitespaces correctly :(
+#   - Suggest installing this to trim whitespaces:
+#      GitHub https://github.com/madskristensen/TrailingWhitespace
+#      VS2019 https://marketplace.visualstudio.com/items?itemName=MadsKristensen.TrailingWhitespaceVisualizer
+#      VS2022 https://marketplace.visualstudio.com/items?itemName=MadsKristensen.TrailingWhitespace64
+#     (in spite of its name doesn't only visualize but also trims)
 #   - Alternative for older VS2010 to VS2015: https://marketplace.visualstudio.com/items?itemName=EditorConfigTeam.EditorConfig
 
 # top-most EditorConfig file

@@ -2,16 +2,20 @@
 // This needs to be used along with a Platform Backend (e.g. Win32)
 
 // Implemented features:
-//  [X] Renderer: User texture backend. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: User texture binding. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: DirectX10: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
 //  2021-02-18: DirectX10: Change blending equation to preserve alpha in output buffer.
@@ -29,6 +33,7 @@
 //  2016-05-07: DirectX10: Disabling depth-write.
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_impl_dx10.h"
 
 // DirectX
@@ -67,10 +72,10 @@ struct ImGui_ImplDX10_Data
     int                         VertexBufferSize;
     int                         IndexBufferSize;
 
-    ImGui_ImplDX10_Data()       { memset(this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
+    ImGui_ImplDX10_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
 
-struct VERTEX_CONSTANT_BUFFER
+struct VERTEX_CONSTANT_BUFFER_DX10
 {
     float   mvp[4][4];
 };
@@ -79,7 +84,7 @@ struct VERTEX_CONSTANT_BUFFER
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 static ImGui_ImplDX10_Data* ImGui_ImplDX10_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplDX10_Data*)ImGui::GetIO().BackendRendererUserData : NULL;
+    return ImGui::GetCurrentContext() ? (ImGui_ImplDX10_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
 // Functions
@@ -108,7 +113,7 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     ctx->VSSetConstantBuffers(0, 1, &bd->pVertexConstantBuffer);
     ctx->PSSetShader(bd->pPixelShader);
     ctx->PSSetSamplers(0, 1, &bd->pFontSampler);
-    ctx->GSSetShader(NULL);
+    ctx->GSSetShader(nullptr);
 
     // Setup render state
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
@@ -122,7 +127,7 @@ static void ImGui_ImplDX10_UpdateFontTextures();
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 {
 	ImGui_ImplDX10_UpdateFontTextures();
-	
+
 	// Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
@@ -133,7 +138,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     // Create and grow vertex/index buffers if needed
     if (!bd->pVB || bd->VertexBufferSize < draw_data->TotalVtxCount)
     {
-        if (bd->pVB) { bd->pVB->Release(); bd->pVB = NULL; }
+        if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
         D3D10_BUFFER_DESC desc;
         memset(&desc, 0, sizeof(D3D10_BUFFER_DESC));
@@ -142,13 +147,13 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
-        if (ctx->CreateBuffer(&desc, NULL, &bd->pVB) < 0)
+        if (ctx->CreateBuffer(&desc, nullptr, &bd->pVB) < 0)
             return;
     }
 
     if (!bd->pIB || bd->IndexBufferSize < draw_data->TotalIdxCount)
     {
-        if (bd->pIB) { bd->pIB->Release(); bd->pIB = NULL; }
+        if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
         D3D10_BUFFER_DESC desc;
         memset(&desc, 0, sizeof(D3D10_BUFFER_DESC));
@@ -156,13 +161,13 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-        if (ctx->CreateBuffer(&desc, NULL, &bd->pIB) < 0)
+        if (ctx->CreateBuffer(&desc, nullptr, &bd->pIB) < 0)
             return;
     }
 
     // Copy and convert all vertices into a single contiguous buffer
-    ImDrawVert* vtx_dst = NULL;
-    ImDrawIdx* idx_dst = NULL;
+    ImDrawVert* vtx_dst = nullptr;
+    ImDrawIdx* idx_dst = nullptr;
     bd->pVB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&vtx_dst);
     bd->pIB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&idx_dst);
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -182,7 +187,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         void* mapped_resource;
         if (bd->pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
-        VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource;
+        VERTEX_CONSTANT_BUFFER_DX10* constant_buffer = (VERTEX_CONSTANT_BUFFER_DX10*)mapped_resource;
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
         float T = draw_data->DisplayPos.y;
@@ -326,7 +331,7 @@ static ImGui_ImplDX10_TextureResource ImGui_ImplDX10_CreateTexture(int width, in
         subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
         bd->pd3dDevice->CreateTexture2D(&desc, &subResource, &result.pFontTexture);
-        IM_ASSERT(result.pFontTexture != NULL);
+        IM_ASSERT(result.pFontTexture != nullptr);
 
         // Create texture view
         D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
@@ -336,7 +341,7 @@ static ImGui_ImplDX10_TextureResource ImGui_ImplDX10_CreateTexture(int width, in
         srv_desc.Texture2D.MipLevels = desc.MipLevels;
         srv_desc.Texture2D.MostDetailedMip = 0;
         bd->pd3dDevice->CreateShaderResourceView(result.pFontTexture, &srv_desc, &result.pFontTextureView);
-		IM_ASSERT(result.pFontTextureView != NULL);
+		IM_ASSERT(result.pFontTextureView != nullptr);
     }
 
     // Create texture sampler
@@ -381,7 +386,7 @@ static void ImGui_ImplDX10_UpdateFontTextures()
 	// FIXME-DYNAMICFONT: Add support for resizing textures
 	for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
 		ImFontTexture* font_texture_ptr = *font_texture;
-		if (font_texture_ptr->TexID == NULL) {
+		if (font_texture_ptr->TexID == nullptr) {
 			//This Direct3D texture has not yet been created. Create it.
 			ImGui_ImplDX10_TextureResource new_texture = ImGui_ImplDX10_CreateTexture(font_texture_ptr->TexWidth, font_texture_ptr->TexHeight, font_texture_ptr->TexData.Data);
 			font_texture_ptr->TexID = (ImTextureID)(intptr_t)new_texture.pFontTextureView;
@@ -393,7 +398,7 @@ static void ImGui_ImplDX10_UpdateFontTextures()
 			//Update whole affected rows
 			int x = 0, y = static_cast<int>(font_texture_ptr->DirtyTopLeft.y);
 			int width = font_texture_ptr->TexWidth, height = static_cast<int>(font_texture_ptr->DirtyBotRight.y) - static_cast<int>(font_texture_ptr->DirtyTopLeft.y) + 1;
-			
+
 			//Find the texture resource with corresponding TexID
 			ImGui_ImplDX10_TextureResource* texture = bd->Textures.begin();
 			for (; texture != bd->Textures.end(); ++texture) {
@@ -452,7 +457,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             }";
 
         ID3DBlob* vertexShaderBlob;
-        if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_4_0", 0, 0, &vertexShaderBlob, NULL)))
+        if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), nullptr, nullptr, nullptr, "main", "vs_4_0", 0, 0, &vertexShaderBlob, nullptr)))
             return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
         if (bd->pd3dDevice->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &bd->pVertexShader) != S_OK)
         {
@@ -463,9 +468,9 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         // Create the input layout
         D3D10_INPUT_ELEMENT_DESC local_layout[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D10_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D10_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D10_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D10_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D10_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)offsetof(ImDrawVert, col), D3D10_INPUT_PER_VERTEX_DATA, 0 },
         };
         if (bd->pd3dDevice->CreateInputLayout(local_layout, 3, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &bd->pInputLayout) != S_OK)
         {
@@ -477,12 +482,12 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         // Create the constant buffer
         {
             D3D10_BUFFER_DESC desc;
-            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
+            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER_DX10);
             desc.Usage = D3D10_USAGE_DYNAMIC;
             desc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
             desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
             desc.MiscFlags = 0;
-            bd->pd3dDevice->CreateBuffer(&desc, NULL, &bd->pVertexConstantBuffer);
+            bd->pd3dDevice->CreateBuffer(&desc, nullptr, &bd->pVertexConstantBuffer);
         }
     }
 
@@ -505,7 +510,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             }";
 
         ID3DBlob* pixelShaderBlob;
-        if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_4_0", 0, 0, &pixelShaderBlob, NULL)))
+        if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), nullptr, nullptr, nullptr, "main", "ps_4_0", 0, 0, &pixelShaderBlob, nullptr)))
             return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
         if (bd->pd3dDevice->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), &bd->pPixelShader) != S_OK)
         {
@@ -567,7 +572,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
     if (!bd->pd3dDevice)
         return;
 
-    if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = NULL; }
+    if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = nullptr; }
 
 	if (bd->Textures.Size) {
 		ImGuiIO& io = ImGui::GetIO();
@@ -584,28 +589,28 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
 			}
 
 			texture->pFontTextureView->Release();
-			texture->pFontTextureView = NULL;
+			texture->pFontTextureView = nullptr;
 			texture->pFontTexture->Release();
-			texture->pFontTexture = NULL;
+			texture->pFontTexture = nullptr;
 			font_texture_ptr->TexID = 0;
 		}
 	}
 
-    if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = NULL; }
-    if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = NULL; }
-    if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = NULL; }
-    if (bd->pDepthStencilState)     { bd->pDepthStencilState->Release(); bd->pDepthStencilState = NULL; }
-    if (bd->pRasterizerState)       { bd->pRasterizerState->Release(); bd->pRasterizerState = NULL; }
-    if (bd->pPixelShader)           { bd->pPixelShader->Release(); bd->pPixelShader = NULL; }
-    if (bd->pVertexConstantBuffer)  { bd->pVertexConstantBuffer->Release(); bd->pVertexConstantBuffer = NULL; }
-    if (bd->pInputLayout)           { bd->pInputLayout->Release(); bd->pInputLayout = NULL; }
-    if (bd->pVertexShader)          { bd->pVertexShader->Release(); bd->pVertexShader = NULL; }
+    if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
+    if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
+    if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }
+    if (bd->pDepthStencilState)     { bd->pDepthStencilState->Release(); bd->pDepthStencilState = nullptr; }
+    if (bd->pRasterizerState)       { bd->pRasterizerState->Release(); bd->pRasterizerState = nullptr; }
+    if (bd->pPixelShader)           { bd->pPixelShader->Release(); bd->pPixelShader = nullptr; }
+    if (bd->pVertexConstantBuffer)  { bd->pVertexConstantBuffer->Release(); bd->pVertexConstantBuffer = nullptr; }
+    if (bd->pInputLayout)           { bd->pInputLayout->Release(); bd->pInputLayout = nullptr; }
+    if (bd->pVertexShader)          { bd->pVertexShader->Release(); bd->pVertexShader = nullptr; }
 }
 
 bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
     // Setup backend capabilities flags
     ImGui_ImplDX10_Data* bd = IM_NEW(ImGui_ImplDX10_Data)();
@@ -614,9 +619,9 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     // Get factory from device
-    IDXGIDevice* pDXGIDevice = NULL;
-    IDXGIAdapter* pDXGIAdapter = NULL;
-    IDXGIFactory* pFactory = NULL;
+    IDXGIDevice* pDXGIDevice = nullptr;
+    IDXGIAdapter* pDXGIAdapter = nullptr;
+    IDXGIFactory* pFactory = nullptr;
     if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) == S_OK)
         if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) == S_OK)
             if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) == S_OK)
@@ -634,24 +639,29 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 void ImGui_ImplDX10_Shutdown()
 {
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
-    IM_ASSERT(bd != NULL && "No renderer backend to shutdown, or already shutdown?");
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplDX10_InvalidateDeviceObjects();
     if (bd->pFactory) { bd->pFactory->Release(); }
     if (bd->pd3dDevice) { bd->pd3dDevice->Release(); }
-    io.BackendRendererName = NULL;
-    io.BackendRendererUserData = NULL;
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
     IM_DELETE(bd);
 }
 
 void ImGui_ImplDX10_NewFrame()
 {
 	ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
-	IM_ASSERT(bd != NULL && "Did you call ImGui_ImplDX10_Init()?");
+	IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplDX10_Init()?");
 
 	if (!bd->pVertexShader)
 		ImGui_ImplDX10_CreateDeviceObjects();
 
 	ImGui::GetIO().Fonts->CheckOverflow();
 }
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE
