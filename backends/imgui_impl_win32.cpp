@@ -1025,6 +1025,12 @@ static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags fl
 
     if (flags & ImGuiViewportFlags_TopMost)
         *out_ex_style |= WS_EX_TOPMOST;
+
+    // "Redirection bitmap" can be understood as a copy of painted window content held by DWM.
+    // By making DWM not hold a copy, which happens to not support transparency, this enables using
+    // transparent window contents, without having to use uniform transparency for the whole window.
+    if (flags & ImGuiViewportFlags_TransparencySupport)
+        *out_ex_style |= WS_EX_NOREDIRECTIONBITMAP;
 }
 
 static HWND ImGui_ImplWin32_GetHwndFromViewportID(ImGuiID viewport_id)

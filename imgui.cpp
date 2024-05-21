@@ -6541,7 +6541,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                     is_docking_transparent_payload = true;
 
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdx(window));
-            if (window->ViewportOwned)
+            if (window->ViewportOwned && !(g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTransparentViewports))
             {
                 bg_col |= IM_COL32_A_MASK; // No alpha
                 if (is_docking_transparent_payload)
@@ -15444,7 +15444,9 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
     // We can also tell the backend that clearing the platform window won't be necessary,
     // as our window background is filling the viewport and we have disabled BgAlpha.
     // FIXME: Work on support for per-viewport transparency (#2766)
-    if (!(window_flags & ImGuiWindowFlags_NoBackground))
+    if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTransparentViewports)
+        viewport_flags |= ImGuiViewportFlags_TransparencySupport;
+    else if (!(window_flags & ImGuiWindowFlags_NoBackground))
         viewport_flags |= ImGuiViewportFlags_NoRendererClear;
 
     window->Viewport->Flags = viewport_flags;
