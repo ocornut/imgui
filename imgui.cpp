@@ -1523,7 +1523,7 @@ static ImGuiInputEvent* FindLatestInputEvent(ImGuiContext* ctx, ImGuiInputEventT
 // - bool down:          Is the key down? use false to signify a key release.
 // - float analog_value: 0.0f..1.0f
 // IMPORTANT: THIS FUNCTION AND OTHER "ADD" GRABS THE CONTEXT FROM OUR INSTANCE.
-// WE NEED TO ENSURE THAT ALL FUNCTION CALLS ARE FULLFILLING THIS, WHICH IS WHY GetKeyData() HAS AN EXPLICIT CONTEXT.
+// WE NEED TO ENSURE THAT ALL FUNCTION CALLS ARE FULFILLING THIS, WHICH IS WHY GetKeyData() HAS AN EXPLICIT CONTEXT.
 void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
 {
     //if (e->Down) { IMGUI_DEBUG_LOG_IO("AddKeyEvent() Key='%s' %d, NativeKeycode = %d, NativeScancode = %d\n", ImGui::GetKeyName(e->Key), e->Down, e->NativeKeycode, e->NativeScancode); }
@@ -1531,7 +1531,7 @@ void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float analog_value)
     if (key == ImGuiKey_None || !AppAcceptingEvents)
         return;
     ImGuiContext& g = *Ctx;
-    IM_ASSERT(ImGui::IsNamedKeyOrModKey(key)); // Backend needs to pass a valid ImGuiKey_ constant. 0..511 values are legacy native key codes which are not accepted by this API.
+    IM_ASSERT(ImGui::IsNamedKeyOrMod(key)); // Backend needs to pass a valid ImGuiKey_ constant. 0..511 values are legacy native key codes which are not accepted by this API.
     IM_ASSERT(ImGui::IsAliasKey(key) == false); // Backend cannot submit ImGuiKey_MouseXXX values they are automatically inferred from AddMouseXXX() events.
 
     // MacOS: swap Cmd(Super) and Ctrl
@@ -1648,11 +1648,35 @@ void ImGuiIO::AddMouseButtonEvent(int mouse_button, bool down)
     if (!AppAcceptingEvents)
         return;
 
+    // On MacOS X: Convert Ctrl(Super)+Left click into Right-click: handle held button.
+    if (ConfigMacOSXBehaviors && mouse_button == 0 && MouseCtrlLeftAsRightClick)
+    {
+        // Order of both statements matterns: this event will still release mouse button 1
+        mouse_button = 1;
+        if (!down)
+            MouseCtrlLeftAsRightClick = false;
+    }
+
     // Filter duplicate
     const ImGuiInputEvent* latest_event = FindLatestInputEvent(&g, ImGuiInputEventType_MouseButton, (int)mouse_button);
     const bool latest_button_down = latest_event ? latest_event->MouseButton.Down : g.IO.MouseDown[mouse_button];
     if (latest_button_down == down)
         return;
+
+    // On MacOS X: Convert Ctrl(Super)+Left click into Right-click.
+    // - Note that this is actual physical Ctrl which is ImGuiMod_Super for us.
+    // - At this point we want from !down to down, so this is handling the initial press.
+    if (ConfigMacOSXBehaviors && mouse_button == 0 && down)
+    {
+        const ImGuiInputEvent* latest_super_event = FindLatestInputEvent(&g, ImGuiInputEventType_Key, (int)ImGuiMod_Super);
+        if (latest_super_event ? latest_super_event->Key.Down : g.IO.KeySuper)
+        {
+            IMGUI_DEBUG_LOG_IO("[io] Super+Left Click aliased into Right Click\n");
+            MouseCtrlLeftAsRightClick = true;
+            AddMouseButtonEvent(1, true); // This is just quicker to write that passing through, as we need to filter duplicate again.
+            return;
+        }
+    }
 
     ImGuiInputEvent e;
     e.Type = ImGuiInputEventType_MouseButton;
@@ -5863,7 +5887,9 @@ void ImGui::EndChild()
         else
         {
             // Not navigable into
-            ItemAdd(bb, 0);
+            // - This is a bit of a fringe use case, mostly useful for undecorated, non-scrolling contents childs, or empty childs.
+            // - We could later decide to not apply this path if ImGuiChildFlags_FrameStyle or ImGuiChildFlags_Borders is set.
+            ItemAdd(bb, child_window->ChildId, NULL, ImGuiItemFlags_NoNav);
 
             // But when flattened we directly reach items, adjust active layer mask accordingly
             if (child_window->Flags & ImGuiWindowFlags_NavFlattened)
@@ -8851,6 +8877,8 @@ ImGuiID ImGui::GetID(const void* ptr_id)
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
 //-----------------------------------------------------------------------------
+// - GetModForModKey() [Internal]
+// - FixupKeyChord() [Internal]
 // - GetKeyData() [Internal]
 // - GetKeyIndex() [Internal]
 // - GetKeyName()
@@ -8912,21 +8940,25 @@ ImGuiID ImGui::GetID(const void* ptr_id)
 // - Shortcut() [Internal]
 //-----------------------------------------------------------------------------
 
+static ImGuiKeyChord GetModForModKey(ImGuiKey key)
+{
+    if (key == ImGuiKey_LeftCtrl || key == ImGuiKey_RightCtrl)
+        return ImGuiMod_Ctrl;
+    if (key == ImGuiKey_LeftShift || key == ImGuiKey_RightShift)
+        return ImGuiMod_Shift;
+    if (key == ImGuiKey_LeftAlt || key == ImGuiKey_RightAlt)
+        return ImGuiMod_Alt;
+    if (key == ImGuiKey_LeftSuper || key == ImGuiKey_RightSuper)
+        return ImGuiMod_Super;
+    return ImGuiMod_None;
+}
+
 ImGuiKeyChord ImGui::FixupKeyChord(ImGuiKeyChord key_chord)
 {
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
     if (IsModKey(key))
-    {
-        if (key == ImGuiKey_LeftCtrl || key == ImGuiKey_RightCtrl)
-            key_chord |= ImGuiMod_Ctrl;
-        if (key == ImGuiKey_LeftShift || key == ImGuiKey_RightShift)
-            key_chord |= ImGuiMod_Shift;
-        if (key == ImGuiKey_LeftAlt || key == ImGuiKey_RightAlt)
-            key_chord |= ImGuiMod_Alt;
-        if (key == ImGuiKey_LeftSuper || key == ImGuiKey_RightSuper)
-            key_chord |= ImGuiMod_Super;
-    }
+        key_chord |= GetModForModKey(key);
     return key_chord;
 }
 
@@ -8987,8 +9019,10 @@ IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
 
 const char* ImGui::GetKeyName(ImGuiKey key)
 {
+    if (key == ImGuiKey_None)
+        return "None";
 #ifdef IMGUI_DISABLE_OBSOLETE_KEYIO
-    IM_ASSERT((IsNamedKeyOrModKey(key) || key == ImGuiKey_None) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
+    IM_ASSERT(IsNamedKeyOrMod(key) && "Support for user key indices was dropped in favor of ImGuiKey. Please update backend and user code.");
 #else
     ImGuiContext& g = *GImGui;
     if (IsLegacyKey(key))
@@ -8999,8 +9033,6 @@ const char* ImGui::GetKeyName(ImGuiKey key)
         key = (ImGuiKey)g.IO.KeyMap[key];
     }
 #endif
-    if (key == ImGuiKey_None)
-        return "None";
     if (key & ImGuiMod_Mask_)
         key = ConvertSingleModFlagToKey(key);
     if (!IsNamedKey(key))
@@ -9009,16 +9041,25 @@ const char* ImGui::GetKeyName(ImGuiKey key)
     return GKeyNames[key - ImGuiKey_NamedKey_BEGIN];
 }
 
+// Return untranslated names: on macOS, Cmd key will show as Ctrl, Ctrl key will show as super.
+// Lifetime of return value: valid until next call to same function.
 const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
 {
     ImGuiContext& g = *GImGui;
-    key_chord = FixupKeyChord(key_chord);
+
+    const ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    if (IsModKey(key))
+        key_chord &= ~GetModForModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
     ImFormatString(g.TempKeychordName, IM_ARRAYSIZE(g.TempKeychordName), "%s%s%s%s%s",
         (key_chord & ImGuiMod_Ctrl) ? "Ctrl+" : "",
         (key_chord & ImGuiMod_Shift) ? "Shift+" : "",
         (key_chord & ImGuiMod_Alt) ? "Alt+" : "",
         (key_chord & ImGuiMod_Super) ? "Super+" : "",
-        GetKeyName((ImGuiKey)(key_chord & ~ImGuiMod_Mask_)));
+        (key != ImGuiKey_None || key_chord == ImGuiKey_None) ? GetKeyName(key) : "");
+    size_t len;
+    if (key == ImGuiKey_None && key_chord != 0)
+        if ((len = strlen(g.TempKeychordName)) != 0) // Remove trailing '+'
+            g.TempKeychordName[len - 1] = 0;
     return g.TempKeychordName;
 }
 
@@ -9159,11 +9200,11 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
 }
 
 // Current score encoding (lower is highest priority):
-//  -   0: ImGuiInputFlags_RouteGlobalHigh
+//  -   0: ImGuiInputFlags_RouteGlobalHighest
 //  -   1: ImGuiInputFlags_RouteFocused (if item active)
-//  -   2: ImGuiInputFlags_RouteGlobal
+//  -   2: ImGuiInputFlags_RouteGlobalOverFocused
 //  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
-//  - 254: ImGuiInputFlags_RouteGlobalLow
+//  - 254: ImGuiInputFlags_RouteGlobal
 //  - 255: never route
 // 'flags' should include an explicit routing policy
 static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInputFlags flags)
@@ -9193,10 +9234,10 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
         return 255;
     }
 
-    // ImGuiInputFlags_RouteGlobalHigh is default, so calls without flags are not conditional
-    if (flags & ImGuiInputFlags_RouteGlobal)
+    // ImGuiInputFlags_RouteGlobalHighest is default, so calls without flags are not conditional
+    if (flags & ImGuiInputFlags_RouteGlobalOverFocused)
         return 2;
-    if (flags & ImGuiInputFlags_RouteGlobalLow)
+    if (flags & ImGuiInputFlags_RouteGlobal)
         return 254;
     return 0;
 }
@@ -9227,10 +9268,10 @@ static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
 bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
-        flags |= ImGuiInputFlags_RouteGlobalHigh; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
+    if ((flags & ImGuiInputFlags_RouteTypeMask_) == 0)
+        flags |= ImGuiInputFlags_RouteGlobalHighest; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
-        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_None);
 
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
@@ -9247,7 +9288,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
     // Note how ImGuiInputFlags_RouteAlways won't set routing and thus won't set owner. May want to rework this?
     if (flags & ImGuiInputFlags_RouteAlways)
     {
-        IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> always\n", GetKeyChordName(key_chord), owner_id, flags);
+        IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, owner_id=0x%08X, flags=%04X) -> always, no register\n", GetKeyChordName(key_chord), owner_id, flags);
         return true;
     }
 
@@ -9266,7 +9307,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         }
 
         // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
-        if ((flags & ImGuiInputFlags_RouteGlobalHigh) == 0 && g.ActiveIdUsingAllKeyboardKeys)
+        if ((flags & ImGuiInputFlags_RouteGlobalHighest) == 0 && g.ActiveIdUsingAllKeyboardKeys)
         {
             ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
             if (key == ImGuiKey_None)
@@ -10135,7 +10176,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
 
 ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
 {
-    if (!IsNamedKeyOrModKey(key))
+    if (!IsNamedKeyOrMod(key))
         return ImGuiKeyOwner_None;
 
     ImGuiContext& g = *GImGui;
@@ -10155,7 +10196,7 @@ ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
 // All paths are also testing for key not being locked, for the rare cases that key have been locked with using ImGuiInputFlags_LockXXX flags.
 bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
 {
-    if (!IsNamedKeyOrModKey(key))
+    if (!IsNamedKeyOrMod(key))
         return true;
 
     ImGuiContext& g = *GImGui;
@@ -10189,7 +10230,7 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
 void ImGui::SetKeyOwner(ImGuiKey key, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(IsNamedKeyOrModKey(key) && (owner_id != ImGuiKeyOwner_Any || (flags & (ImGuiInputFlags_LockThisFrame | ImGuiInputFlags_LockUntilRelease)))); // Can only use _Any with _LockXXX flags (to eat a key away without an ID to retrieve it)
+    IM_ASSERT(IsNamedKeyOrMod(key) && (owner_id != ImGuiKeyOwner_Any || (flags & (ImGuiInputFlags_LockThisFrame | ImGuiInputFlags_LockUntilRelease)))); // Can only use _Any with _LockXXX flags (to eat a key away without an ID to retrieve it)
     IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetKeyOwner) == 0); // Passing flags not supported by this function!
     //IMGUI_DEBUG_LOG("SetKeyOwner(%s, owner_id=0x%08X, flags=%08X)\n", GetKeyName(key), owner_id, flags);
 
@@ -10270,7 +10311,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
     //IMGUI_DEBUG_LOG("Shortcut(%s, owner_id=0x%08X, flags=%X)\n", GetKeyChordName(key_chord, g.TempBuffer.Data, g.TempBuffer.Size), owner_id, flags);
 
     // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
-    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+    if ((flags & ImGuiInputFlags_RouteTypeMask_) == 0)
         flags |= ImGuiInputFlags_RouteFocused;
 
     // Using 'owner_id == ImGuiKeyOwner_Any/0': auto-assign an owner based on current focus scope (each window has its focus scope by default)
@@ -13455,7 +13496,7 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
 
-            // Register ownership of our mods. Using ImGuiInputFlags_RouteGlobalHigh in the Shortcut() calls instead would probably be correct but may have more side-effects.
+            // Manually register ownership of our mods. Using ImGuiInputFlags_RouteGlobalHighest in the Shortcut() calls instead would probably be correct but may have more side-effects.
             if (keyboard_next_window || keyboard_prev_window)
                 SetKeyOwnersForKeyChord((g.ConfigNavWindowingKeyNext | g.ConfigNavWindowingKeyPrev) & ImGuiMod_Mask_, owner_id);
         }
@@ -21648,7 +21689,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     Checkbox("Ctrl+C: copy path to clipboard", &tool->CopyToClipboardOnCtrlC);
     SameLine();
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
-    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0, ImGuiInputFlags_RouteGlobal))
+    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0, ImGuiInputFlags_RouteGlobalOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
         char* p = g.TempBuffer.Data;
