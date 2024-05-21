@@ -8643,10 +8643,10 @@ static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
 bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+    if ((flags & ImGuiInputFlags_RouteTypeMask_) == 0)
         flags |= ImGuiInputFlags_RouteGlobalHighest; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
-        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteMask_)); // Check that only 1 routing flag is used
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_None);
 
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
@@ -9676,7 +9676,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
     //IMGUI_DEBUG_LOG("Shortcut(%s, owner_id=0x%08X, flags=%X)\n", GetKeyChordName(key_chord, g.TempBuffer.Data, g.TempBuffer.Size), owner_id, flags);
 
     // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
-    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+    if ((flags & ImGuiInputFlags_RouteTypeMask_) == 0)
         flags |= ImGuiInputFlags_RouteFocused;
 
     // Using 'owner_id == ImGuiKeyOwner_Any/0': auto-assign an owner based on current focus scope (each window has its focus scope by default)
