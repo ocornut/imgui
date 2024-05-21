@@ -62,6 +62,7 @@ Other changes:
 - Inputs: (OSX) Ctrl+Left Click alias as a Right click. (#2343) [@haldean, @ocornut]
 - Inputs: Fixed ImGui::GetKeyName(ImGuiKey_None) from returning "N/A" or "None" depending
   on value of IMGUI_DISABLE_OBSOLETE_KEYIO. It always returns "None".
+- Windows: BeginChild(): fixed visibility of fully clipped child windows and tables to Test Engine.
 - Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
   Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
