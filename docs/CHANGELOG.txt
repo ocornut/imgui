@@ -5605,7 +5605,7 @@ Other Changes:
  VERSION 1.08 (2014-08-25)
 -----------------------------------------------------------------------
 
-Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.09
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.08
 
 - Fixed ImGuiTextFilter trimming of leading/trailing blanks.
 - Fixed file descriptor leak on LoadSettings() failure.
