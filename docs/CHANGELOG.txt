@@ -73,6 +73,11 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking: *BREAKING* changed signature of DockSpaceOverViewport() to allow passing
+  an explicit dockspace id if desired. (#7611)
+    Before: DockSpaceOverViewport(const ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags flags = 0, ...);
+    After:  DockSpaceOverViewport(ImGuiID dockspace_id = 0, const ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags flags = 0, ...);
+  Simply add a leading 0 to your existing calls to DockSpaceOverViewport() if you have any.
 - Tables: resizing border hit-rect scales according to current monitor dpi scale.
 
 

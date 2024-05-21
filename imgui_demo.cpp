@@ -8450,7 +8450,7 @@ void ShowExampleAppDockSpace(bool* p_open)
     // If we remove all options we are showcasing, this demo would become:
     //     void ShowExampleAppDockSpace()
     //     {
-    //         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    //         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
     //     }
     // In most cases you should be able to just call DockSpaceOverViewport() and ignore all the code below!
     // In this specific demo, we are not using DockSpaceOverViewport() because:
