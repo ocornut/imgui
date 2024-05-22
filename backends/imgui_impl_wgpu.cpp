@@ -808,7 +808,7 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         IM_ASSERT(init_info->CreateViewportWindowFn != nullptr && "Window creation callback required for multi viewport!");
-        IM_ASSERT(init_info->ViewportPresentMode != 0 && "WGPUPresentMode required to be set for multi viewport!");
+        IM_ASSERT(init_info->ViewportPresentMode != ~0 && "WGPUPresentMode required to be set for multi viewport!");
         ImGui_ImplWGPU_InitPlatformInterface();
     }
 
@@ -877,7 +877,6 @@ static void ImGui_ImplWGPU_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGui_ImplWGPU_ViewportData* vd = (ImGui_ImplWGPU_ViewportData*)viewport->RendererUserData)
     {
-        wgpuSurfaceUnconfigure(vd->wgpu_surface);
         SafeRelease(vd->wgpu_surface);
         IM_DELETE(vd);
     }
