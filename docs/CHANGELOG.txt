@@ -53,11 +53,16 @@ Breaking changes:
 - Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
   ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
   overlooked from the API but it will facilitate eventual support for multi-viewports.
-- Internals, Inputs: (not public nor documented yet, but disclosing breaking changes
+- Inputs: (not public nor documented yet, but disclosing breaking changes
   because I expect a few advanced users caught on owner-aware inputs system):
-  - Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more explicit and
+  - (Internals) Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more explicit and
     reduce confusion with the default it is a non-zero value and cannot be the default value.
-
+  - (Internals) Shortcut(), SetShortcutRouting(): swapped last two parameters order in function signatures:
+      Before: Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
+      After:  Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0, ImGuiID owner_id = 0);
+  - For several reasons those changes makes sense. They are being made because making some of
+    those API public. Only past users of imgui_internal.h with the extra parameters will be affected.
+    Added asserts for valid flags in various functions to detect _some_ misuses, BUT NOT ALL.
 
 Other changes:
 
