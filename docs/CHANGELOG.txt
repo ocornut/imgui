@@ -53,6 +53,11 @@ Breaking changes:
 - Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
   ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
   overlooked from the API but it will facilitate eventual support for multi-viewports.
+- Internals, Inputs: (not public nor documented yet, but disclosing breaking changes
+  because I expect a few advanced users caught on owner-aware inputs system):
+  - Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more explicit and
+    reduce confusion with the default it is a non-zero value and cannot be the default value.
+
 
 Other changes:
 

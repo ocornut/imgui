@@ -430,6 +430,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2024/05/22 (1.90.7) - inputs internals: renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more explicit and reduce confusion with the default it is a non-zero value and cannot be the default value (never made public, but disclosing as I expect a few users caught on owner-aware inputs).
  - 2024/05/16 (1.90.7) - inputs: on macOS X, Cmd and Ctrl keys are now automatically swapped by io.AddKeyEvent() as this naturally align with how macOS X uses those keys.
                            - it shouldn't really affect you unless you had custom shortcut swapping in place for macOS X apps.
                            - removed ImGuiMod_Shortcut which was previously dynamically remapping to Ctrl or Cmd/Super. It is now unnecessary to specific cross-platform idiomatic shortcuts. (#2343, #4084, #5923, #456)
@@ -6713,7 +6714,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // We don't use a regular button+id to test for double-click on title bar (mostly due to legacy reason, could be fixed), so verify that we don't have items over the title bar.
             ImRect title_bar_rect = window->TitleBarRect();
             if (g.HoveredWindow == window && g.HoveredId == 0 && g.HoveredIdPreviousFrame == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
-                if (g.IO.MouseClickedCount[0] == 2 && GetKeyOwner(ImGuiKey_MouseLeft) == ImGuiKeyOwner_None)
+                if (g.IO.MouseClickedCount[0] == 2 && GetKeyOwner(ImGuiKey_MouseLeft) == ImGuiKeyOwner_NoOwner)
                     window->WantCollapseToggle = true;
             if (window->WantCollapseToggle)
             {
@@ -8504,9 +8505,9 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
             routing_entry = &rt->Entries[old_routing_idx];
             routing_entry->RoutingCurrScore = routing_entry->RoutingNextScore;
             routing_entry->RoutingCurr = routing_entry->RoutingNext; // Update entry
-            routing_entry->RoutingNext = ImGuiKeyOwner_None;
+            routing_entry->RoutingNext = ImGuiKeyOwner_NoOwner;
             routing_entry->RoutingNextScore = 255;
-            if (routing_entry->RoutingCurr == ImGuiKeyOwner_None)
+            if (routing_entry->RoutingCurr == ImGuiKeyOwner_NoOwner)
                 continue;
             rt->EntriesNext.push_back(*routing_entry); // Write alive ones into new buffer
 
@@ -8515,7 +8516,7 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
             if (routing_entry->Mods == g.IO.KeyMods)
             {
                 ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
-                if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
+                if (owner_data->OwnerCurr == ImGuiKeyOwner_NoOwner)
                 {
                     owner_data->OwnerCurr = routing_entry->RoutingCurr;
                     //IMGUI_DEBUG_LOG("SetKeyOwner(%s, owner_id=0x%08X) via Routing\n", GetKeyName(key), routing_entry->RoutingCurr);
@@ -8535,7 +8536,7 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
 static inline ImGuiID GetRoutingIdFromOwnerId(ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    return (owner_id != ImGuiKeyOwner_None && owner_id != ImGuiKeyOwner_Any) ? owner_id : g.CurrentFocusScopeId;
+    return (owner_id != ImGuiKeyOwner_NoOwner && owner_id != ImGuiKeyOwner_Any) ? owner_id : g.CurrentFocusScopeId;
 }
 
 ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
@@ -8647,7 +8648,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiI
         flags |= ImGuiInputFlags_RouteGlobalHighest; // IMPORTANT: This is the default for SetShortcutRouting() but NOT Shortcut()
     else
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_)); // Check that only 1 routing flag is used
-    IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_None);
+    IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_NoOwner);
 
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
     key_chord = FixupKeyChord(key_chord);
@@ -9146,7 +9147,7 @@ static void ImGui::UpdateKeyboardInputs()
         ImGuiKeyOwnerData* owner_data = &g.KeysOwnerData[key - ImGuiKey_NamedKey_BEGIN];
         owner_data->OwnerCurr = owner_data->OwnerNext;
         if (!key_data->Down) // Important: ownership is released on the frame after a release. Ensure a 'MouseDown -> CloseWindow -> MouseUp' chain doesn't lead to someone else seeing the MouseUp.
-            owner_data->OwnerNext = ImGuiKeyOwner_None;
+            owner_data->OwnerNext = ImGuiKeyOwner_NoOwner;
         owner_data->LockThisFrame = owner_data->LockUntilRelease = owner_data->LockUntilRelease && key_data->Down;  // Clear LockUntilRelease when key is not Down anymore
     }
 
@@ -9302,8 +9303,8 @@ void ImGui::UpdateMouseWheel()
     }
 
     ImVec2 wheel;
-    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_None) ? g.IO.MouseWheelH : 0.0f;
-    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_None) ? g.IO.MouseWheel : 0.0f;
+    wheel.x = TestKeyOwner(ImGuiKey_MouseWheelX, ImGuiKeyOwner_NoOwner) ? g.IO.MouseWheelH : 0.0f;
+    wheel.y = TestKeyOwner(ImGuiKey_MouseWheelY, ImGuiKeyOwner_NoOwner) ? g.IO.MouseWheel : 0.0f;
 
     //IMGUI_DEBUG_LOG("MouseWheel X:%.3f Y:%.3f\n", wheel_x, wheel_y);
     ImGuiWindow* mouse_window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
@@ -9542,7 +9543,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
 ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
 {
     if (!IsNamedKeyOrMod(key))
-        return ImGuiKeyOwner_None;
+        return ImGuiKeyOwner_NoOwner;
 
     ImGuiContext& g = *GImGui;
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
@@ -9550,7 +9551,7 @@ ImGuiID ImGui::GetKeyOwner(ImGuiKey key)
 
     if (g.ActiveIdUsingAllKeyboardKeys && owner_id != g.ActiveId && owner_id != ImGuiKeyOwner_Any)
         if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
-            return ImGuiKeyOwner_None;
+            return ImGuiKeyOwner_NoOwner;
 
     return owner_id;
 }
@@ -9580,7 +9581,7 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
     {
         if (owner_data->LockThisFrame)
             return false;
-        if (owner_data->OwnerCurr != ImGuiKeyOwner_None)
+        if (owner_data->OwnerCurr != ImGuiKeyOwner_NoOwner)
             return false;
     }
 
@@ -9681,7 +9682,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags 
 
     // Using 'owner_id == ImGuiKeyOwner_Any/0': auto-assign an owner based on current focus scope (each window has its focus scope by default)
     // Effectively makes Shortcut() always input-owner aware.
-    if (owner_id == ImGuiKeyOwner_Any || owner_id == ImGuiKeyOwner_None)
+    if (owner_id == ImGuiKeyOwner_Any || owner_id == ImGuiKeyOwner_NoOwner)
         owner_id = GetRoutingIdFromOwnerId(owner_id);
 
     // Submit route
@@ -12123,10 +12124,10 @@ static void ImGui::NavUpdate()
     g.NavActivateFlags = ImGuiActivateFlags_None;
     if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
-        const bool activate_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Space, ImGuiKeyOwner_None)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadActivate, ImGuiKeyOwner_None));
-        const bool activate_pressed = activate_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Space, ImGuiKeyOwner_None)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadActivate, ImGuiKeyOwner_None)));
-        const bool input_down = (nav_keyboard_active && (IsKeyDown(ImGuiKey_Enter, ImGuiKeyOwner_None) || IsKeyDown(ImGuiKey_KeypadEnter, ImGuiKeyOwner_None))) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadInput, ImGuiKeyOwner_None));
-        const bool input_pressed = input_down && ((nav_keyboard_active && (IsKeyPressed(ImGuiKey_Enter, ImGuiKeyOwner_None) || IsKeyPressed(ImGuiKey_KeypadEnter, ImGuiKeyOwner_None))) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadInput, ImGuiKeyOwner_None)));
+        const bool activate_down = (nav_keyboard_active && IsKeyDown(ImGuiKey_Space, ImGuiKeyOwner_NoOwner)) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadActivate, ImGuiKeyOwner_NoOwner));
+        const bool activate_pressed = activate_down && ((nav_keyboard_active && IsKeyPressed(ImGuiKey_Space, ImGuiKeyOwner_NoOwner)) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadActivate, ImGuiKeyOwner_NoOwner)));
+        const bool input_down = (nav_keyboard_active && (IsKeyDown(ImGuiKey_Enter, ImGuiKeyOwner_NoOwner) || IsKeyDown(ImGuiKey_KeypadEnter, ImGuiKeyOwner_NoOwner))) || (nav_gamepad_active && IsKeyDown(ImGuiKey_NavGamepadInput, ImGuiKeyOwner_NoOwner));
+        const bool input_pressed = input_down && ((nav_keyboard_active && (IsKeyPressed(ImGuiKey_Enter, ImGuiKeyOwner_NoOwner) || IsKeyPressed(ImGuiKey_KeypadEnter, ImGuiKeyOwner_NoOwner))) || (nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadInput, ImGuiKeyOwner_NoOwner)));
         if (g.ActiveId == 0 && activate_pressed)
         {
             g.NavActivateId = g.NavId;
@@ -12300,10 +12301,10 @@ void ImGui::NavUpdateCreateMoveRequest()
         if (window && !g.NavWindowingTarget && !(window->Flags & ImGuiWindowFlags_NoNavInputs))
         {
             const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | ImGuiInputFlags_RepeatRateNavMove;
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Left; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Right; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Up; }
-            if (!IsActiveIdUsingNavDir(ImGuiDir_Down)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadDown,  ImGuiKeyOwner_None, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_DownArrow,  ImGuiKeyOwner_None, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Down; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  ImGuiKeyOwner_NoOwner, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  ImGuiKeyOwner_NoOwner, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Left; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, ImGuiKeyOwner_NoOwner, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, ImGuiKeyOwner_NoOwner, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Right; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    ImGuiKeyOwner_NoOwner, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    ImGuiKeyOwner_NoOwner, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Up; }
+            if (!IsActiveIdUsingNavDir(ImGuiDir_Down)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadDown,  ImGuiKeyOwner_NoOwner, repeat_mode)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_DownArrow,  ImGuiKeyOwner_NoOwner, repeat_mode)))) { g.NavMoveDir = ImGuiDir_Down; }
         }
         g.NavMoveClipDir = g.NavMoveDir;
         g.NavScoringNoClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -12399,7 +12400,7 @@ void ImGui::NavUpdateCreateTabbingRequest()
     if (window == NULL || g.NavWindowingTarget != NULL || (window->Flags & ImGuiWindowFlags_NoNavInputs))
         return;
 
-    const bool tab_pressed = IsKeyPressed(ImGuiKey_Tab, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
+    const bool tab_pressed = IsKeyPressed(ImGuiKey_Tab, ImGuiKeyOwner_NoOwner, ImGuiInputFlags_Repeat) && !g.IO.KeyCtrl && !g.IO.KeyAlt;
     if (!tab_pressed)
         return;
 
@@ -12537,7 +12538,7 @@ static void ImGui::NavUpdateCancelRequest()
     ImGuiContext& g = *GImGui;
     const bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (g.IO.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    if (!(nav_keyboard_active && IsKeyPressed(ImGuiKey_Escape, ImGuiKeyOwner_None)) && !(nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, ImGuiKeyOwner_None)))
+    if (!(nav_keyboard_active && IsKeyPressed(ImGuiKey_Escape, ImGuiKeyOwner_NoOwner)) && !(nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadCancel, ImGuiKeyOwner_NoOwner)))
         return;
 
     IMGUI_DEBUG_LOG_NAV("[nav] NavUpdateCancelRequest()\n");
@@ -12586,10 +12587,10 @@ static float ImGui::NavUpdatePageUpPageDown()
     if ((window->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL)
         return 0.0f;
 
-    const bool page_up_held = IsKeyDown(ImGuiKey_PageUp, ImGuiKeyOwner_None);
-    const bool page_down_held = IsKeyDown(ImGuiKey_PageDown, ImGuiKeyOwner_None);
-    const bool home_pressed = IsKeyPressed(ImGuiKey_Home, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat);
-    const bool end_pressed = IsKeyPressed(ImGuiKey_End, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat);
+    const bool page_up_held = IsKeyDown(ImGuiKey_PageUp, ImGuiKeyOwner_NoOwner);
+    const bool page_down_held = IsKeyDown(ImGuiKey_PageDown, ImGuiKeyOwner_NoOwner);
+    const bool home_pressed = IsKeyPressed(ImGuiKey_Home, ImGuiKeyOwner_NoOwner, ImGuiInputFlags_Repeat);
+    const bool end_pressed = IsKeyPressed(ImGuiKey_End, ImGuiKeyOwner_NoOwner, ImGuiInputFlags_Repeat);
     if (page_up_held == page_down_held && home_pressed == end_pressed) // Proceed if either (not both) are pressed, otherwise early out
         return 0.0f;
 
@@ -12599,9 +12600,9 @@ static float ImGui::NavUpdatePageUpPageDown()
     if (window->DC.NavLayersActiveMask == 0x00 && window->DC.NavWindowHasScrollY)
     {
         // Fallback manual-scroll when window has no navigable item
-        if (IsKeyPressed(ImGuiKey_PageUp, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat))
+        if (IsKeyPressed(ImGuiKey_PageUp, ImGuiKeyOwner_NoOwner, ImGuiInputFlags_Repeat))
             SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-        else if (IsKeyPressed(ImGuiKey_PageDown, ImGuiKeyOwner_None, ImGuiInputFlags_Repeat))
+        else if (IsKeyPressed(ImGuiKey_PageDown, ImGuiKeyOwner_NoOwner, ImGuiInputFlags_Repeat))
             SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
         else if (home_pressed)
             SetScrollY(window, 0.0f);
@@ -12855,7 +12856,7 @@ static void ImGui::NavUpdateWindowing()
     // Keyboard: Press and Release ALT to toggle menu layer
     const ImGuiKey windowing_toggle_keys[] = { ImGuiKey_LeftAlt, ImGuiKey_RightAlt };
     for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
-        if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, ImGuiKeyOwner_None))
+        if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, ImGuiKeyOwner_NoOwner))
         {
             g.NavWindowingToggleLayer = true;
             g.NavWindowingToggleKey = windowing_toggle_key;
@@ -12870,7 +12871,7 @@ static void ImGui::NavUpdateWindowing()
         // We cancel toggling nav layer if an owner has claimed the key.
         if (io.InputQueueCharacters.Size > 0 || io.KeyCtrl || io.KeyShift || io.KeySuper)
             g.NavWindowingToggleLayer = false;
-        if (TestKeyOwner(g.NavWindowingToggleKey, ImGuiKeyOwner_None) == false || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_None) == false)
+        if (TestKeyOwner(g.NavWindowingToggleKey, ImGuiKeyOwner_NoOwner) == false || TestKeyOwner(ImGuiMod_Alt, ImGuiKeyOwner_NoOwner) == false)
             g.NavWindowingToggleLayer = false;
 
         // Apply layer toggle on Alt release
@@ -14836,7 +14837,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
                 {
                     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
-                    if (owner_data->OwnerCurr == ImGuiKeyOwner_None)
+                    if (owner_data->OwnerCurr == ImGuiKeyOwner_NoOwner)
                         continue;
                     Text("%s: 0x%08X%s", GetKeyName(key), owner_data->OwnerCurr,
                         owner_data->LockUntilRelease ? " LockUntilRelease" : owner_data->LockThisFrame ? " LockThisFrame" : "");

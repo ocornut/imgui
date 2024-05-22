@@ -1400,7 +1400,8 @@ struct ImGuiInputEvent
 
 // Input function taking an 'ImGuiID owner_id' argument defaults to (ImGuiKeyOwner_Any == 0) aka don't test ownership, which matches legacy behavior.
 #define ImGuiKeyOwner_Any           ((ImGuiID)0)    // Accept key that have an owner, UNLESS a call to SetKeyOwner() explicitly used ImGuiInputFlags_LockThisFrame or ImGuiInputFlags_LockUntilRelease.
-#define ImGuiKeyOwner_None          ((ImGuiID)-1)   // Require key to have no owner.
+#define ImGuiKeyOwner_NoOwner       ((ImGuiID)-1)   // Require key to have no owner.
+//#define ImGuiKeyOwner_None ImGuiKeyOwner_NoOwner  // We previously called this 'ImGuiKeyOwner_None' but it was inconsistent with our pattern that _None values == 0 and quite dangerous. Also using _NoOwner makes the IsKeyPressed() calls more explicit.
 
 typedef ImS16 ImGuiKeyRoutingIndex;
 
@@ -1414,7 +1415,7 @@ struct ImGuiKeyRoutingData
     ImGuiID                         RoutingCurr;
     ImGuiID                         RoutingNext;
 
-    ImGuiKeyRoutingData()           { NextEntryIndex = -1; Mods = 0; RoutingCurrScore = RoutingNextScore = 255; RoutingCurr = RoutingNext = ImGuiKeyOwner_None; }
+    ImGuiKeyRoutingData()           { NextEntryIndex = -1; Mods = 0; RoutingCurrScore = RoutingNextScore = 255; RoutingCurr = RoutingNext = ImGuiKeyOwner_NoOwner; }
 };
 
 // Routing table: maintain a desired owner for each possible key-chord (key + mods), and setup owner in NewFrame() when mods are matching.
@@ -1438,7 +1439,7 @@ struct ImGuiKeyOwnerData
     bool        LockThisFrame;      // Reading this key requires explicit owner id (until end of frame). Set by ImGuiInputFlags_LockThisFrame.
     bool        LockUntilRelease;   // Reading this key requires explicit owner id (until key is released). Set by ImGuiInputFlags_LockUntilRelease. When this is true LockThisFrame is always true as well.
 
-    ImGuiKeyOwnerData()             { OwnerCurr = OwnerNext = ImGuiKeyOwner_None; LockThisFrame = LockUntilRelease = false; }
+    ImGuiKeyOwnerData()             { OwnerCurr = OwnerNext = ImGuiKeyOwner_NoOwner; LockThisFrame = LockUntilRelease = false; }
 };
 
 // Flags for extended versions of IsKeyPressed(), IsMouseClicked(), Shortcut(), SetKeyOwner(), SetItemKeyOwner()
@@ -2015,7 +2016,7 @@ struct ImGuiContext
 
     // [EXPERIMENTAL] Key/Input Ownership + Shortcut Routing system
     // - The idea is that instead of "eating" a given key, we can link to an owner.
-    // - Input query can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_None (== -1) or a custom ID.
+    // - Input query can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_NoOwner (== -1) or a custom ID.
     // - Routing is requested ahead of time for a given chord (Key + Mods) and granted in NewFrame().
     double                  LastKeyModsChangeTime;              // Record the last time key mods changed (affect repeat delay when using shortcut logic)
     double                  LastKeyModsChangeFromNoneTime;      // Record the last time key mods changed away from being 0 (affect repeat delay when using shortcut logic)
@@ -3244,7 +3245,7 @@ namespace ImGui
     // [EXPERIMENTAL] Low-Level: Key/Input Ownership
     // - The idea is that instead of "eating" a given input, we can link to an owner id.
     // - Ownership is most often claimed as a result of reacting to a press/down event (but occasionally may be claimed ahead).
-    // - Input queries can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_None (== -1) or a custom ID.
+    // - Input queries can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_NoOwner (== -1) or a custom ID.
     // - Legacy input queries (without specifying an owner or _Any or _None) are equivalent to using ImGuiKeyOwner_Any (== 0).
     // - Input ownership is automatically released on the frame after a key is released. Therefore:
     //   - for ownership registration happening as a result of a down/press event, the SetKeyOwner() call may be done once (common case).
