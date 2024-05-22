@@ -169,7 +169,6 @@ typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // E
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow();
-typedef int ImGuiInputFlags;            // -> enum ImGuiInputFlags_         // Flags: for IsKeyPressed(), IsMouseClicked(), SetKeyOwner(), SetItemKeyOwner() etc.
 typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag(), g.LastItemData.InFlags
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for g.LastItemData.StatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
@@ -1442,15 +1441,13 @@ struct ImGuiKeyOwnerData
     ImGuiKeyOwnerData()             { OwnerCurr = OwnerNext = ImGuiKeyOwner_NoOwner; LockThisFrame = LockUntilRelease = false; }
 };
 
+// Extend ImGuiInputFlags_
 // Flags for extended versions of IsKeyPressed(), IsMouseClicked(), Shortcut(), SetKeyOwner(), SetItemKeyOwner()
 // Don't mistake with ImGuiInputTextFlags! (which is for ImGui::InputText() function)
-enum ImGuiInputFlags_
+enum ImGuiInputFlagsPrivate_
 {
-    ImGuiInputFlags_None                = 0,
-
     // Flags for IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked(), Shortcut()
     // - Repeat mode
-    ImGuiInputFlags_Repeat              = 1 << 0,   // Enable repeat. Return true on successive repeats. Default for legacy IsKeyPressed(). NOT Default for legacy IsMouseClicked(). MUST BE == 1.
     ImGuiInputFlags_RepeatRateDefault   = 1 << 1,   // Repeat rate: Regular (default)
     ImGuiInputFlags_RepeatRateNavMove   = 1 << 2,   // Repeat rate: Fast
     ImGuiInputFlags_RepeatRateNavTweak  = 1 << 3,   // Repeat rate: Faster
@@ -1471,33 +1468,6 @@ enum ImGuiInputFlags_
     // - Locking key away from non-input aware code. Locking is useful to make input-owner-aware code steal keys from non-input-owner-aware code. If all code is input-owner-aware locking would never be necessary.
     ImGuiInputFlags_LockThisFrame       = 1 << 10,  // Further accesses to key data will require EXPLICIT owner ID (ImGuiKeyOwner_Any/0 will NOT accepted for polling). Cleared at end of frame.
     ImGuiInputFlags_LockUntilRelease    = 1 << 11,  // Further accesses to key data will require EXPLICIT owner ID (ImGuiKeyOwner_Any/0 will NOT accepted for polling). Cleared when the key is released or at end of each frame if key is released.
-
-    // Flags for Shortcut() and low-level SetShortcutRouting()
-    // - Routing Policies
-    //   The general idea is that several callers register interest in a shortcut, and only one owner gets it.
-    //      Parent   -> call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
-    //        Child1 -> call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
-    //        Child2 -> no call                  // When Child2 is focused, Parent gets the shortcut.
-    //   The whole system is order independent, so if Child1 does it calls before Parent results will be identical.
-    //   This is an important property as it facilitate working with foreign code or larger codebase.
-    // - Visualize registered routes in 'Metrics->Inputs' and submitted routes in 'Debug Log->InputRouting'.
-    // - When a policy (except for _RouteAlways *) is set, Shortcut() will register itself with SetShortcutRouting(),
-    //   allowing the system to decide where to route the input among other route-aware calls.
-    //   (* Using ImGuiInputFlags_RouteAlways is roughly equivalent to calling IsKeyChordPressed(key)).
-    // - Shortcut() uses ImGuiInputFlags_RouteFocused by default. Meaning that a Shortcut() call will register
-    //   a route and only succeed when parent window is in the focus-stack and if no-one with a higher priority
-    //   is claiming the same shortcut.
-    // - You can chain two unrelated windows in the focus stack using SetWindowParentWindowForFocusRoute()
-    //   e.g. if you have a tool window associated to a document, and you want document shortcuts to run when the tool is focused.
-    // - Priorities: GlobalHighest > Focused (if owner is active item) > GlobalOverFocused > Focused (if in focused window) > Global.
-    // - Can select only 1 policy among all available.
-    ImGuiInputFlags_RouteFocused            = 1 << 12,  // (Default) Honor focus route: Accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
-    ImGuiInputFlags_RouteGlobal             = 1 << 13,  // Register route globally (normal priority: unless a focused window or active item registered the route) -> recommended Global priority.
-    ImGuiInputFlags_RouteGlobalOverFocused  = 1 << 14,  // Register route globally (higher priority: unless an active item registered the route, e.g. CTRL+A registered by InputText will take priority over this).
-    ImGuiInputFlags_RouteGlobalHighest      = 1 << 15,  // Register route globally (highest priority: unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this)
-    ImGuiInputFlags_RouteAlways             = 1 << 16,  // Do not register route, poll keys directly.
-    // Routing polices: extra options
-    ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 17,  // Global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
 
     // [Internal] Mask of which function support which flags
     ImGuiInputFlags_RepeatRateMask_             = ImGuiInputFlags_RepeatRateDefault | ImGuiInputFlags_RepeatRateNavMove | ImGuiInputFlags_RepeatRateNavTweak,
@@ -2014,7 +1984,7 @@ struct ImGuiContext
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
-    // [EXPERIMENTAL] Key/Input Ownership + Shortcut Routing system
+    // Key/Input Ownership + Shortcut Routing system
     // - The idea is that instead of "eating" a given key, we can link to an owner.
     // - Input query can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_NoOwner (== -1) or a custom ID.
     // - Routing is requested ahead of time for a given chord (Key + Mods) and granted in NewFrame().
@@ -3275,23 +3245,21 @@ namespace ImGui
     IMGUI_API bool          IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id);
     IMGUI_API bool          IsMouseDoubleClicked(ImGuiMouseButton button, ImGuiID owner_id);
 
-    // [EXPERIMENTAL] Shortcut Routing
-    // - ImGuiKeyChord = a ImGuiKey optionally OR-red with ImGuiMod_Alt/ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Super.
-    //     ImGuiKey_C                 (accepted by functions taking ImGuiKey or ImGuiKeyChord)
-    //     ImGuiKey_C | ImGuiMod_Ctrl (accepted by functions taking ImGuiKeyChord)
-    //   ONLY ImGuiMod_XXX values are legal to 'OR' with an ImGuiKey. You CANNOT 'OR' two ImGuiKey values.
-    // - When using one of the routing option, e.g. ImGuiInputFlags_RouteFocused:
+    // Shortcut Testing & Routing
+    // - Set Shortcut() and SetNextItemShortcut() in imgui.h
+    // - When a policy (except for ImGuiInputFlags_RouteAlways *) is set, Shortcut() will register itself with SetShortcutRouting(),
+    //   allowing the system to decide where to route the input among other route-aware calls.
+    //   (* using ImGuiInputFlags_RouteAlways is roughly equivalent to calling IsKeyChordPressed(key) and bypassing route registration and check)
+    // - When using one of the routing option:
+    //   - The default route is ImGuiInputFlags_RouteFocused (accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.)
     //   - Routes are requested given a chord (key + modifiers) and a routing policy.
     //   - Routes are resolved during NewFrame(): if keyboard modifiers are matching current ones: SetKeyOwner() is called + route is granted for the frame.
-    //   - One route may be granted to a single owner. When multiple requests are made we have policies to select the winning route (e.g. deep most window).
+    //   - Each route may be granted to a single owner. When multiple requests are made we have policies to select the winning route (e.g. deep most window).
     //   - Multiple read sites may use the same owner id can all access the granted route.
     //   - When owner_id is 0 we use the current Focus Scope ID as a owner ID in order to identify our location.
-    // - TL;DR;
-    //   - IsKeyChordPressed() compares mods + call IsKeyPressed() -> function has no side-effect.
-    //   - Shortcut() submits a route then if currently can be routed calls IsKeyChordPressed() -> function has (desirable) side-effects.
-    //   - Use Tools->Metrics/Debugger->Inputs to view input routes.
-    IMGUI_API void          SetNextItemShortcut(ImGuiKeyChord key_chord);
-    IMGUI_API bool          Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0, ImGuiID owner_id = 0);
+    // - You can chain two unrelated windows in the focus stack using SetWindowParentWindowForFocusRoute()
+    //   e.g. if you have a tool window associated to a document, and you want document shortcuts to run when the tool is focused.
+    IMGUI_API bool          Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id);
     IMGUI_API bool          SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id); // owner_id needs to be explicit and cannot be 0
     IMGUI_API bool          TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id);
     IMGUI_API ImGuiKeyRoutingData* GetShortcutRoutingData(ImGuiKeyChord key_chord);

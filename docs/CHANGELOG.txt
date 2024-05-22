@@ -56,6 +56,23 @@ Breaking changes:
 
 Other changes:
 
+- Inputs: added Shortcut() function (w/ routing policies) in public API. (#456, #2637)
+  - using ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
+    - checks that CTRL+C is pressed,
+    - and that current window is in focus stack,
+    - and that no other requests for CTRL+C have been made from deeper locations of the window/item stack.
+  - Added ImGuiInputFlags_RouteFocused, ImGuiInputFlags_RouteGlobal and other flags
+    related to routing policies. (#456, #2637)
+  - Added ImGuiInputFlags_Repeat for use by Shortcut() and by upcoming (still internal)
+    extended rework of various input functions.
+  - About routing system and routing policies:
+    The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
+         Parent  -> call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
+         Child1  -> call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
+         Child2  -> no call                  // When Child2 is focused, Parent gets the shortcut.
+    The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
+    This is an important property as it facilitate working with foreign code or larger codebase.
+- Inputs: added SetNextItemShortcut() to set a shortcut to activate an item. (#456)
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
   - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
   - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
