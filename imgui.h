@@ -1481,7 +1481,7 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_None                    = 0,
     ImGuiInputFlags_Repeat                  = 1 << 0,   // Enable repeat. Return true on successive repeats. Default for legacy IsKeyPressed(). NOT Default for legacy IsMouseClicked(). MUST BE == 1.
 
-    // Flags for Shortcut()
+    // Flags for Shortcut(), SetNextItemShortcut()
     // - Default policy is RouteFocused. Can select only 1 policy among all available.
     // - Priorities: GlobalHighest > Focused (if owner is active item) > GlobalOverFocused > Focused (if in focused window) > Global.
     ImGuiInputFlags_RouteFocused            = 1 << 12,  // Focus stack route (default): Accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
@@ -1490,6 +1490,9 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteGlobalHighest      = 1 << 15,  // Global route (highest priority): unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this)
     ImGuiInputFlags_RouteAlways             = 1 << 16,  // Do not register route, poll keys directly.
     ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 17,  // Option combine with others: global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
+
+    // Flags for SetNextItemShortcut()
+    ImGuiInputFlags_Tooltip                 = 1 << 18,  // Automatically display a tooltip when hovering item.
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO

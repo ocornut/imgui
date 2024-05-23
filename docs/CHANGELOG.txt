@@ -72,7 +72,12 @@ Other changes:
          Child2  -> no call                  // When Child2 is focused, Parent gets the shortcut.
     The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
     This is an important property as it facilitate working with foreign code or larger codebase.
-- Inputs: added SetNextItemShortcut() to set a shortcut to activate an item. (#456)
+- Inputs: added SetNextItemShortcut() to set a shortcut to locally or remotely press or activate
+  an item (depending on specified routing policy). Items like buttons are not fully activated, in
+  the sense that they get pressed but an active e.g. InputText() won't be deactivated. (#456)
+  - Added ImGuiInputFlags_Tooltip to automatically show a tooltip when hovering item.
+  - Using e.g. ImGuiInputFlags_RouteGlobal the item shortcut may be executed even if its
+    window is not in focus stack.
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
   - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
   - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)

@@ -4186,6 +4186,11 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
             if (g.HoveredIdPreviousFrame != id)
                 return false;
         }
+
+        // Display shortcut (only works with mouse)
+        if (id == g.LastItemData.ID && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasShortcut))
+            if (IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_DelayNormal))
+                SetTooltip("%s", GetKeyChordName(g.LastItemData.Shortcut));
     }
 
     // When disabled we'll return false but still set HoveredId
@@ -10020,7 +10025,14 @@ void ImGui::ItemHandleShortcut(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiInputFlags flags = g.NextItemData.ShortcutFlags;
-    if (!Shortcut(g.NextItemData.Shortcut, flags, id) || g.NavActivateId != 0)
+    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetNextItemShortcut) == 0); // Passing flags not supported by SetNextItemShortcut()!
+
+    if (flags & ImGuiInputFlags_Tooltip)
+    {
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasShortcut;
+        g.LastItemData.Shortcut = g.NextItemData.Shortcut;
+    }
+    if (!Shortcut(g.NextItemData.Shortcut, flags & ImGuiInputFlags_SupportedByShortcut, id) || g.NavActivateId != 0)
         return;
 
     // FIXME: Generalize Activation queue?

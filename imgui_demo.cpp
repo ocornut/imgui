@@ -7206,7 +7206,7 @@ struct ExampleAppConsole
         }
 
         // Options, Filter
-        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O); // FIXME
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
         if (ImGui::Button("Options"))
             ImGui::OpenPopup("Options");
         ImGui::SameLine();
@@ -8437,16 +8437,16 @@ struct MyDocument
         ImGui::PushStyleColor(ImGuiCol_Text, doc->Color);
         ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
         ImGui::PopStyleColor();
-        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_M);
-        if (ImGui::Button("Modify (Ctrl+M)"))
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_M, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Modify"))
             doc->Dirty = true;
         ImGui::SameLine();
-        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S);
-        if (ImGui::Button("Save (Ctrl+S)"))
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Save"))
             doc->DoSave();
         ImGui::SameLine();
-        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_W);
-        if (ImGui::Button("Close (Ctrl+W)"))
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Close"))
             doc->DoQueueClose();
         ImGui::ColorEdit3("color", &doc->Color.x);  // Useful to test drag and drop and hold-dragged-to-open-tab behavior.
         ImGui::PopID();
