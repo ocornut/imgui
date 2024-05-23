@@ -9687,6 +9687,28 @@ void ImGui::SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
     g.NextItemData.ShortcutFlags = flags;
 }
 
+void ImGui::ItemHandleShortcut(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiInputFlags flags = g.NextItemData.ShortcutFlags;
+    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetNextItemShortcut) == 0); // Passing flags not supported by SetNextItemShortcut()!
+
+    if (flags & ImGuiInputFlags_Tooltip)
+    {
+        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasShortcut;
+        g.LastItemData.Shortcut = g.NextItemData.Shortcut;
+    }
+    if (!Shortcut(g.NextItemData.Shortcut, flags & ImGuiInputFlags_SupportedByShortcut, id) || g.NavActivateId != 0)
+        return;
+
+    // FIXME: Generalize Activation queue?
+    g.NavActivateId = id; // Will effectively disable clipping.
+    g.NavActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_FromShortcut;
+    //if (g.ActiveId == 0 || g.ActiveId == id)
+    g.NavActivateDownId = g.NavActivatePressedId = id;
+    NavHighlightActivated(id);
+}
+
 bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
 {
     return Shortcut(key_chord, flags, ImGuiKeyOwner_Any);
@@ -10004,7 +10026,6 @@ void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
 // [SECTION] ITEM SUBMISSION
 //-----------------------------------------------------------------------------
 // - KeepAliveID()
-// - ItemHandleShortcut() [Internal]
 // - ItemAdd()
 //-----------------------------------------------------------------------------
 
@@ -10016,28 +10037,6 @@ void ImGui::KeepAliveID(ImGuiID id)
         g.ActiveIdIsAlive = id;
     if (g.ActiveIdPreviousFrame == id)
         g.ActiveIdPreviousFrameIsAlive = true;
-}
-
-void ImGui::ItemHandleShortcut(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiInputFlags flags = g.NextItemData.ShortcutFlags;
-    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetNextItemShortcut) == 0); // Passing flags not supported by SetNextItemShortcut()!
-
-    if (flags & ImGuiInputFlags_Tooltip)
-    {
-        g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasShortcut;
-        g.LastItemData.Shortcut = g.NextItemData.Shortcut;
-    }
-    if (!Shortcut(g.NextItemData.Shortcut, flags & ImGuiInputFlags_SupportedByShortcut, id) || g.NavActivateId != 0)
-        return;
-
-    // FIXME: Generalize Activation queue?
-    g.NavActivateId = id; // Will effectively disable clipping.
-    g.NavActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_FromShortcut;
-    //if (g.ActiveId == 0 || g.ActiveId == id)
-    g.NavActivateDownId = g.NavActivatePressedId = id;
-    NavHighlightActivated(id);
 }
 
 // Declare item bounding box for clipping and interaction.
