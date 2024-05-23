@@ -10020,8 +10020,8 @@ static void ItemHandleShortcut(ImGuiID id)
     {
         g.NavActivateId = id; // Will effectively disable clipping.
         g.NavActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_FromShortcut;
-        if (g.ActiveId == 0 || g.ActiveId == id)
-            g.NavActivateDownId = g.NavActivatePressedId = id;
+        //if (g.ActiveId == 0 || g.ActiveId == id)
+        g.NavActivateDownId = g.NavActivatePressedId = id;
         ImGui::NavHighlightActivated(id);
     }
 }
@@ -12026,7 +12026,10 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.NavWindow;
-    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !window)
+    const bool activated_shortcut = g.ActiveId != 0 && g.ActiveIdFromShortcut && g.ActiveId == g.LastItemData.ID;
+
+    // Testing for !activated_shortcut here could in theory be removed if we decided that activating a remote shortcut altered one of the g.NavDisableXXX flag.
+    if ((g.NavDisableHighlight || !g.NavDisableMouseHover || !window) && !activated_shortcut)
     {
         // Mouse (we need a fallback in case the mouse becomes invalid after being used)
         // The +1.0f offset when stored by OpenPopupEx() allows reopening this or another popup (same or another mouse button) while not moving the mouse, it is pretty standard.
@@ -12037,14 +12040,19 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
     else
     {
         // When navigation is active and mouse is disabled, pick a position around the bottom left of the currently navigated item
+        ImRect ref_rect;
+        if (activated_shortcut)
+            ref_rect = g.LastItemData.NavRect;
+        else
+            ref_rect = WindowRectRelToAbs(window, window->NavRectRel[g.NavLayer]);
+
         // Take account of upcoming scrolling (maybe set mouse pos should be done in EndFrame?)
-        ImRect rect_rel = WindowRectRelToAbs(window, window->NavRectRel[g.NavLayer]);
         if (window->LastFrameActive != g.FrameCount && (window->ScrollTarget.x != FLT_MAX || window->ScrollTarget.y != FLT_MAX))
         {
             ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
-            rect_rel.Translate(window->Scroll - next_scroll);
+            ref_rect.Translate(window->Scroll - next_scroll);
         }
-        ImVec2 pos = ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x * 4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
+        ImVec2 pos = ImVec2(ref_rect.Min.x + ImMin(g.Style.FramePadding.x * 4, ref_rect.GetWidth()), ref_rect.Max.y - ImMin(g.Style.FramePadding.y, ref_rect.GetHeight()));
         ImGuiViewport* viewport = GetMainViewport();
         return ImTrunc(ImClamp(pos, viewport->Pos, viewport->Pos + viewport->Size)); // ImTrunc() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
     }
