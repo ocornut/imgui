@@ -2814,7 +2814,7 @@ struct ImGuiSelectionRequest
 {
     //------------------------------------------// BeginMultiSelect / EndMultiSelect
     ImGuiSelectionRequestType   Type;           //  ms:w, app:r     /  ms:w, app:r   // Request type. You'll most often receive 1 Clear + 1 SetRange with a single-item range.
-    bool                        Selected;       //                  /  ms:w, app:r   // Parameter for SetAll/SetRange requests (true = select, false = unselect)
+    bool                        Selected;       //  ms:w, app:r     /  ms:w, app:r   // Parameter for SetAll/SetRange requests (true = select, false = unselect)
     ImGuiSelectionUserData      RangeFirstItem; //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
     ImGuiSelectionUserData      RangeLastItem;  //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
 };

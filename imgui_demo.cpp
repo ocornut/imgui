@@ -3161,9 +3161,7 @@ static void ShowDemoWindowMultiSelect()
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, items.Size);
 
-                // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to turn into 'ms_io->RequestDelete' signal -> need HasSelection passed.
-                // FIXME-MULTISELECT: If pressing Delete + another key we have ambiguous behavior.
-                const bool want_delete = (selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete);
+                const bool want_delete = ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0);
                 const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
 
                 for (int n = 0; n < items.Size; n++)
@@ -3378,8 +3376,7 @@ static void ShowDemoWindowMultiSelect()
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
                 selection.ApplyRequests(ms_io, items.Size);
 
-                // FIXME-MULTISELECT: Shortcut(). Hard to demo this? May be helpful to turn into 'ms_io->RequestDelete' signal -> need HasSelection passed.
-                const bool want_delete = request_deletion_from_menu || ((selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
+                const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0)) || request_deletion_from_menu;
                 const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
                 request_deletion_from_menu = false;
 
@@ -9854,7 +9851,7 @@ struct ExampleAssetsBrowser
             Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->AdapterData; return self->Items[idx].ID; };
             Selection.ApplyRequests(ms_io, Items.Size);
 
-            const bool want_delete = RequestDelete || ((Selection.Size > 0) && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete));
+            const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (Selection.Size > 0)) || RequestDelete;
             const int item_curr_idx_to_focus = want_delete ? Selection.ApplyDeletionPreLoop(ms_io, Items.Size) : -1;
             RequestDelete = false;
 
