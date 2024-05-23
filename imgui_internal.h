@@ -3264,7 +3264,7 @@ namespace ImGui
     // - You can chain two unrelated windows in the focus stack using SetWindowParentWindowForFocusRoute()
     //   e.g. if you have a tool window associated to a document, and you want document shortcuts to run when the tool is focused.
     IMGUI_API bool          Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id);
-    IMGUI_API bool          SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id); // owner_id needs to be explicit and cannot be 0
+    IMGUI_API bool          SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id); // routing policy and owner_id needs to be explicit and cannot be 0
     IMGUI_API bool          TestShortcutRouting(ImGuiKeyChord key_chord, ImGuiID owner_id);
     IMGUI_API ImGuiKeyRoutingData* GetShortcutRoutingData(ImGuiKeyChord key_chord);
 
