@@ -6338,6 +6338,86 @@ static void ShowDemoWindowInputs()
             ImGui::TreePop();
         }
 
+        // Demonstrate using Shortcut() and Routing Policies.
+        // The general flow is:
+        // - Code interested in a chord (e.g. "Ctrl+A") declares their intent.
+        // - Multiple locations may be interested in same chord! Routing helps find a winner.
+        // - Every frame, we resolve all claims and assign one owner if the modifiers are matching.
+        // - The lower-level function is 'bool SetShortcutRouting()', returns true when caller got the route.
+        // - Most of the times, SetShortcutRouting() is not called directly. User mostly calls Shortcut() with routing flags.
+        // - If you call Shortcut() WITHOUT any routing option, it uses ImGuiInputFlags_RouteFocused.
+        // TL;DR: Most uses will simply be:
+        // - Shortcut(ImGuiMod_Ctrl | ImGuiKey_A); // Use ImGuiInputFlags_RouteFocused policy.
+        IMGUI_DEMO_MARKER("Inputs & Focus/Shortcuts");
+        if (ImGui::TreeNode("Shortcuts"))
+        {
+            ImGui::SeparatorText("Using SetNextItemShortcut()");
+            ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S);
+            ImGui::Button("Save");
+            ImGui::SetItemTooltip("Ctrl+S"); // FIXME: Tooltip could be automatically submitted by SetNextItemShortcut
+
+            ImGui::SeparatorText("Using Shortcut()");
+            const float line_height = ImGui::GetTextLineHeightWithSpacing();
+            const ImGuiKeyChord key_chord = ImGuiMod_Ctrl | ImGuiKey_A;
+            static ImGuiInputFlags other_flags = ImGuiInputFlags_Repeat;
+            static ImGuiInputFlags routing_flags = ImGuiInputFlags_RouteFocused;
+            ImGui::CheckboxFlags("ImGuiInputFlags_Repeat", &other_flags, ImGuiInputFlags_Repeat);
+            ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &routing_flags, ImGuiInputFlags_RouteFocused);
+            ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &routing_flags, ImGuiInputFlags_RouteAlways);
+            ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &routing_flags, ImGuiInputFlags_RouteGlobal);
+            ImGui::RadioButton("ImGuiInputFlags_RouteGlobalOverFocused", &routing_flags, ImGuiInputFlags_RouteGlobalOverFocused);
+            ImGui::RadioButton("ImGuiInputFlags_RouteGlobalHighest", &routing_flags, ImGuiInputFlags_RouteGlobalHighest);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteUnlessBgFocused", &other_flags, ImGuiInputFlags_RouteUnlessBgFocused);
+            const ImGuiInputFlags flags = other_flags | routing_flags; // Merged flags
+
+            ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
+
+            ImGui::BeginChild("WindowA", ImVec2(-FLT_MIN, line_height * 14), true);
+            ImGui::Text("Press CTRL+A and see who receives it!");
+            ImGui::Separator();
+
+            // 1: Window polling for CTRL+A
+            ImGui::Text("(in WindowA)");
+            ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
+
+            // 2: InputText also polling for CTRL+A: it always uses _RouteFocused internally (gets priority when active)
+            // (Commmented because the owner-aware version of Shortcut() is still in imgui_internal.h)
+            //char str[16] = "Press CTRL+A";
+            //ImGui::Spacing();
+            //ImGui::InputText("InputTextB", str, IM_ARRAYSIZE(str), ImGuiInputTextFlags_ReadOnly);
+            //ImGuiID item_id = ImGui::GetItemID();
+            //ImGui::SameLine(); HelpMarker("Internal widgets always use _RouteFocused");
+            //ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags, item_id) ? "PRESSED" : "...");
+
+            // 3: Dummy child is not claiming the route: focusing them shouldn't steal route away from WindowA
+            ImGui::BeginChild("ChildD", ImVec2(-FLT_MIN, line_height * 4), true);
+            ImGui::Text("(in ChildD: not using same Shortcut)");
+            ImGui::Text("IsWindowFocused: %d", ImGui::IsWindowFocused());
+            ImGui::EndChild();
+
+            // 4: Child window polling for CTRL+A. It is deeper than WindowA and gets priority when focused.
+            ImGui::BeginChild("ChildE", ImVec2(-FLT_MIN, line_height * 4), true);
+            ImGui::Text("(in ChildE: using same Shortcut)");
+            ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
+            ImGui::EndChild();
+
+            // 5: In a popup
+            if (ImGui::Button("Open Popup"))
+                ImGui::OpenPopup("PopupF");
+            if (ImGui::BeginPopup("PopupF"))
+            {
+                ImGui::Text("(in PopupF)");
+                ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
+                // (Commmented because the owner-aware version of Shortcut() is still in imgui_internal.h)
+                //ImGui::InputText("InputTextG", str, IM_ARRAYSIZE(str), ImGuiInputTextFlags_ReadOnly);
+                //ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags, ImGui::GetItemID()) ? "PRESSED" : "...");
+                ImGui::EndPopup();
+            }
+            ImGui::EndChild();
+
+            ImGui::TreePop();
+        }
+
         // Display mouse cursors
         IMGUI_DEMO_MARKER("Inputs & Focus/Mouse Cursors");
         if (ImGui::TreeNode("Mouse Cursors"))
@@ -7226,6 +7306,7 @@ struct ExampleAppConsole
         }
 
         // Options, Filter
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
         if (ImGui::Button("Options"))
             ImGui::OpenPopup("Options");
         ImGui::SameLine();
@@ -7234,7 +7315,7 @@ struct ExampleAppConsole
 
         // Reserve enough left-over height for 1 separator + 1 input text
         const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar))
+        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NavFlattened))
         {
             if (ImGui::BeginPopupContextWindow())
             {
@@ -8587,11 +8668,17 @@ struct MyDocument
         ImGui::PushStyleColor(ImGuiCol_Text, doc->Color);
         ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
         ImGui::PopStyleColor();
-        if (ImGui::Button("Modify", ImVec2(100, 0)))
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_M, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Modify"))
             doc->Dirty = true;
         ImGui::SameLine();
-        if (ImGui::Button("Save", ImVec2(100, 0)))
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Save"))
             doc->DoSave();
+        ImGui::SameLine();
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Close"))
+            doc->DoQueueClose();
         ImGui::ColorEdit3("color", &doc->Color.x);  // Useful to test drag and drop and hold-dragged-to-open-tab behavior.
         ImGui::PopID();
     }
@@ -8604,9 +8691,9 @@ struct MyDocument
 
         char buf[256];
         sprintf(buf, "Save %s", doc->Name);
-        if (ImGui::MenuItem(buf, "CTRL+S", false, doc->Open))
+        if (ImGui::MenuItem(buf, "Ctrl+S", false, doc->Open))
             doc->DoSave();
-        if (ImGui::MenuItem("Close", "CTRL+W", false, doc->Open))
+        if (ImGui::MenuItem("Close", "Ctrl+W", false, doc->Open))
             doc->DoQueueClose();
         ImGui::EndPopup();
     }
@@ -8693,7 +8780,7 @@ void ShowExampleAppDocuments(bool* p_open)
             if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
                 for (MyDocument& doc : app.Documents)
                     doc.DoQueueClose();
-            if (ImGui::MenuItem("Exit", "Ctrl+F4") && p_open)
+            if (ImGui::MenuItem("Exit") && p_open)
                 *p_open = false;
             ImGui::EndMenu();
         }
