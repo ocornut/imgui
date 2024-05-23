@@ -1112,6 +1112,9 @@ static void             SetPlatformImeDataFn_DefaultImpl(ImGuiViewport* viewport
 
 namespace ImGui
 {
+// Item
+static void             ItemHandleShortcut(ImGuiID id);
+
 // Navigation
 static void             NavUpdate();
 static void             NavUpdateWindowing();
@@ -9674,11 +9677,12 @@ bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiInputFlags flags, Im
     return true;
 }
 
-void ImGui::SetNextItemShortcut(ImGuiKeyChord key_chord)
+void ImGui::SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
     g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasShortcut;
     g.NextItemData.Shortcut = key_chord;
+    g.NextItemData.ShortcutFlags = flags;
 }
 
 bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
@@ -10012,18 +10016,19 @@ void ImGui::KeepAliveID(ImGuiID id)
         g.ActiveIdPreviousFrameIsAlive = true;
 }
 
-static void ItemHandleShortcut(ImGuiID id)
+void ImGui::ItemHandleShortcut(ImGuiID id)
 {
-    // FIXME: Generalize Activation queue?
     ImGuiContext& g = *GImGui;
-    if (ImGui::Shortcut(g.NextItemData.Shortcut, ImGuiInputFlags_None, id) && g.NavActivateId == 0)
-    {
-        g.NavActivateId = id; // Will effectively disable clipping.
-        g.NavActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_FromShortcut;
-        //if (g.ActiveId == 0 || g.ActiveId == id)
-        g.NavActivateDownId = g.NavActivatePressedId = id;
-        ImGui::NavHighlightActivated(id);
-    }
+    ImGuiInputFlags flags = g.NextItemData.ShortcutFlags;
+    if (!Shortcut(g.NextItemData.Shortcut, flags, id) || g.NavActivateId != 0)
+        return;
+
+    // FIXME: Generalize Activation queue?
+    g.NavActivateId = id; // Will effectively disable clipping.
+    g.NavActivateFlags = ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_FromShortcut;
+    //if (g.ActiveId == 0 || g.ActiveId == id)
+    g.NavActivateDownId = g.NavActivatePressedId = id;
+    NavHighlightActivated(id);
 }
 
 // Declare item bounding box for clipping and interaction.

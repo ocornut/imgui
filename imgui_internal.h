@@ -1186,6 +1186,7 @@ struct ImGuiNextItemData
     ImGuiSelectionUserData      SelectionUserData;  // Set by SetNextItemSelectionUserData() (note that NULL/0 is a valid value, we use -1 == ImGuiSelectionUserData_Invalid to mark invalid values)
     float                       Width;              // Set by SetNextItemWidth()
     ImGuiKeyChord               Shortcut;           // Set by SetNextItemShortcut()
+    ImGuiInputFlags             ShortcutFlags;      // Set by SetNextItemShortcut()
     bool                        OpenVal;            // Set by SetNextItemOpen()
     ImGuiCond                   OpenCond : 8;
 
