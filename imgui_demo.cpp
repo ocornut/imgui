@@ -8422,51 +8422,85 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 // Simplified structure to mimic a Document model
 struct MyDocument
 {
-    const char* Name;       // Document title
+    char        Name[32];   // Document title
+    int         UID;        // Unique ID (necessary as we can change title)
     bool        Open;       // Set when open (we keep an array of all available documents to simplify demo code!)
     bool        OpenPrev;   // Copy of Open from last update.
     bool        Dirty;      // Set when the document has been modified
-    bool        WantClose;  // Set when the document
     ImVec4      Color;      // An arbitrary variable associated to the document
 
-    MyDocument(const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
+    MyDocument(int uid, const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f))
     {
-        Name = name;
+        UID = uid;
+        snprintf(Name, sizeof(Name), "%s", name);
         Open = OpenPrev = open;
         Dirty = false;
-        WantClose = false;
         Color = color;
     }
     void DoOpen()       { Open = true; }
-    void DoQueueClose() { WantClose = true; }
     void DoForceClose() { Open = false; Dirty = false; }
     void DoSave()       { Dirty = false; }
+};
+
+struct ExampleAppDocuments
+{
+    ImVector<MyDocument>    Documents;
+    ImVector<MyDocument*>   CloseQueue;
+    MyDocument*             RenamingDoc = NULL;
+    bool                    RenamingStarted = false;
+
+    ExampleAppDocuments()
+    {
+        Documents.push_back(MyDocument(0, "Lettuce",             true,  ImVec4(0.4f, 0.8f, 0.4f, 1.0f)));
+        Documents.push_back(MyDocument(1, "Eggplant",            true,  ImVec4(0.8f, 0.5f, 1.0f, 1.0f)));
+        Documents.push_back(MyDocument(2, "Carrot",              true,  ImVec4(1.0f, 0.8f, 0.5f, 1.0f)));
+        Documents.push_back(MyDocument(3, "Tomato",              false, ImVec4(1.0f, 0.3f, 0.4f, 1.0f)));
+        Documents.push_back(MyDocument(4, "A Rather Long Title", false, ImVec4(0.4f, 0.8f, 0.8f, 1.0f)));
+        Documents.push_back(MyDocument(5, "Some Document",       false, ImVec4(0.8f, 0.8f, 1.0f, 1.0f)));
+    }
+
+    // As we allow to change document name, we append a never-changing document ID so tabs are stable
+    void GetTabName(MyDocument* doc, char* out_buf, size_t out_buf_size)
+    {
+        snprintf(out_buf, out_buf_size, "%s###doc%d", doc->Name, doc->UID);
+    }
 
     // Display placeholder contents for the Document
-    static void DisplayContents(MyDocument* doc)
+    void DisplayDocContents(MyDocument* doc)
     {
         ImGui::PushID(doc);
         ImGui::Text("Document \"%s\"", doc->Name);
         ImGui::PushStyleColor(ImGuiCol_Text, doc->Color);
         ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
         ImGui::PopStyleColor();
+
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_R, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Rename.."))
+        {
+            RenamingDoc = doc;
+            RenamingStarted = true;
+        }
+        ImGui::SameLine();
+
         ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_M, ImGuiInputFlags_Tooltip);
         if (ImGui::Button("Modify"))
             doc->Dirty = true;
+
         ImGui::SameLine();
         ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_Tooltip);
         if (ImGui::Button("Save"))
             doc->DoSave();
+
         ImGui::SameLine();
         ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_Tooltip);
         if (ImGui::Button("Close"))
-            doc->DoQueueClose();
+            CloseQueue.push_back(doc);
         ImGui::ColorEdit3("color", &doc->Color.x);  // Useful to test drag and drop and hold-dragged-to-open-tab behavior.
         ImGui::PopID();
     }
 
     // Display context menu for the Document
-    static void DisplayContextMenu(MyDocument* doc)
+    void DisplayDocContextMenu(MyDocument* doc)
     {
         if (!ImGui::BeginPopupContextItem())
             return;
@@ -8475,44 +8509,31 @@ struct MyDocument
         sprintf(buf, "Save %s", doc->Name);
         if (ImGui::MenuItem(buf, "Ctrl+S", false, doc->Open))
             doc->DoSave();
+        if (ImGui::MenuItem("Rename...", "Ctrl+R", false, doc->Open))
+            RenamingDoc = doc;
         if (ImGui::MenuItem("Close", "Ctrl+W", false, doc->Open))
-            doc->DoQueueClose();
+            CloseQueue.push_back(doc);
         ImGui::EndPopup();
     }
-};
 
-struct ExampleAppDocuments
-{
-    ImVector<MyDocument> Documents;
-
-    ExampleAppDocuments()
+    // [Optional] Notify the system of Tabs/Windows closure that happened outside the regular tab interface.
+    // If a tab has been closed programmatically (aka closed from another source such as the Checkbox() in the demo,
+    // as opposed to clicking on the regular tab closing button) and stops being submitted, it will take a frame for
+    // the tab bar to notice its absence. During this frame there will be a gap in the tab bar, and if the tab that has
+    // disappeared was the selected one, the tab bar will report no selected tab during the frame. This will effectively
+    // give the impression of a flicker for one frame.
+    // We call SetTabItemClosed() to manually notify the Tab Bar or Docking system of removed tabs to avoid this glitch.
+    // Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
+    void NotifyOfDocumentsClosedElsewhere()
     {
-        Documents.push_back(MyDocument("Lettuce",             true,  ImVec4(0.4f, 0.8f, 0.4f, 1.0f)));
-        Documents.push_back(MyDocument("Eggplant",            true,  ImVec4(0.8f, 0.5f, 1.0f, 1.0f)));
-        Documents.push_back(MyDocument("Carrot",              true,  ImVec4(1.0f, 0.8f, 0.5f, 1.0f)));
-        Documents.push_back(MyDocument("Tomato",              false, ImVec4(1.0f, 0.3f, 0.4f, 1.0f)));
-        Documents.push_back(MyDocument("A Rather Long Title", false));
-        Documents.push_back(MyDocument("Some Document",       false));
+        for (MyDocument& doc : Documents)
+        {
+            if (!doc.Open && doc.OpenPrev)
+                ImGui::SetTabItemClosed(doc.Name);
+            doc.OpenPrev = doc.Open;
+        }
     }
 };
-
-// [Optional] Notify the system of Tabs/Windows closure that happened outside the regular tab interface.
-// If a tab has been closed programmatically (aka closed from another source such as the Checkbox() in the demo,
-// as opposed to clicking on the regular tab closing button) and stops being submitted, it will take a frame for
-// the tab bar to notice its absence. During this frame there will be a gap in the tab bar, and if the tab that has
-// disappeared was the selected one, the tab bar will report no selected tab during the frame. This will effectively
-// give the impression of a flicker for one frame.
-// We call SetTabItemClosed() to manually notify the Tab Bar or Docking system of removed tabs to avoid this glitch.
-// Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
-static void NotifyOfDocumentsClosedElsewhere(ExampleAppDocuments& app)
-{
-    for (MyDocument& doc : app.Documents)
-    {
-        if (!doc.Open && doc.OpenPrev)
-            ImGui::SetTabItemClosed(doc.Name);
-        doc.OpenPrev = doc.Open;
-    }
-}
 
 void ShowExampleAppDocuments(bool* p_open)
 {
@@ -8547,7 +8568,7 @@ void ShowExampleAppDocuments(bool* p_open)
             }
             if (ImGui::MenuItem("Close All Documents", NULL, false, open_count > 0))
                 for (MyDocument& doc : app.Documents)
-                    doc.DoQueueClose();
+                    app.CloseQueue.push_back(&doc);
             if (ImGui::MenuItem("Exit") && p_open)
                 *p_open = false;
             ImGui::EndMenu();
@@ -8586,7 +8607,7 @@ void ShowExampleAppDocuments(bool* p_open)
         if (ImGui::BeginTabBar("##tabs", tab_bar_flags))
         {
             if (opt_reorderable)
-                NotifyOfDocumentsClosedElsewhere(app);
+                app.NotifyOfDocumentsClosedElsewhere();
 
             // [DEBUG] Stress tests
             //if ((ImGui::GetFrameCount() % 30) == 0) docs[1].Open ^= 1;            // [DEBUG] Automatically show/hide a tab. Test various interactions e.g. dragging with this on.
@@ -8598,20 +8619,23 @@ void ShowExampleAppDocuments(bool* p_open)
                 if (!doc.Open)
                     continue;
 
+                // As we allow to change document name, we append a never-changing document id so tabs are stable
+                char doc_name_buf[64];
+                app.GetTabName(&doc, doc_name_buf, sizeof(doc_name_buf));
                 ImGuiTabItemFlags tab_flags = (doc.Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
-                bool visible = ImGui::BeginTabItem(doc.Name, &doc.Open, tab_flags);
+                bool visible = ImGui::BeginTabItem(doc_name_buf, &doc.Open, tab_flags);
 
                 // Cancel attempt to close when unsaved add to save queue so we can display a popup.
                 if (!doc.Open && doc.Dirty)
                 {
                     doc.Open = true;
-                    doc.DoQueueClose();
+                    app.CloseQueue.push_back(&doc);
                 }
 
-                MyDocument::DisplayContextMenu(&doc);
+                app.DisplayDocContextMenu(&doc);
                 if (visible)
                 {
-                    MyDocument::DisplayContents(&doc);
+                    app.DisplayDocContents(&doc);
                     ImGui::EndTabItem();
                 }
             }
@@ -8620,33 +8644,44 @@ void ShowExampleAppDocuments(bool* p_open)
         }
     }
 
-    // Update closing queue
-    static ImVector<MyDocument*> close_queue;
-    if (close_queue.empty())
+    // Display renaming UI
+    if (app.RenamingDoc != NULL)
     {
-        // Close queue is locked once we started a popup
-        for (MyDocument& doc : app.Documents)
-            if (doc.WantClose)
+        if (app.RenamingStarted)
+            ImGui::OpenPopup("Rename");
+        if (ImGui::BeginPopup("Rename"))
+        {
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 30);
+            if (ImGui::InputText("###Name", app.RenamingDoc->Name, IM_ARRAYSIZE(app.RenamingDoc->Name), ImGuiInputTextFlags_EnterReturnsTrue))
             {
-                doc.WantClose = false;
-                close_queue.push_back(&doc);
+                ImGui::CloseCurrentPopup();
+                app.RenamingDoc = NULL;
             }
+            if (app.RenamingStarted)
+                ImGui::SetKeyboardFocusHere(-1);
+            ImGui::EndPopup();
+        }
+        else
+        {
+            app.RenamingDoc = NULL;
+        }
+        app.RenamingStarted = false;
     }
 
     // Display closing confirmation UI
-    if (!close_queue.empty())
+    if (!app.CloseQueue.empty())
     {
         int close_queue_unsaved_documents = 0;
-        for (int n = 0; n < close_queue.Size; n++)
-            if (close_queue[n]->Dirty)
+        for (int n = 0; n < app.CloseQueue.Size; n++)
+            if (app.CloseQueue[n]->Dirty)
                 close_queue_unsaved_documents++;
 
         if (close_queue_unsaved_documents == 0)
         {
             // Close documents when all are unsaved
-            for (int n = 0; n < close_queue.Size; n++)
-                close_queue[n]->DoForceClose();
-            close_queue.clear();
+            for (int n = 0; n < app.CloseQueue.Size; n++)
+                app.CloseQueue[n]->DoForceClose();
+            app.CloseQueue.clear();
         }
         else
         {
@@ -8657,37 +8692,35 @@ void ShowExampleAppDocuments(bool* p_open)
                 ImGui::Text("Save change to the following items?");
                 float item_height = ImGui::GetTextLineHeightWithSpacing();
                 if (ImGui::BeginChild(ImGui::GetID("frame"), ImVec2(-FLT_MIN, 6.25f * item_height), ImGuiChildFlags_FrameStyle))
-                {
-                    for (int n = 0; n < close_queue.Size; n++)
-                        if (close_queue[n]->Dirty)
-                            ImGui::Text("%s", close_queue[n]->Name);
-                }
+                    for (MyDocument* doc : app.CloseQueue)
+                        if (doc->Dirty)
+                            ImGui::Text("%s", doc->Name);
                 ImGui::EndChild();
 
                 ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
                 if (ImGui::Button("Yes", button_size))
                 {
-                    for (int n = 0; n < close_queue.Size; n++)
+                    for (MyDocument* doc : app.CloseQueue)
                     {
-                        if (close_queue[n]->Dirty)
-                            close_queue[n]->DoSave();
-                        close_queue[n]->DoForceClose();
+                        if (doc->Dirty)
+                            doc->DoSave();
+                        doc->DoForceClose();
                     }
-                    close_queue.clear();
+                    app.CloseQueue.clear();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("No", button_size))
                 {
-                    for (int n = 0; n < close_queue.Size; n++)
-                        close_queue[n]->DoForceClose();
-                    close_queue.clear();
+                    for (MyDocument* doc : app.CloseQueue)
+                        doc->DoForceClose();
+                    app.CloseQueue.clear();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel", button_size))
                 {
-                    close_queue.clear();
+                    app.CloseQueue.clear();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();

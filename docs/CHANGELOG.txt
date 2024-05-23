@@ -89,6 +89,7 @@ Other changes:
   Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
 - Demo: Added "Inputs & Focus -> Shortcuts" section. (#456, #2637)
+- Demo: Documents: Added shortcuts and renaming tabs/documents. (#7233)
 - Examples: Win32+DX9,DX10,DX11,DX12: rework main loop to handle minimization and screen
   locking without burning resources by running unthrottled code. (#2496, #3907, #6308, #7615)
 - Backends: all backends + demo now call IMGUI_CHECKVERSION() to verify ABI compatibility between caller
