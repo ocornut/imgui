@@ -1489,10 +1489,11 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteGlobalOverFocused  = 1 << 14,  // Global route (higher priority): unless an active item registered the route, e.g. CTRL+A registered by InputText will take priority over this).
     ImGuiInputFlags_RouteGlobalHighest      = 1 << 15,  // Global route (highest priority): unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this)
     ImGuiInputFlags_RouteAlways             = 1 << 16,  // Do not register route, poll keys directly.
-    ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 17,  // Option combine with others: global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
+    ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 17,  // Option: global routes will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
+    ImGuiInputFlags_RouteFromRootWindow     = 1 << 18,  // Option: route evaluated from the point of view of root window rather than current window.
 
     // Flags for SetNextItemShortcut()
-    ImGuiInputFlags_Tooltip                 = 1 << 18,  // Automatically display a tooltip when hovering item.
+    ImGuiInputFlags_Tooltip                 = 1 << 19,  // Automatically display a tooltip when hovering item.
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
