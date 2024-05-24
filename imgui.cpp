@@ -8636,7 +8636,7 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
 
         return 255;
     }
-    if (flags & ImGuiInputFlags_RouteActiveItem)
+    if (flags & ImGuiInputFlags_RouteActive)
     {
         if (owner_id != 0 && g.ActiveId == owner_id)
             return 1;
@@ -8712,7 +8712,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
             return false;
         }
 
-        if (flags & ImGuiInputFlags_RouteActiveItem)
+        if (flags & ImGuiInputFlags_RouteActive)
             return false;
 
         // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId

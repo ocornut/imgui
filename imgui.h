@@ -1485,7 +1485,7 @@ enum ImGuiInputFlags_
     // - Default policy is RouteFocused. Can select only 1 policy among all available.
     // - Priorities: RouteGlobalHighest >> RouteActiveItem or RouteFocused (if owner is active item) >> RouteGlobalOverFocused >> RouteFocused (if in focused window stack) >> RouteGlobal.
     ImGuiInputFlags_RouteFocused            = 1 << 12,  // Focus stack route (default): Accept inputs if window is in focus stack. Deep-most focused window takes inputs. ActiveId takes inputs over deep-most focused window.
-    ImGuiInputFlags_RouteActiveItem         = 1 << 13,  // Route to active item only.
+    ImGuiInputFlags_RouteActive             = 1 << 13,  // Route to active item only.
     ImGuiInputFlags_RouteGlobal             = 1 << 14,  // Global route (normal priority): unless a focused window or active item registered the route) -> recommended Global priority.
     ImGuiInputFlags_RouteGlobalOverFocused  = 1 << 15,  // Global route (higher priority): unless an active item registered the route, e.g. CTRL+A registered by InputText will take priority over this.
     ImGuiInputFlags_RouteGlobalHighest      = 1 << 16,  // Global route (highest priority): unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this. May not be fully honored as user/internal code is likely to always assume they can access keys when active.
