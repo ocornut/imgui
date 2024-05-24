@@ -56,39 +56,52 @@ Breaking changes:
 
 Other changes:
 
-- Inputs: added Shortcut() function (w/ routing policies) in public API. (#456, #2637)
-  - using ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
-    - checks that CTRL+C is pressed,
-    - and that current window is in focus stack,
-    - and that no other requests for CTRL+C have been made from deeper locations of the window/item stack.
-  - Added ImGuiInputFlags_RouteFocused, ImGuiInputFlags_RouteGlobal and other flags
-    related to routing policies. (#456, #2637)
-  - Added ImGuiInputFlags_Repeat for use by Shortcut() and by upcoming (still internal)
-    extended rework of various input functions.
-  - About routing system and routing policies:
-    The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
+- Windows: BeginChild(): fixed visibility of fully clipped child windows and tables to Test Engine.
+- Windows: BeginChild(): fixed auto-fit calculation when using either (not both) ResizeX/ResizeY
+  and double-clicking on a border. Calculation incorrectly didn't always account for scrollbar as
+  it assumed the other axis would also be auto-fit. (#1710)
+- Inputs: added shortcut and routing system in public API. (#456, #2637)
+  - The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
          Parent  -> call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
          Child1  -> call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
          Child2  -> no call                  // When Child2 is focused, Parent gets the shortcut.
     The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
     This is an important property as it facilitate working with foreign code or larger codebase.
-- Inputs: added SetNextItemShortcut() to set a shortcut to locally or remotely press or activate
-  an item (depending on specified routing policy). Items like buttons are not fully activated, in
-  the sense that they get pressed but an active e.g. InputText() won't be deactivated. (#456)
-  - Added ImGuiInputFlags_Tooltip to automatically show a tooltip when hovering item.
-  - Using e.g. ImGuiInputFlags_RouteGlobal the item shortcut may be executed even if its
-    window is not in focus stack.
+  - Added Shortcut() function:
+    e.g. Using ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
+    - checks that CTRL+C is pressed,
+    - and that current window is in focus stack,
+    - and that no other requests for CTRL+C have been made from higher priority locations
+      (e.g. deeper in the window/item stack).
+  - Added SetNextItemShortcut() to set a shortcut to locally or remotely press or activate
+    an item (depending on specified routing policy: using ImGuiInputFlags_RouteGlobal the item
+    shortcut may be executed even if its window is not in focus stack).
+    Items like buttons are not fully activated, in the sense that they get pressed but another
+    active item, e.g. InputText() won't be deactivated.
+  - Added routing policies for Shortcut(), SetNextItemShortcut(): (#456, #2637)
+    - ImGuiInputFlags_RouteFocused: focus stack route (default)
+    - ImGuiInputFlags_RouteActive: only route to active item
+    - ImGuiInputFlags_RouteGlobal: route globally, unless a focus route claim shame shortcut.
+    - ImGuiInputFlags_RouteAlways: no routing submission, no routing check.
+  - Added other shortcut/routing options: (#456, #2637)
+    - ImGuiInputFlags_Repeat: for use by Shortcut() and by upcoming rework of various
+      input functions (which are still internal for now).
+    - ImGuiInputFlags_Tooltip: for SetNextItemShortcut() to show a tooltip when hovering item.
+    - ImGuiInputFlags_RouteGlobalOverFocused
+    - ImGuiInputFlags_RouteGlobalOverActive
+    - ImGuiInputFlags_RouteUnlessBgFocused
+    - ImGuiInputFlags_RouteFromRootWindow
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
   - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
   - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
 - Inputs: (OSX) Ctrl+Left Click alias as a Right click. (#2343) [@haldean, @ocornut]
 - Inputs: Fixed ImGui::GetKeyName(ImGuiKey_None) from returning "N/A" or "None" depending
   on value of IMGUI_DISABLE_OBSOLETE_KEYIO. It always returns "None".
-- Windows: BeginChild(): fixed visibility of fully clipped child windows and tables to Test Engine.
 - Nav: fixed holding Ctrl or gamepad L1 from not slowing down keyboard/gamepad tweak speed.
   Broken during a refactor refactor for 1.89. Holding Shift/R1 to speed up wasn't broken.
 - Tables: fixed cell background of fully clipped row overlapping with header. (#7575, #7041) [@prabuinet]
 - Demo: Added "Inputs & Focus -> Shortcuts" section. (#456, #2637)
+- Demo: Documents: Added shortcuts and renaming tabs/documents. (#7233)
 - Examples: Win32+DX9,DX10,DX11,DX12: rework main loop to handle minimization and screen
   locking without burning resources by running unthrottled code. (#2496, #3907, #6308, #7615)
 - Backends: all backends + demo now call IMGUI_CHECKVERSION() to verify ABI compatibility between caller
@@ -103,9 +116,12 @@ Breaking changes IF you were using imgui_internal.h versions of Shortcut() or ow
 versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this version:
 
 - Inputs (Internals) Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
-  explicit and reduce confusion with the fact it is a non-zero value and cannot be the
-  default value.
-- Inputs (Internals) Shortcut(), SetShortcutRouting(): swapped last two parameters order
+  explicit and reduce confusion with the fact it is a non-zero value and cannot be a default.
+- Inputs (Internals): Renamed symbols global routes:
+      Renamed ImGuiInputFlags_RouteGlobalLow  -> ImGuiInputFlags_RouteGlobal (this is the suggest global route)
+      Renamed ImGuiInputFlags_RouteGlobal     -> ImGuiInputFlags_RouteGlobalOverFocused (override focused route)
+      Renamed ImGuiInputFlags_RouteGlobalHigh -> ImGuiInputFlags_RouteGlobalHighest
+- Inputs (Internals): Shortcut(), SetShortcutRouting(): swapped last two parameters order
   in function signatures:
       Before: Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
       After:  Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0, ImGuiID owner_id = 0);
@@ -115,6 +131,7 @@ versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this 
       After:  IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id = 0);
       Before: IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInputFlags flags = 0);
       After:  IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id = 0);
+
 - For several reasons those changes makes sense. They are being made because making some of
   those API public. Only past users of imgui_internal.h with the extra parameters will be affected.
   Added asserts for valid flags in various functions to detect _some_ misuses, BUT NOT ALL.
