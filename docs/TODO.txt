@@ -175,6 +175,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers (WIP branch)
 
  - status-bar: add a per-window status bar helper similar to what menu-bar does. generalize concept of layer0 rect in window (can make _MenuBar window flag obsolete too).
+ - shortcuts: store multiple keychords in ImGuiKeyChord
+ - shortcuts: Hovered route (lower than Focused, higher than Global)
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
  - shortcuts: programmatically access shortcuts "Focus("&Save"))

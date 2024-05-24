@@ -107,9 +107,12 @@ Breaking changes IF you were using imgui_internal.h versions of Shortcut() or ow
 versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this version:
 
 - Inputs (Internals) Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
-  explicit and reduce confusion with the fact it is a non-zero value and cannot be the
-  default value.
-- Inputs (Internals) Shortcut(), SetShortcutRouting(): swapped last two parameters order
+  explicit and reduce confusion with the fact it is a non-zero value and cannot be a default.
+- Inputs (Internals): Renamed symbols global routes:
+      Renamed ImGuiInputFlags_RouteGlobalLow  -> ImGuiInputFlags_RouteGlobal (this is the suggest global route)
+      Renamed ImGuiInputFlags_RouteGlobal     -> ImGuiInputFlags_RouteGlobalOverFocused (override focused route)
+      Renamed ImGuiInputFlags_RouteGlobalHigh -> ImGuiInputFlags_RouteGlobalHighest
+- Inputs (Internals): Shortcut(), SetShortcutRouting(): swapped last two parameters order
   in function signatures:
       Before: Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
       After:  Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0, ImGuiID owner_id = 0);
@@ -119,6 +122,7 @@ versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this 
       After:  IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id = 0);
       Before: IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInputFlags flags = 0);
       After:  IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id = 0);
+
 - For several reasons those changes makes sense. They are being made because making some of
   those API public. Only past users of imgui_internal.h with the extra parameters will be affected.
   Added asserts for valid flags in various functions to detect _some_ misuses, BUT NOT ALL.
