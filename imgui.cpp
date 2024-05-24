@@ -8705,19 +8705,19 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
     // Specific culling when there's an active item.
     if (g.ActiveId != 0 && g.ActiveId != owner_id)
     {
+        if (flags & ImGuiInputFlags_RouteActive)
+            return false;
+
         // Cull shortcuts with no modifiers when it could generate a character.
         // e.g. Shortcut(ImGuiKey_G) also generates 'g' character, should not trigger when InputText() is active.
         // but  Shortcut(Ctrl+G) should generally trigger when InputText() is active.
         // TL;DR: lettered shortcut with no mods or with only Alt mod will not trigger while an item reading text input is active.
         // (We cannot filter based on io.InputQueueCharacters[] contents because of trickling and key<>chars submission order are undefined)
-        if ((flags & ImGuiInputFlags_RouteFocused) && g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
+        if (g.IO.WantTextInput && IsKeyChordPotentiallyCharInput(key_chord))
         {
             IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, flags=%04X, owner_id=0x%08X) -> filtered as potential char input\n", GetKeyChordName(key_chord), flags, owner_id);
             return false;
         }
-
-        if (flags & ImGuiInputFlags_RouteActive)
-            return false;
 
         // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
         if ((flags & ImGuiInputFlags_RouteOverActive) == 0 && g.ActiveIdUsingAllKeyboardKeys)
