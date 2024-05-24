@@ -6285,15 +6285,17 @@ static void ShowDemoWindowInputs()
             ImGui::RadioButton("ImGuiInputFlags_RouteActive", &route_type, ImGuiInputFlags_RouteActive);
             ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &route_type, ImGuiInputFlags_RouteFocused);
             ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &route_type, ImGuiInputFlags_RouteGlobal);
-            ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &route_type, ImGuiInputFlags_RouteAlways);
+            ImGui::Indent();
             ImGui::BeginDisabled(route_type != ImGuiInputFlags_RouteGlobal);
-            ImGui::CheckboxFlags("ImGuiInputFlags_RouteGlobalOverFocused", &route_options, ImGuiInputFlags_RouteGlobalOverFocused);
-            ImGui::CheckboxFlags("ImGuiInputFlags_RouteGlobalOverActive", &route_options, ImGuiInputFlags_RouteGlobalOverActive);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteOverFocused", &route_options, ImGuiInputFlags_RouteOverFocused);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteOverActive", &route_options, ImGuiInputFlags_RouteOverActive);
             ImGui::CheckboxFlags("ImGuiInputFlags_RouteUnlessBgFocused", &route_options, ImGuiInputFlags_RouteUnlessBgFocused);
             ImGui::EndDisabled();
+            ImGui::Unindent();
+            ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &route_type, ImGuiInputFlags_RouteAlways);
             ImGuiInputFlags flags = route_type | route_options; // Merged flags
             if (route_type != ImGuiInputFlags_RouteGlobal)
-                route_options &= ~(ImGuiInputFlags_RouteGlobalOverFocused | ImGuiInputFlags_RouteGlobalOverActive);
+                route_options &= ~(ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive | ImGuiInputFlags_RouteUnlessBgFocused);
 
             ImGui::SeparatorText("Using SetNextItemShortcut()");
             ImGui::Text("Ctrl+S");

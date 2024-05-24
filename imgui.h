@@ -1489,9 +1489,9 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteGlobal             = 1 << 12,  // Global route (unless a focused window or active item registered the route).
     ImGuiInputFlags_RouteAlways             = 1 << 13,  // Do not register route, poll keys directly.
     // - Routing options
-    ImGuiInputFlags_RouteGlobalOverFocused  = 1 << 14,  // Option: global route, higher priority than focused route (unless active item in focused route). automatically sets ImGuiInputFlags_RouteGlobal.
-    ImGuiInputFlags_RouteGlobalOverActive   = 1 << 15,  // Option: global route, higher priority than active item. Unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this. May not be fully honored as user/internal code is likely to always assume they can access keys when active. Automatically sets ImGuiInputFlags_RouteGlobal.
-    ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 16,  // Option: global route will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
+    ImGuiInputFlags_RouteOverFocused        = 1 << 14,  // Option: global route: higher priority than focused route (unless active item in focused route).
+    ImGuiInputFlags_RouteOverActive         = 1 << 15,  // Option: global route: higher priority than active item. Unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this. May not be fully honored as user/internal code is likely to always assume they can access keys when active.
+    ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 16,  // Option: global route: will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
     ImGuiInputFlags_RouteFromRootWindow     = 1 << 17,  // Option: route evaluated from the point of view of root window rather than current window.
 
     // Flags for SetNextItemShortcut()
