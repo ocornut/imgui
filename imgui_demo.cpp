@@ -6283,6 +6283,7 @@ static void ShowDemoWindowInputs()
             static ImGuiInputFlags routing_flags = ImGuiInputFlags_RouteFocused;
             ImGui::CheckboxFlags("ImGuiInputFlags_Repeat", &other_flags, ImGuiInputFlags_Repeat);
             ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &routing_flags, ImGuiInputFlags_RouteFocused);
+            ImGui::RadioButton("ImGuiInputFlags_RouteActiveItem", &routing_flags, ImGuiInputFlags_RouteActiveItem);
             ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &routing_flags, ImGuiInputFlags_RouteAlways);
             ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &routing_flags, ImGuiInputFlags_RouteGlobal);
             ImGui::RadioButton("ImGuiInputFlags_RouteGlobalOverFocused", &routing_flags, ImGuiInputFlags_RouteGlobalOverFocused);

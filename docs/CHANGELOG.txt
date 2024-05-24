@@ -60,28 +60,37 @@ Other changes:
 - Windows: BeginChild(): fixed auto-fit calculation when using either (not both) ResizeX/ResizeY
   and double-clicking on a border. Calculation incorrectly didn't always account for scrollbar as
   it assumed the other axis would also be auto-fit. (#1710)
-- Inputs: added Shortcut() function (w/ routing policies) in public API. (#456, #2637)
-  - using ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
-    - checks that CTRL+C is pressed,
-    - and that current window is in focus stack,
-    - and that no other requests for CTRL+C have been made from deeper locations of the window/item stack.
-  - Added ImGuiInputFlags_RouteFocused, ImGuiInputFlags_RouteGlobal and other flags
-    related to routing policies. (#456, #2637)
-  - Added ImGuiInputFlags_Repeat for use by Shortcut() and by upcoming (still internal)
-    extended rework of various input functions.
-  - About routing system and routing policies:
-    The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
+- Inputs: added shortcut and routing system in public API. (#456, #2637)
+  - The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
          Parent  -> call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
          Child1  -> call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
          Child2  -> no call                  // When Child2 is focused, Parent gets the shortcut.
     The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
     This is an important property as it facilitate working with foreign code or larger codebase.
-- Inputs: added SetNextItemShortcut() to set a shortcut to locally or remotely press or activate
-  an item (depending on specified routing policy). Items like buttons are not fully activated, in
-  the sense that they get pressed but an active e.g. InputText() won't be deactivated. (#456)
-  - Added ImGuiInputFlags_Tooltip to automatically show a tooltip when hovering item.
-  - Using e.g. ImGuiInputFlags_RouteGlobal the item shortcut may be executed even if its
-    window is not in focus stack.
+  - Added Shortcut() function:
+    e.g. Using ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C); with default policy:
+    - checks that CTRL+C is pressed,
+    - and that current window is in focus stack,
+    - and that no other requests for CTRL+C have been made from higher priority locations
+      (e.g. deeper in the window/item stack).
+  - Added SetNextItemShortcut() to set a shortcut to locally or remotely press or activate
+    an item (depending on specified routing policy: using ImGuiInputFlags_RouteGlobal the item
+    shortcut may be executed even if its window is not in focus stack).
+    Items like buttons are not fully activated, in the sense that they get pressed but another
+    active item, e.g. InputText() won't be deactivated.
+  - Added routing policies for Shortcut(), SetNextItemShortcut(): (#456, #2637)
+    - ImGuiInputFlags_RouteFocused: focus stack route (default)
+    - ImGuiInputFlags_RouteActiveItem: only route to active item
+    - ImGuiInputFlags_RouteGlobal: route globally, unless a focus route claim shame shortcut.
+    - ImGuiInputFlags_RouteGlobalOverFocused
+    - ImGuiInputFlags_RouteGlobalHighest
+    - ImGuiInputFlags_RouteAlways: no routing submission, no routing check.
+  - Added other shortcut/routing options: (#456, #2637)
+    - ImGuiInputFlags_Repeat: for use by Shortcut() and by upcoming rework of various
+      input functions (which are still internal for now).
+    - ImGuiInputFlags_Tooltip: for SetNextItemShortcut() to show a tooltip when hovering item.
+    - ImGuiInputFlags_RouteUnlessBgFocused
+    - ImGuiInputFlags_RouteFromRootWindow
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
   - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
   - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
