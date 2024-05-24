@@ -8633,21 +8633,22 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
         for (int index_in_focus_path = 0; index_in_focus_path < g.NavFocusRoute.Size; index_in_focus_path++)
             if (g.NavFocusRoute.Data[index_in_focus_path].ID == focus_scope_id)
                 return 3 + index_in_focus_path;
-
         return 255;
     }
-    if (flags & ImGuiInputFlags_RouteActive)
+    else if (flags & ImGuiInputFlags_RouteActive)
     {
         if (owner_id != 0 && g.ActiveId == owner_id)
             return 1;
         return 255;
     }
-    if (flags & ImGuiInputFlags_RouteOverFocused)
-        return 2;
-    if (flags & ImGuiInputFlags_RouteGlobal)
+    else if (flags & ImGuiInputFlags_RouteGlobal)
+    {
+        if (flags & ImGuiInputFlags_RouteOverActive)
+            return 0;
+        if (flags & ImGuiInputFlags_RouteOverFocused)
+            return 2;
         return 254;
-    if (flags & ImGuiInputFlags_RouteOverActive)
-        return 0;
+    }
     IM_ASSERT(0);
     return 0;
 }
