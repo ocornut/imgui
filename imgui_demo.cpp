@@ -6279,17 +6279,21 @@ static void ShowDemoWindowInputs()
         IMGUI_DEMO_MARKER("Inputs & Focus/Shortcuts");
         if (ImGui::TreeNode("Shortcuts"))
         {
-            static ImGuiInputFlags other_flags = ImGuiInputFlags_Repeat;
-            static ImGuiInputFlags routing_flags = ImGuiInputFlags_RouteFocused;
-            ImGui::CheckboxFlags("ImGuiInputFlags_Repeat", &other_flags, ImGuiInputFlags_Repeat);
-            ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &routing_flags, ImGuiInputFlags_RouteFocused);
-            ImGui::RadioButton("ImGuiInputFlags_RouteActive", &routing_flags, ImGuiInputFlags_RouteActive);
-            ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &routing_flags, ImGuiInputFlags_RouteAlways);
-            ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &routing_flags, ImGuiInputFlags_RouteGlobal);
-            ImGui::RadioButton("ImGuiInputFlags_RouteGlobalOverFocused", &routing_flags, ImGuiInputFlags_RouteGlobalOverFocused);
-            ImGui::RadioButton("ImGuiInputFlags_RouteGlobalHighest", &routing_flags, ImGuiInputFlags_RouteGlobalHighest);
-            ImGui::CheckboxFlags("ImGuiInputFlags_RouteUnlessBgFocused", &other_flags, ImGuiInputFlags_RouteUnlessBgFocused);
-            const ImGuiInputFlags flags = other_flags | routing_flags; // Merged flags
+            static ImGuiInputFlags route_options = ImGuiInputFlags_Repeat;
+            static ImGuiInputFlags route_type = ImGuiInputFlags_RouteFocused;
+            ImGui::CheckboxFlags("ImGuiInputFlags_Repeat", &route_options, ImGuiInputFlags_Repeat);
+            ImGui::RadioButton("ImGuiInputFlags_RouteActive", &route_type, ImGuiInputFlags_RouteActive);
+            ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &route_type, ImGuiInputFlags_RouteFocused);
+            ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &route_type, ImGuiInputFlags_RouteGlobal);
+            ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &route_type, ImGuiInputFlags_RouteAlways);
+            ImGui::BeginDisabled(route_type != ImGuiInputFlags_RouteGlobal);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteGlobalOverFocused", &route_options, ImGuiInputFlags_RouteGlobalOverFocused);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteGlobalOverActive", &route_options, ImGuiInputFlags_RouteGlobalOverActive);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteUnlessBgFocused", &route_options, ImGuiInputFlags_RouteUnlessBgFocused);
+            ImGui::EndDisabled();
+            ImGuiInputFlags flags = route_type | route_options; // Merged flags
+            if (route_type != ImGuiInputFlags_RouteGlobal)
+                route_options &= ~(ImGuiInputFlags_RouteGlobalOverFocused | ImGuiInputFlags_RouteGlobalOverActive);
 
             ImGui::SeparatorText("Using SetNextItemShortcut()");
             ImGui::Text("Ctrl+S");

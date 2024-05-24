@@ -82,13 +82,13 @@ Other changes:
     - ImGuiInputFlags_RouteFocused: focus stack route (default)
     - ImGuiInputFlags_RouteActive: only route to active item
     - ImGuiInputFlags_RouteGlobal: route globally, unless a focus route claim shame shortcut.
-    - ImGuiInputFlags_RouteGlobalOverFocused
-    - ImGuiInputFlags_RouteGlobalHighest
     - ImGuiInputFlags_RouteAlways: no routing submission, no routing check.
   - Added other shortcut/routing options: (#456, #2637)
     - ImGuiInputFlags_Repeat: for use by Shortcut() and by upcoming rework of various
       input functions (which are still internal for now).
     - ImGuiInputFlags_Tooltip: for SetNextItemShortcut() to show a tooltip when hovering item.
+    - ImGuiInputFlags_RouteGlobalOverFocused
+    - ImGuiInputFlags_RouteGlobalOverActive
     - ImGuiInputFlags_RouteUnlessBgFocused
     - ImGuiInputFlags_RouteFromRootWindow
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
