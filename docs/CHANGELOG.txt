@@ -50,6 +50,9 @@ Breaking changes:
   - Removed ImGuiMod_Shortcut which was previously dynamically remapping to Ctrl or Cmd/Super.
     It is now unnecessary to specific cross-platform idiomatic shortcuts.
     Kept symbols redirecting ImGuiMod_Shortcut to ImGuiMod_Ctrl (will obsolete).
+- Commented out obsolete symbols renamed in 1.88 (May 2022):
+    CaptureKeyboardFromApp() -> SetNextFrameWantCaptureKeyboard()
+    CaptureMouseFromApp()    -> SetNextFrameWantCaptureMouse()
 - Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
   ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
   overlooked from the API but it will facilitate eventual support for multi-viewports.
@@ -115,7 +118,7 @@ Other changes:
 Breaking changes IF you were using imgui_internal.h versions of Shortcut() or owner-aware
 versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this version:
 
-- Inputs (Internals) Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
+- Inputs (Internals): Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
   explicit and reduce confusion with the fact it is a non-zero value and cannot be a default.
 - Inputs (Internals): Renamed symbols global routes:
       Renamed ImGuiInputFlags_RouteGlobalLow  -> ImGuiInputFlags_RouteGlobal (this is the suggest global route)
