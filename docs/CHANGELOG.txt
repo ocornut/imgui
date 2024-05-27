@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.7 WIP (In Progress)
+ VERSION 1.90.7 (Released 2024-05-27)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.7
 
 Breaking changes:
 
@@ -50,9 +52,12 @@ Breaking changes:
   - Removed ImGuiMod_Shortcut which was previously dynamically remapping to Ctrl or Cmd/Super.
     It is now unnecessary to specific cross-platform idiomatic shortcuts.
     Kept symbols redirecting ImGuiMod_Shortcut to ImGuiMod_Ctrl (will obsolete).
-- Backends: SDL_Renderer2/SDL_Renderer3: and ImGui_ImplSDLRenderer2_RenderDrawData() and
+- Commented out obsolete symbols renamed in 1.88 (May 2022):
+    CaptureKeyboardFromApp() -> SetNextFrameWantCaptureKeyboard()
+    CaptureMouseFromApp()    -> SetNextFrameWantCaptureMouse()
+- Backends: SDL_Renderer2/SDL_Renderer3: ImGui_ImplSDLRenderer2_RenderDrawData() and
   ImGui_ImplSDLRenderer3_RenderDrawData() now takes a SDL_Renderer* parameter. This was previously
-  overlooked from the API but it will facilitate eventual support for multi-viewports.
+  overlooked from the API but it will allow eventual support for multi-viewports.
 
 Other changes:
 
@@ -60,11 +65,11 @@ Other changes:
 - Windows: BeginChild(): fixed auto-fit calculation when using either (not both) ResizeX/ResizeY
   and double-clicking on a border. Calculation incorrectly didn't always account for scrollbar as
   it assumed the other axis would also be auto-fit. (#1710)
-- Inputs: added shortcut and routing system in public API. (#456, #2637)
+- Inputs: added shortcut and routing system in public API. (#456, #2637) [BETA]
   - The general idea is that several callers may register interest in a shortcut, and only one owner gets it.
-         Parent  -> call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
-         Child1  -> call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
-         Child2  -> no call                  // When Child2 is focused, Parent gets the shortcut.
+    - in Parent: call Shortcut(Ctrl+S)    // When Parent is focused, Parent gets the shortcut.
+    - in Child1: call Shortcut(Ctrl+S)    // When Child1 is focused, Child1 gets the shortcut (Child1 overrides Parent shortcuts)
+    - in Child2: no call                  // When Child2 is focused, Parent gets the shortcut.
     The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
     This is an important property as it facilitate working with foreign code or larger codebase.
   - Added Shortcut() function:
@@ -87,10 +92,10 @@ Other changes:
     - ImGuiInputFlags_Repeat: for use by Shortcut() and by upcoming rework of various
       input functions (which are still internal for now).
     - ImGuiInputFlags_Tooltip: for SetNextItemShortcut() to show a tooltip when hovering item.
-    - ImGuiInputFlags_RouteGlobalOverFocused
-    - ImGuiInputFlags_RouteGlobalOverActive
-    - ImGuiInputFlags_RouteUnlessBgFocused
-    - ImGuiInputFlags_RouteFromRootWindow
+    - ImGuiInputFlags_RouteOverFocused: global route takes priority over focus route.
+    - ImGuiInputFlags_RouteOverActive: global route takes priority over active item.
+    - ImGuiInputFlags_RouteUnlessBgFocused: global route disabled if no imgui window focused.
+    - ImGuiInputFlags_RouteFromRootWindow: route evaluated from the point of view of root window rather than current window.
 - Inputs: (OSX) Fixes variety of code which inconsistently required using Ctrl instead of Cmd.
   - e.g. Drags/Sliders now use Cmd+Click to input a value. (#4084)
   - Some shortcuts still uses Ctrl on Mac: e.g. Ctrl+Tab to switch windows. (#4828)
@@ -115,12 +120,12 @@ Other changes:
 Breaking changes IF you were using imgui_internal.h versions of Shortcut() or owner-aware
 versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this version:
 
-- Inputs (Internals) Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
+- Inputs (Internals): Renamed ImGuiKeyOwner_None to ImGuiKeyOwner_NoOwner, to make use more
   explicit and reduce confusion with the fact it is a non-zero value and cannot be a default.
 - Inputs (Internals): Renamed symbols global routes:
-      Renamed ImGuiInputFlags_RouteGlobalLow  -> ImGuiInputFlags_RouteGlobal (this is the suggest global route)
-      Renamed ImGuiInputFlags_RouteGlobal     -> ImGuiInputFlags_RouteGlobalOverFocused (override focused route)
-      Renamed ImGuiInputFlags_RouteGlobalHigh -> ImGuiInputFlags_RouteGlobalHighest
+      Renamed ImGuiInputFlags_RouteGlobalLow  -> ImGuiInputFlags_RouteGlobal (this is the suggested global route)
+      Renamed ImGuiInputFlags_RouteGlobal     -> ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused
+      Renamed ImGuiInputFlags_RouteGlobalHigh -> ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive
 - Inputs (Internals): Shortcut(), SetShortcutRouting(): swapped last two parameters order
   in function signatures:
       Before: Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id = 0, ImGuiInputFlags flags = 0);
@@ -131,8 +136,7 @@ versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this 
       After:  IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id = 0);
       Before: IsMouseClicked(ImGuiMouseButton button, ImGuiID owner_id, ImGuiInputFlags flags = 0);
       After:  IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id = 0);
-
-- For several reasons those changes makes sense. They are being made because making some of
+- For several reasons those changes makes sense. They were all made before making some of
   those API public. Only past users of imgui_internal.h with the extra parameters will be affected.
   Added asserts for valid flags in various functions to detect _some_ misuses, BUT NOT ALL.
 
