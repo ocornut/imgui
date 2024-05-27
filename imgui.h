@@ -1,4 +1,4 @@
-// dear imgui, v1.90.7 WIP
+// dear imgui, v1.90.7
 // (headers)
 
 // Help:
@@ -27,8 +27,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.90.7 WIP"
-#define IMGUI_VERSION_NUM   19068
+#define IMGUI_VERSION       "1.90.7"
+#define IMGUI_VERSION_NUM   19070
 #define IMGUI_HAS_TABLE
 
 /*
@@ -939,7 +939,7 @@ namespace ImGui
     IMGUI_API const char*   GetKeyName(ImGuiKey key);                                           // [DEBUG] returns English name of the key. Those names a provided for debugging purpose and are not meant to be saved persistently not compared.
     IMGUI_API void          SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard);        // Override io.WantCaptureKeyboard flag next frame (said flag is left for your application to handle, typically when true it instructs your app to ignore inputs). e.g. force capture keyboard when your widget is being hovered. This is equivalent to setting "io.WantCaptureKeyboard = want_capture_keyboard"; after the next NewFrame() call.
 
-    // Inputs Utilities: Shortcut Testing & Routing
+    // Inputs Utilities: Shortcut Testing & Routing [BETA]
     // - ImGuiKeyChord = a ImGuiKey + optional ImGuiMod_Alt/ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Super.
     //       ImGuiKey_C                          // Accepted by functions taking ImGuiKey or ImGuiKeyChord arguments)
     //       ImGuiMod_Ctrl | ImGuiKey_C          // Accepted by functions taking ImGuiKeyChord arguments)
@@ -1482,7 +1482,7 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_Repeat                  = 1 << 0,   // Enable repeat. Return true on successive repeats. Default for legacy IsKeyPressed(). NOT Default for legacy IsMouseClicked(). MUST BE == 1.
 
     // Flags for Shortcut(), SetNextItemShortcut()
-    // - Routing policies: RouteGlobalOverActive >> RouteActive or RouteFocused (if owner is active item) >> RouteGlobalOverFocused >> RouteFocused (if in focused window stack) >> RouteGlobal.
+    // - Routing policies: RouteGlobal+OverActive >> RouteActive or RouteFocused (if owner is active item) >> RouteGlobal+OverFocused >> RouteFocused (if in focused window stack) >> RouteGlobal.
     // - Default policy is RouteFocused. Can select only 1 policy among all available.
     ImGuiInputFlags_RouteActive             = 1 << 10,  // Route to active item only.
     ImGuiInputFlags_RouteFocused            = 1 << 11,  // Route to windows in the focus stack (DEFAULT). Deep-most focused window takes inputs. Active item takes inputs over deep-most focused window.
@@ -1495,7 +1495,7 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteFromRootWindow     = 1 << 17,  // Option: route evaluated from the point of view of root window rather than current window.
 
     // Flags for SetNextItemShortcut()
-    ImGuiInputFlags_Tooltip                 = 1 << 18,  // Automatically display a tooltip when hovering item.
+    ImGuiInputFlags_Tooltip                 = 1 << 18,  // Automatically display a tooltip when hovering item [BETA] Unsure of right api (opt-in/opt-out)
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO

@@ -1,4 +1,4 @@
-// dear imgui, v1.90.7 WIP
+// dear imgui, v1.90.7
 // (main code and documentation)
 
 // Help:
@@ -8610,9 +8610,9 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
 }
 
 // Current score encoding (lower is highest priority):
-//  -   0: ImGuiInputFlags_RouteGlobalOverActive
+//  -   0: ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive
 //  -   1: ImGuiInputFlags_ActiveItem or ImGuiInputFlags_RouteFocused (if item active)
-//  -   2: ImGuiInputFlags_RouteGlobalOverFocused
+//  -   2: ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused
 //  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
 //  - 254: ImGuiInputFlags_RouteGlobal
 //  - 255: never route
