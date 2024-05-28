@@ -472,7 +472,7 @@ template<typename T> static inline T ImSubClampOverflow(T a, T b, T mn, T mx)   
 // - Misc maths helpers
 static inline ImVec2 ImMin(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x < rhs.x ? lhs.x : rhs.x, lhs.y < rhs.y ? lhs.y : rhs.y); }
 static inline ImVec2 ImMax(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x >= rhs.x ? lhs.x : rhs.x, lhs.y >= rhs.y ? lhs.y : rhs.y); }
-static inline ImVec2 ImClamp(const ImVec2& v, const ImVec2& mn, ImVec2 mx)      { return ImVec2((v.x < mn.x) ? mn.x : (v.x > mx.x) ? mx.x : v.x, (v.y < mn.y) ? mn.y : (v.y > mx.y) ? mx.y : v.y); }
+static inline ImVec2 ImClamp(const ImVec2& v, const ImVec2&mn, const ImVec2&mx) { return ImVec2((v.x < mn.x) ? mn.x : (v.x > mx.x) ? mx.x : v.x, (v.y < mn.y) ? mn.y : (v.y > mx.y) ? mx.y : v.y); }
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, float t)          { return ImVec2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t); }
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)          { return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t); }
@@ -2162,13 +2162,14 @@ struct ImGuiContext
     ImGuiComboPreviewData   ComboPreviewData;
     ImRect                  WindowResizeBorderExpectedRect;     // Expected border rect, switch to relative edit if moving
     bool                    WindowResizeRelativeMode;
+    short                   ScrollbarSeekMode;                  // 0: relative, -1/+1: prev/next page.
+    float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     float                   SliderGrabClickOffset;
     float                   SliderCurrentAccum;                 // Accumulated slider delta when using navigation controls.
     bool                    SliderCurrentAccumDirty;            // Has the accumulated slider delta changed since last time we tried to apply it?
     bool                    DragCurrentAccumDirty;
     float                   DragCurrentAccum;                   // Accumulator for dragging modification. Always high-precision, not rounded by end-user precision settings
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
-    float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     float                   DisabledAlphaBackup;                // Backup for style.Alpha for BeginDisabled()
     short                   DisabledStackSize;
     short                   LockMarkEdited;
@@ -2376,13 +2377,14 @@ struct ImGuiContext
         ColorEditSavedHue = ColorEditSavedSat = 0.0f;
         ColorEditSavedColor = 0;
         WindowResizeRelativeMode = false;
+        ScrollbarSeekMode = 0;
+        ScrollbarClickDeltaToGrabCenter = 0.0f;
         SliderGrabClickOffset = 0.0f;
         SliderCurrentAccum = 0.0f;
         SliderCurrentAccumDirty = false;
         DragCurrentAccumDirty = false;
         DragCurrentAccum = 0.0f;
         DragSpeedDefaultRatio = 1.0f / 100.0f;
-        ScrollbarClickDeltaToGrabCenter = 0.0f;
         DisabledAlphaBackup = 0.0f;
         DisabledStackSize = 0;
         LockMarkEdited = 0;
