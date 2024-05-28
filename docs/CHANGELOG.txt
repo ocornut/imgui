@@ -36,6 +36,20 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.90.8 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Windows: fixed altering FramePadding mid-frame not correctly affecting logic
+  responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
+- Scrollbar: made scrolling logic more standard: clicking above or below the
+  grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.7 (Released 2024-05-27)
 -----------------------------------------------------------------------
 
