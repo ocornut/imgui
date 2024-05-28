@@ -2795,7 +2795,7 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 static inline ImGuiSortDirection TableGetColumnAvailSortDirection(ImGuiTableColumn* column, int n)
 {
     IM_ASSERT(n < column->SortDirectionsAvailCount);
-    return (column->SortDirectionsAvailList >> (n << 1)) & 0x03;
+    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 1)) & 0x03);
 }
 
 // Fix sort direction if currently set on a value which is unavailable (e.g. activating NoSortAscending/NoSortDescending)
@@ -2949,7 +2949,7 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
             sort_spec->ColumnUserID = column->UserID;
             sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
             sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
-            sort_spec->SortDirection = column->SortDirection;
+            sort_spec->SortDirection = (ImGuiSortDirection)column->SortDirection;
         }
 
     table->SortSpecs.Specs = sort_specs;
