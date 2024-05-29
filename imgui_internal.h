@@ -1758,7 +1758,6 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    IsEndIO;            // Set when switching IO from BeginMultiSelect() to EndMultiSelect() state.
     bool                    IsFocused;          // Set if currently focusing the selection scope (any item of the selection). May be used if you have custom shortcut associated to selection.
     bool                    IsKeyboardSetRange; // Set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
-    bool                    IsSelectionEmpty;   // Set by BeginMultiSelect() based on optional info provided by user. May be false positive, never false negative.
     bool                    NavIdPassedBy;
     bool                    RangeSrcPassedBy;   // Set by the item that matches RangeSrcItem.
     bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
@@ -1775,12 +1774,13 @@ struct IMGUI_API ImGuiMultiSelectState
     ImGuiWindow*            Window;
     ImGuiID                 ID;
     int                     LastFrameActive;    // Last used frame-count, for GC.
+    int                     LastSelectionSize;  // Set by BeginMultiSelect() based on optional info provided by user. May be -1 if unknown.
     ImS8                    RangeSelected;      // -1 (don't have) or true/false
     ImS8                    NavIdSelected;      // -1 (don't have) or true/false
     ImGuiSelectionUserData  RangeSrcItem;       //
     ImGuiSelectionUserData  NavIdItem;          // SetNextItemSelectionUserData() value for NavId (if part of submitted items)
 
-    ImGuiMultiSelectState() { Window = NULL; ID = 0; LastFrameActive = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
+    ImGuiMultiSelectState() { Window = NULL; ID = 0; LastFrameActive = LastSelectionSize = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
@@ -3411,7 +3411,8 @@ namespace ImGui
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
     IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
-    inline ImGuiBoxSelectState* GetBoxSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.ID == id && g.BoxSelectState.IsActive) ? &g.BoxSelectState : NULL; }
+    inline ImGuiBoxSelectState*     GetBoxSelectState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.ID == id && g.BoxSelectState.IsActive) ? &g.BoxSelectState : NULL; }
+    inline ImGuiMultiSelectState*   GetMultiSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return g.MultiSelectStorage.GetByKey(id); }
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);

@@ -7330,7 +7330,6 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     ms->FocusScopeId = id;
     ms->Flags = flags;
     ms->IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
-    ms->IsSelectionEmpty = (current_selection_size == 0);
     ms->BackupCursorMaxPos = window->DC.CursorMaxPos;
     ms->ScopeRectMin = window->DC.CursorMaxPos = window->DC.CursorPos;
     PushFocusScope(ms->FocusScopeId);
@@ -7344,6 +7343,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     ImGuiMultiSelectState* storage = g.MultiSelectStorage.GetOrAddByKey(id);
     storage->ID = id;
     storage->LastFrameActive = g.FrameCount;
+    storage->LastSelectionSize = current_selection_size;
     storage->Window = window;
     ms->Storage = storage;
 
@@ -7400,7 +7400,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     {
         ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
         if (!request_select_all)
-            ms->IsSelectionEmpty = true;
+            storage->LastSelectionSize = 0;
         ms->IO.Requests.push_back(req);
     }
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
@@ -7658,13 +7658,13 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 selected = !selected;
                 ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
                 ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-                if (ms->IsSelectionEmpty && bs->IsStartedFromVoid)
+                if (storage->LastSelectionSize == 0 && bs->IsStartedFromVoid)
                     pressed = true; // First item act as a pressed: code below will emit selection request and set NavId (whatever we emit here will be overriden anyway)
                 else if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
                     prev_req->RangeLastItem = item_data; // Merge span into same request
                 else
                     ms->IO.Requests.push_back(req);
-                ms->IsSelectionEmpty = false;
+                storage->LastSelectionSize++;
             }
             ms->BoxSelectLastitem = item_data;
         }
@@ -7799,6 +7799,7 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
         return;
     Text("RangeSrcItem = %" IM_PRId64 " (0x%" IM_PRIX64 "), RangeSelected = %d", storage->RangeSrcItem, storage->RangeSrcItem, storage->RangeSelected);
     Text("NavIdItem = %" IM_PRId64 " (0x%" IM_PRIX64 "), NavIdSelected = %d", storage->NavIdItem, storage->NavIdItem, storage->NavIdSelected);
+    Text("LastSelectionSize = %d", storage->LastSelectionSize); // Provided by user
     TreePop();
 #else
     IM_UNUSED(storage);
