@@ -4299,6 +4299,15 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
             state->Stb.insert_mode = 1; // stb field name is indeed incorrect (see #2863)
     }
+    else if ( state && (flags & ImGuiInputTextFlags_BufferDirty) ) {
+
+        // The external buffer changed, refresh our internal representation.
+        const char* buf_end = NULL;
+        state->TextW.resize(buf_size + 1);
+        state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, buf, NULL, &buf_end);
+        state->CurLenA = (int)(buf_end - buf);
+        state->CursorClamp();
+    }
 
     const bool is_osx = io.ConfigMacOSXBehaviors;
     if (g.ActiveId != id && init_make_active)
@@ -5060,6 +5069,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     if (is_multiline)
     {
+        // Auto scroll vertically if requested.
+        if ( (flags & ImGuiInputTextFlags_AutoScrollY) && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() )
+            ImGui::SetScrollY( text_size.y );
+
         // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
         Dummy(ImVec2(text_size.x, text_size.y + style.FramePadding.y));
         g.NextItemData.ItemFlags |= ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;
