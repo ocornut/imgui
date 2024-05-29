@@ -15568,8 +15568,11 @@ void ImGui::DebugLogV(const char* fmt, va_list args)
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTTY)
         IMGUI_DEBUG_PRINTF("%s", g.DebugLogBuf.begin() + old_size);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
+    // IMGUI_TEST_ENGINE_LOG() adds a trailing \n automatically
+    const int new_size = g.DebugLogBuf.size();
+    const bool trailing_carriage_return = (g.DebugLogBuf[new_size - 1] == '\n');
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTestEngine)
-        IMGUI_TEST_ENGINE_LOG("%s", g.DebugLogBuf.begin() + old_size);
+        IMGUI_TEST_ENGINE_LOG("%.*s", new_size - old_size - (trailing_carriage_return ? 1 : 0), g.DebugLogBuf.begin() + old_size);
 #endif
 }
 
