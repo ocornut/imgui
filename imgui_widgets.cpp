@@ -7330,6 +7330,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     ms->FocusScopeId = id;
     ms->Flags = flags;
     ms->IsFocused = (ms->FocusScopeId == g.NavFocusScopeId);
+    ms->IsSelectionEmpty = (current_selection_size == 0);
     ms->BackupCursorMaxPos = window->DC.CursorMaxPos;
     ms->ScopeRectMin = window->DC.CursorMaxPos = window->DC.CursorPos;
     PushFocusScope(ms->FocusScopeId);
@@ -7398,6 +7399,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     if (request_clear || request_select_all)
     {
         ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+        if (!request_select_all)
+            ms->IsSelectionEmpty = true;
         ms->IO.Requests.push_back(req);
     }
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
@@ -7655,10 +7658,13 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 selected = !selected;
                 ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
                 ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-                if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
+                if (ms->IsSelectionEmpty && bs->IsStartedFromVoid)
+                    pressed = true; // First item act as a pressed: code below will emit selection request and set NavId (whatever we emit here will be overriden anyway)
+                else if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
                     prev_req->RangeLastItem = item_data; // Merge span into same request
                 else
                     ms->IO.Requests.push_back(req);
+                ms->IsSelectionEmpty = false;
             }
             ms->BoxSelectLastitem = item_data;
         }
