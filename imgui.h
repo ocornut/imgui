@@ -2843,14 +2843,14 @@ struct ImGuiSelectionBasicStorage
     // Members
     ImGuiStorage    Storage;        // [Internal] Selection set. Think of this as similar to e.g. std::set<ImGuiID>
     int             Size;           // Number of selected items (== number of 1 in the Storage), maintained by this helper.
-    void*           AdapterData;    // Adapter to convert item index to item identifier     // e.g. selection.AdapterData = (void*)my_items;
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->AdapterData)[idx]->ID; };
+    void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
 
     // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions
     IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count);
 
     // Methods: selection storage
-    ImGuiSelectionBasicStorage()                { Clear(); AdapterData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
+    ImGuiSelectionBasicStorage()                { Clear(); UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
     void    Clear()                             { Storage.Data.resize(0); Size = 0; }
     void    Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); }
     bool    Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }

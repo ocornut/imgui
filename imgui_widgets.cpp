@@ -7306,7 +7306,7 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
 // Lifetime: don't hold on ImGuiMultiSelectIO* pointers over multiple frames or past any subsequent call to BeginMultiSelect() or EndMultiSelect().
 // Passing 'current_selection_size' is currently optional:
 // - it is useful for shortcut routing with ImGuiMultiSelectFlags_ClearOnEscape: so we can have Escape be used to clear selection THEN to exit child window.
-// - if it is costly for you to compute, but can easily tell if your selection is empty or not, you may alter the ImGuiMultiSelectFlags_ClearOnEscape flag based on that.
+// - if it is costly for you to compute, but can easily tell if your selection is empty or not, you may pass 1, or use the ImGuiMultiSelectFlags_ClearOnEscape flag dynamically.
 ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int current_selection_size)
 {
     ImGuiContext& g = *GImGui;
@@ -7347,6 +7347,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     storage->Window = window;
     ms->Storage = storage;
 
+    // Output to user
     ms->IO.RangeSrcItem = storage->RangeSrcItem;
     ms->IO.NavIdItem = storage->NavIdItem;
     ms->IO.NavIdSelected = (storage->NavIdSelected == 1) ? true : false;

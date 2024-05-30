@@ -2872,8 +2872,8 @@ struct ExampleDualListBox
     void ApplySelectionRequests(ImGuiMultiSelectIO* ms_io, int side)
     {
         // In this example we store item id in selection (instead of item index)
-        Selections[side].AdapterData = Items[side].Data;
-        Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImGuiID* items = (ImGuiID*)self->AdapterData; return items[idx]; };
+        Selections[side].UserData = Items[side].Data;
+        Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImGuiID* items = (ImGuiID*)self->UserData; return items[idx]; };
         Selections[side].ApplyRequests(ms_io, Items[side].Size);
     }
     static int IMGUI_CDECL CompareItemsByValue(const void* lhs, const void* rhs)
@@ -3135,8 +3135,8 @@ static void ShowDemoWindowMultiSelect()
             // Use a custom selection.Adapter: store item identifier in Selection (instead of index)
             static ImVector<ImGuiID> items;
             static ExampleSelectionWithDeletion selection;
-            selection.AdapterData = (void*)&items;
-            selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImVector<ImGuiID>* p_items = (ImVector<ImGuiID>*)self->AdapterData; return (*p_items)[idx]; }; // Index -> ID
+            selection.UserData = (void*)&items;
+            selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImVector<ImGuiID>* p_items = (ImVector<ImGuiID>*)self->UserData; return (*p_items)[idx]; }; // Index -> ID
 
             ImGui::Text("Added features:");
             ImGui::BulletText("Dynamic list with Delete key support.");
@@ -9847,8 +9847,8 @@ struct ExampleAssetsBrowser
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, Selection.Size);
 
             // Use custom selection adapter: store ID in selection (recommended)
-            Selection.AdapterData = this;
-            Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->AdapterData; return self->Items[idx].ID; };
+            Selection.UserData = this;
+            Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->UserData; return self->Items[idx].ID; };
             Selection.ApplyRequests(ms_io, Items.Size);
 
             const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (Selection.Size > 0)) || RequestDelete;
