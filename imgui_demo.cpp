@@ -6295,7 +6295,7 @@ static void ShowDemoWindowInputs()
             ImGui::RadioButton("ImGuiInputFlags_RouteAlways", &route_type, ImGuiInputFlags_RouteAlways);
             ImGuiInputFlags flags = route_type | route_options; // Merged flags
             if (route_type != ImGuiInputFlags_RouteGlobal)
-                route_options &= ~(ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive | ImGuiInputFlags_RouteUnlessBgFocused);
+                flags &= ~(ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive | ImGuiInputFlags_RouteUnlessBgFocused);
 
             ImGui::SeparatorText("Using SetNextItemShortcut()");
             ImGui::Text("Ctrl+S");
