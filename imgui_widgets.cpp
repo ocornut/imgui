@@ -7529,7 +7529,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
         ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
         IM_ASSERT(g.NextItemData.FocusScopeId == g.CurrentFocusScopeId && "Forgot to call SetNextItemSelectionUserData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
 
-        // Apply SetAll (Clear/SelectAll )requests requested by BeginMultiSelect().
+        // Apply SetAll (Clear/SelectAll) requests requested by BeginMultiSelect().
         // This is only useful if the user hasn't processed them already, and this only works if the user isn't using the clipper.
         // If you are using a clipper you need to process the SetAll request after calling BeginMultiSelect()
         if (ms->LoopRequestSetAll != -1)
@@ -7655,16 +7655,21 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             const bool rect_overlap_prev = bs->BoxSelectRectPrev.Overlaps(g.LastItemData.Rect);
             if ((rect_overlap_curr && !rect_overlap_prev && !selected) || (rect_overlap_prev && !rect_overlap_curr))
             {
-                selected = !selected;
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
-                ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-                if (storage->LastSelectionSize == 0 && bs->IsStartedFromVoid)
-                    pressed = true; // First item act as a pressed: code below will emit selection request and set NavId (whatever we emit here will be overriden anyway)
-                else if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
-                    prev_req->RangeLastItem = item_data; // Merge span into same request
+                if (storage->LastSelectionSize <= 0 && bs->IsStartedFromVoid)
+                {
+                    pressed = true; // First item act as a pressed: code below will emit selection request and set NavId (whatever we emit here will be overridden anyway)
+                }
                 else
-                    ms->IO.Requests.push_back(req);
-                storage->LastSelectionSize++;
+                {
+                    selected = !selected;
+                    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
+                    ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
+                    if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
+                        prev_req->RangeLastItem = item_data; // Merge span into same request
+                    else
+                        ms->IO.Requests.push_back(req);
+                }
+                storage->LastSelectionSize = ImMax(storage->LastSelectionSize + 1, 1);
             }
             ms->BoxSelectLastitem = item_data;
         }
