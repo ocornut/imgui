@@ -3059,7 +3059,7 @@ static void ShowDemoWindowMultiSelect()
             // The BeginChild() has no purpose for selection logic, other that offering a scrolling region.
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
@@ -3093,7 +3093,7 @@ static void ShowDemoWindowMultiSelect()
             ImGui::Text("Selection: %d/%d", selection.Size, ITEMS_COUNT);
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
                 selection.ApplyRequests(ms_io, ITEMS_COUNT);
 
@@ -3157,7 +3157,7 @@ static void ShowDemoWindowMultiSelect()
 
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
-                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
+                ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
                 selection.ApplyRequests(ms_io, items.Size);
 
@@ -3215,7 +3215,7 @@ static void ShowDemoWindowMultiSelect()
             static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_NoAutoSelect | ImGuiMultiSelectFlags_NoAutoClear | ImGuiMultiSelectFlags_ClearOnEscape;
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoSelect", &flags, ImGuiMultiSelectFlags_NoAutoSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoClear", &flags, ImGuiMultiSelectFlags_NoAutoClear);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect2d", &flags, ImGuiMultiSelectFlags_BoxSelect2d); // Use 2D version as checkboxes are not same width.
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect); // Cannot use ImGuiMultiSelectFlags_BoxSelect1d as checkboxes are varying width.
 
             struct Funcs
             {
@@ -3268,7 +3268,7 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
                 flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
-            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
+            ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect1d", &flags, ImGuiMultiSelectFlags_BoxSelect1d);
 
             for (int selection_scope_n = 0; selection_scope_n < SCOPES_COUNT; selection_scope_n++)
             {
@@ -3321,7 +3321,7 @@ static void ShowDemoWindowMultiSelect()
             static bool use_drag_drop = true;
             static bool show_in_table = false;
             static bool show_color_button = false;
-            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect;
+            static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
             static WidgetType widget_type = WidgetType_Selectable;
 
             if (ImGui::TreeNode("Options"))
@@ -3340,6 +3340,7 @@ static void ShowDemoWindowMultiSelect()
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoSelect", &flags, ImGuiMultiSelectFlags_NoAutoSelect);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoClear", &flags, ImGuiMultiSelectFlags_NoAutoClear);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect);
+                ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect1d", &flags, ImGuiMultiSelectFlags_BoxSelect1d);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelectNoScroll", &flags, ImGuiMultiSelectFlags_BoxSelectNoScroll);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnEscape", &flags, ImGuiMultiSelectFlags_ClearOnEscape);
                 ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ClearOnClickVoid", &flags, ImGuiMultiSelectFlags_ClearOnClickVoid);
@@ -9843,7 +9844,7 @@ struct ExampleAssetsBrowser
             if (AllowDragUnselected)
                 ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
             if (AllowBoxSelect)
-                ms_flags |= ImGuiMultiSelectFlags_BoxSelect2d; // Enable box-select in 2D mode.
+                ms_flags |= ImGuiMultiSelectFlags_BoxSelect; // Enable box-select in 2D mode.
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, Selection.Size);
 
             // Use custom selection adapter: store ID in selection (recommended)
@@ -9918,7 +9919,7 @@ struct ExampleAssetsBrowser
                         }
 
                         // Render icon (a real app would likely display an image/thumbnail here)
-                        // Because we use ImGuiMultiSelectFlags_BoxSelect2d mode,
+                        // Because we use ImGuiMultiSelectFlags_BoxSelect (without ImGuiMultiSelectFlags_BoxSelect1d flag),
                         // clipping vertical range may occasionally be larger so we coarse-clip our rendering.
                         if (item_is_visible)
                         {

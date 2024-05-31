@@ -7235,7 +7235,7 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
 
     // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
     // Storing an extra rect used by widgets supporting box-select.
-    if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
+    if ((ms_flags & ImGuiMultiSelectFlags_BoxSelect) && !(ms_flags & ImGuiMultiSelectFlags_BoxSelect1d))
         if (bs->BoxSelectRectPrev.Min.x != bs->BoxSelectRectCurr.Min.x || bs->BoxSelectRectPrev.Max.x != bs->BoxSelectRectCurr.Max.x)
         {
             bs->UnclipMode = true;
@@ -7316,8 +7316,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     if ((flags & (ImGuiMultiSelectFlags_ScopeWindow | ImGuiMultiSelectFlags_ScopeRect)) == 0)
         flags |= ImGuiMultiSelectFlags_ScopeWindow;
     if (flags & ImGuiMultiSelectFlags_SingleSelect)
-        flags &= ~(ImGuiMultiSelectFlags_BoxSelect | ImGuiMultiSelectFlags_BoxSelect2d);
-    if (flags & ImGuiMultiSelectFlags_BoxSelect2d)
+        flags &= ~(ImGuiMultiSelectFlags_BoxSelect | ImGuiMultiSelectFlags_BoxSelect1d);
+    if (flags & ImGuiMultiSelectFlags_BoxSelect1d)
         flags |= ImGuiMultiSelectFlags_BoxSelect;
 
     // FIXME: BeginFocusScope()
