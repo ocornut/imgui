@@ -37,9 +37,9 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += $(LINUX_GL_LIBS) -ldl `sdl3-config --libs`
+	LIBS += $(LINUX_GL_LIBS) -ldl `pkg-config sdl3 --libs`
 
-	CXXFLAGS += `sdl3-config --cflags`
+	CXXFLAGS += `pkg-config sdl3 --cflags`
 	CFLAGS = $(CXXFLAGS)
 endif
 
@@ -48,7 +48,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl3-config --libs`
 	LIBS += -L/usr/local/lib -L/opt/local/lib
 
-	CXXFLAGS += `sdl3-config --cflags`
+	CXXFLAGS += `pkg-config sdl3 --cflags`
 	CXXFLAGS += -I/usr/local/include -I/opt/local/include
 	CFLAGS = $(CXXFLAGS)
 endif
