@@ -49,6 +49,8 @@ Other changes:
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
 - Combo: simplified Combo() API uses a list clipper (due to its api it wasn't
   previously trivial before we added clipper.IncludeItemByIndex() function).
+- Disabled: nested tooltips or other non-child window within a BeginDisabled()
+  block disable the disabled state. (#211, #7640)
 - Misc: made ImGuiDir and ImGuiSortDirection stronger-typed enums.
 
 
