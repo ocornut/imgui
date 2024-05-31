@@ -10120,6 +10120,7 @@ void ImGui::KeepAliveID(ImGuiID id)
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
 // THIS IS IN THE PERFORMANCE CRITICAL PATH (UNTIL THE CLIPPING TEST AND EARLY-RETURN)
+IM_MSVC_RUNTIME_CHECKS_OFF
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGuiItemFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
@@ -10207,7 +10208,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredRect;
     return true;
 }
-
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
 // [SECTION] LAYOUT
@@ -10244,6 +10245,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 // Register minimum needed size so it can extend the bounding box used for auto-fit calculation.
 // See comments in ItemAdd() about how/why the size provided to ItemSize() vs ItemAdd() may often different.
 // THIS IS IN THE PERFORMANCE CRITICAL PATH.
+IM_MSVC_RUNTIME_CHECKS_OFF
 void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
 {
     ImGuiContext& g = *GImGui;
@@ -10279,6 +10281,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
         SameLine();
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Gets back to previous line and continue with horizontal layout
 //      offset_from_start_x == 0 : follow right after previous item
