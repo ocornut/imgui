@@ -4237,7 +4237,7 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id)
     ImGuiWindow* window = g.CurrentWindow;
     if (!bb.Overlaps(window->ClipRect))
         if (id == 0 || (id != g.ActiveId && id != g.ActiveIdPreviousFrame && id != g.NavId && id != g.NavActivateId))
-            if (!g.LogEnabled)
+            if (!g.ItemUnclipByLog)
                 return true;
     return false;
 }
@@ -10173,15 +10173,12 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 #endif
 
     // Clipping test
-    // (this is a modified copy of IsClippedEx() so we can reuse the is_rect_visible value)
-    //const bool is_clipped = IsClippedEx(bb, id);
-    //if (is_clipped)
-    //    return false;
+    // (this is an inline copy of IsClippedEx() so we can reuse the is_rect_visible value, otherwise we'd do 'if (IsClippedEx(bb, id)) return false')
     // g.NavActivateId is not necessarily == g.NavId, in the case of remote activation (e.g. shortcuts)
     const bool is_rect_visible = bb.Overlaps(window->ClipRect);
     if (!is_rect_visible)
         if (id == 0 || (id != g.ActiveId && id != g.ActiveIdPreviousFrame && id != g.NavId && id != g.NavActivateId))
-            if (!g.LogEnabled)
+            if (!g.ItemUnclipByLog)
                 return false;
 
     // [DEBUG]
@@ -13585,7 +13582,7 @@ void ImGui::LogBegin(ImGuiLogType type, int auto_open_depth)
     IM_ASSERT(g.LogEnabled == false);
     IM_ASSERT(g.LogFile == NULL);
     IM_ASSERT(g.LogBuffer.empty());
-    g.LogEnabled = true;
+    g.LogEnabled = g.ItemUnclipByLog = true;
     g.LogType = type;
     g.LogNextPrefix = g.LogNextSuffix = NULL;
     g.LogDepthRef = window->DC.TreeDepth;
@@ -13684,7 +13681,7 @@ void ImGui::LogFinish()
         break;
     }
 
-    g.LogEnabled = false;
+    g.LogEnabled = g.ItemUnclipByLog = false;
     g.LogType = ImGuiLogType_None;
     g.LogFile = NULL;
     g.LogBuffer.clear();
