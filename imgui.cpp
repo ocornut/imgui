@@ -6562,6 +6562,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
     window_stack_data.StackSizesOnBegin.SetToContextState(&g);
+    window_stack_data.DisabledOverrideReenable = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     g.CurrentWindowStack.push_back(window_stack_data);
     if (flags & ImGuiWindowFlags_ChildMenu)
         g.BeginMenuDepth++;
@@ -6649,9 +6650,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     UpdateWindowSkipRefresh(window);
 
     // Nested root windows (typically tooltips) override disabled state
-    if (window->RootWindow == window)
-        if ((window->DC.BackupItemDisabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0))
-            BeginDisabledOverrideReenable();
+    if (window_stack_data.DisabledOverrideReenable && window->RootWindow == window)
+        BeginDisabledOverrideReenable();
 
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindow = NULL;
@@ -7252,7 +7252,7 @@ void ImGui::End()
         IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size > 1, "Calling End() too many times!");
         return;
     }
-    IM_ASSERT(g.CurrentWindowStack.Size > 0);
+    ImGuiWindowStackData& window_stack_data = g.CurrentWindowStack.back();
 
     // Error checking: verify that user doesn't directly call End() on a child window.
     if (window->Flags & ImGuiWindowFlags_ChildWindow)
@@ -7264,7 +7264,7 @@ void ImGui::End()
     if (!window->SkipRefresh)
         PopClipRect();   // Inner window clip rectangle
     PopFocusScope();
-    if (window->RootWindow == window && window->DC.BackupItemDisabled)
+    if (window_stack_data.DisabledOverrideReenable && window->RootWindow == window)
         EndDisabledOverrideReenable();
 
     if (window->SkipRefresh)
@@ -7281,12 +7281,12 @@ void ImGui::End()
         ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
 
     // Pop from window stack
-    g.LastItemData = g.CurrentWindowStack.back().ParentLastItemDataBackup;
+    g.LastItemData = window_stack_data.ParentLastItemDataBackup;
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
         g.BeginMenuDepth--;
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithContextState(&g);
+    window_stack_data.StackSizesOnBegin.CompareWithContextState(&g);
     g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
@@ -10030,7 +10030,7 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         else
         {
             EndDisabledOverrideReenable();
-            window->DC.BackupItemDisabled = false;
+            g.CurrentWindowStack.back().DisabledOverrideReenable = false;
         }
     }
     while (g.ColorStack.Size > stack_sizes->SizeOfColorStack)
