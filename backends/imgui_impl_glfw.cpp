@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-06-02: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (requires emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
 //  2023-12-19: Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to register canvas selector and auto-resize GLFW window.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys.
 //  2023-07-18: Inputs: Revert ignoring mouse data on GLFW_CURSOR_DISABLED as it can be used differently. User may set ImGuiConfigFLags_NoMouse if desired. (#5625, #6609)
@@ -100,6 +101,12 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <cstdio>
+#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+#include <GLFW/emscripten_glfw3.h>
+#else
+#define EMSCRIPTEN_USE_GLFW3
+#endif
 #endif
 
 // We gather version tests as define in order to easily see which features are version-dependent.
@@ -131,7 +138,7 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
     const char*             CanvasSelector;
 #endif
 
@@ -335,7 +342,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
     if (bd->PrevUserCallbackScroll != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackScroll(window, xoffset, yoffset);
 
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
     // Ignore GLFW events: will be processed in ImGui_ImplEmscripten_WheelCallback().
     return;
 #endif
@@ -346,7 +353,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
 
 static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
 {
-#if GLFW_HAS_GETKEYNAME && !defined(__EMSCRIPTEN__)
+#if GLFW_HAS_GETKEYNAME && !defined(EMSCRIPTEN_USE_GLFW3)
     // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
     // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
     // See https://github.com/glfw/glfw/issues/1502 for details.
@@ -357,7 +364,7 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     const char* key_name = glfwGetKeyName(key, scancode);
     glfwSetErrorCallback(prev_error_callback);
-#if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
+#if GLFW_HAS_GETERROR && !defined(EMSCRIPTEN_USE_GLFW3) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
     if (key_name && key_name[0] != 0 && key_name[1] == 0)
@@ -454,7 +461,7 @@ void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 	// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
 }
 
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
 static EM_BOOL ImGui_ImplEmscripten_WheelCallback(int, const EmscriptenWheelEvent* ev, void*)
 {
     // Mimic Emscripten_HandleWheel() in SDL.
@@ -606,7 +613,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     // Register Emscripten Wheel callback to workaround issue in Emscripten GLFW Emulation (#6096)
     // We intentionally do not check 'if (install_callbacks)' here, as some users may set it to false and call GLFW callback themselves.
     // FIXME: May break chaining in case user registered their own Emscripten callback?
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
     emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, false, ImGui_ImplEmscripten_WheelCallback);
 #endif
 
@@ -654,7 +661,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     if (bd->InstalledCallbacks)
         ImGui_ImplGlfw_RestoreCallbacks(bd->Window);
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
     emscripten_set_wheel_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, false, nullptr);
 #endif
 
@@ -682,7 +689,7 @@ static void ImGui_ImplGlfw_UpdateMouseData()
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
         GLFWwindow* window = bd->Window;
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
         const bool is_window_focused = true;
 #else
         const bool is_window_focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
@@ -740,7 +747,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         return;
 
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-#if GLFW_HAS_GAMEPAD_API && !defined(__EMSCRIPTEN__)
+#if GLFW_HAS_GAMEPAD_API && !defined(EMSCRIPTEN_USE_GLFW3)
     GLFWgamepadstate gamepad;
     if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))
         return;
@@ -814,7 +821,7 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateGamepads();
 }
 
-#ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_GLFW3
 static EM_BOOL ImGui_ImplGlfw_OnCanvasSizeChange(int event_type, const EmscriptenUiEvent* event, void* user_data)
 {
     ImGui_ImplGlfw_Data* bd = (ImGui_ImplGlfw_Data*)user_data;
@@ -847,6 +854,13 @@ void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_sel
 
     // Change the size of the GLFW window according to the size of the canvas
     ImGui_ImplGlfw_OnCanvasSizeChange(EMSCRIPTEN_EVENT_RESIZE, {}, bd);
+}
+#else
+void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
+{
+    printf("[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead\n");
+    auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
+    emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
 }
 #endif
 

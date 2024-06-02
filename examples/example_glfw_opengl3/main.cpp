@@ -27,6 +27,9 @@
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
+#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+#include <GLFW/emscripten_glfw3.h>
+#endif
 #endif
 
 static void glfw_error_callback(int error, const char* description)
@@ -85,7 +88,11 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 #ifdef __EMSCRIPTEN__
+#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+    emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
+#else
     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
+#endif
 #endif
     ImGui_ImplOpenGL3_Init(glsl_version);
 
