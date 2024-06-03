@@ -105,7 +105,7 @@
 #ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
 #include <GLFW/emscripten_glfw3.h>
 #else
-#define EMSCRIPTEN_USE_GLFW3
+#define EMSCRIPTEN_USE_EMBEDDED_GLFW3
 #endif
 #endif
 
@@ -138,7 +138,7 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     const char*             CanvasSelector;
 #endif
 
@@ -342,7 +342,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
     if (bd->PrevUserCallbackScroll != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackScroll(window, xoffset, yoffset);
 
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     // Ignore GLFW events: will be processed in ImGui_ImplEmscripten_WheelCallback().
     return;
 #endif
@@ -353,7 +353,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
 
 static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
 {
-#if GLFW_HAS_GETKEYNAME && !defined(EMSCRIPTEN_USE_GLFW3)
+#if GLFW_HAS_GETKEYNAME && !defined(EMSCRIPTEN_USE_EMBEDDED_GLFW3)
     // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
     // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
     // See https://github.com/glfw/glfw/issues/1502 for details.
@@ -364,7 +364,7 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     const char* key_name = glfwGetKeyName(key, scancode);
     glfwSetErrorCallback(prev_error_callback);
-#if GLFW_HAS_GETERROR && !defined(EMSCRIPTEN_USE_GLFW3) // Eat errors (see #5908)
+#if GLFW_HAS_GETERROR && !defined(EMSCRIPTEN_USE_EMBEDDED_GLFW3) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
     if (key_name && key_name[0] != 0 && key_name[1] == 0)
@@ -461,7 +461,7 @@ void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 	// Unused in 'master' branch but 'docking' branch will use this, so we declare it ahead of it so if you have to install callbacks you can install this one too.
 }
 
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
 static EM_BOOL ImGui_ImplEmscripten_WheelCallback(int, const EmscriptenWheelEvent* ev, void*)
 {
     // Mimic Emscripten_HandleWheel() in SDL.
@@ -655,7 +655,7 @@ void ImGui_ImplGlfw_Shutdown()
 
     if (bd->InstalledCallbacks)
         ImGui_ImplGlfw_RestoreCallbacks(bd->Window);
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     if(bd->CanvasSelector)
         emscripten_set_wheel_callback(bd->CanvasSelector, nullptr, false, nullptr);
 #endif
@@ -684,7 +684,7 @@ static void ImGui_ImplGlfw_UpdateMouseData()
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
         GLFWwindow* window = bd->Window;
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
         const bool is_window_focused = true;
 #else
         const bool is_window_focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
@@ -742,7 +742,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         return;
 
     io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-#if GLFW_HAS_GAMEPAD_API && !defined(EMSCRIPTEN_USE_GLFW3)
+#if GLFW_HAS_GAMEPAD_API && !defined(EMSCRIPTEN_USE_EMBEDDED_GLFW3)
     GLFWgamepadstate gamepad;
     if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))
         return;
@@ -816,7 +816,7 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateGamepads();
 }
 
-#ifdef EMSCRIPTEN_USE_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
 static EM_BOOL ImGui_ImplGlfw_OnCanvasSizeChange(int event_type, const EmscriptenUiEvent* event, void* user_data)
 {
     ImGui_ImplGlfw_Data* bd = (ImGui_ImplGlfw_Data*)user_data;
