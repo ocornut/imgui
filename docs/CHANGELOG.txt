@@ -56,6 +56,7 @@ Other changes:
 - Disabled: nested tooltips or other non-child window within a BeginDisabled()
   block disable the disabled state. (#211, #7640)
 - Misc: made ImGuiDir and ImGuiSortDirection stronger-typed enums.
+- Backends: SDL3: Update for SDL_SYSTEM_CURSOR_xxx api renames. (#7653)
 
 
 -----------------------------------------------------------------------
