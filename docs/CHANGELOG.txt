@@ -49,6 +49,9 @@ Other changes:
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
 - Scrollbar: fixed miscalculation of vertical scrollbar visibility when required
   solely by the presence of an horizontal scrollbar. (#1574)
+- Tables: fixed an issue where ideal size reported to parent container wouldn't
+  correctly take account of inner scrollbar, affecting potential auto-resize of
+  parent container. (#7651)
 - Tables: fixed a bug where after disabling the ScrollY flag for a table,
   previous scrollbar width would be accounted for. (#5920)
 - Combo: simplified Combo() API uses a list clipper (due to its api it wasn't
