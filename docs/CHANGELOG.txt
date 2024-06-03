@@ -47,6 +47,19 @@ Other changes:
   responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
 - Scrollbar: made scrolling logic more standard: clicking above or below the
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
+- Scrollbar: fixed miscalculation of vertical scrollbar visibility when required
+  solely by the presence of an horizontal scrollbar. (#1574)
+- Tables: fixed an issue where ideal size reported to parent container wouldn't
+  correctly take account of inner scrollbar, affecting potential auto-resize of
+  parent container. (#7651)
+- Tables: fixed a bug where after disabling the ScrollY flag for a table,
+  previous scrollbar width would be accounted for. (#5920)
+- Combo: simplified Combo() API uses a list clipper (due to its api it wasn't
+  previously trivial before we added clipper.IncludeItemByIndex() function).
+- Disabled: nested tooltips or other non-child window within a BeginDisabled()
+  block disable the disabled state. (#211, #7640)
+- Misc: made ImGuiDir and ImGuiSortDirection stronger-typed enums.
+- Backends: SDL3: Update for SDL_SYSTEM_CURSOR_xxx api renames. (#7653)
 
 
 -----------------------------------------------------------------------

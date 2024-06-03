@@ -179,7 +179,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: a way/helper to customize the combo preview (#1658) -> experimental BeginComboPreview()
- - combo: Combo() helper could use clipper.
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection (WIP range-select branch)
  - listbox: unselect option (#1208)

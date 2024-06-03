@@ -1958,28 +1958,30 @@ bool ImGui::Combo(const char* label, int* current_item, const char* (*getter)(vo
         return false;
 
     // Display items
-    // FIXME-OPT: Use clipper (but we need to disable it on the appearing frame to make sure our call to SetItemDefaultFocus() is processed)
     bool value_changed = false;
-    for (int i = 0; i < items_count; i++)
-    {
-        const char* item_text = getter(user_data, i);
-        if (item_text == NULL)
-            item_text = "*Unknown item*";
-
-        PushID(i);
-        const bool item_selected = (i == *current_item);
-        if (Selectable(item_text, item_selected) && *current_item != i)
+    ImGuiListClipper clipper;
+    clipper.Begin(items_count);
+    clipper.IncludeItemByIndex(*current_item);
+    while (clipper.Step())
+        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         {
-            value_changed = true;
-            *current_item = i;
+            const char* item_text = getter(user_data, i);
+            if (item_text == NULL)
+                item_text = "*Unknown item*";
+
+            PushID(i);
+            const bool item_selected = (i == *current_item);
+            if (Selectable(item_text, item_selected) && *current_item != i)
+            {
+                value_changed = true;
+                *current_item = i;
+            }
+            if (item_selected)
+                SetItemDefaultFocus();
+            PopID();
         }
-        if (item_selected)
-            SetItemDefaultFocus();
-        PopID();
-    }
 
     EndCombo();
-
     if (value_changed)
         MarkItemEdited(g.LastItemData.ID);
 
@@ -7018,6 +7020,7 @@ bool ImGui::ListBox(const char* label, int* current_item, const char* (*getter)(
     bool value_changed = false;
     ImGuiListClipper clipper;
     clipper.Begin(items_count, GetTextLineHeightWithSpacing()); // We know exactly our line height here so we pass it as a minor optimization, but generally you don't need to.
+    clipper.IncludeItemByIndex(*current_item);
     while (clipper.Step())
         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         {
