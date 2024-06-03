@@ -437,6 +437,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         // For non-scrolling tables, WorkRect == OuterRect == InnerRect.
         // But at this point we do NOT have a correct value for .Max.y (unless a height has been explicitly passed in). It will only be updated in EndTable().
         table->WorkRect = table->OuterRect = table->InnerRect = outer_rect;
+        table->HasScrollbarYPrev = table->HasScrollbarYCurr = false;
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
@@ -1490,9 +1491,10 @@ void    ImGui::EndTable()
     }
     else if (temp_data->UserOuterSize.x <= 0.0f)
     {
+        const float inner_content_max_x = table->OuterRect.Min.x + table->ColumnsAutoFitWidth; // Slightly misleading name but used for code symmetry with inner_content_max_y
         const float decoration_size = table->TempData->AngledHeadersExtraWidth + ((table->Flags & ImGuiTableFlags_ScrollX) ? inner_window->ScrollbarSizes.x : 0.0f);
-        outer_window->DC.IdealMaxPos.x = ImMax(outer_window->DC.IdealMaxPos.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth + decoration_size - temp_data->UserOuterSize.x);
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, ImMin(table->OuterRect.Max.x, table->OuterRect.Min.x + table->ColumnsAutoFitWidth));
+        outer_window->DC.IdealMaxPos.x = ImMax(outer_window->DC.IdealMaxPos.x, inner_content_max_x + decoration_size - temp_data->UserOuterSize.x);
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos.x, ImMin(table->OuterRect.Max.x, inner_content_max_x));
     }
     else
     {
