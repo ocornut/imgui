@@ -43,6 +43,10 @@ Breaking changes:
 
 Other changes:
 
+- Inputs: Fixed IsMouseClicked(..., repeat=true); broken on 2024/05/22.
+  (due to an internal api parameter swap, repeat wouldn't be honored and
+  ownership would be accidently checked even though this api is meant to not
+  check ownership). (#7657) [@korenkonder]
 - Windows: fixed altering FramePadding mid-frame not correctly affecting logic
   responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
 - Scrollbar: made scrolling logic more standard: clicking above or below the
