@@ -8900,7 +8900,7 @@ bool ImGui::IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
 
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 {
-    return IsMouseClicked(button, ImGuiKeyOwner_Any, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None);
+    return IsMouseClicked(button, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None, ImGuiKeyOwner_Any);
 }
 
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id)
