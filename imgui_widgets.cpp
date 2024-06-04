@@ -7329,6 +7329,8 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     ms->BackupCursorMaxPos = window->DC.CursorMaxPos;
     ms->ScopeRectMin = window->DC.CursorMaxPos = window->DC.CursorPos;
     PushFocusScope(ms->FocusScopeId);
+    if (flags & ImGuiMultiSelectFlags_ScopeWindow) // Mark parent child window as navigable into, with highlight. Assume user will always submit interactive items.
+        window->DC.NavLayersActiveMask |= 1 << ImGuiNavLayer_Main;
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
     ms->KeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
