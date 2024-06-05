@@ -179,7 +179,7 @@ struct ImGuiMultiSelectIO;          // Structure to interact with a BeginMultiSe
 struct ImGuiOnceUponAFrame;         // Helper for running a block of code not more than once a frame
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiPlatformImeData;        // Platform IME data for io.PlatformSetImeDataFn() function.
-struct ImGuiSelectionBasicStorage;  // Helper struct to store multi-selection state + apply multi-selection requests.
+struct ImGuiSelectionBasicStorage;  // Optional helper to store multi-selection state + apply multi-selection requests.
 struct ImGuiSelectionRequest;       // A selection request (stored in ImGuiMultiSelectIO)
 struct ImGuiSizeCallbackData;       // Callback data when using SetNextWindowSizeConstraints() (rare/advanced use)
 struct ImGuiStorage;                // Helper for key->value storage (container sorted by key)
@@ -673,9 +673,10 @@ namespace ImGui
 
     // Multi-selection system for Selectable() and TreeNode() functions.
     // - This enables standard multi-selection/range-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc.) in a way that also allow a clipper to be used.
-    // - ImGuiSelectionUserData is often used to store your item index.
+    // - ImGuiSelectionUserData is often used to store your item index within the current view (but may store something else).
     // - Read comments near ImGuiMultiSelectIO for instructions/details and see 'Demo->Widgets->Selection State & Multi-Select' for demo.
-    IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags, int current_selection_size = -1);
+    // - 'selection_size' and 'items_count' parameters are optional and used by a few features. If they are costly for you to compute, you may avoid them.
+    IMGUI_API ImGuiMultiSelectIO*   BeginMultiSelect(ImGuiMultiSelectFlags flags, int selection_size = -1, int items_count = -1);
     IMGUI_API ImGuiMultiSelectIO*   EndMultiSelect();
     IMGUI_API void                  SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
     IMGUI_API bool                  IsItemToggledSelection();                                   // Was the last item selection state toggled? Useful if you need the per-item information _before_ reaching EndMultiSelect(). We only returns toggle _event_ in order to handle clipping correctly.
@@ -2799,6 +2800,7 @@ struct ImGuiMultiSelectIO
     ImGuiSelectionUserData      NavIdItem;      //  ms:w, app:r     /                // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
     bool                        NavIdSelected;  //  ms:w, app:r     /        app:r   // (If using deletion) Last known selection state for NavId (if part of submitted items).
     bool                        RangeSrcReset;  //        app:w     /  ms:r          // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
+    int                         ItemsCount;     //  ms:w, app:r     /        app:r   // 'int items_count' parameter to BeginMultiSelect() is copied here for convenience, allowing simpler calls to your ApplyRequests handler. Not used internally.
 };
 
 // Selection request type
@@ -2846,8 +2848,8 @@ struct ImGuiSelectionBasicStorage
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->AdapterData)[idx]->ID; };
     void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
 
-    // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions
-    IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count);
+    // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. Uses 'items_count' based to BeginMultiSelect()
+    IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io);
 
     // Methods: selection storage
     ImGuiSelectionBasicStorage()                { Clear(); UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }

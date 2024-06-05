@@ -2874,7 +2874,7 @@ struct ExampleDualListBox
         // In this example we store item id in selection (instead of item index)
         Selections[side].UserData = Items[side].Data;
         Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImGuiID* items = (ImGuiID*)self->UserData; return items[idx]; };
-        Selections[side].ApplyRequests(ms_io, Items[side].Size);
+        Selections[side].ApplyRequests(ms_io);
     }
     static int IMGUI_CDECL CompareItemsByValue(const void* lhs, const void* rhs)
     {
@@ -2929,7 +2929,7 @@ struct ExampleDualListBox
                 if (child_visible)
                 {
                     ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
-                    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
+                    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
                     ApplySelectionRequests(ms_io, side);
 
                     for (int item_n = 0; item_n < items.Size; item_n++)
@@ -3060,8 +3060,8 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
-                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, ITEMS_COUNT);
+                selection.ApplyRequests(ms_io);
 
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
@@ -3073,7 +3073,7 @@ static void ShowDemoWindowMultiSelect()
                 }
 
                 ms_io = ImGui::EndMultiSelect();
-                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+                selection.ApplyRequests(ms_io);
             }
             ImGui::EndChild();
             ImGui::TreePop();
@@ -3094,8 +3094,8 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
-                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, ITEMS_COUNT);
+                selection.ApplyRequests(ms_io);
 
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
@@ -3114,7 +3114,7 @@ static void ShowDemoWindowMultiSelect()
                 }
 
                 ms_io = ImGui::EndMultiSelect();
-                selection.ApplyRequests(ms_io, ITEMS_COUNT);
+                selection.ApplyRequests(ms_io);
             }
             ImGui::EndChild();
             ImGui::TreePop();
@@ -3158,8 +3158,8 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
                 ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
-                selection.ApplyRequests(ms_io, items.Size);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
+                selection.ApplyRequests(ms_io);
 
                 const bool want_delete = ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0);
                 const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
@@ -3179,7 +3179,7 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 ms_io = ImGui::EndMultiSelect();
-                selection.ApplyRequests(ms_io, items.Size);
+                selection.ApplyRequests(ms_io);
                 if (want_delete)
                     selection.ApplyDeletionPostLoop(ms_io, items, item_curr_idx_to_focus);
             }
@@ -3275,8 +3275,8 @@ static void ShowDemoWindowMultiSelect()
             {
                 ImGui::PushID(selection_scope_n);
                 ImGuiSelectionBasicStorage* selection = &selections_data[selection_scope_n];
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection->Size);
-                selection->ApplyRequests(ms_io, ITEMS_COUNT);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection->Size, ITEMS_COUNT);
+                selection->ApplyRequests(ms_io);
 
                 ImGui::SeparatorText("Selection scope");
                 ImGui::Text("Selection size: %d/%d", selection->Size, ITEMS_COUNT);
@@ -3292,7 +3292,7 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 ms_io = ImGui::EndMultiSelect();
-                selection->ApplyRequests(ms_io, ITEMS_COUNT);
+                selection->ApplyRequests(ms_io);
                 ImGui::PopID();
             }
             ImGui::TreePop();
@@ -3375,8 +3375,8 @@ static void ShowDemoWindowMultiSelect()
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size);
-                selection.ApplyRequests(ms_io, items.Size);
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
+                selection.ApplyRequests(ms_io);
 
                 const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (selection.Size > 0)) || request_deletion_from_menu;
                 const int item_curr_idx_to_focus = want_delete ? selection.ApplyDeletionPreLoop(ms_io, items.Size) : -1;
@@ -3520,7 +3520,7 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 ms_io = ImGui::EndMultiSelect();
-                selection.ApplyRequests(ms_io, items.Size);
+                selection.ApplyRequests(ms_io);
                 if (want_delete)
                     selection.ApplyDeletionPostLoop(ms_io, items, item_curr_idx_to_focus);
 
@@ -9846,12 +9846,12 @@ struct ExampleAssetsBrowser
                 ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
             if (AllowBoxSelect)
                 ms_flags |= ImGuiMultiSelectFlags_BoxSelect; // Enable box-select in 2D mode.
-            ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, Selection.Size);
+            ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, Selection.Size, Items.Size);
 
             // Use custom selection adapter: store ID in selection (recommended)
             Selection.UserData = this;
             Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->UserData; return self->Items[idx].ID; };
-            Selection.ApplyRequests(ms_io, Items.Size);
+            Selection.ApplyRequests(ms_io);
 
             const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (Selection.Size > 0)) || RequestDelete;
             const int item_curr_idx_to_focus = want_delete ? Selection.ApplyDeletionPreLoop(ms_io, Items.Size) : -1;
@@ -9959,7 +9959,7 @@ struct ExampleAssetsBrowser
             }
 
             ms_io = ImGui::EndMultiSelect();
-            Selection.ApplyRequests(ms_io, Items.Size);
+            Selection.ApplyRequests(ms_io);
             if (want_delete)
                 Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
 

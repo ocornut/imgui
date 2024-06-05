@@ -7300,10 +7300,13 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
 
 // Return ImGuiMultiSelectIO structure.
 // Lifetime: don't hold on ImGuiMultiSelectIO* pointers over multiple frames or past any subsequent call to BeginMultiSelect() or EndMultiSelect().
-// Passing 'current_selection_size' is currently optional:
-// - it is useful for shortcut routing with ImGuiMultiSelectFlags_ClearOnEscape: so we can have Escape be used to clear selection THEN to exit child window.
-// - if it is costly for you to compute, but can easily tell if your selection is empty or not, you may pass 1, or use the ImGuiMultiSelectFlags_ClearOnEscape flag dynamically.
-ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int current_selection_size)
+// Passing 'selection_size' and 'items_count' parameters is currently optional.
+// - 'selection_size' is useful to disable some shortcut routing: e.g. ImGuiMultiSelectFlags_ClearOnEscape won't claim Escape key when selection_size 0,
+//    allowing a first press to clear selection THEN the second press to leave child window and return to parent.
+// - 'items_count' is stored in ImGuiMultiSelectIO which makes it a convenient way to pass the information to your ApplyRequest() handler (but you may pass it differently).
+// - If they are costly for you to compute (e.g. external intrusive selection without maintaining size), you may avoid them and pass -1.
+//   - If you can easily tell if your selection is empty or not, you may pass 0/1, or you may enable ImGuiMultiSelectFlags_ClearOnEscape flag dynamically.
+ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int selection_size, int items_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7341,15 +7344,16 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     ImGuiMultiSelectState* storage = g.MultiSelectStorage.GetOrAddByKey(id);
     storage->ID = id;
     storage->LastFrameActive = g.FrameCount;
-    storage->LastSelectionSize = current_selection_size;
+    storage->LastSelectionSize = selection_size;
     storage->Window = window;
     ms->Storage = storage;
 
     // Output to user
+    ms->IO.Requests.resize(0);
     ms->IO.RangeSrcItem = storage->RangeSrcItem;
     ms->IO.NavIdItem = storage->NavIdItem;
     ms->IO.NavIdSelected = (storage->NavIdSelected == 1) ? true : false;
-    ms->IO.Requests.resize(0);
+    ms->IO.ItemsCount = items_count;
 
     // Clear when using Navigation to move within the scope
     // (we compare FocusScopeId so it possible to use multiple selections inside a same window)
@@ -7375,7 +7379,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int cur
     {
         // Shortcut: Clear selection (Escape)
         // Only claim shortcut if selection is not empty, allowing further presses on Escape to e.g. leave current child window.
-        if ((flags & ImGuiMultiSelectFlags_ClearOnEscape) && (current_selection_size != 0))
+        if ((flags & ImGuiMultiSelectFlags_ClearOnEscape) && (selection_size != 0))
             if (Shortcut(ImGuiKey_Escape))
                 request_clear = true;
 
@@ -7826,17 +7830,22 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 //      if (req.Type == ImGuiSelectionRequestType_SetAll)    { Clear(); if (req.Selected) { for (int n = 0; n < items_count; n++) { AddItem(n); } }
 //      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->Selected); } }
 //   }
-void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io, int items_count)
+void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 {
+    // For convenience we obtain ItemsCount as passed to BeginMultiSelect(), which is optional.
+    // It makes sense when using ImGuiSelectionBasicStorage to simply pass your items count to BeginMultiSelect().
+    // Other scheme may handle SetAll differently.
+    IM_ASSERT(ms_io->ItemsCount != -1 && "Missing value for items_count in BeginMultiSelect() call!");
     IM_ASSERT(AdapterIndexToStorageId != NULL);
+
     for (ImGuiSelectionRequest& req : ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
             Clear();
         if (req.Type == ImGuiSelectionRequestType_SetAll && req.Selected)
         {
-            Storage.Data.reserve(items_count);
-            for (int idx = 0; idx < items_count; idx++)
+            Storage.Data.reserve(ms_io->ItemsCount);
+            for (int idx = 0; idx < ms_io->ItemsCount; idx++)
                 SetItemSelected(AdapterIndexToStorageId(this, idx), true);
         }
         if (req.Type == ImGuiSelectionRequestType_SetRange)
