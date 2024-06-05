@@ -44,7 +44,7 @@ Index of this file:
 // [SECTION] ImGuiIO
 // [SECTION] Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, Math Operators, ImColor)
-// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiSelectionRequestType, ImGuiSelectionRequest, ImGuiMultiSelectIO, ImGuiSelectionBasicStorage)
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO, ImGuiSelectionRequest, ImGuiSelectionBasicStorage)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
@@ -2817,8 +2817,8 @@ struct ImGuiSelectionRequest
     //------------------------------------------// BeginMultiSelect / EndMultiSelect
     ImGuiSelectionRequestType   Type;           //  ms:w, app:r     /  ms:w, app:r   // Request type. You'll most often receive 1 Clear + 1 SetRange with a single-item range.
     bool                        Selected;       //  ms:w, app:r     /  ms:w, app:r   // Parameter for SetAll/SetRange requests (true = select, false = unselect)
-    ImGuiSelectionUserData      RangeFirstItem; //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom)
-    ImGuiSelectionUserData      RangeLastItem;  //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top)
+    ImGuiSelectionUserData      RangeFirstItem; //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from top to bottom).
+    ImGuiSelectionUserData      RangeLastItem;  //                  /  ms:w, app:r   // Parameter for SetRange request (this is generally == RangeSrcItem when shift selecting from bottom to top). Inclusive!
 };
 
 // Optional helper to store multi-selection state + apply multi-selection requests.
@@ -2848,16 +2848,16 @@ struct ImGuiSelectionBasicStorage
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
     void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
 
-    // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. Uses 'items_count' based to BeginMultiSelect()
-    IMGUI_API void ApplyRequests(ImGuiMultiSelectIO* ms_io);
+    // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. Uses 'items_count' passed to BeginMultiSelect()
+    IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);
 
     // Methods: selection storage
-    ImGuiSelectionBasicStorage()                { Clear(); UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
-    void    Clear()                             { Storage.Data.resize(0); Size = 0; }
-    void    Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); }
-    bool    Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }
-    void    SetItemSelected(ImGuiID id, bool v) { int* p_int = Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
-    ImGuiID GetStorageIdFromIndex(int idx)      { return AdapterIndexToStorageId(this, idx); }
+    ImGuiSelectionBasicStorage()                        { Clear(); UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
+    void            Clear()                             { Storage.Data.resize(0); Size = 0; }
+    void            Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); int lhs_size = Size; Size = r.Size; r.Size = lhs_size; }
+    bool            Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }
+    void            SetItemSelected(ImGuiID id, bool v) { int* p_int = Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
+    ImGuiID         GetStorageIdFromIndex(int idx)      { return AdapterIndexToStorageId(this, idx); }
 };
 
 //-----------------------------------------------------------------------------
