@@ -49,6 +49,8 @@ Other changes:
   check ownership). (#7657) [@korenkonder]
 - Windows: fixed altering FramePadding mid-frame not correctly affecting logic
   responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
+- Popups: fixed an issue preventing to close a popup opened over a modal by clicking
+  over void (it required clicking over the visible part of the modal). (#7654)
 - Scrollbar: made scrolling logic more standard: clicking above or below the
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
 - Scrollbar: fixed miscalculation of vertical scrollbar visibility when required
