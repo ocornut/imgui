@@ -7846,11 +7846,11 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
         {
             Storage.Data.reserve(ms_io->ItemsCount);
             for (int idx = 0; idx < ms_io->ItemsCount; idx++)
-                SetItemSelected(AdapterIndexToStorageId(this, idx), true);
+                SetItemSelected(GetStorageIdFromIndex(idx), true);
         }
         if (req.Type == ImGuiSelectionRequestType_SetRange)
             for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
-                SetItemSelected(AdapterIndexToStorageId(this, idx), req.Selected);
+                SetItemSelected(GetStorageIdFromIndex(idx), req.Selected);
     }
 }
 

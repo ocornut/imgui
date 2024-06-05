@@ -2798,12 +2798,12 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
 
         // If focused item is selected: land on first unselected item after focused item.
         for (int idx = focused_idx + 1; idx < items_count; idx++)
-            if (!Contains(AdapterIndexToStorageId(this, idx)))
+            if (!Contains(GetStorageIdFromIndex(idx)))
                 return idx;
 
         // If focused item is selected: otherwise return last unselected item before focused item.
         for (int idx = IM_MIN(focused_idx, items_count) - 1; idx >= 0; idx--)
-            if (!Contains(AdapterIndexToStorageId(this, idx)))
+            if (!Contains(GetStorageIdFromIndex(idx)))
                 return idx;
 
         return -1;
@@ -2822,7 +2822,7 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
         int item_next_idx_to_select = -1;
         for (int idx = 0; idx < items.Size; idx++)
         {
-            if (!Contains(AdapterIndexToStorageId(this, idx)))
+            if (!Contains(GetStorageIdFromIndex(idx)))
                 new_items.push_back(items[idx]);
             if (item_curr_idx_to_select == idx)
                 item_next_idx_to_select = new_items.Size - 1;
@@ -2832,7 +2832,7 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
         // Update selection
         Clear();
         if (item_next_idx_to_select != -1 && ms_io->NavIdSelected)
-            SetItemSelected(AdapterIndexToStorageId(this, item_next_idx_to_select), true);
+            SetItemSelected(GetStorageIdFromIndex(item_next_idx_to_select), true);
     }
 };
 

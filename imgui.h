@@ -2823,7 +2823,7 @@ struct ImGuiSelectionRequest
 
 // Optional helper to store multi-selection state + apply multi-selection requests.
 // - Used by our demos and provided as a convenience to easily implement basic multi-selection.
-// - USING THIS IS NOT MANDATORY. This is only a helper and not a required API. Advanced users are likely to implement their own.
+// - USING THIS IS NOT MANDATORY. This is only a helper and not a required API.
 // To store a multi-selection, in your application you could:
 // - A) Use this helper as a convenience. We use our simple key->value ImGuiStorage as a std::set<ImGuiID> replacement.
 // - B) Use your own external storage: e.g. std::set<MyObjectId>, std::vector<MyObjectId>, interval trees, etc.
@@ -2845,7 +2845,7 @@ struct ImGuiSelectionBasicStorage
     // Members
     ImGuiStorage    Storage;        // [Internal] Selection set. Think of this as similar to e.g. std::set<ImGuiID>
     int             Size;           // Number of selected items (== number of 1 in the Storage), maintained by this helper.
-    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->AdapterData)[idx]->ID; };
+    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
     void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
 
     // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. Uses 'items_count' based to BeginMultiSelect()
@@ -2857,6 +2857,7 @@ struct ImGuiSelectionBasicStorage
     void    Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); }
     bool    Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }
     void    SetItemSelected(ImGuiID id, bool v) { int* p_int = Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
+    ImGuiID GetStorageIdFromIndex(int idx)      { return AdapterIndexToStorageId(this, idx); }
 };
 
 //-----------------------------------------------------------------------------
