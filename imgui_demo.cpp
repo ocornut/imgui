@@ -3212,41 +3212,28 @@ static void ShowDemoWindowMultiSelect()
             ImGui::BulletText("Shift+Keyboard to copy current value to other boxes.");
 
             // If you have an array of checkboxes, you may want to use NoAutoSelect + NoAutoClear and the ImGuiSelectionExternalStorage helper.
-            static bool values[20] = {};
+            static bool items[20] = {};
             static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_NoAutoSelect | ImGuiMultiSelectFlags_NoAutoClear | ImGuiMultiSelectFlags_ClearOnEscape;
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoSelect", &flags, ImGuiMultiSelectFlags_NoAutoSelect);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_NoAutoClear", &flags, ImGuiMultiSelectFlags_NoAutoClear);
             ImGui::CheckboxFlags("ImGuiMultiSelectFlags_BoxSelect", &flags, ImGuiMultiSelectFlags_BoxSelect); // Cannot use ImGuiMultiSelectFlags_BoxSelect1d as checkboxes are varying width.
 
-            struct Funcs
-            {
-                static void ApplyMultiSelectRequestsToBoolArray(ImGuiMultiSelectIO* ms_io, bool items[], int items_count)
-                {
-                    for (ImGuiSelectionRequest& req : ms_io->Requests)
-                    {
-                        if (req.Type == ImGuiSelectionRequestType_SetAll)
-                            for (int n = 0; n < items_count; n++)
-                                items[n] = req.Selected;
-                        else if (req.Type == ImGuiSelectionRequestType_SetRange)
-                            for (int n = (int)req.RangeFirstItem; n <= (int)req.RangeLastItem; n++)
-                                items[n] = req.Selected;
-                    }
-                }
-            };
-
             if (ImGui::BeginChild("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
             {
-                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags);
-                Funcs::ApplyMultiSelectRequestsToBoolArray(ms_io, values, IM_ARRAYSIZE(values)); //// By specs, it could be optional to apply requests from BeginMultiSelect() if not using a clipper.
+                ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, -1, IM_ARRAYSIZE(items));
+                ImGuiSelectionExternalStorage storage_wrapper;
+                storage_wrapper.UserData = (void*)items;
+                storage_wrapper.AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int n, bool selected) { bool* array = (bool*)self->UserData; array[n] = selected; };
+                storage_wrapper.ApplyRequests(ms_io);
                 for (int n = 0; n < 20; n++)
                 {
                     char label[32];
                     sprintf(label, "Item %d", n);
                     ImGui::SetNextItemSelectionUserData(n);
-                    ImGui::Checkbox(label, &values[n]);
+                    ImGui::Checkbox(label, &items[n]);
                 }
                 ms_io = ImGui::EndMultiSelect();
-                Funcs::ApplyMultiSelectRequestsToBoolArray(ms_io, values, IM_ARRAYSIZE(values));
+                storage_wrapper.ApplyRequests(ms_io);
             }
             ImGui::EndChild();
 

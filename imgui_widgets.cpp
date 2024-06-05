@@ -7854,6 +7854,22 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     }
 }
 
+// Apply requests coming from BeginMultiSelect() and EndMultiSelect().
+// We also pull 'ms_io->ItemsCount' as passed for BeginMultiSelect() for consistency with ImGuiSelectionBasicStorage
+// This makes no assumption about underlying storage.
+void ImGuiSelectionExternalStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
+{
+    IM_ASSERT(AdapterSetItemSelected);
+    for (ImGuiSelectionRequest& req : ms_io->Requests)
+    {
+        if (req.Type == ImGuiSelectionRequestType_SetAll)
+            for (int idx = 0; idx < ms_io->ItemsCount; idx++)
+                AdapterSetItemSelected(this, idx, req.Selected);
+        if (req.Type == ImGuiSelectionRequestType_SetRange)
+            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+                AdapterSetItemSelected(this, idx, req.Selected);
+    }
+}
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: ListBox
