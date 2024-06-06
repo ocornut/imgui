@@ -43,6 +43,8 @@ Breaking changes:
 
 - Reordered various ImGuiInputTextFlags values. This should not be breaking unless
   you are using generated headers that have values not matching the main library.
+- Removed ImGuiButtonFlags_MouseButtonDefault_ = ImGuiButtonFlags_MouseButtonLeft
+  from imgui.h, was mostly unused and misleading.
 
 Other changes:
 
