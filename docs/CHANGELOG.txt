@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Reordered various ImGuiInputTextFlags values. This should not be breaking unless
+  you are using generated headers that have values not matching the main library.
+
 Other changes:
 
 - Inputs: Fixed IsMouseClicked(..., repeat=true); broken on 2024/05/22.
