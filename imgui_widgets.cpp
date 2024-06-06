@@ -2150,7 +2150,7 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
 
     // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
     const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
-    ImGuiDataTypeTempStorage data_backup;
+    ImGuiDataTypeStorage data_backup;
     memcpy(&data_backup, p_data, type_info->Size);
 
     // Sanitize format
@@ -3471,7 +3471,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     {
         // Backup old value
         size_t data_type_size = type_info->Size;
-        ImGuiDataTypeTempStorage data_backup;
+        ImGuiDataTypeStorage data_backup;
         memcpy(&data_backup, p_data, data_type_size);
 
         // Apply new value (or operations) then clamp
@@ -6497,7 +6497,7 @@ void ImGui::SetNextItemOpen(bool is_open, ImGuiCond cond)
         return;
     g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasOpen;
     g.NextItemData.OpenVal = is_open;
-    g.NextItemData.OpenCond = cond ? cond : ImGuiCond_Always;
+    g.NextItemData.OpenCond = (ImU8)(cond ? cond : ImGuiCond_Always);
 }
 
 // CollapsingHeader returns true when opened but do not indent nor push into the ID stack (because of the ImGuiTreeNodeFlags_NoTreePushOnOpen flag).
