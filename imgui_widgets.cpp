@@ -3498,6 +3498,13 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     return value_changed;
 }
 
+void ImGui::SetNextItemRefVal(ImGuiDataType data_type, void* p_data)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasRefVal;
+    memcpy(&g.NextItemData.RefVal, p_data, DataTypeGetInfo(data_type)->Size);
+}
+
 // Note: p_data, p_step, p_step_fast are _pointers_ to a memory address holding the data. For an Input widget, p_step and p_step_fast are optional.
 // Read code of e.g. InputFloat(), InputInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
 bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_step, const void* p_step_fast, const char* format, ImGuiInputTextFlags flags)

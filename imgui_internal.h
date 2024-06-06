@@ -3473,6 +3473,7 @@ namespace ImGui
     IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min = NULL, const void* p_clamp_max = NULL);
     inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return (g.ActiveId == id && g.TempInputId == id); }
     inline ImGuiInputTextState* GetInputTextState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.InputTextState.ID == id) ? &g.InputTextState : NULL; } // Get input text state if active
+    IMGUI_API void          SetNextItemRefVal(ImGuiDataType data_type, void* p_data);
 
     // Color
     IMGUI_API void          ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags);
