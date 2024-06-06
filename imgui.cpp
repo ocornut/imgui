@@ -1,4 +1,4 @@
-// dear imgui, v1.90.8 WIP
+// dear imgui, v1.90.8
 // (main code and documentation)
 
 // Help:
@@ -438,6 +438,8 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2024/06/06 (1.90.8) - reordered ImGuiInputTextFlags values. This should not be breaking unless you are using generated headers that have values not matching the main library.
+ - 2024/06/06 (1.90.8) - removed 'ImGuiButtonFlags_MouseButtonDefault_ = ImGuiButtonFlags_MouseButtonLeft', was mostly unused and misleading.
  - 2024/05/27 (1.90.7) - commented out obsolete symbols marked obsolete in 1.88 (May 2022):
                             - old: CaptureKeyboardFromApp(bool)
                             - new: SetNextFrameWantCaptureKeyboard(bool)
@@ -7936,9 +7938,13 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
     if ((flags & ImGuiFocusRequestFlags_UnlessBelowModal) && (g.NavWindow != window)) // Early out in common case.
         if (ImGuiWindow* blocking_modal = FindBlockingModal(window))
         {
+            // This block would typically be reached in two situations:
+            // - API call to FocusWindow() with a window under a modal and ImGuiFocusRequestFlags_UnlessBelowModal flag.
+            // - User clicking on void or anything behind a modal while a modal is open (window == NULL)
             IMGUI_DEBUG_LOG_FOCUS("[focus] FocusWindow(\"%s\", UnlessBelowModal): prevented by \"%s\".\n", window ? window->Name : "<NULL>", blocking_modal->Name);
             if (window && window == window->RootWindow && (window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
-                BringWindowToDisplayBehind(window, blocking_modal); // Still bring to right below modal.
+                BringWindowToDisplayBehind(window, blocking_modal); // Still bring right under modal. (FIXME: Could move in focus list too?)
+            ClosePopupsOverWindow(GetTopMostPopupModal(), false); // Note how we need to use GetTopMostPopupModal() aad NOT blocking_modal, to handle nested modals
             return;
         }
 
@@ -9527,7 +9533,7 @@ bool ImGui::IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
 
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 {
-    return IsMouseClicked(button, ImGuiKeyOwner_Any, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None);
+    return IsMouseClicked(button, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None, ImGuiKeyOwner_Any);
 }
 
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id)
@@ -10362,7 +10368,7 @@ void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
 // This is the only public API until we expose owner_id versions of the API as replacements.
 bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord)
 {
-    return IsKeyChordPressed(key_chord, 0, ImGuiInputFlags_None);
+    return IsKeyChordPressed(key_chord, ImGuiInputFlags_None, ImGuiKeyOwner_Any);
 }
 
 // This is equivalent to comparing KeyMods + doing a IsKeyPressed()

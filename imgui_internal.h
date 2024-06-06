@@ -1,4 +1,4 @@
-// dear imgui, v1.90.8 WIP
+// dear imgui, v1.90.8
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -14,8 +14,8 @@ Index of this file:
 // [SECTION] Macros
 // [SECTION] Generic helpers
 // [SECTION] ImDrawList support
-// [SECTION] Widgets support: flags, enums, data structures
 // [SECTION] Data types support
+// [SECTION] Widgets support: flags, enums, data structures
 // [SECTION] Popup support
 // [SECTION] Inputs support
 // [SECTION] Clipper support
@@ -811,6 +811,40 @@ struct ImDrawDataBuilder
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Data types support
+//-----------------------------------------------------------------------------
+
+struct ImGuiDataVarInfo
+{
+    ImGuiDataType   Type;
+    ImU32           Count;      // 1+
+    ImU32           Offset;     // Offset in parent structure
+    void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
+};
+
+struct ImGuiDataTypeStorage
+{
+    ImU8        Data[8];        // Opaque storage to fit any data up to ImGuiDataType_COUNT
+};
+
+// Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
+struct ImGuiDataTypeInfo
+{
+    size_t      Size;           // Size in bytes
+    const char* Name;           // Short descriptive name for the type, for debugging
+    const char* PrintFmt;       // Default printf format for the type
+    const char* ScanFmt;        // Default scanf format for the type
+};
+
+// Extend ImGuiDataType_
+enum ImGuiDataTypePrivate_
+{
+    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
+    ImGuiDataType_Pointer,
+    ImGuiDataType_ID,
+};
+
+//-----------------------------------------------------------------------------
 // [SECTION] Widgets support: flags, enums, data structures
 //-----------------------------------------------------------------------------
 
@@ -1197,6 +1231,7 @@ enum ImGuiNextItemDataFlags_
     ImGuiNextItemDataFlags_HasWidth     = 1 << 0,
     ImGuiNextItemDataFlags_HasOpen      = 1 << 1,
     ImGuiNextItemDataFlags_HasShortcut  = 1 << 2,
+    ImGuiNextItemDataFlags_HasRefVal    = 1 << 3,
 };
 
 struct ImGuiNextItemData
@@ -1209,7 +1244,8 @@ struct ImGuiNextItemData
     ImGuiKeyChord               Shortcut;           // Set by SetNextItemShortcut()
     ImGuiInputFlags             ShortcutFlags;      // Set by SetNextItemShortcut()
     bool                        OpenVal;            // Set by SetNextItemOpen()
-    ImGuiCond                   OpenCond : 8;
+    ImU8                        OpenCond;           // Set by SetNextItemOpen()
+    ImGuiDataTypeStorage        RefVal;             // Not exposed yet, for ImGuiInputTextFlags_ParseEmptyAsRefVal
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!
@@ -1281,40 +1317,6 @@ struct ImGuiPtrOrIndex
 
     ImGuiPtrOrIndex(void* ptr)  { Ptr = ptr; Index = -1; }
     ImGuiPtrOrIndex(int index)  { Ptr = NULL; Index = index; }
-};
-
-//-----------------------------------------------------------------------------
-// [SECTION] Data types support
-//-----------------------------------------------------------------------------
-
-struct ImGuiDataVarInfo
-{
-    ImGuiDataType   Type;
-    ImU32           Count;      // 1+
-    ImU32           Offset;     // Offset in parent structure
-    void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
-};
-
-struct ImGuiDataTypeTempStorage
-{
-    ImU8        Data[8];        // Can fit any data up to ImGuiDataType_COUNT
-};
-
-// Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
-struct ImGuiDataTypeInfo
-{
-    size_t      Size;           // Size in bytes
-    const char* Name;           // Short descriptive name for the type, for debugging
-    const char* PrintFmt;       // Default printf format for the type
-    const char* ScanFmt;        // Default scanf format for the type
-};
-
-// Extend ImGuiDataType_
-enum ImGuiDataTypePrivate_
-{
-    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
-    ImGuiDataType_Pointer,
-    ImGuiDataType_ID,
 };
 
 //-----------------------------------------------------------------------------
@@ -2357,6 +2359,7 @@ struct ImGuiContext
     ImGuiInputTextDeactivatedState InputTextDeactivatedState;
     ImFont                  InputTextPasswordFont;
     ImGuiID                 TempInputId;                        // Temporary text input when CTRL+clicking on a slider, etc.
+    ImGuiDataTypeStorage    DataTypeZeroValue;                  // 0 for all data types
     int                     BeginMenuDepth;
     int                     BeginComboDepth;
     ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
@@ -2593,6 +2596,7 @@ struct ImGuiContext
         MouseStationaryTimer = 0.0f;
 
         TempInputId = 0;
+        memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
         BeginMenuDepth = BeginComboDepth = 0;
         ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;
         ColorEditCurrentID = ColorEditSavedID = 0;
@@ -3768,7 +3772,7 @@ namespace ImGui
     IMGUI_API const ImGuiDataTypeInfo*  DataTypeGetInfo(ImGuiDataType data_type);
     IMGUI_API int           DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* p_data, const char* format);
     IMGUI_API void          DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const void* arg_1, const void* arg_2);
-    IMGUI_API bool          DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format);
+    IMGUI_API bool          DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format, void* p_data_when_empty = NULL);
     IMGUI_API int           DataTypeCompare(ImGuiDataType data_type, const void* arg_1, const void* arg_2);
     IMGUI_API bool          DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max);
 
@@ -3779,6 +3783,7 @@ namespace ImGui
     IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min = NULL, const void* p_clamp_max = NULL);
     inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return (g.ActiveId == id && g.TempInputId == id); }
     inline ImGuiInputTextState* GetInputTextState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.InputTextState.ID == id) ? &g.InputTextState : NULL; } // Get input text state if active
+    IMGUI_API void          SetNextItemRefVal(ImGuiDataType data_type, void* p_data);
 
     // Color
     IMGUI_API void          ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags);

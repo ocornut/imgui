@@ -36,19 +36,36 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.8 WIP (In Progress)
+ VERSION 1.90.8 (Released 2024-06-06)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.8
 
 Breaking changes:
 
+- Reordered various ImGuiInputTextFlags values. This should NOT be breaking unless
+  you are using generated headers that have values not matching the main library.
+- Removed ImGuiButtonFlags_MouseButtonDefault_ = ImGuiButtonFlags_MouseButtonLeft
+  from imgui.h, was mostly unused and misleading.
+
 Other changes:
 
+- Inputs: fixed IsMouseClicked(..., repeat=true); broken in 1.90.7 on 2024/05/22.
+  (due to an internal api parameter swap, repeat wouldn't be honored and
+  ownership would be accidentally checked even though this api is meant to not
+  check ownership). (#7657) [@korenkonder]
 - Windows: fixed altering FramePadding mid-frame not correctly affecting logic
   responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
 - Scrollbar: made scrolling logic more standard: clicking above or below the
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
 - Scrollbar: fixed miscalculation of vertical scrollbar visibility when required
   solely by the presence of an horizontal scrollbar. (#1574)
+- InputScalar, InputInt, InputFloat: added ImGuiInputTextFlags_ParseEmptyRefVal
+  to parse an empty field as zero-value. (#7305) [@supermerill, @ocornut]
+- InputScalar, InputInt, InputFloat: added ImGuiInputTextFlags_DisplayEmptyRefVal
+  to display a zero-value as empty. (#7305) [@supermerill, @ocornut]
+- Popups: fixed an issue preventing to close a popup opened over a modal by clicking
+  over void (it required clicking over the visible part of the modal). (#7654)
 - Tables: fixed an issue where ideal size reported to parent container wouldn't
   correctly take account of inner scrollbar, affecting potential auto-resize of
   parent container. (#7651)
