@@ -21,6 +21,7 @@ Index of this file:
 // [SECTION] Widgets: Typing-Select support
 // [SECTION] Widgets: Box-Select support
 // [SECTION] Widgets: Multi-Select support
+// [SECTION] Widgets: Multi-Select helpers
 // [SECTION] Widgets: ListBox
 // [SECTION] Widgets: PlotLines, PlotHistogram
 // [SECTION] Widgets: Value helpers
@@ -7285,7 +7286,6 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, bool enable_scroll)
 // - MultiSelectItemHeader() [Internal]
 // - MultiSelectItemFooter() [Internal]
 // - DebugNodeMultiSelectState() [Internal]
-// - ImGuiSelectionBasicStorage
 //-------------------------------------------------------------------------
 
 static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSelectIO* io)
@@ -7814,6 +7814,13 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 #endif
 }
 
+//-------------------------------------------------------------------------
+// [SECTION] Widgets: Multi-Select helpers
+//-------------------------------------------------------------------------
+// - ImGuiSelectionBasicStorage
+// - ImGuiSelectionExternalStorage
+//-------------------------------------------------------------------------
+
 // Apply requests coming from BeginMultiSelect() and EndMultiSelect().
 // - Enable 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.
 // - Honoring SetRange requests requires that you can iterate/interpolate between RangeFirstItem and RangeLastItem.
@@ -7827,8 +7834,8 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 // The most simple implementation (using indices everywhere) would look like:
 //   for (ImGuiSelectionRequest& req : ms_io->Requests)
 //   {
-//      if (req.Type == ImGuiSelectionRequestType_SetAll)    { Clear(); if (req.Selected) { for (int n = 0; n < items_count; n++) { AddItem(n); } }
-//      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { UpdateItem(n, ms_io->Selected); } }
+//      if (req.Type == ImGuiSelectionRequestType_SetAll)    { Clear(); if (req.Selected) { for (int n = 0; n < items_count; n++) { SetItemSelected(n, true); } }
+//      if (req.Type == ImGuiSelectionRequestType_SetRange)  { for (int n = (int)ms_io->RangeFirstItem; n <= (int)ms_io->RangeLastItem; n++) { SetItemSelected(n, ms_io->Selected); } }
 //   }
 void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 {
@@ -7841,14 +7848,16 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     for (ImGuiSelectionRequest& req : ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
-            Clear();
-        if (req.Type == ImGuiSelectionRequestType_SetAll && req.Selected)
         {
-            Storage.Data.reserve(ms_io->ItemsCount);
-            for (int idx = 0; idx < ms_io->ItemsCount; idx++)
-                SetItemSelected(GetStorageIdFromIndex(idx), true);
+            Clear();
+            if (req.Selected)
+            {
+                Storage.Data.reserve(ms_io->ItemsCount);
+                for (int idx = 0; idx < ms_io->ItemsCount; idx++)
+                    SetItemSelected(GetStorageIdFromIndex(idx), true);
+            }
         }
-        if (req.Type == ImGuiSelectionRequestType_SetRange)
+        else if (req.Type == ImGuiSelectionRequestType_SetRange)
             for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
                 SetItemSelected(GetStorageIdFromIndex(idx), req.Selected);
     }

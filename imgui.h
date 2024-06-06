@@ -2730,18 +2730,17 @@ struct ImColor
 #define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
 
 // Multi-selection system
-// Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
+// Documentation at: https://github.com/ocornut/imgui/wiki/Multi-Select
 // - Refer to 'Demo->Widgets->Selection State & Multi-Select' for demos using this.
 // - This system implements standard multi-selection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc)
 //   with support for clipper (skipping non-visible items), box-select and many other details.
-// - TreeNode() and Selectable() are supported but custom widgets may use it as well.
+// - TreeNode(), Selectable(), Checkbox() are supported but custom widgets may use it as well.
 // - In the spirit of Dear ImGui design, your code owns actual selection data.
 //   This is designed to allow all kinds of selection storage you may use in your application e.g. set/map/hash.
-// - The work involved to deal with multi-selection differs whether you want to only submit visible items and
-//   clip others, or submit all items regardless of their visibility. Clipping items is more efficient and will
-//   allow you to deal with large lists (1k~100k items). See "Usage flow" section below for details.
-//   If you are not sure, always start without clipping! You can work your way to the optimized version afterwards.
-// TL;DR;
+// About ImGuiSelectionBasicStorage:
+// - This is an optional helper to store a selection state and apply selection requests.
+// - It is used by our demos and provided as a convenience to quickly implement multi-selection.
+// Usage:
 // - Identify submitted items with SetNextItemSelectionUserData(), most likely using an index into your current data-set.
 // - Store and maintain actual selection data using persistent object identifiers.
 // - Usage flow:
@@ -2753,20 +2752,14 @@ struct ImColor
 //           - (6) Honor request list (SetAll/SetRange requests) by updating your selection data. Same code as Step 2.
 //     If you submit all items (no clipper), Step 2 and 3 are optional and will be handled by each item themselves. It is fine to always honor those steps.
 // About ImGuiSelectionUserData:
-// - For each item is it submitted by your call to SetNextItemSelectionUserData().
-// - This can store an application-defined identifier (e.g. index or pointer).
+// - This can store an application-defined identifier (e.g. index or pointer) submitted via SetNextItemSelectionUserData().
 // - In return we store them into RangeSrcItem/RangeFirstItem/RangeLastItem and other fields in ImGuiMultiSelectIO.
-// - Most applications will store an object INDEX, hence the chosen name and type.
-//   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end-points
-//   and you will need to iterate/interpolate between them to update your selection.
-// - However it is perfectly possible to store a POINTER or another IDENTIFIER inside this value!
+// - Most applications will store an object INDEX, hence the chosen name and type. Storing an index is natural, because
+//   SetRange requests will give you two end-points and you will need to iterate/interpolate between them to update your selection.
+// - However it is perfectly possible to store a POINTER or another IDENTIFIER inside ImGuiSelectionUserData.
 //   Our system never assume that you identify items by indices, it never attempts to interpolate between two values.
 // - As most users will want to store an index, for convenience and to reduce confusion we use ImS64 instead of void*,
 //   being syntactically easier to downcast. Feel free to reinterpret_cast and store a pointer inside.
-// - If you need to wrap this API for another language/framework, feel free to expose this as 'int' if simpler.
-// About ImGuiSelectionBasicStorage:
-// - This is an optional helper to store a selection state and apply selection requests.
-// - It is used by our demos and provided as a convenience if you want to quickly implement multi-selection.
 
 // Flags for BeginMultiSelect()
 enum ImGuiMultiSelectFlags_
@@ -2774,7 +2767,7 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_None                  = 0,
     ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,   // Disable selecting more than one item. This is available to allow single-selection code to share same code/logic if desired. It essentially disables the main purpose of BeginMultiSelect() tho!
     ImGuiMultiSelectFlags_NoSelectAll           = 1 << 1,   // Disable CTRL+A shortcut to select all.
-    ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 2,   // Disable Shift+Click/Shift+Keyboard handling (useful for unordered 2D selection).
+    ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 2,   // Disable Shift+selection mouse/keyboard support (useful for unordered 2D selection).
     ImGuiMultiSelectFlags_NoAutoSelect          = 1 << 3,   // Disable selecting items when navigating (useful for e.g. supporting range-select in a list of checkboxes)
     ImGuiMultiSelectFlags_NoAutoClear           = 1 << 4,   // Disable clearing other items when navigating or selecting another one (generally used with ImGuiMultiSelectFlags_NoAutoSelect. useful for e.g. supporting range-select in a list of checkboxes)
     ImGuiMultiSelectFlags_BoxSelect             = 1 << 5,   // Enable box-selection with varying width or varying x pos items support (e.g. different width labels, or 2D layout/grid). This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items. Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
@@ -2828,32 +2821,26 @@ struct ImGuiSelectionRequest
 // To store a multi-selection, in your application you could:
 // - A) Use this helper as a convenience. We use our simple key->value ImGuiStorage as a std::set<ImGuiID> replacement.
 // - B) Use your own external storage: e.g. std::set<MyObjectId>, std::vector<MyObjectId>, interval trees, etc.
-// - C) Use intrusively stored selection (e.g. 'bool IsSelected' inside objects). Doing that, you can't have multiple views over
-//      your objects. Also, some features requires to provide selection _size_, which with this strategy requires additional work.
+// - C) Use intrusively stored selection (e.g. 'bool IsSelected' inside objects). Cannot have multiple views over same objects.
 // In ImGuiSelectionBasicStorage we:
 // - always use indices in the multi-selection API (passed to SetNextItemSelectionUserData(), retrieved in ImGuiMultiSelectIO)
-// - use the AdapterIndexToStorageId() indirection layer to abstract how persistent selection data is derived from an index,
-//   so this helper can be used regardless of your object storage/types (it is analogous to using a virtual function):
-//   - in some cases we read an ID from some custom item data structure (similar to what you would do in your codebase)
-//   - in some cases we use Index as custom identifier (default implementation returns Index cast as Identifier): only OK for a never changing item list.
+// - use the AdapterIndexToStorageId() indirection layer to abstract how persistent selection data is derived from an index.
 // Many combinations are possible depending on how you prefer to store your items and how you prefer to store your selection.
 // Large applications are likely to eventually want to get rid of this indirection layer and do their own thing.
-// See https://github.com/ocornut/imgui/wiki/Multi-Select for minimum pseudo-code example using this helper.
-// (In theory, for maximum abstraction, this class could contains AdapterIndexToUserData() and AdapterUserDataToIndex() functions as well,
-// but because we always use indices in SetNextItemSelectionUserData() in the demo, we omit that indirection for clarity.)
+// See https://github.com/ocornut/imgui/wiki/Multi-Select for details and pseudo-code using this helper.
 struct ImGuiSelectionBasicStorage
 {
     // Members
     ImGuiStorage    Storage;        // [Internal] Selection set. Think of this as similar to e.g. std::set<ImGuiID>
     int             Size;           // Number of selected items (== number of 1 in the Storage), maintained by this helper.
-    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
     void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
+    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
 
     // Methods: apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. Uses 'items_count' passed to BeginMultiSelect()
     IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);
 
     // Methods: selection storage
-    ImGuiSelectionBasicStorage()                        { Clear(); UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
+    ImGuiSelectionBasicStorage()                        { Size = 0; UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
     void            Clear()                             { Storage.Data.resize(0); Size = 0; }
     void            Swap(ImGuiSelectionBasicStorage& r) { Storage.Data.swap(r.Storage.Data); int lhs_size = Size; Size = r.Size; r.Size = lhs_size; }
     bool            Contains(ImGuiID id) const          { return Storage.GetInt(id, 0) != 0; }
@@ -2866,11 +2853,11 @@ struct ImGuiSelectionBasicStorage
 struct ImGuiSelectionExternalStorage
 {
     // Members
-    void            (*AdapterSetItemSelected)(ImGuiSelectionExternalStorage* self, int idx, bool selected); // e.g. AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int idx, bool selected) { ((MyItems**)self->UserData)[idx]->Selected = selected; }
     void*           UserData;       // User data for use by adapter function                                // e.g. selection.UserData = (void*)my_items;
+    void            (*AdapterSetItemSelected)(ImGuiSelectionExternalStorage* self, int idx, bool selected); // e.g. AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int idx, bool selected) { ((MyItems**)self->UserData)[idx]->Selected = selected; }
 
     // Methods
-    ImGuiSelectionExternalStorage()             { memset(this, 0, sizeof(*this)); }
+    ImGuiSelectionExternalStorage()                     { UserData = NULL; AdapterSetItemSelected = NULL; }
     IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);                           // Generic function, using AdapterSetItemSelected()
 };
 
