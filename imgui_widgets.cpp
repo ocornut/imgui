@@ -6640,6 +6640,10 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
         float button_size = g.FontSize;
         float button_x = ImMax(g.LastItemData.Rect.Min.x, g.LastItemData.Rect.Max.x - g.Style.FramePadding.x - button_size);
         float button_y = g.LastItemData.Rect.Min.y + g.Style.FramePadding.y;
+#ifdef WIN98
+        button_x -= 4;
+        button_y -= 1;
+#endif
         ImGuiID close_button_id = GetIDWithSeed("#CLOSE", NULL, id);
         if (CloseButton(close_button_id, ImVec2(button_x, button_y)))
             *p_visible = false;

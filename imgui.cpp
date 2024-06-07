@@ -6418,8 +6418,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
 
 #ifdef WIN98 // windows style title bar
 
-    close_button_pos += ImVec2(0.0f, 2.0f);
-    collapse_button_pos += ImVec2(0.0f, 2.0f);
+    close_button_pos += ImVec2(-2.0f, -2.0f);
+    collapse_button_pos += ImVec2(-2.0f, -2.0f);
 
     ImU32 col_left = IM_COL32(128,128,128,255);
     ImU32 col_right = IM_COL32(181,181,181,255);
