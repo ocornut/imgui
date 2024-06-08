@@ -299,6 +299,29 @@ static void ImGui_ImplSDL2_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & KMOD_GUI) != 0);
 }
 
+static int ImGui_ImplSDL2_TranslateUntranslatedKey(SDL_Keycode key, SDL_Scancode scancode)
+{
+#if !defined(__EMSCRIPTEN__)
+    if (key >= SDLK_0 && key <= SDLK_EQUALS)
+        return key;
+    const char* key_name = SDL_GetScancodeName(scancode);
+    if (key_name && key_name[0] != 0 && key_name[1] == 0)
+    {
+        const char char_names[] = "`-=[]\\,;\'./";
+        const int char_keys[] = { SDLK_BACKQUOTE, SDLK_MINUS, SDLK_EQUALS, SDLK_LEFTBRACKET, SDLK_RIGHTBRACKET, SDLK_BACKSLASH, SDLK_COMMA, SDLK_SEMICOLON, SDLK_QUOTE, SDLK_PERIOD, SDLK_SLASH, 0 };
+        IM_ASSERT(IM_ARRAYSIZE(char_names) == IM_ARRAYSIZE(char_keys));
+        if (key_name[0] >= '0' && key_name[0] <= '9')               { key = SDLK_0 + (key_name[0] - '0'); }
+        else if (key_name[0] >= 'A' && key_name[0] <= 'Z')          { key = SDLK_a + (key_name[0] - 'A'); }
+        else if (key_name[0] >= 'a' && key_name[0] <= 'z')          { key = SDLK_a + (key_name[0] - 'a'); }
+        else if (const char* p = strchr(char_names, key_name[0]))   { key = char_keys[p - char_names]; }
+    }
+#else
+    IM_UNUSED(scancode);
+#endif
+    return key;
+}
+
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
@@ -361,7 +384,8 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_KEYUP:
         {
             ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
-            ImGuiKey key = ImGui_ImplSDL2_KeycodeToImGuiKey(event->key.keysym.sym);
+            int keycode = ImGui_ImplSDL2_TranslateUntranslatedKey(event->key.keysym.sym, event->key.keysym.scancode);
+            ImGuiKey key = ImGui_ImplSDL2_KeycodeToImGuiKey(keycode);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
