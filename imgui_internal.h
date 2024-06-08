@@ -131,6 +131,7 @@ struct ImGuiDataVarInfo;            // Variable information (e.g. to access styl
 struct ImGuiDataTypeInfo;           // Type information associated to a ImGuiDataType enum
 struct ImGuiDockContext;            // Docking system context
 struct ImGuiDockRequest;            // Docking system dock/undock queued request
+struct ImGuiDockPreviewData;
 struct ImGuiDockNode;               // Docking system node (hold a list of Windows OR two child dock nodes)
 struct ImGuiDockNodeSettings;       // Storage for a dock node in .ini file (we preserve those even if the associated dock node isn't active during the session)
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
@@ -171,6 +172,7 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 enum ImGuiLocKey : int;                 // -> enum ImGuiLocKey              // Enum: a localization entry for translation.
 typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // Enum: for storing the source authority (dock node vs window) of a field
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
+typedef int ImGuiDockRequestType;
 
 // Flags
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
@@ -1015,6 +1017,14 @@ enum ImGuiLayoutType_
     ImGuiLayoutType_Vertical = 1
 };
 
+enum ImGuiDockRequestType_
+{
+    ImGuiDockRequestType_None = 0,
+    ImGuiDockRequestType_Dock,
+    ImGuiDockRequestType_Undock,
+    ImGuiDockRequestType_Split       // Split is the same as Dock but without a DockPayload
+};
+
 enum ImGuiLogType
 {
     ImGuiLogType_None = 0,
@@ -1854,6 +1864,22 @@ struct IMGUI_API ImGuiDockNode
     void                    UpdateMergedFlags()     { MergedFlags = SharedFlags | LocalFlags | LocalFlagsInWindows; }
 };
 
+// Persistent Settings data, stored contiguously in SettingsNodes (sizeof() ~32 bytes)
+struct ImGuiDockNodeSettings
+{
+    ImGuiID             ID;
+    ImGuiID             ParentNodeId;
+    ImGuiID             ParentWindowId;
+    ImGuiID             SelectedTabId;
+    signed char         SplitAxis;
+    char                Depth;
+    ImGuiDockNodeFlags  Flags;                  // NB: We save individual flags one by one in ascii format (ImGuiDockNodeFlags_SavedFlagsMask_)
+    ImVec2ih            Pos;
+    ImVec2ih            Size;
+    ImVec2ih            SizeRef;
+    ImGuiDockNodeSettings() { memset(this, 0, sizeof(*this)); SplitAxis = ImGuiAxis_None; }
+};
+
 // List of colors that are stored at the time of Begin() into Docked Windows.
 // We currently store the packed colors in a simple array window->DockStyle.Colors[].
 // A better solution may involve appending into a log of colors in ImGuiContext + store offsets into those arrays in ImGuiWindow,
@@ -1882,6 +1908,44 @@ struct ImGuiDockContext
     ImVector<ImGuiDockNodeSettings> NodesSettings;
     bool                            WantFullRebuild;
     ImGuiDockContext()              { memset(this, 0, sizeof(*this)); }
+};
+
+struct ImGuiDockRequest
+{
+    ImGuiDockRequestType    Type;
+    ImGuiWindow*            DockTargetWindow;   // Destination/Target Window to dock into (may be a loose window or a DockNode, might be NULL in which case DockTargetNode cannot be NULL)
+    ImGuiDockNode*          DockTargetNode;     // Destination/Target Node to dock into
+    ImGuiWindow*            DockPayload;        // Source/Payload window to dock (may be a loose window or a DockNode), [Optional]
+    ImGuiDir                DockSplitDir;
+    float                   DockSplitRatio;
+    bool                    DockSplitOuter;
+    ImGuiWindow*            UndockTargetWindow;
+    ImGuiDockNode*          UndockTargetNode;
+
+    ImGuiDockRequest()
+    {
+        Type = ImGuiDockRequestType_None;
+        DockTargetWindow = DockPayload = UndockTargetWindow = NULL;
+        DockTargetNode = UndockTargetNode = NULL;
+        DockSplitDir = ImGuiDir_None;
+        DockSplitRatio = 0.5f;
+        DockSplitOuter = false;
+    }
+};
+
+struct ImGuiDockPreviewData
+{
+    ImGuiDockNode   FutureNode;
+    bool            IsDropAllowed;
+    bool            IsCenterAvailable;
+    bool            IsSidesAvailable;           // Hold your breath, grammar freaks..
+    bool            IsSplitDirExplicit;         // Set when hovered the drop rect (vs. implicit SplitDir==None when hovered the window)
+    ImGuiDockNode*  SplitNode;
+    ImGuiDir        SplitDir;
+    float           SplitRatio;
+    ImRect          DropRectsDraw[ImGuiDir_COUNT + 1];  // May be slightly different from hit-testing drop rects used in DockNodeCalcDropRects()
+
+    ImGuiDockPreviewData() : FutureNode(0) { IsDropAllowed = IsCenterAvailable = IsSidesAvailable = IsSplitDirExplicit = false; SplitNode = NULL; SplitDir = ImGuiDir_None; SplitRatio = 0.f; for (int n = 0; n < IM_ARRAYSIZE(DropRectsDraw); n++) DropRectsDraw[n] = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX); }
 };
 
 #endif // #ifdef IMGUI_HAS_DOCK
