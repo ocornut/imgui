@@ -38,7 +38,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
 #endif
-#include <iostream>
 
 // SDL
 #include <SDL3/SDL.h>
