@@ -38,6 +38,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
 #endif
+#include <iostream>
 
 // SDL
 #include <SDL3/SDL.h>
@@ -115,14 +116,19 @@ static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
 
 void ImGui_ImplSDLRenderer3_NewFrame()
 {
+    ImGuiIO& io = ImGui::GetIO();
+
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDLRenderer3_Init()?");
 
     if (!bd->FontTexture)
         ImGui_ImplSDLRenderer3_CreateDeviceObjects();
+
+    // Font needs to be pushed each frame
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 }
 
-void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer)
+void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, SDL_Texture* texture)
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
@@ -171,6 +177,18 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+
+            // Bind texture, Draw
+            SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+
+            if (tex == bd->FontTexture)
+            {
+                if (texture != nullptr)
+                {
+                    tex = texture;
+                }
+            }
+
             if (pcmd->UserCallback)
             {
                 // User callback, registered via ImDrawList::AddCallback()
@@ -193,7 +211,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                     continue;
 
                 SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
-                SDL_SetRenderClipRect(renderer, &r);
+            //    SDL_SetRenderClipRect(renderer, &r);
 
                 const float* xy = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, pos));
                 int xy_stride = (int)sizeof(ImDrawVert);
@@ -218,8 +236,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                     xy_stride = (int)sizeof(ImVec2);
                 }
 
-                // Bind texture, Draw
-				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+            
                 SDL_RenderGeometryRaw(renderer, tex,
                     xy, xy_stride,
                     color, (int)sizeof(ImDrawVert),
@@ -236,10 +253,9 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
 }
 
 // Called by Init/NewFrame/Shutdown
-bool ImGui_ImplSDLRenderer3_CreateFontsTexture()
+bool ImGui_ImplSDLRenderer3_CreateFontsTexture(SDL_Renderer* renderer, SDL_Texture** texture)
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
     // Build texture atlas
     unsigned char* pixels;
@@ -248,18 +264,17 @@ bool ImGui_ImplSDLRenderer3_CreateFontsTexture()
 
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (bd->FontTexture == nullptr)
+
+    *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
+    if (*texture == nullptr)
     {
         SDL_Log("error creating texture");
         return false;
     }
-    SDL_UpdateTexture(bd->FontTexture, nullptr, pixels, 4 * width);
-    SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(bd->FontTexture, SDL_SCALEMODE_LINEAR);
+    SDL_UpdateTexture(*texture, nullptr, pixels, 4 * width);
+    SDL_SetTextureBlendMode(*texture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(*texture, SDL_SCALEMODE_LINEAR);
 
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 
     return true;
 }
@@ -278,7 +293,9 @@ void ImGui_ImplSDLRenderer3_DestroyFontsTexture()
 
 bool ImGui_ImplSDLRenderer3_CreateDeviceObjects()
 {
-    return ImGui_ImplSDLRenderer3_CreateFontsTexture();
+    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+
+    return ImGui_ImplSDLRenderer3_CreateFontsTexture(bd->Renderer, &bd->FontTexture);
 }
 
 void ImGui_ImplSDLRenderer3_DestroyDeviceObjects()
@@ -296,9 +313,10 @@ void ImGui_ImplSDLRenderer3_DestroyDeviceObjects()
 struct ImGui_ImplSDLRenderer3_ViewportData
 {
     SDL_Renderer*                   Renderer;
+    SDL_Texture*                    FontTexture;
 
-    ImGui_ImplSDLRenderer3_ViewportData()   { Renderer = nullptr; }
-    ~ImGui_ImplSDLRenderer3_ViewportData()  { IM_ASSERT(Renderer == nullptr); }
+    ImGui_ImplSDLRenderer3_ViewportData()   { Renderer = nullptr; FontTexture = nullptr; }
+    ~ImGui_ImplSDLRenderer3_ViewportData() { IM_ASSERT(Renderer == nullptr); IM_ASSERT(FontTexture == nullptr); }
 };
 
 static void ImGui_ImplSDLRenderer3_CreateWindow(ImGuiViewport* viewport)
@@ -311,6 +329,8 @@ static void ImGui_ImplSDLRenderer3_CreateWindow(ImGuiViewport* viewport)
     vd->Renderer = SDL_CreateRenderer(window, nullptr);
     SDL_SetRenderVSync(vd->Renderer, 0);
     IM_ASSERT(vd->Renderer != NULL);
+
+    ImGui_ImplSDLRenderer3_CreateFontsTexture(vd->Renderer, &vd->FontTexture);
 }
 
 static void ImGui_ImplSDLRenderer3_DestroyWindow(ImGuiViewport* viewport)
@@ -318,10 +338,14 @@ static void ImGui_ImplSDLRenderer3_DestroyWindow(ImGuiViewport* viewport)
     // The main viewport (owned by the application) will always have RendererUserData == nullptr since we didn't create the data for it.
     if (ImGui_ImplSDLRenderer3_ViewportData* vd = (ImGui_ImplSDLRenderer3_ViewportData*)viewport->RendererUserData)
     {
+        SDL_DestroyTexture(vd->FontTexture);
         SDL_DestroyRenderer(vd->Renderer);
+
+        vd->FontTexture = nullptr;
         vd->Renderer = nullptr;
         IM_DELETE(vd);
     }
+
     viewport->RendererUserData = nullptr;
 }
 
@@ -334,7 +358,8 @@ static void ImGui_ImplSDLRenderer3_RenderWindow(ImGuiViewport* viewport, void*)
         SDL_SetRenderDrawColor(vd->Renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
         SDL_RenderClear(vd->Renderer);
     }
-    ImGui_ImplSDLRenderer3_RenderDrawData(viewport->DrawData, vd->Renderer);
+
+    ImGui_ImplSDLRenderer3_RenderDrawData(viewport->DrawData, vd->Renderer, vd->FontTexture);
 }
 
 static void ImGui_ImplSDLRenderer3_SwapBuffers(ImGuiViewport* viewport, void*)
