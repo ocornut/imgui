@@ -115,16 +115,16 @@ static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
 
 void ImGui_ImplSDLRenderer3_NewFrame()
 {
-    ImGuiIO& io = ImGui::GetIO();
-
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDLRenderer3_Init()?");
 
     if (!bd->FontTexture)
-        ImGui_ImplSDLRenderer3_CreateDeviceObjects();
+    {    
+        ImGuiIO& io = ImGui::GetIO();
 
-    // Font needs to be pushed each frame
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
+        ImGui_ImplSDLRenderer3_CreateDeviceObjects();
+        io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
+    }
 }
 
 void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, SDL_Texture* texture)
@@ -263,18 +263,17 @@ bool ImGui_ImplSDLRenderer3_CreateFontsTexture(SDL_Renderer* renderer, SDL_Textu
 
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-
     *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
     if (*texture == nullptr)
     {
         SDL_Log("error creating texture");
         return false;
     }
+    
     SDL_UpdateTexture(*texture, nullptr, pixels, 4 * width);
     SDL_SetTextureBlendMode(*texture, SDL_BLENDMODE_BLEND);
     SDL_SetTextureScaleMode(*texture, SDL_SCALEMODE_LINEAR);
-
-
+    
     return true;
 }
 
