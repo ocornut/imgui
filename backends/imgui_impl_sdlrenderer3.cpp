@@ -177,17 +177,6 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
 
-            // Bind texture, Draw
-            SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
-
-            if (tex == bd->FontTexture)
-            {
-                if (texture != nullptr)
-                {
-                    tex = texture;
-                }
-            }
-
             if (pcmd->UserCallback)
             {
                 // User callback, registered via ImDrawList::AddCallback()
@@ -234,8 +223,18 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                     xy = (const float*)bd->PosBuffer.Data;
                     xy_stride = (int)sizeof(ImVec2);
                 }
+                
+                // Bind texture, Draw
+                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+    
+                if (tex == bd->FontTexture)
+                {
+                    if (texture != nullptr)
+                    {
+                        tex = texture;
+                    }
+                }
 
-            
                 SDL_RenderGeometryRaw(renderer, tex,
                     xy, xy_stride,
                     color, (int)sizeof(ImDrawVert),
