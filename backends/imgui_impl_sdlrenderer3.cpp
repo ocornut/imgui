@@ -127,7 +127,7 @@ void ImGui_ImplSDLRenderer3_NewFrame()
     }
 }
 
-void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, SDL_Texture* texture)
+void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, SDL_Texture* font_texture)
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
@@ -229,10 +229,8 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     
                 if (tex == bd->FontTexture)
                 {
-                    if (texture != nullptr)
-                    {
-                        tex = texture;
-                    }
+                    if (font_texture != nullptr)
+                        tex = font_texture;
                 }
 
                 SDL_RenderGeometryRaw(renderer, tex,
