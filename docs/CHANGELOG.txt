@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Examples: GLFW+Vulkan: handle swap chain resize even without Vulkan returning
+  VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671) [@AndreiNego]
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.8 (Released 2024-06-06)
