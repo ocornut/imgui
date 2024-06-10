@@ -101,7 +101,6 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <cstdio>
 #ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
 #include <GLFW/emscripten_glfw3.h>
 #else
@@ -856,11 +855,16 @@ void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_sel
     emscripten_set_wheel_callback(bd->CanvasSelector, nullptr, false, ImGui_ImplEmscripten_WheelCallback);
 }
 #else
+// When using --use-port=contrib.glfw3 for the GLFW implementation, this function is no longer used. Instead, you
+// do this:
+// - add #include <GLFW/emscripten_glfw3.h>
+// - call emscripten_glfw_make_canvas_resizable like this:
+//   emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
+// See examples/example_glfw_opengl3/main.cpp for an example
+// See https://github.com/pongasoft/emscripten-glfw/blob/master/docs/Usage.md#how-to-make-the-canvas-resizable-by-the-user for an explanation
 void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
 {
-    printf("[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead\n");
-    auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
-    emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
+    static_assert(false, "[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead");
 }
 #endif
 
