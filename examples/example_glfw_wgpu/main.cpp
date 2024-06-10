@@ -28,9 +28,6 @@
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
-#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
-#include <GLFW/emscripten_glfw3.h>
-#endif
 #endif
 
 // Global WebGPU required states
@@ -104,11 +101,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
 #ifdef __EMSCRIPTEN__
-#ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
-    emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
-#else
-    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
-#endif
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;

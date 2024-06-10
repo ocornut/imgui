@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-06-10: Replaced ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback (now deprecated) with ImGui_ImplGlfw_InstallEmscriptenCallbacks
 //  2024-06-02: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (requires emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
 //  2023-12-19: Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to register canvas selector and auto-resize GLFW window.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys.
@@ -834,9 +835,18 @@ static EM_BOOL ImGui_ImplEmscripten_FullscreenChangeCallback(int event_type, con
     return true;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // 'canvas_selector' is a CSS selector. The event listener is applied to the first element that matches the query.
 // STRING MUST PERSIST FOR THE APPLICATION DURATION. PLEASE USE A STRING LITERAL OR ENSURE POINTER WILL STAY VALID.
 void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
+{
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(nullptr, canvas_selector);
+}
+#endif
+
+// 'canvas_selector' is a CSS selector. The event listener is applied to the first element that matches the query.
+// STRING MUST PERSIST FOR THE APPLICATION DURATION. PLEASE USE A STRING LITERAL OR ENSURE POINTER WILL STAY VALID.
+void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* /* window */, const char* canvas_selector)
 {
     IM_ASSERT(canvas_selector != nullptr);
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
@@ -855,16 +865,21 @@ void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_sel
     emscripten_set_wheel_callback(bd->CanvasSelector, nullptr, false, ImGui_ImplEmscripten_WheelCallback);
 }
 #else
-// When using --use-port=contrib.glfw3 for the GLFW implementation, this function is no longer used. Instead, you
-// do this:
-// - add #include <GLFW/emscripten_glfw3.h>
-// - call emscripten_glfw_make_canvas_resizable like this:
-//   emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
-// See examples/example_glfw_opengl3/main.cpp for an example
-// See https://github.com/pongasoft/emscripten-glfw/blob/master/docs/Usage.md#how-to-make-the-canvas-resizable-by-the-user for an explanation
 void ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector)
 {
-    static_assert(false, "[ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback] When using --use-port=contrib.glfw3, you should include <GLFW/emscripten_glfw3.h> and call emscripten_glfw_make_canvas_resizable instead");
+    auto window = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, canvas_selector);
+}
+
+// When using --use-port=contrib.glfw3 for the GLFW implementation, you can override the behavior of this call
+// by invoking emscripten_glfw_make_canvas_resizable afterward.
+// See https://github.com/pongasoft/emscripten-glfw/blob/master/docs/Usage.md#how-to-make-the-canvas-resizable-by-the-user for an explanation
+void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* canvas_selector)
+{
+  // sanity check...
+  auto w = reinterpret_cast<GLFWwindow *>(EM_ASM_INT({ return Module.glfwGetWindow(UTF8ToString($0)); }, canvas_selector));
+  IM_ASSERT(window == w);
+  emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
 }
 #endif
 
