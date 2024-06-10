@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Removed old nested structure: renaming ImGuiStorage::ImGuiStoragePair type to
+  ImGuiStoragePair (simpler for many languages). No significant nested type left.
+
 Other changes:
 
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
