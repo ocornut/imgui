@@ -7821,6 +7821,30 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 // - ImGuiSelectionExternalStorage
 //-------------------------------------------------------------------------
 
+ImGuiSelectionBasicStorage::ImGuiSelectionBasicStorage()
+{
+    Size = 0;
+    UserData = NULL;
+    AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; };
+}
+
+void ImGuiSelectionBasicStorage::Clear()
+{
+    Size = 0;
+    _Storage.Data.resize(0);
+}
+
+void ImGuiSelectionBasicStorage::Swap(ImGuiSelectionBasicStorage& r)
+{
+    ImSwap(Size, r.Size);
+    _Storage.Data.swap(r._Storage.Data);
+}
+
+bool ImGuiSelectionBasicStorage::Contains(ImGuiID id) const
+{
+    return _Storage.GetInt(id, 0) != 0;
+}
+
 // GetNextSelectedItem() is an abstraction allowing us to change our underlying actual storage system without impacting user.
 // (e.g. store unselected vs compact down, compact down on demand, use raw ImVector<ImGuiID> instead of ImGuiStorage...)
 ImGuiID ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it)
@@ -7836,6 +7860,13 @@ ImGuiID ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it)
     const bool has_more = (it != it_end);
     *opaque_it = has_more ? (void**)(it + 1) : (void**)(it);
     return has_more ? it->key : 0;
+}
+
+void ImGuiSelectionBasicStorage::SetItemSelected(ImGuiID id, bool selected)
+{
+    int* p_int = _Storage.GetIntRef(id, 0);
+    if (selected && *p_int == 0) { *p_int = 1; Size++; }
+    else if (!selected && *p_int != 0) { *p_int = 0; Size--; }
 }
 
 // Optimized for batch edits (with same value of 'selected')
@@ -7913,6 +7944,12 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 }
 
 //-------------------------------------------------------------------------
+
+ImGuiSelectionExternalStorage::ImGuiSelectionExternalStorage()
+{
+    UserData = NULL;
+    AdapterSetItemSelected = NULL;
+}
 
 // Apply requests coming from BeginMultiSelect() and EndMultiSelect().
 // We also pull 'ms_io->ItemsCount' as passed for BeginMultiSelect() for consistency with ImGuiSelectionBasicStorage

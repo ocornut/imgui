@@ -2840,16 +2840,14 @@ struct ImGuiSelectionBasicStorage
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
 
     // Methods
-    IMGUI_API void      ApplyRequests(ImGuiMultiSelectIO* ms_io);// Apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. It uses 'items_count' passed to BeginMultiSelect()
-    IMGUI_API ImGuiID   GetNextSelectedItem(void** opaque_it);   // Iterate selection with 'void* it = NULL; while (ImGuiId id = selection.GetNextSelectedItem(&it)) { ... }'
-    bool                Contains(ImGuiID id) const              { return _Storage.GetInt(id, 0) != 0; }         // Query if an item id is in selection.
-    ImGuiID             GetStorageIdFromIndex(int idx)          { return AdapterIndexToStorageId(this, idx); }  // Convert index to item id based on provided adapter.
-
-    // [Internal, rarely called directly by end-user]
-    ImGuiSelectionBasicStorage()                                { Size = 0; UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
-    void                Clear()                                 { _Storage.Data.resize(0); Size = 0; }
-    void                Swap(ImGuiSelectionBasicStorage& r)     { _Storage.Data.swap(r._Storage.Data); int lhs_size = Size; Size = r.Size; r.Size = lhs_size; }
-    void                SetItemSelected(ImGuiID id, bool v)     { int* p_int = _Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
+    ImGuiSelectionBasicStorage();
+    IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);   // Apply selection requests coming from BeginMultiSelect() and EndMultiSelect() functions. It uses 'items_count' passed to BeginMultiSelect()
+    IMGUI_API bool  Contains(ImGuiID id) const;                 // Query if an item id is in selection.
+    IMGUI_API void  Clear();                                    // Clear selection
+    IMGUI_API void  Swap(ImGuiSelectionBasicStorage& r);        // Swap two selections
+    IMGUI_API void  SetItemSelected(ImGuiID id, bool selected); // Add/remove an item from selection (generally done by ApplyRequests() function)
+    IMGUI_API ImGuiID GetNextSelectedItem(void** opaque_it);    // Iterate selection with 'void* it = NULL; while (ImGuiId id = selection.GetNextSelectedItem(&it)) { ... }'
+    inline ImGuiID  GetStorageIdFromIndex(int idx)              { return AdapterIndexToStorageId(this, idx); }  // Convert index to item id based on provided adapter.
 };
 
 // Optional helper to apply multi-selection requests to existing randomly accessible storage.
@@ -2861,8 +2859,8 @@ struct ImGuiSelectionExternalStorage
     void            (*AdapterSetItemSelected)(ImGuiSelectionExternalStorage* self, int idx, bool selected); // e.g. AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int idx, bool selected) { ((MyItems**)self->UserData)[idx]->Selected = selected; }
 
     // Methods
-    ImGuiSelectionExternalStorage()                         { UserData = NULL; AdapterSetItemSelected = NULL; }
-    IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);   // Generic function, using AdapterSetItemSelected()
+    IMGUI_API ImGuiSelectionExternalStorage();
+    IMGUI_API void  ApplyRequests(ImGuiMultiSelectIO* ms_io);   // Apply selection requests by using AdapterSetItemSelected() calls
 };
 
 //-----------------------------------------------------------------------------

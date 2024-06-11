@@ -2567,10 +2567,12 @@ static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 }
 
 // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
+IM_MSVC_RUNTIME_CHECKS_OFF
 void ImGuiStorage::BuildSortByKey()
 {
     ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
