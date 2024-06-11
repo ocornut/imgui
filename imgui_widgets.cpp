@@ -7821,6 +7821,23 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 // - ImGuiSelectionExternalStorage
 //-------------------------------------------------------------------------
 
+// GetNextSelectedItem() is an abstraction allowing us to change our underlying actual storage system without impacting user.
+// (e.g. store unselected vs compact down, compact down on demand, use raw ImVector<ImGuiID> instead of ImGuiStorage...)
+ImGuiID ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it)
+{
+    ImGuiStoragePair* it = (ImGuiStoragePair*)*opaque_it;
+    ImGuiStoragePair* it_end = _Storage.Data.Data + _Storage.Data.Size;
+    if (it == NULL)
+        it = _Storage.Data.Data;
+    IM_ASSERT(it >= _Storage.Data.Data && it <= it_end);
+    if (it != it_end)
+        while (it->val_i == 0 && it < it_end)
+            it++;
+    const bool has_more = (it != it_end);
+    *opaque_it = has_more ? (void**)(it + 1) : (void**)(it);
+    return has_more ? it->key : 0;
+}
+
 // Apply requests coming from BeginMultiSelect() and EndMultiSelect().
 // - Enable 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.
 // - Honoring SetRange requests requires that you can iterate/interpolate between RangeFirstItem and RangeLastItem.
@@ -7852,7 +7869,7 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
             Clear();
             if (req.Selected)
             {
-                Storage.Data.reserve(ms_io->ItemsCount);
+                _Storage.Data.reserve(ms_io->ItemsCount);
                 for (int idx = 0; idx < ms_io->ItemsCount; idx++)
                     SetItemSelected(GetStorageIdFromIndex(idx), true);
             }
@@ -7862,6 +7879,8 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
                 SetItemSelected(GetStorageIdFromIndex(idx), req.Selected);
     }
 }
+
+//-------------------------------------------------------------------------
 
 // Apply requests coming from BeginMultiSelect() and EndMultiSelect().
 // We also pull 'ms_io->ItemsCount' as passed for BeginMultiSelect() for consistency with ImGuiSelectionBasicStorage

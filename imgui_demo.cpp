@@ -3441,24 +3441,24 @@ static void ShowDemoWindowMultiSelect()
                         // Drag and Drop
                         if (use_drag_drop && ImGui::BeginDragDropSource())
                         {
-                            // Consider payload to be full selection OR single unselected item.
+                            // Create payload with full selection OR single unselected item.
                             // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
                             if (ImGui::GetDragDropPayload() == NULL)
                             {
                                 ImVector<int> payload_items;
+                                void* it = NULL;
                                 if (!item_is_selected)
                                     payload_items.push_back(item_id);
                                 else
-                                    for (const ImGuiStoragePair& pair : selection.Storage.Data)
-                                        if (pair.val_i)
-                                            payload_items.push_back((int)pair.key);
+                                    while (int id = (int)selection.GetNextSelectedItem(&it))
+                                        payload_items.push_back(id);
                                 ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
                             }
 
                             // Display payload content in tooltip
                             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
                             const int* payload_items = (int*)payload->Data;
-                            const int payload_count = (int)payload->DataSize / (int)sizeof(payload_items[0]);
+                            const int payload_count = (int)payload->DataSize / (int)sizeof(int);
                             if (payload_count == 1)
                                 ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_ARRAYSIZE(ExampleNames)]);
                             else
@@ -9896,13 +9896,26 @@ struct ExampleAssetsBrowser
                         // Drag and drop
                         if (ImGui::BeginDragDropSource())
                         {
-                            // Consider payload to be full selection OR single unselected item
+                            // Create payload with full selection OR single unselected item.
                             // (the later is only possible when using ImGuiMultiSelectFlags_SelectOnClickRelease)
-                            int payload_size = item_is_selected ? Selection.Size : 1;
                             if (ImGui::GetDragDropPayload() == NULL)
-                                ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", "Dummy", 5); // Dummy payload
+                            {
+                                ImVector<ImGuiID> payload_items;
+                                void* it = NULL;
+                                if (!item_is_selected)
+                                    payload_items.push_back(item_data->ID);
+                                else
+                                    while (ImGuiID id = Selection.GetNextSelectedItem(&it))
+                                        payload_items.push_back(id);
+                                ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+                            }
 
-                            ImGui::Text("%d assets", payload_size);
+                            // Display payload content in tooltip, by extracting it from the payload data
+                            // (we could read from selection, but it is more correct and reusable to read from payload)
+                            const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+                            const int payload_count = (int)payload->DataSize / (int)sizeof(ImGuiID);
+                            ImGui::Text("%d assets", payload_count);
+
                             ImGui::EndDragDropSource();
                         }
 
