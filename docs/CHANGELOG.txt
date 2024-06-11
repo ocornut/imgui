@@ -46,6 +46,12 @@ Breaking changes:
 
 Other changes:
 
+- IO: do not disable io.ConfigWindowsResizeFromEdges (which allow resizing from borders
+  and lower-left corner) when ImGuiBackendFlags_HasMouseCursors is not set by backend.
+  The initial reasoning is that resizing from borders feels better when correct mouse cursor
+  shape change as honored by backends. Keeping this enabling will hopefully increase pressure
+  on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
+  ImGui::GetMouseCursor() value. (#1495)
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
