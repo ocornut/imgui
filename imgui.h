@@ -2835,7 +2835,7 @@ struct ImGuiSelectionBasicStorage
 {
     // Members
     ImGuiStorage    _Storage;       // [Internal] Selection set. Think of this as similar to e.g. std::set<ImGuiID>. Prefer not accessing directly: iterate with GetNextSelectedItem().
-    int             Size;           // Number of selected items (== number of 1 in the Storage), maintained by this helper.
+    int             Size;           // Number of selected items, maintained by this helper.
     void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
     ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
 
@@ -2849,7 +2849,7 @@ struct ImGuiSelectionBasicStorage
     ImGuiSelectionBasicStorage()                                { Size = 0; UserData = NULL; AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; }; }
     void                Clear()                                 { _Storage.Data.resize(0); Size = 0; }
     void                Swap(ImGuiSelectionBasicStorage& r)     { _Storage.Data.swap(r._Storage.Data); int lhs_size = Size; Size = r.Size; r.Size = lhs_size; }
-    void                SetItemSelected(ImGuiID id, bool v)     { int* p_int = _Storage.GetIntRef(id, 0); if (v && *p_int == 0) { *p_int = 1; Size++; } else if (!v && *p_int != 0) { *p_int = 0; Size--; } }
+    IMGUI_API void      SetItemSelected(ImGuiID id, bool selected);
 };
 
 // Optional helper to apply multi-selection requests to existing randomly accessible storage.
