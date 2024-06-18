@@ -43,6 +43,11 @@ Breaking changes:
 
 - Removed old nested structure: renaming ImGuiStorage::ImGuiStoragePair type to
   ImGuiStoragePair (simpler for many languages). No significant nested type left.
+- Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
+  - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
+  - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
+  - ImGuiCol_TabUnfocusedActive -> ImGuiCol_TabDimmedSelected
+  Kept inline redirecting enums (will obsolete).
 
 Other changes:
 
