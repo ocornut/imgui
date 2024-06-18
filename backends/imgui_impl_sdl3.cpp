@@ -1053,7 +1053,7 @@ static void ImGui_ImplSDL3_InitPlatformInterface(SDL_Window* window, void* sdl_g
     vd->Window = window;
     vd->WindowID = SDL_GetWindowID(window);
     vd->WindowOwned = false;
-    vd->GLContext = sdl_gl_context;
+    vd->GLContext = (SDL_GLContext)sdl_gl_context;
     main_viewport->PlatformUserData = vd;
     main_viewport->PlatformHandle = vd->Window;
 }
