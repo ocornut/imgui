@@ -62,6 +62,9 @@ Other changes:
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
   active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
+- Drag and Drop: Fixes an issue when elapsing payload would be based on last payload
+  frame instead of last drag source frame, which makes a difference if not resubmitting
+  payload every frame.
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
