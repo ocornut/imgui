@@ -13234,6 +13234,8 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
         window = NULL;
         source_id = ImHashStr("#SourceExtern");
         source_drag_active = true;
+        KeepAliveID(source_id);
+        SetActiveID(source_id, NULL);
     }
 
     IM_ASSERT(g.DragDropWithinTarget == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()

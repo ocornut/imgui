@@ -60,6 +60,8 @@ Other changes:
 - TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
   line over selected tabs to increase visibility. This is used by docking.
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
+- Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
+  active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
