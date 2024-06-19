@@ -39,10 +39,36 @@ HOW TO UPDATE?
  VERSION 1.90.9 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking changes:
+
+- Removed old nested structure: renaming ImGuiStorage::ImGuiStoragePair type to
+  ImGuiStoragePair (simpler for many languages). No significant nested type left.
+- Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
+  - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
+  - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
+  - ImGuiCol_TabUnfocusedActive -> ImGuiCol_TabDimmedSelected
+  Kept inline redirecting enums (will obsolete).
+
 Other changes:
+
+- IO: do not disable io.ConfigWindowsResizeFromEdges (which allow resizing from borders
+  and lower-left corner) when ImGuiBackendFlags_HasMouseCursors is not set by backend.
+  The initial reasoning is that resizing from borders feels better when correct mouse cursor
+  shape change as honored by backends. Keeping this enabling will hopefully increase pressure
+  on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
+  ImGui::GetMouseCursor() value. (#1495)
+- TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
+  line over selected tabs to increase visibility. This is used by docking.
+  Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
+- Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
+  returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
+  [@AndreiNego, @ocornut]
+
+Docking+Viewports Branch:
 
 - Backends: SDL3: Update for introduction of SDL_GLContext from void*. (#7701, #7702)
   [@bcsanches]
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.8 (Released 2024-06-06)
@@ -192,7 +218,6 @@ versions of IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked() prior to this 
 - For several reasons those changes makes sense. They were all made before making some of
   those API public. Only past users of imgui_internal.h with the extra parameters will be affected.
   Added asserts for valid flags in various functions to detect _some_ misuses, BUT NOT ALL.
-
 
 Docking+Viewports Branch:
 
