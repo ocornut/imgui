@@ -66,6 +66,9 @@ Other changes:
   active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern does not assume
   a mouse button being pressed. Facilitate implementing cross-context drag and drop. (#143)
+- Drag and Drop: Added ImGuiDragDropFlags_PayloadNoCrossContext/_PayloadNoCrossProcess flags
+  as metadata to specify that a payload may not be copied outside the context/process by
+  some logic aiming to copy payloads around.
 - Drag and Drop: Fixes an issue when elapsing payload would be based on last payload
   frame instead of last drag source frame, which makes a difference if not resubmitting
   payload every frame. (#143)
