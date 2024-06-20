@@ -5141,7 +5141,11 @@ void ImGui::EndFrame()
             ClearDragDrop();
     }
 
-    // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
+    // Drag and Drop: Fallback for missing source tooltip. This is not ideal but better than nothing.
+    // If you want to handle source item disappearing: instead of submitting your description tooltip
+    // in the BeginDragDropSource() block of the dragged item, you can submit them from a safe single spot
+    // (e.g. end of your item loop, or before EndFrame) by reading payload data.
+    // In the typical case, the contents of drag tooltip should be possible to infer solely from payload data.
     if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
     {
         g.DragDropWithinSource = true;
@@ -13231,6 +13235,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
     }
     else
     {
+        // When ImGuiDragDropFlags_SourceExtern is set:
         window = NULL;
         source_id = ImHashStr("#SourceExtern");
         source_drag_active = true;
@@ -13247,7 +13252,8 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
     {
         IM_ASSERT(source_id != 0);
         ClearDragDrop();
-        IMGUI_DEBUG_LOG_ACTIVEID("[dragdrop] BeginDragDropSource() DragDropActive = true, source_id = %08X\n", source_id);
+        IMGUI_DEBUG_LOG_ACTIVEID("[dragdrop] BeginDragDropSource() DragDropActive = true, source_id = 0x%08X%s\n",
+            source_id, (flags & ImGuiDragDropFlags_SourceExtern) ? " (EXTERN)" : "");
         ImGuiPayload& payload = g.DragDropPayload;
         payload.SourceId = source_id;
         payload.SourceParentId = source_parent_id;
@@ -13437,7 +13443,8 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;
 
-    //IMGUI_DEBUG_LOG("AcceptDragDropPayload(): %08X: return payload\n", g.DragDropTargetId);
+    if (payload.Delivery)
+        IMGUI_DEBUG_LOG_ACTIVEID("[dragdrop] AcceptDragDropPayload(): 0x%08X: payload delivery\n", g.DragDropTargetId);
     return &payload;
 }
 
