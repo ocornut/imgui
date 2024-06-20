@@ -48,6 +48,8 @@ Breaking changes:
   - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
   - ImGuiCol_TabUnfocusedActive -> ImGuiCol_TabDimmedSelected
   Kept inline redirecting enums (will obsolete).
+- Drag and Drop: renamed ImGuiDragDropFlags_SourceAutoExpirePayload to
+  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143).
 
 Other changes:
 
