@@ -68,6 +68,8 @@ Docking+Viewports Branch:
 
 - Backends: SDL3: Update for introduction of SDL_GLContext from void*. (#7701, #7702)
   [@bcsanches]
+- Backends: Win32: Secondary viewports WndProc handler retrieve/set imgui context from
+  the HWND, allowing WndProc dispatch to work in multi-context setups.
 
 
 -----------------------------------------------------------------------

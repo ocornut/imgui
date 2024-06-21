@@ -1054,6 +1054,9 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     vd->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
+
+    // Secondary viewports store their imgui context
+    ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
@@ -1256,10 +1259,16 @@ static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        return true;
+    // Allow secondary viewport WndProc to be called regardless of current context
+    ImGuiContext* hwnd_ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
+    ImGuiContext* prev_ctx = ImGui::GetCurrentContext();
+    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
+        ImGui::SetCurrentContext(hwnd_ctx);
 
-    if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hWnd))
+    LRESULT result = 0;
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        result = true;
+    else if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hWnd))
     {
         switch (msg)
         {
@@ -1274,7 +1283,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
             break;
         case WM_MOUSEACTIVATE:
             if (viewport->Flags & ImGuiViewportFlags_NoFocusOnClick)
-                return MA_NOACTIVATE;
+                result = MA_NOACTIVATE;
             break;
         case WM_NCHITTEST:
             // Let mouse pass-through the window. This will allow the backend to call io.AddMouseViewportEvent() correctly. (which is optional).
@@ -1282,12 +1291,15 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
             // If you cannot easily access those viewport flags from your windowing/event code: you may manually synchronize its state e.g. in
             // your main loop after calling UpdatePlatformWindows(). Iterate all viewports/platform windows and pass the flag to your windowing system.
             if (viewport->Flags & ImGuiViewportFlags_NoInputs)
-                return HTTRANSPARENT;
+                result = HTTRANSPARENT;
             break;
         }
     }
-
-    return DefWindowProc(hWnd, msg, wParam, lParam);
+    if (result == 0)
+        result = DefWindowProc(hWnd, msg, wParam, lParam);
+    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
+        ImGui::SetCurrentContext(prev_ctx);
+    return result;
 }
 
 static void ImGui_ImplWin32_InitPlatformInterface(bool platform_has_own_dc)
