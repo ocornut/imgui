@@ -14569,7 +14569,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     // Basic info
     Text("Dear ImGui %s", GetVersion());
-    if (g.ContextName[0] != NULL)
+    if (g.ContextName[0] != 0)
     {
         SameLine();
         Text("(Context Name: \"%s\")", g.ContextName);
