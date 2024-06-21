@@ -43,11 +43,18 @@ Breaking changes:
 
 - Removed old nested structure: renaming ImGuiStorage::ImGuiStoragePair type to
   ImGuiStoragePair (simpler for many languages). No significant nested type left.
+- BeginChild: added ImGuiChildFlags_NavFlattened as a replacement for the window
+  flag ImGuiWindowFlags_NavFlattened: the feature only ever made sense for
+  BeginChild() calls anyhow. (#7687) [@cfillion]
+   - old: BeginChild("Name", size, 0, ImGuiWindowFlags_NavFlattened);
+   - new: BeginChild("Name", size, ImGuiChildFlags_NavFlattened, 0)
 - Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
   - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
   - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
   - ImGuiCol_TabUnfocusedActive -> ImGuiCol_TabDimmedSelected
   Kept inline redirecting enums (will obsolete).
+- IO: io.ClearInputKeys() (first exposed in 1.89.8) doesn't clear mouse data.
+  Newly added io.ClearInputMouse() does. (#4921)
 - Drag and Drop: renamed ImGuiDragDropFlags_SourceAutoExpirePayload to
   ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143).
 
@@ -59,6 +66,7 @@ Other changes:
   shape change as honored by backends. Keeping this enabling will hopefully increase pressure
   on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
   ImGui::GetMouseCursor() value. (#1495)
+- IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
 - TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
   line over selected tabs to increase visibility. This is used by docking.
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
@@ -935,7 +943,7 @@ Breaking changes:
 
 - IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
   and often incorrect/misleading considering the existence of a higher-level
-  input queue. This is automatically cleared by io.ClearInputsKeys(). (#4921)
+  input queue. This is automatically cleared by io.ClearInputKeys(). (#4921)
 - ImDrawData: CmdLists[] array is now owned, changed from 'ImDrawList**' to
   'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
   cannot compare to NULL nor reassign manually anymore.
@@ -973,10 +981,10 @@ Other changes:
   will slightly reduce scrollbar size. Generally we tried to make it that window
   border size has no incidence on layout but this can't work with thick borders. (#2522)
 - IO: Added io.ClearEventsQueue() to clear incoming inputs events. (#4921)
-  May be useful in conjunction with io.ClearInputsKeys() if you need to clear
+  May be useful in conjunction with io.ClearInputKeys() if you need to clear
   both current inputs state and queued events (e.g. when using blocking native
   dialogs such as Windows's ::MessageBox() or ::GetOpenFileName()).
-- IO: Changed io.ClearInputsKeys() specs to also clear current frame character buffer
+- IO: Changed io.ClearInputKeys() specs to also clear current frame character buffer
   (what now obsoleted io.ClearInputCharacters() did), as this is effectively the
   desirable behavior.
 - Misc: Added IMGUI_DISABLE_STB_SPRINTF_IMPLEMENTATION config macro to disable
