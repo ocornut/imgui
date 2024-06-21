@@ -1265,7 +1265,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
         {
         case WM_CLOSE:
             viewport->PlatformRequestClose = true;
-            return 0;
+            break;
         case WM_MOVE:
             viewport->PlatformRequestMove = true;
             break;
