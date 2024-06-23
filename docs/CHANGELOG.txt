@@ -83,6 +83,7 @@ Other changes:
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
+- Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
 
 
 -----------------------------------------------------------------------
