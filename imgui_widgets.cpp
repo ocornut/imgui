@@ -7236,7 +7236,7 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
 
     // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
     // Storing an extra rect used by widgets supporting box-select.
-    if ((ms_flags & ImGuiMultiSelectFlags_BoxSelect) && !(ms_flags & ImGuiMultiSelectFlags_BoxSelect1d))
+    if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
         if (bs->BoxSelectRectPrev.Min.x != bs->BoxSelectRectCurr.Min.x || bs->BoxSelectRectPrev.Max.x != bs->BoxSelectRectCurr.Max.x)
         {
             bs->UnclipMode = true;
@@ -7319,9 +7319,9 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     if ((flags & (ImGuiMultiSelectFlags_ScopeWindow | ImGuiMultiSelectFlags_ScopeRect)) == 0)
         flags |= ImGuiMultiSelectFlags_ScopeWindow;
     if (flags & ImGuiMultiSelectFlags_SingleSelect)
-        flags &= ~(ImGuiMultiSelectFlags_BoxSelect | ImGuiMultiSelectFlags_BoxSelect1d);
-    if (flags & ImGuiMultiSelectFlags_BoxSelect1d)
-        flags |= ImGuiMultiSelectFlags_BoxSelect;
+        flags &= ~(ImGuiMultiSelectFlags_BoxSelect2d | ImGuiMultiSelectFlags_BoxSelect1d);
+    if (flags & ImGuiMultiSelectFlags_BoxSelect2d)
+        flags &= ~ImGuiMultiSelectFlags_BoxSelect1d;
 
     // FIXME: BeginFocusScope()
     const ImGuiID id = window->IDStack.back();
@@ -7391,7 +7391,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
 
     // Box-select handling: update active state.
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
-    if (flags & ImGuiMultiSelectFlags_BoxSelect)
+    if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
     {
         ms->BoxSelectId = GetID("##BoxSelect");
         ms->BoxSelectLastitem = ImGuiSelectionUserData_Invalid;
@@ -7442,7 +7442,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
             storage->NavIdSelected = -1;
         }
 
-        if ((ms->Flags & ImGuiMultiSelectFlags_BoxSelect) && GetBoxSelectState(ms->BoxSelectId))
+        if ((ms->Flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d)) && GetBoxSelectState(ms->BoxSelectId))
         {
             bool enable_scroll = (ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0;
             EndBoxSelect(scope_rect, enable_scroll);
@@ -7460,7 +7460,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         scope_hovered &= scope_rect.Contains(g.IO.MousePos);
     if (scope_hovered && g.HoveredId == 0 && g.ActiveId == 0)
     {
-        if (ms->Flags & ImGuiMultiSelectFlags_BoxSelect)
+        if (ms->Flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
         {
             if (!g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && g.IO.MouseClickedCount[0] == 1)
             {
@@ -7701,7 +7701,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     {
         // Box-select
         ImGuiInputSource input_source = (g.NavJustMovedToId == id || g.NavActivateId == id) ? g.NavInputSource : ImGuiInputSource_Mouse;
-        if (flags & ImGuiMultiSelectFlags_BoxSelect)
+        if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
             if (selected == false && !g.BoxSelectState.IsActive && !g.BoxSelectState.IsStarting && input_source == ImGuiInputSource_Mouse && g.IO.MouseClickedCount[0] == 1)
                 BoxSelectPreStartDrag(ms->BoxSelectId, item_data);
 

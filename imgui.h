@@ -2770,8 +2770,8 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 2,   // Disable Shift+selection mouse/keyboard support (useful for unordered 2D selection).
     ImGuiMultiSelectFlags_NoAutoSelect          = 1 << 3,   // Disable selecting items when navigating (useful for e.g. supporting range-select in a list of checkboxes)
     ImGuiMultiSelectFlags_NoAutoClear           = 1 << 4,   // Disable clearing other items when navigating or selecting another one (generally used with ImGuiMultiSelectFlags_NoAutoSelect. useful for e.g. supporting range-select in a list of checkboxes)
-    ImGuiMultiSelectFlags_BoxSelect             = 1 << 5,   // Enable box-selection with varying width or varying x pos items support (e.g. different width labels, or 2D layout/grid). This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items. Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
-    ImGuiMultiSelectFlags_BoxSelect1d           = 1 << 6,   // Enable box-selection with same width and same x pos items (e.g. only full row Selectable()). Small optimization.
+    ImGuiMultiSelectFlags_BoxSelect1d           = 1 << 5,   // Enable box-selection with same width and same x pos items (e.g. only full row Selectable()). Small optimization.
+    ImGuiMultiSelectFlags_BoxSelect2d           = 1 << 6,   // Enable box-selection with varying width or varying x pos items support (e.g. different width labels, or 2D layout/grid). This alters clipping logic so that e.g. horizontal movements will update selection of normally clipped items. Box-selection works better with little bit of spacing between items hit-box in order to be able to aim at empty space.
     ImGuiMultiSelectFlags_BoxSelectNoScroll     = 1 << 7,   // Disable scrolling when box-selecting near edges of scope.
     ImGuiMultiSelectFlags_ClearOnEscape         = 1 << 8,   // Clear selection when pressing Escape while scope is focused.
     ImGuiMultiSelectFlags_ClearOnClickVoid      = 1 << 9,   // Clear selection when clicking on empty location within scope.
