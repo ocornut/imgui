@@ -80,6 +80,7 @@ struct ImGui_ImplOSX_Data
     KeyEventResponder*          KeyEventResponder;
     NSTextInputContext*         InputContext;
     id                          Monitor;
+    NSWindow*                   Window;
 
     ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
 };
@@ -402,6 +403,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Observer = [ImGuiObserver new];
+    bd->Window = view.window ?: NSApp.orderedWindows.firstObject;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
 
