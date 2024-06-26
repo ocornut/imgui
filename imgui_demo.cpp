@@ -3447,11 +3447,12 @@ static void ShowDemoWindowMultiSelect()
                             {
                                 ImVector<int> payload_items;
                                 void* it = NULL;
+                                ImGuiID id = 0;
                                 if (!item_is_selected)
                                     payload_items.push_back(item_id);
                                 else
-                                    while (int id = (int)selection.GetNextSelectedItem(&it))
-                                        payload_items.push_back(id);
+                                    while (selection.GetNextSelectedItem(&it, &id))
+                                        payload_items.push_back((int)id);
                                 ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
                             }
 
@@ -9907,10 +9908,11 @@ struct ExampleAssetsBrowser
                             {
                                 ImVector<ImGuiID> payload_items;
                                 void* it = NULL;
+                                ImGuiID id = 0;
                                 if (!item_is_selected)
                                     payload_items.push_back(item_data->ID);
                                 else
-                                    while (ImGuiID id = Selection.GetNextSelectedItem(&it))
+                                    while (Selection.GetNextSelectedItem(&it, &id))
                                         payload_items.push_back(id);
                                 ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
                             }

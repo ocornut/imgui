@@ -7847,7 +7847,7 @@ bool ImGuiSelectionBasicStorage::Contains(ImGuiID id) const
 
 // GetNextSelectedItem() is an abstraction allowing us to change our underlying actual storage system without impacting user.
 // (e.g. store unselected vs compact down, compact down on demand, use raw ImVector<ImGuiID> instead of ImGuiStorage...)
-ImGuiID ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it)
+bool ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it, ImGuiID* out_id)
 {
     ImGuiStoragePair* it = (ImGuiStoragePair*)*opaque_it;
     ImGuiStoragePair* it_end = _Storage.Data.Data + _Storage.Data.Size;
@@ -7859,7 +7859,8 @@ ImGuiID ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it)
             it++;
     const bool has_more = (it != it_end);
     *opaque_it = has_more ? (void**)(it + 1) : (void**)(it);
-    return has_more ? it->key : 0;
+    *out_id = has_more ? it->key : 0;
+    return has_more;
 }
 
 void ImGuiSelectionBasicStorage::SetItemSelected(ImGuiID id, bool selected)
