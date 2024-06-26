@@ -84,6 +84,7 @@ Other changes:
 - Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
   use by backends.
 - Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
+- Backends: SDL3: Update for SDL_StartTextInput()/SDL_StopTextInput() API changes. (#7735)
 - Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
   [@martin-ejdestig]
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
