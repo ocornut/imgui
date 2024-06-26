@@ -7824,19 +7824,23 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 ImGuiSelectionBasicStorage::ImGuiSelectionBasicStorage()
 {
     Size = 0;
+    PreserveOrder = false;
     UserData = NULL;
     AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; };
+    _SelectionOrder = 1; // Always >0
 }
 
 void ImGuiSelectionBasicStorage::Clear()
 {
     Size = 0;
+    _SelectionOrder = 1; // Always >0
     _Storage.Data.resize(0);
 }
 
 void ImGuiSelectionBasicStorage::Swap(ImGuiSelectionBasicStorage& r)
 {
     ImSwap(Size, r.Size);
+    ImSwap(_SelectionOrder, r._SelectionOrder);
     _Storage.Data.swap(r._Storage.Data);
 }
 
@@ -7845,12 +7849,21 @@ bool ImGuiSelectionBasicStorage::Contains(ImGuiID id) const
     return _Storage.GetInt(id, 0) != 0;
 }
 
+static int IMGUI_CDECL PairComparerByValueInt(const void* lhs, const void* rhs)
+{
+    int lhs_v = ((const ImGuiStoragePair*)lhs)->val_i;
+    int rhs_v = ((const ImGuiStoragePair*)rhs)->val_i;
+    return (lhs_v > rhs_v ? +1 : lhs_v < rhs_v ? -1 : 0);
+}
+
 // GetNextSelectedItem() is an abstraction allowing us to change our underlying actual storage system without impacting user.
 // (e.g. store unselected vs compact down, compact down on demand, use raw ImVector<ImGuiID> instead of ImGuiStorage...)
 bool ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it, ImGuiID* out_id)
 {
     ImGuiStoragePair* it = (ImGuiStoragePair*)*opaque_it;
     ImGuiStoragePair* it_end = _Storage.Data.Data + _Storage.Data.Size;
+    if (PreserveOrder && it == NULL && it_end != NULL)
+        ImQsort(_Storage.Data.Data, (size_t)_Storage.Data.Size, sizeof(ImGuiStoragePair), PairComparerByValueInt); // ~ImGuiStorage::BuildSortByValueInt()
     if (it == NULL)
         it = _Storage.Data.Data;
     IM_ASSERT(it >= _Storage.Data.Data && it <= it_end);
@@ -7860,18 +7873,20 @@ bool ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it, ImGuiID* 
     const bool has_more = (it != it_end);
     *opaque_it = has_more ? (void**)(it + 1) : (void**)(it);
     *out_id = has_more ? it->key : 0;
+    if (PreserveOrder && !has_more)
+        _Storage.BuildSortByKey();
     return has_more;
 }
 
 void ImGuiSelectionBasicStorage::SetItemSelected(ImGuiID id, bool selected)
 {
     int* p_int = _Storage.GetIntRef(id, 0);
-    if (selected && *p_int == 0) { *p_int = 1; Size++; }
+    if (selected && *p_int == 0) { *p_int = _SelectionOrder++; Size++; }
     else if (!selected && *p_int != 0) { *p_int = 0; Size--; }
 }
 
 // Optimized for batch edits (with same value of 'selected')
-static void ImGuiSelectionBasicStorage_BatchSetItemSelected(ImGuiSelectionBasicStorage* selection, ImGuiID id, bool selected, int size_before_amends)
+static void ImGuiSelectionBasicStorage_BatchSetItemSelected(ImGuiSelectionBasicStorage* selection, ImGuiID id, bool selected, int size_before_amends, int selection_order)
 {
     ImGuiStorage* storage = &selection->_Storage;
     ImGuiStoragePair* it = ImLowerBound(storage->Data.Data, storage->Data.Data + size_before_amends, id);
@@ -7879,9 +7894,9 @@ static void ImGuiSelectionBasicStorage_BatchSetItemSelected(ImGuiSelectionBasicS
     if (selected == is_contained && it->val_i != 0)
         return;
     if (selected && !is_contained)
-        storage->Data.push_back(ImGuiStoragePair(id, 1)); // Push unsorted at end of vector, will be sorted in SelectionMultiAmendsFinish()
+        storage->Data.push_back(ImGuiStoragePair(id, selection_order)); // Push unsorted at end of vector, will be sorted in SelectionMultiAmendsFinish()
     else if (is_contained)
-        it->val_i = selected ? 1 : 0; // Modify in-place.
+        it->val_i = selected ? selection_order : 0; // Modify in-place.
     selection->Size += selected ? +1 : -1;
 }
 
@@ -7929,16 +7944,19 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
             {
                 _Storage.Data.reserve(ms_io->ItemsCount);
                 const int size_before_amends = _Storage.Data.Size;
-                for (int idx = 0; idx < ms_io->ItemsCount; idx++)
-                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends);
+                for (int idx = 0; idx < ms_io->ItemsCount; idx++, _SelectionOrder++)
+                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, _SelectionOrder);
                 ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
             }
         }
         else if (req.Type == ImGuiSelectionRequestType_SetRange)
         {
+            // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
             const int size_before_amends = _Storage.Data.Size;
-            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
-                ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends);
+            int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? (int)req.RangeLastItem - (int)req.RangeFirstItem : 0);
+            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
+                ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
+            _SelectionOrder += (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
             ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
         }
     }

@@ -2835,9 +2835,11 @@ struct ImGuiSelectionRequest
 struct ImGuiSelectionBasicStorage
 {
     // Members
-    int             Size;           // Number of selected items (== number of 1 in the Storage), maintained by this helper.
-    void*           UserData;       // User data for use by adapter function                // e.g. selection.UserData = (void*)my_items;
-    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);  // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
+    int             Size;           //          // Number of selected items, maintained by this helper.
+    bool            PreserveOrder;  // = false  // GetNextSelectedItem() will return ordered selection (currently implemented by two additional sorts of selection. Could be improved)
+    void*           UserData;       // = NULL   // User data for use by adapter function        // e.g. selection.UserData = (void*)my_items;
+    ImGuiID         (*AdapterIndexToStorageId)(ImGuiSelectionBasicStorage* self, int idx);      // e.g. selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { return ((MyItems**)self->UserData)[idx]->ID; };
+    int             _SelectionOrder;// [Internal] Increasing counter to store selection order
     ImGuiStorage    _Storage;       // [Internal] Selection set. Think of this as similar to e.g. std::set<ImGuiID>. Prefer not accessing directly: iterate with GetNextSelectedItem().
 
     // Methods
