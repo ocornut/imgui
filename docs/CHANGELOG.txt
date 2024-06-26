@@ -81,6 +81,8 @@ Other changes:
   frame instead of last drag source frame, which makes a difference if not resubmitting
   payload every frame. (#143)
 - Debug Tools: Metrics/Debugger: Browsing a Storage perform hover lookup on identifier.
+- Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
+  use by backends.
 - Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
 - Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
   [@martin-ejdestig]
