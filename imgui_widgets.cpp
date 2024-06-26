@@ -7294,7 +7294,7 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
     for (const ImGuiSelectionRequest& req : io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
-        if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected);
+        if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d (dir %d)\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected, req.RangeDirection);
     }
 }
 
@@ -7401,7 +7401,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
 
     if (request_clear || request_select_all)
     {
-        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
         if (!request_select_all)
             storage->LastSelectionSize = 0;
         ms->IO.Requests.push_back(req);
@@ -7475,7 +7475,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
             {
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
                 ms->IO.Requests.resize(0);
                 ms->IO.Requests.push_back(req);
             }
@@ -7665,7 +7665,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 else
                 {
                     selected = !selected;
-                    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, item_data, item_data };
+                    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, +1, item_data, item_data };
                     ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
                     if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
                         prev_req->RangeLastItem = item_data; // Merge span into same request
@@ -7733,7 +7733,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
             if (request_clear)
             {
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
                 ms->IO.Requests.resize(0);
                 ms->IO.Requests.push_back(req);
             }
@@ -7775,7 +7775,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             range_direction = +1;
         }
         ImGuiSelectionUserData range_dst_item = item_data;
-        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, range_selected, (range_direction > 0) ? storage->RangeSrcItem : range_dst_item, (range_direction > 0) ? range_dst_item : storage->RangeSrcItem };
+        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, range_selected, (ImS8)range_direction, (range_direction > 0) ? storage->RangeSrcItem : range_dst_item, (range_direction > 0) ? range_dst_item : storage->RangeSrcItem };
         ms->IO.Requests.push_back(req);
     }
 
@@ -7876,7 +7876,7 @@ static void ImGuiSelectionBasicStorage_BatchSetItemSelected(ImGuiSelectionBasicS
     ImGuiStorage* storage = &selection->_Storage;
     ImGuiStoragePair* it = ImLowerBound(storage->Data.Data, storage->Data.Data + size_before_amends, id);
     const bool is_contained = (it != storage->Data.Data + size_before_amends) && (it->key == id);
-    if (selected == is_contained && it->val_i == 1)
+    if (selected == is_contained && it->val_i != 0)
         return;
     if (selected && !is_contained)
         storage->Data.push_back(ImGuiStoragePair(id, 1)); // Push unsorted at end of vector, will be sorted in SelectionMultiAmendsFinish()
