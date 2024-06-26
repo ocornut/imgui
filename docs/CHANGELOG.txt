@@ -80,6 +80,13 @@ Other changes:
 - Drag and Drop: Fixes an issue when elapsing payload would be based on last payload
   frame instead of last drag source frame, which makes a difference if not resubmitting
   payload every frame. (#143)
+- Debug Tools: Metrics/Debugger: Browsing a Storage perform hover lookup on identifier.
+- Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
+  use by backends.
+- Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
+- Backends: SDL3: Update for SDL_StartTextInput()/SDL_StopTextInput() API changes. (#7735)
+- Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
+  [@martin-ejdestig]
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
