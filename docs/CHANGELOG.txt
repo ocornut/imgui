@@ -72,6 +72,8 @@ Other changes:
 - TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
   line over selected tabs to increase visibility. This is used by docking.
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
+- Tables: added TableGetHoveredColumn() to public API, as an alternative to testing for
+  'TableGetColumnFlags(column) & ImGuiTableColumnFlags_IsHovered' on each column. (#3740)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
   active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern does not assume
