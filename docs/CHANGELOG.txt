@@ -69,6 +69,9 @@ Other changes:
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
 - Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block bypassing
   the disabled state. (#7726)
+- Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
+  tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
+  position could have temporarily be moved around by erroneous padding application. (#7706)
 - TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
   line over selected tabs to increase visibility. This is used by docking.
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
