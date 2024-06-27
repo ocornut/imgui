@@ -4214,6 +4214,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
         }
 
         // Display shortcut (only works with mouse)
+        // (ImGuiItemStatusFlags_HasShortcut in LastItemData denotes we want a tooltip)
         if (id == g.LastItemData.ID && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasShortcut))
             if (IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_DelayNormal))
                 SetTooltip("%s", GetKeyChordName(g.LastItemData.Shortcut));
@@ -9793,12 +9794,15 @@ void ImGui::SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
     g.NextItemData.ShortcutFlags = flags;
 }
 
+// Called from within ItemAdd: at this point we can read from NextItemData and write to LastItemData
 void ImGui::ItemHandleShortcut(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiInputFlags flags = g.NextItemData.ShortcutFlags;
     IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetNextItemShortcut) == 0); // Passing flags not supported by SetNextItemShortcut()!
 
+    if (g.LastItemData.InFlags & ImGuiItemFlags_Disabled)
+        return;
     if (flags & ImGuiInputFlags_Tooltip)
     {
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasShortcut;
@@ -9822,7 +9826,7 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags)
 
 bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID owner_id)
 {
-    //ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *GImGui;
     //IMGUI_DEBUG_LOG("Shortcut(%s, flags=%X, owner_id=0x%08X)\n", GetKeyChordName(key_chord, g.TempBuffer.Data, g.TempBuffer.Size), flags, owner_id);
 
     // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
@@ -9833,6 +9837,9 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID own
     // Effectively makes Shortcut() always input-owner aware.
     if (owner_id == ImGuiKeyOwner_Any || owner_id == ImGuiKeyOwner_NoOwner)
         owner_id = GetRoutingIdFromOwnerId(owner_id);
+
+    if (g.CurrentItemFlags & ImGuiItemFlags_Disabled)
+        return false;
 
     // Submit route
     if (!SetShortcutRouting(key_chord, flags, owner_id))
