@@ -7336,7 +7336,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
         window->DC.NavLayersActiveMask |= 1 << ImGuiNavLayer_Main;
 
     // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
-    ms->KeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
+    ms->KeyMods = g.NavJustMovedToId ? (g.NavJustMovedToIsTabbing ? 0 : g.NavJustMovedToKeyMods) : g.IO.KeyMods;
     if (flags & ImGuiMultiSelectFlags_NoRangeSelect)
         ms->KeyMods &= ~ImGuiMod_Shift;
 
