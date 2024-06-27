@@ -93,6 +93,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Windows, Menus: Fixed an issue where the size of sub-menu in their own viewport
+  would be erroneously clamped to the size of main viewport. (#7730)
 - Backends: SDL3: Update for introduction of SDL_GLContext from void*. (#7701, #7702)
   [@bcsanches]
 - Backends: Win32: Secondary viewports WndProc handler retrieve/set imgui context from
