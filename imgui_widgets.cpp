@@ -7479,6 +7479,13 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
             }
     }
 
+    // Courtesy nav wrapping helper flag
+    if (ms->Flags & ImGuiMultiSelectFlags_NavWrapX)
+    {
+        IM_ASSERT(ms->Flags & ImGuiMultiSelectFlags_ScopeWindow); // Only supported at window scope
+        ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
+    }
+
     // Unwind
     window->DC.CursorMaxPos = ImMax(ms->BackupCursorMaxPos, window->DC.CursorMaxPos);
     PopFocusScope();

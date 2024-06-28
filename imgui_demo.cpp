@@ -9836,10 +9836,21 @@ struct ExampleAssetsBrowser
 
             // Multi-select
             ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_ClearOnClickVoid;
-            if (AllowDragUnselected)
-                ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease; // To allow dragging an unselected item without altering selection.
+
+            // - Enable box-select (in 2D mode, so that changing box-select rectangle X1/X2 boundaries will affect clipped items)
             if (AllowBoxSelect)
-                ms_flags |= ImGuiMultiSelectFlags_BoxSelect2d; // Enable box-select in 2D mode.
+                ms_flags |= ImGuiMultiSelectFlags_BoxSelect2d;
+
+            // - This feature allows dragging an unselected item without selecting it (rarely used)
+            if (AllowDragUnselected)
+                ms_flags |= ImGuiMultiSelectFlags_SelectOnClickRelease;
+
+            // - Enable keyboard wrapping on X axis
+            // (FIXME-MULTISELECT: We haven't designed/exposed a general nav wrapping api yet, so this flag is provided as a courtesy to avoid doing:
+            //    ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
+            // When we finish implementing a more general API for this, we will obsolete this flag in favor of the new system)
+            ms_flags |= ImGuiMultiSelectFlags_NavWrapX;
+
             ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, Selection.Size, Items.Size);
 
             // Use custom selection adapter: store ID in selection (recommended)
@@ -9969,10 +9980,6 @@ struct ExampleAssetsBrowser
             Selection.ApplyRequests(ms_io);
             if (want_delete)
                 Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
-
-            // Keyboard/Gamepad Wrapping
-            // FIXME-MULTISELECT: Currently an imgui_internal.h API. Find a design/way to expose this in public API.
-            //ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_WrapX);
 
             // Zooming with CTRL+Wheel
             if (ImGui::IsWindowAppearing())
