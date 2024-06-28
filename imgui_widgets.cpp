@@ -1136,8 +1136,9 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
     ItemSize(total_bb, style.FramePadding.y);
     const bool is_visible = ItemAdd(total_bb, id);
+    const bool is_multi_select = (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) != 0;
     if (!is_visible)
-        if (!g.BoxSelectState.UnclipMode || (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) == 0 || !g.BoxSelectState.UnclipRect.Overlaps(total_bb)) // Extra layer of "no logic clip" for box-select support
+        if (!is_multi_select || !g.BoxSelectState.UnclipMode || !g.BoxSelectState.UnclipRect.Overlaps(total_bb)) // Extra layer of "no logic clip" for box-select support
         {
             IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
             return false;
@@ -1145,7 +1146,6 @@ bool ImGui::Checkbox(const char* label, bool* v)
 
     // Range-Selection/Multi-selection support (header)
     bool checked = *v;
-    const bool is_multi_select = (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) != 0;
     if (is_multi_select)
         MultiSelectItemHeader(id, &checked, NULL);
 
@@ -7250,7 +7250,7 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
     return true;
 }
 
-void ImGui::EndBoxSelect(const ImRect& scope_rect, bool enable_scroll)
+void ImGui::EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -7266,6 +7266,7 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, bool enable_scroll)
     window->DrawList->AddRect(box_select_r.Min, box_select_r.Max, GetColorU32(ImGuiCol_NavHighlight)); // FIXME-MULTISELECT: Styling
 
     // Scroll
+    const bool enable_scroll = (ms_flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms_flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0;
     if (enable_scroll)
     {
         ImRect scroll_r = scope_rect;
@@ -7443,10 +7444,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
         }
 
         if ((ms->Flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d)) && GetBoxSelectState(ms->BoxSelectId))
-        {
-            bool enable_scroll = (ms->Flags & ImGuiMultiSelectFlags_ScopeWindow) && (ms->Flags & ImGuiMultiSelectFlags_BoxSelectNoScroll) == 0;
-            EndBoxSelect(scope_rect, enable_scroll);
-        }
+            EndBoxSelect(scope_rect, ms->Flags);
     }
 
     if (ms->IsEndIO == false)

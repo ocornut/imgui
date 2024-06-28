@@ -3406,7 +3406,7 @@ namespace ImGui
 
     // Box-Select API
     IMGUI_API bool          BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags);
-    IMGUI_API void          EndBoxSelect(const ImRect& scope_rect, bool enable_scroll);
+    IMGUI_API void          EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flags);
 
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
