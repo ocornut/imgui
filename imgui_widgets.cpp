@@ -7377,20 +7377,6 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
             request_clear = true;
     }
 
-    if (ms->IsFocused)
-    {
-        // Shortcut: Clear selection (Escape)
-        // Only claim shortcut if selection is not empty, allowing further presses on Escape to e.g. leave current child window.
-        if ((flags & ImGuiMultiSelectFlags_ClearOnEscape) && (selection_size != 0))
-            if (Shortcut(ImGuiKey_Escape))
-                request_clear = true;
-
-        // Shortcut: Select all (CTRL+A)
-        if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
-                request_select_all = true;
-    }
-
     // Box-select handling: update active state.
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
     if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
@@ -7399,6 +7385,28 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
         ms->BoxSelectLastitem = ImGuiSelectionUserData_Invalid;
         if (BeginBoxSelect(window, ms->BoxSelectId, flags))
             request_clear |= bs->RequestClear;
+    }
+
+    if (ms->IsFocused)
+    {
+        // Shortcut: Clear selection (Escape)
+        // - Only claim shortcut if selection is not empty, allowing further presses on Escape to e.g. leave current child window.
+        // - Box select also handle Escape and needs to pass an id to bypass ActiveIdUsingAllKeyboardKeys lock.
+        if (flags & ImGuiMultiSelectFlags_ClearOnEscape)
+        {
+            if (selection_size != 0 || bs->IsActive)
+                if (Shortcut(ImGuiKey_Escape, ImGuiInputFlags_None, bs->IsActive ? bs->ID : 0))
+                {
+                    request_clear = true;
+                    if (bs->IsActive)
+                        BoxSelectDeactivateDrag(bs);
+                }
+        }
+
+        // Shortcut: Select all (CTRL+A)
+        if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
+            if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
+                request_select_all = true;
     }
 
     if (request_clear || request_select_all)
