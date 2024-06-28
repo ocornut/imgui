@@ -7728,7 +7728,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             if (is_singleselect)
                 request_clear = true;
             else if ((input_source == ImGuiInputSource_Mouse || g.NavActivateId == id) && !is_ctrl)
-                request_clear = true;
+                request_clear = (flags & ImGuiMultiSelectFlags_NoAutoClearOnReselect) ? !selected : true;
             else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
                 request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
             if (request_clear)
