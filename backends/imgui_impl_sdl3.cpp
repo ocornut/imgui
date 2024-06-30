@@ -139,7 +139,7 @@ static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport* viewport, ImGuiPlat
         r.y = (int)data->InputPos.y;
         r.w = 1;
         r.h = (int)data->InputLineHeight;
-        SDL_SetTextInputRect(window, &r);
+        SDL_SetTextInputArea(window, &r, 0);
         SDL_StartTextInput(window);
         bd->ImeWindow = window;
     }
