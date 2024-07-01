@@ -818,7 +818,6 @@ void ImGui_ImplVulkan_DestroyFontsTexture()
 
     if (bd->FontDescriptorSet)
     {
-        ImGui_ImplVulkan_RemoveTexture(bd->FontDescriptorSet);
         bd->FontDescriptorSet = VK_NULL_HANDLE;
         io.Fonts->SetTexID(0);
     }
