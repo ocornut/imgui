@@ -7935,13 +7935,26 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
         }
         else if (req.Type == ImGuiSelectionRequestType_SetRange)
         {
-            // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
-            const int size_before_amends = _Storage.Data.Size;
-            int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? (int)req.RangeLastItem - (int)req.RangeFirstItem : 0);
-            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
-                ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
-            _SelectionOrder += (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
-            ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+            const int selection_changes = (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
+            if (selection_changes < Size / 100)
+            {
+                // Multiple sorted insertion + copy likely to be faster.
+                // Technically we could do a single copy with a little more work.
+                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+                    SetItemSelected(GetStorageIdFromIndex(idx), req.Selected);
+            }
+            else
+            {
+                // Append insertion + single sort likely be faster.
+                // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
+                const int size_before_amends = _Storage.Data.Size;
+                int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? selection_changes - 1 : 0);
+                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
+                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
+                if (req.Selected)
+                    _SelectionOrder += selection_changes;
+                ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+            }
         }
     }
 }
