@@ -1741,8 +1741,6 @@ struct ImGuiBoxSelectState
 // We always assume that -1 is an invalid value (which works for indices and pointers)
 #define ImGuiSelectionUserData_Invalid        ((ImGuiSelectionUserData)-1)
 
-#ifdef IMGUI_HAS_MULTI_SELECT
-
 // Temporary storage for multi-select
 struct IMGUI_API ImGuiMultiSelectTempData
 {
@@ -1782,8 +1780,6 @@ struct IMGUI_API ImGuiMultiSelectState
 
     ImGuiMultiSelectState() { Window = NULL; ID = 0; LastFrameActive = LastSelectionSize = 0; RangeSelected = NavIdSelected = -1; RangeSrcItem = NavIdItem = ImGuiSelectionUserData_Invalid; }
 };
-
-#endif // #ifdef IMGUI_HAS_MULTI_SELECT
 
 //-----------------------------------------------------------------------------
 // [SECTION] Docking support

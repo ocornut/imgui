@@ -28,7 +28,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.0 WIP"
-#define IMGUI_VERSION_NUM   19095
+#define IMGUI_VERSION_NUM   19096
 #define IMGUI_HAS_TABLE
 
 /*
@@ -2729,8 +2729,6 @@ struct ImColor
 // [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiSelectionRequestType, ImGuiSelectionRequest, ImGuiMultiSelectIO, ImGuiSelectionBasicStorage)
 //-----------------------------------------------------------------------------
 
-#define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
-
 // Multi-selection system
 // Documentation at: https://github.com/ocornut/imgui/wiki/Multi-Select
 // - Refer to 'Demo->Widgets->Selection State & Multi-Select' for demos using this.
@@ -2797,7 +2795,7 @@ struct ImGuiMultiSelectIO
 {
     //------------------------------------------// BeginMultiSelect / EndMultiSelect
     ImVector<ImGuiSelectionRequest> Requests;   //  ms:w, app:r     /  ms:w  app:r   // Requests to apply to your selection data.
-    ImGuiSelectionUserData      RangeSrcItem;   //  ms:w  app:r     /                // (If using clipper) Begin: Source item (generally the first selected item when multi-selecting, which is used as a reference point) must never be clipped!
+    ImGuiSelectionUserData      RangeSrcItem;   //  ms:w  app:r     /                // (If using clipper) Begin: Source item (often the first selected item) must never be clipped: use clipper.IncludeItemByIndex() to ensure it is submitted.
     ImGuiSelectionUserData      NavIdItem;      //  ms:w, app:r     /                // (If using deletion) Last known SetNextItemSelectionUserData() value for NavId (if part of submitted items).
     bool                        NavIdSelected;  //  ms:w, app:r     /        app:r   // (If using deletion) Last known selection state for NavId (if part of submitted items).
     bool                        RangeSrcReset;  //        app:w     /  ms:r          // (If using deletion) Set before EndMultiSelect() to reset ResetSrcItem (e.g. if deleted selection).
