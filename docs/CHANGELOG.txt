@@ -93,6 +93,7 @@ Other changes:
 - Debug Tools: Metrics/Debugger: Browsing a Storage perform hover lookup on identifier.
 - Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
   use by backends.
+- imgui_freetype: Fixed divide by zero while handling FT_PIXEL_MODE_BGRA glyphs. (#7267, #3369)
 - Backends: OpenGL2, OpenGL3: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it
   has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) [@mlauss2]
 - Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
