@@ -66,6 +66,9 @@ Other changes:
   shape change as honored by backends. Keeping this enabling will hopefully increase pressure
   on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
   ImGui::GetMouseCursor() value. (#1495)
+- IO: do not claim io.WantCaptureMouse=true on the mouse release frame of a button
+  which was pressed over void/underlying app, which is consistent/needed to allow the
+  mouse up event of a drag over void/underlying app to catch release. (#1392) [@Moka42]
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
 - Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
   tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
