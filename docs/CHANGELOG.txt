@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.9 WIP (In Progress)
+ VERSION 1.90.9 (Released 2024-07-01)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.9
 
 Breaking changes:
 
@@ -48,6 +50,7 @@ Breaking changes:
   BeginChild() calls anyhow. (#7687) [@cfillion]
    - old: BeginChild("Name", size, 0, ImGuiWindowFlags_NavFlattened);
    - new: BeginChild("Name", size, ImGuiChildFlags_NavFlattened, 0)
+  Kept inline redirection flag (will obsolete).
 - Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
   - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
   - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
@@ -56,7 +59,7 @@ Breaking changes:
 - IO: io.ClearInputKeys() (first exposed in 1.89.8) doesn't clear mouse data.
   Newly added io.ClearInputMouse() does. (#4921)
 - Drag and Drop: renamed ImGuiDragDropFlags_SourceAutoExpirePayload to
-  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143).
+  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143)
 
 Other changes:
 
