@@ -7905,7 +7905,7 @@ static void ImGuiSelectionBasicStorage_BatchSetItemSelected(ImGuiSelectionBasicS
     ImGuiStorage* storage = &selection->_Storage;
     ImGuiStoragePair* it = ImLowerBound(storage->Data.Data, storage->Data.Data + size_before_amends, id);
     const bool is_contained = (it != storage->Data.Data + size_before_amends) && (it->key == id);
-    if (selected == is_contained && it->val_i != 0)
+    if (selected == (is_contained && it->val_i != 0))
         return;
     if (selected && !is_contained)
         storage->Data.push_back(ImGuiStoragePair(id, selection_order)); // Push unsorted at end of vector, will be sorted in SelectionMultiAmendsFinish()
@@ -7945,10 +7945,15 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     IM_ASSERT(ms_io->ItemsCount != -1 && "Missing value for items_count in BeginMultiSelect() call!");
     IM_ASSERT(AdapterIndexToStorageId != NULL);
 
-    // This is optimized/specialized to cope nicely with very large selections (e.g. 1 million items)
+    // This is optimized/specialized to cope with very large selections (e.g. 100k+ items)
     // - A simpler version could call SetItemSelected() directly instead of ImGuiSelectionBasicStorage_BatchSetItemSelected() + ImGuiSelectionBasicStorage_BatchFinish().
     // - Optimized select can append unsorted, then sort in a second pass. Optimized unselect can clear in-place then compact in a second pass.
-    // - (A more optimal version wouldn't even use ImGuiStorage but directly a ImVector<ImGuiID> to reduce bandwidth, but this is a reasonable trade off to reuse code)
+    // - A more optimal version wouldn't even use ImGuiStorage but directly a ImVector<ImGuiID> to reduce bandwidth, but this is a reasonable trade off to reuse code.
+    // - There are many ways this could be better optimized. The worse case scenario being: using BoxSelect2d in a grid, box-select scrolling down while wiggling
+    //   left and right: it affects coarse clipping + can emit multiple SetRange with 1 item each.)
+    // FIXME-OPT: For each block of consecutive SetRange request:
+    // - add all requests to a sorted list, store ID, selected, offset in ImGuiStorage.
+    // - rewrite sorted storage a single time.
     for (ImGuiSelectionRequest& req : ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
@@ -7965,13 +7970,27 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
         }
         else if (req.Type == ImGuiSelectionRequestType_SetRange)
         {
-            // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
-            const int size_before_amends = _Storage.Data.Size;
-            int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? (int)req.RangeLastItem - (int)req.RangeFirstItem : 0);
-            for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
-                ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
-            _SelectionOrder += (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
-            ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+            const int selection_changes = (int)req.RangeLastItem - (int)req.RangeFirstItem + 1;
+            //ImGuiContext& g = *GImGui; IMGUI_DEBUG_LOG_SELECTION("Req %d/%d: set %d to %d\n", ms_io->Requests.index_from_ptr(&req), ms_io->Requests.Size, selection_changes, req.Selected);
+            if (selection_changes == 1 || (selection_changes < Size / 100))
+            {
+                // Multiple sorted insertion + copy likely to be faster.
+                // Technically we could do a single copy with a little more work (sort sequential SetRange requests)
+                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++)
+                    SetItemSelected(GetStorageIdFromIndex(idx), req.Selected);
+            }
+            else
+            {
+                // Append insertion + single sort likely be faster.
+                // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
+                const int size_before_amends = _Storage.Data.Size;
+                int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? selection_changes - 1 : 0);
+                for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
+                    ImGuiSelectionBasicStorage_BatchSetItemSelected(this, GetStorageIdFromIndex(idx), req.Selected, size_before_amends, selection_order);
+                if (req.Selected)
+                    _SelectionOrder += selection_changes;
+                ImGuiSelectionBasicStorage_BatchFinish(this, req.Selected, size_before_amends);
+            }
         }
     }
 }

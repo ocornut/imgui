@@ -2558,6 +2558,7 @@ ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStoragePair* in_
     return in_p;
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 {
     // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
@@ -2567,7 +2568,6 @@ static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 }
 
 // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
-IM_MSVC_RUNTIME_CHECKS_OFF
 void ImGuiStorage::BuildSortByKey()
 {
     ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
