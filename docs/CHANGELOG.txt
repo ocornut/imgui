@@ -67,8 +67,6 @@ Other changes:
   on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
   ImGui::GetMouseCursor() value. (#1495)
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
-- Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block bypassing
-  the disabled state. (#7726)
 - Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
   tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
   position could have temporarily be moved around by erroneous padding application. (#7706)
@@ -77,6 +75,10 @@ Other changes:
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
 - Tables: added TableGetHoveredColumn() to public API, as an alternative to testing for
   'TableGetColumnFlags(column) & ImGuiTableColumnFlags_IsHovered' on each column. (#3740)
+- Disabled, Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block
+  bypassing the disabled state. (#7726)
+- Disabled: Reworked 1.90.8 behavior of Begin() not inheriting current BeginDisabled() state,
+  to make it that only tooltip windows are temporarily clearing it. (#211, #7640)
 - Drags: added ImGuiSliderFlags_WrapAround flag for DragInt(), DragFloat() etc. (#7749)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
   active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
