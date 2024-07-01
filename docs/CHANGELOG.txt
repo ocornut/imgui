@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.9 WIP (In Progress)
+ VERSION 1.90.9 (Released 2024-07-01)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.9
 
 Breaking changes:
 
@@ -48,6 +50,7 @@ Breaking changes:
   BeginChild() calls anyhow. (#7687) [@cfillion]
    - old: BeginChild("Name", size, 0, ImGuiWindowFlags_NavFlattened);
    - new: BeginChild("Name", size, ImGuiChildFlags_NavFlattened, 0)
+  Kept inline redirection flag (will obsolete).
 - Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
   - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
   - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
@@ -56,7 +59,7 @@ Breaking changes:
 - IO: io.ClearInputKeys() (first exposed in 1.89.8) doesn't clear mouse data.
   Newly added io.ClearInputMouse() does. (#4921)
 - Drag and Drop: renamed ImGuiDragDropFlags_SourceAutoExpirePayload to
-  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143).
+  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143)
 
 Other changes:
 
@@ -66,9 +69,10 @@ Other changes:
   shape change as honored by backends. Keeping this enabling will hopefully increase pressure
   on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
   ImGui::GetMouseCursor() value. (#1495)
+- IO: do not claim io.WantCaptureMouse=true on the mouse release frame of a button
+  which was pressed over void/underlying app, which is consistent/needed to allow the
+  mouse up event of a drag over void/underlying app to catch release. (#1392) [@Moka42]
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
-- Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block bypassing
-  the disabled state. (#7726)
 - Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
   tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
   position could have temporarily be moved around by erroneous padding application. (#7706)
@@ -77,7 +81,11 @@ Other changes:
   Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
 - Tables: added TableGetHoveredColumn() to public API, as an alternative to testing for
   'TableGetColumnFlags(column) & ImGuiTableColumnFlags_IsHovered' on each column. (#3740)
-- Drags: added ImGuisliderFlags_WrapAround flag for DragInt(), DragFloat() etc. (#7749)
+- Disabled, Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block
+  bypassing the disabled state. (#7726)
+- Disabled: Reworked 1.90.8 behavior of Begin() not inheriting current BeginDisabled() state,
+  to make it that only tooltip windows are temporarily clearing it. (#211, #7640)
+- Drags: added ImGuiSliderFlags_WrapAround flag for DragInt(), DragFloat() etc. (#7749)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
   active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
 - Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern does not assume
@@ -91,12 +99,17 @@ Other changes:
 - Debug Tools: Metrics/Debugger: Browsing a Storage perform hover lookup on identifier.
 - Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
   use by backends.
+- imgui_freetype: Fixed divide by zero while handling FT_PIXEL_MODE_BGRA glyphs. (#7267, #3369)
 - Backends: OpenGL2, OpenGL3: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it
   has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) [@mlauss2]
 - Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
 - Backends: SDL3: Update for SDL_StartTextInput()/SDL_StopTextInput() API changes. (#7735)
+- Backends: SDL3: Update for SDL_SetTextInputRect() API rename. (#7760, #7754) [@maxortner01]
+- Backends: SDLRenderer3: Update for SDL_RenderGeometryRaw() API changes. (SDL#9009).
 - Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
   [@martin-ejdestig]
+- Examples: SDL3: Remove use of SDL_HINT_IME_NATIVE_UI since new SDL_HINT_IME_IMPLEMENTED_UI
+  values has a more suitable default for our case case.
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]

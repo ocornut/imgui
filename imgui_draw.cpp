@@ -1,4 +1,4 @@
-// dear imgui, v1.90.9 WIP
+// dear imgui, v1.90.9
 // (drawing and font code)
 
 /*
