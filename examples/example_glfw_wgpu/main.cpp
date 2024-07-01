@@ -17,13 +17,15 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/html5_webgpu.h>
-#else
-#include <webgpu/webgpu_glfw.h>
 #endif
 
 #include <GLFW/glfw3.h>
 #include <webgpu/webgpu.h>
-#include <webgpu/webgpu_cpp.h>
+#include <glfw3webgpu.h>
+
+#ifdef WEBGPU_BACKEND_WGPU
+#include <webgpu/wgpu.h> // for wgpuDevicePoll
+#endif
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -35,13 +37,13 @@ static WGPUInstance      wgpu_instance = nullptr;
 static WGPUDevice        wgpu_device = nullptr;
 static WGPUSurface       wgpu_surface = nullptr;
 static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
-static WGPUSwapChain     wgpu_swap_chain = nullptr;
-static int               wgpu_swap_chain_width = 1280;
-static int               wgpu_swap_chain_height = 720;
+static int               wgpu_surface_width = 1280;
+static int               wgpu_surface_height = 720;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow* window);
-static void CreateSwapChain(int width, int height);
+static void ConfigureSurface(int width, int height);
+static WGPUTextureView GetCurrentSurfaceTextureView();
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -72,7 +74,7 @@ int main(int, char**)
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(wgpu_swap_chain_width, wgpu_swap_chain_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(wgpu_surface_width, wgpu_surface_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (window == nullptr)
         return 1;
 
@@ -84,7 +86,7 @@ int main(int, char**)
         glfwTerminate();
         return 1;
     }
-    CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
+    ConfigureSurface(wgpu_surface_width, wgpu_surface_height);
     glfwShowWindow(window);
 
     // Setup Dear ImGui context
@@ -152,13 +154,23 @@ int main(int, char**)
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
+        // Poll WebGPU events
+#if defined(WEBGPU_BACKEND_DAWN)
+        // Tick needs to be called in Dawn to display validation errors
+        wgpuDeviceTick(wgpu_device);
+#elif defined(WEBGPU_BACKEND_WGPU)
+        wgpuDevicePoll(wgpu_device, false, nullptr);
+#elif defined(__EMSCRIPTEN__)
+        // Nothing to do
+#endif
+
         // React to changes in screen size
         int width, height;
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
-        if (width != wgpu_swap_chain_width || height != wgpu_swap_chain_height)
+        if (width != wgpu_surface_width || height != wgpu_surface_height)
         {
             ImGui_ImplWGPU_InvalidateDeviceObjects();
-            CreateSwapChain(width, height);
+            ConfigureSurface(width, height);
             ImGui_ImplWGPU_CreateDeviceObjects();
         }
 
@@ -207,17 +219,14 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
 
-#ifndef __EMSCRIPTEN__
-        // Tick needs to be called in Dawn to display validation errors
-        wgpuDeviceTick(wgpu_device);
-#endif
-
         WGPURenderPassColorAttachment color_attachments = {};
+#ifndef WEBGPU_BACKEND_WGPU // not supported yet by wgpu-native
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
         color_attachments.loadOp = WGPULoadOp_Clear;
         color_attachments.storeOp = WGPUStoreOp_Store;
         color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-        color_attachments.view = wgpuSwapChainGetCurrentTextureView(wgpu_swap_chain);
+        color_attachments.view = GetCurrentSurfaceTextureView();
 
         WGPURenderPassDescriptor render_pass_desc = {};
         render_pass_desc.colorAttachmentCount = 1;
@@ -237,7 +246,7 @@ int main(int, char**)
         wgpuQueueSubmit(queue, 1, &cmd_buffer);
 
 #ifndef __EMSCRIPTEN__
-        wgpuSwapChainPresent(wgpu_swap_chain);
+        wgpuSurfacePresent(wgpu_surface);
 #endif
 
         wgpuTextureViewRelease(color_attachments.view);
@@ -292,54 +301,64 @@ static WGPUDevice RequestDevice(WGPUAdapter& adapter)
 
 static bool InitWGPU(GLFWwindow* window)
 {
-    wgpu::Instance instance = wgpuCreateInstance(nullptr);
+    WGPUInstance instance = wgpuCreateInstance(nullptr);
 
 #ifdef __EMSCRIPTEN__
+    WGPUAdapter adapter = nullptr;
     wgpu_device = emscripten_webgpu_get_device();
-    if (!wgpu_device)
-        return false;
 #else
-    WGPUAdapter adapter = RequestAdapter(instance.Get());
+    WGPUAdapter adapter = RequestAdapter(instance);
     if (!adapter)
         return false;
     wgpu_device = RequestDevice(adapter);
+    wgpuAdapterRelease(adapter);
 #endif
-
-#ifdef __EMSCRIPTEN__
-    wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
-    html_surface_desc.selector = "#canvas";
-    wgpu::SurfaceDescriptor surface_desc = {};
-    surface_desc.nextInChain = &html_surface_desc;
-    wgpu::Surface surface = instance.CreateSurface(&surface_desc);
-
-    wgpu::Adapter adapter = {};
-    wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
-#else
-    wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
-    if (!surface)
+    if (!wgpu_device)
         return false;
-    wgpu_preferred_fmt = WGPUTextureFormat_BGRA8Unorm;
-#endif
 
-    wgpu_instance = instance.MoveToCHandle();
-    wgpu_surface = surface.MoveToCHandle();
+    wgpu_surface = glfwGetWGPUSurface(instance, window);
+    if (!wgpu_surface)
+        return false;
+    wgpu_preferred_fmt = wgpuSurfaceGetPreferredFormat(wgpu_surface, adapter);
 
     wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
 
+    wgpuInstanceRelease(instance);
     return true;
 }
 
-static void CreateSwapChain(int width, int height)
+static void ConfigureSurface(int width, int height)
 {
-    if (wgpu_swap_chain)
-        wgpuSwapChainRelease(wgpu_swap_chain);
-    wgpu_swap_chain_width = width;
-    wgpu_swap_chain_height = height;
-    WGPUSwapChainDescriptor swap_chain_desc = {};
-    swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
-    swap_chain_desc.format = wgpu_preferred_fmt;
-    swap_chain_desc.width = width;
-    swap_chain_desc.height = height;
-    swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
-    wgpu_swap_chain = wgpuDeviceCreateSwapChain(wgpu_device, wgpu_surface, &swap_chain_desc);
+    wgpu_surface_width = width;
+    wgpu_surface_height = height;
+    WGPUSurfaceConfiguration surface_config = {};
+    surface_config.device = wgpu_device;
+    surface_config.usage = WGPUTextureUsage_RenderAttachment;
+    surface_config.format = wgpu_preferred_fmt;
+    surface_config.width = width;
+    surface_config.height = height;
+    surface_config.viewFormatCount = 0;
+    surface_config.viewFormats = nullptr;
+    surface_config.presentMode = WGPUPresentMode_Fifo;
+    surface_config.alphaMode = WGPUCompositeAlphaMode_Auto;
+    wgpuSurfaceConfigure(wgpu_surface, &surface_config);
+}
+
+static WGPUTextureView GetCurrentSurfaceTextureView() {
+    WGPUSurfaceTexture surfaceTexture;
+    wgpuSurfaceGetCurrentTexture(wgpu_surface, &surfaceTexture);
+    if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+        return nullptr;
+    }
+    WGPUTextureViewDescriptor viewDescriptor;
+    viewDescriptor.nextInChain = nullptr;
+    viewDescriptor.label = "Surface texture view";
+    viewDescriptor.format = wgpuTextureGetFormat(surfaceTexture.texture);
+    viewDescriptor.dimension = WGPUTextureViewDimension_2D;
+    viewDescriptor.baseMipLevel = 0;
+    viewDescriptor.mipLevelCount = 1;
+    viewDescriptor.baseArrayLayer = 0;
+    viewDescriptor.arrayLayerCount = 1;
+    viewDescriptor.aspect = WGPUTextureAspect_All;
+    return wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
 }

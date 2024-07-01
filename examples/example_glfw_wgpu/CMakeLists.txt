@@ -26,40 +26,9 @@ set(CMAKE_CXX_STANDARD 17) # Dawn requires C++17
 set(IMGUI_DIR ../../)
 
 # Libraries
-if(EMSCRIPTEN)
-  set(LIBRARIES glfw)
-  add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
-else()
-  # Dawn wgpu desktop
-  set(DAWN_FETCH_DEPENDENCIES ON)
-  set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
-  if (NOT IMGUI_DAWN_DIR)
-    message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
-  endif()
-
-  option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
-
-  # Dawn builds many things by default - disable things we don't need
-  option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)
-  option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" OFF)
-  option(TINT_BUILD_DOCS "Build documentation" OFF)
-  option(TINT_BUILD_TESTS "Build tests" OFF)
-  if (NOT APPLE)
-    option(TINT_BUILD_MSL_WRITER "Build the MSL output writer" OFF)
-  endif()
-  if(WIN32)
-    option(TINT_BUILD_SPV_READER "Build the SPIR-V input reader" OFF)
-    option(TINT_BUILD_WGSL_READER "Build the WGSL input reader" ON)
-    option(TINT_BUILD_GLSL_WRITER "Build the GLSL output writer" OFF)
-    option(TINT_BUILD_GLSL_VALIDATOR "Build the GLSL output validator" OFF)
-    option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" OFF)
-    option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
-  endif()
-
-  add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
-
-  set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
-endif()
+include(FetchGLFW3WebGPU.cmake)
+include(FetchWgpuNative.cmake)
+include(FetchGLFW.cmake)
 
 add_executable(example_glfw_wgpu
   main.cpp
@@ -73,15 +42,26 @@ add_executable(example_glfw_wgpu
   ${IMGUI_DIR}/imgui_tables.cpp
   ${IMGUI_DIR}/imgui_widgets.cpp
 )
-target_include_directories(example_glfw_wgpu PUBLIC
+target_include_directories(example_glfw_wgpu PRIVATE
   ${IMGUI_DIR}
   ${IMGUI_DIR}/backends
 )
 
-target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
+target_link_libraries(example_glfw_wgpu PRIVATE
+  webgpu
+  glfw
+  glfw3webgpu
+)
+
+target_copy_webgpu_binaries(example_glfw_wgpu)
 
 # Emscripten settings
 if(EMSCRIPTEN)
+  target_compile_options(example_glfw_wgpu PRIVATE
+    -sDISABLE_EXCEPTION_CATCHING=1
+    -DIMGUI_DISABLE_FILE_FUNCTIONS=1
+  )
+
   target_link_options(example_glfw_wgpu PRIVATE
     "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"
