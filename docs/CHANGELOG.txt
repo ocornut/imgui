@@ -95,6 +95,7 @@ Other changes:
   has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) [@mlauss2]
 - Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
 - Backends: SDL3: Update for SDL_StartTextInput()/SDL_StopTextInput() API changes. (#7735)
+- Backends: SDLRenderer3: Update for SDL_RenderGeometryRaw() API changes. (SDL#9009).
 - Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
   [@martin-ejdestig]
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
