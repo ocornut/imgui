@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+
 
 -----------------------------------------------------------------------
  VERSION 1.90.9 (Released 2024-07-01)
