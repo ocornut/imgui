@@ -41,6 +41,12 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- IO, IME: renamed platform IME hook and added explicit context for consistency and future-proofness.
+    - old: io.SetPlatformImeDataFn(ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+    - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+  It is expected that for a vast majority of users this is automatically set by core
+  library and/or platform backend so it won't have any effect.
+
 Other changes:
 
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
@@ -51,6 +57,7 @@ Other changes:
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+- Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
 
 
 -----------------------------------------------------------------------
