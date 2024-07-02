@@ -168,6 +168,7 @@ static ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scanc
         case SDL_SCANCODE_KP_PLUS: return ImGuiKey_KeypadAdd;
         case SDL_SCANCODE_KP_ENTER: return ImGuiKey_KeypadEnter;
         case SDL_SCANCODE_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        default: break;
     }
     switch (keycode)
     {
@@ -273,6 +274,7 @@ static ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scanc
         case SDLK_F24: return ImGuiKey_F24;
         case SDLK_AC_BACK: return ImGuiKey_AppBack;
         case SDLK_AC_FORWARD: return ImGuiKey_AppForward;
+        default: break;
     }
     return ImGuiKey_None;
 }
