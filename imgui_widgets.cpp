@@ -1,4 +1,4 @@
-// dear imgui, v1.90.8 WIP
+// dear imgui, v1.91.0 WIP
 // (widgets code)
 
 /*
@@ -488,7 +488,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
 
     // Default only reacts to left mouse button
     if ((flags & ImGuiButtonFlags_MouseButtonMask_) == 0)
-        flags |= ImGuiButtonFlags_MouseButtonDefault_;
+        flags |= ImGuiButtonFlags_MouseButtonLeft;
 
     // Default behavior requires click + release inside bounding box
     if ((flags & ImGuiButtonFlags_PressedOnMask_) == 0)
@@ -1132,7 +1132,8 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImVec2 pos = window->DC.CursorPos;
     const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, id))
+    const bool is_visible = ItemAdd(total_bb, id);
+    if (!is_visible)
     {
         IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
         return false;
@@ -1147,27 +1148,29 @@ bool ImGui::Checkbox(const char* label, bool* v)
     }
 
     const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
-    RenderNavHighlight(total_bb, id);
-    RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
-    ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
-    bool mixed_value = (g.LastItemData.InFlags & ImGuiItemFlags_MixedValue) != 0;
-    if (mixed_value)
+    const bool mixed_value = (g.LastItemData.InFlags & ImGuiItemFlags_MixedValue) != 0;
+    if (is_visible)
     {
-        // Undocumented tristate/mixed/indeterminate checkbox (#2644)
-        // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-        ImVec2 pad(ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)), ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)));
-        window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+        RenderNavHighlight(total_bb, id);
+        RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+        ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+        if (mixed_value)
+        {
+            // Undocumented tristate/mixed/indeterminate checkbox (#2644)
+            // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
+            ImVec2 pad(ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)), ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)));
+            window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+        }
+        else if (*v)
+        {
+            const float pad = ImMax(1.0f, IM_TRUNC(square_sz / 6.0f));
+            RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
+        }
     }
-    else if (*v)
-    {
-        const float pad = ImMax(1.0f, IM_TRUNC(square_sz / 6.0f));
-        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
-    }
-
-    ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+    const ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
     if (g.LogEnabled)
         LogRenderedText(&label_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
-    if (label_size.x > 0.0f)
+    if (is_visible && label_size.x > 0.0f)
         RenderText(label_pos, label);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
@@ -2141,17 +2144,24 @@ void ImGui::DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const
 
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: This is _not_ a full expression evaluator. We should probably add one and replace this dumb mess..
-bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format)
+bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format, void* p_data_when_empty)
 {
+    // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
+    const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
+    ImGuiDataTypeStorage data_backup;
+    memcpy(&data_backup, p_data, type_info->Size);
+
     while (ImCharIsBlankA(*buf))
         buf++;
     if (!buf[0])
+    {
+        if (p_data_when_empty != NULL)
+        {
+            memcpy(p_data, p_data_when_empty, type_info->Size);
+            return memcmp(&data_backup, p_data, type_info->Size) != 0;
+        }
         return false;
-
-    // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
-    const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
-    ImGuiDataTypeTempStorage data_backup;
-    memcpy(&data_backup, p_data, type_info->Size);
+    }
 
     // Sanitize format
     // - For float/double we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in, so force them into %f and %lf
@@ -2298,12 +2308,13 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 {
     ImGuiContext& g = *GImGui;
     const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
-    const bool is_clamped = (v_min < v_max);
+    const bool is_bounded = (v_min < v_max);
+    const bool is_wrapped = is_bounded && (flags & ImGuiSliderFlags_WrapAround);
     const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
     const bool is_floating_point = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
 
     // Default tweak speed
-    if (v_speed == 0.0f && is_clamped && (v_max - v_min < FLT_MAX))
+    if (v_speed == 0.0f && is_bounded && (v_max - v_min < FLT_MAX))
         v_speed = (float)((v_max - v_min) * g.DragSpeedDefaultRatio);
 
     // Inputs accumulates into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
@@ -2337,8 +2348,8 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 
     // Clear current value on activation
     // Avoid altering values and clamping when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300.
-    bool is_just_activated = g.ActiveIdIsJustActivated;
-    bool is_already_past_limits_and_pushing_outward = is_clamped && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
+    const bool is_just_activated = g.ActiveIdIsJustActivated;
+    const bool is_already_past_limits_and_pushing_outward = is_bounded && !is_wrapped && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
     if (is_just_activated || is_already_past_limits_and_pushing_outward)
     {
         g.DragCurrentAccum = 0.0f;
@@ -2396,13 +2407,24 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     if (v_cur == (TYPE)-0)
         v_cur = (TYPE)0;
 
-    // Clamp values (+ handle overflow/wrap-around for integer types)
-    if (*v != v_cur && is_clamped)
+    if (*v != v_cur && is_bounded)
     {
-        if (v_cur < v_min || (v_cur > *v && adjust_delta < 0.0f && !is_floating_point))
-            v_cur = v_min;
-        if (v_cur > v_max || (v_cur < *v && adjust_delta > 0.0f && !is_floating_point))
-            v_cur = v_max;
+        if (is_wrapped)
+        {
+            // Wrap values
+            if (v_cur < v_min)
+                v_cur += v_max - v_min + (is_floating_point ? 0 : 1);
+            if (v_cur > v_max)
+                v_cur -= v_max - v_min + (is_floating_point ? 0 : 1);
+        }
+        else
+        {
+            // Clamp values + handle overflow/wrap-around for integer types.
+            if (v_cur < v_min || (v_cur > *v && adjust_delta < 0.0f && !is_floating_point))
+                v_cur = v_min;
+            if (v_cur > v_max || (v_cur < *v && adjust_delta > 0.0f && !is_floating_point))
+                v_cur = v_max;
+        }
     }
 
     // Apply result
@@ -2415,7 +2437,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     // Read imgui.cpp "API BREAKING CHANGES" section for 1.78 if you hit this assert.
-    IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flags! Has the 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
+    IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flags! Has the legacy 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
 
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
@@ -3008,7 +3030,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
     // Read imgui.cpp "API BREAKING CHANGES" section for 1.78 if you hit this assert.
-    IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flag!  Has the 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
+    IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flags! Has the legacy 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
+    IM_ASSERT((flags & ImGuiSliderFlags_WrapAround) == 0); // Not supported by SliderXXX(), only by DragXXX()
 
     switch (data_type)
     {
@@ -3471,11 +3494,11 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     {
         // Backup old value
         size_t data_type_size = type_info->Size;
-        ImGuiDataTypeTempStorage data_backup;
+        ImGuiDataTypeStorage data_backup;
         memcpy(&data_backup, p_data, data_type_size);
 
         // Apply new value (or operations) then clamp
-        DataTypeApplyFromText(data_buf, data_type, p_data, format);
+        DataTypeApplyFromText(data_buf, data_type, p_data, format, NULL);
         if (p_clamp_min || p_clamp_max)
         {
             if (p_clamp_min && p_clamp_max && DataTypeCompare(data_type, p_clamp_min, p_clamp_max) > 0)
@@ -3489,6 +3512,13 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
             MarkItemEdited(id);
     }
     return value_changed;
+}
+
+void ImGui::SetNextItemRefVal(ImGuiDataType data_type, void* p_data)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasRefVal;
+    memcpy(&g.NextItemData.RefVal, p_data, DataTypeGetInfo(data_type)->Size);
 }
 
 // Note: p_data, p_step, p_step_fast are _pointers_ to a memory address holding the data. For an Input widget, p_step and p_step_fast are optional.
@@ -3505,8 +3535,13 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
 
+    void* p_data_default = (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasRefVal) ? &g.NextItemData.RefVal : &g.DataTypeZeroValue;
+
     char buf[64];
-    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, p_data, format);
+    if ((flags & ImGuiInputTextFlags_DisplayEmptyRefVal) && DataTypeCompare(data_type, p_data, p_data_default) == 0)
+        buf[0] = 0;
+    else
+        DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, p_data, format);
 
     flags |= ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_NoMarkEdited; // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
     flags |= (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
@@ -3515,7 +3550,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if (p_step == NULL)
     {
         if (InputText(label, buf, IM_ARRAYSIZE(buf), flags))
-            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format);
+            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
     }
     else
     {
@@ -3525,7 +3560,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         PushID(label);
         SetNextItemWidth(ImMax(1.0f, CalcItemWidth() - (button_size + style.ItemInnerSpacing.x) * 2));
         if (InputText("", buf, IM_ARRAYSIZE(buf), flags)) // PushId(label) + "" gives us the expected ID from outside point of view
-            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format);
+            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Inputable);
 
         // Step buttons
@@ -6497,7 +6532,7 @@ void ImGui::SetNextItemOpen(bool is_open, ImGuiCond cond)
         return;
     g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasOpen;
     g.NextItemData.OpenVal = is_open;
-    g.NextItemData.OpenCond = cond ? cond : ImGuiCond_Always;
+    g.NextItemData.OpenCond = (ImU8)(cond ? cond : ImGuiCond_Always);
 }
 
 // CollapsingHeader returns true when opened but do not indent nor push into the ID stack (because of the ImGuiTreeNodeFlags_NoTreePushOnOpen flag).
@@ -7902,7 +7937,9 @@ bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
     tab_bar->ID = id;
     tab_bar->SeparatorMinX = tab_bar->BarRect.Min.x - IM_TRUNC(window->WindowPadding.x * 0.5f);
     tab_bar->SeparatorMaxX = tab_bar->BarRect.Max.x + IM_TRUNC(window->WindowPadding.x * 0.5f);
-    return BeginTabBarEx(tab_bar, tab_bar_bb, flags | ImGuiTabBarFlags_IsFocused);
+    //if (g.NavWindow && IsWindowChildOf(g.NavWindow, window, false, false))
+    flags |= ImGuiTabBarFlags_IsFocused;
+    return BeginTabBarEx(tab_bar, tab_bar_bb, flags);
 }
 
 bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImGuiTabBarFlags flags)
@@ -7956,7 +7993,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
 
     // Draw separator
     // (it would be misleading to draw this in EndTabBar() suggesting that it may be drawn over tabs, as tab bar are appendable)
-    const ImU32 col = GetColorU32((flags & ImGuiTabBarFlags_IsFocused) ? ImGuiCol_TabActive : ImGuiCol_TabUnfocusedActive);
+    const ImU32 col = GetColorU32((flags & ImGuiTabBarFlags_IsFocused) ? ImGuiCol_TabSelected : ImGuiCol_TabDimmedSelected);
     if (g.Style.TabBarBorderSize > 0.0f)
     {
         const float y = tab_bar->BarRect.Max.y;
@@ -8816,8 +8853,16 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Render tab shape
     ImDrawList* display_draw_list = window->DrawList;
-    const ImU32 tab_col = GetColorU32((held || hovered) ? ImGuiCol_TabHovered : tab_contents_visible ? (tab_bar_focused ? ImGuiCol_TabActive : ImGuiCol_TabUnfocusedActive) : (tab_bar_focused ? ImGuiCol_Tab : ImGuiCol_TabUnfocused));
+    const ImU32 tab_col = GetColorU32((held || hovered) ? ImGuiCol_TabHovered : tab_contents_visible ? (tab_bar_focused ? ImGuiCol_TabSelected : ImGuiCol_TabDimmedSelected) : (tab_bar_focused ? ImGuiCol_Tab : ImGuiCol_TabDimmed));
     TabItemBackground(display_draw_list, bb, flags, tab_col);
+    if (tab_contents_visible && (tab_bar->Flags & ImGuiTabBarFlags_DrawSelectedOverline))
+    {
+        float x_offset = IM_TRUNC(0.4f * style.TabRounding);
+        if (x_offset < 2.0f * g.CurrentDpiScale)
+            x_offset = 0.0f;
+        float y_offset = 1.0f * g.CurrentDpiScale;
+        display_draw_list->AddLine(bb.GetTL() + ImVec2(x_offset, y_offset), bb.GetTR() + ImVec2(-x_offset, y_offset), GetColorU32(tab_bar_focused ? ImGuiCol_TabSelectedOverline : ImGuiCol_TabDimmedSelectedOverline), 2.0f * g.CurrentDpiScale);
+    }
     RenderNavHighlight(bb, id);
 
     // Select with right mouse button. This is so the common idiom for context menu automatically highlight the current widget.

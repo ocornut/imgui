@@ -80,6 +80,7 @@ struct ImGui_ImplOSX_Data
     KeyEventResponder*          KeyEventResponder;
     NSTextInputContext*         InputContext;
     id                          Monitor;
+    NSWindow*                   Window;
 
     ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
 };
@@ -133,7 +134,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 - (void)updateImePosWithView:(NSView *)view
 {
-    NSWindow *window = view.window;
+    NSWindow* window = view.window;
     if (!window)
         return;
     NSRect contentRect = [window contentRectForFrameRect:window.frame];
@@ -402,6 +403,9 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Observer = [ImGuiObserver new];
+    bd->Window = view.window ?: NSApp.orderedWindows.firstObject;
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
 
     // Load cursors. Some of them are undocumented.
     bd->MouseCursorHidden = false;

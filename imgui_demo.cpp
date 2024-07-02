@@ -1,4 +1,4 @@
-// dear imgui, v1.90.8 WIP
+// dear imgui, v1.91.0 WIP
 // (demo code)
 
 // Help:
@@ -462,19 +462,26 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", &io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
             ImGui::SameLine(); HelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
             ImGui::CheckboxFlags("io.ConfigFlags: NoMouse",              &io.ConfigFlags, ImGuiConfigFlags_NoMouse);
+            ImGui::SameLine(); HelpMarker("Instruct dear imgui to disable mouse inputs and interactions.");
+
+            // The "NoMouse" option can get us stuck with a disabled mouse! Let's provide an alternative way to fix it:
             if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)
             {
-                // The "NoMouse" option can get us stuck with a disabled mouse! Let's provide an alternative way to fix it:
                 if (fmodf((float)ImGui::GetTime(), 0.40f) < 0.20f)
                 {
                     ImGui::SameLine();
                     ImGui::Text("<<PRESS SPACE TO DISABLE>>");
                 }
-                if (ImGui::IsKeyPressed(ImGuiKey_Space))
+                // Prevent both being checked
+                if (ImGui::IsKeyPressed(ImGuiKey_Space) || (io.ConfigFlags & ImGuiConfigFlags_NoKeyboard))
                     io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
             }
-            ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", &io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
+
+            ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange",  &io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
             ImGui::SameLine(); HelpMarker("Instruct backend to not alter mouse cursor shape and visibility.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NoKeyboard", &io.ConfigFlags, ImGuiConfigFlags_NoKeyboard);
+            ImGui::SameLine(); HelpMarker("Instruct dear imgui to disable keyboard inputs and interactions.");
+
             ImGui::Checkbox("io.ConfigInputTrickleEventQueue", &io.ConfigInputTrickleEventQueue);
             ImGui::SameLine(); HelpMarker("Enable input queue trickling: some types of events submitted during the same frame (e.g. button down + up) will be spread over multiple frames, improving interactions with low framerates.");
             ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
@@ -713,18 +720,19 @@ static void ShowDemoWindowWidgets()
 
         {
             IMGUI_DEMO_MARKER("Widgets/Basic/DragInt, DragFloat");
-            static int i1 = 50, i2 = 42;
+            static int i1 = 50, i2 = 42, i3 = 128;
             ImGui::DragInt("drag int", &i1, 1);
             ImGui::SameLine(); HelpMarker(
                 "Click and drag to edit value.\n"
                 "Hold SHIFT/ALT for faster/slower edit.\n"
                 "Double-click or CTRL+click to input value.");
-
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragInt("drag int wrap 100..200", &i3, 1, 100, 200, "%d", ImGuiSliderFlags_WrapAround);
 
             static float f1 = 1.00f, f2 = 0.0067f;
             ImGui::DragFloat("drag float", &f1, 0.005f);
             ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
+            //ImGui::DragFloat("drag wrap -1..1", &f3, 0.005f, -1.0f, 1.0f, NULL, ImGuiSliderFlags_WrapAround);
         }
 
         ImGui::SeparatorText("Sliders");
@@ -881,12 +889,11 @@ static void ShowDemoWindowWidgets()
 
         // Using ImGuiHoveredFlags_ForTooltip will pull flags from 'style.HoverFlagsForTooltipMouse' or 'style.HoverFlagsForTooltipNav',
         // which default value include the ImGuiHoveredFlags_AllowWhenDisabled flag.
-        // As a result, Set
         ImGui::BeginDisabled();
         ImGui::Button("Disabled item", sz);
-        ImGui::EndDisabled();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
             ImGui::SetTooltip("I am a a tooltip for a disabled item.");
+        ImGui::EndDisabled();
 
         ImGui::TreePop();
     }
@@ -1730,6 +1737,7 @@ static void ShowDemoWindowWidgets()
             ImGui::CheckboxFlags("ImGuiTabBarFlags_AutoSelectNewTabs", &tab_bar_flags, ImGuiTabBarFlags_AutoSelectNewTabs);
             ImGui::CheckboxFlags("ImGuiTabBarFlags_TabListPopupButton", &tab_bar_flags, ImGuiTabBarFlags_TabListPopupButton);
             ImGui::CheckboxFlags("ImGuiTabBarFlags_NoCloseWithMiddleMouseButton", &tab_bar_flags, ImGuiTabBarFlags_NoCloseWithMiddleMouseButton);
+            ImGui::CheckboxFlags("ImGuiTabBarFlags_DrawSelectedOverline", &tab_bar_flags, ImGuiTabBarFlags_DrawSelectedOverline);
             if ((tab_bar_flags & ImGuiTabBarFlags_FittingPolicyMask_) == 0)
                 tab_bar_flags |= ImGuiTabBarFlags_FittingPolicyDefault_;
             if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyResizeDown", &tab_bar_flags, ImGuiTabBarFlags_FittingPolicyResizeDown))
@@ -1738,11 +1746,13 @@ static void ShowDemoWindowWidgets()
                 tab_bar_flags &= ~(ImGuiTabBarFlags_FittingPolicyMask_ ^ ImGuiTabBarFlags_FittingPolicyScroll);
 
             // Tab Bar
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Opened:");
             const char* names[4] = { "Artichoke", "Beetroot", "Celery", "Daikon" };
             static bool opened[4] = { true, true, true, true }; // Persistent user state
             for (int n = 0; n < IM_ARRAYSIZE(opened); n++)
             {
-                if (n > 0) { ImGui::SameLine(); }
+                ImGui::SameLine();
                 ImGui::Checkbox(names[n], &opened[n]);
             }
 
@@ -2135,6 +2145,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", &flags, ImGuiSliderFlags_NoInput);
         ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_WrapAround", &flags, ImGuiSliderFlags_WrapAround);
+        ImGui::SameLine(); HelpMarker("Enable wrapping around from max to min and from min to max (only supported by DragXXX() functions)");
 
         // Drags
         static float drag_f = 0.5f;
@@ -2149,9 +2161,10 @@ static void ShowDemoWindowWidgets()
         // Sliders
         static float slider_f = 0.5f;
         static int slider_i = 50;
+        const ImGuiSliderFlags flags_for_sliders = flags & ~ImGuiSliderFlags_WrapAround;
         ImGui::Text("Underlying float value: %f", slider_f);
-        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags);
-        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags);
+        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags_for_sliders);
+        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags_for_sliders);
 
         ImGui::TreePop();
     }
@@ -2273,20 +2286,24 @@ static void ShowDemoWindowWidgets()
 
         IMGUI_DEMO_MARKER("Widgets/Data Types/Inputs");
         static bool inputs_step = true;
+        static ImGuiInputTextFlags flags = ImGuiInputTextFlags_None;
         ImGui::SeparatorText("Inputs");
         ImGui::Checkbox("Show step buttons", &inputs_step);
-        ImGui::InputScalar("input s8",      ImGuiDataType_S8,     &s8_v,  inputs_step ? &s8_one  : NULL, NULL, "%d");
-        ImGui::InputScalar("input u8",      ImGuiDataType_U8,     &u8_v,  inputs_step ? &u8_one  : NULL, NULL, "%u");
-        ImGui::InputScalar("input s16",     ImGuiDataType_S16,    &s16_v, inputs_step ? &s16_one : NULL, NULL, "%d");
-        ImGui::InputScalar("input u16",     ImGuiDataType_U16,    &u16_v, inputs_step ? &u16_one : NULL, NULL, "%u");
-        ImGui::InputScalar("input s32",     ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%d");
-        ImGui::InputScalar("input s32 hex", ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%04X");
-        ImGui::InputScalar("input u32",     ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%u");
-        ImGui::InputScalar("input u32 hex", ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%08X");
-        ImGui::InputScalar("input s64",     ImGuiDataType_S64,    &s64_v, inputs_step ? &s64_one : NULL);
-        ImGui::InputScalar("input u64",     ImGuiDataType_U64,    &u64_v, inputs_step ? &u64_one : NULL);
-        ImGui::InputScalar("input float",   ImGuiDataType_Float,  &f32_v, inputs_step ? &f32_one : NULL);
-        ImGui::InputScalar("input double",  ImGuiDataType_Double, &f64_v, inputs_step ? &f64_one : NULL);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", &flags, ImGuiInputTextFlags_ReadOnly);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_ParseEmptyRefVal", &flags, ImGuiInputTextFlags_ParseEmptyRefVal);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_DisplayEmptyRefVal", &flags, ImGuiInputTextFlags_DisplayEmptyRefVal);
+        ImGui::InputScalar("input s8",      ImGuiDataType_S8,     &s8_v,  inputs_step ? &s8_one  : NULL, NULL, "%d", flags);
+        ImGui::InputScalar("input u8",      ImGuiDataType_U8,     &u8_v,  inputs_step ? &u8_one  : NULL, NULL, "%u", flags);
+        ImGui::InputScalar("input s16",     ImGuiDataType_S16,    &s16_v, inputs_step ? &s16_one : NULL, NULL, "%d", flags);
+        ImGui::InputScalar("input u16",     ImGuiDataType_U16,    &u16_v, inputs_step ? &u16_one : NULL, NULL, "%u", flags);
+        ImGui::InputScalar("input s32",     ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%d", flags);
+        ImGui::InputScalar("input s32 hex", ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%04X", flags);
+        ImGui::InputScalar("input u32",     ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%u", flags);
+        ImGui::InputScalar("input u32 hex", ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%08X", flags);
+        ImGui::InputScalar("input s64",     ImGuiDataType_S64,    &s64_v, inputs_step ? &s64_one : NULL, NULL, NULL, flags);
+        ImGui::InputScalar("input u64",     ImGuiDataType_U64,    &u64_v, inputs_step ? &u64_one : NULL, NULL, NULL, flags);
+        ImGui::InputScalar("input float",   ImGuiDataType_Float,  &f32_v, inputs_step ? &f32_one : NULL, NULL, NULL, flags);
+        ImGui::InputScalar("input double",  ImGuiDataType_Double, &f64_v, inputs_step ? &f64_one : NULL, NULL, NULL, flags);
 
         ImGui::TreePop();
     }
@@ -3875,7 +3892,7 @@ static void ShowDemoWindowPopups()
             static int item = 1;
             static float color[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
             ImGui::Combo("Combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
-            ImGui::ColorEdit4("color", color);
+            ImGui::ColorEdit4("Color", color);
 
             if (ImGui::Button("Add another modal.."))
                 ImGui::OpenPopup("Stacked 2");
@@ -3887,6 +3904,7 @@ static void ShowDemoWindowPopups()
             if (ImGui::BeginPopupModal("Stacked 2", &unused_open))
             {
                 ImGui::Text("Hello from Stacked The Second!");
+                ImGui::ColorEdit4("Color", color); // Allow opening another nested popup
                 if (ImGui::Button("Close"))
                     ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
@@ -6836,7 +6854,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "Right-click to open edit options menu.");
 
             ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10), ImVec2(FLT_MAX, FLT_MAX));
-            ImGui::BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Border, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
+            ImGui::BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
             ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
             for (int i = 0; i < ImGuiCol_COUNT; i++)
             {
@@ -6917,10 +6935,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos());
             if (show_samples && ImGui::BeginTooltip())
             {
-                ImGui::TextUnformatted("(R = radius, N = number of segments)");
+                ImGui::TextUnformatted("(R = radius, N = approx number of segments)");
                 ImGui::Spacing();
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                const float min_widget_width = ImGui::CalcTextSize("N: MMM\nR: MMM").x;
+                const float min_widget_width = ImGui::CalcTextSize("R: MMM\nN: MMM").x;
                 for (int n = 0; n < 8; n++)
                 {
                     const float RAD_MIN = 5.0f;
@@ -6929,6 +6947,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
                     ImGui::BeginGroup();
 
+                    // N is not always exact here due to how PathArcTo() function work internally
                     ImGui::Text("R: %.f\nN: %d", rad, draw_list->_CalcCircleAutoSegmentCount(rad));
 
                     const float canvas_width = IM_MAX(min_widget_width, rad * 2.0f);
@@ -7236,7 +7255,7 @@ struct ExampleAppConsole
 
         // Reserve enough left-over height for 1 separator + 1 input text
         const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NavFlattened))
+        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_HorizontalScrollbar))
         {
             if (ImGui::BeginPopupContextWindow())
             {
@@ -8612,6 +8631,7 @@ void ShowExampleAppDocuments(bool* p_open)
     // Submit Tab Bar and Tabs
     {
         ImGuiTabBarFlags tab_bar_flags = (opt_fitting_flags) | (opt_reorderable ? ImGuiTabBarFlags_Reorderable : 0);
+        tab_bar_flags |= ImGuiTabBarFlags_DrawSelectedOverline;
         if (ImGui::BeginTabBar("##tabs", tab_bar_flags))
         {
             if (opt_reorderable)
