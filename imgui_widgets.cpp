@@ -422,6 +422,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - RadioButton()
 // - ProgressBar()
 // - Bullet()
+// - Hyperlink()
 //-------------------------------------------------------------------------
 
 // The ButtonBehavior() function is key to many interactions and used by many/most widgets.
@@ -1368,6 +1369,76 @@ void ImGui::Bullet()
     ImU32 text_col = GetColorU32(ImGuiCol_Text);
     RenderBullet(window->DrawList, bb.Min + ImVec2(style.FramePadding.x + g.FontSize * 0.5f, line_height * 0.5f), text_col);
     SameLine(0, style.FramePadding.x * 2.0f);
+}
+
+// This is provided as a convenience for being an often requested feature.
+// FIXME-STYLE: we delayed adding as there is a larger plan to revamp the styling system.
+// Because of this we currently don't provide many styling options for this widget
+// (e.g. hovered/active colors are automatically inferred from a single color).
+bool ImGui::TextLink(const char* label)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiID id = window->GetID(label);
+    const char* label_end = FindRenderedTextEnd(label);
+
+    ImVec2 pos = window->DC.CursorPos;
+    ImVec2 size = CalcTextSize(label, label_end, true);
+    ImRect bb(pos, pos + size);
+    ItemSize(size, 0.0f);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+    RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_None);
+
+    ImVec4 text_colf = g.Style.Colors[ImGuiCol_TextLink];
+    ImVec4 line_colf = text_colf;
+    {
+        // FIXME-STYLE: Read comments above. This widget is NOT written in the same style as some earlier widgets,
+        // as we are currently experimenting/planning a different styling system.
+        float h, s, v;
+        ColorConvertRGBtoHSV(text_colf.x, text_colf.y, text_colf.z, h, s, v);
+        if (held || hovered)
+        {
+            v = ImSaturate(v + (held ? 0.4f : 0.3f));
+            h = ImFmod(h + 0.02f, 1.0f);
+        }
+        ColorConvertHSVtoRGB(h, s, v, text_colf.x, text_colf.y, text_colf.z);
+        v = ImSaturate(v - 0.20f);
+        ColorConvertHSVtoRGB(h, s, v, line_colf.x, line_colf.y, line_colf.z);
+    }
+
+    float line_y = bb.Max.y + ImFloor(g.Font->Descent * g.FontScale * 0.20f);
+    window->DrawList->AddLine(ImVec2(bb.Min.x, line_y), ImVec2(bb.Max.x, line_y), GetColorU32(line_colf)); // FIXME-TEXT: Underline mode.
+
+    PushStyleColor(ImGuiCol_Text, GetColorU32(text_colf));
+    RenderText(bb.Min, label, label_end);
+    PopStyleColor();
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
+    return pressed;
+}
+
+void ImGui::TextLinkOpenURL(const char* label, const char* url)
+{
+    ImGuiContext& g = *GImGui;
+    if (url == NULL)
+        url = label;
+    if (TextLink(label))
+        if (g.IO.PlatformOpenInShellFn != NULL)
+            g.IO.PlatformOpenInShellFn(&g, url);
+    SetItemTooltip("%s", url); // It is more reassuring for user to _always_ display URL when we same as label
+    if (BeginPopupContextItem())
+    {
+        if (MenuItem(LocalizeGetMsg(ImGuiLocKey_CopyLink)))
+            SetClipboardText(url);
+        EndPopup();
+    }
 }
 
 //-------------------------------------------------------------------------

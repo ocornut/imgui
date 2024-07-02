@@ -52,6 +52,7 @@ Breaking changes:
 
 Other changes:
 
+- Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
   Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
