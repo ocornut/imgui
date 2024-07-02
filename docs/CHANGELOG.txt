@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
+  Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
+  Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
