@@ -14343,6 +14343,10 @@ static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text
 
 //-----------------------------------------------------------------------------
 
+#if defined(__APPLE__) && defined(TARGET_OS_IPHONE) && !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
+#define IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+#endif
+
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
 #include <shellapi.h>   // ShellExecuteA()
 #ifdef _MSC_VER
