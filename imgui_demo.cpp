@@ -540,8 +540,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
         IMGUI_DEMO_MARKER("Configuration/Style");
         if (ImGui::TreeNode("Style"))
         {
+            ImGui::Checkbox("Style Editor", &show_tool_style_editor);
+            ImGui::SameLine();
             HelpMarker("The same contents can be accessed in 'Tools->Style Editor' or by calling the ShowStyleEditor() function.");
-            ImGui::ShowStyleEditor();
             ImGui::TreePop();
             ImGui::Spacing();
         }
