@@ -3505,7 +3505,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         const ImFont* font = draw_list->_Data->Font;
         const float font_size = draw_list->_Data->FontSize;
-        const float font_scale = font_size / font->FontSize;
+        const float font_scale = draw_list->_Data->FontScale;
         const char* text_end_ellipsis = NULL;
         const float ellipsis_width = font->EllipsisWidth * font_scale;
 
@@ -3903,6 +3903,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
+        g.FontScale = g.FontSize / g.Font->FontSize;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -7507,12 +7508,14 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.Font = font;
     g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
+    g.FontScale = g.FontSize / g.FontSize;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
     g.DrawListSharedData.TexUvWhitePixel = atlas->TexUvWhitePixel;
     g.DrawListSharedData.TexUvLines = atlas->TexUvLines;
     g.DrawListSharedData.Font = g.Font;
     g.DrawListSharedData.FontSize = g.FontSize;
+    g.DrawListSharedData.FontScale = g.FontScale;
 }
 
 void ImGui::PushFont(ImFont* font)
@@ -8057,6 +8060,7 @@ void ImGui::SetWindowFontScale(float scale)
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
     g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
+    g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
 }
 
 void ImGui::PushFocusScope(ImGuiID id)
