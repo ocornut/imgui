@@ -14352,7 +14352,7 @@ static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
     ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
 }
-#elif !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS))
+#elif !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
 static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
 #if __APPLE__
