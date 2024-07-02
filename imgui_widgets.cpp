@@ -1461,10 +1461,10 @@ void ImGui::TextLinkOpenURL(ImStrv label, ImStrv url)
     if (pressed && g.PlatformIO.Platform_OpenInShellFn != NULL)
     {
         ImStrv url_zt;
-        ImFormatStringToTempBuffer(&url_zt, "%.*s", (int)url.length(), url.Begin);
+        ImFormatStringToTempBuffer(&url_zt, "%.*s", url.length(), url.Begin);
         g.PlatformIO.Platform_OpenInShellFn(&g, url_zt.Begin);
     }
-    SetItemTooltip(LocalizeGetMsg(ImGuiLocKey_OpenLink_s), (int)url.length(), url.Begin); // It is more reassuring for user to _always_ display URL when we same as label
+    SetItemTooltip(LocalizeGetMsg(ImGuiLocKey_OpenLink_s), url.length(), url.Begin); // It is more reassuring for user to _always_ display URL when we same as label
     if (BeginPopupContextItem())
     {
         if (MenuItem(LocalizeGetMsg(ImGuiLocKey_CopyLink)))
@@ -4211,7 +4211,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, ImStrv new_text)
         return;
 
     const bool is_resizable = (Flags & ImGuiInputTextFlags_CallbackResize) != 0;
-    const int new_text_len = (int)new_text.length();
+    const int new_text_len = new_text.length();
     if (new_text_len + BufTextLen >= BufSize)
     {
         if (!is_resizable)
@@ -4901,7 +4901,7 @@ bool ImGui::InputTextEx(ImStrv label, ImStrv hint, char* buf, int buf_size, cons
             if (ImStrv clipboard = GetClipboardText())
             {
                 // Filter pasted buffer
-                const int clipboard_len = (int)clipboard.length();
+                const int clipboard_len = clipboard.length();
                 char* clipboard_filtered = (char*)IM_ALLOC(clipboard_len + 1);
                 int clipboard_filtered_len = 0;
                 for (const char* s = clipboard.Begin; *s; )
@@ -8505,17 +8505,17 @@ void ImGui::PlotHistogram(ImStrv label, float (*values_getter)(void* data, int i
 
 void ImGui::Value(ImStrv prefix, bool b)
 {
-    Text("%.*s: %s", (int)prefix.length(), prefix.Begin, (b ? "true" : "false"));
+    Text("%.*s: %s", prefix.length(), prefix.Begin, (b ? "true" : "false"));
 }
 
 void ImGui::Value(ImStrv prefix, int v)
 {
-    Text("%.*s: %d", (int)prefix.length(), prefix.Begin, v);
+    Text("%.*s: %d", prefix.length(), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStrv prefix, unsigned int v)
 {
-    Text("%.*s: %d", (int)prefix.length(), prefix.Begin, v);
+    Text("%.*s: %d", prefix.length(), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStrv prefix, float v, ImStrv float_format)
@@ -8523,12 +8523,12 @@ void ImGui::Value(ImStrv prefix, float v, ImStrv float_format)
     if (float_format)
     {
         char fmt[64];
-        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%.*s: %.*s", (int)float_format.length(), float_format.Begin);
-        Text(fmt, (int)prefix.length(), prefix.Begin, v);
+        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%.*s: %.*s", float_format.length(), float_format.Begin);
+        Text(fmt, prefix.length(), prefix.Begin, v);
     }
     else
     {
-        Text("%.*s: %.3f", (int)prefix.length(), prefix.Begin, v);
+        Text("%.*s: %.3f", prefix.length(), prefix.Begin, v);
     }
 }
 
