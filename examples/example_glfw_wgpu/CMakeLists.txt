@@ -27,6 +27,12 @@ set(IMGUI_DIR ../../)
 
 # Libraries
 if(EMSCRIPTEN)
+  if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "3.1.57")
+    set(IMGUI_EMSCRIPTEN_GLFW3 "--use-port=contrib.glfw3" CACHE STRING "Choose between --use-port=contrib.glfw3 and -sUSE_GLFW=3 for GLFW implementation (default to --use-port=contrib.glfw3)")
+  else()
+    # cannot use contrib.glfw3 prior to 3.1.57
+    set(IMGUI_EMSCRIPTEN_GLFW3 "-sUSE_GLFW=3" CACHE STRING "Use -sUSE_GLFW=3 for GLFW implementation" FORCE)
+  endif()
   set(LIBRARIES glfw)
   add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
 else()
@@ -82,9 +88,16 @@ target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
 
 # Emscripten settings
 if(EMSCRIPTEN)
+  if("${IMGUI_EMSCRIPTEN_GLFW3}" STREQUAL "--use-port=contrib.glfw3")
+    target_compile_options(example_glfw_wgpu PUBLIC
+        "${IMGUI_EMSCRIPTEN_GLFW3}"
+        "-DEMSCRIPTEN_USE_PORT_CONTRIB_GLFW3" # unnecessary beyond emscripten 3.1.59
+    )
+  endif()
+  message(STATUS "Using ${IMGUI_EMSCRIPTEN_GLFW3} GLFW implementation")
   target_link_options(example_glfw_wgpu PRIVATE
     "-sUSE_WEBGPU=1"
-    "-sUSE_GLFW=3"
+    "${IMGUI_EMSCRIPTEN_GLFW3}"
     "-sWASM=1"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=0"
