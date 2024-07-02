@@ -1,4 +1,4 @@
-// dear imgui, v1.90.9
+// dear imgui, v1.91.0 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -787,6 +787,7 @@ struct IMGUI_API ImDrawListSharedData
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
+    float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
@@ -1992,6 +1993,7 @@ enum ImGuiLocKey : int
     ImGuiLocKey_WindowingMainMenuBar,
     ImGuiLocKey_WindowingPopup,
     ImGuiLocKey_WindowingUntitled,
+    ImGuiLocKey_CopyLink,
     ImGuiLocKey_DockingHideTabBar,
     ImGuiLocKey_DockingHoldShiftToDock,
     ImGuiLocKey_DockingDragToUndockOrMoveNode,
@@ -2122,6 +2124,7 @@ struct ImGuiContext
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
     float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
     float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
+    float                   FontScale;                          // == FontSize / Font->FontSize
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
     double                  Time;
@@ -2402,7 +2405,7 @@ struct ImGuiContext
 
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame
-    ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data (when changing we will call io.SetPlatformImeDataFn
+    ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data. When changed we call the io.PlatformSetImeDataFn() handler.
     ImGuiID                 PlatformImeViewport;
 
     // Extensions
@@ -2477,7 +2480,7 @@ struct ImGuiContext
         ConfigFlagsCurrFrame = ConfigFlagsLastFrame = ImGuiConfigFlags_None;
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
         Font = NULL;
-        FontSize = FontBaseSize = CurrentDpiScale = 0.0f;
+        FontSize = FontBaseSize = FontScale = CurrentDpiScale = 0.0f;
         IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
         Time = 0.0f;
         FrameCount = 0;
@@ -3825,12 +3828,8 @@ namespace ImGui
     IMGUI_API void          GcCompactTransientWindowBuffers(ImGuiWindow* window);
     IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
-    // Debug Log
-    IMGUI_API void          DebugLog(const char* fmt, ...) IM_FMTARGS(1);
-    IMGUI_API void          DebugLogV(const char* fmt, va_list args) IM_FMTLIST(1);
-    IMGUI_API void          DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size); // size >= 0 : alloc, size = -1 : free
-
     // Debug Tools
+    IMGUI_API void          DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size); // size >= 0 : alloc, size = -1 : free
     IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
     IMGUI_API void          ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
     IMGUI_API void          ErrorCheckUsingSetCursorPosToExtendParentBoundaries();

@@ -36,6 +36,35 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.0 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+- IO, IME: renamed platform IME hook and added explicit context for consistency and future-proofness.
+    - old: io.SetPlatformImeDataFn(ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+    - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+  It is expected that for a vast majority of users this is automatically set by core
+  library and/or platform backend so it won't have any effect.
+- Commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
+- Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
+    - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
+
+Other changes:
+
+- Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
+- IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
+  Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
+  Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
+  Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
+  other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
+- Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+- Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
+
+
+-----------------------------------------------------------------------
  VERSION 1.90.9 (Released 2024-07-01)
 -----------------------------------------------------------------------
 
