@@ -168,6 +168,7 @@ static ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scanc
         case SDL_SCANCODE_KP_PLUS: return ImGuiKey_KeypadAdd;
         case SDL_SCANCODE_KP_ENTER: return ImGuiKey_KeypadEnter;
         case SDL_SCANCODE_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        default: break;
     }
     switch (keycode)
     {
