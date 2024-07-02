@@ -62,6 +62,7 @@ Other changes:
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
 - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
+- Backends: GLFW,SDL2: Added ioPlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
 
 
 -----------------------------------------------------------------------
