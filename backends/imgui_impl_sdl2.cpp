@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
 //  2024-07-02: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() renaming in main library.
 //  2024-02-14: Inputs: Handle gamepad disconnection. Added ImGui_ImplSDL2_SetGamepadMode().
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -97,8 +98,11 @@
 // (the multi-viewports feature requires SDL features supported from SDL 2.0.4+. SDL 2.0.5+ is highly recommended)
 #include <SDL.h>
 #include <SDL_syswm.h>
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <TargetConditionals.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten/em_js.h>
 #endif
 
 #if SDL_VERSION_ATLEAST(2,0,4) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)
@@ -449,6 +453,10 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     return false;
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(void, ImGui_ImplSDL2_EmscriptenOpenURL, (char const* url), { url = url ? UTF8ToString(url) : null; if (url) window.open(url, '_blank'); });
+#endif
+
 static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void* sdl_gl_context)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -492,6 +500,9 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = nullptr;
     io.PlatformSetImeDataFn = ImGui_ImplSDL2_PlatformSetImeData;
+#ifdef __EMSCRIPTEN__
+    io.PlatformOpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplSDL2_EmscriptenOpenURL(url); return true; };
+#endif
 
     // Gamepad handling
     bd->GamepadMode = ImGui_ImplSDL2_GamepadMode_AutoFirst;

@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
 //  2023-12-19: Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to register canvas selector and auto-resize GLFW window.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys.
 //  2023-07-18: Inputs: Revert ignoring mouse data on GLFW_CURSOR_DISABLED as it can be used differently. User may set ImGuiConfigFLags_NoMouse if desired. (#5625, #6609)
@@ -569,6 +570,10 @@ void ImGui_ImplGlfw_SetCallbacksChainForAllWindows(bool chain_for_all_windows)
     bd->CallbacksChainForAllWindows = chain_for_all_windows;
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(void, ImGui_ImplGlfw_EmscriptenOpenURL, (char const* url), { url = url ? UTF8ToString(url) : null; if (url) window.open(url, '_blank'); });
+#endif
+
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -596,6 +601,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
     io.ClipboardUserData = bd->Window;
+#ifdef __EMSCRIPTEN__
+    io.PlatformOpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplGlfw_EmscriptenOpenURL(url); return true; };
+#endif
 
     // Create mouse cursors
     // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,

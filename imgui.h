@@ -28,7 +28,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.0 WIP"
-#define IMGUI_VERSION_NUM   19092
+#define IMGUI_VERSION_NUM   19093
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -2337,7 +2337,7 @@ struct ImGuiIO
 
     // Optional: Open link/folder/file in OS Shell
     // (default to use ShellExecuteA() on Windows, system() on Linux/Mac)
-    void        (*PlatformOpenInShellFn)(ImGuiContext* ctx, const char* path);
+    bool        (*PlatformOpenInShellFn)(ImGuiContext* ctx, const char* path);
     void*       PlatformOpenInShellUserData;
 
     // Optional: Notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME on Windows)

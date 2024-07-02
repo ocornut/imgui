@@ -1145,7 +1145,7 @@ static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSetti
 static const char*      GetClipboardTextFn_DefaultImpl(void* user_data_ctx);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text);
 static void             PlatformSetImeDataFn_DefaultImpl(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
-static void             PlatformOpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
+static bool             PlatformOpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
 
 namespace ImGui
 {
@@ -19982,12 +19982,12 @@ static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text
 #ifdef _MSC_VER
 #pragma comment(lib, "shell32")
 #endif
-static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
-    ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
+    return (INT_PTR)::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
 #elif !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
-static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
 #if __APPLE__
     const char* open_executable = "open";
@@ -19996,10 +19996,10 @@ static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 #endif
     ImGuiTextBuffer buf;
     buf.appendf("%s \"%s\"", open_executable, path);
-    system(buf.c_str());
+    return system(buf.c_str()) != -1;
 }
 #else
-static void PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) {}
+static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
 #endif // Default shell handlers
 
 //-----------------------------------------------------------------------------
