@@ -324,7 +324,7 @@ struct ImStrv
     ImStrv()                            { Begin = End = NULL; }
     ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
     ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b ? b + strlen(b) : NULL; }
-    inline size_t length() const        { return (size_t)(End - Begin); }
+    inline int length() const           { return (int)(End - Begin); }
     inline bool empty() const           { return Begin == End; }    // == "" or == NULL
     inline operator bool() const        { return Begin != NULL; }   // return true when valid ("" is valid, NULL construction is not)
 #ifdef IM_STRV_CLASS_EXTRA
@@ -2710,7 +2710,7 @@ struct ImGuiPayload
 
     ImGuiPayload()  { Clear(); }
     void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
-    bool IsDataType(ImStrv type) const      { size_t len = type.length(); return DataFrameCount != -1 && memcmp(DataType, type.Begin, len) == 0 && DataType[len] == 0; }
+    bool IsDataType(ImStrv type) const      { size_t len = (size_t)type.length(); return DataFrameCount != -1 && memcmp(DataType, type.Begin, len) == 0 && DataType[len] == 0; }
     bool IsPreview() const                  { return Preview; }
     bool IsDelivery() const                 { return Delivery; }
 };

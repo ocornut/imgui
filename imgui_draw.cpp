@@ -3147,7 +3147,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(ImStrv filename, float size_pixels, cons
         const char* p;
         for (p = filename.End; p > filename.Begin && p[-1] != '/' && p[-1] != '\\'; p--) {}
         filename.Begin = p;
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%.*s", (int)filename.length(), filename.Begin);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%.*s", filename.length(), filename.Begin);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -3181,7 +3181,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(ImStrv compressed_ttf_data_base85, float size_pixels, const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
 {
-    int compressed_ttf_size = (((int)compressed_ttf_data_base85.length() + 4) / 5) * 4;
+    int compressed_ttf_size = ((compressed_ttf_data_base85.length() + 4) / 5) * 4;
     void* compressed_ttf = IM_ALLOC((size_t)compressed_ttf_size);
     Decode85(compressed_ttf_data_base85, (unsigned char*)compressed_ttf);
     ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);

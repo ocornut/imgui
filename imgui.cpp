@@ -2048,11 +2048,11 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 
 int ImStrcmp(ImStrv str1, ImStrv str2)
 {
-    size_t str1_len = str1.length();
-    size_t str2_len = str2.length();
+    int str1_len = str1.length();
+    int str2_len = str2.length();
     if (str1_len != str2_len)
-        return (int)str1_len - (int)str2_len;
-    return memcmp(str1.Begin, str2.Begin, str1_len);
+        return str1_len - str2_len;
+    return memcmp(str1.Begin, str2.Begin, (size_t)str1_len);
 }
 
 // Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
@@ -2083,7 +2083,7 @@ void ImStrncpy(char* dst, ImStrv src, size_t count)
 {
     // Even though src does not necessarily include \0 terminator it is ok to include it. ImStrncpy above does not
     // actually include that in a copy operation and inserts zero terminator manually.
-    ImStrncpy(dst, src.Begin, ImMin(count, src.length() + 1));
+    ImStrncpy(dst, src.Begin, ImMin(count, (size_t)src.length() + 1));
 }
 
 char* ImStrdup(const char* str)
@@ -2095,7 +2095,7 @@ char* ImStrdup(const char* str)
 
 char* ImStrdup(ImStrv str)
 {
-    size_t len = str.length();
+    size_t len = (size_t)str.length();
     void* buf = IM_ALLOC(len + 1);
     *((char*)buf + len) = 0;                // str may not contain \0, it must be inserted manually.
     if (len > 0)
@@ -2106,7 +2106,7 @@ char* ImStrdup(ImStrv str)
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, ImStrv src)
 {
     size_t dst_buf_size = p_dst_size ? *p_dst_size : ImStrlen(dst) + 1;
-    size_t src_size = src.length() + 1;
+    size_t src_size = (size_t)src.length() + 1;
     if (dst_buf_size < src_size)
     {
         IM_FREE(dst);
@@ -2186,7 +2186,7 @@ const char* ImStrstr(ImStrv haystack, ImStrv needle)
 {
     const char un0 = (char)*needle.Begin;
     const char* p = haystack.Begin;
-    const size_t needle_len_m1 = needle.length() - 1;
+    const size_t needle_len_m1 = (size_t)needle.length() - 1;
     while (true)
     {
         p = (const char*)memchr(p, un0, haystack.End - p);
@@ -2410,7 +2410,7 @@ ImGuiID ImHashStr(ImStrv str, ImGuiID seed)
 #endif
     if (str.End != NULL)
     {
-        size_t data_size = str.length();
+        size_t data_size = (size_t)str.length();
         while (data_size-- != 0)
         {
             unsigned char c = *data++;
@@ -2462,8 +2462,8 @@ ImFileHandle ImFileOpen(ImStrv filename, ImStrv mode)
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && (defined(__MINGW32__) || (!defined(__CYGWIN__) && !defined(__GNUC__)))
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
-    const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length() + 1, NULL, 0);
-    const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length() + 1, NULL, 0);
+    const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, filename.length() + 1, NULL, 0);
+    const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, mode.length() + 1, NULL, 0);
 
     // Use stack buffer if possible, otherwise heap buffer. Sizes include zero terminator.
     // We don't rely on current ImGuiContext as this is implied to be a helper function which doesn't depend on it (see #7314).
@@ -2473,8 +2473,8 @@ ImFileHandle ImFileOpen(ImStrv filename, ImStrv mode)
         local_temp_heap.resize(filename_wsize + mode_wsize);
     wchar_t* filename_wbuf = local_temp_heap.Data ? local_temp_heap.Data : local_temp_stack;
     wchar_t* mode_wbuf = filename_wbuf + filename_wsize;
-    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), filename_wbuf, filename_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), mode_wbuf, mode_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, filename.length(), filename_wbuf, filename_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, mode.length(), mode_wbuf, mode_wsize);
     filename_wbuf[filename_wsize - 1] = mode_wbuf[mode_wsize - 1] = 0;
     return ::_wfopen(filename_wbuf, mode_wbuf);
 #else
@@ -3078,7 +3078,7 @@ char ImGuiTextBuffer::EmptyString[1] = { 0 };
 
 void ImGuiTextBuffer::append(ImStrv str)
 {
-    int len = (int)str.length();
+    const int len = str.length();
     if (len == 0)
         return;
 
@@ -4484,7 +4484,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, ImStrv name) : DrawListInst(NULL)
     memset(this, 0, sizeof(*this));
     Ctx = ctx;
     Name = ImStrdup(name);
-    NameBufLen = (int)name.length() + 1;
+    NameBufLen = name.length() + 1;
     ID = ImHashStr(name);
     IDStack.push_back(ID);
     MoveId = GetID("#MOVE");
@@ -5041,7 +5041,7 @@ void ImGui::SetClipboardText(ImStrv text)
     ImGuiContext& g = *GImGui;
     if (g.PlatformIO.Platform_SetClipboardTextFn != NULL)
     {
-        int len = (int)text.length();
+        int len = text.length();
         char* text_p = (char*)IM_ALLOC(len + 1);
         if (len > 0)
             memcpy(text_p, text.Begin, len);
@@ -6377,10 +6377,10 @@ bool ImGui::BeginChildEx(ImStrv name, ImGuiID id, const ImVec2& size_arg, ImGuiC
     // e.g. "ParentName###ParentIdentifier/ChildName###ChildIdentifier" would get hashed incorrectly by ImHashStr(), trailing _%08X somehow fixes it.
     ImStrv temp_window_name;
     /*if (name && parent_window->IDStack.back() == parent_window->ID)
-        ImFormatStringToTempBuffer(&temp_window_name, "%s/%.*s", parent_window->Name, (int)name.length(), name.Begin); // May omit ID if in root of ID stack
+        ImFormatStringToTempBuffer(&temp_window_name, "%s/%.*s", parent_window->Name, name.length(), name.Begin); // May omit ID if in root of ID stack
     else*/
     if (name)
-        ImFormatStringToTempBuffer(&temp_window_name, "%s/%.*s_%08X", parent_window->Name, (int)name.length(), name.Begin, id);
+        ImFormatStringToTempBuffer(&temp_window_name, "%s/%.*s_%08X", parent_window->Name, name.length(), name.Begin, id);
     else
         ImFormatStringToTempBuffer(&temp_window_name, "%s/%08X", parent_window->Name, id);
 
@@ -12272,7 +12272,7 @@ bool ImGui::BeginPopupMenuEx(ImGuiID id, ImStrv label, ImGuiWindowFlags extra_wi
 
     char name[128];
     IM_ASSERT(extra_window_flags & ImGuiWindowFlags_ChildMenu);
-    ImFormatString(name, IM_ARRAYSIZE(name), "%.*s###Menu_%02d", (int)label.length(), label.Begin, g.BeginMenuDepth); // Recycle windows based on depth
+    ImFormatString(name, IM_ARRAYSIZE(name), "%.*s###Menu_%02d", label.length(), label.Begin, g.BeginMenuDepth); // Recycle windows based on depth
     bool is_open = Begin(name, NULL, extra_window_flags | ImGuiWindowFlags_Popup);
     if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
         EndPopup();
@@ -15232,7 +15232,7 @@ void ImGui::LoadIniSettingsFromMemory(ImStrv ini_data)
 
     // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
-    const int ini_size = (int)ini_data.length();
+    const int ini_size = ini_data.length();
     g.SettingsIniData.Buf.resize((int)ini_size + 1);
     char* const buf = g.SettingsIniData.Buf.Data;
     char* const buf_end = buf + ini_size;
@@ -15329,7 +15329,7 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(ImStrv name)
     // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
     if (g.IO.ConfigDebugIniSettings == false)
         name.Begin = ImHashSkipUncontributingPrefix(name);
-    const size_t name_len = name.length();
+    const size_t name_len = (size_t)name.length();
     if (name_len == 0)
     {
         IM_ASSERT(false && "Name must not be empty.");
@@ -15956,7 +15956,7 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
 // Helper tool to diagnose between text encoding issues and font loading issues. Pass your UTF-8 string and verify that there are correct.
 void ImGui::DebugTextEncoding(ImStrv str)
 {
-    Text("Text: \"%.*s\"", (int)str.length(), str.Begin);
+    Text("Text: \"%.*s\"", str.length(), str.Begin);
     if (!BeginTable("##DebugTextEncoding", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable))
         return;
     TableSetupColumn("Offset");
