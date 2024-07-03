@@ -6390,6 +6390,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
 // - TreeNodeV()
 // - TreeNodeEx()
 // - TreeNodeExV()
+// - TreeNodeStoreStackData() [Internal]
 // - TreeNodeBehavior() [Internal]
 // - TreePush()
 // - TreePop()
@@ -6548,17 +6549,27 @@ bool ImGui::TreeNodeUpdateNextOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 
 // Store ImGuiTreeNodeStackData for just submitted node.
 // Currently only supports 32 level deep and we are fine with (1 << Depth) overflowing into a zero, easy to increase.
-static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags)
+static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
     g.TreeNodeStack.resize(g.TreeNodeStack.Size + 1);
-    ImGuiTreeNodeStackData* tree_node_data = &g.TreeNodeStack.back();
+    ImGuiTreeNodeStackData* tree_node_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
     tree_node_data->ID = g.LastItemData.ID;
     tree_node_data->TreeFlags = flags;
     tree_node_data->ItemFlags = g.LastItemData.ItemFlags;
     tree_node_data->NavRect = g.LastItemData.NavRect;
+    if (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes))
+    {
+        tree_node_data->DrawLinesCol = ImGui::GetColorU32(ImGuiCol_TreeLines);
+        tree_node_data->DrawLinesX1 = x1;
+        tree_node_data->DrawLinesY2 = -FLT_MAX;
+    }
+    else
+    {
+        tree_node_data->DrawLinesCol = 0;
+    }    
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
 
@@ -6634,18 +6645,28 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
     // It will become tempting to enable ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default or move it to ImGuiStyle.
     bool store_tree_node_stack_data = false;
-    if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+    if ((flags & ImGuiTreeNodeFlags_DrawLinesMask_) == 0)
+        flags |= g.Style.TreeLinesFlags;
+    const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y);// && (g.Style.TreeLinesSize > 0.0f);
+    if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
     {
-        if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && is_open && !g.NavIdIsAlive)
+        if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !g.NavIdIsAlive)
             if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 store_tree_node_stack_data = true;
+        if (draw_tree_lines)
+            store_tree_node_stack_data = true;
     }
 
     const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
     if (!is_visible)
     {
-        if (store_tree_node_stack_data && is_open)
-            TreeNodeStoreStackData(flags); // Call before TreePushOverrideID()
+        if (draw_tree_lines && (flags & ImGuiTreeNodeFlags_DrawLinesToNodes) && (window->DC.TreeHasStackDataDepthMask & (1 << window->DC.TreeDepth)))
+        {
+            ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+            parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
+        }
+        if (is_open && store_tree_node_stack_data)
+            TreeNodeStoreStackData(flags, text_pos.x - text_offset_x); // Call before TreePushOverrideID()
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushOverrideID(id);
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
@@ -6807,6 +6828,18 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 LogSetNextTextDecoration(">", NULL);
         }
 
+        if (draw_tree_lines && (window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))))
+        {
+            // Draw horizontal line from our parent node
+            ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+            float x1 = parent_data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
+            float x2 = text_pos.x - text_offset_x;
+            float y = text_pos.y + ImTrunc(g.FontSize * 0.5f);
+            parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
+            if (x1 < x2)
+                window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), parent_data->DrawLinesCol, g.Style.TreeLinesSize);
+        }
+
         if (span_all_columns && !span_all_columns_label)
             TablePopBackgroundChannel();
 
@@ -6821,7 +6854,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
 
     if (store_tree_node_stack_data && is_open)
-        TreeNodeStoreStackData(flags); // Call before TreePushOverrideID()
+        TreeNodeStoreStackData(flags, text_pos.x - text_offset_x); // Call before TreePushOverrideID()
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
         TreePushOverrideID(id); // Could use TreePush(label) but this avoid computing twice
 
@@ -6865,13 +6898,25 @@ void ImGui::TreePop()
 
     if (window->DC.TreeHasStackDataDepthMask & tree_depth_mask) // Only set during request
     {
-        ImGuiTreeNodeStackData* data = &g.TreeNodeStack.back();
+        const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
         IM_ASSERT(data->ID == window->IDStack.back());
         if (data->TreeFlags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere)
         {
             // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsBackHere is enabled)
             if (g.NavIdIsAlive && g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 NavMoveRequestResolveWithPastTreeNode(&g.NavMoveResultLocal, data);
+        }
+        if (data->DrawLinesCol != 0 && window->DC.CursorPos.y >= window->ClipRect.Min.y)
+        {
+            // Draw vertical line of the hierarchy
+            float y1 = ImMax(data->NavRect.Max.y, window->ClipRect.Min.y);
+            float y2 = (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesToNodes) ? data->DrawLinesY2 : ImTrunc(window->DC.CursorPos.y - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
+            y2 = ImMin(y2, window->ClipRect.Max.y);
+            if (y1 < y2)
+            {
+                float x = data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
+                window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), data->DrawLinesCol, g.Style.TreeLinesSize);
+            }
         }
         g.TreeNodeStack.pop_back();
         window->DC.TreeHasStackDataDepthMask &= ~tree_depth_mask;
