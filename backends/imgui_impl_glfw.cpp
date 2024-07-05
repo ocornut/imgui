@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
 //  2024-06-10: Replaced ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback (now deprecated) with ImGui_ImplGlfw_InstallEmscriptenCallbacks
 //  2024-06-02: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (requires emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
 //  2023-12-19: Emscripten: Added ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to register canvas selector and auto-resize GLFW window.
@@ -152,7 +153,7 @@ struct ImGui_ImplGlfw_Data
     GLFWcharfun             PrevUserCallbackChar;
     GLFWmonitorfun          PrevUserCallbackMonitor;
 #ifdef _WIN32
-    WNDPROC                 GlfwWndProc;
+    WNDPROC                 PrevWndProc;
 #endif
 
     ImGui_ImplGlfw_Data()   { memset((void*)this, 0, sizeof(*this)); }
@@ -504,7 +505,7 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
         ImGui::GetIO().AddMouseSourceEvent(GetMouseSourceFromMessageExtraInfo());
         break;
     }
-    return ::CallWindowProcW(bd->GlfwWndProc, hWnd, msg, wParam, lParam);
+    return ::CallWindowProcW(bd->PrevWndProc, hWnd, msg, wParam, lParam);
 }
 #endif
 
@@ -560,6 +561,10 @@ void ImGui_ImplGlfw_SetCallbacksChainForAllWindows(bool chain_for_all_windows)
     bd->CallbacksChainForAllWindows = chain_for_all_windows;
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(void, ImGui_ImplGlfw_EmscriptenOpenURL, (char const* url), { url = url ? UTF8ToString(url) : null; if (url) window.open(url, '_blank'); });
+#endif
+
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -580,6 +585,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
     io.ClipboardUserData = bd->Window;
+#ifdef __EMSCRIPTEN__
+    io.PlatformOpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplGlfw_EmscriptenOpenURL(url); return true; };
+#endif
 
     // Create mouse cursors
     // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
@@ -613,6 +621,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Set platform dependent data in viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandle = (void*)bd->Window;
 #ifdef _WIN32
     main_viewport->PlatformHandleRaw = glfwGetWin32Window(bd->Window);
 #elif defined(__APPLE__)
@@ -623,8 +632,8 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Windows: register a WndProc hook so we can intercept some messages.
 #ifdef _WIN32
-    bd->GlfwWndProc = (WNDPROC)::GetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC);
-    IM_ASSERT(bd->GlfwWndProc != nullptr);
+    bd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC);
+    IM_ASSERT(bd->PrevWndProc != nullptr);
     ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
 #endif
 
@@ -663,11 +672,11 @@ void ImGui_ImplGlfw_Shutdown()
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         glfwDestroyCursor(bd->MouseCursors[cursor_n]);
 
-    // Windows: register a WndProc hook so we can intercept some messages.
+    // Windows: restore our WndProc hook
 #ifdef _WIN32
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->GlfwWndProc);
-    bd->GlfwWndProc = nullptr;
+    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
+    bd->PrevWndProc = nullptr;
 #endif
 
     io.BackendPlatformName = nullptr;

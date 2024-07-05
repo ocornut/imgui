@@ -36,22 +36,158 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.90.8 WIP (In Progress)
+ VERSION 1.91.0 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
+- IO, IME: renamed platform IME hook and added explicit context for consistency and future-proofness.
+    - old: io.SetPlatformImeDataFn(ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+    - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+  It is expected that for a vast majority of users this is automatically set by core
+  library and/or platform backend so it won't have any effect.
+- Commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
+- Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
+    - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
+
 Other changes:
 
+- Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
+- IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
+  Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
+  Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
+  Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
+  other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
+- Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+- Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
+- Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
+  [@ypujante, @ocornut]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.90.9 (Released 2024-07-01)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.9
+
+Breaking changes:
+
+- Removed old nested structure: renaming ImGuiStorage::ImGuiStoragePair type to
+  ImGuiStoragePair (simpler for many languages). No significant nested type left.
+- BeginChild: added ImGuiChildFlags_NavFlattened as a replacement for the window
+  flag ImGuiWindowFlags_NavFlattened: the feature only ever made sense for
+  BeginChild() calls anyhow. (#7687) [@cfillion]
+   - old: BeginChild("Name", size, 0, ImGuiWindowFlags_NavFlattened);
+   - new: BeginChild("Name", size, ImGuiChildFlags_NavFlattened, 0)
+  Kept inline redirection flag (will obsolete).
+- Style: renamed tab colors for clarity and consistency with other changes: (#261, #351)
+  - ImGuiCol_TabActive          -> ImGuiCol_TabSelected
+  - ImGuiCol_TabUnfocused       -> ImGuiCol_TabDimmed
+  - ImGuiCol_TabUnfocusedActive -> ImGuiCol_TabDimmedSelected
+  Kept inline redirecting enums (will obsolete).
+- IO: io.ClearInputKeys() (first exposed in 1.89.8) doesn't clear mouse data.
+  Newly added io.ClearInputMouse() does. (#4921)
+- Drag and Drop: renamed ImGuiDragDropFlags_SourceAutoExpirePayload to
+  ImGuiDragDropFlags_PayloadAutoExpire. Kept inline redirecting enum (will obsolete). (#1725, #143)
+
+Other changes:
+
+- IO: do not disable io.ConfigWindowsResizeFromEdges (which allow resizing from borders
+  and lower-left corner) when ImGuiBackendFlags_HasMouseCursors is not set by backend.
+  The initial reasoning is that resizing from borders feels better when correct mouse cursor
+  shape change as honored by backends. Keeping this enabling will hopefully increase pressure
+  on third-party backends to set ImGuiBackendFlags_HasMouseCursors and honor changes of
+  ImGui::GetMouseCursor() value. (#1495)
+- IO: do not claim io.WantCaptureMouse=true on the mouse release frame of a button
+  which was pressed over void/underlying app, which is consistent/needed to allow the
+  mouse up event of a drag over void/underlying app to catch release. (#1392) [@Moka42]
+- IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
+- Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
+  tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
+  position could have temporarily be moved around by erroneous padding application. (#7706)
+- TabBar, Style: added ImGuiTabBarFlags_DrawSelectedOverline option to draw an horizontal
+  line over selected tabs to increase visibility. This is used by docking.
+  Added corresponding ImGuiCol_TabSelectedOverline and ImGuiCol_TabDimmedSelectedOverline colors.
+- Tables: added TableGetHoveredColumn() to public API, as an alternative to testing for
+  'TableGetColumnFlags(column) & ImGuiTableColumnFlags_IsHovered' on each column. (#3740)
+- Disabled, Inputs: fixed using Shortcut() or SetNextItemShortcut() within a disabled block
+  bypassing the disabled state. (#7726)
+- Disabled: Reworked 1.90.8 behavior of Begin() not inheriting current BeginDisabled() state,
+  to make it that only tooltip windows are temporarily clearing it. (#211, #7640)
+- Drags: added ImGuiSliderFlags_WrapAround flag for DragInt(), DragFloat() etc. (#7749)
+- Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern sets
+  active id so a multi-frame extern source doesn't interfere with hovered widgets. (#143)
+- Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceExtern does not assume
+  a mouse button being pressed. Facilitate implementing cross-context drag and drop. (#143)
+- Drag and Drop: Added ImGuiDragDropFlags_PayloadNoCrossContext/_PayloadNoCrossProcess flags
+  as metadata to specify that a payload may not be copied outside the context/process by
+  some logic aiming to copy payloads around.
+- Drag and Drop: Fixes an issue when elapsing payload would be based on last payload
+  frame instead of last drag source frame, which makes a difference if not resubmitting
+  payload every frame. (#143)
+- Debug Tools: Metrics/Debugger: Browsing a Storage perform hover lookup on identifier.
+- Viewports: Backported 'void* ImGuiViewport::PlatformHandle' from docking branch for
+  use by backends.
+- imgui_freetype: Fixed divide by zero while handling FT_PIXEL_MODE_BGRA glyphs. (#7267, #3369)
+- Backends: OpenGL2, OpenGL3: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it
+  has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) [@mlauss2]
+- Backends: SDL3: Update for API removal of keysym field in SDL_KeyboardEvent. (#7728)
+- Backends: SDL3: Update for SDL_StartTextInput()/SDL_StopTextInput() API changes. (#7735)
+- Backends: SDL3: Update for SDL_SetTextInputRect() API rename. (#7760, #7754) [@maxortner01]
+- Backends: SDLRenderer3: Update for SDL_RenderGeometryRaw() API changes. (SDL#9009).
+- Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
+  [@martin-ejdestig]
+- Examples: SDL3: Remove use of SDL_HINT_IME_NATIVE_UI since new SDL_HINT_IME_IMPLEMENTED_UI
+  values has a more suitable default for our case case.
+- Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
+  returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
+  [@AndreiNego, @ocornut]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.90.8 (Released 2024-06-06)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.90.8
+
+Breaking changes:
+
+- Reordered various ImGuiInputTextFlags values. This should NOT be breaking unless
+  you are using generated headers that have values not matching the main library.
+- Removed ImGuiButtonFlags_MouseButtonDefault_ = ImGuiButtonFlags_MouseButtonLeft
+  from imgui.h, was mostly unused and misleading.
+
+Other changes:
+
+- Inputs: fixed IsMouseClicked(..., repeat=true); broken in 1.90.7 on 2024/05/22.
+  (due to an internal api parameter swap, repeat wouldn't be honored and
+  ownership would be accidentally checked even though this api is meant to not
+  check ownership). (#7657) [@korenkonder]
 - Windows: fixed altering FramePadding mid-frame not correctly affecting logic
   responsible for honoring io.ConfigWindowsMoveFromTitleBarOnly. (#7576, #899)
 - Scrollbar: made scrolling logic more standard: clicking above or below the
   grab scrolls by one page, holding mouse button repeats scrolling. (#7328, #150)
+- Scrollbar: fixed miscalculation of vertical scrollbar visibility when required
+  solely by the presence of an horizontal scrollbar. (#1574)
+- InputScalar, InputInt, InputFloat: added ImGuiInputTextFlags_ParseEmptyRefVal
+  to parse an empty field as zero-value. (#7305) [@supermerill, @ocornut]
+- InputScalar, InputInt, InputFloat: added ImGuiInputTextFlags_DisplayEmptyRefVal
+  to display a zero-value as empty. (#7305) [@supermerill, @ocornut]
+- Popups: fixed an issue preventing to close a popup opened over a modal by clicking
+  over void (it required clicking over the visible part of the modal). (#7654)
+- Tables: fixed an issue where ideal size reported to parent container wouldn't
+  correctly take account of inner scrollbar, affecting potential auto-resize of
+  parent container. (#7651)
+- Tables: fixed a bug where after disabling the ScrollY flag for a table,
+  previous scrollbar width would be accounted for. (#5920)
 - Combo: simplified Combo() API uses a list clipper (due to its api it wasn't
   previously trivial before we added clipper.IncludeItemByIndex() function).
 - Disabled: nested tooltips or other non-child window within a BeginDisabled()
   block disable the disabled state. (#211, #7640)
 - Misc: made ImGuiDir and ImGuiSortDirection stronger-typed enums.
+- Backends: SDL3: Update for SDL_SYSTEM_CURSOR_xxx api renames. (#7653)
 
 
 -----------------------------------------------------------------------
@@ -775,7 +911,7 @@ Breaking changes:
 
 - IO: Obsoleted io.ClearInputCharacters() (added in 1.47) as it now ambiguous
   and often incorrect/misleading considering the existence of a higher-level
-  input queue. This is automatically cleared by io.ClearInputsKeys(). (#4921)
+  input queue. This is automatically cleared by io.ClearInputKeys(). (#4921)
 - ImDrawData: CmdLists[] array is now owned, changed from 'ImDrawList**' to
   'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
   cannot compare to NULL nor reassign manually anymore.
@@ -813,10 +949,10 @@ Other changes:
   will slightly reduce scrollbar size. Generally we tried to make it that window
   border size has no incidence on layout but this can't work with thick borders. (#2522)
 - IO: Added io.ClearEventsQueue() to clear incoming inputs events. (#4921)
-  May be useful in conjunction with io.ClearInputsKeys() if you need to clear
+  May be useful in conjunction with io.ClearInputKeys() if you need to clear
   both current inputs state and queued events (e.g. when using blocking native
   dialogs such as Windows's ::MessageBox() or ::GetOpenFileName()).
-- IO: Changed io.ClearInputsKeys() specs to also clear current frame character buffer
+- IO: Changed io.ClearInputKeys() specs to also clear current frame character buffer
   (what now obsoleted io.ClearInputCharacters() did), as this is effectively the
   desirable behavior.
 - Misc: Added IMGUI_DISABLE_STB_SPRINTF_IMPLEMENTATION config macro to disable

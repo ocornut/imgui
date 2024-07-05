@@ -639,7 +639,7 @@ The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use `MultiByteToWideChar()` or `ToUnicode()` to retrieve Unicode codepoints from MultiByte characters or keyboard state.
 Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to ImGui::GetMainViewport()->PlatformHandleRaw
-for the default implementation of io.SetPlatformImeDataFn() to set your Microsoft IME position correctly.
+for the default implementation of io.PlatformSetImeDataFn() to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
 

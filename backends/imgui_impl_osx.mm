@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-07-02: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() renaming in main library.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F20 function keys. Stopped mapping F13 into PrintScreen.
 //  2023-04-09: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_Pen.
 //  2023-02-01: Fixed scroll wheel scaling for devices emitting events with hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
@@ -80,6 +81,7 @@ struct ImGui_ImplOSX_Data
     KeyEventResponder*          KeyEventResponder;
     NSTextInputContext*         InputContext;
     id                          Monitor;
+    NSWindow*                   Window;
 
     ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
 };
@@ -133,7 +135,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 - (void)updateImePosWithView:(NSView *)view
 {
-    NSWindow *window = view.window;
+    NSWindow* window = view.window;
     if (!window)
         return;
     NSRect contentRect = [window contentRectForFrameRect:window.frame];
@@ -402,6 +404,9 @@ bool ImGui_ImplOSX_Init(NSView* view)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Observer = [ImGuiObserver new];
+    bd->Window = view.window ?: NSApp.orderedWindows.firstObject;
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)bd->Window;
 
     // Load cursors. Some of them are undocumented.
     bd->MouseCursorHidden = false;
@@ -460,7 +465,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     [view addSubview:bd->KeyEventResponder];
     ImGui_ImplOSX_AddTrackingArea(view);
 
-    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    io.PlatformSetImeDataFn = [](ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
     {
         ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
         if (data->WantVisible)
