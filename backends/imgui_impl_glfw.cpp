@@ -139,7 +139,7 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
-#if EMSCRIPTEN_USE_EMBEDDED_GLFW3
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     const char*             CanvasSelector;
 #endif
 
