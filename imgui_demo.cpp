@@ -177,6 +177,7 @@ Index of this file:
 #define IM_MIN(A, B)            (((A) < (B)) ? (A) : (B))
 #define IM_MAX(A, B)            (((A) >= (B)) ? (A) : (B))
 #define IM_CLAMP(V, MN, MX)     ((V) < (MN) ? (MN) : (V) > (MX) ? (MX) : (V))
+#define IM_LERP(X, Y, A)        ((X) + ((Y) - (X)) * (A))
 
 // Enforce cdecl calling convention for functions called by the standard library,
 // in case compilation settings changed the default to e.g. __vectorcall
@@ -600,6 +601,119 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::PopItemWidth();
     ImGui::End();
 }
+
+//-----------------------------------------------------------------------------
+// Helpers for ShowDemoWindowWidgets, to highlight changes in the status data of items and windows
+#ifndef IMGUI_DEFINE_MATH_OPERATORS_IMPLEMENTED
+// Needed for StatusField<ImVec2>::operator=
+static inline bool operator!=(const ImVec2& lhs, const ImVec2& rhs)  { return lhs.x != rhs.x || lhs.y != rhs.y; }
+#endif
+
+template <typename T>
+struct StatusField
+{
+    T val{};
+    float last_changed{};
+
+    StatusField& operator=(const T& rhs)
+    {
+        if (val != rhs)
+        {
+            val = rhs;
+            last_changed = (float)ImGui::GetTime();
+        }
+        return *this;
+    }
+};
+
+static void StatusDrawBackground(float time, ImVec4 color)
+{
+    static constexpr float delay = 0.5f; // Time in seconds before a values if considered "old"
+    static constexpr float new_alpha = 1.0f; // Alpha multiplier for "new" values
+    static constexpr float old_alpha = 0.25f; // Alpha multiplier for "old" values
+
+    float fade = IM_CLAMP((time + delay - (float)ImGui::GetTime()) / delay, 0.0, 1.0);
+    color.w *= IM_LERP(old_alpha, new_alpha, fade);
+
+    ImVec2 size = ImVec2(ImGui::CalcItemWidth(), ImGui::CalcTextSize("").y);
+    ImVec2 p0 = ImGui::GetCursorScreenPos();
+    ImVec2 p1 = ImVec2(p0.x + size.x, p0.y + size.y);
+    ImGui::GetWindowDrawList()->AddRectFilled(p0, p1, ImGui::ColorConvertFloat4ToU32(color));
+}
+
+static inline void StatusDrawText(const char *fmt, const StatusField<bool> &field, bool bullet = false)
+{
+    StatusDrawBackground(field.last_changed, field.val ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+    if (bullet)
+        ImGui::BulletText(fmt, (int)field.val);
+    else
+        ImGui::Text(fmt, (int)field.val);
+}
+
+static inline void StatusDrawText(const char *fmt, const StatusField<ImVec2> &field)
+{
+    StatusDrawBackground(field.last_changed, ImVec4(0.0f, 0, 1.0f, 1.0f));
+    ImGui::Text(fmt, field.val.x, field.val.y);
+}
+
+struct ItemData
+{
+    StatusField<bool> ret;
+    StatusField<bool> Focused;
+    StatusField<bool> Hovered;
+    StatusField<bool> Hovered_AllowWhenBlockedByPopup;
+    StatusField<bool> Hovered_AllowWhenBlockedByActiveItem;
+    StatusField<bool> Hovered_AllowWhenOverlappedByItem;
+    StatusField<bool> Hovered_AllowWhenOverlappedByWindow;
+    StatusField<bool> Hovered_AllowWhenDisabled;
+    StatusField<bool> Hovered_RectOnly;
+    StatusField<bool> Active;
+    StatusField<bool> Edited;
+    StatusField<bool> Activated;
+    StatusField<bool> Deactivated;
+    StatusField<bool> DeactivatedAfterEdit;
+    StatusField<bool> Visible;
+    StatusField<bool> Clicked;
+    StatusField<bool> ToggledOpen;
+
+    StatusField<ImVec2> RectMin;
+    StatusField<ImVec2> RectMax;
+    StatusField<ImVec2> RectSize;
+
+    StatusField<bool> Hovered_Delay_None;
+    StatusField<bool> Hovered_Delay_Stationary;
+    StatusField<bool> Hovered_Delay_Short;
+    StatusField<bool> Hovered_Delay_Normal;
+    StatusField<bool> Hovered_Delay_Tooltip;
+};
+
+struct WindowFocused
+{
+    StatusField<bool> None;
+    StatusField<bool> ChildWindows;
+    StatusField<bool> ChildWindows_NoPopupHierarchy;
+    StatusField<bool> ChildWindows_RootWindow;
+    StatusField<bool> ChildWindows_RootWindow_NoPopupHierarchy;
+    StatusField<bool> RootWindow;
+    StatusField<bool> RootWindow_NoPopupHierarchy;
+    StatusField<bool> AnyWindow;
+};
+
+struct WindowHovered
+{
+    StatusField<bool> None;
+    StatusField<bool> AllowWhenBlockedByPopup;
+    StatusField<bool> AllowWhenBlockedByActiveItem;
+    StatusField<bool> ChildWindows;
+    StatusField<bool> ChildWindows_NoPopupHierarchy;
+    StatusField<bool> ChildWindows_RootWindow;
+    StatusField<bool> ChildWindows_RootWindow_NoPopupHierarchy;
+    StatusField<bool> RootWindow;
+    StatusField<bool> RootWindow_NoPopupHierarchy;
+    StatusField<bool> ChildWindows_AllowWhenBlockedByPopup;
+    StatusField<bool> AnyWindow;
+    StatusField<bool> Stationary;
+};
 
 static void ShowDemoWindowWidgets()
 {
@@ -2596,66 +2710,65 @@ static void ShowDemoWindowWidgets()
         if (item_type == 14){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::Combo("ITEM: Combo", &current, items, IM_ARRAYSIZE(items)); }
         if (item_type == 15){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
-        bool hovered_delay_none = ImGui::IsItemHovered();
-        bool hovered_delay_stationary = ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary);
-        bool hovered_delay_short = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort);
-        bool hovered_delay_normal = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
-        bool hovered_delay_tooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip); // = Normal + Stationary
-
         // Display the values of IsItemHovered() and other common item state functions.
-        // Note that the ImGuiHoveredFlags_XXX flags can be combined.
-        // Because BulletText is an item itself and that would affect the output of IsItemXXX functions,
-        // we query every state in a single call to avoid storing them and to simplify the code.
-        ImGui::BulletText(
-            "Return value = %d\n"
-            "IsItemFocused() = %d\n"
-            "IsItemHovered() = %d\n"
-            "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
-            "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-            "IsItemHovered(_AllowWhenOverlappedByItem) = %d\n"
-            "IsItemHovered(_AllowWhenOverlappedByWindow) = %d\n"
-            "IsItemHovered(_AllowWhenDisabled) = %d\n"
-            "IsItemHovered(_RectOnly) = %d\n"
-            "IsItemActive() = %d\n"
-            "IsItemEdited() = %d\n"
-            "IsItemActivated() = %d\n"
-            "IsItemDeactivated() = %d\n"
-            "IsItemDeactivatedAfterEdit() = %d\n"
-            "IsItemVisible() = %d\n"
-            "IsItemClicked() = %d\n"
-            "IsItemToggledOpen() = %d\n"
-            "GetItemRectMin() = (%.1f, %.1f)\n"
-            "GetItemRectMax() = (%.1f, %.1f)\n"
-            "GetItemRectSize() = (%.1f, %.1f)",
-            ret,
-            ImGui::IsItemFocused(),
-            ImGui::IsItemHovered(),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByItem),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled),
-            ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
-            ImGui::IsItemActive(),
-            ImGui::IsItemEdited(),
-            ImGui::IsItemActivated(),
-            ImGui::IsItemDeactivated(),
-            ImGui::IsItemDeactivatedAfterEdit(),
-            ImGui::IsItemVisible(),
-            ImGui::IsItemClicked(),
-            ImGui::IsItemToggledOpen(),
-            ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y,
-            ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
-            ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
-        );
-        ImGui::BulletText(
-            "with Hovering Delay or Stationary test:\n"
-            "IsItemHovered() = = %d\n"
-            "IsItemHovered(_Stationary) = %d\n"
-            "IsItemHovered(_DelayShort) = %d\n"
-            "IsItemHovered(_DelayNormal) = %d\n"
-            "IsItemHovered(_Tooltip) = %d",
-            hovered_delay_none, hovered_delay_stationary, hovered_delay_short, hovered_delay_normal, hovered_delay_tooltip);
+        static ItemData item_data;
+        item_data.ret = ret;
+        item_data.Focused = ImGui::IsItemFocused();
+        item_data.Hovered = ImGui::IsItemHovered();
+        item_data.Hovered_AllowWhenBlockedByPopup = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+        item_data.Hovered_AllowWhenBlockedByActiveItem = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+        item_data.Hovered_AllowWhenOverlappedByItem = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByItem);
+        item_data.Hovered_AllowWhenOverlappedByWindow = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow);
+        item_data.Hovered_AllowWhenDisabled = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+        item_data.Hovered_RectOnly = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
+        item_data.Active = ImGui::IsItemActive();
+        item_data.Edited = ImGui::IsItemEdited();
+        item_data.Activated = ImGui::IsItemActivated();
+        item_data.Deactivated = ImGui::IsItemDeactivated();
+        item_data.DeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+        item_data.Visible = ImGui::IsItemVisible();
+        item_data.Clicked = ImGui::IsItemClicked();
+        item_data.ToggledOpen = ImGui::IsItemToggledOpen();
+        item_data.RectMin = ImGui::GetItemRectMin();
+        item_data.RectMax = ImGui::GetItemRectMax();
+        item_data.RectSize = ImGui::GetItemRectSize();
+
+        item_data.Hovered_Delay_None = ImGui::IsItemHovered();
+        item_data.Hovered_Delay_Stationary = ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary);
+        item_data.Hovered_Delay_Short = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort);
+        item_data.Hovered_Delay_Normal = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
+        item_data.Hovered_Delay_Tooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip); // = Normal + Stationary
+
+        StatusDrawText("Return value = %d", item_data.ret, true);
+        ImGui::Indent();
+        StatusDrawText("IsItemFocused() = %d", item_data.Focused);
+        StatusDrawText("IsItemHovered() = %d", item_data.Hovered);
+        StatusDrawText("IsItemHovered(_AllowWhenBlockedByPopup) = %d", item_data.Hovered_AllowWhenBlockedByPopup);
+        StatusDrawText("IsItemHovered(_AllowWhenBlockedByActiveItem) = %d", item_data.Hovered_AllowWhenBlockedByActiveItem);
+        StatusDrawText("IsItemHovered(_AllowWhenOverlappedByItem) = %d", item_data.Hovered_AllowWhenOverlappedByItem);
+        StatusDrawText("IsItemHovered(_AllowWhenOverlappedByWindow) = %d", item_data.Hovered_AllowWhenOverlappedByWindow);
+        StatusDrawText("IsItemHovered(_AllowWhenDisabled) = %d", item_data.Hovered_AllowWhenDisabled);
+        StatusDrawText("IsItemHovered(_RectOnly) = %d", item_data.Hovered_RectOnly);
+        StatusDrawText("IsItemActive() = %d", item_data.Active);
+        StatusDrawText("IsItemEdited() = %d", item_data.Edited);
+        StatusDrawText("IsItemActivated() = %d", item_data.Activated);
+        StatusDrawText("IsItemDeactivated() = %d", item_data.Deactivated);
+        StatusDrawText("IsItemDeactivatedAfterEdit() = %d", item_data.DeactivatedAfterEdit);
+        StatusDrawText("IsItemVisible() = %d", item_data.Visible);
+        StatusDrawText("IsItemClicked() = %d", item_data.Clicked);
+        StatusDrawText("IsItemToggledOpen() = %d", item_data.ToggledOpen);
+        StatusDrawText("GetItemRectMin() = (%.1f, %.1f)", item_data.RectMin);
+        StatusDrawText("GetItemRectMax() = (%.1f, %.1f)", item_data.RectMax);
+        StatusDrawText("GetItemRectSize() = (%.1f, %.1f)", item_data.RectSize);
+        ImGui::Unindent();
+        ImGui::BulletText("with Hovering Delay or Stationary test:");
+        ImGui::Indent();
+        StatusDrawText("IsItemHovered() = %d", item_data.Hovered_Delay_None);
+        StatusDrawText("IsItemHovered(_Stationary) = %d", item_data.Hovered_Delay_Stationary);
+        StatusDrawText("IsItemHovered(_DelayShort) = %d", item_data.Hovered_Delay_Short);
+        StatusDrawText("IsItemHovered(_DelayNormal) = %d", item_data.Hovered_Delay_Normal);
+        StatusDrawText("IsItemHovered(_Tooltip) = %d", item_data.Hovered_Delay_Tooltip);
+        ImGui::Unindent();
 
         if (item_disabled)
             ImGui::EndDisabled();
@@ -2677,50 +2790,56 @@ static void ShowDemoWindowWidgets()
             ImGui::BeginChild("outer_child", ImVec2(0, ImGui::GetFontSize() * 20.0f), ImGuiChildFlags_Border);
 
         // Testing IsWindowFocused() function with its various flags.
-        ImGui::BulletText(
-            "IsWindowFocused() = %d\n"
-            "IsWindowFocused(_ChildWindows) = %d\n"
-            "IsWindowFocused(_ChildWindows|_NoPopupHierarchy) = %d\n"
-            "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
-            "IsWindowFocused(_ChildWindows|_RootWindow|_NoPopupHierarchy) = %d\n"
-            "IsWindowFocused(_RootWindow) = %d\n"
-            "IsWindowFocused(_RootWindow|_NoPopupHierarchy) = %d\n"
-            "IsWindowFocused(_AnyWindow) = %d\n",
-            ImGui::IsWindowFocused(),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_NoPopupHierarchy),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_NoPopupHierarchy),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_NoPopupHierarchy),
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
+        static WindowFocused window_focused;
+        window_focused.None = ImGui::IsWindowFocused(),
+        window_focused.ChildWindows = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+        window_focused.ChildWindows_NoPopupHierarchy = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_NoPopupHierarchy);
+        window_focused.ChildWindows_RootWindow = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow);
+        window_focused.ChildWindows_RootWindow_NoPopupHierarchy = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_NoPopupHierarchy);
+        window_focused.RootWindow = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow);
+        window_focused.RootWindow_NoPopupHierarchy = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_NoPopupHierarchy);
+        window_focused.AnyWindow = ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow);
+
+        StatusDrawText("IsWindowFocused() = %d", window_focused.None, true);
+        ImGui::Indent();
+        StatusDrawText("IsWindowFocused(_ChildWindows) = %d", window_focused.ChildWindows);
+        StatusDrawText("IsWindowFocused(_ChildWindows|_NoPopupHierarchy) = %d", window_focused.ChildWindows_NoPopupHierarchy);
+        StatusDrawText("IsWindowFocused(_ChildWindows|_RootWindow) = %d", window_focused.ChildWindows_RootWindow);
+        StatusDrawText("IsWindowFocused(_ChildWindows|_RootWindow|_NoPopupHierarchy) = %d", window_focused.ChildWindows_RootWindow_NoPopupHierarchy);
+        StatusDrawText("IsWindowFocused(_RootWindow) = %d", window_focused.RootWindow);
+        StatusDrawText("IsWindowFocused(_RootWindow|_NoPopupHierarchy) = %d", window_focused.RootWindow_NoPopupHierarchy);
+        StatusDrawText("IsWindowFocused(_AnyWindow) = %d", window_focused.AnyWindow);
+        ImGui::Unindent();
 
         // Testing IsWindowHovered() function with its various flags.
-        ImGui::BulletText(
-            "IsWindowHovered() = %d\n"
-            "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
-            "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-            "IsWindowHovered(_ChildWindows) = %d\n"
-            "IsWindowHovered(_ChildWindows|_NoPopupHierarchy) = %d\n"
-            "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
-            "IsWindowHovered(_ChildWindows|_RootWindow|_NoPopupHierarchy) = %d\n"
-            "IsWindowHovered(_RootWindow) = %d\n"
-            "IsWindowHovered(_RootWindow|_NoPopupHierarchy) = %d\n"
-            "IsWindowHovered(_ChildWindows|_AllowWhenBlockedByPopup) = %d\n"
-            "IsWindowHovered(_AnyWindow) = %d\n"
-            "IsWindowHovered(_Stationary) = %d\n",
-            ImGui::IsWindowHovered(),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_NoPopupHierarchy),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow),
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_Stationary));
+        static WindowHovered window_hovered;
+        window_hovered.None = ImGui::IsWindowHovered(),
+        window_hovered.AllowWhenBlockedByPopup = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+        window_hovered.AllowWhenBlockedByActiveItem = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+        window_hovered.ChildWindows = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+        window_hovered.ChildWindows_NoPopupHierarchy = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_NoPopupHierarchy);
+        window_hovered.ChildWindows_RootWindow = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow);
+        window_hovered.ChildWindows_RootWindow_NoPopupHierarchy = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy);
+        window_hovered.RootWindow = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow);
+        window_hovered.RootWindow_NoPopupHierarchy = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_NoPopupHierarchy);
+        window_hovered.ChildWindows_AllowWhenBlockedByPopup = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+        window_hovered.AnyWindow = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+        window_hovered.Stationary = ImGui::IsWindowHovered(ImGuiHoveredFlags_Stationary);
+
+        StatusDrawText("IsWindowHovered() = %d", window_hovered.None, true);
+        ImGui::Indent();
+        StatusDrawText("IsWindowHovered(_AllowWhenBlockedByPopup) = %d", window_hovered.AllowWhenBlockedByPopup);
+        StatusDrawText("IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d", window_hovered.AllowWhenBlockedByActiveItem);
+        StatusDrawText("IsWindowHovered(_ChildWindows) = %d", window_hovered.ChildWindows);
+        StatusDrawText("IsWindowHovered(_ChildWindows|_NoPopupHierarchy) = %d", window_hovered.ChildWindows_NoPopupHierarchy);
+        StatusDrawText("IsWindowHovered(_ChildWindows|_RootWindow) = %d", window_hovered.ChildWindows_RootWindow);
+        StatusDrawText("IsWindowHovered(_ChildWindows|_RootWindow|_NoPopupHierarchy) = %d", window_hovered.ChildWindows_RootWindow_NoPopupHierarchy);
+        StatusDrawText("IsWindowHovered(_RootWindow) = %d", window_hovered.RootWindow);
+        StatusDrawText("IsWindowHovered(_RootWindow|_NoPopupHierarchy) = %d", window_hovered.RootWindow_NoPopupHierarchy);
+        StatusDrawText("IsWindowHovered(_ChildWindows|_AllowWhenBlockedByPopup) = %d", window_hovered.ChildWindows_AllowWhenBlockedByPopup);
+        StatusDrawText("IsWindowHovered(_AnyWindow) = %d", window_hovered.AnyWindow);
+        StatusDrawText("IsWindowHovered(_Stationary) = %d", window_hovered.Stationary);
+        ImGui::Unindent();
 
         ImGui::BeginChild("child", ImVec2(0, 50), ImGuiChildFlags_Border);
         ImGui::Text("This is another child window for testing the _ChildWindows flag.");
