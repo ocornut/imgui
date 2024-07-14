@@ -14378,7 +14378,7 @@ static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 #include <unistd.h>
 static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
-#if __APPLE__
+#if defined(__APPLE__)
     const char* args[] { "open", "--", path, NULL };
 #else
     const char* args[] { "xdg-open", path, NULL };
