@@ -6421,10 +6421,10 @@ static void ShowDemoWindowInputs()
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
-            ImGui::PushTabStop(false);
+            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop, true);
             ImGui::InputText("4 (tab skip)", buf, IM_ARRAYSIZE(buf));
             ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
-            ImGui::PopTabStop();
+            ImGui::PopItemFlag();
             ImGui::InputText("5", buf, IM_ARRAYSIZE(buf));
             ImGui::TreePop();
         }
@@ -6446,12 +6446,12 @@ static void ShowDemoWindowInputs()
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 2;
 
-            ImGui::PushTabStop(false);
+            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop, true);
             if (focus_3) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 3;
             ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
-            ImGui::PopTabStop();
+            ImGui::PopItemFlag();
 
             if (has_focus)
                 ImGui::Text("Item with focus: %d", has_focus);

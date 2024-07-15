@@ -49,6 +49,8 @@ Breaking changes:
 - Item flag changes:
   - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
     with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
+  - Obsoleted PushTabStop()/PopTabStop() in favor of using new PushItemFlag()/PopItemFlag()
+    with ImGuiItemFlags_NoTabStop. Kept inline redirecting functions (will obsolete).
   - Renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups for
     consistency. Kept inline redirecting functions (will obsolete).
     + Internals: changed/inverted ImGuiItemFlags_SelectableDontClosePopup (default==false) to

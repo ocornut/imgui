@@ -7624,16 +7624,6 @@ void ImGui::EndDisabledOverrideReenable()
     g.Style.Alpha = g.DisabledAlphaBackup * g.Style.DisabledAlpha;
 }
 
-void ImGui::PushTabStop(bool tab_stop)
-{
-    PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
-}
-
-void ImGui::PopTabStop()
-{
-    PopItemFlag();
-}
-
 void ImGui::PushTextWrapPos(float wrap_pos_x)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -13773,10 +13763,10 @@ void ImGui::LogButtons()
 #endif
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
-    PushTabStop(false);
+    PushItemFlag(ImGuiItemFlags_NoTabStop, true);
     SetNextItemWidth(80.0f);
     SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
-    PopTabStop();
+    PopItemFlag();
     PopID();
 
     // Start logging at the end of the function so that the buttons don't appear in the log
