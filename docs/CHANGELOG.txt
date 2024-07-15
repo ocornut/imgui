@@ -49,6 +49,8 @@ Breaking changes:
 - Commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
 - Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
     - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
+- Backends: GLFW+Emscripten: Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
+  ImGui_ImplGlfw_InstallEmscriptenCallbacks(), with additional GLFWWindow* parameter. (#7647) [@ypujante]
 
 Other changes:
 
@@ -60,9 +62,19 @@ Other changes:
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
+  (#7768, #4858, #2622) [@Aemony]
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+- Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
 - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
-- Backends: GLFW,SDL2: Added ioPlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
+- Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
+  [@ypujante, @ocornut]
+- Backends; GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
+  not supported by the embedded GLFW: gamepad support, mouse cursor shapes, copy to clipboard,
+  workaround for Super/Meta key, different ways of resizing, multi-window (glfw/canvas) support.
+  (#7647) [@ypujante]
+- Backends: GLFW+Emscripten: Fixed Emscripten warning when using mouse wheel on some setups
+  "Unable to preventDefault inside passive event listener". (#7647, #7600) [@ypujante]
 
 
 -----------------------------------------------------------------------
