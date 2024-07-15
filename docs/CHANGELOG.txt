@@ -46,16 +46,19 @@ Breaking changes:
     - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
   It is expected that for a vast majority of users this is automatically set by core
   library and/or platform backend so it won't have any effect.
-- Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
-  with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
+- Item flag changes:
+  - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
+    with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
+  - Renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups for
+    consistency. Kept inline redirecting functions (will obsolete).
+    + Internals: changed/inverted ImGuiItemFlags_SelectableDontClosePopup (default==false) to
+      ImGuiItemFlags_AutoClosePopups (default==true), same logic, only inverted behavior.
+    (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
 - Commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
 - Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
     - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
 - Backends: GLFW+Emscripten: Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
   ImGui_ImplGlfw_InstallEmscriptenCallbacks(), with additional GLFWWindow* parameter. (#7647) [@ypujante]
-- Internals: changed/inverted ImGuiItemFlags_SelectableDontClosePopup (default==false) to
-  ImGuiItemFlags_AutoClosePopups (default==true), same logic, only inverted behavior.
-  (#1379, #2200, #4936, #5216, #7302)
 
 Other changes:
 
