@@ -441,8 +441,6 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
     IMGUI_API void          PushTabStop(bool tab_stop);                                     // == tab stop enable. Allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets
     IMGUI_API void          PopTabStop();
-    IMGUI_API void          PushButtonRepeat(bool repeat);                                  // in repeat mode, any button-like function behave with a repeating behavior (using io.KeyRepeatDelay/io.KeyRepeatRate values). Note that you can call IsItemActive() after any button to tell if it is being held.
-    IMGUI_API void          PopButtonRepeat();
 
     // Parameters stacks (current window)
     IMGUI_API void          PushItemWidth(float item_width);                                // push width of items for common large "item+label" widgets. >0.0f: width in pixels, <0.0f align xx pixels to the right of window (so -FLT_MIN always align width to the right side).
@@ -3314,6 +3312,9 @@ struct ImGuiPlatformImeData
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
+    // OBSOLETED in 1.91.0 (from July 2024)
+    static inline void  PushButtonRepeat(bool repeat)                                       { PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat); }
+    static inline void  PopButtonRepeat()                                                   { PopItemFlag(); }
     // OBSOLETED in 1.90.0 (from September 2023)
     static inline bool  BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags window_flags = 0)                 { return BeginChild(id, size, ImGuiChildFlags_FrameStyle, window_flags); }
     static inline void  EndChildFrame()                                                                                    { EndChild(); }
