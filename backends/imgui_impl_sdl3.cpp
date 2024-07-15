@@ -387,9 +387,9 @@ static void ImGui_ImplSDL3_SetupPlatformHandles(ImGuiViewport* viewport, SDL_Win
     viewport->PlatformHandle = window;
     viewport->PlatformHandleRaw = nullptr;
 #if defined(__WIN32__) && !defined(__WINRT__)
-    viewport->PlatformHandleRaw = (HWND)SDL_GetProperty(SDL_GetWindowProperties(window), "SDL.window.win32.hwnd", nullptr);
+    viewport->PlatformHandleRaw = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 #elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
-    viewport->PlatformHandleRaw = (void*)SDL_GetProperty(SDL_GetWindowProperties(window), "SDL.window.cocoa.window", nullptr);
+    viewport->PlatformHandleRaw = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
 #endif
 }
 
