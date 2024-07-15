@@ -169,7 +169,6 @@ typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // E
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow();
-typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag(), g.LastItemData.InFlags
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for g.LastItemData.StatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
 typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
@@ -840,29 +839,22 @@ enum ImGuiDataTypePrivate_
 // [SECTION] Widgets support: flags, enums, data structures
 //-----------------------------------------------------------------------------
 
-// Flags used by upcoming items
+// Extend ImGuiItemFlags
 // - input: PushItemFlag() manipulates g.CurrentItemFlags, ItemAdd() calls may add extra flags.
 // - output: stored in g.LastItemData.InFlags
-// Current window shared by all windows.
-// This is going to be exposed in imgui.h when stabilized enough.
-enum ImGuiItemFlags_
+enum ImGuiItemFlagsPrivate_
 {
     // Controlled by user
-    ImGuiItemFlags_None                     = 0,
-    ImGuiItemFlags_NoTabStop                = 1 << 0,  // false     // Disable keyboard tabbing. This is a "lighter" version of ImGuiItemFlags_NoNav.
-    ImGuiItemFlags_ButtonRepeat             = 1 << 1,  // false     // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
-    ImGuiItemFlags_Disabled                 = 1 << 2,  // false     // Disable interactions but doesn't affect visuals. See BeginDisabled()/EndDisabled(). See github.com/ocornut/imgui/issues/211
-    ImGuiItemFlags_NoNav                    = 1 << 3,  // false     // Disable any form of focusing (keyboard/gamepad directional navigation and SetKeyboardFocusHere() calls)
-    ImGuiItemFlags_NoNavDefaultFocus        = 1 << 4,  // false     // Disable item being a candidate for default focus (e.g. used by title bar items)
-    ImGuiItemFlags_SelectableDontClosePopup = 1 << 5,  // false     // Disable MenuItem/Selectable() automatically closing their popup window
-    ImGuiItemFlags_MixedValue               = 1 << 6,  // false     // [BETA] Represent a mixed/indeterminate value, generally multi-selection where values differ. Currently only supported by Checkbox() (later should support all sorts of widgets)
-    ImGuiItemFlags_ReadOnly                 = 1 << 7,  // false     // [ALPHA] Allow hovering interactions but underlying value is not changed.
-    ImGuiItemFlags_NoWindowHoverableCheck   = 1 << 8,  // false     // Disable hoverable check in ItemHoverable()
-    ImGuiItemFlags_AllowOverlap             = 1 << 9,  // false     // Allow being overlapped by another widget. Not-hovered to Hovered transition deferred by a frame.
+    ImGuiItemFlags_Disabled                 = 1 << 10, // false     // Disable interactions (DOES NOT affect visuals, see BeginDisabled()/EndDisabled() for full disable feature, and github #211).
+    ImGuiItemFlags_SelectableDontClosePopup = 1 << 11, // false     // Disable MenuItem/Selectable() automatically closing their popup window
+    ImGuiItemFlags_MixedValue               = 1 << 12, // false     // [BETA] Represent a mixed/indeterminate value, generally multi-selection where values differ. Currently only supported by Checkbox() (later should support all sorts of widgets)
+    ImGuiItemFlags_ReadOnly                 = 1 << 13, // false     // [ALPHA] Allow hovering interactions but underlying value is not changed.
+    ImGuiItemFlags_NoWindowHoverableCheck   = 1 << 14, // false     // Disable hoverable check in ItemHoverable()
+    ImGuiItemFlags_AllowOverlap             = 1 << 15, // false     // Allow being overlapped by another widget. Not-hovered to Hovered transition deferred by a frame.
 
     // Controlled by widget code
-    ImGuiItemFlags_Inputable                = 1 << 10, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
-    ImGuiItemFlags_HasSelectionUserData     = 1 << 11, // false     // Set by SetNextItemSelectionUserData()
+    ImGuiItemFlags_Inputable                = 1 << 20, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
+    ImGuiItemFlags_HasSelectionUserData     = 1 << 21, // false     // Set by SetNextItemSelectionUserData()
 };
 
 // Status flags for an already submitted item
@@ -3153,8 +3145,6 @@ namespace ImGui
     IMGUI_API void          ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess);
 
     // Parameter stacks (shared)
-    IMGUI_API void          PushItemFlag(ImGuiItemFlags option, bool enabled);
-    IMGUI_API void          PopItemFlag();
     IMGUI_API const ImGuiDataVarInfo* GetStyleVarInfo(ImGuiStyleVar idx);
     IMGUI_API void          BeginDisabledOverrideReenable();
     IMGUI_API void          EndDisabledOverrideReenable();

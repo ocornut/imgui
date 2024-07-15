@@ -58,6 +58,12 @@ Other changes:
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
   Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- Added PushItemFlag()/PopItemFlags(), ImGuiItemFlags to modify shared item flags:
+  - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
+  - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
+  - Added ImGuiItemFlags_NoNavDefaultFocus to disable item being default focus. (#787)
+  - Added ImGuiItemFlags_ButtonRepeat to enable repeat on any button-like behavior.
+  - (previously in imgui_internal.h)
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.

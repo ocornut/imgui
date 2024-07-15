@@ -7851,9 +7851,9 @@ static void PropertyEditor_ShowTreeNode(ExampleTreeNode* node)
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::AlignTextToFramePadding();
-            ImGui::PushTabStop(false); // We didn't expose ImGuiItemFlags_NoNav yet, so arrow navigation will still pass through this
+            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop | ImGuiItemFlags_NoNav, true);
             ImGui::Selectable(field_desc.Name, false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
-            ImGui::PopTabStop();
+            ImGui::PopItemFlag();
             ImGui::TableSetColumnIndex(1);
             ImGui::PushID(field_desc.Name);
             void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
