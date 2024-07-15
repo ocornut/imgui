@@ -3471,7 +3471,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             Separator();
         want_separator = true;
 
-        PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+        PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
         for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
         {
             ImGuiTableColumn* other_column = &table->Columns[other_column_n];

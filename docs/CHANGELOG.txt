@@ -53,6 +53,9 @@ Breaking changes:
     - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
 - Backends: GLFW+Emscripten: Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
   ImGui_ImplGlfw_InstallEmscriptenCallbacks(), with additional GLFWWindow* parameter. (#7647) [@ypujante]
+- Internals: changed/inverted ImGuiItemFlags_SelectableDontClosePopup (default==false) to
+  ImGuiItemFlags_AutoClosePopups (default==true), same logic, only inverted behavior.
+  (#1379, #2200, #4936, #5216, #7302)
 
 Other changes:
 
@@ -65,7 +68,10 @@ Other changes:
   - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
   - Added ImGuiItemFlags_NoNavDefaultFocus to disable item being default focus. (#787)
   - Added ImGuiItemFlags_ButtonRepeat to enable repeat on any button-like behavior.
-  - (previously in imgui_internal.h)
+  - Added ImGuiItemFlags_AutoClosePopups to disable menu items/selection auto closing parent popups.
+    Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
+    (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
+  - This was mostly all previously in imgui_internal.h.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.

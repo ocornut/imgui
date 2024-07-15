@@ -4903,7 +4903,8 @@ void ImGui::NewFrame()
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
     g.ItemFlagsStack.resize(0);
-    g.ItemFlagsStack.push_back(ImGuiItemFlags_None);
+    g.ItemFlagsStack.push_back(ImGuiItemFlags_AutoClosePopups); // Default flags
+    g.CurrentItemFlags = g.ItemFlagsStack.back();
     g.GroupStack.resize(0);
 
     // [DEBUG] Update debug features
