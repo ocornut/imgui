@@ -11,7 +11,7 @@
 //  2023/01/04: fixed a packing issue which in some occurrences would prevent large amount of glyphs from being packed correctly.
 //  2021/08/23: fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL.
 //  2021/03/05: added ImGuiFreeTypeBuilderFlags_Bitmap to load bitmap glyphs.
-//  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a prefered texture format.
+//  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a preferred texture format.
 //  2021/01/28: added support for color-layered glyphs via ImGuiFreeTypeBuilderFlags_LoadColor (require Freetype 2.10+).
 //  2021/01/26: simplified integration by using '#define IMGUI_ENABLE_FREETYPE'. renamed ImGuiFreeType::XXX flags to ImGuiFreeTypeBuilderFlags_XXX for consistency with other API. removed ImGuiFreeType::BuildFontAtlas().
 //  2020/06/04: fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
@@ -357,7 +357,7 @@ namespace
         case FT_PIXEL_MODE_BGRA:
             {
                 // FIXME: Converting pre-multiplied alpha to straight. Doesn't smell good.
-                #define DE_MULTIPLY(color, alpha) (ImU32)(255.0f * (float)color / (float)alpha + 0.5f)
+                #define DE_MULTIPLY(color, alpha) ImMin((ImU32)(255.0f * (float)color / (float)(alpha + FLT_MIN) + 0.5f), 255u)
                 if (multiply_table == nullptr)
                 {
                     for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)

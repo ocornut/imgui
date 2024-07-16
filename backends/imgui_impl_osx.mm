@@ -34,6 +34,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-07-02: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() renaming in main library.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F20 function keys. Stopped mapping F13 into PrintScreen.
 //  2023-04-09: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_Pen.
 //  2023-02-01: Fixed scroll wheel scaling for devices emitting events with hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
@@ -499,7 +500,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     [view addSubview:bd->KeyEventResponder];
     ImGui_ImplOSX_AddTrackingArea(view);
 
-    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    io.PlatformSetImeDataFn = [](ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
     {
         ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
         if (data->WantVisible)

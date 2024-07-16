@@ -24,7 +24,7 @@
 // Volk headers
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
 #define VOLK_IMPLEMENTATION
-#include <Volk/volk.h>
+#include <volk.h>
 #endif
 
 //#define APP_USE_UNLIMITED_FRAME_RATE
@@ -506,17 +506,14 @@ int main(int, char**)
         }
 
         // Resize swap chain?
-        if (g_SwapChainRebuild)
+        int fb_width, fb_height;
+        SDL_GetWindowSize(window, &fb_width, &fb_height);
+        if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
         {
-            int width, height;
-            SDL_GetWindowSize(window, &width, &height);
-            if (width > 0 && height > 0)
-            {
-                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
-                g_MainWindowData.FrameIndex = 0;
-                g_SwapChainRebuild = false;
-            }
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount);
+            g_MainWindowData.FrameIndex = 0;
+            g_SwapChainRebuild = false;
         }
 
         // Start the Dear ImGui frame

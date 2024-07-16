@@ -15,6 +15,7 @@
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = nullptr;
+static bool                     g_DeviceLost = false;
 static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static D3DPRESENT_PARAMETERS    g_d3dpp = {};
 
@@ -110,6 +111,20 @@ int main(int, char**)
         if (done)
             break;
 
+        // Handle lost D3D9 device
+        if (g_DeviceLost)
+        {
+            HRESULT hr = g_pd3dDevice->TestCooperativeLevel();
+            if (hr == D3DERR_DEVICELOST)
+            {
+                ::Sleep(10);
+                continue;
+            }
+            if (hr == D3DERR_DEVICENOTRESET)
+                ResetDevice();
+            g_DeviceLost = false;
+        }
+
         // Handle window resize (we don't resize directly in the WM_SIZE handler)
         if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
         {
@@ -183,12 +198,11 @@ int main(int, char**)
         }
 
         HRESULT result = g_pd3dDevice->Present(nullptr, nullptr, nullptr, nullptr);
-
-        // Handle loss of D3D9 device
-        if (result == D3DERR_DEVICELOST && g_pd3dDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
-            ResetDevice();
+        if (result == D3DERR_DEVICELOST)
+            g_DeviceLost = true;
     }
 
+    // Cleanup
     ImGui_ImplDX9_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();

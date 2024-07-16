@@ -39,7 +39,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - scrolling: forward mouse wheel scrolling to parent window when at the edge of scrolling limits? (useful for listbox,tables?)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents (see e.g. DaVinci Resolve ui)
 
- - drawdata: make it easy to deep-copy (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (e.g. #2646)
+ - drawdata: make it easy to deep-copy (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (#1860 see ImDrawDataSnapshot)
  ! drawlist: add CalcTextSize() func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command). (WIP branch)
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
@@ -117,7 +117,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
- - plot: full featured plot/graph api w/ scrolling, zooming etc. --> ImPlot
+ - plot: full featured plot/graph api w/ scrolling, zooming etc. --> promote using ImPlot
  - (plot: deleted all other todo lines on 2023-06-28)
 
  - clipper: ability to disable the clipping through a simple flag/bool.
@@ -178,7 +178,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
- - combo: use clipper.
  - combo: a way/helper to customize the combo preview (#1658) -> experimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection (WIP range-select branch)
@@ -201,13 +200,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers (WIP branch)
+ - tooltip: tooltip priorities to override a stock tooltip (e.g. shortcut tooltip)
 
  - status-bar: add a per-window status bar helper similar to what menu-bar does. generalize concept of layer0 rect in window (can make _MenuBar window flag obsolete too).
+ - shortcuts: store multiple keychords in ImGuiKeyChord
+ - shortcuts: Hovered route (lower than Focused, higher than Global)
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
- - shortcuts: programmatically access shortcuts "Focus("&Save"))
- - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
- - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
+ - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally zero.
  - menus: would be nice if the Selectable() supported horizontal alignment (must be given the equivalent of WorkRect.Max.x matching the position of the shortcut column)
 
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
@@ -303,7 +303,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16-bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
- - nav: visual feedback on button press.
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line? how about CTRL+Tab)
  ! nav: never clear NavId on some setup (e.g. gamepad centric)
  - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
@@ -357,8 +356,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
- - misc: possible compile-time support for string view/range instead of char* would e.g. facilitate usage with Rust (#683, #3038, WIP string_view branch)
- - misc: possible compile-time support for wchar_t instead of char*?
+ - misc: support for string view/range instead of char* would e.g. facilitate usage with Rust (#683, #3038, WIP string_view branch)
 
  - demo: demonstrate using PushStyleVar() in more details.
  - demo: add vertical separator demo
@@ -378,7 +376,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
- - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h) (WIP project "dear-bindings" still private)
+ - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h) (--> use https://github.com/dearimgui/dear_bindings)
 
  - optimization: replace vsnprintf with stb_printf? using IMGUI_USE_STB_SPRINTF. (#1038 + needed for string_view)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.

@@ -1,7 +1,8 @@
 // dear imgui: Platform Backend for SDL3 (*EXPERIMENTAL*)
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 // (Info: SDL3 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
-// (IMPORTANT: SDL 3.0.0 is NOT YET RELEASED. IT IS POSSIBLE THAT ITS SPECS/API WILL CHANGE BEFORE RELEASE)
+
+// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN**)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
@@ -14,7 +15,6 @@
 //  [ ] Platform: Multi-viewport: Minimized windows seems to break mouse wheel events (at least under Windows).
 //  [ ] Platform: Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
 //  [x] Platform: Basic IME support. Position somehow broken in SDL3 + app needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
-//  [ ] Platform: IME SUPPORT IS BROKEN IN SDL3 BECAUSE INPUTS GETS SENT TO BOTH APP AND IME + app needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
