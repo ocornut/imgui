@@ -7793,6 +7793,7 @@ static ExampleTreeNode* ExampleTree_CreateNode(const char* name, const ImGuiID u
     return node;
 }
 
+// Create example tree data
 static ExampleTreeNode* ExampleTree_CreateDemoTree()
 {
     static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
@@ -7826,6 +7827,7 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
 // Some of the interactions are a bit lack-luster:
 // - We would want the table scrolling window to use NavFlattened.
 // - We would want pressing validating or leaving the filter to somehow restore focus.
+// - We may want more advanced filtering (child nodes) and clipper support: both will need extra work.
 //-----------------------------------------------------------------------------
 
 struct ExampleAppPropertyEditor
@@ -7835,13 +7837,12 @@ struct ExampleAppPropertyEditor
     void Draw(ExampleTreeNode* root_node)
     {
         ImGui::SetNextItemWidth(-FLT_MIN);
-        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
         ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
         if (ImGui::InputTextWithHint("##Filter", "incl,-excl", Filter.InputBuf, IM_ARRAYSIZE(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
             Filter.Build();
         ImGui::PopItemFlag();
 
-        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
         ImGuiTableFlags table_flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("##split", 2, table_flags))
         {
@@ -7850,13 +7851,11 @@ struct ExampleAppPropertyEditor
             //ImGui::TableSetupScrollFreeze(0, 1);
             //ImGui::TableHeadersRow();
 
-            // Filter root node
             for (ExampleTreeNode* node : root_node->Childs)
-                if (Filter.PassFilter(node->Name))
+                if (Filter.PassFilter(node->Name)) // Filter root node
                     DrawTreeNode(node);
             ImGui::EndTable();
         }
-        //ImGui::PopStyleVar();
     }
 
     void DrawTreeNode(ExampleTreeNode* node)
