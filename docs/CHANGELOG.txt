@@ -77,6 +77,7 @@ Other changes:
     Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
     (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
   - This was mostly all previously in imgui_internal.h.
+- Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
