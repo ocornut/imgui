@@ -83,6 +83,7 @@ Index of this file:
 // [SECTION] Example App: Debug Console / ShowExampleAppConsole()
 // [SECTION] Example App: Debug Log / ShowExampleAppLog()
 // [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 // [SECTION] Example App: Long Text / ShowExampleAppLongText()
 // [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
@@ -7744,7 +7745,7 @@ static void ShowExampleAppLayout(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 //-----------------------------------------------------------------------------
 
 // Simple representation for a tree
@@ -7819,92 +7820,98 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
     return node_L0;
 }
 
-static void PropertyEditor_ShowTreeNode(ExampleTreeNode* node)
-{
-    // Object tree node
-    ImGui::PushID((int)node->UID);
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
-    ImGui::AlignTextToFramePadding();
-    ImGuiTreeNodeFlags tree_flags = ImGuiTreeNodeFlags_None;
-    tree_flags |= ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_AllowOverlap;      // Highlight whole row for visibility
-    tree_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;    // Standard opening mode as we are likely to want to add selection afterwards
-    tree_flags |= ImGuiTreeNodeFlags_NavLeftJumpsBackHere;                                  // Left arrow support
-    bool node_open = ImGui::TreeNodeEx("##Object", tree_flags, "%s", node->Name);
-    ImGui::TableSetColumnIndex(1);
-    ImGui::TextDisabled("UID: 0x%08X", node->UID);
+//-----------------------------------------------------------------------------
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+//-----------------------------------------------------------------------------
 
-    // Display child and data
-    if (node_open)
-        for (ExampleTreeNode* child : node->Childs)
-            PropertyEditor_ShowTreeNode(child);
-    if (node_open && node->HasData)
+struct ExampleAppPropertyEditor
+{
+    void Draw(ExampleTreeNode* root_node)
     {
-        // In a typical application, the structure description would be derived from a data-driven system.
-        // - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
-        // - Limits and some details are hard-coded to simplify the demo.
-        // - Text and Selectable are less high than framed widgets, using AlignTextToFramePadding() we add vertical spacing to make the selectable lines equal high.
-        for (const ExampleMemberInfo& field_desc : ExampleTreeNodeMemberInfos)
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+        ImGuiTableFlags table_flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("##split", 2, table_flags))
         {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop | ImGuiItemFlags_NoNav, true);
-            ImGui::Selectable(field_desc.Name, false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
-            ImGui::PopItemFlag();
-            ImGui::TableSetColumnIndex(1);
-            ImGui::PushID(field_desc.Name);
-            void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
-            switch (field_desc.DataType)
-            {
-            case ImGuiDataType_Bool:
-            {
-                IM_ASSERT(field_desc.DataCount == 1);
-                ImGui::Checkbox("##Editor", (bool*)field_ptr);
-                break;
-            }
-            case ImGuiDataType_S32:
-            {
-                int v_min = INT_MIN, v_max = INT_MAX;
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::DragScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, 1.0f, &v_min, &v_max);
-                break;
-            }
-            case ImGuiDataType_Float:
-            {
-                float v_min = 0.0f, v_max = 1.0f;
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
-                break;
-            }
-            }
-            ImGui::PopID();
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+            ImGui::TableSetupColumn("Contents", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
+            ImGui::TableHeadersRow();
+            for (ExampleTreeNode* node : root_node->Childs)
+                DrawTreeNode(node);
+            ImGui::EndTable();
         }
+        ImGui::PopStyleVar();
     }
-    if (node_open)
-        ImGui::TreePop();
-    ImGui::PopID();
-}
 
-static void PropertyEditor_ShowTree(ExampleTreeNode* root_node)
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    ImGuiTableFlags table_flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
-    if (ImGui::BeginTable("##split", 2, table_flags))
+    void DrawTreeNode(ExampleTreeNode* node)
     {
-        ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-        ImGui::TableSetupColumn("Contents", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
-        ImGui::TableHeadersRow();
-        for (ExampleTreeNode* node : root_node->Childs)
-            PropertyEditor_ShowTreeNode(node);
-        ImGui::EndTable();
-    }
-    ImGui::PopStyleVar();
-}
+        // Object tree node
+        ImGui::PushID((int)node->UID);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGuiTreeNodeFlags tree_flags = ImGuiTreeNodeFlags_None;
+        tree_flags |= ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_AllowOverlap;      // Highlight whole row for visibility
+        tree_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;    // Standard opening mode as we are likely to want to add selection afterwards
+        tree_flags |= ImGuiTreeNodeFlags_NavLeftJumpsBackHere;                                  // Left arrow support
+        bool node_open = ImGui::TreeNodeEx("##Object", tree_flags, "%s", node->Name);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextDisabled("UID: 0x%08X", node->UID);
 
-// Demonstrate create a simple property editor.
-// This demo is a bit lackluster nowadays, would be nice to improve.
+        // Display child and data
+        if (node_open)
+            for (ExampleTreeNode* child : node->Childs)
+                DrawTreeNode(child);
+        if (node_open && node->HasData)
+        {
+            // In a typical application, the structure description would be derived from a data-driven system.
+            // - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
+            // - Limits and some details are hard-coded to simplify the demo.
+            // - Text and Selectable are less high than framed widgets, using AlignTextToFramePadding() we add vertical spacing to make the selectable lines equal high.
+            for (const ExampleMemberInfo& field_desc : ExampleTreeNodeMemberInfos)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::AlignTextToFramePadding();
+                ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop | ImGuiItemFlags_NoNav, true);
+                ImGui::Selectable(field_desc.Name, false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
+                ImGui::PopItemFlag();
+                ImGui::TableSetColumnIndex(1);
+                ImGui::PushID(field_desc.Name);
+                void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
+                switch (field_desc.DataType)
+                {
+                case ImGuiDataType_Bool:
+                {
+                    IM_ASSERT(field_desc.DataCount == 1);
+                    ImGui::Checkbox("##Editor", (bool*)field_ptr);
+                    break;
+                }
+                case ImGuiDataType_S32:
+                {
+                    int v_min = INT_MIN, v_max = INT_MAX;
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::DragScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, 1.0f, &v_min, &v_max);
+                    break;
+                }
+                case ImGuiDataType_Float:
+                {
+                    float v_min = 0.0f, v_max = 1.0f;
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
+                    break;
+                }
+                }
+                ImGui::PopID();
+            }
+        }
+        if (node_open)
+            ImGui::TreePop();
+        ImGui::PopID();
+    }
+};
+
+// Demonstrate creating a simple property editor.
 static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
@@ -7915,11 +7922,9 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
     }
 
     IMGUI_DEMO_MARKER("Examples/Property Editor");
-    static ExampleTreeNode* tree_data = NULL;
-    if (tree_data == NULL)
-        tree_data = ExampleTree_CreateDemoTree();
-
-    PropertyEditor_ShowTree(tree_data);
+    static ExampleAppPropertyEditor property_editor;
+    static ExampleTreeNode* tree_data = ExampleTree_CreateDemoTree();
+    property_editor.Draw(tree_data);
 
     ImGui::End();
 }
