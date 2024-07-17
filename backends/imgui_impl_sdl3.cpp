@@ -79,7 +79,7 @@ struct ImGui_ImplSDL3_Data
     SDL_Window*             Window;
     SDL_Renderer*           Renderer;
     Uint64                  Time;
-    char*                   ClipboardTextData;
+    const char*             ClipboardTextData;
 
     // IME handling
     SDL_Window*             ImeWindow;
@@ -114,7 +114,7 @@ static const char* ImGui_ImplSDL3_GetClipboardText(void*)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     if (bd->ClipboardTextData)
-        SDL_free(bd->ClipboardTextData);
+        SDL_free((void*)bd->ClipboardTextData);
     bd->ClipboardTextData = SDL_GetClipboardText();
     return bd->ClipboardTextData;
 }
@@ -507,7 +507,7 @@ void ImGui_ImplSDL3_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
 
     if (bd->ClipboardTextData)
-        SDL_free(bd->ClipboardTextData);
+        SDL_free((void*)bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_DestroyCursor(bd->MouseCursors[cursor_n]);
     ImGui_ImplSDL3_CloseGamepads();
