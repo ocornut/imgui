@@ -7823,24 +7823,40 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
 //-----------------------------------------------------------------------------
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
+// Some of the interactions are a bit lack-luster:
+// - We would want the table scrolling window to use NavFlattened.
+// - We would want pressing validating or leaving the filter to somehow restore focus.
+//-----------------------------------------------------------------------------
 
 struct ExampleAppPropertyEditor
 {
+    ImGuiTextFilter     Filter;
+
     void Draw(ExampleTreeNode* root_node)
     {
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-        ImGuiTableFlags table_flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
+        if (ImGui::InputTextWithHint("##Filter", "incl,-excl", Filter.InputBuf, IM_ARRAYSIZE(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
+            Filter.Build();
+        ImGui::PopItemFlag();
+
+        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+        ImGuiTableFlags table_flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("##split", 2, table_flags))
         {
-            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthStretch, 1.0f);
             ImGui::TableSetupColumn("Contents", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
-            ImGui::TableHeadersRow();
+            //ImGui::TableSetupScrollFreeze(0, 1);
+            //ImGui::TableHeadersRow();
+
+            // Filter root node
             for (ExampleTreeNode* node : root_node->Childs)
-                DrawTreeNode(node);
+                if (Filter.PassFilter(node->Name))
+                    DrawTreeNode(node);
             ImGui::EndTable();
         }
-        ImGui::PopStyleVar();
+        //ImGui::PopStyleVar();
     }
 
     void DrawTreeNode(ExampleTreeNode* node)
