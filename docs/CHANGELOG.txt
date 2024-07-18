@@ -46,6 +46,16 @@ Breaking changes:
     - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
   It is expected that for a vast majority of users this is automatically set by core
   library and/or platform backend so it won't have any effect.
+- Item flag changes:
+  - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
+    with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
+  - Obsoleted PushTabStop()/PopTabStop() in favor of using new PushItemFlag()/PopItemFlag()
+    with ImGuiItemFlags_NoTabStop. Kept inline redirecting functions (will obsolete).
+  - Renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups for
+    consistency. Kept inline redirecting functions (will obsolete).
+    + Internals: changed/inverted ImGuiItemFlags_SelectableDontClosePopup (default==false) to
+      ImGuiItemFlags_AutoClosePopups (default==true), same logic, only inverted behavior.
+    (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
 - Commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
 - Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
     - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
@@ -58,12 +68,29 @@ Other changes:
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
   Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- Added PushItemFlag()/PopItemFlags(), ImGuiItemFlags to modify shared item flags:
+  - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
+  - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
+  - Added ImGuiItemFlags_NoNavDefaultFocus to disable item being default focus. (#787)
+  - Added ImGuiItemFlags_ButtonRepeat to enable repeat on any button-like behavior.
+  - Added ImGuiItemFlags_AutoClosePopups to disable menu items/selection auto closing parent popups.
+    Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
+    (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
+  - This was mostly all previously in imgui_internal.h.
+- Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
+  can use the clipper without knowing the amount of items beforehand. (#1311)
+  In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
+  loop to position the layout cursor correctly. This is done automatically if provided a count to Begin().
+- Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Demo: Reworked "Property Editor" demo in a manner that more ressemble the tree data and
+  struct description data that a real application would want to use.
 - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
   (#7768, #4858, #2622) [@Aemony]
+- Backends: SDL3: Update for API changes: SDL_GetClipboardText() string ownership change. (#7801)
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
 - Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
 - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.

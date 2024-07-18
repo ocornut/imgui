@@ -83,6 +83,7 @@ Index of this file:
 // [SECTION] Example App: Debug Console / ShowExampleAppConsole()
 // [SECTION] Example App: Debug Log / ShowExampleAppLog()
 // [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 // [SECTION] Example App: Long Text / ShowExampleAppLongText()
 // [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
@@ -722,11 +723,11 @@ static void ShowDemoWindowWidgets()
         IMGUI_DEMO_MARKER("Widgets/Basic/Buttons (Repeating)");
         static int counter = 0;
         float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        ImGui::PushButtonRepeat(true);
+        ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
         if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { counter--; }
         ImGui::SameLine(0.0f, spacing);
         if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { counter++; }
-        ImGui::PopButtonRepeat();
+        ImGui::PopItemFlag();
         ImGui::SameLine();
         ImGui::Text("%d", counter);
 
@@ -2641,7 +2642,7 @@ static void ShowDemoWindowWidgets()
             ImGui::BeginDisabled(true);
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
         if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
-        if (item_type == 2) { ImGui::PushButtonRepeat(true); ret = ImGui::Button("ITEM: Button"); ImGui::PopButtonRepeat(); } // Testing button (with repeater)
+        if (item_type == 2) { ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true); ret = ImGui::Button("ITEM: Button"); ImGui::PopItemFlag(); } // Testing button (with repeater)
         if (item_type == 3) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 4) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 5) { ret = ImGui::InputText("ITEM: InputText", &str[0], IM_ARRAYSIZE(str)); }  // Testing input text (which handles tabbing)
@@ -5950,7 +5951,6 @@ static void ShowDemoWindowTables()
 
             // Show data
             // FIXME-TABLE FIXME-NAV: How we can get decent up/down even though we have the buttons here?
-            ImGui::PushButtonRepeat(true);
 #if 1
             // Demonstrate using clipper for large vertical lists
             ImGuiListClipper clipper;
@@ -6035,7 +6035,6 @@ static void ShowDemoWindowTables()
                     ImGui::PopID();
                 }
             }
-            ImGui::PopButtonRepeat();
 
             // Store some info to display debug details below
             table_scroll_cur = ImVec2(ImGui::GetScrollX(), ImGui::GetScrollY());
@@ -6498,10 +6497,10 @@ static void ShowDemoWindowInputs()
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
-            ImGui::PushTabStop(false);
+            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop, true);
             ImGui::InputText("4 (tab skip)", buf, IM_ARRAYSIZE(buf));
             ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
-            ImGui::PopTabStop();
+            ImGui::PopItemFlag();
             ImGui::InputText("5", buf, IM_ARRAYSIZE(buf));
             ImGui::TreePop();
         }
@@ -6523,12 +6522,12 @@ static void ShowDemoWindowInputs()
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 2;
 
-            ImGui::PushTabStop(false);
+            ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop, true);
             if (focus_3) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 3;
             ImGui::SameLine(); HelpMarker("Item won't be cycled through when using TAB or Shift+Tab.");
-            ImGui::PopTabStop();
+            ImGui::PopItemFlag();
 
             if (has_focus)
                 ImGui::Text("Item with focus: %d", has_focus);
@@ -7845,58 +7844,188 @@ static void ShowExampleAppLayout(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 //-----------------------------------------------------------------------------
 
-static void ShowPlaceholderObject(const char* prefix, int uid)
+// Simple representation for a tree
+// (this is designed to be simple to understand for our demos, not to be efficient etc.)
+struct ExampleTreeNode
 {
-    // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
-    ImGui::PushID(uid);
+    char                    Name[28];
+    ImGuiID                 UID = 0;
+    ExampleTreeNode*        Parent = NULL;
+    ImVector<ExampleTreeNode*> Childs;
 
-    // Text and Tree nodes are less high than framed widgets, using AlignTextToFramePadding() we add vertical spacing to make the tree lines equal high.
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
-    ImGui::AlignTextToFramePadding();
-    bool node_open = ImGui::TreeNode("##Object", "%s_%u", prefix, uid);
-    ImGui::TableSetColumnIndex(1);
-    ImGui::Text("my sailor is rich");
+    // Data
+    bool                    HasData = false; // All leaves have data
+    bool                    DataIsEnabled = false;
+    int                     DataInt = 128;
+    ImVec2                  DataVec2 = ImVec2(0.0f, 3.141592f);
+};
 
-    if (node_open)
+// Simple representation of struct metadata/serialization data.
+// (this is a minimal version of what a typical advanced application may provide)
+struct ExampleMemberInfo
+{
+    const char*             Name;
+    ImGuiDataType           DataType;
+    int                     DataCount;
+    int                     Offset;
+};
+
+// Metadata description of ExampleTreeNode struct.
+static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
+{
+    { "Enabled",    ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataIsEnabled) },
+    { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataInt) },
+    { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataVec2) },
+};
+
+static ExampleTreeNode* ExampleTree_CreateNode(const char* name, const ImGuiID uid, ExampleTreeNode* parent)
+{
+    ExampleTreeNode* node = IM_NEW(ExampleTreeNode);
+    snprintf(node->Name, IM_ARRAYSIZE(node->Name), "%s", name);
+    node->UID = uid;
+    node->Parent = parent;
+    if (parent)
+        parent->Childs.push_back(node);
+    return node;
+}
+
+// Create example tree data
+static ExampleTreeNode* ExampleTree_CreateDemoTree()
+{
+    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+    char name_buf[32];
+    ImGuiID uid = 0;
+    ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
+    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * 2; idx_L0++)
     {
-        static float placeholder_members[8] = { 0.0f, 0.0f, 1.0f, 3.1416f, 100.0f, 999.0f };
-        for (int i = 0; i < 8; i++)
+        snprintf(name_buf, 32, "%s %d", root_names[idx_L0 / 2], idx_L0 % 2);
+        ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
+        const int number_of_childs = (int)strlen(node_L1->Name);
+        for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
         {
-            ImGui::PushID(i); // Use field index as identifier.
-            if (i < 2)
+            snprintf(name_buf, 32, "Child %d", idx_L1);
+            ExampleTreeNode* node_L2 = ExampleTree_CreateNode(name_buf, ++uid, node_L1);
+            node_L2->HasData = true;
+            if (idx_L1 == 0)
             {
-                ShowPlaceholderObject("Child", 424242);
+                snprintf(name_buf, 32, "Sub-child %d", 0);
+                ExampleTreeNode* node_L3 = ExampleTree_CreateNode(name_buf, ++uid, node_L2);
+                node_L3->HasData = true;
             }
-            else
+        }
+    }
+    return node_L0;
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+//-----------------------------------------------------------------------------
+// Some of the interactions are a bit lack-luster:
+// - We would want the table scrolling window to use NavFlattened.
+// - We would want pressing validating or leaving the filter to somehow restore focus.
+// - We may want more advanced filtering (child nodes) and clipper support: both will need extra work.
+//-----------------------------------------------------------------------------
+
+struct ExampleAppPropertyEditor
+{
+    ImGuiTextFilter     Filter;
+
+    void Draw(ExampleTreeNode* root_node)
+    {
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
+        if (ImGui::InputTextWithHint("##Filter", "incl,-excl", Filter.InputBuf, IM_ARRAYSIZE(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
+            Filter.Build();
+        ImGui::PopItemFlag();
+
+        ImGuiTableFlags table_flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("##split", 2, table_flags))
+        {
+            ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+            ImGui::TableSetupColumn("Contents", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
+            //ImGui::TableSetupScrollFreeze(0, 1);
+            //ImGui::TableHeadersRow();
+
+            for (ExampleTreeNode* node : root_node->Childs)
+                if (Filter.PassFilter(node->Name)) // Filter root node
+                    DrawTreeNode(node);
+            ImGui::EndTable();
+        }
+    }
+
+    void DrawTreeNode(ExampleTreeNode* node)
+    {
+        // Object tree node
+        ImGui::PushID((int)node->UID);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGuiTreeNodeFlags tree_flags = ImGuiTreeNodeFlags_None;
+        tree_flags |= ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_AllowOverlap;      // Highlight whole row for visibility
+        tree_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;    // Standard opening mode as we are likely to want to add selection afterwards
+        tree_flags |= ImGuiTreeNodeFlags_NavLeftJumpsBackHere;                                  // Left arrow support
+        bool node_open = ImGui::TreeNodeEx("##Object", tree_flags, "%s", node->Name);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextDisabled("UID: 0x%08X", node->UID);
+
+        // Display child and data
+        if (node_open)
+            for (ExampleTreeNode* child : node->Childs)
+                DrawTreeNode(child);
+        if (node_open && node->HasData)
+        {
+            // In a typical application, the structure description would be derived from a data-driven system.
+            // - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
+            // - Limits and some details are hard-coded to simplify the demo.
+            // - Text and Selectable are less high than framed widgets, using AlignTextToFramePadding() we add vertical spacing to make the selectable lines equal high.
+            for (const ExampleMemberInfo& field_desc : ExampleTreeNodeMemberInfos)
             {
-                // Here we use a TreeNode to highlight on hover (we could use e.g. Selectable as well)
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::AlignTextToFramePadding();
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
-                ImGui::TreeNodeEx("Field", flags, "Field_%d", i);
-
+                ImGui::PushItemFlag(ImGuiItemFlags_NoTabStop | ImGuiItemFlags_NoNav, true);
+                ImGui::Selectable(field_desc.Name, false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
+                ImGui::PopItemFlag();
                 ImGui::TableSetColumnIndex(1);
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                if (i >= 5)
-                    ImGui::InputFloat("##value", &placeholder_members[i], 1.0f);
-                else
-                    ImGui::DragFloat("##value", &placeholder_members[i], 0.01f);
-                ImGui::NextColumn();
+                ImGui::PushID(field_desc.Name);
+                void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
+                switch (field_desc.DataType)
+                {
+                case ImGuiDataType_Bool:
+                {
+                    IM_ASSERT(field_desc.DataCount == 1);
+                    ImGui::Checkbox("##Editor", (bool*)field_ptr);
+                    break;
+                }
+                case ImGuiDataType_S32:
+                {
+                    int v_min = INT_MIN, v_max = INT_MAX;
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::DragScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, 1.0f, &v_min, &v_max);
+                    break;
+                }
+                case ImGuiDataType_Float:
+                {
+                    float v_min = 0.0f, v_max = 1.0f;
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
+                    break;
+                }
+                }
+                ImGui::PopID();
             }
-            ImGui::PopID();
         }
-        ImGui::TreePop();
+        if (node_open)
+            ImGui::TreePop();
+        ImGui::PopID();
     }
-    ImGui::PopID();
-}
+};
 
-// Demonstrate create a simple property editor.
-// This demo is a bit lackluster nowadays, would be nice to improve.
+// Demonstrate creating a simple property editor.
 static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
@@ -7907,25 +8036,10 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
     }
 
     IMGUI_DEMO_MARKER("Examples/Property Editor");
-    HelpMarker(
-        "This example shows how you may implement a property editor using two columns.\n"
-        "All objects/fields data are dummies here.\n");
+    static ExampleAppPropertyEditor property_editor;
+    static ExampleTreeNode* tree_data = ExampleTree_CreateDemoTree();
+    property_editor.Draw(tree_data);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    if (ImGui::BeginTable("##split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
-    {
-        ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn("Object");
-        ImGui::TableSetupColumn("Contents");
-        ImGui::TableHeadersRow();
-
-        // Iterate placeholder objects (all the same data)
-        for (int obj_i = 0; obj_i < 4; obj_i++)
-            ShowPlaceholderObject("Object", obj_i);
-
-        ImGui::EndTable();
-    }
-    ImGui::PopStyleVar();
     ImGui::End();
 }
 

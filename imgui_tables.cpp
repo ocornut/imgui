@@ -412,8 +412,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
             SetNextWindowScroll(ImVec2(0.0f, 0.0f));
 
         // Create scrolling region (without border and zero window padding)
-        ImGuiWindowFlags child_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
-        BeginChildEx(name, instance_id, outer_rect.GetSize(), false, child_flags);
+        ImGuiWindowFlags child_window_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
+        BeginChildEx(name, instance_id, outer_rect.GetSize(), ImGuiChildFlags_None, child_window_flags);
         table->InnerWindow = g.CurrentWindow;
         table->WorkRect = table->InnerWindow->WorkRect;
         table->OuterRect = table->InnerWindow->Rect();
@@ -3471,7 +3471,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             Separator();
         want_separator = true;
 
-        PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+        PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
         for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
         {
             ImGuiTableColumn* other_column = &table->Columns[other_column_n];
