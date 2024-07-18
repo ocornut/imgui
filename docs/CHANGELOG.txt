@@ -77,6 +77,57 @@ Other changes:
     Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
     (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
   - This was mostly all previously in imgui_internal.h.
+- Multi-Select: added multi-select API and demos. (#1861)
+   - This system implements standard multi-selection idioms (CTRL+mouse click, CTRL+keyboard moves,
+     SHIFT+mouse click, SHIFT+keyboard moves, etc.) with support for clipper (not submitting non-visible
+     items), box-selection with scrolling, and many other details.
+   - In the spirit of Dear ImGui design, your code owns both items and actual selection data.
+     This is designed to allow all kinds of selection storage you may use in your application
+     (e.g. set/map/hash, intrusive selection, interval trees, up to you).
+   - The supported widgets are Selectable(), Checkbox(). TreeNode() is also technically supported but...
+     using this correctly is more complicated (you need some sort of linear/random access to your tree,
+     which is suited to advanced trees setups already implementing filters and clipper.
+     We will work toward simplifying and demoing this later.
+   - A helper ImGuiSelectionBasicStorage is provided to facilitate getting started in a typical app.
+   - Documentation:
+     - Wiki page https://github.com/ocornut/imgui/wiki/Multi-Select for API overview.
+     - Demo code.
+     - Headers are well commented.
+  - Added BeginMultiSelect(), EndMultiSelect(), SetNextItemSelectionUserData().
+  - Added IsItemToggledSelection() for use if you need latest selection update during currnet iteration.
+  - Added ImGuiMultiSelectIO and ImGuiSelectionRequest structures:
+    - BeginMultiSelect() and EndMultiSelect() return a ImGuiMultiSelectIO structure, which
+      is mostly an array of ImGuiSelectionRequest actions (clear, select all, set range, etc.)
+    - Other fields are helpful when using a clipper, or wanting to handle deletion nicely.
+  - Added ImGuiSelectionBasicStorage helper to store and maintain a selection (optional):
+    - This is similar to if you used e.g. a std::set<ID> to store a selection, with all the right
+      glue to honor ImGuiMultiSelectIO requests. Most applications can use that.
+  - Added ImGuiSelectionExternalStorage helper to maintain an externally stored selection (optional):
+    - Helpful to easily bind multi-selection to e.g. an array of checkboxes.
+  - Added ImGuiMultiSelectFlags options:
+    - ImGuiMultiSelectFlags_SingleSelect
+    - ImGuiMultiSelectFlags_NoSelectAll
+    - ImGuiMultiSelectFlags_NoRangeSelect
+    - ImGuiMultiSelectFlags_NoAutoSelect
+    - ImGuiMultiSelectFlags_NoAutoClear
+    - ImGuiMultiSelectFlags_NoAutoClearOnReselect (#7424)
+    - ImGuiMultiSelectFlags_BoxSelect1d
+    - ImGuiMultiSelectFlags_BoxSelect2d
+    - ImGuiMultiSelectFlags_BoxSelectNoScroll
+    - ImGuiMultiSelectFlags_ClearOnEscape
+    - ImGuiMultiSelectFlags_ClearOnClickVoid
+    - ImGuiMultiSelectFlags_ScopeWindow (default), ImGuiMultiSelectFlags_ScopeRect
+    - ImGuiMultiSelectFlags_SelectOnClick (default), ImGuiMultiSelectFlags_SelectOnClickRelease
+    - ImGuiMultiSelectFlags_NavWrapX
+  - Demo: Added "Examples->Assets Browser" demo.
+  - Demo: Added "Widgets->Selection State & Multi-Select" section, with:
+    - Multi-Select
+    - Multi-Select (with clipper)
+    - Multi-Select (with deletion)
+    - Multi-Select (dual list box) (#6648)
+    - Multi-Select (checkboxes)
+    - Multi-Select (multiple scopes)
+    - Multi-Select (advanced)
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration

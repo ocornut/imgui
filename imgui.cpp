@@ -2558,6 +2558,7 @@ ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStoragePair* in_
     return in_p;
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 {
     // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
@@ -2571,6 +2572,7 @@ void ImGuiStorage::BuildSortByKey()
 {
     ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
@@ -3079,9 +3081,27 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
             // Add visible range
+            float min_y = window->ClipRect.Min.y;
+            float max_y = window->ClipRect.Max.y;
+
+            // Add box selection range
+            ImGuiBoxSelectState* bs = &g.BoxSelectState;
+            if (bs->IsActive && bs->Window == window)
+            {
+                // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
+                // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
+                // As a workaround we currently half ItemSpacing worth on each side.
+                min_y -= g.Style.ItemSpacing.y;
+                max_y += g.Style.ItemSpacing.y;
+
+                // Box-select on 2D area requires different clipping.
+                if (bs->UnclipMode)
+                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
+            }
+
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
-            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(window->ClipRect.Min.y, window->ClipRect.Max.y, off_min, off_max));
+            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(min_y, max_y, off_min, off_max));
         }
 
         // Convert position ranges to item index ranges
@@ -3818,6 +3838,9 @@ void ImGui::Shutdown()
     g.TablesTempData.clear_destruct();
     g.DrawChannelsTempMergeBuffer.clear();
 
+    g.MultiSelectStorage.Clear();
+    g.MultiSelectTempData.clear_destruct();
+
     g.ClipboardHandlerData.clear();
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
@@ -3928,6 +3951,8 @@ void ImGui::GcCompactTransientMiscBuffers()
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
     g.GroupStack.clear();
+    g.MultiSelectTempDataStacked = 0;
+    g.MultiSelectTempData.clear_destruct();
     TableGcCompactSettings();
 }
 
@@ -4052,7 +4077,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
-    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id);
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
 
     //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
@@ -5446,9 +5471,15 @@ bool ImGui::IsItemToggledOpen()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_ToggledOpen) ? true : false;
 }
 
+// Call after a Selectable() or TreeNode() involved in multi-selection.
+// Useful if you need the per-item information before reaching EndMultiSelect(), e.g. for rendering purpose.
+// This is only meant to be called inside a BeginMultiSelect()/EndMultiSelect() block.
+// (Outside of multi-select, it would be misleading/ambiguous to report this signal, as widgets
+// return e.g. a pressed event and user code is in charge of altering selection in ways we cannot predict.)
 bool ImGui::IsItemToggledSelection()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentMultiSelect != NULL); // Can only be used inside a BeginMultiSelect()/EndMultiSelect()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_ToggledSelection) ? true : false;
 }
 
@@ -5508,7 +5539,8 @@ void ImGui::SetItemAllowOverlap()
 }
 #endif
 
-// FIXME: It might be undesirable that this will likely disable KeyOwner-aware shortcuts systems. Consider a more fine-tuned version for the two users of this function.
+// This is a shortcut for not taking ownership of 100+ keys, frequently used by drag operations.
+// FIXME: It might be undesirable that this will likely disable KeyOwner-aware shortcuts systems. Consider a more fine-tuned version if needed?
 void ImGui::SetActiveIdUsingAllKeyboardKeys()
 {
     ImGuiContext& g = *GImGui;
@@ -10060,6 +10092,11 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
         if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
         EndTabBar();
     }
+    while (g.CurrentMultiSelect != NULL && g.CurrentMultiSelect->Storage->Window == window)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndMultiSelect() in '%s'", window->Name);
+        EndMultiSelect();
+    }
     while (window->DC.TreeDepth > 0)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
@@ -12251,6 +12288,7 @@ static void ImGui::NavUpdate()
 
     // Process navigation init request (select first/default focus)
     g.NavJustMovedToId = 0;
+    g.NavJustMovedToFocusScopeId = g.NavJustMovedFromFocusScopeId = 0;
     if (g.NavInitResult.ID != 0)
         NavInitRequestApplyResult();
     g.NavInitRequest = false;
@@ -12403,6 +12441,7 @@ void ImGui::NavInitRequestApplyResult()
     ImGuiNavItemData* result = &g.NavInitResult;
     if (g.NavId != result->ID)
     {
+        g.NavJustMovedFromFocusScopeId = g.NavFocusScopeId;
         g.NavJustMovedToId = result->ID;
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = 0;
@@ -12661,6 +12700,7 @@ void ImGui::NavMoveRequestApplyResult()
     // PageUp/PageDown however sets always set NavJustMovedTo (vs Home/End which doesn't) mimicking Windows behavior.
     if ((g.NavId != result->ID || (g.NavMoveFlags & ImGuiNavMoveFlags_IsPageMove)) && (g.NavMoveFlags & ImGuiNavMoveFlags_NoSelect) == 0)
     {
+        g.NavJustMovedFromFocusScopeId = g.NavFocusScopeId;
         g.NavJustMovedToId = result->ID;
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
@@ -13419,7 +13459,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 
     IM_ASSERT(g.DragDropWithinTarget == false && g.DragDropWithinSource == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()
     g.DragDropTargetRect = bb;
-    g.DragDropTargetClipRect = window->ClipRect; // May want to be overriden by user depending on use case?
+    g.DragDropTargetClipRect = window->ClipRect; // May want to be overridden by user depending on use case?
     g.DragDropTargetId = id;
     g.DragDropWithinTarget = true;
     return true;
@@ -14957,6 +14997,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         TreePop();
     }
 
+    // Details for MultiSelect
+    if (TreeNode("MultiSelect", "MultiSelect (%d)", g.MultiSelectStorage.GetAliveCount()))
+    {
+        ImGuiBoxSelectState* bs = &g.BoxSelectState;
+        BulletText("BoxSelect ID=0x%08X, Starting = %d, Active %d", bs->ID, bs->IsStarting, bs->IsActive);
+        for (int n = 0; n < g.MultiSelectStorage.GetMapSize(); n++)
+            if (ImGuiMultiSelectState* state = g.MultiSelectStorage.TryGetMapData(n))
+                DebugNodeMultiSelectState(state);
+        TreePop();
+    }
+
     // Details for Docking
 #ifdef IMGUI_HAS_DOCK
     if (TreeNode("Docking"))
@@ -15799,7 +15850,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     ShowDebugLogFlag("IO", ImGuiDebugLogFlags_EventIO);
     ShowDebugLogFlag("Nav", ImGuiDebugLogFlags_EventNav);
     ShowDebugLogFlag("Popup", ImGuiDebugLogFlags_EventPopup);
-    //ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
+    ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
     ShowDebugLogFlag("InputRouting", ImGuiDebugLogFlags_EventInputRouting);
 
     if (SmallButton("Clear"))
