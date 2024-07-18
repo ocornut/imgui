@@ -90,6 +90,7 @@ Other changes:
   struct description data that a real application would want to use.
 - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
   (#7768, #4858, #2622) [@Aemony]
+- Backends: SDL3: Update for API changes: SDL_GetClipboardText() string ownership change. (#7801)
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
 - Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
 - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
