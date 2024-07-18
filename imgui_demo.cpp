@@ -3317,6 +3317,8 @@ static void ShowDemoWindowMultiSelect()
                 if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
                 ImGui::SameLine();
                 if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
+                ImGui::SameLine();
+                HelpMarker("TreeNode() is technically supported but... using this correctly is more complicated (you need some sort of linear/random access to your tree, which is suited to advanced trees setups already implementing filters and clipper. We will work toward simplifying and demoing this.\n\nFor now the tree demo is actually a little bit meaningless because it is an empty tree with only root nodes.");
                 ImGui::Checkbox("Enable clipper", &use_clipper);
                 ImGui::Checkbox("Enable deletion", &use_deletion);
                 ImGui::Checkbox("Enable drag & drop", &use_drag_drop);
