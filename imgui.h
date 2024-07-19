@@ -74,11 +74,43 @@ Index of this file:
 #include <stddef.h>                 // ptrdiff_t, NULL
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-// Define attributes of all API symbols declarations (e.g. for DLL under Windows)
-// IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default backends files (imgui_impl_xxx.h)
-// Using dear imgui via a shared library is not recommended: we don't guarantee backward nor forward ABI compatibility + this is a call-heavy library and function call overhead adds up.
+// Automatically select the ImGui platform if `_IMGUI_AUTO` is defined
+#ifdef _IMGUI_AUTO
+#if !defined(_IMGUI_WINDOWS) && (defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__))
+#define _IMGUI_WINDOWS
+#elif !defined(_IMGUI_LINUX) && defined(__GNUC__)
+#define _IMGUI_LINUX
+#endif
+#endif
+
+// Define DLL_EXPORT to export symbols (for example, Windows DLL)
+// IMGUI_API is used for core ImGui functions, IMGUI_IMPL_API is used for the default backends files (imgui_impl_xxx.h)
+// Using Dear ImGui via a shared library is not recommended: we don't guarantee backward nor forward ABI compatibility and function call overhead adds up.
 #ifndef IMGUI_API
+#ifndef IMGUI_API
+#ifdef _IMGUI_DLL
+#ifdef _IMGUI_WINDOWS
+#ifdef _IMGUI_DLL_EXPORT
+#define IMGUI_API                   __declspec(dllexport)
+#else
+#define IMGUI_API                   __declspec(dllimport)
+#endif
+#elif defined(_IMGUI_LINUX)
+#ifdef _IMGUI_DLL_EXPORT
+#define IMGUI_API __attribute__((visibility("default")))
+#endif
+#elif defined(_IMGUI_MACOS)
+#ifdef _IMGUI_DLL_EXPORT
+#define IMGUI_API __attribute__((visibility("default")))
+#else
+#define IMGUI_API 
+#endif
+#else
+#error DLL (Shared Library) is not supported on this platform
+#endif
+#else
 #define IMGUI_API
+#endif
 #endif
 #ifndef IMGUI_IMPL_API
 #define IMGUI_IMPL_API              IMGUI_API

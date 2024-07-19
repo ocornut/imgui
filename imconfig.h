@@ -19,12 +19,26 @@
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts
 
-//---- Define attributes of all API symbols declarations, e.g. for DLL under Windows
-// Using Dear ImGui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
-// DLL users: heaps and globals are not shared across DLL boundaries! You will need to call SetCurrentContext() + SetAllocatorFunctions()
-// for each static/DLL boundary you are calling from. Read "Context and Memory Allocators" section of imgui.cpp for more details.
-//#define IMGUI_API __declspec( dllexport )
-//#define IMGUI_API __declspec( dllimport )
+//---- Define the target platform. This will select the appropriate code path for your operating system.
+// You can define one of the following manually:
+// #define _IMGUI_WINDOWS   // Use this for compiling on Windows platforms.
+// #define _IMGUI_LINUX     // Use this for compiling on Linux platforms.
+// #define _IMGUI_MACOS     // Use this for compiling on macOS platforms.
+//
+// Alternatively, you can use automatic detection by defining:
+// #define _IMGUI_AUTO      // Automatically detect the platform. 
+//
+// Ensure that only one of these macros is defined at any time to avoid conflicts.
+//#define _IMGUI_WINDOWS
+//#define _IMGUI_LINUX
+//#define _IMGUI_MACOS
+//#define _IMGUI_AUTO
+
+//---- Define attributes for all API symbols declarations
+// Using Dear ImGui through a shared library is generally not recommended due to the overhead of function calls and the lack of guaranteed backward or forward ABI compatibility.
+// If you are using a DLL, keep in mind that heaps and globals are not shared across DLL boundaries. Therefore, you need to call SetCurrentContext() and SetAllocatorFunctions()
+// for each static/DLL boundary you are working across. Refer to the "Context and Memory Allocators" section in imgui.cpp for further details.
+// #define _IMGUI_DLL
 
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to clean your code of obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
