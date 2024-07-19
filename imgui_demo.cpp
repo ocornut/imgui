@@ -11,7 +11,7 @@
 // Get the latest version at https://github.com/ocornut/imgui
 
 // How to easily locate code?
-// - Use the Item Picker to debug break in code by clicking any widgets: https://github.com/ocornut/imgui/wiki/Debug-Tools
+// - Use Tools->Item Picker to debug break in code by clicking any widgets: https://github.com/ocornut/imgui/wiki/Debug-Tools
 // - Browse an online version the demo with code linked to hovered widgets: https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html
 // - Find a visible string and search for it in the code!
 
@@ -62,6 +62,7 @@
 // - In Visual Studio: CTRL+comma ("Edit.GoToAll") can follow symbols inside comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
 // - In Visual Studio w/ Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
 // - In VS Code, CLion, etc.: CTRL+click can follow symbols inside comments.
+// - You can search/grep for all sections listed in the index to find the section.
 
 /*
 
@@ -69,14 +70,14 @@ Index of this file:
 
 // [SECTION] Forward Declarations
 // [SECTION] Helpers
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] Demo Window / ShowDemoWindow()
-// - ShowDemoWindow()
-// - sub section: ShowDemoWindowWidgets()
-// - sub section: ShowDemoWindowMultiSelect()
-// - sub section: ShowDemoWindowLayout()
-// - sub section: ShowDemoWindowPopups()
-// - sub section: ShowDemoWindowTables()
-// - sub section: ShowDemoWindowInputs()
+// [SECTION] ShowDemoWindowWidgets()
+// [SECTION] ShowDemoWindowMultiSelect()
+// [SECTION] ShowDemoWindowLayout()
+// [SECTION] ShowDemoWindowPopups()
+// [SECTION] ShowDemoWindowTables()
+// [SECTION] ShowDemoWindowInputs()
 // [SECTION] About Window / ShowAboutWindow()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] User Guide / ShowUserGuide()
@@ -84,7 +85,6 @@ Index of this file:
 // [SECTION] Example App: Debug Console / ShowExampleAppConsole()
 // [SECTION] Example App: Debug Log / ShowExampleAppLog()
 // [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
-// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 // [SECTION] Example App: Long Text / ShowExampleAppLongText()
 // [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
@@ -192,7 +192,7 @@ Index of this file:
 #endif
 
 //-----------------------------------------------------------------------------
-// [SECTION] Forward Declarations, Helpers
+// [SECTION] Forward Declarations
 //-----------------------------------------------------------------------------
 
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
@@ -215,7 +215,7 @@ static void ShowExampleAppWindowTitles(bool* p_open);
 static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
-// (because the link time of very large functions grow non-linearly)
+// (because the link time of very large functions tends to grow non-linearly)
 static void ShowDemoWindowWidgets();
 static void ShowDemoWindowMultiSelect();
 static void ShowDemoWindowLayout();
@@ -251,16 +251,85 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 #define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback != NULL) GImGuiDemoMarkerCallback(__FILE__, __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
 
 //-----------------------------------------------------------------------------
-// [SECTION] Demo Window / ShowDemoWindow()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
 //-----------------------------------------------------------------------------
-// - ShowDemoWindow()
-// - ShowDemoWindowWidgets()
-// - ShowDemoWindowMultiSelect()
-// - ShowDemoWindowLayout()
-// - ShowDemoWindowPopups()
-// - ShowDemoWindowTables()
-// - ShowDemoWindowColumns()
-// - ShowDemoWindowInputs()
+
+// Simple representation for a tree
+// (this is designed to be simple to understand for our demos, not to be fancy or efficient etc.)
+struct ExampleTreeNode
+{
+    // Tree structure
+    char                        Name[28];
+    int                         UID = 0;
+    ExampleTreeNode*            Parent = NULL;
+    ImVector<ExampleTreeNode*>  Childs;
+
+    // Leaf Data
+    bool                        HasData = false; // All leaves have data
+    bool                        DataMyBool = false;
+    int                         DataMyInt = 128;
+    ImVec2                      DataMyVec2 = ImVec2(0.0f, 3.141592f);
+};
+
+// Simple representation of struct metadata/serialization data.
+// (this is a minimal version of what a typical advanced application may provide)
+struct ExampleMemberInfo
+{
+    const char*     Name;       // Member name
+    ImGuiDataType   DataType;   // Member type
+    int             DataCount;  // Member count (1 when scalar)
+    int             Offset;     // Offset inside parent structure
+};
+
+// Metadata description of ExampleTreeNode struct.
+static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
+{
+    { "MyBool",     ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataMyBool) },
+    { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataMyInt) },
+    { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataMyVec2) },
+};
+
+static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, ExampleTreeNode* parent)
+{
+    ExampleTreeNode* node = IM_NEW(ExampleTreeNode);
+    snprintf(node->Name, IM_ARRAYSIZE(node->Name), "%s", name);
+    node->UID = uid;
+    node->Parent = parent;
+    if (parent)
+        parent->Childs.push_back(node);
+    return node;
+}
+
+// Create example tree data
+static ExampleTreeNode* ExampleTree_CreateDemoTree()
+{
+    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+    char name_buf[32];
+    int uid = 0;
+    ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
+    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * 2; idx_L0++)
+    {
+        snprintf(name_buf, 32, "%s %d", root_names[idx_L0 / 2], idx_L0 % 2);
+        ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
+        const int number_of_childs = (int)strlen(node_L1->Name);
+        for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
+        {
+            snprintf(name_buf, 32, "Child %d", idx_L1);
+            ExampleTreeNode* node_L2 = ExampleTree_CreateNode(name_buf, ++uid, node_L1);
+            node_L2->HasData = true;
+            if (idx_L1 == 0)
+            {
+                snprintf(name_buf, 32, "Sub-child %d", 0);
+                ExampleTreeNode* node_L3 = ExampleTree_CreateNode(name_buf, ++uid, node_L2);
+                node_L3->HasData = true;
+            }
+        }
+    }
+    return node_L0;
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] Demo Window / ShowDemoWindow()
 //-----------------------------------------------------------------------------
 
 // Demonstrate most Dear ImGui features (this is big function!)
@@ -609,6 +678,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::PopItemWidth();
     ImGui::End();
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowWidgets()
+//-----------------------------------------------------------------------------
 
 static void ShowDemoWindowWidgets()
 {
@@ -2991,8 +3064,13 @@ struct ExampleDualListBox
     }
 };
 
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowMultiSelect()
+//-----------------------------------------------------------------------------
 // Multi-selection demos
 // Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
+//-----------------------------------------------------------------------------
+
 static void ShowDemoWindowMultiSelect()
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
@@ -3524,6 +3602,10 @@ static void ShowDemoWindowMultiSelect()
         ImGui::TreePop();
     }
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowLayout()
+//-----------------------------------------------------------------------------
 
 static void ShowDemoWindowLayout()
 {
@@ -4384,6 +4466,10 @@ static void ShowDemoWindowLayout()
     }
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowPopups()
+//-----------------------------------------------------------------------------
+
 static void ShowDemoWindowPopups()
 {
     IMGUI_DEMO_MARKER("Popups");
@@ -4843,6 +4929,10 @@ static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags)
     ImGui::CheckboxFlags("_IsSorted", &flags, ImGuiTableColumnFlags_IsSorted);
     ImGui::CheckboxFlags("_IsHovered", &flags, ImGuiTableColumnFlags_IsHovered);
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowTables()
+//-----------------------------------------------------------------------------
 
 static void ShowDemoWindowTables()
 {
@@ -6937,6 +7027,10 @@ static void ShowDemoWindowColumns()
     ImGui::TreePop();
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowInputs()
+//-----------------------------------------------------------------------------
+
 static void ShowDemoWindowInputs()
 {
     IMGUI_DEMO_MARKER("Inputs & Focus");
@@ -8485,83 +8579,6 @@ static void ShowExampleAppLayout(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
-//-----------------------------------------------------------------------------
-
-// Simple representation for a tree
-// (this is designed to be simple to understand for our demos, not to be efficient etc.)
-struct ExampleTreeNode
-{
-    char                    Name[28];
-    ImGuiID                 UID = 0;
-    ExampleTreeNode*        Parent = NULL;
-    ImVector<ExampleTreeNode*> Childs;
-
-    // Data
-    bool                    HasData = false; // All leaves have data
-    bool                    DataIsEnabled = false;
-    int                     DataInt = 128;
-    ImVec2                  DataVec2 = ImVec2(0.0f, 3.141592f);
-};
-
-// Simple representation of struct metadata/serialization data.
-// (this is a minimal version of what a typical advanced application may provide)
-struct ExampleMemberInfo
-{
-    const char*             Name;
-    ImGuiDataType           DataType;
-    int                     DataCount;
-    int                     Offset;
-};
-
-// Metadata description of ExampleTreeNode struct.
-static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
-{
-    { "Enabled",    ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataIsEnabled) },
-    { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataInt) },
-    { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataVec2) },
-};
-
-static ExampleTreeNode* ExampleTree_CreateNode(const char* name, const ImGuiID uid, ExampleTreeNode* parent)
-{
-    ExampleTreeNode* node = IM_NEW(ExampleTreeNode);
-    snprintf(node->Name, IM_ARRAYSIZE(node->Name), "%s", name);
-    node->UID = uid;
-    node->Parent = parent;
-    if (parent)
-        parent->Childs.push_back(node);
-    return node;
-}
-
-// Create example tree data
-static ExampleTreeNode* ExampleTree_CreateDemoTree()
-{
-    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
-    char name_buf[32];
-    ImGuiID uid = 0;
-    ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
-    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * 2; idx_L0++)
-    {
-        snprintf(name_buf, 32, "%s %d", root_names[idx_L0 / 2], idx_L0 % 2);
-        ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
-        const int number_of_childs = (int)strlen(node_L1->Name);
-        for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
-        {
-            snprintf(name_buf, 32, "Child %d", idx_L1);
-            ExampleTreeNode* node_L2 = ExampleTree_CreateNode(name_buf, ++uid, node_L1);
-            node_L2->HasData = true;
-            if (idx_L1 == 0)
-            {
-                snprintf(name_buf, 32, "Sub-child %d", 0);
-                ExampleTreeNode* node_L3 = ExampleTree_CreateNode(name_buf, ++uid, node_L2);
-                node_L3->HasData = true;
-            }
-        }
-    }
-    return node_L0;
-}
-
-//-----------------------------------------------------------------------------
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
 // Some of the interactions are a bit lack-luster:
@@ -8601,7 +8618,7 @@ struct ExampleAppPropertyEditor
     void DrawTreeNode(ExampleTreeNode* node)
     {
         // Object tree node
-        ImGui::PushID((int)node->UID);
+        ImGui::PushID(node->UID);
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::AlignTextToFramePadding();

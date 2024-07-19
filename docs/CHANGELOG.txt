@@ -77,7 +77,7 @@ Other changes:
     Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
     (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
   - This was mostly all previously in imgui_internal.h.
-- Multi-Select: added multi-select API and demos. (#1861)
+- Multi-Select: added multi-select API and demos. (#1861, #6518)
    - This system implements standard multi-selection idioms (CTRL+mouse click, CTRL+keyboard moves,
      SHIFT+mouse click, SHIFT+keyboard moves, etc.) with support for clipper (not submitting non-visible
      items), box-selection with scrolling, and many other details.
