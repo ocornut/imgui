@@ -7687,9 +7687,10 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 {
                     selected = !selected;
                     ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, +1, item_data, item_data };
-                    ImGuiSelectionRequest* prev_req = (ms->IO.Requests.Size > 0) ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-                    if (prev_req && prev_req->Type == ImGuiSelectionRequestType_SetRange && prev_req->RangeLastItem == ms->BoxSelectLastitem && prev_req->Selected == selected)
-                        prev_req->RangeLastItem = item_data; // Merge span into same request
+                    // Merge continuous ranges (unless NoRangeSelect is set)
+                    ImGuiSelectionRequest* prev = ms->IO.Requests.Size > 0 ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
+                    if (prev && prev->Type == ImGuiSelectionRequestType_SetRange && prev->RangeLastItem == ms->BoxSelectLastitem && prev->Selected == selected && (ms->Flags & ImGuiMultiSelectFlags_NoRangeSelect) == 0)
+                        prev->RangeLastItem = item_data; // Merge span into same request
                     else
                         ms->IO.Requests.push_back(req);
                 }
