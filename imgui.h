@@ -28,7 +28,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.0 WIP"
-#define IMGUI_VERSION_NUM   19096
+#define IMGUI_VERSION_NUM   19097
 #define IMGUI_HAS_TABLE
 
 /*
@@ -983,6 +983,14 @@ namespace ImGui
     // - Visualize registered routes in 'Metrics/Debugger->Inputs'.
     IMGUI_API bool          Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0);
     IMGUI_API void          SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0);
+
+    // Inputs Utilities: Key/Input Ownership [BETA]
+    // - One common use case would be to allow your items to disable standard inputs behaviors such
+    //   as Tab or Alt key handling, Mouse Wheel scrolling, etc.
+    //   e.g. Button(...); SetItemKeyOwner(ImGuiKey_MouseWheelY); to make hovering/activating a button disable wheel for scrolling.
+    // - Reminder ImGuiKey enum include access to mouse buttons and gamepad, so key ownership can apply to them.
+    // - Many related features are still in imgui_internal.h. For instance, most IsKeyXXX()/IsMouseXXX() functions have an owner-id-aware version.
+    IMGUI_API void          SetItemKeyOwner(ImGuiKey key);                                      // Set key owner to last item ID if it is hovered or active. Equivalent to 'if (IsItemHovered() || IsItemActive()) { SetKeyOwner(key, GetItemID());'.
 
     // Inputs Utilities: Mouse specific
     // - To refer to a mouse button, you may use named enums in your code e.g. ImGuiMouseButton_Left, ImGuiMouseButton_Right.

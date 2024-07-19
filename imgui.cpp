@@ -9805,6 +9805,11 @@ void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
     }
 }
 
+void ImGui::SetItemKeyOwner(ImGuiKey key)
+{
+    SetItemKeyOwner(key, ImGuiInputFlags_None);
+}
+
 // This is the only public API until we expose owner_id versions of the API as replacements.
 bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord)
 {

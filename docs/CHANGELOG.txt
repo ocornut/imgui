@@ -77,6 +77,13 @@ Other changes:
     Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
     (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
   - This was mostly all previously in imgui_internal.h.
+- Inputs: added SetItemKeyOwner(ImGuiKey key) in public API. This is a simplified version of a more
+  complete set of function available in imgui_internal.h. One common use-case for this is to allow
+  your items to disable standard inputs behaviors such as Tab or Alt handling, Mouse Wheel scrolling,
+  etc. (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
+     // Hovering or activating the button will disable mouse wheel default behavior to scroll
+     InvisibleButton(...);
+     SetItemKeyOwner(ImGuiKey_MouseWheelY);
 - Multi-Select: added multi-select API and demos. (#1861, #6518)
    - This system implements standard multi-selection idioms (CTRL+mouse click, CTRL+keyboard moves,
      SHIFT+mouse click, SHIFT+keyboard moves, etc.) with support for clipper (not submitting non-visible
