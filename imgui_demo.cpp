@@ -72,6 +72,7 @@ Index of this file:
 // [SECTION] Helpers
 // [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] Demo Window / ShowDemoWindow()
+// [SECTION] ShowDemoWindowMenuBar()
 // [SECTION] ShowDemoWindowWidgets()
 // [SECTION] ShowDemoWindowMultiSelect()
 // [SECTION] ShowDemoWindowLayout()
@@ -217,6 +218,7 @@ static void ShowExampleMenuFile();
 // We split the contents of the big ShowDemoWindow() function into smaller functions
 // (because the link time of very large functions tends to grow non-linearly)
 struct DemoWindowData;
+static void ShowDemoWindowMenuBar(DemoWindowData* demo_data);
 static void ShowDemoWindowWidgets(DemoWindowData* demo_data);
 static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data);
 static void ShowDemoWindowLayout();
@@ -443,68 +445,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     // Most "big" widgets share a common width settings by default. See 'Demo->Layout->Widgets Width' for details.
-    // e.g. Use 2/3 of the space for widgets and 1/3 for labels (right align)
-    //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
-    // e.g. Leave a fixed amount of width for labels (by passing a negative value), the rest goes to widgets.
-    ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
+    ImGui::PushItemWidth(ImGui::GetFontSize() * -12);           // e.g. Leave a fixed amount of width for labels (by passing a negative value), the rest goes to widgets.
+    //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);   // e.g. Use 2/3 of the space for widgets and 1/3 for labels (right align)
 
     // Menu Bar
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("Menu"))
-        {
-            IMGUI_DEMO_MARKER("Menu/File");
-            ShowExampleMenuFile();
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Examples"))
-        {
-            IMGUI_DEMO_MARKER("Menu/Examples");
-            ImGui::MenuItem("Main menu bar", NULL, &demo.ShowMainMenuBar);
-
-            ImGui::SeparatorText("Mini apps");
-            ImGui::MenuItem("Assets Browser", NULL, &demo.ShowAppAssetsBrowser);
-            ImGui::MenuItem("Console", NULL, &demo.ShowAppConsole);
-            ImGui::MenuItem("Custom rendering", NULL, &demo.ShowAppCustomRendering);
-            ImGui::MenuItem("Documents", NULL, &demo.ShowAppDocuments);
-            ImGui::MenuItem("Log", NULL, &demo.ShowAppLog);
-            ImGui::MenuItem("Property editor", NULL, &demo.ShowAppPropertyEditor);
-            ImGui::MenuItem("Simple layout", NULL, &demo.ShowAppLayout);
-            ImGui::MenuItem("Simple overlay", NULL, &demo.ShowAppSimpleOverlay);
-
-            ImGui::SeparatorText("Concepts");
-            ImGui::MenuItem("Auto-resizing window", NULL, &demo.ShowAppAutoResize);
-            ImGui::MenuItem("Constrained-resizing window", NULL, &demo.ShowAppConstrainedResize);
-            ImGui::MenuItem("Fullscreen window", NULL, &demo.ShowAppFullscreen);
-            ImGui::MenuItem("Long text display", NULL, &demo.ShowAppLongText);
-            ImGui::MenuItem("Manipulating window titles", NULL, &demo.ShowAppWindowTitles);
-
-            ImGui::EndMenu();
-        }
-        //if (ImGui::MenuItem("MenuItem")) {} // You can also use MenuItem() inside a menu bar!
-        if (ImGui::BeginMenu("Tools"))
-        {
-            IMGUI_DEMO_MARKER("Menu/Tools");
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-            const bool has_debug_tools = true;
-#else
-            const bool has_debug_tools = false;
-#endif
-            ImGui::MenuItem("Metrics/Debugger", NULL, &demo.ShowMetrics, has_debug_tools);
-            ImGui::MenuItem("Debug Log", NULL, &demo.ShowDebugLog, has_debug_tools);
-            ImGui::MenuItem("ID Stack Tool", NULL, &demo.ShowIDStackTool, has_debug_tools);
-            ImGui::MenuItem("Style Editor", NULL, &demo.ShowStyleEditor);
-            bool is_debugger_present = ImGui::GetIO().ConfigDebugIsDebuggerPresent;
-            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
-                ImGui::DebugStartItemPicker();
-            if (!is_debugger_present)
-                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
-            ImGui::Separator();
-            ImGui::MenuItem("About Dear ImGui", NULL, &demo.ShowAbout);
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
+    ShowDemoWindowMenuBar(&demo);
 
     ImGui::Text("dear imgui says hello! (%s) (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Spacing();
@@ -682,6 +627,71 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // End of ShowDemoWindow()
     ImGui::PopItemWidth();
     ImGui::End();
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] ShowDemoWindowMenuBar()
+//-----------------------------------------------------------------------------
+
+static void ShowDemoWindowMenuBar(DemoWindowData* demo_data)
+{
+    IMGUI_DEMO_MARKER("Menu");
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("Menu"))
+        {
+            IMGUI_DEMO_MARKER("Menu/File");
+            ShowExampleMenuFile();
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Examples"))
+        {
+            IMGUI_DEMO_MARKER("Menu/Examples");
+            ImGui::MenuItem("Main menu bar", NULL, &demo_data->ShowMainMenuBar);
+
+            ImGui::SeparatorText("Mini apps");
+            ImGui::MenuItem("Assets Browser", NULL, &demo_data->ShowAppAssetsBrowser);
+            ImGui::MenuItem("Console", NULL, &demo_data->ShowAppConsole);
+            ImGui::MenuItem("Custom rendering", NULL, &demo_data->ShowAppCustomRendering);
+            ImGui::MenuItem("Documents", NULL, &demo_data->ShowAppDocuments);
+            ImGui::MenuItem("Log", NULL, &demo_data->ShowAppLog);
+            ImGui::MenuItem("Property editor", NULL, &demo_data->ShowAppPropertyEditor);
+            ImGui::MenuItem("Simple layout", NULL, &demo_data->ShowAppLayout);
+            ImGui::MenuItem("Simple overlay", NULL, &demo_data->ShowAppSimpleOverlay);
+
+            ImGui::SeparatorText("Concepts");
+            ImGui::MenuItem("Auto-resizing window", NULL, &demo_data->ShowAppAutoResize);
+            ImGui::MenuItem("Constrained-resizing window", NULL, &demo_data->ShowAppConstrainedResize);
+            ImGui::MenuItem("Fullscreen window", NULL, &demo_data->ShowAppFullscreen);
+            ImGui::MenuItem("Long text display", NULL, &demo_data->ShowAppLongText);
+            ImGui::MenuItem("Manipulating window titles", NULL, &demo_data->ShowAppWindowTitles);
+
+            ImGui::EndMenu();
+        }
+        //if (ImGui::MenuItem("MenuItem")) {} // You can also use MenuItem() inside a menu bar!
+        if (ImGui::BeginMenu("Tools"))
+        {
+            IMGUI_DEMO_MARKER("Menu/Tools");
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+            const bool has_debug_tools = true;
+#else
+            const bool has_debug_tools = false;
+#endif
+            ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
+            ImGui::MenuItem("Debug Log", NULL, &demo_data->ShowDebugLog, has_debug_tools);
+            ImGui::MenuItem("ID Stack Tool", NULL, &demo_data->ShowIDStackTool, has_debug_tools);
+            ImGui::MenuItem("Style Editor", NULL, &demo_data->ShowStyleEditor);
+            bool is_debugger_present = ImGui::GetIO().ConfigDebugIsDebuggerPresent;
+            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
+                ImGui::DebugStartItemPicker();
+            if (!is_debugger_present)
+                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
+            ImGui::Separator();
+            ImGui::MenuItem("About Dear ImGui", NULL, &demo_data->ShowAbout);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
 }
 
 //-----------------------------------------------------------------------------
