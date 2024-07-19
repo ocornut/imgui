@@ -216,8 +216,9 @@ static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
 // (because the link time of very large functions tends to grow non-linearly)
-static void ShowDemoWindowWidgets();
-static void ShowDemoWindowMultiSelect();
+struct DemoWindowData;
+static void ShowDemoWindowWidgets(DemoWindowData* demo_data);
+static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data);
 static void ShowDemoWindowLayout();
 static void ShowDemoWindowPopups();
 static void ShowDemoWindowTables();
@@ -332,6 +333,32 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
 // [SECTION] Demo Window / ShowDemoWindow()
 //-----------------------------------------------------------------------------
 
+struct DemoWindowData
+{
+    // Examples Apps (accessible from the "Examples" menu)
+    bool ShowMainMenuBar = false;
+    bool ShowAppAssetsBrowser = false;
+    bool ShowAppConsole = false;
+    bool ShowAppCustomRendering = false;
+    bool ShowAppDocuments = false;
+    bool ShowAppLog = false;
+    bool ShowAppLayout = false;
+    bool ShowAppPropertyEditor = false;
+    bool ShowAppSimpleOverlay = false;
+    bool ShowAppAutoResize = false;
+    bool ShowAppConstrainedResize = false;
+    bool ShowAppFullscreen = false;
+    bool ShowAppLongText = false;
+    bool ShowAppWindowTitles = false;
+
+    // Dear ImGui Tools (accessible from the "Tools" menu)
+    bool ShowMetrics = false;
+    bool ShowDebugLog = false;
+    bool ShowIDStackTool = false;
+    bool ShowStyleEditor = false;
+    bool ShowAbout = false;
+};
+
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
 // You may then search for keywords in the code when you are interested by a specific feature.
@@ -344,58 +371,36 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // Verify ABI compatibility between caller code and compiled version of Dear ImGui. This helps detects some build issues.
     IMGUI_CHECKVERSION();
 
-    // Examples Apps (accessible from the "Examples" menu)
-    static bool show_app_main_menu_bar = false;
-    static bool show_app_assets_browser = false;
-    static bool show_app_console = false;
-    static bool show_app_custom_rendering = false;
-    static bool show_app_documents = false;
-    static bool show_app_log = false;
-    static bool show_app_layout = false;
-    static bool show_app_property_editor = false;
-    static bool show_app_simple_overlay = false;
-    static bool show_app_auto_resize = false;
-    static bool show_app_constrained_resize = false;
-    static bool show_app_fullscreen = false;
-    static bool show_app_long_text = false;
-    static bool show_app_window_titles = false;
+    // Stored data
+    static DemoWindowData demo;
 
-    if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
-    if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);
-    if (show_app_assets_browser)      ShowExampleAppAssetsBrowser(&show_app_assets_browser);
-    if (show_app_console)             ShowExampleAppConsole(&show_app_console);
-    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
-    if (show_app_log)                 ShowExampleAppLog(&show_app_log);
-    if (show_app_layout)              ShowExampleAppLayout(&show_app_layout);
-    if (show_app_property_editor)     ShowExampleAppPropertyEditor(&show_app_property_editor);
-    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
-    if (show_app_auto_resize)         ShowExampleAppAutoResize(&show_app_auto_resize);
-    if (show_app_constrained_resize)  ShowExampleAppConstrainedResize(&show_app_constrained_resize);
-    if (show_app_fullscreen)          ShowExampleAppFullscreen(&show_app_fullscreen);
-    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
-    if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
+    // Examples Apps (accessible from the "Examples" menu)
+    if (demo.ShowMainMenuBar)           { ShowExampleAppMainMenuBar(); }
+    if (demo.ShowAppDocuments)          { ShowExampleAppDocuments(&demo.ShowAppDocuments); }
+    if (demo.ShowAppAssetsBrowser)      { ShowExampleAppAssetsBrowser(&demo.ShowAppAssetsBrowser); }
+    if (demo.ShowAppConsole)            { ShowExampleAppConsole(&demo.ShowAppConsole); }
+    if (demo.ShowAppCustomRendering)    { ShowExampleAppCustomRendering(&demo.ShowAppCustomRendering); }
+    if (demo.ShowAppLog)                { ShowExampleAppLog(&demo.ShowAppLog); }
+    if (demo.ShowAppLayout)             { ShowExampleAppLayout(&demo.ShowAppLayout); }
+    if (demo.ShowAppPropertyEditor)     { ShowExampleAppPropertyEditor(&demo.ShowAppPropertyEditor); }
+    if (demo.ShowAppSimpleOverlay)      { ShowExampleAppSimpleOverlay(&demo.ShowAppSimpleOverlay); }
+    if (demo.ShowAppAutoResize)         { ShowExampleAppAutoResize(&demo.ShowAppAutoResize); }
+    if (demo.ShowAppConstrainedResize)  { ShowExampleAppConstrainedResize(&demo.ShowAppConstrainedResize); }
+    if (demo.ShowAppFullscreen)         { ShowExampleAppFullscreen(&demo.ShowAppFullscreen); }
+    if (demo.ShowAppLongText)           { ShowExampleAppLongText(&demo.ShowAppLongText); }
+    if (demo.ShowAppWindowTitles)       { ShowExampleAppWindowTitles(&demo.ShowAppWindowTitles); }
 
     // Dear ImGui Tools (accessible from the "Tools" menu)
-    static bool show_tool_metrics = false;
-    static bool show_tool_debug_log = false;
-    static bool show_tool_id_stack_tool = false;
-    static bool show_tool_style_editor = false;
-    static bool show_tool_about = false;
-
-    if (show_tool_metrics)
-        ImGui::ShowMetricsWindow(&show_tool_metrics);
-    if (show_tool_debug_log)
-        ImGui::ShowDebugLogWindow(&show_tool_debug_log);
-    if (show_tool_id_stack_tool)
-        ImGui::ShowIDStackToolWindow(&show_tool_id_stack_tool);
-    if (show_tool_style_editor)
+    if (demo.ShowMetrics)               { ImGui::ShowMetricsWindow(&demo.ShowMetrics); }
+    if (demo.ShowDebugLog)              { ImGui::ShowDebugLogWindow(&demo.ShowDebugLog); }
+    if (demo.ShowIDStackTool)           { ImGui::ShowIDStackToolWindow(&demo.ShowIDStackTool); }
+    if (demo.ShowAbout)                 { ImGui::ShowAboutWindow(&demo.ShowAbout); }
+    if (demo.ShowStyleEditor)
     {
-        ImGui::Begin("Dear ImGui Style Editor", &show_tool_style_editor);
+        ImGui::Begin("Dear ImGui Style Editor", &demo.ShowStyleEditor);
         ImGui::ShowStyleEditor();
         ImGui::End();
     }
-    if (show_tool_about)
-        ImGui::ShowAboutWindow(&show_tool_about);
 
     // Demonstrate the various window flags. Typically you would just use the default!
     static bool no_titlebar = false;
@@ -455,24 +460,24 @@ void ImGui::ShowDemoWindow(bool* p_open)
         if (ImGui::BeginMenu("Examples"))
         {
             IMGUI_DEMO_MARKER("Menu/Examples");
-            ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
+            ImGui::MenuItem("Main menu bar", NULL, &demo.ShowMainMenuBar);
 
             ImGui::SeparatorText("Mini apps");
-            ImGui::MenuItem("Assets Browser", NULL, &show_app_assets_browser);
-            ImGui::MenuItem("Console", NULL, &show_app_console);
-            ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
-            ImGui::MenuItem("Documents", NULL, &show_app_documents);
-            ImGui::MenuItem("Log", NULL, &show_app_log);
-            ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
-            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
-            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
+            ImGui::MenuItem("Assets Browser", NULL, &demo.ShowAppAssetsBrowser);
+            ImGui::MenuItem("Console", NULL, &demo.ShowAppConsole);
+            ImGui::MenuItem("Custom rendering", NULL, &demo.ShowAppCustomRendering);
+            ImGui::MenuItem("Documents", NULL, &demo.ShowAppDocuments);
+            ImGui::MenuItem("Log", NULL, &demo.ShowAppLog);
+            ImGui::MenuItem("Property editor", NULL, &demo.ShowAppPropertyEditor);
+            ImGui::MenuItem("Simple layout", NULL, &demo.ShowAppLayout);
+            ImGui::MenuItem("Simple overlay", NULL, &demo.ShowAppSimpleOverlay);
 
             ImGui::SeparatorText("Concepts");
-            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
-            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
-            ImGui::MenuItem("Fullscreen window", NULL, &show_app_fullscreen);
-            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
-            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
+            ImGui::MenuItem("Auto-resizing window", NULL, &demo.ShowAppAutoResize);
+            ImGui::MenuItem("Constrained-resizing window", NULL, &demo.ShowAppConstrainedResize);
+            ImGui::MenuItem("Fullscreen window", NULL, &demo.ShowAppFullscreen);
+            ImGui::MenuItem("Long text display", NULL, &demo.ShowAppLongText);
+            ImGui::MenuItem("Manipulating window titles", NULL, &demo.ShowAppWindowTitles);
 
             ImGui::EndMenu();
         }
@@ -485,17 +490,17 @@ void ImGui::ShowDemoWindow(bool* p_open)
 #else
             const bool has_debug_tools = false;
 #endif
-            ImGui::MenuItem("Metrics/Debugger", NULL, &show_tool_metrics, has_debug_tools);
-            ImGui::MenuItem("Debug Log", NULL, &show_tool_debug_log, has_debug_tools);
-            ImGui::MenuItem("ID Stack Tool", NULL, &show_tool_id_stack_tool, has_debug_tools);
-            ImGui::MenuItem("Style Editor", NULL, &show_tool_style_editor);
+            ImGui::MenuItem("Metrics/Debugger", NULL, &demo.ShowMetrics, has_debug_tools);
+            ImGui::MenuItem("Debug Log", NULL, &demo.ShowDebugLog, has_debug_tools);
+            ImGui::MenuItem("ID Stack Tool", NULL, &demo.ShowIDStackTool, has_debug_tools);
+            ImGui::MenuItem("Style Editor", NULL, &demo.ShowStyleEditor);
             bool is_debugger_present = ImGui::GetIO().ConfigDebugIsDebuggerPresent;
             if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
                 ImGui::DebugStartItemPicker();
             if (!is_debugger_present)
                 ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
             ImGui::Separator();
-            ImGui::MenuItem("About Dear ImGui", NULL, &show_tool_about);
+            ImGui::MenuItem("About Dear ImGui", NULL, &demo.ShowAbout);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -620,7 +625,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         IMGUI_DEMO_MARKER("Configuration/Style");
         if (ImGui::TreeNode("Style"))
         {
-            ImGui::Checkbox("Style Editor", &show_tool_style_editor);
+            ImGui::Checkbox("Style Editor", &demo.ShowStyleEditor);
             ImGui::SameLine();
             HelpMarker("The same contents can be accessed in 'Tools->Style Editor' or by calling the ShowStyleEditor() function.");
             ImGui::TreePop();
@@ -668,7 +673,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     // All demo contents
-    ShowDemoWindowWidgets();
+    ShowDemoWindowWidgets(&demo);
     ShowDemoWindowLayout();
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
@@ -683,7 +688,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 // [SECTION] ShowDemoWindowWidgets()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowWidgets()
+static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets");
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -1561,7 +1566,7 @@ static void ShowDemoWindowWidgets()
         ImGui::TreePop();
     }
 
-    ShowDemoWindowMultiSelect();
+    ShowDemoWindowMultiSelect(demo_data);
 
     // To wire InputText() with std::string or any other custom string type,
     // see the "Text Input > Resize Callback" section of this demo, and the misc/cpp/imgui_stdlib.h file.
@@ -3071,7 +3076,7 @@ struct ExampleDualListBox
 // Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowMultiSelect()
+static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
     if (ImGui::TreeNode("Selection State & Multi-Select"))
@@ -3366,7 +3371,8 @@ static void ShowDemoWindowMultiSelect()
         // See ShowExampleAppAssetsBrowser()
         if (ImGui::TreeNode("Multi-Select (tiled assets browser)"))
         {
-            ImGui::BulletText("See 'Examples->Assets Browser' in menu");
+            ImGui::Checkbox("Assets Browser", &demo_data->ShowAppAssetsBrowser);
+            ImGui::Text("(also access from 'Examples->Assets Browser' in menu)");
             ImGui::TreePop();
         }
 
