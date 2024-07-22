@@ -8615,8 +8615,7 @@ struct ExampleAppPropertyEditor
     {
         // Left side: draw tree
         // - Currently using a table to benefit from RowBg feature
-        // - Using ImGuiChildFlags_NavFlattened exhibit a bug where clicking on root window decoration sets focus to root window
-        if (ImGui::BeginChild("##tree", ImVec2(300, 0), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Border))
+        if (ImGui::BeginChild("##tree", ImVec2(300, 0), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Border | ImGuiChildFlags_NavFlattened))
         {
             ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
@@ -8648,8 +8647,7 @@ struct ExampleAppPropertyEditor
             {
                 ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
                 ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
-
-                if (node && node->HasData)
+                if (node->HasData)
                 {
                     // In a typical application, the structure description would be derived from a data-driven system.
                     // - We try to mimic this with our ExampleMemberInfo structure and the ExampleTreeNodeMemberInfos[] array.
@@ -8714,10 +8712,11 @@ struct ExampleAppPropertyEditor
         if (ImGui::IsItemFocused())
             VisibleNode = node;
         if (node_open)
+        {
             for (ExampleTreeNode* child : node->Childs)
                 DrawTreeNode(child);
-        if (node_open)
             ImGui::TreePop();
+        }
         ImGui::PopID();
     }
 };
