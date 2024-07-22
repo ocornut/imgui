@@ -567,8 +567,14 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                     SetActiveID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
                     if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                    {
                         SetFocusID(id, window);
-                    FocusWindow(window);
+                        FocusWindow(window);
+                    }
+                    else
+                    {
+                        FocusWindow(window, ImGuiFocusRequestFlags_RestoreFocusedChild); // Still need to focus and bring to front, but try to avoid losing NavId when navigating a child
+                    }
                 }
                 if ((flags & ImGuiButtonFlags_PressedOnClick) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseClickedCount[mouse_button_clicked] == 2))
                 {
@@ -577,10 +583,16 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                         ClearActiveID();
                     else
                         SetActiveID(id, window); // Hold on ID
-                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
-                        SetFocusID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
-                    FocusWindow(window);
+                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                    {
+                        SetFocusID(id, window);
+                        FocusWindow(window);
+                    }
+                    else
+                    {
+                        FocusWindow(window, ImGuiFocusRequestFlags_RestoreFocusedChild); // Still need to focus and bring to front, but try to avoid losing NavId when navigating a child
+                    }
                 }
             }
             if (flags & ImGuiButtonFlags_PressedOnRelease)
