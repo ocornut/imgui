@@ -15710,6 +15710,12 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
         (flags & ImGuiWindowFlags_ChildWindow)  ? "Child " : "",      (flags & ImGuiWindowFlags_Tooltip)     ? "Tooltip "   : "",  (flags & ImGuiWindowFlags_Popup) ? "Popup " : "",
         (flags & ImGuiWindowFlags_Modal)        ? "Modal " : "",      (flags & ImGuiWindowFlags_ChildMenu)   ? "ChildMenu " : "",  (flags & ImGuiWindowFlags_NoSavedSettings) ? "NoSavedSettings " : "",
         (flags & ImGuiWindowFlags_NoMouseInputs)? "NoMouseInputs":"", (flags & ImGuiWindowFlags_NoNavInputs) ? "NoNavInputs" : "", (flags & ImGuiWindowFlags_AlwaysAutoResize) ? "AlwaysAutoResize" : "");
+    if (flags & ImGuiWindowFlags_ChildWindow)
+        BulletText("ChildFlags: 0x%08X (%s%s%s%s..)", window->ChildFlags,
+            (window->ChildFlags & ImGuiChildFlags_Border) ? "Border " : "",
+            (window->ChildFlags & ImGuiChildFlags_ResizeX) ? "ResizeX " : "",
+            (window->ChildFlags & ImGuiChildFlags_ResizeY) ? "ResizeY " : "",
+            (window->ChildFlags & ImGuiChildFlags_NavFlattened) ? "NavFlattened " : "");
     BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f) Scrollbar:%s%s", window->Scroll.x, window->ScrollMax.x, window->Scroll.y, window->ScrollMax.y, window->ScrollbarX ? "X" : "", window->ScrollbarY ? "Y" : "");
     BulletText("Active: %d/%d, WriteAccessed: %d, BeginOrderWithinContext: %d", window->Active, window->WasActive, window->WriteAccessed, (window->Active || window->WasActive) ? window->BeginOrderWithinContext : -1);
     BulletText("Appearing: %d, Hidden: %d (CanSkip %d Cannot %d), SkipItems: %d", window->Appearing, window->Hidden, window->HiddenFramesCanSkipItems, window->HiddenFramesCannotSkipItems, window->SkipItems);

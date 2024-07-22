@@ -98,8 +98,7 @@ Other changes:
    - A helper ImGuiSelectionBasicStorage is provided to facilitate getting started in a typical app.
    - Documentation:
      - Wiki page https://github.com/ocornut/imgui/wiki/Multi-Select for API overview.
-     - Demo code.
-     - Headers are well commented.
+     - Demo code + headers are well commented.
   - Added BeginMultiSelect(), EndMultiSelect(), SetNextItemSelectionUserData().
   - Added IsItemToggledSelection() for use if you need latest selection update during currnet iteration.
   - Added ImGuiMultiSelectIO and ImGuiSelectionRequest structures:
