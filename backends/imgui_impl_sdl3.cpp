@@ -789,7 +789,7 @@ static void ImGui_ImplSDL3_UpdateMonitors()
     bd->WantUpdateMonitors = false;
 
     int display_count;
-    SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
+    const SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
     for (int n = 0; n < display_count; n++)
     {
         // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
