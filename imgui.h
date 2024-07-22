@@ -417,6 +417,8 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond = 0);   // set named window collapsed state
     IMGUI_API void          SetWindowFocus(const char* name);                                           // set named window to be focused / top-most. use NULL to remove focus.
 
+    IMGUI_API bool          IsBlockedByModal();
+
     // Content region
     // - Retrieve available space from a given point. GetContentRegionAvail() is frequently useful.
     // - Those functions are bound to be redesigned (they are confusing, incomplete and the Min/Max return values are in local window coordinates which increases confusion)
@@ -1563,9 +1565,10 @@ enum ImGuiInputFlags_
     ImGuiInputFlags_RouteOverActive         = 1 << 15,  // Option: global route: higher priority than active item. Unlikely you need to use that: will interfere with every active items, e.g. CTRL+A registered by InputText will be overridden by this. May not be fully honored as user/internal code is likely to always assume they can access keys when active.
     ImGuiInputFlags_RouteUnlessBgFocused    = 1 << 16,  // Option: global route: will not be applied if underlying background/void is focused (== no Dear ImGui windows are focused). Useful for overlay applications.
     ImGuiInputFlags_RouteFromRootWindow     = 1 << 17,  // Option: route evaluated from the point of view of root window rather than current window.
+    ImGuiInputFlags_RouteUnlessModal        = 1 << 18,  // Option: global route: will not be applied if below a modal pop-up.
 
     // Flags for SetNextItemShortcut()
-    ImGuiInputFlags_Tooltip                 = 1 << 18,  // Automatically display a tooltip when hovering item [BETA] Unsure of right api (opt-in/opt-out)
+    ImGuiInputFlags_Tooltip                 = 1 << 19,  // Automatically display a tooltip when hovering item [BETA] Unsure of right api (opt-in/opt-out)
 };
 
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
