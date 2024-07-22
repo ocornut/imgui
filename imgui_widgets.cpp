@@ -567,8 +567,14 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                     SetActiveID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
                     if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                    {
                         SetFocusID(id, window);
-                    FocusWindow(window);
+                        FocusWindow(window);
+                    }
+                    else
+                    {
+                        FocusWindow(window, ImGuiFocusRequestFlags_RestoreFocusedChild); // Still need to focus and bring to front, but try to avoid losing NavId when navigating a child
+                    }
                 }
                 if ((flags & ImGuiButtonFlags_PressedOnClick) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseClickedCount[mouse_button_clicked] == 2))
                 {
@@ -577,10 +583,16 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                         ClearActiveID();
                     else
                         SetActiveID(id, window); // Hold on ID
-                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
-                        SetFocusID(id, window);
                     g.ActiveIdMouseButton = mouse_button_clicked;
-                    FocusWindow(window);
+                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                    {
+                        SetFocusID(id, window);
+                        FocusWindow(window);
+                    }
+                    else
+                    {
+                        FocusWindow(window, ImGuiFocusRequestFlags_RestoreFocusedChild); // Still need to focus and bring to front, but try to avoid losing NavId when navigating a child
+                    }
                 }
             }
             if (flags & ImGuiButtonFlags_PressedOnRelease)
@@ -10027,13 +10039,13 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     ImDrawList* display_draw_list = window->DrawList;
     const ImU32 tab_col = GetColorU32((held || hovered) ? ImGuiCol_TabHovered : tab_contents_visible ? (tab_bar_focused ? ImGuiCol_TabSelected : ImGuiCol_TabDimmedSelected) : (tab_bar_focused ? ImGuiCol_Tab : ImGuiCol_TabDimmed));
     TabItemBackground(display_draw_list, bb, flags, tab_col);
-    if (tab_contents_visible && (tab_bar->Flags & ImGuiTabBarFlags_DrawSelectedOverline))
+    if (tab_contents_visible && (tab_bar->Flags & ImGuiTabBarFlags_DrawSelectedOverline) && style.TabBarOverlineSize > 0.0f)
     {
         float x_offset = IM_TRUNC(0.4f * style.TabRounding);
         if (x_offset < 2.0f * g.CurrentDpiScale)
             x_offset = 0.0f;
         float y_offset = 1.0f * g.CurrentDpiScale;
-        display_draw_list->AddLine(bb.GetTL() + ImVec2(x_offset, y_offset), bb.GetTR() + ImVec2(-x_offset, y_offset), GetColorU32(tab_bar_focused ? ImGuiCol_TabSelectedOverline : ImGuiCol_TabDimmedSelectedOverline), 2.0f * g.CurrentDpiScale);
+        display_draw_list->AddLine(bb.GetTL() + ImVec2(x_offset, y_offset), bb.GetTR() + ImVec2(-x_offset, y_offset), GetColorU32(tab_bar_focused ? ImGuiCol_TabSelectedOverline : ImGuiCol_TabDimmedSelectedOverline), style.TabBarOverlineSize);
     }
     RenderNavHighlight(bb, id);
 

@@ -98,8 +98,7 @@ Other changes:
    - A helper ImGuiSelectionBasicStorage is provided to facilitate getting started in a typical app.
    - Documentation:
      - Wiki page https://github.com/ocornut/imgui/wiki/Multi-Select for API overview.
-     - Demo code.
-     - Headers are well commented.
+     - Demo code + headers are well commented.
   - Added BeginMultiSelect(), EndMultiSelect(), SetNextItemSelectionUserData().
   - Added IsItemToggledSelection() for use if you need latest selection update during currnet iteration.
   - Added ImGuiMultiSelectIO and ImGuiSelectionRequest structures:
@@ -135,10 +134,14 @@ Other changes:
     - Multi-Select (checkboxes)
     - Multi-Select (multiple scopes)
     - Multi-Select (advanced)
+- Nav: fixed clicking window decorations (e.g. resize borders) from losing focused item when
+  within a child window using ImGuiChildFlags_NavFlattened.
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
   loop to position the layout cursor correctly. This is done automatically if provided a count to Begin().
+- TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
+  thickness of the horizontal line over selectable tabs. [@DctrNoob]
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
@@ -148,7 +151,8 @@ Other changes:
   struct description data that a real application would want to use.
 - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
   (#7768, #4858, #2622) [@Aemony]
-- Backends: SDL3: Update for API changes: SDL_GetClipboardText() string ownership change. (#7801)
+- Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership change. (#7807)
+- Backends: SDL3: Update for API changes: SDL_GetClipboardText() memory ownership change. (#7801)
 - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
 - Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
 - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
