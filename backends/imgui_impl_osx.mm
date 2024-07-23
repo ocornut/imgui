@@ -919,7 +919,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     window.opaque = YES;
 
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
-    if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
+    if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6 && ceil(NSAppKitVersionNumber) < NSAppKitVersionNumber10_15)
         [view setWantsBestResolutionOpenGLSurface:YES];
 
     window.contentView = view;

@@ -167,6 +167,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Backends: OSX: Fixed NSAppKitVersion version limit for setWantsBestResolutionOpenGLSurface
+  usage. (#7814) [@YGXXD]
 - Backends: SDL3: Fixed a bug preventing ImGuiViewportFlags_NoFocusOnAppearing support from
   working (Windows only).
 
