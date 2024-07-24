@@ -7424,7 +7424,11 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     }
 
     if (request_clear || request_select_all)
+    {
         MultiSelectAddSetAll(ms, request_select_all);
+        if (!request_select_all)
+            storage->LastSelectionSize = 0;
+    }
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
     ms->LastSubmittedItem = ImGuiSelectionUserData_Invalid;
 
@@ -7810,8 +7814,6 @@ void ImGui::MultiSelectAddSetAll(ImGuiMultiSelectTempData* ms, bool selected)
     ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, selected, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
     ms->IO.Requests.resize(0);      // Can always clear previous requests
     ms->IO.Requests.push_back(req); // Add new request
-    if (selected == false)
-        ms->Storage->LastSelectionSize = 0;
 }
 
 void ImGui::MultiSelectAddSetRange(ImGuiMultiSelectTempData* ms, bool selected, int range_dir, ImGuiSelectionUserData first_item, ImGuiSelectionUserData last_item)
