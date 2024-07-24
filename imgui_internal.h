@@ -3408,6 +3408,7 @@ namespace ImGui
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
     IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
+    IMGUI_API void          MultiSelectAddSetAll(ImGuiMultiSelectTempData* ms, bool selected);
     IMGUI_API void          MultiSelectAddSetRange(ImGuiMultiSelectTempData* ms, bool selected, int range_dir, ImGuiSelectionUserData first_item, ImGuiSelectionUserData last_item);
     inline ImGuiBoxSelectState*     GetBoxSelectState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.ID == id && g.BoxSelectState.IsActive) ? &g.BoxSelectState : NULL; }
     inline ImGuiMultiSelectState*   GetMultiSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return g.MultiSelectStorage.GetByKey(id); }

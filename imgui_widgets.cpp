@@ -7424,12 +7424,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     }
 
     if (request_clear || request_select_all)
-    {
-        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, request_select_all, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
-        if (!request_select_all)
-            storage->LastSelectionSize = 0;
-        ms->IO.Requests.push_back(req);
-    }
+        MultiSelectAddSetAll(ms, request_select_all);
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
     ms->LastSubmittedItem = ImGuiSelectionUserData_Invalid;
 
@@ -7496,11 +7491,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
 
         if (ms->Flags & ImGuiMultiSelectFlags_ClearOnClickVoid)
             if (IsMouseReleased(0) && IsMouseDragPastThreshold(0) == false && g.IO.KeyMods == ImGuiMod_None)
-            {
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
-                ms->IO.Requests.resize(0);
-                ms->IO.Requests.push_back(req);
-            }
+                MultiSelectAddSetAll(ms, false);
     }
 
     // Courtesy nav wrapping helper flag
@@ -7755,11 +7746,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             else if ((input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad) && is_shift && !is_ctrl)
                 request_clear = true; // With is_shift==false the RequestClear was done in BeginIO, not necessary to do again.
             if (request_clear)
-            {
-                ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, false, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
-                ms->IO.Requests.resize(0);
-                ms->IO.Requests.push_back(req);
-            }
+                MultiSelectAddSetAll(ms, false);
         }
 
         int range_direction;
@@ -7816,6 +7803,15 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     *p_selected = selected;
     *p_pressed = pressed;
+}
+
+void ImGui::MultiSelectAddSetAll(ImGuiMultiSelectTempData* ms, bool selected)
+{
+    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetAll, selected, 0, ImGuiSelectionUserData_Invalid, ImGuiSelectionUserData_Invalid };
+    ms->IO.Requests.resize(0);      // Can always clear previous requests
+    ms->IO.Requests.push_back(req); // Add new request
+    if (selected == false)
+        ms->Storage->LastSelectionSize = 0;
 }
 
 void ImGui::MultiSelectAddSetRange(ImGuiMultiSelectTempData* ms, bool selected, int range_dir, ImGuiSelectionUserData first_item, ImGuiSelectionUserData last_item)
