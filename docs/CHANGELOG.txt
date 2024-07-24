@@ -140,6 +140,7 @@ Other changes:
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
   loop to position the layout cursor correctly. This is done automatically if provided a count to Begin().
+- Groups, Tables: fixed EndGroup() failing to correctly capture current table occupied size. (#7543)
 - TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
   thickness of the horizontal line over selectable tabs. [@DctrNoob]
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
