@@ -1751,6 +1751,7 @@ struct IMGUI_API ImGuiMultiSelectTempData
     ImGuiMultiSelectFlags   Flags;
     ImVec2                  ScopeRectMin;
     ImVec2                  BackupCursorMaxPos;
+    ImGuiSelectionUserData  LastSubmittedItem;  // Copy of last submitted item data, used to merge output ranges.
     ImGuiID                 BoxSelectId;
     ImGuiKeyChord           KeyMods;
     ImS8                    LoopRequestSetAll;  // -1: no operation, 0: clear all, 1: select all.
@@ -1760,7 +1761,6 @@ struct IMGUI_API ImGuiMultiSelectTempData
     bool                    NavIdPassedBy;
     bool                    RangeSrcPassedBy;   // Set by the item that matches RangeSrcItem.
     bool                    RangeDstPassedBy;   // Set by the item that matches NavJustMovedToId when IsSetRange is set.
-    ImGuiSelectionUserData  BoxSelectLastitem;  // Copy of last submitted item data, used to merge output ranges.
 
     ImGuiMultiSelectTempData()  { Clear(); }
     void Clear()            { size_t io_sz = sizeof(IO); ClearIO(); memset((void*)(&IO + 1), 0, sizeof(*this) - io_sz); } // Zero-clear except IO as we preserve IO.Requests[] buffer allocation.
@@ -3408,6 +3408,7 @@ namespace ImGui
     // Multi-Select API
     IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags* p_button_flags);
     IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
+    IMGUI_API void          MultiSelectAddSetRange(ImGuiMultiSelectTempData* ms, bool selected, int range_dir, ImGuiSelectionUserData first_item, ImGuiSelectionUserData last_item);
     inline ImGuiBoxSelectState*     GetBoxSelectState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.BoxSelectState.ID == id && g.BoxSelectState.IsActive) ? &g.BoxSelectState : NULL; }
     inline ImGuiMultiSelectState*   GetMultiSelectState(ImGuiID id) { ImGuiContext& g = *GImGui; return g.MultiSelectStorage.GetByKey(id); }
 

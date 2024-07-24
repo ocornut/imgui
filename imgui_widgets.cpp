@@ -7069,7 +7069,7 @@ static int ImStrimatchlen(const char* s1, const char* s1_end, const char* s2)
 // When SingleCharMode is set:
 // - it is better to NOT display a tooltip of other on-screen display indicator.
 // - the index of the currently focused item is required.
-//   if your SetNextItemSelectionData() values are indices, you can obtain it from ImGuiMultiSelectIO::NavIdItem, otherwise from g.NavLastValidSelectionUserData.
+//   if your SetNextItemSelectionUserData() values are indices, you can obtain it from ImGuiMultiSelectIO::NavIdItem, otherwise from g.NavLastValidSelectionUserData.
 int ImGui::TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx)
 {
     if (req == NULL || req->SelectRequest == false) // Support NULL parameter so both calls can be done from same spot.
@@ -7397,7 +7397,6 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
     {
         ms->BoxSelectId = GetID("##BoxSelect");
-        ms->BoxSelectLastitem = ImGuiSelectionUserData_Invalid;
         if (BeginBoxSelect(window, ms->BoxSelectId, flags))
             request_clear |= bs->RequestClear;
     }
@@ -7432,6 +7431,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
         ms->IO.Requests.push_back(req);
     }
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
+    ms->LastSubmittedItem = ImGuiSelectionUserData_Invalid;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
         DebugLogMultiSelectRequests("BeginMultiSelect", &ms->IO);
@@ -7694,17 +7694,10 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 else
                 {
                     selected = !selected;
-                    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, +1, item_data, item_data };
-                    // Merge continuous ranges (unless NoRangeSelect is set)
-                    ImGuiSelectionRequest* prev = ms->IO.Requests.Size > 0 ? &ms->IO.Requests.Data[ms->IO.Requests.Size - 1] : NULL;
-                    if (prev && prev->Type == ImGuiSelectionRequestType_SetRange && prev->RangeLastItem == ms->BoxSelectLastitem && prev->Selected == selected && (ms->Flags & ImGuiMultiSelectFlags_NoRangeSelect) == 0)
-                        prev->RangeLastItem = item_data; // Merge span into same request
-                    else
-                        ms->IO.Requests.push_back(req);
+                    MultiSelectAddSetRange(ms, selected, +1, item_data, item_data);
                 }
                 storage->LastSelectionSize = ImMax(storage->LastSelectionSize + 1, 1);
             }
-            ms->BoxSelectLastitem = item_data;
         }
 
     // Right-click handling.
@@ -7804,9 +7797,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             range_selected = selected;
             range_direction = +1;
         }
-        ImGuiSelectionUserData range_dst_item = item_data;
-        ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, range_selected, (ImS8)range_direction, (range_direction > 0) ? storage->RangeSrcItem : range_dst_item, (range_direction > 0) ? range_dst_item : storage->RangeSrcItem };
-        ms->IO.Requests.push_back(req);
+        MultiSelectAddSetRange(ms, range_selected, range_direction, storage->RangeSrcItem, item_data);
     }
 
     // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
@@ -7821,9 +7812,27 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     }
     if (storage->NavIdItem == item_data)
         ms->NavIdPassedBy = true;
+    ms->LastSubmittedItem = item_data;
 
     *p_selected = selected;
     *p_pressed = pressed;
+}
+
+void ImGui::MultiSelectAddSetRange(ImGuiMultiSelectTempData* ms, bool selected, int range_dir, ImGuiSelectionUserData first_item, ImGuiSelectionUserData last_item)
+{
+    // Merge contiguous spans into same request (unless NoRangeSelect is set which guarantees single-item ranges)
+    if (ms->IO.Requests.Size > 0 && first_item == last_item && (ms->Flags & ImGuiMultiSelectFlags_NoRangeSelect) == 0)
+    {
+        ImGuiSelectionRequest* prev = &ms->IO.Requests.Data[ms->IO.Requests.Size - 1];
+        if (prev->Type == ImGuiSelectionRequestType_SetRange && prev->RangeLastItem == ms->LastSubmittedItem && prev->Selected == selected)
+        {
+            prev->RangeLastItem = last_item;
+            return;
+        }
+    }
+
+    ImGuiSelectionRequest req = { ImGuiSelectionRequestType_SetRange, selected, (ImS8)range_dir, (range_dir > 0) ? first_item : last_item, (range_dir > 0) ? last_item : first_item };
+    ms->IO.Requests.push_back(req); // Add new request
 }
 
 void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
