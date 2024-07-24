@@ -147,6 +147,7 @@ Other changes:
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Debug Tools: Debug Log: Fixed incorrect checkbox layout when partially clipped.
 - Demo: Reworked "Property Editor" demo in a manner that more ressemble the tree data and
   struct description data that a real application would want to use.
 - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
