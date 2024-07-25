@@ -126,6 +126,7 @@
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option" // warning: ignore unknown flags
 #pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning: implicit conversion changes signedness
 #pragma clang diagnostic ignored "-Wunused-macros"          // warning: macro is not used

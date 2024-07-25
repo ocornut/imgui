@@ -438,6 +438,14 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2024/07/25 (1.91.0) - obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax().
+                         you should never need those functions. you can do everything with GetCursorScreenPos() and GetContentRegionAvail() in a more simple way.
+                            - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
+                            - you can use: GetContentRegionAvail().x
+                            - instead of:  GetWindowContentRegionMax().x + GetWindowPos().x
+                            - you can use: GetCursorScreenPos().x + GetContentRegionAvail().x (from left edge of window)
+                            - instead of:  GetContentRegionMax()
+                            - you cna use: GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
  - 2024/07/15 (1.91.0) - renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups. (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
                          (internals: also renamed ImGuiItemFlags_SelectableDontClosePopup into ImGuiItemFlags_AutoClosePopups with inverted behaviors)
  - 2024/07/15 (1.91.0) - obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag(ImGuiItemFlags_ButtonRepeat, ...)/PopItemFlag().
@@ -4131,9 +4139,6 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     // (Please note that this is WIP and not all keys/inputs are thoroughly declared by all widgets yet)
     g.ActiveIdUsingNavDirMask = 0x00;
     g.ActiveIdUsingAllKeyboardKeys = false;
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    g.ActiveIdUsingNavInputMask = 0x00;
-#endif
 }
 
 void ImGui::ClearActiveID()
@@ -4987,24 +4992,7 @@ void ImGui::NewFrame()
     {
         g.ActiveIdUsingNavDirMask = 0x00;
         g.ActiveIdUsingAllKeyboardKeys = false;
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-        g.ActiveIdUsingNavInputMask = 0x00;
-#endif
     }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    if (g.ActiveId == 0)
-        g.ActiveIdUsingNavInputMask = 0;
-    else if (g.ActiveIdUsingNavInputMask != 0)
-    {
-        // If your custom widget code used:                 { g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel); }
-        // Since IMGUI_VERSION_NUM >= 18804 it should be:   { SetKeyOwner(ImGuiKey_Escape, g.ActiveId); SetKeyOwner(ImGuiKey_NavGamepadCancel, g.ActiveId); }
-        if (g.ActiveIdUsingNavInputMask & (1 << ImGuiNavInput_Cancel))
-            SetKeyOwner(ImGuiKey_Escape, g.ActiveId);
-        if (g.ActiveIdUsingNavInputMask & ~(1 << ImGuiNavInput_Cancel))
-            IM_ASSERT(0); // Other values unsupported
-    }
-#endif
 
     // Record when we have been stationary as this state is preserved while over same item.
     // FIXME: The way this is expressed means user cannot alter HoverStationaryDelay during the frame to use varying values.
@@ -11004,9 +10992,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // - GetFrameHeight()
 // - GetFrameHeightWithSpacing()
 // - GetContentRegionMax()
-// - GetContentRegionMaxAbs() [Internal]
 // - GetContentRegionAvail(),
-// - GetWindowContentRegionMin(), GetWindowContentRegionMax()
 // - BeginGroup()
 // - EndGroup()
 // Also see in imgui_widgets: tab bars, and in imgui_tables: tables, columns.
@@ -11222,8 +11208,8 @@ float ImGui::CalcItemWidth()
         w = window->DC.ItemWidth;
     if (w < 0.0f)
     {
-        float region_max_x = GetContentRegionMaxAbs().x;
-        w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
+        float region_avail_x = GetContentRegionAvail().x;
+        w = ImMax(1.0f, region_avail_x + w);
     }
     w = IM_TRUNC(w);
     return w;
@@ -11235,22 +11221,19 @@ float ImGui::CalcItemWidth()
 // The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
 ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    ImVec2 region_max;
+    ImVec2 avail;
     if (size.x < 0.0f || size.y < 0.0f)
-        region_max = GetContentRegionMaxAbs();
+        avail = GetContentRegionAvail();
 
     if (size.x == 0.0f)
         size.x = default_w;
     else if (size.x < 0.0f)
-        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x + size.x);
+        size.x = ImMax(4.0f, avail.x + size.x); // <-- size.x is negative here so we are subtracting
 
     if (size.y == 0.0f)
         size.y = default_h;
     else if (size.y < 0.0f)
-        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y + size.y);
+        size.y = ImMax(4.0f, avail.y + size.y); // <-- size.y is negative here so we are subtracting
 
     return size;
 }
@@ -11279,33 +11262,23 @@ float ImGui::GetFrameHeightWithSpacing()
     return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
 }
 
-// FIXME: All the Contents Region function are messy or misleading. WE WILL AIM TO OBSOLETE ALL OF THEM WITH A NEW "WORK RECT" API. Thanks for your patience!
-
-// FIXME: This is in window space (not screen space!).
-ImVec2 ImGui::GetContentRegionMax()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 mx = (window->DC.CurrentColumns || g.CurrentTable) ? window->WorkRect.Max : window->ContentRegionRect.Max;
-    return mx - window->Pos;
-}
-
-// [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
-ImVec2 ImGui::GetContentRegionMaxAbs()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 mx = (window->DC.CurrentColumns || g.CurrentTable) ? window->WorkRect.Max : window->ContentRegionRect.Max;
-    return mx;
-}
-
 ImVec2 ImGui::GetContentRegionAvail()
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return GetContentRegionMaxAbs() - window->DC.CursorPos;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImVec2 mx = (window->DC.CurrentColumns || g.CurrentTable) ? window->WorkRect.Max : window->ContentRegionRect.Max;
+    return mx - window->DC.CursorPos;
 }
 
-// In window space (not screen space!)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
+// You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail()!
+// They are bizarre local-coordinates which don't play well with scrolling.
+ImVec2 ImGui::GetContentRegionMax()
+{
+    return GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos();
+}
+
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
@@ -11317,6 +11290,7 @@ ImVec2 ImGui::GetWindowContentRegionMax()
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.Max - window->Pos;
 }
+#endif
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
 // Groups are currently a mishmash of functionalities which should perhaps be clarified and separated.
@@ -11362,11 +11336,11 @@ void ImGui::EndGroup()
     if (window->DC.IsSetPos)
         ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
 
-    ImRect group_bb(group_data.BackupCursorPos, ImMax(window->DC.CursorMaxPos, group_data.BackupCursorPos));
-
+    // Include LastItemData.Rect.Max as a workaround for e.g. EndTable() undershooting with CursorMaxPos report. (#7543)
+    ImRect group_bb(group_data.BackupCursorPos, ImMax(ImMax(window->DC.CursorMaxPos, g.LastItemData.Rect.Max), group_data.BackupCursorPos));
     window->DC.CursorPos = group_data.BackupCursorPos;
     window->DC.CursorPosPrevLine = group_data.BackupCursorPosPrevLine;
-    window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, window->DC.CursorMaxPos);
+    window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, group_bb.Max);
     window->DC.Indent = group_data.BackupIndent;
     window->DC.GroupOffset = group_data.BackupGroupOffset;
     window->DC.CurrLineSize = group_data.BackupCurrLineSize;
@@ -11381,7 +11355,7 @@ void ImGui::EndGroup()
         return;
     }
 
-    window->DC.CurrLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrLineTextBaseOffset);      // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
+    window->DC.CurrLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrLineTextBaseOffset); // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
     ItemSize(group_bb.GetSize());
     ItemAdd(group_bb, 0, NULL, ImGuiItemFlags_NoTabStop);
 
@@ -12735,6 +12709,7 @@ void ImGui::NavMoveRequestSubmit(ImGuiDir move_dir, ImGuiDir clip_dir, ImGuiNavM
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow != NULL);
+    //IMGUI_DEBUG_LOG_NAV("[nav] NavMoveRequestSubmit: dir %c, window \"%s\"\n", "-WENS"[move_dir + 1], g.NavWindow->Name);
 
     if (move_flags & ImGuiNavMoveFlags_IsTabbing)
         move_flags |= ImGuiNavMoveFlags_AllowCurrentNavId;
@@ -21674,7 +21649,7 @@ static void SameLineOrWrap(const ImVec2& size)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImVec2 pos(window->DC.CursorPosPrevLine.x + g.Style.ItemSpacing.x, window->DC.CursorPosPrevLine.y);
-    if (window->ClipRect.Contains(ImRect(pos, pos + size)))
+    if (window->WorkRect.Contains(ImRect(pos, pos + size)))
         ImGui::SameLine();
 }
 
@@ -21770,7 +21745,7 @@ void ImGui::DebugTextUnformattedWithLocateItem(const char* line_begin, const cha
     for (const char* p = line_begin; p <= line_end - 10; p++)
     {
         ImGuiID id = 0;
-        if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1)
+        if (p[0] != '0' || (p[1] != 'x' && p[1] != 'X') || sscanf(p + 2, "%X", &id) != 1 || ImCharIsXdigitA(p[10]))
             continue;
         ImVec2 p0 = CalcTextSize(line_begin, p);
         ImVec2 p1 = CalcTextSize(p, p + 10);

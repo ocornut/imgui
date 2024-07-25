@@ -3993,7 +3993,7 @@ static void ShowDemoWindowLayout()
         ImGui::Text("Manual wrapping:");
         ImGuiStyle& style = ImGui::GetStyle();
         int buttons_count = 20;
-        float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+        float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
         for (int n = 0; n < buttons_count; n++)
         {
             ImGui::PushID(n);

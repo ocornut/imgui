@@ -46,6 +46,14 @@ Breaking changes:
     - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
   It is expected that for a vast majority of users this is automatically set by core
   library and/or platform backend so it won't have any effect.
+- Obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax().
+  You should never need those functions! You can do everything in less a confusing manner by only
+  using GetCursorScreenPos() and GetContentRegionAvail(). Also always consider that if you are using
+  GetWindowPos() and GetCursorPos() you may also be making things unnecessarily complicated.
+  I repeat: You can do everything with GetCursorScreenPos() and GetContentRegionAvail()!!
+   - GetWindowContentRegionMax().x - GetCursorPos().x   -->  GetContentRegionAvail().x
+   - GetWindowContentRegionMax().x + GetWindowPos().x   -->  GetCursorScreenPos().x + GetContentRegionAvail().x
+   - GetContentRegionMax()                              -->  GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
 - Item flag changes:
   - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
     with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
@@ -140,6 +148,7 @@ Other changes:
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
   loop to position the layout cursor correctly. This is done automatically if provided a count to Begin().
+- Groups, Tables: fixed EndGroup() failing to correctly capture current table occupied size. (#7543)
 - TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
   thickness of the horizontal line over selectable tabs. [@DctrNoob]
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
@@ -147,6 +156,7 @@ Other changes:
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
   other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
 - Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
+- Debug Tools: Debug Log: Fixed incorrect checkbox layout when partially clipped.
 - Demo: Reworked "Property Editor" demo in a manner that more ressemble the tree data and
   struct description data that a real application would want to use.
 - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
