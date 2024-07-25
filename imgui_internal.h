@@ -1719,6 +1719,7 @@ struct ImGuiBoxSelectState
     bool                    IsActive;
     bool                    IsStarting;
     bool                    IsStartedFromVoid;  // Starting click was not from an item.
+    bool                    IsStartedSetNavIdOnce;
     bool                    RequestClear;
     ImGuiKeyChord           KeyMods : 16;       // Latched key-mods for box-select logic.
     ImVec2                  StartPosRel;        // Start position in window-contents relative space (to support scrolling)

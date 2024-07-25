@@ -7161,6 +7161,7 @@ static void BoxSelectPreStartDrag(ImGuiID id, ImGuiSelectionUserData clicked_ite
     bs->ID = id;
     bs->IsStarting = true; // Consider starting box-select.
     bs->IsStartedFromVoid = (clicked_item == ImGuiSelectionUserData_Invalid);
+    bs->IsStartedSetNavIdOnce = bs->IsStartedFromVoid;
     bs->KeyMods = g.IO.KeyMods;
     bs->StartPosRel = bs->EndPosRel = ImGui::WindowPosAbsToRel(g.CurrentWindow, g.IO.MousePos);
     bs->ScrollAccum = ImVec2(0.0f, 0.0f);
@@ -7682,9 +7683,10 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             const bool rect_overlap_prev = bs->BoxSelectRectPrev.Overlaps(g.LastItemData.Rect);
             if ((rect_overlap_curr && !rect_overlap_prev && !selected) || (rect_overlap_prev && !rect_overlap_curr))
             {
-                if (storage->LastSelectionSize <= 0 && bs->IsStartedFromVoid)
+                if (storage->LastSelectionSize <= 0 && bs->IsStartedSetNavIdOnce)
                 {
                     pressed = true; // First item act as a pressed: code below will emit selection request and set NavId (whatever we emit here will be overridden anyway)
+                    bs->IsStartedSetNavIdOnce = false;
                 }
                 else
                 {
