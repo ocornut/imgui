@@ -430,6 +430,11 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2024/07/25 (1.91.0) - obsoleted GetWindowContentRegionMin() and GetWindowContentRegionMax(). You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail().
+                            - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
+                            - you can use: GetContentRegionAvail().x
+                            - instead of:  GetWindowContentRegionMax().x + GetWindowPos().x
+                            - you can use: GetCursorScreenPos().x + GetContentRegionAvail().x (from left edge of window)
  - 2024/07/15 (1.91.0) - renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups. (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
                          (internals: also renamed ImGuiItemFlags_SelectableDontClosePopup into ImGuiItemFlags_AutoClosePopups with inverted behaviors)
  - 2024/07/15 (1.91.0) - obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag(ImGuiItemFlags_ButtonRepeat, ...)/PopItemFlag().
@@ -10609,7 +10614,9 @@ ImVec2 ImGui::GetContentRegionAvail()
     return GetContentRegionMaxAbs() - window->DC.CursorPos;
 }
 
-// In window space (not screen space!)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail()!
+// They are bizarre local-coordinates which don't play well with scrolling.
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
@@ -10621,6 +10628,7 @@ ImVec2 ImGui::GetWindowContentRegionMax()
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.Max - window->Pos;
 }
+#endif
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
 // Groups are currently a mishmash of functionalities which should perhaps be clarified and separated.
