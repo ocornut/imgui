@@ -10315,7 +10315,6 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // - GetContentRegionMax()
 // - GetContentRegionMaxAbs() [Internal]
 // - GetContentRegionAvail(),
-// - GetWindowContentRegionMin(), GetWindowContentRegionMax()
 // - BeginGroup()
 // - EndGroup()
 // Also see in imgui_widgets: tab bars, and in imgui_tables: tables, columns.
