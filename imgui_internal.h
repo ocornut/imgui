@@ -2081,9 +2081,7 @@ struct ImGuiContext
     ImU32                   ActiveIdUsingNavDirMask;            // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
     bool                    ActiveIdUsingAllKeyboardKeys;       // Active widget will want to read all keyboard keys inputs. (this is a shortcut for not taking ownership of 100+ keys, frequently used by drag operations)
     ImGuiKeyChord           DebugBreakInShortcutRouting;        // Set to break in SetShortcutRouting()/Shortcut() calls.
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    ImU32                   ActiveIdUsingNavInputMask;          // If you used this. Since (IMGUI_VERSION_NUM >= 18804) : 'g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);' becomes 'SetKeyOwner(ImGuiKey_Escape, g.ActiveId) and/or SetKeyOwner(ImGuiKey_NavGamepadCancel, g.ActiveId);'
-#endif
+    //ImU32                 ActiveIdUsingNavInputMask;          // [OBSOLETE] Since (IMGUI_VERSION_NUM >= 18804) : 'g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);' becomes --> 'SetKeyOwner(ImGuiKey_Escape, g.ActiveId) and/or SetKeyOwner(ImGuiKey_NavGamepadCancel, g.ActiveId);'
 
     // Next window/item data
     ImGuiID                 CurrentFocusScopeId;                // Value for currently appending items == g.FocusScopeStack.back(). Not to be mistaken with g.NavFocusScopeId.
@@ -2395,9 +2393,6 @@ struct ImGuiContext
 
         ActiveIdUsingNavDirMask = 0x00;
         ActiveIdUsingAllKeyboardKeys = false;
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-        ActiveIdUsingNavInputMask = 0x00;
-#endif
 
         CurrentFocusScopeId = 0;
         CurrentItemFlags = ImGuiItemFlags_None;
@@ -3196,7 +3191,7 @@ namespace ImGui
 //#endif
 
     // Basic Accessors
-    inline ImGuiItemStatusFlags GetItemStatusFlags(){ ImGuiContext& g = *GImGui; return g.LastItemData.StatusFlags; }
+    inline ImGuiItemStatusFlags GetItemStatusFlags() { ImGuiContext& g = *GImGui; return g.LastItemData.StatusFlags; }
     inline ImGuiItemFlags   GetItemFlags()  { ImGuiContext& g = *GImGui; return g.LastItemData.InFlags; }
     inline ImGuiID          GetActiveID()   { ImGuiContext& g = *GImGui; return g.ActiveId; }
     inline ImGuiID          GetFocusID()    { ImGuiContext& g = *GImGui; return g.NavId; }

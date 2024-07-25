@@ -4040,9 +4040,6 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     // (Please note that this is WIP and not all keys/inputs are thoroughly declared by all widgets yet)
     g.ActiveIdUsingNavDirMask = 0x00;
     g.ActiveIdUsingAllKeyboardKeys = false;
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    g.ActiveIdUsingNavInputMask = 0x00;
-#endif
 }
 
 void ImGui::ClearActiveID()
@@ -4806,24 +4803,7 @@ void ImGui::NewFrame()
     {
         g.ActiveIdUsingNavDirMask = 0x00;
         g.ActiveIdUsingAllKeyboardKeys = false;
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-        g.ActiveIdUsingNavInputMask = 0x00;
-#endif
     }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-    if (g.ActiveId == 0)
-        g.ActiveIdUsingNavInputMask = 0;
-    else if (g.ActiveIdUsingNavInputMask != 0)
-    {
-        // If your custom widget code used:                 { g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel); }
-        // Since IMGUI_VERSION_NUM >= 18804 it should be:   { SetKeyOwner(ImGuiKey_Escape, g.ActiveId); SetKeyOwner(ImGuiKey_NavGamepadCancel, g.ActiveId); }
-        if (g.ActiveIdUsingNavInputMask & (1 << ImGuiNavInput_Cancel))
-            SetKeyOwner(ImGuiKey_Escape, g.ActiveId);
-        if (g.ActiveIdUsingNavInputMask & ~(1 << ImGuiNavInput_Cancel))
-            IM_ASSERT(0); // Other values unsupported
-    }
-#endif
 
     // Record when we have been stationary as this state is preserved while over same item.
     // FIXME: The way this is expressed means user cannot alter HoverStationaryDelay during the frame to use varying values.
