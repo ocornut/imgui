@@ -27,6 +27,8 @@ struct ID3D12GraphicsCommandList;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
+
 // cmd_list is the command list that the implementation will use to render imgui draw lists.
 // Before calling the render function, caller must prepare cmd_list by resetting it and setting the appropriate
 // render target and descriptor heap that contains font_srv_cpu_desc_handle/font_srv_gpu_desc_handle.

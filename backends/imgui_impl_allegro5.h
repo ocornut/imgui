@@ -25,6 +25,7 @@
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display);
 IMGUI_IMPL_API void     ImGui_ImplAllegro5_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplAllegro5_NewFrame();

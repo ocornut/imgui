@@ -26,6 +26,7 @@
 #ifndef IMGUI_DISABLE
 #include "imgui.h"      // IMGUI_IMPL_API
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplGLUT_Init();
 IMGUI_IMPL_API void     ImGui_ImplGLUT_InstallFuncs();
 IMGUI_IMPL_API void     ImGui_ImplGLUT_Shutdown();
