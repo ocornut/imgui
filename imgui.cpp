@@ -430,11 +430,14 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2024/07/25 (1.91.0) - obsoleted GetWindowContentRegionMin() and GetWindowContentRegionMax(). You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail().
+ - 2024/07/25 (1.91.0) - obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax().
+                         you should never need those functions. you can do everything with GetCursorScreenPos() and GetContentRegionAvail() in a more simple way.
                             - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
                             - you can use: GetContentRegionAvail().x
                             - instead of:  GetWindowContentRegionMax().x + GetWindowPos().x
                             - you can use: GetCursorScreenPos().x + GetContentRegionAvail().x (from left edge of window)
+                            - instead of:  GetContentRegionMax()
+                            - you cna use: GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
  - 2024/07/15 (1.91.0) - renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups. (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
                          (internals: also renamed ImGuiItemFlags_SelectableDontClosePopup into ImGuiItemFlags_AutoClosePopups with inverted behaviors)
  - 2024/07/15 (1.91.0) - obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag(ImGuiItemFlags_ButtonRepeat, ...)/PopItemFlag().
@@ -10591,19 +10594,15 @@ ImVec2 ImGui::GetContentRegionAvail()
     return mx - window->DC.CursorPos;
 }
 
-// FIXME: All the Contents Region function are messy or misleading. WE WILL AIM TO OBSOLETE ALL OF THEM WITH A NEW "WORK RECT" API. Thanks for your patience!
-// FIXME: This is in window space (not screen space!).
-ImVec2 ImGui::GetContentRegionMax()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 mx = (window->DC.CurrentColumns || g.CurrentTable) ? window->WorkRect.Max : window->ContentRegionRect.Max;
-    return mx - window->Pos;
-}
-
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
 // You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail()!
 // They are bizarre local-coordinates which don't play well with scrolling.
+ImVec2 ImGui::GetContentRegionMax()
+{
+    return GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos();
+}
+
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;

@@ -46,12 +46,14 @@ Breaking changes:
     - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
   It is expected that for a vast majority of users this is automatically set by core
   library and/or platform backend so it won't have any effect.
-- Obsoleted GetWindowContentRegionMin() and GetWindowContentRegionMax().
-  You should never need those functions. Always use GetCursorScreenPos() and GetContentRegionAvail().
-  Also consider that if you are using GetWindowPos() and GetCursorPos() you may also be making things
-  unnecessarily complicated. You can do everything with GetCursorScreenPos() and GetContentRegionAvail()!!
+- Obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax().
+  You should never need those functions! You can do everything in less a confusing manner by only
+  using GetCursorScreenPos() and GetContentRegionAvail(). Also always consider that if you are using
+  GetWindowPos() and GetCursorPos() you may also be making things unnecessarily complicated.
+  I repeat: You can do everything with GetCursorScreenPos() and GetContentRegionAvail()!!
    - GetWindowContentRegionMax().x - GetCursorPos().x   -->  GetContentRegionAvail().x
    - GetWindowContentRegionMax().x + GetWindowPos().x   -->  GetCursorScreenPos().x + GetContentRegionAvail().x
+   - GetContentRegionMax()                              -->  GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
 - Item flag changes:
   - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
     with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
