@@ -6857,6 +6857,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
 
+    const bool highlighted = hovered || (flags & ImGuiSelectableFlags_Highlight);
+
     // Multi-selection support (footer)
     if (is_multi_select)
     {
@@ -6894,14 +6896,14 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // Render
     if (is_visible)
     {
-        if (hovered || selected)
+        if (highlighted || selected)
         {
             // FIXME-MULTISELECT: Styling: Color for 'selected' elements? ImGuiCol_HeaderSelected
             ImU32 col;
-            if (selected && !hovered)
+            if (selected && !highlighted)
                 col = GetColorU32(ImLerp(GetStyleColorVec4(ImGuiCol_Header), GetStyleColorVec4(ImGuiCol_HeaderHovered), 0.5f));
             else
-                col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+                col = GetColorU32((held && highlighted) ? ImGuiCol_HeaderActive : highlighted ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
             RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
         }
         if (g.NavId == id)
