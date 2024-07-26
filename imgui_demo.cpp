@@ -1411,6 +1411,7 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
         // stored in the object itself, etc.)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
         static int item_selected_idx = 0; // Here we store our selected data as an index.
+        static int item_highlighted_idx = -1; // Here we store our highlighted data as an index.
         if (ImGui::BeginListBox("listbox 1"))
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
@@ -1418,6 +1419,9 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
                 const bool is_selected = (item_selected_idx == n);
                 if (ImGui::Selectable(items[n], is_selected))
                     item_selected_idx = n;
+
+                if (ImGui::IsItemHovered())
+                    item_highlighted_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
@@ -1434,7 +1438,8 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
                 const bool is_selected = (item_selected_idx == n);
-                if (ImGui::Selectable(items[n], is_selected))
+                const ImGuiSelectableFlags flags = (item_highlighted_idx == n)?ImGuiSelectableFlags_Highlight: 0;
+                if (ImGui::Selectable(items[n], is_selected, flags))
                     item_selected_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
