@@ -147,6 +147,8 @@ Other changes:
 - Nav: fixed clicking window decorations (e.g. resize borders) from losing focused item when
   within a child window using ImGuiChildFlags_NavFlattened.
 - InputText: added '\' and '/' as word seperator. (#7824, #7704) [@reduf]
+- Selectable: added ImGuiSelectableFlags_Highlight flag to highlight items independently from
+  the hovered state. (#7820) [@rerilier]
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration

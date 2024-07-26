@@ -1357,18 +1357,18 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
         // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
         // stored in the object itself, etc.)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
-        static int item_current_idx = 0; // Here we store our selection data as an index.
+        static int item_selected_idx = 0; // Here we store our selection data as an index.
 
         // Pass in the preview value visible before opening the combo (it could technically be different contents or not pulled from items[])
-        const char* combo_preview_value = items[item_current_idx];
+        const char* combo_preview_value = items[item_selected_idx];
 
         if (ImGui::BeginCombo("combo 1", combo_preview_value, flags))
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
-                const bool is_selected = (item_current_idx == n);
+                const bool is_selected = (item_selected_idx == n);
                 if (ImGui::Selectable(items[n], is_selected))
-                    item_current_idx = n;
+                    item_selected_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
@@ -1410,14 +1410,22 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
         // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
         // stored in the object itself, etc.)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
-        static int item_current_idx = 0; // Here we store our selection data as an index.
+        static int item_selected_idx = 0; // Here we store our selected data as an index.
+
+        static bool item_highlight = false;
+        int item_highlighted_idx = -1; // Here we store our highlighted data as an index.
+        ImGui::Checkbox("Highlight hovered item in second listbox", &item_highlight);
+
         if (ImGui::BeginListBox("listbox 1"))
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
-                const bool is_selected = (item_current_idx == n);
+                const bool is_selected = (item_selected_idx == n);
                 if (ImGui::Selectable(items[n], is_selected))
-                    item_current_idx = n;
+                    item_selected_idx = n;
+
+                if (item_highlight && ImGui::IsItemHovered())
+                    item_highlighted_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
@@ -1433,9 +1441,10 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
             {
-                const bool is_selected = (item_current_idx == n);
-                if (ImGui::Selectable(items[n], is_selected))
-                    item_current_idx = n;
+                bool is_selected = (item_selected_idx == n);
+                ImGuiSelectableFlags flags = (item_highlighted_idx == n) ? ImGuiSelectableFlags_Highlight : 0;
+                if (ImGui::Selectable(items[n], is_selected, flags))
+                    item_selected_idx = n;
 
                 // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
                 if (is_selected)
@@ -1482,8 +1491,8 @@ static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Selectables/In columns");
-        if (ImGui::TreeNode("In columns"))
+        IMGUI_DEMO_MARKER("Widgets/Selectables/In Tables");
+        if (ImGui::TreeNode("In Tables"))
         {
             static bool selected[10] = {};
 
