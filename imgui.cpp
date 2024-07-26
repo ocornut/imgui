@@ -2583,12 +2583,11 @@ void ImGuiStorage::BuildSortByKey()
 {
     ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
 }
-IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
     ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         return default_val;
     return it->val_i;
 }
@@ -2601,7 +2600,7 @@ bool ImGuiStorage::GetBool(ImGuiID key, bool default_val) const
 float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const
 {
     ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         return default_val;
     return it->val_f;
 }
@@ -2609,7 +2608,7 @@ float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const
 void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
 {
     ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         return NULL;
     return it->val_p;
 }
@@ -2618,7 +2617,7 @@ void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
 int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_i;
 }
@@ -2631,7 +2630,7 @@ bool* ImGuiStorage::GetBoolRef(ImGuiID key, bool default_val)
 float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_f;
 }
@@ -2639,7 +2638,7 @@ float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val)
 void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_p;
 }
@@ -2648,7 +2647,7 @@ void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val)
 void ImGuiStorage::SetInt(ImGuiID key, int val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         Data.insert(it, ImGuiStoragePair(key, val));
     else
         it->val_i = val;
@@ -2662,7 +2661,7 @@ void ImGuiStorage::SetBool(ImGuiID key, bool val)
 void ImGuiStorage::SetFloat(ImGuiID key, float val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         Data.insert(it, ImGuiStoragePair(key, val));
     else
         it->val_f = val;
@@ -2671,7 +2670,7 @@ void ImGuiStorage::SetFloat(ImGuiID key, float val)
 void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val)
 {
     ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
-    if (it == Data.end() || it->key != key)
+    if (it == Data.Data + Data.Size || it->key != key)
         Data.insert(it, ImGuiStoragePair(key, val));
     else
         it->val_p = val;
@@ -2682,6 +2681,7 @@ void ImGuiStorage::SetAllInt(int v)
     for (int i = 0; i < Data.Size; i++)
         Data[i].val_i = v;
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiTextFilter
@@ -2749,7 +2749,7 @@ void ImGuiTextFilter::Build()
 
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
-    if (Filters.empty())
+    if (Filters.Size == 0)
         return true;
 
     if (text == NULL)
@@ -8241,6 +8241,7 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 
 // This is one of the very rare legacy case where we use ImGuiWindow methods,
 // it should ideally be flattened at some point but it's been used a lots by widgets.
+IM_MSVC_RUNTIME_CHECKS_OFF
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
@@ -8385,6 +8386,8 @@ ImGuiID ImGui::GetID(int int_id)
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(int_id);
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
+
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
 //-----------------------------------------------------------------------------
