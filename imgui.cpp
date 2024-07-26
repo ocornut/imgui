@@ -1376,6 +1376,7 @@ ImGuiIO::ImGuiIO()
 #else
     ConfigMacOSXBehaviors = false;
 #endif
+    ConfigNavSwapGamepadButtons = false;
     ConfigInputTrickleEventQueue = true;
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;

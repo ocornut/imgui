@@ -76,6 +76,8 @@ Other changes:
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
   Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match tye
+  typical "Nintendo/Japanese consoles" button layout when using Gamepad navigation. (#787, #5723)
 - Added PushItemFlag()/PopItemFlags(), ImGuiItemFlags to modify shared item flags:
   - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
   - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
