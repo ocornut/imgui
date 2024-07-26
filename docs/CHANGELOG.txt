@@ -153,6 +153,7 @@ Other changes:
 - Groups, Tables: fixed EndGroup() failing to correctly capture current table occupied size. (#7543)
 - TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
   thickness of the horizontal line over selectable tabs. [@DctrNoob]
+- Misc: added GetID(int) variant for consistency. (#7111)
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
