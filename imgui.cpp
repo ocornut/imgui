@@ -15279,6 +15279,10 @@ static void ImGui::UpdateViewportsNewFrame()
         g.PlatformMonitorsFullWorkRect.Add(monitor->WorkPos);
         g.PlatformMonitorsFullWorkRect.Add(monitor->WorkPos + monitor->WorkSize);
     }
+    else
+    {
+        g.FallbackMonitor = g.PlatformIO.Monitors[0];
+    }
     for (ImGuiPlatformMonitor& monitor : g.PlatformIO.Monitors)
     {
         g.PlatformMonitorsFullWorkRect.Add(monitor.WorkPos);
@@ -20568,14 +20572,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
             {
-                const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
-                BulletText("Monitor #%d: DPI %.0f%%\n MainMin (%.0f,%.0f), MainMax (%.0f,%.0f), MainSize (%.0f,%.0f)\n WorkMin (%.0f,%.0f), WorkMax (%.0f,%.0f), WorkSize (%.0f,%.0f)",
-                    i, mon.DpiScale * 100.0f,
-                    mon.MainPos.x, mon.MainPos.y, mon.MainPos.x + mon.MainSize.x, mon.MainPos.y + mon.MainSize.y, mon.MainSize.x, mon.MainSize.y,
-                    mon.WorkPos.x, mon.WorkPos.y, mon.WorkPos.x + mon.WorkSize.x, mon.WorkPos.y + mon.WorkSize.y, mon.WorkSize.x, mon.WorkSize.y);
+                DebugNodePlatformMonitor(&g.PlatformIO.Monitors[i], "Monitor", i);
                 if (IsItemHovered())
                     cfg->HighlightMonitorIdx = i;
             }
+            DebugNodePlatformMonitor(&g.FallbackMonitor, "Fallback", 0);
             TreePop();
         }
 
@@ -21490,6 +21491,14 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             DebugNodeDrawList(NULL, viewport, draw_list, "DrawList");
         TreePop();
     }
+}
+
+void ImGui::DebugNodePlatformMonitor(ImGuiPlatformMonitor* monitor, const char* label, int idx)
+{
+    BulletText("%s %d: DPI %.0f%%\n MainMin (%.0f,%.0f), MainMax (%.0f,%.0f), MainSize (%.0f,%.0f)\n WorkMin (%.0f,%.0f), WorkMax (%.0f,%.0f), WorkSize (%.0f,%.0f)",
+        label, idx, monitor->DpiScale * 100.0f,
+        monitor->MainPos.x, monitor->MainPos.y, monitor->MainPos.x + monitor->MainSize.x, monitor->MainPos.y + monitor->MainSize.y, monitor->MainSize.x, monitor->MainSize.y,
+        monitor->WorkPos.x, monitor->WorkPos.y, monitor->WorkPos.x + monitor->WorkSize.x, monitor->WorkPos.y + monitor->WorkSize.y, monitor->WorkSize.x, monitor->WorkSize.y);
 }
 
 void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
