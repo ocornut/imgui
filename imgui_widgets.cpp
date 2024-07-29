@@ -7221,7 +7221,7 @@ static void BoxSelectScrollWithMouseDrag(ImGuiBoxSelectState* bs, ImGuiWindow* w
     }
 }
 
-bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags)
+bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
@@ -7241,11 +7241,10 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
 
     // Current frame absolute prev/current rectangles are used to toggle selection.
     // They are derived from positions relative to scrolling space.
-    const ImRect scope_rect = window->InnerClipRect;
     ImVec2 start_pos_abs = WindowPosRelToAbs(window, bs->StartPosRel);
     ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, bs->EndPosRel); // Clamped already
     ImVec2 curr_end_pos_abs = g.IO.MousePos;
-    if (ms_flags & ImGuiMultiSelectFlags_ScopeWindow)  // Box-select scrolling only happens with ScopeWindow
+    if (ms_flags & ImGuiMultiSelectFlags_ScopeWindow) // Box-select scrolling only happens with ScopeWindow
         curr_end_pos_abs = ImClamp(curr_end_pos_abs, scope_rect.Min, scope_rect.Max);
     bs->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
     bs->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
@@ -7299,6 +7298,7 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flag
 // [SECTION] Widgets: Multi-Select support
 //-------------------------------------------------------------------------
 // - DebugLogMultiSelectRequests() [Internal]
+// - CalcScopeRect() [Internal]
 // - BeginMultiSelect()
 // - EndMultiSelect()
 // - SetNextItemSelectionUserData()
@@ -7314,6 +7314,22 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
         if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d (dir %d)\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected, req.RangeDirection);
+    }
+}
+
+static ImRect CalcScopeRect(ImGuiMultiSelectTempData* ms, ImGuiWindow* window)
+{
+    if (ms->Flags & ImGuiMultiSelectFlags_ScopeRect)
+    {
+        // Warning: this depends on CursorMaxPos so it means to be called by EndMultiSelect() only
+        return ImRect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin));
+    }
+    else
+    {
+        // Add inner table decoration (#7821) // FIXME: Why not baking in InnerClipRect?
+        ImRect scope_rect = window->InnerClipRect;
+        scope_rect.Min = ImMin(scope_rect.Min + ImVec2(window->DecoInnerSizeX1, window->DecoInnerSizeY1), scope_rect.Max);
+        return scope_rect;
     }
 }
 
@@ -7399,7 +7415,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
     {
         ms->BoxSelectId = GetID("##BoxSelect");
-        if (BeginBoxSelect(window, ms->BoxSelectId, flags))
+        if (BeginBoxSelect(CalcScopeRect(ms, window), window, ms->BoxSelectId, flags))
             request_clear |= bs->RequestClear;
     }
 
@@ -7452,7 +7468,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
     IM_ASSERT(g.MultiSelectTempDataStacked > 0 && &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1] == g.CurrentMultiSelect);
 
-    const ImRect scope_rect = (ms->Flags & ImGuiMultiSelectFlags_ScopeRect) ? ImRect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin)) : window->InnerClipRect;
+    ImRect scope_rect = CalcScopeRect(ms, window);
     if (ms->IsFocused)
     {
         // We currently don't allow user code to modify RangeSrcItem by writing to BeginIO's version, but that would be an easy change here.
