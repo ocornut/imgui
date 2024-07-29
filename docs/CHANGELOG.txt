@@ -147,6 +147,9 @@ Other changes:
 - Nav: fixed clicking window decorations (e.g. resize borders) from losing focused item when
   within a child window using ImGuiChildFlags_NavFlattened.
 - InputText: added '\' and '/' as word seperator. (#7824, #7704) [@reduf]
+- TreeNode: added SetNextItemStorageID() to specify/override the identifier used for persisting
+  open/close storage. Useful if needing to often read/write from storage without manipulating
+  the ID stack. (#7553, #6990, #3823, #1131)
 - Selectable: added ImGuiSelectableFlags_Highlight flag to highlight items independently from
   the hovered state. (#7820) [@rerilier]
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
