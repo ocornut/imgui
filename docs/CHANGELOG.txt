@@ -182,6 +182,8 @@ Docking+Viewports Branch:
   usage. (#7814) [@YGXXD]
 - Backends: SDL3: Fixed a bug preventing ImGuiViewportFlags_NoFocusOnAppearing support from
   working (Windows only).
+- Backends: Vulkan: ImGui_ImplVulkan_SwapBuffers() used by secondary viewports still proceeds
+  increasing frame counters on VK_SUBOPTIMAL_KHR. (#7825, #3881) [@NostraMagister]
 
 
 -----------------------------------------------------------------------

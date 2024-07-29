@@ -1895,9 +1895,13 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
     {
         vd->SwapChainNeedRebuild = true;
-        return;
+        if (err == VK_ERROR_OUT_OF_DATE_KHR)
+            return;
     }
-    check_vk_result(err);
+    else
+    {
+        check_vk_result(err);
+    }
 
     wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount;             // This is for the next vkWaitForFences()
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
