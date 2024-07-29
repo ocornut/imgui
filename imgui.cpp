@@ -435,9 +435,11 @@ CODE
                             - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
                             - you can use: GetContentRegionAvail().x
                             - instead of:  GetWindowContentRegionMax().x + GetWindowPos().x
-                            - you can use: GetCursorScreenPos().x + GetContentRegionAvail().x (from left edge of window)
+                            - you can use: GetCursorScreenPos().x + GetContentRegionAvail().x // when called from left edge of window
                             - instead of:  GetContentRegionMax()
-                            - you cna use: GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
+                            - you can use: GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in local coordinates
+                            - instead of:  GetWindowContentRegionMax().x - GetWindowContentRegionMin().x
+                            - you can use: GetContentRegionAvail() // when called from left edge of window
  - 2024/07/15 (1.91.0) - renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups. (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
                          (internals: also renamed ImGuiItemFlags_SelectableDontClosePopup into ImGuiItemFlags_AutoClosePopups with inverted behaviors)
  - 2024/07/15 (1.91.0) - obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag(ImGuiItemFlags_ButtonRepeat, ...)/PopItemFlag().
@@ -2753,11 +2755,11 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         return true;
 
     if (text == NULL)
-        text = "";
+        text = text_end = "";
 
     for (const ImGuiTextRange& f : Filters)
     {
-        if (f.empty())
+        if (f.b == f.e)
             continue;
         if (f.b[0] == '-')
         {
