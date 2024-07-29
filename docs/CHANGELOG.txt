@@ -50,10 +50,11 @@ Breaking changes:
   You should never need those functions! You can do everything in less a confusing manner by only
   using GetCursorScreenPos() and GetContentRegionAvail(). Also always consider that if you are using
   GetWindowPos() and GetCursorPos() you may also be making things unnecessarily complicated.
-  I repeat: You can do everything with GetCursorScreenPos() and GetContentRegionAvail()!!
-   - GetWindowContentRegionMax().x - GetCursorPos().x   -->  GetContentRegionAvail().x
-   - GetWindowContentRegionMax().x + GetWindowPos().x   -->  GetCursorScreenPos().x + GetContentRegionAvail().x
-   - GetContentRegionMax()                              -->  GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in weird local coordinates
+  I repeat: You can do everything with GetCursorScreenPos() and GetContentRegionAvail()!
+   - GetWindowContentRegionMax().x - GetCursorPos().x              -->  GetContentRegionAvail().x
+   - GetWindowContentRegionMax().x + GetWindowPos().x              -->  GetCursorScreenPos().x + GetContentRegionAvail().x              // when called from left edge of window
+   - GetContentRegionMax()                                         -->  GetContentRegionAvail() + GetCursorScreenPos() - GetWindowPos() // right edge in local coordinates
+   - GetWindowContentRegionMax().x - GetWindowContentRegionMin().x -->  GetContentRegionAvail()                                         // when called from left edge of window
 - Item flag changes:
   - Obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag()/PopItemFlag()
     with ImGuiItemFlags_ButtonRepeat. Kept inline redirecting functions (will obsolete).
@@ -76,6 +77,8 @@ Other changes:
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
   Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
+- IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match tye
+  typical "Nintendo/Japanese consoles" button layout when using Gamepad navigation. (#787, #5723)
 - Added PushItemFlag()/PopItemFlags(), ImGuiItemFlags to modify shared item flags:
   - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
   - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
@@ -144,6 +147,12 @@ Other changes:
     - Multi-Select (advanced)
 - Nav: fixed clicking window decorations (e.g. resize borders) from losing focused item when
   within a child window using ImGuiChildFlags_NavFlattened.
+- InputText: added '\' and '/' as word seperator. (#7824, #7704) [@reduf]
+- TreeNode: added SetNextItemStorageID() to specify/override the identifier used for persisting
+  open/close storage. Useful if needing to often read/write from storage without manipulating
+  the ID stack. (#7553, #6990, #3823, #1131)
+- Selectable: added ImGuiSelectableFlags_Highlight flag to highlight items independently from
+  the hovered state. (#7820) [@rerilier]
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
   can use the clipper without knowing the amount of items beforehand. (#1311)
   In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
@@ -151,6 +160,7 @@ Other changes:
 - Groups, Tables: fixed EndGroup() failing to correctly capture current table occupied size. (#7543)
 - TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
   thickness of the horizontal line over selectable tabs. [@DctrNoob]
+- Misc: added GetID(int) variant for consistency. (#7111)
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
 - Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
   Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and

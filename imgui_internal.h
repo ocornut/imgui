@@ -1235,6 +1235,7 @@ enum ImGuiNextItemDataFlags_
     ImGuiNextItemDataFlags_HasOpen      = 1 << 1,
     ImGuiNextItemDataFlags_HasShortcut  = 1 << 2,
     ImGuiNextItemDataFlags_HasRefVal    = 1 << 3,
+    ImGuiNextItemDataFlags_HasStorageID = 1 << 4,
 };
 
 struct ImGuiNextItemData
@@ -1250,6 +1251,7 @@ struct ImGuiNextItemData
     bool                        OpenVal;            // Set by SetNextItemOpen()
     ImU8                        OpenCond;           // Set by SetNextItemOpen()
     ImGuiDataTypeStorage        RefVal;             // Not exposed yet, for ImGuiInputTextFlags_ParseEmptyAsRefVal
+    ImGuiID                     StorageId;          // Set by SetNextItemStorageID()
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!
@@ -1375,8 +1377,8 @@ typedef ImBitArray<ImGuiKey_NamedKey_COUNT, -ImGuiKey_NamedKey_BEGIN>    ImBitAr
 #define ImGuiKey_NavKeyboardTweakFast   ImGuiMod_Shift
 #define ImGuiKey_NavGamepadTweakSlow    ImGuiKey_GamepadL1
 #define ImGuiKey_NavGamepadTweakFast    ImGuiKey_GamepadR1
-#define ImGuiKey_NavGamepadActivate     ImGuiKey_GamepadFaceDown
-#define ImGuiKey_NavGamepadCancel       ImGuiKey_GamepadFaceRight
+#define ImGuiKey_NavGamepadActivate     (g.IO.ConfigNavSwapGamepadButtons ? ImGuiKey_GamepadFaceRight : ImGuiKey_GamepadFaceDown)
+#define ImGuiKey_NavGamepadCancel       (g.IO.ConfigNavSwapGamepadButtons ? ImGuiKey_GamepadFaceDown : ImGuiKey_GamepadFaceRight)
 #define ImGuiKey_NavGamepadMenu         ImGuiKey_GamepadFaceLeft
 #define ImGuiKey_NavGamepadInput        ImGuiKey_GamepadFaceUp
 
@@ -3705,7 +3707,7 @@ namespace ImGui
     IMGUI_API int           TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data);
 
     // Box-Select API
-    IMGUI_API bool          BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags);
+    IMGUI_API bool          BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags);
     IMGUI_API void          EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flags);
 
     // Multi-Select API
@@ -3858,7 +3860,7 @@ namespace ImGui
     IMGUI_API bool          SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f, float hover_visibility_delay = 0.0f, ImU32 bg_col = 0);
 
     // Widgets: Tree Nodes
-    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
+    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
     IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id);
     IMGUI_API void          TreeNodeSetOpen(ImGuiID storage_id, bool open);

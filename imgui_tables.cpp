@@ -1996,34 +1996,37 @@ void ImGui::TableEndRow(ImGuiTable* table)
     // We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark end of row and
     // get the new cursor position.
     if (unfreeze_rows_request)
+    {
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
             table->Columns[column_n].NavLayerCurrent = ImGuiNavLayer_Main;
-    if (unfreeze_rows_actual)
-    {
-        IM_ASSERT(table->IsUnfrozenRows == false);
         const float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
-        table->IsUnfrozenRows = true;
         table_instance->LastFrozenHeight = y0 - table->OuterRect.Min.y;
 
-        // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
-        table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
-        table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
-        table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
-        IM_ASSERT(table->Bg2ClipRectForDrawCmd.Min.y <= table->Bg2ClipRectForDrawCmd.Max.y);
-
-        float row_height = table->RowPosY2 - table->RowPosY1;
-        table->RowPosY2 = window->DC.CursorPos.y = table->WorkRect.Min.y + table->RowPosY2 - table->OuterRect.Min.y;
-        table->RowPosY1 = table->RowPosY2 - row_height;
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        if (unfreeze_rows_actual)
         {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            column->DrawChannelCurrent = column->DrawChannelUnfrozen;
-            column->ClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y;
-        }
+            IM_ASSERT(table->IsUnfrozenRows == false);
+            table->IsUnfrozenRows = true;
 
-        // Update cliprect ahead of TableBeginCell() so clipper can access to new ClipRect->Min.y
-        SetWindowClipRectBeforeSetChannel(window, table->Columns[0].ClipRect);
-        table->DrawSplitter->SetCurrentChannel(window->DrawList, table->Columns[0].DrawChannelCurrent);
+            // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
+            table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
+            table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
+            table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
+            IM_ASSERT(table->Bg2ClipRectForDrawCmd.Min.y <= table->Bg2ClipRectForDrawCmd.Max.y);
+
+            float row_height = table->RowPosY2 - table->RowPosY1;
+            table->RowPosY2 = window->DC.CursorPos.y = table->WorkRect.Min.y + table->RowPosY2 - table->OuterRect.Min.y;
+            table->RowPosY1 = table->RowPosY2 - row_height;
+            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+            {
+                ImGuiTableColumn* column = &table->Columns[column_n];
+                column->DrawChannelCurrent = column->DrawChannelUnfrozen;
+                column->ClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y;
+            }
+
+            // Update cliprect ahead of TableBeginCell() so clipper can access to new ClipRect->Min.y
+            SetWindowClipRectBeforeSetChannel(window, table->Columns[0].ClipRect);
+            table->DrawSplitter->SetCurrentChannel(window->DrawList, table->Columns[0].DrawChannelCurrent);
+        }
     }
 
     if (!(table->RowFlags & ImGuiTableRowFlags_Headers))

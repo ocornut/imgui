@@ -3903,7 +3903,7 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* ob
 
 static bool is_separator(unsigned int c)
 {
-    return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|' || c=='\n' || c=='\r' || c=='.' || c=='!';
+    return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|' || c=='\n' || c=='\r' || c=='.' || c=='!' || c=='\\' || c=='/';
 }
 
 static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
@@ -6233,7 +6233,7 @@ bool ImGui::TreeNode(const char* label)
     if (window->SkipItems)
         return false;
     ImGuiID id = window->GetID(label);
-    return TreeNodeBehavior(id, id, ImGuiTreeNodeFlags_None, label, NULL);
+    return TreeNodeBehavior(id, ImGuiTreeNodeFlags_None, label, NULL);
 }
 
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
@@ -6252,7 +6252,7 @@ bool ImGui::TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags)
     if (window->SkipItems)
         return false;
     ImGuiID id = window->GetID(label);
-    return TreeNodeBehavior(id, id, flags, label, NULL);
+    return TreeNodeBehavior(id, flags, label, NULL);
 }
 
 bool ImGui::TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)
@@ -6282,7 +6282,7 @@ bool ImGui::TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char
     ImGuiID id = window->GetID(str_id);
     const char* label, *label_end;
     ImFormatStringToTempBufferV(&label, &label_end, fmt, args);
-    return TreeNodeBehavior(id, id, flags, label, label_end);
+    return TreeNodeBehavior(id, flags, label, label_end);
 }
 
 bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args)
@@ -6294,7 +6294,7 @@ bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char
     ImGuiID id = window->GetID(ptr_id);
     const char* label, *label_end;
     ImFormatStringToTempBufferV(&label, &label_end, fmt, args);
-    return TreeNodeBehavior(id, id, flags, label, label_end);
+    return TreeNodeBehavior(id, flags, label, label_end);
 }
 
 bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
@@ -6374,7 +6374,7 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags)
 }
 
 // When using public API, currently 'id == storage_id' is always true, but we separate the values to facilitate advanced user code doing storage queries outside of UI loop.
-bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
+bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6417,6 +6417,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
         interact_bb.Max.x = frame_bb.Min.x + text_width + (label_size.x > 0.0f ? style.ItemSpacing.x * 2.0f : 0.0f);
 
     // Compute open and multi-select states before ItemAdd() as it clear NextItem data.
+    ImGuiID storage_id = (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasStorageID) ? g.NextItemData.StorageId : id;
     bool is_open = TreeNodeUpdateNextOpen(storage_id, flags);
 
     bool is_visible;
@@ -6701,6 +6702,16 @@ void ImGui::SetNextItemOpen(bool is_open, ImGuiCond cond)
     g.NextItemData.OpenCond = (ImU8)(cond ? cond : ImGuiCond_Always);
 }
 
+// Set next TreeNode/CollapsingHeader storage id.
+void ImGui::SetNextItemStorageID(ImGuiID storage_id)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.CurrentWindow->SkipItems)
+        return;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasStorageID;
+    g.NextItemData.StorageId = storage_id;
+}
+
 // CollapsingHeader returns true when opened but do not indent nor push into the ID stack (because of the ImGuiTreeNodeFlags_NoTreePushOnOpen flag).
 // This is basically the same as calling TreeNodeEx(label, ImGuiTreeNodeFlags_CollapsingHeader). You can remove the _NoTreePushOnOpen flag if you want behavior closer to normal TreeNode().
 bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags)
@@ -6709,7 +6720,7 @@ bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags)
     if (window->SkipItems)
         return false;
     ImGuiID id = window->GetID(label);
-    return TreeNodeBehavior(id, id, flags | ImGuiTreeNodeFlags_CollapsingHeader, label);
+    return TreeNodeBehavior(id, flags | ImGuiTreeNodeFlags_CollapsingHeader, label);
 }
 
 // p_visible == NULL                        : regular collapsing header
@@ -6729,7 +6740,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
     flags |= ImGuiTreeNodeFlags_CollapsingHeader;
     if (p_visible)
         flags |= ImGuiTreeNodeFlags_AllowOverlap | (ImGuiTreeNodeFlags)ImGuiTreeNodeFlags_ClipLabelForTrailingButton;
-    bool is_open = TreeNodeBehavior(id, id, flags, label);
+    bool is_open = TreeNodeBehavior(id, flags, label);
     if (p_visible != NULL)
     {
         // Create a small overlapping close button
@@ -6901,14 +6912,15 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // Render
     if (is_visible)
     {
-        if (hovered || selected)
+        const bool highlighted = hovered || (flags & ImGuiSelectableFlags_Highlight);
+        if (highlighted || selected)
         {
             // FIXME-MULTISELECT: Styling: Color for 'selected' elements? ImGuiCol_HeaderSelected
             ImU32 col;
-            if (selected && !hovered)
+            if (selected && !highlighted)
                 col = GetColorU32(ImLerp(GetStyleColorVec4(ImGuiCol_Header), GetStyleColorVec4(ImGuiCol_HeaderHovered), 0.5f));
             else
-                col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+                col = GetColorU32((held && highlighted) ? ImGuiCol_HeaderActive : highlighted ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
             RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
         }
         if (g.NavId == id)
@@ -7227,7 +7239,7 @@ static void BoxSelectScrollWithMouseDrag(ImGuiBoxSelectState* bs, ImGuiWindow* w
     }
 }
 
-bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags)
+bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiID box_select_id, ImGuiMultiSelectFlags ms_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
@@ -7247,11 +7259,10 @@ bool ImGui::BeginBoxSelect(ImGuiWindow* window, ImGuiID box_select_id, ImGuiMult
 
     // Current frame absolute prev/current rectangles are used to toggle selection.
     // They are derived from positions relative to scrolling space.
-    const ImRect scope_rect = window->InnerClipRect;
     ImVec2 start_pos_abs = WindowPosRelToAbs(window, bs->StartPosRel);
     ImVec2 prev_end_pos_abs = WindowPosRelToAbs(window, bs->EndPosRel); // Clamped already
     ImVec2 curr_end_pos_abs = g.IO.MousePos;
-    if (ms_flags & ImGuiMultiSelectFlags_ScopeWindow)  // Box-select scrolling only happens with ScopeWindow
+    if (ms_flags & ImGuiMultiSelectFlags_ScopeWindow) // Box-select scrolling only happens with ScopeWindow
         curr_end_pos_abs = ImClamp(curr_end_pos_abs, scope_rect.Min, scope_rect.Max);
     bs->BoxSelectRectPrev.Min = ImMin(start_pos_abs, prev_end_pos_abs);
     bs->BoxSelectRectPrev.Max = ImMax(start_pos_abs, prev_end_pos_abs);
@@ -7305,6 +7316,7 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flag
 // [SECTION] Widgets: Multi-Select support
 //-------------------------------------------------------------------------
 // - DebugLogMultiSelectRequests() [Internal]
+// - CalcScopeRect() [Internal]
 // - BeginMultiSelect()
 // - EndMultiSelect()
 // - SetNextItemSelectionUserData()
@@ -7320,6 +7332,22 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
         if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d (dir %d)\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected, req.RangeDirection);
+    }
+}
+
+static ImRect CalcScopeRect(ImGuiMultiSelectTempData* ms, ImGuiWindow* window)
+{
+    if (ms->Flags & ImGuiMultiSelectFlags_ScopeRect)
+    {
+        // Warning: this depends on CursorMaxPos so it means to be called by EndMultiSelect() only
+        return ImRect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin));
+    }
+    else
+    {
+        // Add inner table decoration (#7821) // FIXME: Why not baking in InnerClipRect?
+        ImRect scope_rect = window->InnerClipRect;
+        scope_rect.Min = ImMin(scope_rect.Min + ImVec2(window->DecoInnerSizeX1, window->DecoInnerSizeY1), scope_rect.Max);
+        return scope_rect;
     }
 }
 
@@ -7405,7 +7433,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     if (flags & (ImGuiMultiSelectFlags_BoxSelect1d | ImGuiMultiSelectFlags_BoxSelect2d))
     {
         ms->BoxSelectId = GetID("##BoxSelect");
-        if (BeginBoxSelect(window, ms->BoxSelectId, flags))
+        if (BeginBoxSelect(CalcScopeRect(ms, window), window, ms->BoxSelectId, flags))
             request_clear |= bs->RequestClear;
     }
 
@@ -7458,7 +7486,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
     IM_ASSERT(g.MultiSelectTempDataStacked > 0 && &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1] == g.CurrentMultiSelect);
 
-    const ImRect scope_rect = (ms->Flags & ImGuiMultiSelectFlags_ScopeRect) ? ImRect(ms->ScopeRectMin, ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin)) : window->InnerClipRect;
+    ImRect scope_rect = CalcScopeRect(ms, window);
     if (ms->IsFocused)
     {
         // We currently don't allow user code to modify RangeSrcItem by writing to BeginIO's version, but that would be an easy change here.
