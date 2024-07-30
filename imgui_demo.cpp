@@ -1,4 +1,4 @@
-// dear imgui, v1.91.0 WIP
+// dear imgui, v1.91.0
 // (demo code)
 
 // Help:
@@ -3621,7 +3621,7 @@ static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
             static bool use_deletion = true;
             static bool use_drag_drop = true;
             static bool show_in_table = false;
-            static bool show_color_button = false;
+            static bool show_color_button = true;
             static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
             static WidgetType widget_type = WidgetType_Selectable;
 
