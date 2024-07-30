@@ -83,7 +83,13 @@ struct ImGui_ImplOSX_Data
     id                          Monitor;
     NSWindow*                   Window;
 
-    ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
+    struct {
+        NSLock                      *lock;
+        CGFloat                     backingScaleFactor;
+        CGRect                      bounds;
+    } exclusive;
+
+    ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); @autoreleasepool {this->exclusive.lock = [[NSLock alloc] init]; } }
 };
 
 static ImGui_ImplOSX_Data*      ImGui_ImplOSX_GetBackendData()      { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
@@ -390,8 +396,33 @@ IMGUI_IMPL_API void ImGui_ImplOSX_NewFrame(void* _Nullable view) {
 #endif
 
 
+
+NSLock *ImGui_IO_lock;
+
+
+@interface ScopedLock : NSObject
+@property (strong) NSLock *lockptr;
+@end
+
+@implementation ScopedLock
+
+- (id)init:(NSLock *)incoming
+{
+    _lockptr = incoming;
+    [_lockptr lock];
+    return self;
+}
+
+- (void)dealloc {
+    [_lockptr unlock];
+}
+@end
+
+
 bool ImGui_ImplOSX_Init(NSView* view)
 {
+    ImGui_IO_lock = [[NSLock alloc] init];
+
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
@@ -612,8 +643,18 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     // Setup display size
     if (view)
     {
-        const float dpi = (float)[view.window backingScaleFactor];
-        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [bd->exclusive.lock lock];
+            bd->exclusive.backingScaleFactor = view.window.backingScaleFactor;
+            bd->exclusive.bounds = view.bounds;
+            [bd->exclusive.lock unlock];
+        });
+
+        [bd->exclusive.lock lock];
+        const float dpi = (float) bd->exclusive.backingScaleFactor;
+        io.DisplaySize = ImVec2((float) bd->exclusive.bounds.size.width, bd->exclusive.bounds.size.height);
+        [bd->exclusive.lock unlock];
+
         io.DisplayFramebufferScale = ImVec2(dpi, dpi);
     }
 
@@ -653,6 +694,8 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    ScopedLock *sclock = [[ScopedLock alloc] init:ImGui_IO_lock];
 
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
