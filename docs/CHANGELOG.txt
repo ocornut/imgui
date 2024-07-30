@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.0 WIP (In Progress)
+ VERSION 1.91.0 (Released 2024-07-30)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.0
 
 Breaking changes:
 
@@ -46,7 +48,7 @@ Breaking changes:
     - new: io.PlatformSetImeDataFn(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
   It is expected that for a vast majority of users this is automatically set by core
   library and/or platform backend so it won't have any effect.
-- Obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax().
+- Obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax(). (#7838)
   You should never need those functions! You can do everything in less a confusing manner by only
   using GetCursorScreenPos() and GetContentRegionAvail(). Also always consider that if you are using
   GetWindowPos() and GetCursorPos() you may also be making things unnecessarily complicated.
@@ -69,32 +71,24 @@ Breaking changes:
 - Commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
     - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
 - Backends: GLFW+Emscripten: Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback() to
-  ImGui_ImplGlfw_InstallEmscriptenCallbacks(), with additional GLFWWindow* parameter. (#7647) [@ypujante]
+  ImGui_ImplGlfw_InstallEmscriptenCallbacks(), with an additional GLFWWindow* parameter. (#7647) [@ypujante]
 
 Other changes:
 
 - Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
-  Default to use ShellExecute() under Windows, and system("") under Mac/Linux/etc.
-  Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default implementation.
-- IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match tye
+  Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default Windows/Linux/Mac implementations.
+- IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match the
   typical "Nintendo/Japanese consoles" button layout when using Gamepad navigation. (#787, #5723)
 - Added PushItemFlag()/PopItemFlags(), ImGuiItemFlags to modify shared item flags:
-  - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
-  - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
-  - Added ImGuiItemFlags_NoNavDefaultFocus to disable item being default focus. (#787)
-  - Added ImGuiItemFlags_ButtonRepeat to enable repeat on any button-like behavior.
-  - Added ImGuiItemFlags_AutoClosePopups to disable menu items/selection auto closing parent popups.
-    Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
-    (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
-  - This was mostly all previously in imgui_internal.h.
-- Inputs: added SetItemKeyOwner(ImGuiKey key) in public API. This is a simplified version of a more
-  complete set of function available in imgui_internal.h. One common use-case for this is to allow
-  your items to disable standard inputs behaviors such as Tab or Alt handling, Mouse Wheel scrolling,
-  etc. (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
-     // Hovering or activating the button will disable mouse wheel default behavior to scroll
-     InvisibleButton(...);
-     SetItemKeyOwner(ImGuiKey_MouseWheelY);
+   - Added ImGuiItemFlags_NoTabStop to disable tabbing through items.
+   - Added ImGuiItemFlags_NoNav to disable any navigation and focus of items. (#787)
+   - Added ImGuiItemFlags_NoNavDefaultFocus to disable item being default focus. (#787)
+   - Added ImGuiItemFlags_ButtonRepeat to enable repeat on any button-like behavior.
+   - Added ImGuiItemFlags_AutoClosePopups to disable menu items/selection auto closing parent popups.
+     Disabling this was previously possible for Selectable() via a direct flag but not for MenuItem().
+     (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
+   - This was mostly all previously in imgui_internal.h.
 - Multi-Select: added multi-select API and demos. (#1861, #6518)
    - This system implements standard multi-selection idioms (CTRL+mouse click, CTRL+keyboard moves,
      SHIFT+mouse click, SHIFT+keyboard moves, etc.) with support for clipper (not submitting non-visible
@@ -103,15 +97,16 @@ Other changes:
      This is designed to allow all kinds of selection storage you may use in your application
      (e.g. set/map/hash, intrusive selection, interval trees, up to you).
    - The supported widgets are Selectable(), Checkbox(). TreeNode() is also technically supported but...
-     using this correctly is more complicated (you need some sort of linear/random access to your tree,
+     using this correctly is more complicated. You need some sort of linear/random access to your tree,
      which is suited to advanced trees setups already implementing filters and clipper.
-     We will work toward simplifying and demoing this later.
-   - A helper ImGuiSelectionBasicStorage is provided to facilitate getting started in a typical app.
+     We will work toward simplifying our existing demo for trees.
+   - A helper ImGuiSelectionBasicStorage is provided to facilitate getting started in a typical app
+     (likely to suit a majority of users).
    - Documentation:
      - Wiki page https://github.com/ocornut/imgui/wiki/Multi-Select for API overview.
      - Demo code + headers are well commented.
   - Added BeginMultiSelect(), EndMultiSelect(), SetNextItemSelectionUserData().
-  - Added IsItemToggledSelection() for use if you need latest selection update during currnet iteration.
+  - Added IsItemToggledSelection() for use if you need latest selection update during current iteration.
   - Added ImGuiMultiSelectIO and ImGuiSelectionRequest structures:
     - BeginMultiSelect() and EndMultiSelect() return a ImGuiMultiSelectIO structure, which
       is mostly an array of ImGuiSelectionRequest actions (clear, select all, set range, etc.)
@@ -142,12 +137,23 @@ Other changes:
     - Multi-Select (with clipper)
     - Multi-Select (with deletion)
     - Multi-Select (dual list box) (#6648)
+    - Multi-Select (in a table)
     - Multi-Select (checkboxes)
     - Multi-Select (multiple scopes)
+    - Multi-Select (tiled assert browser)
+    - Multi-Select (trees) (#1861)
     - Multi-Select (advanced)
+- Inputs: added SetItemKeyOwner(ImGuiKey key) in public API.
+  This is a simplified version of a more complete set of function available in imgui_internal.h.
+  One common use-case for this is to allow your widgets to disable standard inputs behaviors such
+  as Tab or Alt handling, Mouse Wheel scrolling, etc.
+  (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
+     // Hovering or activating the button will disable mouse wheel default behavior to scroll
+     InvisibleButton(...);
+     SetItemKeyOwner(ImGuiKey_MouseWheelY);
 - Nav: fixed clicking window decorations (e.g. resize borders) from losing focused item when
   within a child window using ImGuiChildFlags_NavFlattened.
-- InputText: added '\' and '/' as word seperator. (#7824, #7704) [@reduf]
+- InputText: added '\' and '/' as word separator. (#7824, #7704) [@reduf]
 - TreeNode: added SetNextItemStorageID() to specify/override the identifier used for persisting
   open/close storage. Useful if needing to often read/write from storage without manipulating
   the ID stack. (#7553, #6990, #3823, #1131)
@@ -155,35 +161,37 @@ Other changes:
   the hovered state. (#7820) [@rerilier]
 - Clipper: added SeekCursorForItem() function. When using ImGuiListClipper::Begin(INT_MAX) you can
   can use the clipper without knowing the amount of items beforehand. (#1311)
-  In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) as the end of your iteration
+  In this situation, call ImGuiListClipper::SeekCursorForItem(items_count) at the end of your iteration
   loop to position the layout cursor correctly. This is done automatically if provided a count to Begin().
 - Groups, Tables: fixed EndGroup() failing to correctly capture current table occupied size. (#7543)
-- TabBar, Style: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
-  thickness of the horizontal line over selectable tabs. [@DctrNoob]
-- Misc: added GetID(int) variant for consistency. (#7111)
+- Style, TabBar: added style.TabBarOverlineSize / ImGuiStyleVar_TabBarOverlineSize to manipulate
+  thickness of the horizontal line over selected tabs. [@DctrNoob]
 - Style: close button and collapse/window-menu button hover highlight made rectangular instead of round.
-- Debug Tools: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
-  Debug log entries add a imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
-  other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
-- Debug Tools: Debug Log: Added "Configure Outputs.." button. (#5855)
-- Debug Tools: Debug Log: Fixed incorrect checkbox layout when partially clipped.
-- Demo: Reworked "Property Editor" demo in a manner that more ressemble the tree data and
+- Misc: added GetID(int) variant for consistency. (#7111)
+- Debug Tools:
+  - Debug Log: Added IMGUI_DEBUG_LOG(), ImGui::DebugLog() in public API. (#5855)
+    Printed entries include imgui frame counter prefix + are redirected to ShowDebugLogWindow() and
+    other configurable locations. Always call IMGUI_DEBUG_LOG() for maximum stripping in caller code.
+  - Debug Log: Added "Configure Outputs.." button. (#5855)
+  - Debug Log: Fixed incorrect checkbox layout when partially clipped.
+- Demo: Reworked "Property Editor" demo in a manner that more resemble the tree data and
   struct description data that a real application would want to use.
-- Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN.
-  (#7768, #4858, #2622) [@Aemony]
-- Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership change. (#7807)
-- Backends: SDL3: Update for API changes: SDL_GetClipboardText() memory ownership change. (#7801)
-- Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
-- Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
-- Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
-- Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
-  [@ypujante, @ocornut]
-- Backends; GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
-  not supported by the embedded GLFW: gamepad support, mouse cursor shapes, copy to clipboard,
-  workaround for Super/Meta key, different ways of resizing, multi-window (glfw/canvas) support.
-  (#7647) [@ypujante]
-- Backends: GLFW+Emscripten: Fixed Emscripten warning when using mouse wheel on some setups
-  "Unable to preventDefault inside passive event listener". (#7647, #7600) [@ypujante]
+- Backends:
+  - Backends: Win32: Fixed ImGuiMod_Super being mapped to VK_APPS instead of (VK_LWIN || VK_RWIN).
+    (#7768, #4858, #2622) [@Aemony]
+  - Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership change. (#7807)
+  - Backends: SDL3: Update for API changes: SDL_GetClipboardText() memory ownership change. (#7801)
+  - Backends: SDL3: Update for API changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762)
+  - Backends: SDL3: Update for API changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794) [@wermipls]
+  - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
+  - Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
+    [@ypujante, @ocornut]
+  - Backends; GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
+    not supported by the embedded GLFW: gamepad support, mouse cursor shapes, copy to clipboard,
+    workaround for Super/Meta key, different ways of resizing, multi-window (glfw/canvas) support.
+    (#7647) [@ypujante]
+  - Backends: GLFW+Emscripten: Fixed Emscripten warning when using mouse wheel on some setups
+    "Unable to preventDefault inside passive event listener". (#7647, #7600) [@ypujante]
 
 Docking+Viewports Branch:
 

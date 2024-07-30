@@ -1,4 +1,4 @@
-// dear imgui, v1.91.0 WIP
+// dear imgui, v1.91.0
 // (demo code)
 
 // Help:
@@ -200,6 +200,7 @@ Index of this file:
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations
+struct ImGuiDemoWindowData;
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleAppAssetsBrowser(bool* p_open);
 static void ShowExampleAppConsole(bool* p_open);
@@ -208,7 +209,7 @@ static void ShowExampleAppDockSpace(bool* p_open);
 static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
 static void ShowExampleAppLayout(bool* p_open);
-static void ShowExampleAppPropertyEditor(bool* p_open);
+static void ShowExampleAppPropertyEditor(bool* p_open, ImGuiDemoWindowData* demo_data);
 static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
 static void ShowExampleAppConstrainedResize(bool* p_open);
@@ -219,10 +220,9 @@ static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
 // (because the link time of very large functions tends to grow non-linearly)
-struct DemoWindowData;
-static void ShowDemoWindowMenuBar(DemoWindowData* demo_data);
-static void ShowDemoWindowWidgets(DemoWindowData* demo_data);
-static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data);
+static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data);
+static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data);
+static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data);
 static void ShowDemoWindowLayout();
 static void ShowDemoWindowPopups();
 static void ShowDemoWindowTables();
@@ -321,13 +321,14 @@ static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, Exampl
 // (this allocates _many_ more times than most other code in either Dear ImGui or others demo)
 static ExampleTreeNode* ExampleTree_CreateDemoTree()
 {
-    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
     char name_buf[32];
     int uid = 0;
     ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
-    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * 2; idx_L0++)
+    const int root_items_multiplier = 2;
+    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * root_items_multiplier; idx_L0++)
     {
-        snprintf(name_buf, 32, "%s %d", root_names[idx_L0 / 2], idx_L0 % 2);
+        snprintf(name_buf, 32, "%s %d", root_names[idx_L0 / root_items_multiplier], idx_L0 % root_items_multiplier);
         ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
         const int number_of_childs = (int)strlen(node_L1->Name);
         for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
@@ -350,7 +351,8 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
 // [SECTION] Demo Window / ShowDemoWindow()
 //-----------------------------------------------------------------------------
 
-struct DemoWindowData
+// Data to be shared accross different functions of the demo.
+struct ImGuiDemoWindowData
 {
     // Examples Apps (accessible from the "Examples" menu)
     bool ShowMainMenuBar = false;
@@ -375,6 +377,9 @@ struct DemoWindowData
     bool ShowIDStackTool = false;
     bool ShowStyleEditor = false;
     bool ShowAbout = false;
+
+    // Other data
+    ExampleTreeNode* DemoTree = NULL;
 };
 
 // Demonstrate most Dear ImGui features (this is big function!)
@@ -390,33 +395,33 @@ void ImGui::ShowDemoWindow(bool* p_open)
     IMGUI_CHECKVERSION();
 
     // Stored data
-    static DemoWindowData demo;
+    static ImGuiDemoWindowData demo_data;
 
     // Examples Apps (accessible from the "Examples" menu)
-    if (demo.ShowMainMenuBar)           { ShowExampleAppMainMenuBar(); }
-    if (demo.ShowAppDockSpace)          { ShowExampleAppDockSpace(&demo.ShowAppDockSpace); }    // Important: Process the Docking app first, as explicit DockSpace() nodes needs to be submitted early (read comments near the DockSpace function)
-    if (demo.ShowAppDocuments)          { ShowExampleAppDocuments(&demo.ShowAppDocuments); }    // ...Process the Document app next, as it may also use a DockSpace()
-    if (demo.ShowAppAssetsBrowser)      { ShowExampleAppAssetsBrowser(&demo.ShowAppAssetsBrowser); }
-    if (demo.ShowAppConsole)            { ShowExampleAppConsole(&demo.ShowAppConsole); }
-    if (demo.ShowAppCustomRendering)    { ShowExampleAppCustomRendering(&demo.ShowAppCustomRendering); }
-    if (demo.ShowAppLog)                { ShowExampleAppLog(&demo.ShowAppLog); }
-    if (demo.ShowAppLayout)             { ShowExampleAppLayout(&demo.ShowAppLayout); }
-    if (demo.ShowAppPropertyEditor)     { ShowExampleAppPropertyEditor(&demo.ShowAppPropertyEditor); }
-    if (demo.ShowAppSimpleOverlay)      { ShowExampleAppSimpleOverlay(&demo.ShowAppSimpleOverlay); }
-    if (demo.ShowAppAutoResize)         { ShowExampleAppAutoResize(&demo.ShowAppAutoResize); }
-    if (demo.ShowAppConstrainedResize)  { ShowExampleAppConstrainedResize(&demo.ShowAppConstrainedResize); }
-    if (demo.ShowAppFullscreen)         { ShowExampleAppFullscreen(&demo.ShowAppFullscreen); }
-    if (demo.ShowAppLongText)           { ShowExampleAppLongText(&demo.ShowAppLongText); }
-    if (demo.ShowAppWindowTitles)       { ShowExampleAppWindowTitles(&demo.ShowAppWindowTitles); }
+    if (demo_data.ShowMainMenuBar)          { ShowExampleAppMainMenuBar(); }
+    if (demo_data.ShowAppDockSpace)         { ShowExampleAppDockSpace(&demo_data.ShowAppDockSpace); } // Important: Process the Docking app first, as explicit DockSpace() nodes needs to be submitted early (read comments near the DockSpace function)
+    if (demo_data.ShowAppDocuments)         { ShowExampleAppDocuments(&demo_data.ShowAppDocuments); } // ...process the Document app next, as it may also use a DockSpace()
+    if (demo_data.ShowAppAssetsBrowser)     { ShowExampleAppAssetsBrowser(&demo_data.ShowAppAssetsBrowser); }
+    if (demo_data.ShowAppConsole)           { ShowExampleAppConsole(&demo_data.ShowAppConsole); }
+    if (demo_data.ShowAppCustomRendering)   { ShowExampleAppCustomRendering(&demo_data.ShowAppCustomRendering); }
+    if (demo_data.ShowAppLog)               { ShowExampleAppLog(&demo_data.ShowAppLog); }
+    if (demo_data.ShowAppLayout)            { ShowExampleAppLayout(&demo_data.ShowAppLayout); }
+    if (demo_data.ShowAppPropertyEditor)    { ShowExampleAppPropertyEditor(&demo_data.ShowAppPropertyEditor, &demo_data); }
+    if (demo_data.ShowAppSimpleOverlay)     { ShowExampleAppSimpleOverlay(&demo_data.ShowAppSimpleOverlay); }
+    if (demo_data.ShowAppAutoResize)        { ShowExampleAppAutoResize(&demo_data.ShowAppAutoResize); }
+    if (demo_data.ShowAppConstrainedResize) { ShowExampleAppConstrainedResize(&demo_data.ShowAppConstrainedResize); }
+    if (demo_data.ShowAppFullscreen)        { ShowExampleAppFullscreen(&demo_data.ShowAppFullscreen); }
+    if (demo_data.ShowAppLongText)          { ShowExampleAppLongText(&demo_data.ShowAppLongText); }
+    if (demo_data.ShowAppWindowTitles)      { ShowExampleAppWindowTitles(&demo_data.ShowAppWindowTitles); }
 
     // Dear ImGui Tools (accessible from the "Tools" menu)
-    if (demo.ShowMetrics)               { ImGui::ShowMetricsWindow(&demo.ShowMetrics); }
-    if (demo.ShowDebugLog)              { ImGui::ShowDebugLogWindow(&demo.ShowDebugLog); }
-    if (demo.ShowIDStackTool)           { ImGui::ShowIDStackToolWindow(&demo.ShowIDStackTool); }
-    if (demo.ShowAbout)                 { ImGui::ShowAboutWindow(&demo.ShowAbout); }
-    if (demo.ShowStyleEditor)
+    if (demo_data.ShowMetrics)              { ImGui::ShowMetricsWindow(&demo_data.ShowMetrics); }
+    if (demo_data.ShowDebugLog)             { ImGui::ShowDebugLogWindow(&demo_data.ShowDebugLog); }
+    if (demo_data.ShowIDStackTool)          { ImGui::ShowIDStackToolWindow(&demo_data.ShowIDStackTool); }
+    if (demo_data.ShowAbout)                { ImGui::ShowAboutWindow(&demo_data.ShowAbout); }
+    if (demo_data.ShowStyleEditor)
     {
-        ImGui::Begin("Dear ImGui Style Editor", &demo.ShowStyleEditor);
+        ImGui::Begin("Dear ImGui Style Editor", &demo_data.ShowStyleEditor);
         ImGui::ShowStyleEditor();
         ImGui::End();
     }
@@ -468,7 +473,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);   // e.g. Use 2/3 of the space for widgets and 1/3 for labels (right align)
 
     // Menu Bar
-    ShowDemoWindowMenuBar(&demo);
+    ShowDemoWindowMenuBar(&demo_data);
 
     ImGui::Text("dear imgui says hello! (%s) (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Spacing();
@@ -631,7 +636,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         IMGUI_DEMO_MARKER("Configuration/Style");
         if (ImGui::TreeNode("Style"))
         {
-            ImGui::Checkbox("Style Editor", &demo.ShowStyleEditor);
+            ImGui::Checkbox("Style Editor", &demo_data.ShowStyleEditor);
             ImGui::SameLine();
             HelpMarker("The same contents can be accessed in 'Tools->Style Editor' or by calling the ShowStyleEditor() function.");
             ImGui::TreePop();
@@ -680,7 +685,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     // All demo contents
-    ShowDemoWindowWidgets(&demo);
+    ShowDemoWindowWidgets(&demo_data);
     ShowDemoWindowLayout();
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
@@ -695,7 +700,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 // [SECTION] ShowDemoWindowMenuBar()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowMenuBar(DemoWindowData* demo_data)
+static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Menu");
     if (ImGui::BeginMenuBar())
@@ -761,7 +766,7 @@ static void ShowDemoWindowMenuBar(DemoWindowData* demo_data)
 // [SECTION] ShowDemoWindowWidgets()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowWidgets(DemoWindowData* demo_data)
+static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets");
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -3173,7 +3178,7 @@ struct ExampleDualListBox
 // Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data)
+static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
     if (ImGui::TreeNode("Selection State & Multi-Select"))
@@ -3655,11 +3660,13 @@ static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data)
             }; // ExampleTreeFuncs
 
             static ImGuiSelectionBasicStorage selection;
-            static ExampleTreeNode* tree = ExampleTree_CreateDemoTree(); // Create tree once
+            if (demo_data->DemoTree == NULL)
+                demo_data->DemoTree = ExampleTree_CreateDemoTree(); // Create tree once
             ImGui::Text("Selection size: %d", selection.Size);
 
             if (ImGui::BeginChild("##Tree", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
             {
+                ExampleTreeNode* tree = demo_data->DemoTree;
                 ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect2d;
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, selection.Size, -1);
                 ExampleTreeFuncs::ApplySelectionRequests(ms_io, tree, &selection);
@@ -3689,7 +3696,7 @@ static void ShowDemoWindowMultiSelect(DemoWindowData* demo_data)
             static bool use_deletion = true;
             static bool use_drag_drop = true;
             static bool show_in_table = false;
-            static bool show_color_button = false;
+            static bool show_color_button = true;
             static ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect1d;
             static WidgetType widget_type = WidgetType_Selectable;
 
@@ -4672,8 +4679,8 @@ static void ShowDemoWindowLayout()
         ImGui::TreePop();
     }
 
-    IMGUI_DEMO_MARKER("Layout/Clipping");
-    if (ImGui::TreeNode("Clipping"))
+    IMGUI_DEMO_MARKER("Layout/Text Clipping");
+    if (ImGui::TreeNode("Text Clipping"))
     {
         static ImVec2 size(100.0f, 100.0f);
         static ImVec2 offset(30.0f, 30.0f);
@@ -8967,6 +8974,7 @@ struct ExampleAppPropertyEditor
                         ImGui::TableNextRow();
                         ImGui::PushID(field_desc.Name);
                         ImGui::TableNextColumn();
+                        ImGui::AlignTextToFramePadding();
                         ImGui::TextUnformatted(field_desc.Name);
                         ImGui::TableNextColumn();
                         void* field_ptr = (void*)(((unsigned char*)node) + field_desc.Offset);
@@ -9032,7 +9040,7 @@ struct ExampleAppPropertyEditor
 };
 
 // Demonstrate creating a simple property editor.
-static void ShowExampleAppPropertyEditor(bool* p_open)
+static void ShowExampleAppPropertyEditor(bool* p_open, ImGuiDemoWindowData* demo_data)
 {
     ImGui::SetNextWindowSize(ImVec2(430, 450), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Example: Property editor", p_open))
@@ -9043,8 +9051,9 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
 
     IMGUI_DEMO_MARKER("Examples/Property Editor");
     static ExampleAppPropertyEditor property_editor;
-    static ExampleTreeNode* tree_data = ExampleTree_CreateDemoTree();
-    property_editor.Draw(tree_data);
+    if (demo_data->DemoTree == NULL)
+        demo_data->DemoTree = ExampleTree_CreateDemoTree();
+    property_editor.Draw(demo_data->DemoTree);
 
     ImGui::End();
 }
