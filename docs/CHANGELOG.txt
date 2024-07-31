@@ -43,8 +43,10 @@ Breaking changes:
 
 Other changes:
 
-- Examples: SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop to handle
-  minimization without burning CPU or GPU by running unthrottled code. (#7844)
+- Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
+  provide a way to do a portable sleep. (#7844)
+- Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
+  to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
 
 
 
