@@ -43,6 +43,10 @@ Breaking changes:
 
 Other changes:
 
+- Examples: SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop to handle
+  minimization without burning CPU or GPU by running unthrottled code. (#7844)
+
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.0 (Released 2024-07-30)
