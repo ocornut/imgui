@@ -6522,10 +6522,12 @@ void ImGui::UpdateWindowSkipRefresh(ImGuiWindow* window)
             return;
         if (window->Hidden) // If was hidden (previous frame)
             return;
-        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnHover) && g.HoveredWindow && window->RootWindow == g.HoveredWindow->RootWindow)
-            return;
-        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnFocus) && g.NavWindow && window->RootWindow == g.NavWindow->RootWindow)
-            return;
+        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnHover) && g.HoveredWindow)
+            if (window->RootWindow == g.HoveredWindow->RootWindow || IsWindowWithinBeginStackOf(g.HoveredWindow->RootWindow, window))
+                return;
+        if ((g.NextWindowData.RefreshFlagsVal & ImGuiWindowRefreshFlags_RefreshOnFocus) && g.NavWindow)
+            if (window->RootWindow == g.NavWindow->RootWindow || IsWindowWithinBeginStackOf(g.NavWindow->RootWindow, window))
+                return;
         window->DrawList = NULL;
         window->SkipRefresh = true;
     }
