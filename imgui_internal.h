@@ -1990,6 +1990,7 @@ struct ImGuiViewportP : public ImGuiViewport
     // Per-viewport work area
     // - Insets are >= 0.0f values, distance from viewport corners to work area.
     // - BeginMainMenuBar() and DockspaceOverViewport() tend to use work area to avoid stepping over existing contents.
+    // - Generally 'safeAreaInsets' in iOS land, 'DisplayCutout' in Android land.
     ImVec2              WorkInsetMin;           // Work Area inset locked for the frame. GetWorkRect() always fits within GetMainRect().
     ImVec2              WorkInsetMax;           // "
     ImVec2              BuildWorkInsetMin;      // Work Area inset accumulator for current frame, to become next frame's WorkInset

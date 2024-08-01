@@ -52,6 +52,10 @@ Other changes:
 - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
   to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
 
+Docking+Viewports Branch:
+
+- Viewports: added optional platform_io.Platform_GetWindowWorkAreaInsets() hook
+  to allow backends to alter the default per-viewport work-area. (#7823)
 
 
 -----------------------------------------------------------------------

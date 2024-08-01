@@ -15238,11 +15238,18 @@ static void ImGui::UpdateViewportsNewFrame()
         // Update/copy monitor info
         UpdateViewportPlatformMonitor(viewport);
 
-        // Lock down space taken by menu bars and status bars
+        // Lock down space taken by menu bars and status bars + query initial insets from backend
         // Setup initial value for functions like BeginMainMenuBar(), DockSpaceOverViewport() etc.
         viewport->WorkInsetMin = viewport->BuildWorkInsetMin;
         viewport->WorkInsetMax = viewport->BuildWorkInsetMax;
         viewport->BuildWorkInsetMin = viewport->BuildWorkInsetMax = ImVec2(0.0f, 0.0f);
+        if (g.PlatformIO.Platform_GetWindowWorkAreaInsets != NULL)
+        {
+            ImVec4 insets = g.PlatformIO.Platform_GetWindowWorkAreaInsets(viewport);
+            IM_ASSERT(insets.x >= 0.0f && insets.y >= 0.0f && insets.z >= 0.0f && insets.w >= 0.0f);
+            viewport->BuildWorkInsetMin = ImVec2(insets.x, insets.y);
+            viewport->BuildWorkInsetMax = ImVec2(insets.z, insets.w);
+        }
         viewport->UpdateWorkRect();
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
