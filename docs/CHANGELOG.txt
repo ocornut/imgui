@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- MultiSelect, TreeNode, Drag and Drop: fixed an issue where carrying a drag and drop
+  payload over an already open tree node would incorrectly select it. (#7850)
 - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
   provide a way to do a portable sleep. (#7844)
 - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
