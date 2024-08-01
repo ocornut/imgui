@@ -6475,6 +6475,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const float arrow_hit_x2 = (text_pos.x - text_offset_x) + (g.FontSize + padding.x * 2.0f) + style.TouchExtraPadding.x;
     const bool is_mouse_x_over_arrow = (g.IO.MousePos.x >= arrow_hit_x1 && g.IO.MousePos.x < arrow_hit_x2);
 
+    const bool is_multi_select = (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) != 0;
+    if (is_multi_select) // We absolutely need to distinguish open vs select so _OpenOnArrow comes by default
+        flags |= (flags & ImGuiTreeNodeFlags_OpenOnMask_) == 0 ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick : ImGuiTreeNodeFlags_OpenOnArrow;
+
     // Open behaviors can be altered with the _OpenOnArrow and _OnOnDoubleClick flags.
     // Some alteration have subtle effects (e.g. toggle on MouseUp vs MouseDown events) due to requirements for multi-selection and drag and drop support.
     // - Single-click on label = Toggle on MouseUp (default, when _OpenOnArrow=0)
@@ -6495,16 +6499,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool was_selected = selected;
 
     // Multi-selection support (header)
-    const bool is_multi_select = (g.LastItemData.InFlags & ImGuiItemFlags_IsMultiSelect) != 0;
     if (is_multi_select)
     {
         // Handle multi-select + alter button flags for it
         MultiSelectItemHeader(id, &selected, &button_flags);
         if (is_mouse_x_over_arrow)
             button_flags = (button_flags | ImGuiButtonFlags_PressedOnClick) & ~ImGuiButtonFlags_PressedOnClickRelease;
-
-        // We absolutely need to distinguish open vs select so comes by default
-        flags |= ImGuiTreeNodeFlags_OpenOnArrow;
     }
     else
     {
@@ -6519,12 +6519,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     {
         if (pressed && g.DragDropHoldJustPressedId != id)
         {
-            if ((flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) == 0 || (g.NavActivateId == id && !is_multi_select))
-                toggled = true;
+            if ((flags & ImGuiTreeNodeFlags_OpenOnMask_) == 0 || (g.NavActivateId == id && !is_multi_select))
+                toggled = true; // Single click
             if (flags & ImGuiTreeNodeFlags_OpenOnArrow)
                 toggled |= is_mouse_x_over_arrow && !g.NavDisableMouseHover; // Lightweight equivalent of IsMouseHoveringRect() since ButtonBehavior() already did the job
             if ((flags & ImGuiTreeNodeFlags_OpenOnDoubleClick) && g.IO.MouseClickedCount[0] == 2)
-                toggled = true;
+                toggled = true; // Double click
         }
         else if (pressed && g.DragDropHoldJustPressedId == id)
         {
