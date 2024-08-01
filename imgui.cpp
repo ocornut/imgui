@@ -6531,6 +6531,17 @@ void ImGui::UpdateWindowSkipRefresh(ImGuiWindow* window)
     }
 }
 
+static void SetWindowActiveForSkipRefresh(ImGuiWindow* window)
+{
+    window->Active = true;
+    for (ImGuiWindow* child : window->DC.ChildWindows)
+        if (!child->Hidden)
+        {
+            child->Active = child->SkipRefresh = true;
+            SetWindowActiveForSkipRefresh(child);
+        }
+}
+
 // When a modal popup is open, newly created windows that want focus (i.e. are not popups and do not specify ImGuiWindowFlags_NoFocusOnAppearing)
 // should be positioned behind that modal window, unless the window was created inside the modal begin-stack.
 // In case of multiple stacked modals newly created window honors begin stack order and does not go below its own modal parent.
@@ -7233,7 +7244,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         // Skip refresh always mark active
         if (window->SkipRefresh)
-            window->Active = true;
+            SetWindowActiveForSkipRefresh(window);
 
         // Append
         SetCurrentWindow(window);
