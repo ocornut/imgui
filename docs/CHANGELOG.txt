@@ -36,6 +36,25 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.1 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
+  payload over an already open tree node would incorrectly select it. (#7850)
+- MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
+  when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
+  provide a way to do a portable sleep. (#7844)
+- Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
+  to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
+
+
+
+-----------------------------------------------------------------------
  VERSION 1.91.0 (Released 2024-07-30)
 -----------------------------------------------------------------------
 

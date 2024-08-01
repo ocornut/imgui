@@ -1,4 +1,4 @@
-// dear imgui, v1.91.0
+// dear imgui, v1.91.1 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -982,6 +982,7 @@ enum ImGuiTreeNodeFlagsPrivate_
 {
     ImGuiTreeNodeFlags_ClipLabelForTrailingButton = 1 << 28,// FIXME-WIP: Hard-coded for CollapsingHeader()
     ImGuiTreeNodeFlags_UpsideDownArrow            = 1 << 29,// FIXME-WIP: Turn Down arrow into an Up arrow, but reversed trees (#6517)
+    ImGuiTreeNodeFlags_OpenOnMask_                = ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_OpenOnArrow,
 };
 
 enum ImGuiSeparatorFlags_

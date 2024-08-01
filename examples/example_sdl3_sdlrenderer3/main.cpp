@@ -112,6 +112,11 @@ int main(int, char**)
             if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
         }
+        if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
+        {
+            SDL_Delay(10);
+            continue;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplSDLRenderer3_NewFrame();
@@ -163,6 +168,9 @@ int main(int, char**)
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
+#ifdef __EMSCRIPTEN__
+    EMSCRIPTEN_MAINLOOP_END;
+#endif
 
     // Cleanup
     ImGui_ImplSDLRenderer3_Shutdown();

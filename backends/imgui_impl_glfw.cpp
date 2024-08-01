@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-07-31: Added ImGui_ImplGlfw_Sleep() helper function for usage by our examples app, since GLFW doesn't provide one.
 //  2024-07-08: *BREAKING* Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback to ImGui_ImplGlfw_InstallEmscriptenCallbacks(), added GLFWWindow* parameter.
 //  2024-07-08: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (requires emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
 //  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
@@ -103,6 +104,9 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetCocoaWindow()
+#endif
+#ifndef _WIN32
+#include <unistd.h>             // for usleep()
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -939,6 +943,16 @@ void ImGui_ImplGlfw_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplGlfw_UpdateGamepads();
+}
+
+// GLFW doesn't provide a portable sleep function
+void ImGui_ImplGlfw_Sleep(int milliseconds)
+{
+#ifdef _WIN32
+    ::Sleep(milliseconds);
+#else
+    usleep(milliseconds * 1000);
+#endif
 }
 
 #ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
