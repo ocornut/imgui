@@ -307,6 +307,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
     {
         case SDL_EVENT_MOUSE_MOTION:
         {
+            if (event->motion.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
@@ -314,6 +316,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
+            if (event->wheel.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
             float wheel_x = -event->wheel.x;
             float wheel_y = event->wheel.y;
@@ -327,6 +331,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
+            if (event->button.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
             if (event->button.button == SDL_BUTTON_RIGHT) { mouse_button = 1; }
@@ -342,12 +348,16 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_TEXT_INPUT:
         {
+            if (event->text.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
         {
+            if (event->key.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%d: key=%d, scancode=%d, mod=%X\n", (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP", event->key.key, event->key.scancode, event->key.mod);
             ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
             ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
@@ -357,6 +367,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
+            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             bd->MouseWindowID = event->window.windowID;
             bd->MousePendingLeaveFrame = 0;
             return true;
@@ -367,13 +379,19 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         // FIXME: Unconfirmed whether this is still needed with SDL3.
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         {
+            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
             return true;
         }
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             io.AddFocusEvent(true);
             return true;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
+            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+                return false;
             io.AddFocusEvent(false);
             return true;
         case SDL_EVENT_GAMEPAD_ADDED:
