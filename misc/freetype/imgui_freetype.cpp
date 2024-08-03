@@ -480,8 +480,9 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
         {
             // Check for valid range. This may also help detect *some* dangling pointers, because a common
-            // user error is to setup ImFontConfig::GlyphRanges with a pointer to data that isn't persistent.
-            IM_ASSERT(src_range[0] <= src_range[1]);
+            // user error is to setup ImFontConfig::GlyphRanges with a pointer to data that isn't persistent,
+            // or to forget to zero-terminate the glyph range array.
+            IM_ASSERT(src_range[0] <= src_range[1] && "Invalid range: is your glyph range array persistent? it is zero-terminated?");
             src_tmp.GlyphsHighest = ImMax(src_tmp.GlyphsHighest, (int)src_range[1]);
         }
         dst_tmp.SrcCount++;
