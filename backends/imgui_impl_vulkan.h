@@ -64,8 +64,7 @@
 #endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
-// - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-//   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
+// - VkDescriptorPool must be created with a VkDescriptorPoolSize that includes one ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor and a VkDescriptorPoolCreateInfo where `maxSets` includes one ImGui descriptor set.
 // - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
