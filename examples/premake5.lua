@@ -249,6 +249,24 @@ if (true) then
 			ignoredefaultlibraries { "msvcrt" }
 end
 
+-- example_sdl2_sdlrenderer2 (SDL2 + SDL_Renderer)
+if (_OPTIONS["with-sdl2"]) then
+	project "example_sdl2_sdlrenderer2"
+		kind "ConsoleApp"
+		imgui_as_src ("..", "imgui")
+		--imgui_as_lib ("..")
+		vpaths { ["sources"] = "./**" }
+		files { "../backends/imgui_impl_sdl2*", "../backends/imgui_impl_sdlrenderer2.*", "example_sdl2_sdlrenderer2/*.h", "example_sdl2_sdlrenderer2/*.cpp", "./README.txt" }
+		includedirs { "%SDL2_DIR%/include" }
+		filter { "system:windows", "platforms:x86" }
+			libdirs { "%SDL2_DIR%/lib/x86" }
+		filter { "system:windows", "platforms:x86_64" }
+			libdirs { "%SDL2_DIR%/lib/x64" }
+		filter { "system:windows" }
+			ignoredefaultlibraries { "msvcrt" }
+			links { "SDL2", "SDL2main" }
+end
+
 -- example_sdl2_opengl2 (SDL2 + OpenGL2)
 if (_OPTIONS["with-sdl2"]) then
 	project "example_sdl2_opengl2"
