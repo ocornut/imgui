@@ -304,7 +304,7 @@ if (_OPTIONS["with-sdl2"]) then
 end
 
 -- example_sdl2_vulkan (SDL2 + Vulkan)
-if (_OPTIONS["with-vulkan"]) then
+if (_OPTIONS["with-sdl2"] and _OPTIONS["with-vulkan"]) then
     project "example_sdl2_vulkan"
         kind "ConsoleApp"
         imgui_as_src ("..", "imgui")
