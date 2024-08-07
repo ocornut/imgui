@@ -15243,7 +15243,7 @@ static void ImGui::UpdateViewportsNewFrame()
         viewport->WorkInsetMin = viewport->BuildWorkInsetMin;
         viewport->WorkInsetMax = viewport->BuildWorkInsetMax;
         viewport->BuildWorkInsetMin = viewport->BuildWorkInsetMax = ImVec2(0.0f, 0.0f);
-        if (g.PlatformIO.Platform_GetWindowWorkAreaInsets != NULL)
+        if (g.PlatformIO.Platform_GetWindowWorkAreaInsets != NULL && platform_funcs_available)
         {
             ImVec4 insets = g.PlatformIO.Platform_GetWindowWorkAreaInsets(viewport);
             IM_ASSERT(insets.x >= 0.0f && insets.y >= 0.0f && insets.z >= 0.0f && insets.w >= 0.0f);
