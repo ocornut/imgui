@@ -5,6 +5,13 @@
 #include "imgui.h"      // IMGUI_API
 #ifndef IMGUI_DISABLE
 
+// Usage:
+// - Add '#define IMGUI_ENABLE_FREETYPE' in your imconfig to enable support for imgui_freetype in imgui.
+
+// Optional support for OpenType SVG fonts:
+// - Add '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG' to use plutosvg (not provided). See #7927.
+// - Add '#define IMGUI_ENABLE_FREETYPE_LUNASVG' to use lunasvg (not provided). See #6591.
+
 // Forward declarations
 struct ImFontAtlas;
 struct ImFontBuilderIO;

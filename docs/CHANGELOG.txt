@@ -93,6 +93,10 @@ Other changes:
   preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
 - InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
   enabled or not. (#6417)
+- imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render 
+  OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
+  Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
+  (#7927, #7187, #6591, #6607) [@pthom]
 - Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
   ImGui_ImplXXXX_RenderState structures during render loop. (#6969, #5834, #7468, #3590)
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
