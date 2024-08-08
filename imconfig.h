@@ -83,10 +83,13 @@
 // On Windows you may use vcpkg with 'vcpkg install freetype --triplet=x64-windows' + 'vcpkg integrate install'.
 //#define IMGUI_ENABLE_FREETYPE
 
-//---- Use FreeType+lunasvg library to render OpenType SVG fonts (SVGinOT)
-// Requires lunasvg headers to be available in the include path + program to be linked with the lunasvg library (not provided).
+//---- render OpenType SVG fonts (SVGinOT) via plutosvg or lunasvg
+// Two alternatives are possible to render SVG fonts: either use lunasvg (added 2023/11), or use plutosvg (added in 2024)
+// (plutosvg will support more fonts and may load them faster)
+// Both alternatives require the headers to be available in the include path + program to be linked with the lunasvg or plutosvg library (not provided).
 // Only works in combination with IMGUI_ENABLE_FREETYPE.
-// (implementation is based on Freetype's rsvg-port.c which is licensed under CeCILL-C Free Software License Agreement)
+// (lunasvg implementation is based on Freetype's rsvg-port.c which is licensed under CeCILL-C Free Software License Agreement)
+//#define IMGUI_ENABLE_FREETYPE_PLUTOSVG
 //#define IMGUI_ENABLE_FREETYPE_LUNASVG
 
 //---- Use stb_truetype to build and rasterize the font atlas (default)

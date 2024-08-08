@@ -66,7 +66,9 @@ Breaking changes:
    - new ImageButton() always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
 
 Other changes:
-
+- Fonts, imgui_freetype: Added support to render OpenType SVG fonts using plutosvg as an alternative to lunasvg
+  Requires enabling IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE,
+  and providing headers/libraries for plutosvg + plutovg
 - IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
   is a centralized spot to connect os/platform/renderer related functions.
   Clipboard, IME and OpenInShell hooks are moved here. (#7660)
