@@ -8,6 +8,7 @@ on:
     # "scheduled" workflow, while maintaining ability to perform local CI builds.
     workflows:
       - scheduled
+      - manual
     branches:
       - master
       - docking
