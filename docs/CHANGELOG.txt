@@ -47,6 +47,7 @@ Other changes:
   payload over an already open tree node would incorrectly select it. (#7850)
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
   when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
 - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
   provide a way to do a portable sleep. (#7844)
 - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
