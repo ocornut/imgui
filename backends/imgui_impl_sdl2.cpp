@@ -116,6 +116,7 @@
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 #define SDL_HAS_DISPLAY_EVENT               SDL_VERSION_ATLEAST(2,0,9)
+#define SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT SDL_VERSION_ATLEAST(2,0,18)
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
@@ -1014,7 +1015,16 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
     }
 #endif
 
+#ifdef SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT
     SDL_SetHint(SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN, (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) ? "1" : "0");
+#elif defined(_WIN32)
+    // SDL hack: SDL always activate/focus windows :/
+    if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
+    {
+        ::ShowWindow(hwnd, SW_SHOWNA);
+        return;
+    }
+#endif
     SDL_ShowWindow(vd->Window);
 }
 
