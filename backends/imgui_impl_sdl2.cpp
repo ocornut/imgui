@@ -1012,15 +1012,9 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
         ex_style |= WS_EX_TOOLWINDOW;
         ::SetWindowLong(hwnd, GWL_EXSTYLE, ex_style);
     }
-
-    // SDL hack: SDL always activate/focus windows :/
-    if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
-    {
-        ::ShowWindow(hwnd, SW_SHOWNA);
-        return;
-    }
 #endif
 
+    SDL_SetHint(SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN, (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) ? "1" : "0");
     SDL_ShowWindow(vd->Window);
 }
 
