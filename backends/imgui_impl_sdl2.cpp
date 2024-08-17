@@ -1015,7 +1015,7 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
     }
 #endif
 
-#ifdef SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT
+#if SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT
     SDL_SetHint(SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN, (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) ? "1" : "0");
 #elif defined(_WIN32)
     // SDL hack: SDL always activate/focus windows :/
