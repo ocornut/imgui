@@ -58,6 +58,9 @@ Docking+Viewports Branch:
   to allow backends to alter the default per-viewport work-area. (#7823)
 - Backends: don't report monitors with DpiScale of 0, which seemed to be reported
   for virtual monitors instead by accessibility drivers. (#7902) [@nicolasnoble]
+- Backends: SDL2, SDL3: using SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN to support the
+  ImGuiViewportFlags_NoFocusOnAppearing flag, instead of using a Win32-specific hack.
+  (#7896) [@RT2Code]
 
 
 -----------------------------------------------------------------------
