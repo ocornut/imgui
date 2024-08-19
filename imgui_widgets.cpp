@@ -1431,6 +1431,9 @@ bool ImGui::TextLink(const char* label)
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
     RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_None);
 
+    if (hovered)
+        SetMouseCursor(ImGuiMouseCursor_Hand);
+
     ImVec4 text_colf = g.Style.Colors[ImGuiCol_TextLink];
     ImVec4 line_colf = text_colf;
     {
