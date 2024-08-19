@@ -309,18 +309,15 @@ static void ImGui_ImplSDL3_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & SDL_KMOD_GUI) != 0);
 }
 
-
 static ImGuiViewport* ImGui_ImplSDL3_GetViewportForWindowID(SDL_WindowID window_id)
 {
-    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
-    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : NULL;
+    return ImGui::FindViewportByPlatformHandle((void*)(intptr_t)window_id);
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-// If you have multiple SDL events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
 bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -436,16 +433,15 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_WINDOW_MOVED:
         case SDL_EVENT_WINDOW_RESIZED:
         {
-            if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)SDL_GetWindowFromID(event->window.windowID)))
-            {
-                if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-                    viewport->PlatformRequestClose = true;
-                if (event->type == SDL_EVENT_WINDOW_MOVED)
-                    viewport->PlatformRequestMove = true;
-                if (event->type == SDL_EVENT_WINDOW_RESIZED)
-                    viewport->PlatformRequestResize = true;
-                return true;
-            }
+            ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
+            if (viewport == NULL)
+                return false;
+            if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+                viewport->PlatformRequestClose = true;
+            if (event->type == SDL_EVENT_WINDOW_MOVED)
+                viewport->PlatformRequestMove = true;
+            if (event->type == SDL_EVENT_WINDOW_RESIZED)
+                viewport->PlatformRequestResize = true;
             return true;
         }
         case SDL_EVENT_GAMEPAD_ADDED:
@@ -627,7 +623,7 @@ static void ImGui_ImplSDL3_UpdateMouseData()
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
     SDL_CaptureMouse((bd->MouseButtonsDown != 0) ? SDL_TRUE : SDL_FALSE);
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
-    const bool is_app_focused = (focused_window && (bd->Window == focused_window || ImGui::FindViewportByPlatformHandle((void*)focused_window)));
+    const bool is_app_focused = (focused_window && (bd->Window == focused_window || ImGui_ImplSDL3_GetViewportForWindowID(SDL_GetWindowID(focused_window)) != NULL));
 #else
     SDL_Window* focused_window = bd->Window;
     const bool is_app_focused = (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
@@ -673,9 +669,8 @@ static void ImGui_ImplSDL3_UpdateMouseData()
     if (io.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
     {
         ImGuiID mouse_viewport_id = 0;
-        if (SDL_Window* sdl_mouse_window = SDL_GetWindowFromID(bd->MouseWindowID))
-            if (ImGuiViewport* mouse_viewport = ImGui::FindViewportByPlatformHandle((void*)sdl_mouse_window))
-                mouse_viewport_id = mouse_viewport->ID;
+        if (ImGuiViewport* mouse_viewport = ImGui_ImplSDL3_GetViewportForWindowID(bd->MouseWindowID))
+            mouse_viewport_id = mouse_viewport->ID;
         io.AddMouseViewportEvent(mouse_viewport_id);
     }
 }
@@ -1105,7 +1100,7 @@ static void ImGui_ImplSDL3_InitPlatformInterface(SDL_Window* window, void* sdl_g
     vd->WindowOwned = false;
     vd->GLContext = (SDL_GLContext)sdl_gl_context;
     main_viewport->PlatformUserData = vd;
-    main_viewport->PlatformHandle = vd->Window;
+    main_viewport->PlatformHandle = (void*)(intptr_t)vd->WindowID;
 }
 
 static void ImGui_ImplSDL3_ShutdownPlatformInterface()
