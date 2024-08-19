@@ -848,7 +848,11 @@ static void ImGui_ImplSDL2_UpdateMonitors()
         //  DpiScale to cocoa_window.backingScaleFactor here.
         float dpi = 0.0f;
         if (!SDL_GetDisplayDPI(n, &dpi, nullptr, nullptr))
+        {
+            if (dpi <= 0.0f)
+                continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
             monitor.DpiScale = dpi / 96.0f;
+        }
 #endif
         monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
