@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-08-19: ImGui_ImplSDL3_ProcessEvent() now ignores events intended for other SDL windows. (#7853)
 //  2024-07-22: Update for SDL3 api changes: SDL_GetGamepads() memory ownership change. (#7807)
 //  2024-07-18: Update for SDL3 api changes: SDL_GetClipboardText() memory ownership change. (#7801)
 //  2024-07-15: Update for SDL3 api changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794)
@@ -80,6 +81,7 @@
 struct ImGui_ImplSDL3_Data
 {
     SDL_Window*             Window;
+    SDL_WindowID            WindowID;
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
@@ -292,6 +294,13 @@ static void ImGui_ImplSDL3_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & SDL_KMOD_GUI) != 0);
 }
 
+
+static ImGuiViewport* ImGui_ImplSDL3_GetViewportForWindowID(SDL_WindowID window_id)
+{
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : NULL;
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
@@ -307,7 +316,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
     {
         case SDL_EVENT_MOUSE_MOTION:
         {
-            if (event->motion.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->motion.windowID) == NULL)
                 return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
@@ -316,7 +325,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
-            if (event->wheel.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->wheel.windowID) == NULL)
                 return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
             float wheel_x = -event->wheel.x;
@@ -331,7 +340,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
-            if (event->button.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID) == NULL)
                 return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
@@ -348,7 +357,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_TEXT_INPUT:
         {
-            if (event->text.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->text.windowID) == NULL)
                 return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
@@ -356,7 +365,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
         {
-            if (event->key.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == NULL)
                 return false;
             //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%d: key=%d, scancode=%d, mod=%X\n", (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP", event->key.key, event->key.scancode, event->key.mod);
             ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
@@ -367,7 +376,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
-            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
                 return false;
             bd->MouseWindowID = event->window.windowID;
             bd->MousePendingLeaveFrame = 0;
@@ -379,21 +388,19 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         // FIXME: Unconfirmed whether this is still needed with SDL3.
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         {
-            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
                 return false;
             bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
             return true;
         }
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
-            if (event->window.windowID != SDL_GetWindowID(bd->Window))
-                return false;
-            io.AddFocusEvent(true);
-            return true;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
-            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+        {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
                 return false;
-            io.AddFocusEvent(false);
+            io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
             return true;
+        }
         case SDL_EVENT_GAMEPAD_ADDED:
         case SDL_EVENT_GAMEPAD_REMOVED:
         {
@@ -441,6 +448,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Window = window;
+    bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
     bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 

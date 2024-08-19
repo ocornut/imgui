@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-08-19: ImGui_ImplSDL2_ProcessEvent() now ignores events intended for other SDL windows. (#7853)
 //  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
 //  2024-07-02: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() renaming in main library.
 //  2024-02-14: Inputs: Handle gamepad disconnection. Added ImGui_ImplSDL2_SetGamepadMode().
@@ -110,6 +111,7 @@
 struct ImGui_ImplSDL2_Data
 {
     SDL_Window*             Window;
+    Uint32                  WindowID;
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
@@ -306,6 +308,12 @@ static void ImGui_ImplSDL2_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & KMOD_GUI) != 0);
 }
 
+static ImGuiViewport* ImGui_ImplSDL2_GetViewportForWindowID(Uint32 window_id)
+{
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
+    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : NULL;
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
@@ -321,7 +329,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     {
         case SDL_MOUSEMOTION:
         {
-            if (event->motion.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->motion.windowID) == NULL)
                 return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
@@ -330,7 +338,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_MOUSEWHEEL:
         {
-            if (event->wheel.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->wheel.windowID) == NULL)
                 return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
 #if SDL_VERSION_ATLEAST(2,0,18) // If this fails to compile on Emscripten: update to latest Emscripten!
@@ -350,7 +358,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
         {
-            if (event->button.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->button.windowID) == NULL)
                 return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
@@ -367,7 +375,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_TEXTINPUT:
         {
-            if (event->text.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->text.windowID) == NULL)
                 return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
@@ -375,7 +383,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
-            if (event->key.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID) == NULL)
                 return false;
             ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
             ImGuiKey key = ImGui_ImplSDL2_KeyEventToImGuiKey(event->key.keysym.sym, event->key.keysym.scancode);
@@ -385,7 +393,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_WINDOWEVENT:
         {
-            if (event->window.windowID != SDL_GetWindowID(bd->Window))
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->window.windowID) == NULL)
                 return false;
             // - When capturing mouse, SDL will send a bunch of conflicting LEAVE/ENTER event on every mouse move, but the final ENTER tends to be right.
             // - However we won't get a correct LEAVE event for a captured window.
@@ -445,6 +453,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Window = window;
+    bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
     bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 
