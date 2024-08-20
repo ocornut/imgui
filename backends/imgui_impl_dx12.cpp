@@ -54,7 +54,7 @@
 #endif
 
 // TODO: Pass in configuration parameter in ImGui standard manner.
-bool ImGuiConfigFlags_OutputDegamma = false; // TODO: Enable to degamma into linear target as required.
+bool ImGuiConfigFlags_ConvertSRGBToLinear = false; // TODO: Enable to degamma into linear target as required.
 
 // DirectX data
 struct ImGui_ImplDX12_RenderBuffers;
@@ -643,7 +643,7 @@ float3 RemoveSRGBCurve (float3 x)\
               return out_col; \
             }";
 
-        auto pixelShader = ImGuiConfigFlags_OutputDegamma ? pixelShader_linear_target : pixelShader_straight;
+        auto pixelShader = ImGuiConfigFlags_ConvertSRGBToLinear ? pixelShader_linear_target : pixelShader_straight;
         if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShaderBlob, nullptr)))
         {
             vertexShaderBlob->Release();
