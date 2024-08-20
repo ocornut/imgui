@@ -46,6 +46,9 @@ Other changes:
 - IO, InputText: fixed an issue where typing text in a InputText() would defer character
   processing by one frame, because of the trickling input queue. Reworked interleaved
   keys<>char trickling to take account for keys known to input characters. (#7889, #4921, #4858)
+- Windows: adjust default ClipRect to better match rendering of thick borders (which are in
+  theory not supported). Compensate for the fact that borders are centered around the windows
+  edge rather than inner. (#7887, #7888 + #3312, #7540, #3756, #6170, #6365)
 - MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
   payload over an already open tree node would incorrectly select it. (#7850)
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
