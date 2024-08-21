@@ -54,6 +54,7 @@ Other changes:
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
   when used in a multi-select context without any OpenOnXXX flags set. (#7850)
 - InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)
+- InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
 - Fonts: Made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
 - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
