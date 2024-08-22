@@ -23,6 +23,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2024-08-22: Follow up on function pointers moved from ImGuiIO to ImGuiPlatformIO:
 //               - io.PlatformOpenInShellFn -> platform_io.Platform_OpenInShellFn
+//               - io.PlatformSetImeDataFn  -> platform_io.Platform_SetImeDataFn
 //  2024-08-19: Storing SDL's Uint32 WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
 //  2024-08-19: ImGui_ImplSDL2_ProcessEvent() now ignores events intended for other SDL windows. (#7853)
 //  2024-07-02: Emscripten: Added io.PlatformOpenInShellFn() handler for Emscripten versions.
@@ -464,7 +465,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = nullptr;
-    io.PlatformSetImeDataFn = ImGui_ImplSDL2_PlatformSetImeData;
+    platform_io.Platform_SetImeDataFn = ImGui_ImplSDL2_PlatformSetImeData;
 #ifdef __EMSCRIPTEN__
     platform_io.Platform_OpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplSDL2_EmscriptenOpenURL(url); return true; };
 #endif

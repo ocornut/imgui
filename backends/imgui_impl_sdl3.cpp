@@ -21,6 +21,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-08-22: Follow up on function pointers moved from ImGuiIO to ImGuiPlatformIO:
+//               - io.PlatformSetImeDataFn  -> platform_io.Platform_SetImeDataFn
 //  2024-08-19: Storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
 //  2024-08-19: ImGui_ImplSDL3_ProcessEvent() now ignores events intended for other SDL windows. (#7853)
 //  2024-07-22: Update for SDL3 api changes: SDL_GetGamepads() memory ownership change. (#7807)
@@ -454,10 +456,11 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     bd->Renderer = renderer;
     bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     io.SetClipboardTextFn = ImGui_ImplSDL3_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL3_GetClipboardText;
     io.ClipboardUserData = nullptr;
-    io.PlatformSetImeDataFn = ImGui_ImplSDL3_PlatformSetImeData;
+    platform_io.Platform_SetImeDataFn = ImGui_ImplSDL3_PlatformSetImeData;
 
     // Gamepad handling
     bd->GamepadMode = ImGui_ImplSDL3_GamepadMode_AutoFirst;

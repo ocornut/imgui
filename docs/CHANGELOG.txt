@@ -43,7 +43,11 @@ Breaking changes:
 
 - IO: moved some functions from ImGuiIO to ImGuiPlatformIO:
     - io.PlatformOpenInShellFn    -> platform_io.Platform_OpenInShellFn. (#7660)
+    - io.PlatformSetImeDataFn     -> platform_io.Platform_SetImeDataFn.
     - access those via GetPlatformIO() instead of GetIO().
+  (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
+  often automatically set by core library and backends, we are exceptionally not maintaining
+  a legacy redirection symbol for those two.)
 
 Other changes:
 
