@@ -62,6 +62,8 @@ Other changes:
   provide a way to do a portable sleep. (#7844)
 - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
 - Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
+- Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
+  since GLFW own tests are doing that and it seems unnecessary.
 - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
   to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
 
