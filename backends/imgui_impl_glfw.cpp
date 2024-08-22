@@ -24,6 +24,10 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
+//               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
+//               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
+//               - io.PlatformOpenInShellFn -> platform_io.Platform_OpenInShellFn
 //  2024-07-31: Added ImGui_ImplGlfw_Sleep() helper function for usage by our examples app, since GLFW doesn't provide one.
 //  2024-07-08: *BREAKING* Renamed ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback to ImGui_ImplGlfw_InstallEmscriptenCallbacks(), added GLFWWindow* parameter.
 //  2024-07-08: Emscripten: Added support for GLFW3 contrib port (GLFW 3.4.0 features + bug fixes): to enable, replace -sUSE_GLFW=3 with --use-port=contrib.glfw3 (requires emscripten 3.1.59+) (https://github.com/pongasoft/emscripten-glfw)
@@ -206,14 +210,14 @@ static void ImGui_ImplGlfw_InitPlatformInterface();
 static void ImGui_ImplGlfw_ShutdownPlatformInterface();
 
 // Functions
-static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
+static const char* ImGui_ImplGlfw_GetClipboardText(void*)
 {
-    return glfwGetClipboardString((GLFWwindow*)user_data);
+    return glfwGetClipboardString(NULL);
 }
 
-static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
+static void ImGui_ImplGlfw_SetClipboardText(void*, const char* text)
 {
-    glfwSetClipboardString((GLFWwindow*)user_data, text);
+    glfwSetClipboardString(NULL, text);
 }
 
 static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
@@ -609,11 +613,11 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->Time = 0.0;
     bd->WantUpdateMonitors = true;
 
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
-    io.ClipboardUserData = bd->Window;
 #ifdef __EMSCRIPTEN__
-    io.PlatformOpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplGlfw_EmscriptenOpenURL(url); return true; };
+    platform_io.Platform_OpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplGlfw_EmscriptenOpenURL(url); return true; };
 #endif
 
     // Create mouse cursors

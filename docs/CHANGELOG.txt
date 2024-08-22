@@ -41,17 +41,56 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- IO: moved clipboard functions from ImGuiIO to ImGuiPlatformIO:
+    - io.GetClipboardTextFn         -> platform_io.Platform_GetClipboardTextFn
+    - io.SetClipboardTextFn         -> platform_io.Platform_SetClipboardTextFn
+    - in function signatures, changed 'void* user_data' to 'ImGuiContext* ctx' for consistency
+      with other functions. Pull your user data from platform_io.ClipboardUserData if used.
+    - as this is will affect all users of custom engines/backends, we are providing proper
+      legacy redirection (will obsolete).
+- IO: moved other functions from ImGuiIO to ImGuiPlatformIO:
+    - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn (#7660)
+    - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn
+    - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint (#7389, #6719, #2278)
+    - clipboard function signature changed:
+    - access those via GetPlatformIO() instead of GetIO().
+  (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
+  often automatically set by core library and backends, we are exceptionally not maintaining
+  a legacy redirection symbol for those two.)
+- Commented the old ImageButton() signature obsoleted in 1.89 (~August 2022). (#5533, #4471, #2464, #1390)
+   - old ImageButton() used ImTextureId as item id (created issue with e.g. multiple buttons in same scope, transient texture id values, opaque computation of ID)
+   - new ImageButton() requires an explicit 'const char* str_id'
+   - old ImageButton() had frame_padding' override argument.
+   - new ImageButton() always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
+
 Other changes:
 
+- IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
+  is a centralized spot to connect os/platform/renderer related functions.
+  Clipboard, IME and OpenInShell hooks are moved here. (#7660)
+- IO, InputText: fixed an issue where typing text in a InputText() would defer character
+  processing by one frame, because of the trickling input queue. Reworked interleaved
+  keys<>char trickling to take account for keys known to input characters. (#7889, #4921, #4858)
+- Windows: adjust default ClipRect to better match rendering of thick borders (which are in
+  theory not supported). Compensate for the fact that borders are centered around the windows
+  edge rather than inner. (#7887, #7888 + #3312, #7540, #3756, #6170, #6365)
 - MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
   payload over an already open tree node would incorrectly select it. (#7850)
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
   when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)
+- InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
+- Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
+- Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
 - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
   provide a way to do a portable sleep. (#7844)
 - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
 - Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
+- Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
+  since GLFW own tests are doing that and it seems unnecessary.
+- Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
+  instead of ImGuiIO.
 - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
   to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
 
@@ -108,6 +147,7 @@ Other changes:
 
 - Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
+  (*EDIT* From next version 1.91.1 we moved this to platform_io.Platform_OpenInShellFn *EDIT**)
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default Windows/Linux/Mac implementations.
 - IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match the
   typical "Nintendo/Japanese consoles" button layout when using Gamepad navigation. (#787, #5723)

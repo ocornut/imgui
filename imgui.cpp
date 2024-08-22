@@ -63,7 +63,7 @@ CODE
 // [SECTION] INCLUDES
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
-// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO, ImGuiPlatformIO)
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 // [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
@@ -438,6 +438,19 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2024/08/22 (1.91.1) - moved some functions from ImGuiIO to ImGuiPlatformIO structure:
+                            - io.GetClipboardTextFn         -> platform_io.Platform_GetClipboardTextFn + changed 'void* user_data' to 'ImGuiContext* ctx'. Pull your user data from platform_io.ClipboardUserData.
+                            - io.SetClipboardTextFn         -> platform_io.Platform_SetClipboardTextFn + same as above line.
+                            - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn (#7660)
+                            - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn
+                            - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint (#7389, #6719, #2278)
+                            - access those via GetPlatformIO() instead of GetIO().
+                         some were introduced very recently and often automatically setup by core library and backends, so for those we are exceptionally not maintaining a legacy redirection symbol.
+                       - commented the old ImageButton() signature obsoleted in 1.89 (~August 2022). As a reminder:
+                            - old ImageButton() before 1.89 used ImTextureId as item id (created issue with e.g. multiple buttons in same scope, transient texture id values, opaque computation of ID)
+                            - new ImageButton() since 1.89 requires an explicit 'const char* str_id'
+                            - old ImageButton() before 1.89 had frame_padding' override argument.
+                            - new ImageButton() since 1.89 always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
  - 2024/07/25 (1.91.0) - obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax(). (see #7838 on GitHub for more info)
                          you should never need those functions. you can do everything with GetCursorScreenPos() and GetContentRegionAvail() in a more simple way.
                             - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
@@ -1154,11 +1167,11 @@ static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSetti
 static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
 static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
 
-// Platform Dependents default implementation for IO functions
-static const char*      GetClipboardTextFn_DefaultImpl(void* user_data_ctx);
-static void             SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text);
-static void             PlatformSetImeDataFn_DefaultImpl(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
-static bool             PlatformOpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
+// Platform Dependents default implementation for ImGuiPlatformIO functions
+static const char*      Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx);
+static void             Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const char* text);
+static void             Platform_SetImeDataFn_DefaultImpl(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
+static bool             Platform_OpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
 
 namespace ImGui
 {
@@ -1269,7 +1282,7 @@ static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
 static void*                GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
-// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO, ImGuiPlatformIO)
 //-----------------------------------------------------------------------------
 
 ImGuiStyle::ImGuiStyle()
@@ -1433,8 +1446,6 @@ ImGuiIO::ImGuiIO()
     // Note: Initialize() will setup default clipboard/ime handlers.
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
-    PlatformOpenInShellUserData = NULL;
-    PlatformLocaleDecimalPoint = '.';
 
     // Input (NB: we already have memset zero the entire structure!)
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
@@ -1821,6 +1832,13 @@ void ImGuiIO::AddFocusEvent(bool focused)
     e.EventId = g.InputEventsNextEventId++;
     e.AppFocused.Focused = focused;
     g.InputEventsQueue.push_back(e);
+}
+
+ImGuiPlatformIO::ImGuiPlatformIO()
+{
+    // Most fields are initialized with zero
+    memset(this, 0, sizeof(*this));
+    Platform_LocaleDecimalPoint = '.';
 }
 
 //-----------------------------------------------------------------------------
@@ -3376,28 +3394,56 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 1)
     {
-        float* pvar = (float*)var_info->GetVarPtr(&g.Style);
-        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
         return;
     }
-    IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+    float* pvar = (float*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    *pvar = val;
+}
+
+void ImGui::PushStyleVarX(ImGuiStyleVar idx, float val_x)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+        return;
+    }
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    pvar->x = val_x;
+}
+
+void ImGui::PushStyleVarY(ImGuiStyleVar idx, float val_y)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+        return;
+    }
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    pvar->y = val_y;
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
     {
-        ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
-        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
         return;
     }
-    IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    *pvar = val;
 }
 
 void ImGui::PopStyleVar(int count)
@@ -3839,12 +3885,11 @@ void ImGui::Initialize()
     // Setup default localization table
     LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
 
-    // Setup default platform clipboard/IME handlers.
-    g.IO.GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;    // Platform dependent default implementations
-    g.IO.SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
-    g.IO.ClipboardUserData = (void*)&g;                          // Default implementation use the ImGuiContext as user data (ideally those would be arguments to the function)
-    g.IO.PlatformOpenInShellFn = PlatformOpenInShellFn_DefaultImpl;
-    g.IO.PlatformSetImeDataFn = PlatformSetImeDataFn_DefaultImpl;
+    // Setup default ImGuiPlatformIO clipboard/IME handlers.
+    g.PlatformIO.Platform_GetClipboardTextFn = Platform_GetClipboardTextFn_DefaultImpl;    // Platform dependent default implementations
+    g.PlatformIO.Platform_SetClipboardTextFn = Platform_SetClipboardTextFn_DefaultImpl;
+    g.PlatformIO.Platform_OpenInShellFn = Platform_OpenInShellFn_DefaultImpl;
+    g.PlatformIO.Platform_SetImeDataFn = Platform_SetImeDataFn_DefaultImpl;
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -4511,14 +4556,14 @@ void ImGui::DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr
 const char* ImGui::GetClipboardText()
 {
     ImGuiContext& g = *GImGui;
-    return g.IO.GetClipboardTextFn ? g.IO.GetClipboardTextFn(g.IO.ClipboardUserData) : "";
+    return g.PlatformIO.Platform_GetClipboardTextFn ? g.PlatformIO.Platform_GetClipboardTextFn(&g) : "";
 }
 
 void ImGui::SetClipboardText(const char* text)
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.SetClipboardTextFn)
-        g.IO.SetClipboardTextFn(g.IO.ClipboardUserData, text);
+    if (g.PlatformIO.Platform_SetClipboardTextFn != NULL)
+        g.PlatformIO.Platform_SetClipboardTextFn(&g, text);
 }
 
 const char* ImGui::GetVersion()
@@ -5265,6 +5310,8 @@ static void InitViewportDrawData(ImGuiViewportP* viewport)
 // - If the code here changes, may need to update code of functions like NextColumn() and PushColumnClipRect():
 //   some frequently called functions which to modify both channels and clipping simultaneously tend to use the
 //   more specialized SetWindowClipRectBeforeSetChannel() to avoid extraneous updates of underlying ImDrawCmds.
+// - This is analoguous to PushFont()/PopFont() in the sense that are a mixing a global stack and a window stack,
+//   which in the case of ClipRect is not so problematic but tends to be more restrictive for fonts.
 void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5419,13 +5466,13 @@ void ImGui::EndFrame()
 
     // Notify Platform/OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     ImGuiPlatformImeData* ime_data = &g.PlatformImeData;
-    if (g.IO.PlatformSetImeDataFn != NULL && memcmp(ime_data, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
+    if (g.PlatformIO.Platform_SetImeDataFn != NULL && memcmp(ime_data, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
     {
         ImGuiViewport* viewport = FindViewportByID(g.PlatformImeViewport);
-        IMGUI_DEBUG_LOG_IO("[io] Calling io.PlatformSetImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f)\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y);
+        IMGUI_DEBUG_LOG_IO("[io] Calling Platform_SetImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f)\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y);
         if (viewport == NULL)
             viewport = GetMainViewport();
-        g.IO.PlatformSetImeDataFn(&g, viewport, ime_data);
+        g.PlatformIO.Platform_SetImeDataFn(&g, viewport, ime_data);
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
@@ -7563,10 +7610,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Affected by window/frame border size. Used by:
         // - Begin() initial clip rect
         float top_border_size = (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
-        window->InnerClipRect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + window->WindowBorderSize);
-        window->InnerClipRect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + top_border_size);
-        window->InnerClipRect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - window->WindowBorderSize);
-        window->InnerClipRect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - window->WindowBorderSize);
+
+        // Try to match the fact that our border is drawn centered over the window rectangle, rather than inner.
+        // This is why we do a *0.5f here. We don't currently even technically support large values for WindowBorderSize,
+        // see e.g #7887 #7888, but may do after we move the window border to become an inner border (and then we can remove the 0.5f here).
+        window->InnerClipRect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + window->WindowBorderSize * 0.5f);
+        window->InnerClipRect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + top_border_size * 0.5f);
+        window->InnerClipRect.Max.x = ImFloor(window->InnerRect.Max.x - window->WindowBorderSize * 0.5f);
+        window->InnerClipRect.Max.y = ImFloor(window->InnerRect.Max.y - window->WindowBorderSize * 0.5f);
         window->InnerClipRect.ClipWithFull(host_rect);
 
         // Default item width. Make it proportional to window size if window manually resizes
@@ -8147,22 +8198,31 @@ void ImGui::SetCurrentFont(ImFont* font)
     g.DrawListSharedData.FontScale = g.FontScale;
 }
 
+// Use ImDrawList::_SetTextureID(), making our shared g.FontStack[] authorative against window-local ImDrawList.
+// - Whereas ImDrawList::PushTextureID()/PopTextureID() is not to be used across Begin() calls.
+// - Note that we don't propagate current texture id when e.g. Begin()-ing into a new window, we never really did...
+//   - Some code paths never really fully worked with multiple atlas textures.
+//   - The right-ish solution may be to remove _SetTextureID() and make AddText/RenderText lazily call PushTextureID()/PopTextureID()
+//     the same way AddImage() does, but then all other primitives would also need to? I don't think we should tackle this problem
+//     because we have a concrete need and a test bed for multiple atlas textures.
 void ImGui::PushFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
-    if (!font)
+    if (font == NULL)
         font = GetDefaultFont();
-    SetCurrentFont(font);
     g.FontStack.push_back(font);
-    g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
+    SetCurrentFont(font);
+    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void  ImGui::PopFont()
 {
     ImGuiContext& g = *GImGui;
-    g.CurrentWindow->DrawList->PopTextureID();
+    IM_ASSERT(g.FontStack.Size > 0);
     g.FontStack.pop_back();
-    SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
+    ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
+    SetCurrentFont(font);
+    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
@@ -9034,7 +9094,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS
 //-----------------------------------------------------------------------------
-// - GetModForModKey() [Internal]
+// - GetModForLRModKey() [Internal]
 // - FixupKeyChord() [Internal]
 // - GetKeyData() [Internal]
 // - GetKeyIndex() [Internal]
@@ -9097,7 +9157,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // - Shortcut() [Internal]
 //-----------------------------------------------------------------------------
 
-static ImGuiKeyChord GetModForModKey(ImGuiKey key)
+static ImGuiKeyChord GetModForLRModKey(ImGuiKey key)
 {
     if (key == ImGuiKey_LeftCtrl || key == ImGuiKey_RightCtrl)
         return ImGuiMod_Ctrl;
@@ -9114,8 +9174,8 @@ ImGuiKeyChord ImGui::FixupKeyChord(ImGuiKeyChord key_chord)
 {
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
-    if (IsModKey(key))
-        key_chord |= GetModForModKey(key);
+    if (IsLRModKey(key))
+        key_chord |= GetModForLRModKey(key);
     return key_chord;
 }
 
@@ -9206,8 +9266,8 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
     ImGuiContext& g = *GImGui;
 
     const ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
-    if (IsModKey(key))
-        key_chord &= ~GetModForModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
+    if (IsLRModKey(key))
+        key_chord &= ~GetModForLRModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
     ImFormatString(g.TempKeychordName, IM_ARRAYSIZE(g.TempKeychordName), "%s%s%s%s%s",
         (key_chord & ImGuiMod_Ctrl) ? "Ctrl+" : "",
         (key_chord & ImGuiMod_Shift) ? "Shift+" : "",
@@ -9407,8 +9467,9 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
     return 0;
 }
 
-// We need this to filter some Shortcut() routes when an item e.g. an InputText() is active
-// e.g. ImGuiKey_G won't be considered a shortcut when item is active, but ImGuiMod|ImGuiKey_G can be.
+// - We need this to filter some Shortcut() routes when an item e.g. an InputText() is active
+//   e.g. ImGuiKey_G won't be considered a shortcut when item is active, but ImGuiMod|ImGuiKey_G can be.
+// - This is also used by UpdateInputEvents() to avoid trickling in the most common case of e.g. pressing ImGuiKey_G also emitting a G character.
 static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
 {
     // Mimic 'ignore_char_inputs' logic in InputText()
@@ -9422,6 +9483,8 @@ static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
 
     // Return true for A-Z, 0-9 and other keys associated to char inputs. Other keys such as F1-F12 won't be filtered.
     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    if (key == ImGuiKey_None)
+        return false;
     return g.KeysMayBeCharInput.TestBit(key);
 }
 
@@ -10232,9 +10295,9 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
     // Only trickle chars<>key when working with InputText()
     // FIXME: InputText() could parse event trail?
     // FIXME: Could specialize chars<>keys trickling rules for control keys (those not typically associated to characters)
-    const bool trickle_interleaved_keys_and_text = (trickle_fast_inputs && g.WantTextInputNextFrame == 1);
+    const bool trickle_interleaved_nonchar_keys_and_text = (trickle_fast_inputs && g.WantTextInputNextFrame == 1);
 
-    bool mouse_moved = false, mouse_wheeled = false, key_changed = false, text_inputted = false;
+    bool mouse_moved = false, mouse_wheeled = false, key_changed = false, key_changed_nonchar = false, text_inputted = false;
     int  mouse_button_changed = 0x00;
     ImBitArray<ImGuiKey_KeysData_SIZE> key_changed_mask;
 
@@ -10290,12 +10353,19 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             IM_ASSERT(key != ImGuiKey_None);
             ImGuiKeyData* key_data = GetKeyData(key);
             const int key_data_index = (int)(key_data - g.IO.KeysData);
-            if (trickle_fast_inputs && key_data->Down != e->Key.Down && (key_changed_mask.TestBit(key_data_index) || text_inputted || mouse_button_changed != 0))
+            if (trickle_fast_inputs && key_data->Down != e->Key.Down && (key_changed_mask.TestBit(key_data_index) || mouse_button_changed != 0))
                 break;
+
+            const bool key_is_potentially_for_char_input = IsKeyChordPotentiallyCharInput(GetMergedModsFromKeys() | key);
+            if (trickle_interleaved_nonchar_keys_and_text && (text_inputted && !key_is_potentially_for_char_input))
+                break;
+
             key_data->Down = e->Key.Down;
             key_data->AnalogValue = e->Key.AnalogValue;
             key_changed = true;
             key_changed_mask.SetBit(key_data_index);
+            if (trickle_interleaved_nonchar_keys_and_text && !key_is_potentially_for_char_input)
+                key_changed_nonchar = true;
 
             // Allow legacy code using io.KeysDown[GetKeyIndex()] with new backends
 #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
@@ -10309,11 +10379,13 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             if (io.ConfigFlags & ImGuiConfigFlags_NoKeyboard)
                 continue;
             // Trickling Rule: Stop processing queued events if keys/mouse have been interacted with
-            if (trickle_fast_inputs && ((key_changed && trickle_interleaved_keys_and_text) || mouse_button_changed != 0 || mouse_moved || mouse_wheeled))
+            if (trickle_fast_inputs && (mouse_button_changed != 0 || mouse_moved || mouse_wheeled))
+                break;
+            if (trickle_interleaved_nonchar_keys_and_text && key_changed_nonchar)
                 break;
             unsigned int c = e->Text.Char;
             io.InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
-            if (trickle_interleaved_keys_and_text)
+            if (trickle_interleaved_nonchar_keys_and_text)
                 text_inputted = true;
         }
         else if (e->Type == ImGuiInputEventType_Focus)
@@ -10660,6 +10732,14 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     // Check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only added in 1.60 WIP)
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && g.IO.BackendUsingLegacyKeyArrays == 1)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
+#endif
+
+    // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
+        g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
+    if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
+        g.PlatformIO.Platform_SetClipboardTextFn = [](ImGuiContext* ctx, const char* text) { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); };
 #endif
 
     // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
@@ -19911,9 +19991,9 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
 
 // Win32 clipboard implementation
 // We use g.ClipboardHandlerData for temporary storage to ensure it is freed on Shutdown()
-static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
+static const char* Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *(ImGuiContext*)user_data_ctx;
+    ImGuiContext& g = *ctx;
     g.ClipboardHandlerData.clear();
     if (!::OpenClipboard(NULL))
         return NULL;
@@ -19934,7 +20014,7 @@ static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
     return g.ClipboardHandlerData.Data;
 }
 
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* text)
 {
     if (!::OpenClipboard(NULL))
         return;
@@ -19961,7 +20041,7 @@ static PasteboardRef main_clipboard = 0;
 
 // OSX clipboard implementation
 // If you enable this you will need to add '-framework ApplicationServices' to your linker command-line!
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* text)
 {
     if (!main_clipboard)
         PasteboardCreate(kPasteboardClipboard, &main_clipboard);
@@ -19974,9 +20054,9 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     }
 }
 
-static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
+static const char* Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *(ImGuiContext*)user_data_ctx;
+    ImGuiContext& g = *ctx;
     if (!main_clipboard)
         PasteboardCreate(kPasteboardClipboard, &main_clipboard);
     PasteboardSynchronize(main_clipboard);
@@ -20010,15 +20090,15 @@ static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
 #else
 
 // Local Dear ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers.
-static const char* GetClipboardTextFn_DefaultImpl(void* user_data_ctx)
+static const char* Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx)
 {
-    ImGuiContext& g = *(ImGuiContext*)user_data_ctx;
+    ImGuiContext& g = *ctx;
     return g.ClipboardHandlerData.empty() ? NULL : g.ClipboardHandlerData.begin();
 }
 
-static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text)
+static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const char* text)
 {
-    ImGuiContext& g = *(ImGuiContext*)user_data_ctx;
+    ImGuiContext& g = *ctx;
     g.ClipboardHandlerData.clear();
     const char* text_end = text + strlen(text);
     g.ClipboardHandlerData.resize((int)(text_end - text) + 1);
@@ -20046,14 +20126,14 @@ static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text
 #ifdef _MSC_VER
 #pragma comment(lib, "shell32")
 #endif
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
     return (INT_PTR)::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
 #else
 #include <sys/wait.h>
 #include <unistd.h>
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
 #if defined(__APPLE__)
     const char* args[] { "open", "--", path, NULL };
@@ -20077,7 +20157,7 @@ static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 }
 #endif
 #else
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
 #endif // Default shell handlers
 
 //-----------------------------------------------------------------------------
@@ -20090,7 +20170,7 @@ static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { retu
 #pragma comment(lib, "imm32")
 #endif
 
-static void PlatformSetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
+static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
 {
     // Notify OS Input Method Editor of text input position
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
@@ -20116,7 +20196,7 @@ static void PlatformSetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewp
 
 #else
 
-static void PlatformSetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImGuiPlatformImeData*) {}
+static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImGuiPlatformImeData*) {}
 
 #endif // Default IME handlers
 

@@ -2484,7 +2484,7 @@ struct ImGuiContext
 
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame
-    ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data. When changed we call the io.PlatformSetImeDataFn() handler.
+    ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data. When changed we call the platform_io.Platform_SetImeDataFn() handler.
     ImGuiID                 PlatformImeViewport;
 
     // Extensions
@@ -3556,7 +3556,7 @@ namespace ImGui
     inline bool             IsGamepadKey(ImGuiKey key)                  { return key >= ImGuiKey_Gamepad_BEGIN && key < ImGuiKey_Gamepad_END; }
     inline bool             IsMouseKey(ImGuiKey key)                    { return key >= ImGuiKey_Mouse_BEGIN && key < ImGuiKey_Mouse_END; }
     inline bool             IsAliasKey(ImGuiKey key)                    { return key >= ImGuiKey_Aliases_BEGIN && key < ImGuiKey_Aliases_END; }
-    inline bool             IsModKey(ImGuiKey key)                      { return key >= ImGuiKey_LeftCtrl && key <= ImGuiKey_RightSuper; }
+    inline bool             IsLRModKey(ImGuiKey key)                    { return key >= ImGuiKey_LeftCtrl && key <= ImGuiKey_RightSuper; }
     ImGuiKeyChord           FixupKeyChord(ImGuiKeyChord key_chord);
     inline ImGuiKey         ConvertSingleModFlagToKey(ImGuiKey key)
     {

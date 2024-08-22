@@ -1114,28 +1114,24 @@ bool ImGui::ImageButton(const char* str_id, ImTextureID user_texture_id, const I
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Legacy API obsoleted in 1.89. Two differences with new ImageButton()
-// - new ImageButton() requires an explicit 'const char* str_id'    Old ImageButton() used opaque imTextureId (created issue with: multiple buttons with same image, transient texture id values, opaque computation of ID)
-// - new ImageButton() always use style.FramePadding                Old ImageButton() had an override argument.
-// If you need to change padding with new ImageButton() you can use PushStyleVar(ImGuiStyleVar_FramePadding, value), consistent with other Button functions.
+// - old ImageButton() used ImTextureId as item id (created issue with multiple buttons with same image, transient texture id values, opaque computation of ID)
+// - new ImageButton() requires an explicit 'const char* str_id'
+// - old ImageButton() had frame_padding' override argument.
+// - new ImageButton() always use style.FramePadding.
+/*
 bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    if (window->SkipItems)
-        return false;
-
     // Default to using texture ID as ID. User can still push string/integer prefixes.
     PushID((void*)(intptr_t)user_texture_id);
-    const ImGuiID id = window->GetID("#image");
-    PopID();
-
     if (frame_padding >= 0)
         PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
-    bool ret = ImageButtonEx(id, user_texture_id, size, uv0, uv1, bg_col, tint_col);
+    bool ret = ImageButton("", user_texture_id, size, uv0, uv1, bg_col, tint_col);
     if (frame_padding >= 0)
         PopStyleVar();
+    PopID();
     return ret;
 }
+*/
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 bool ImGui::Checkbox(const char* label, bool* v)
@@ -1468,8 +1464,8 @@ void ImGui::TextLinkOpenURL(const char* label, const char* url)
     if (url == NULL)
         url = label;
     if (TextLink(label))
-        if (g.IO.PlatformOpenInShellFn != NULL)
-            g.IO.PlatformOpenInShellFn(&g, url);
+        if (g.PlatformIO.Platform_OpenInShellFn != NULL)
+            g.PlatformIO.Platform_OpenInShellFn(&g, url);
     SetItemTooltip("%s", url); // It is more reassuring for user to _always_ display URL when we same as label
     if (BeginPopupContextItem())
     {
@@ -1950,7 +1946,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
 
     // We don't use BeginPopupEx() solely because we have a custom name string, which we could make an argument to BeginPopupEx()
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(g.Style.FramePadding.x, g.Style.WindowPadding.y)); // Horizontally align ourselves with the framed text
+    PushStyleVarX(ImGuiStyleVar_WindowPadding, g.Style.FramePadding.x); // Horizontally align ourselves with the framed text
     bool ret = Begin(name, NULL, window_flags);
     PopStyleVar();
     if (!ret)
@@ -4138,10 +4134,10 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, Im
         // The standard mandate that programs starts in the "C" locale where the decimal point is '.'.
         // We don't really intend to provide widespread support for it, but out of empathy for people stuck with using odd API, we support the bare minimum aka overriding the decimal point.
         // Change the default decimal_point with:
-        //   ImGui::GetIO()->PlatformLocaleDecimalPoint = *localeconv()->decimal_point;
+        //   ImGui::GetPlatformIO()->Platform_LocaleDecimalPoint = *localeconv()->decimal_point;
         // Users of non-default decimal point (in particular ',') may be affected by word-selection logic (is_word_boundary_from_right/is_word_boundary_from_left) functions.
         ImGuiContext& g = *ctx;
-        const unsigned c_decimal_point = (unsigned int)g.IO.PlatformLocaleDecimalPoint;
+        const unsigned c_decimal_point = (unsigned int)g.PlatformIO.Platform_LocaleDecimalPoint;
         if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsScientific | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint))
             if (c == '.' || c == ',')
                 c = c_decimal_point;
@@ -4746,7 +4742,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         else if (is_cut || is_copy)
         {
             // Cut, Copy
-            if (io.SetClipboardTextFn)
+            if (g.PlatformIO.Platform_SetClipboardTextFn != NULL)
             {
                 const int ib = state->HasSelection() ? ImMin(state->Stb.select_start, state->Stb.select_end) : 0;
                 const int ie = state->HasSelection() ? ImMax(state->Stb.select_start, state->Stb.select_end) : state->CurLenW;
@@ -4918,7 +4914,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     if (callback_data.SelectionEnd != utf8_selection_end || buf_dirty)      { state->Stb.select_end = (callback_data.SelectionEnd == callback_data.SelectionStart) ? state->Stb.select_start : ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd); }
                     if (buf_dirty)
                     {
-                        IM_ASSERT(!is_readonly);
+                        // Callback may update buffer and thus set buf_dirty even in read-only mode.
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
                         InputTextReconcileUndoStateAfterUserCallback(state, callback_data.Buf, callback_data.BufTextLen); // FIXME: Move the rest of this block inside function and rename to InputTextReconcileStateAfterUserCallback() ?
                         if (callback_data.BufTextLen > backup_current_text_length && is_resizable)
@@ -5201,7 +5197,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     if (is_multiline)
     {
-        // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
+        // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (see #4761, #7870)...
         Dummy(ImVec2(text_size.x, text_size.y + style.FramePadding.y));
         g.NextItemData.ItemFlags |= ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;
         EndChild();
@@ -5210,7 +5206,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // ...and then we need to undo the group overriding last item data, which gets a bit messy as EndGroup() tries to forward scrollbar being active...
         // FIXME: This quite messy/tricky, should attempt to get rid of the child window.
         EndGroup();
-        if (g.LastItemData.ID == 0)
+        if (g.LastItemData.ID == 0 || g.LastItemData.ID != GetWindowScrollbarID(draw_window, ImGuiAxis_Y))
         {
             g.LastItemData.ID = id;
             g.LastItemData.InFlags = item_data_backup.InFlags;
@@ -8699,7 +8695,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         // For ChildMenu, the popup position will be overwritten by the call to FindBestWindowPosForPopup() in Begin()
         popup_pos = ImVec2(pos.x - 1.0f - IM_TRUNC(style.ItemSpacing.x * 0.5f), pos.y - style.FramePadding.y + window->MenuBarHeight);
         window->DC.CursorPos.x += IM_TRUNC(style.ItemSpacing.x * 0.5f);
-        PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x * 2.0f, style.ItemSpacing.y));
+        PushStyleVarX(ImGuiStyleVar_ItemSpacing, style.ItemSpacing.x * 2.0f);
         float w = label_size.x;
         ImVec2 text_pos(window->DC.CursorPos.x + offsets->OffsetLabel, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
         pressed = Selectable("", menu_is_open, selectable_flags, ImVec2(w, label_size.y));
@@ -8906,7 +8902,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         float w = label_size.x;
         window->DC.CursorPos.x += IM_TRUNC(style.ItemSpacing.x * 0.5f);
         ImVec2 text_pos(window->DC.CursorPos.x + offsets->OffsetLabel, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
-        PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x * 2.0f, style.ItemSpacing.y));
+        PushStyleVarX(ImGuiStyleVar_ItemSpacing, style.ItemSpacing.x * 2.0f);
         pressed = Selectable("", selected, selectable_flags, ImVec2(w, 0.0f));
         PopStyleVar();
         if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible)
