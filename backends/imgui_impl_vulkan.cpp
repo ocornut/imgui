@@ -1461,6 +1461,8 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         VkSurfaceCapabilitiesKHR cap;
         err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, wd->Surface, &cap);
         check_vk_result(err);
+        if (cap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR)
+            info.compositeAlpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
         if (info.minImageCount < cap.minImageCount)
             info.minImageCount = cap.minImageCount;
         else if (cap.maxImageCount != 0 && info.minImageCount > cap.maxImageCount)
@@ -1770,7 +1772,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             check_vk_result(err);
         }
         {
-            ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+            ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
             memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         }
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING

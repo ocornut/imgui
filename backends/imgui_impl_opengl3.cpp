@@ -970,7 +970,7 @@ static void ImGui_ImplOpenGL3_RenderWindow(ImGuiViewport* viewport, void*)
 {
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
     {
-        ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
     }
