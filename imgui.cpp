@@ -430,6 +430,10 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2024/08/22 (1.91.1) - moved some functions from ImGuiIO to ImGuiPlatformIO structure:
+                            - io.PlatformOpenInShellFn    -> platform_io.Platform_OpenInShellFn. (#7660)
+                            - access those via GetPlatformIO() instead of GetIO().
+                         some were introduced very recently and often automatically setup by core library and backends, so for those we are exceptionally not maintaining a legacy redirection symbol.
  - 2024/07/25 (1.91.0) - obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax(). (see #7838 on GitHub for more info)
                          you should never need those functions. you can do everything with GetCursorScreenPos() and GetContentRegionAvail() in a more simple way.
                             - instead of:  GetWindowContentRegionMax().x - GetCursorPos().x
@@ -1144,7 +1148,7 @@ static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSetti
 static const char*      GetClipboardTextFn_DefaultImpl(void* user_data_ctx);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text);
 static void             PlatformSetImeDataFn_DefaultImpl(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
-static bool             PlatformOpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
+static bool             Platform_OpenInShellFn_DefaultImpl(ImGuiContext* ctx, const char* path);
 
 namespace ImGui
 {
@@ -1393,7 +1397,6 @@ ImGuiIO::ImGuiIO()
     // Note: Initialize() will setup default clipboard/ime handlers.
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
-    PlatformOpenInShellUserData = NULL;
     PlatformLocaleDecimalPoint = '.';
 
     // Input (NB: we already have memset zero the entire structure!)
@@ -3805,7 +3808,7 @@ void ImGui::Initialize()
     g.IO.GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;    // Platform dependent default implementations
     g.IO.SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     g.IO.ClipboardUserData = (void*)&g;                          // Default implementation use the ImGuiContext as user data (ideally those would be arguments to the function)
-    g.IO.PlatformOpenInShellFn = PlatformOpenInShellFn_DefaultImpl;
+    g.PlatformIO.Platform_OpenInShellFn = Platform_OpenInShellFn_DefaultImpl;
     g.IO.PlatformSetImeDataFn = PlatformSetImeDataFn_DefaultImpl;
 
     // Create default viewport
@@ -14477,14 +14480,14 @@ static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text
 #ifdef _MSC_VER
 #pragma comment(lib, "shell32")
 #endif
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
     return (INT_PTR)::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
 #else
 #include <sys/wait.h>
 #include <unistd.h>
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
 #if defined(__APPLE__)
     const char* args[] { "open", "--", path, NULL };
@@ -14508,7 +14511,7 @@ static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 }
 #endif
 #else
-static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
+static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
 #endif // Default shell handlers
 
 //-----------------------------------------------------------------------------

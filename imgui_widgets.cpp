@@ -1462,8 +1462,8 @@ void ImGui::TextLinkOpenURL(const char* label, const char* url)
     if (url == NULL)
         url = label;
     if (TextLink(label))
-        if (g.IO.PlatformOpenInShellFn != NULL)
-            g.IO.PlatformOpenInShellFn(&g, url);
+        if (g.PlatformIO.Platform_OpenInShellFn != NULL)
+            g.PlatformIO.Platform_OpenInShellFn(&g, url);
     SetItemTooltip("%s", url); // It is more reassuring for user to _always_ display URL when we same as label
     if (BeginPopupContextItem())
     {

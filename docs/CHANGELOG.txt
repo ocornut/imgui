@@ -41,6 +41,10 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- IO: moved some functions from ImGuiIO to ImGuiPlatformIO:
+    - io.PlatformOpenInShellFn    -> platform_io.Platform_OpenInShellFn. (#7660)
+    - access those via GetPlatformIO() instead of GetIO().
+
 Other changes:
 
 - IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
@@ -114,6 +118,7 @@ Other changes:
 
 - Added TextLink(), TextLinkOpenURL() hyperlink widgets. (#7660)
 - IO: added io.PlatformOpenInShellFn handler to open a link/folder/file in OS shell. (#7660)
+  (*EDIT* From next version 1.91.1 we moved this to platform_io.Platform_OpenInShellFn *EDIT**)
   Added IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS to disable default Windows/Linux/Mac implementations.
 - IO: added io.ConfigNavSwapGamepadButtons to swap Activate/Cancel (A<>B) buttons, to match the
   typical "Nintendo/Japanese consoles" button layout when using Gamepad navigation. (#787, #5723)

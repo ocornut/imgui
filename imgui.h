@@ -2295,11 +2295,6 @@ struct ImGuiIO
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
 
-    // Optional: Open link/folder/file in OS Shell
-    // (default to use ShellExecuteA() on Windows, system() on Linux/Mac)
-    bool        (*PlatformOpenInShellFn)(ImGuiContext* ctx, const char* path);
-    void*       PlatformOpenInShellUserData;
-
     // Optional: Notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME on Windows)
     // (default to use native imm32 api on Windows)
     void        (*PlatformSetImeDataFn)(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
@@ -3491,6 +3486,15 @@ struct ImGuiViewport
 struct ImGuiPlatformIO
 {
     IMGUI_API ImGuiPlatformIO();
+
+    //------------------------------------------------------------------
+    // Inputs - Interface with OS/backends
+    //------------------------------------------------------------------
+
+    // Optional: Open link/folder/file in OS Shell
+    // (default to use ShellExecuteA() on Windows, system() on Linux/Mac)
+    bool        (*Platform_OpenInShellFn)(ImGuiContext* ctx, const char* path);
+    void*       Platform_OpenInShellUserData;
 };
 
 // (Optional) Support for IME (Input Method Editor) via the io.PlatformSetImeDataFn() function.
