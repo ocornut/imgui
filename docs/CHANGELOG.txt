@@ -56,7 +56,8 @@ Other changes:
 - InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)
 - InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
-- Fonts: Made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
+- Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
+- Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
 - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
   provide a way to do a portable sleep. (#7844)
 - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]

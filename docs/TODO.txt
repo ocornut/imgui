@@ -194,7 +194,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 
  - style: better default styles. (#707)
- - style: PushStyleVar: allow direct access to individual float X/Y elements.
  - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)

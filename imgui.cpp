@@ -3309,28 +3309,56 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 1)
     {
-        float* pvar = (float*)var_info->GetVarPtr(&g.Style);
-        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
         return;
     }
-    IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+    float* pvar = (float*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    *pvar = val;
+}
+
+void ImGui::PushStyleVarX(ImGuiStyleVar idx, float val_x)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+        return;
+    }
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    pvar->x = val_x;
+}
+
+void ImGui::PushStyleVarY(ImGuiStyleVar idx, float val_y)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+        return;
+    }
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    pvar->y = val_y;
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiDataVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
+    if (var_info->Type != ImGuiDataType_Float || var_info->Count != 2)
     {
-        ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
-        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
+        IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
         return;
     }
-    IM_ASSERT_USER_ERROR(0, "Calling PushStyleVar() variant with wrong type!");
+    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
+    *pvar = val;
 }
 
 void ImGui::PopStyleVar(int count)

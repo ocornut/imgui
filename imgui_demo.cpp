@@ -3677,7 +3677,7 @@ static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
             {
                 ImVec2 color_button_sz(ImGui::GetFontSize(), ImGui::GetFontSize());
                 if (widget_type == WidgetType_TreeNode)
-                    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
+                    ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, 0.0f);
 
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, items.Size);
                 selection.ApplyRequests(ms_io);
@@ -3693,7 +3693,7 @@ static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
                     ImGui::BeginTable("##Split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoPadOuterX);
                     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.70f);
                     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 0.30f);
-                    //ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
+                    //ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacingY, 0.0f);
                 }
 
                 ImGuiListClipper clipper;
@@ -5082,8 +5082,8 @@ const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
 static void PushStyleCompact()
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, (float)(int)(style.FramePadding.y * 0.60f)));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, (float)(int)(style.ItemSpacing.y * 0.60f)));
+    ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, (float)(int)(style.FramePadding.y * 0.60f));
+    ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, (float)(int)(style.ItemSpacing.y * 0.60f));
 }
 
 static void PopStyleCompact()
@@ -6117,7 +6117,7 @@ static void ShowDemoWindowTables()
             for (int row = 0; row < 8; row++)
             {
                 if ((row % 3) == 2)
-                    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(style.CellPadding.x, 20.0f));
+                    ImGui::PushStyleVarY(ImGuiStyleVar_CellPadding, 20.0f);
                 ImGui::TableNextRow(ImGuiTableRowFlags_None);
                 ImGui::TableNextColumn();
                 ImGui::Text("CellPadding.y = %.2f", style.CellPadding.y);
