@@ -42,8 +42,9 @@ HOW TO UPDATE?
 Breaking changes:
 
 - IO: moved some functions from ImGuiIO to ImGuiPlatformIO:
-    - io.PlatformOpenInShellFn    -> platform_io.Platform_OpenInShellFn. (#7660)
-    - io.PlatformSetImeDataFn     -> platform_io.Platform_SetImeDataFn.
+    - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn. (#7660)
+    - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn.
+    - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint. (#7389, #6719, #2278)
     - access those via GetPlatformIO() instead of GetIO().
   (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
   often automatically set by core library and backends, we are exceptionally not maintaining

@@ -431,8 +431,9 @@ CODE
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
  - 2024/08/22 (1.91.1) - moved some functions from ImGuiIO to ImGuiPlatformIO structure:
-                            - io.PlatformOpenInShellFn    -> platform_io.Platform_OpenInShellFn (#7660)
-                            - io.PlatformSetImeDataFn     -> platform_io.Platform_SetImeDataFn
+                            - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn (#7660)
+                            - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn
+                            - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint (#7389, #6719, #2278)
                             - access those via GetPlatformIO() instead of GetIO().
                          some were introduced very recently and often automatically setup by core library and backends, so for those we are exceptionally not maintaining a legacy redirection symbol.
  - 2024/07/25 (1.91.0) - obsoleted GetContentRegionMax(), GetWindowContentRegionMin() and GetWindowContentRegionMax(). (see #7838 on GitHub for more info)
@@ -1398,7 +1399,6 @@ ImGuiIO::ImGuiIO()
     // Note: Initialize() will setup default clipboard/ime handlers.
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
-    PlatformLocaleDecimalPoint = '.';
 
     // Input (NB: we already have memset zero the entire structure!)
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
@@ -1770,6 +1770,7 @@ ImGuiPlatformIO::ImGuiPlatformIO()
 {
     // Most fields are initialized with zero
     memset(this, 0, sizeof(*this));
+    Platform_LocaleDecimalPoint = '.';
 }
 
 //-----------------------------------------------------------------------------
