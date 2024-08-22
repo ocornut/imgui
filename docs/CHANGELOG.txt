@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
+  is a centralized spot to connect os/platform/renderer related functions.
+  Clipboard, IME and OpenInShell hooks are moved here. (#7660)
 - IO, InputText: fixed an issue where typing text in a InputText() would defer character
   processing by one frame, because of the trickling input queue. Reworked interleaved
   keys<>char trickling to take account for keys known to input characters. (#7889, #4921, #4858)

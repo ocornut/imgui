@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.1 WIP"
-#define IMGUI_VERSION_NUM   19102
+#define IMGUI_VERSION_NUM   19103
 #define IMGUI_HAS_TABLE
 
 /*
@@ -49,7 +49,7 @@ Index of this file:
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
-// [SECTION] Platform Dependent Interfaces (ImGuiPlatformImeData)
+// [SECTION] ImGuiPlatformIO + other Platform Dependent Interfaces (ImGuiPlatformImeData)
 // [SECTION] Obsolete functions and types
 
 */
@@ -172,13 +172,14 @@ struct ImFontGlyph;                 // A single font glyph (code point + coordin
 struct ImFontGlyphRangesBuilder;    // Helper to build glyph ranges from text/string data
 struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4 (*OBSOLETE* please avoid using)
 struct ImGuiContext;                // Dear ImGui context (opaque structure, unless including imgui_internal.h)
-struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
+struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui (also see: ImGuiPlatformIO)
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiKeyData;                // Storage for ImGuiIO and IsKeyDown(), IsKeyPressed() etc functions.
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiMultiSelectIO;          // Structure to interact with a BeginMultiSelect()/EndMultiSelect() block
 struct ImGuiOnceUponAFrame;         // Helper for running a block of code not more than once a frame
 struct ImGuiPayload;                // User data payload for drag and drop operations
+struct ImGuiPlatformIO;             // Interface between platform/renderer backends and ImGui (e.g. Clipboard, IME hooks). Extends ImGuiIO. In docking branch, this gets extended to support multi-viewports.
 struct ImGuiPlatformImeData;        // Platform IME data for io.PlatformSetImeDataFn() function.
 struct ImGuiSelectionBasicStorage;  // Optional helper to store multi-selection state + apply multi-selection requests.
 struct ImGuiSelectionExternalStorage;//Optional helper to apply multi-selection requests to existing randomly accessible storage.
@@ -325,7 +326,8 @@ namespace ImGui
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
 
     // Main
-    IMGUI_API ImGuiIO&      GetIO();                                    // access the IO structure (mouse/keyboard/gamepad inputs, time, various configuration options/flags)
+    IMGUI_API ImGuiIO&      GetIO();                                    // access the ImGuiIO structure (mouse/keyboard/gamepad inputs, time, various configuration options/flags)
+    IMGUI_API ImGuiPlatformIO& GetPlatformIO();                         // access the ImGuiPlatformIO structure (mostly hooks/functions to connect to platform/renderer and OS Clipboard, IME etc.)
     IMGUI_API ImGuiStyle&   GetStyle();                                 // access the Style structure (colors, sizes). Always use PushStyleColor(), PushStyleVar() to modify style mid-frame!
     IMGUI_API void          NewFrame();                                 // start a new Dear ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          EndFrame();                                 // ends the Dear ImGui frame. automatically called by Render(). If you don't need to render data (skipping rendering) you may call EndFrame() without Render()... but you'll have wasted CPU already! If you don't need to render, better to not create any windows and not call NewFrame() at all!
@@ -2196,6 +2198,8 @@ struct ImGuiStyle
 // - initialization: backends and user code writes to ImGuiIO.
 // - main loop: backends writes to ImGuiIO, user code and imgui code reads from ImGuiIO.
 //-----------------------------------------------------------------------------
+// Also see ImGui::GetPlatformIO() and ImGuiPlatformIO struct for OS/platform related functions: clipboard, IME etc.
+//-----------------------------------------------------------------------------
 
 // [Internal] Storage used by IsKeyDown(), IsKeyPressed() etc functions.
 // If prior to 1.87 you used io.KeysDownDuration[] (which was marked as internal), you should use GetKeyData(key)->DownDuration and *NOT* io.KeysData[key]->DownDuration.
@@ -3482,6 +3486,12 @@ struct ImGuiViewport
 //-----------------------------------------------------------------------------
 // [SECTION] Platform Dependent Interfaces
 //-----------------------------------------------------------------------------
+
+// Access via ImGui::GetPlatformIO()
+struct ImGuiPlatformIO
+{
+    IMGUI_API ImGuiPlatformIO();
+};
 
 // (Optional) Support for IME (Input Method Editor) via the io.PlatformSetImeDataFn() function.
 struct ImGuiPlatformImeData

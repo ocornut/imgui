@@ -63,7 +63,7 @@ CODE
 // [SECTION] INCLUDES
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
-// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO, ImGuiPlatformIO)
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 // [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
@@ -1244,7 +1244,7 @@ static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
 static void*                GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
-// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO, ImGuiPlatformIO)
 //-----------------------------------------------------------------------------
 
 ImGuiStyle::ImGuiStyle()
@@ -1760,6 +1760,12 @@ void ImGuiIO::AddFocusEvent(bool focused)
     e.EventId = g.InputEventsNextEventId++;
     e.AppFocused.Focused = focused;
     g.InputEventsQueue.push_back(e);
+}
+
+ImGuiPlatformIO::ImGuiPlatformIO()
+{
+    // Most fields are initialized with zero
+    memset(this, 0, sizeof(*this));
 }
 
 //-----------------------------------------------------------------------------
@@ -4459,6 +4465,12 @@ ImGuiIO& ImGui::GetIO()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->IO;
+}
+
+ImGuiPlatformIO& ImGui::GetPlatformIO()
+{
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext()?");
+    return GImGui->PlatformIO;
 }
 
 // Pass this to your backend rendering function! Valid after Render() and until the next call to NewFrame()
