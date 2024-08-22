@@ -180,16 +180,6 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 }
 
 // Functions
-static const char* ImGui_ImplGlfw_GetClipboardText(void*)
-{
-    return glfwGetClipboardString(NULL);
-}
-
-static void ImGui_ImplGlfw_SetClipboardText(void*, const char* text)
-{
-    glfwSetClipboardString(NULL, text);
-}
-
 static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
 {
     switch (key)
@@ -591,8 +581,8 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->Time = 0.0;
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
+    platform_io.Platform_SetClipboardTextFn = [](ImGuiContext*, const char* text) { glfwSetClipboardString(NULL, text); };
+    platform_io.Platform_GetClipboardTextFn = [](ImGuiContext*) { return glfwGetClipboardString(NULL); };
 #ifdef __EMSCRIPTEN__
     platform_io.Platform_OpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplGlfw_EmscriptenOpenURL(url); return true; };
 #endif
