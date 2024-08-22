@@ -190,6 +190,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height? format only %s/%c to be able to count height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
+ - settings: facilitate extension lazily calling AddSettingsHandler() while running and still getting their data call the ReadXXX handlers immediately.
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 

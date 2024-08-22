@@ -57,6 +57,11 @@ Breaking changes:
   (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
   often automatically set by core library and backends, we are exceptionally not maintaining
   a legacy redirection symbol for those two.)
+- Commented the old ImageButton() signature obsoleted in 1.89 (~August 2022). (#5533, #4471, #2464, #1390)
+   - old ImageButton() used ImTextureId as item id (created issue with e.g. multiple buttons in same scope, transient texture id values, opaque computation of ID)
+   - new ImageButton() requires an explicit 'const char* str_id'
+   - old ImageButton() had frame_padding' override argument.
+   - new ImageButton() always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
 
 Other changes:
 
