@@ -80,6 +80,8 @@ Other changes:
   payload over an already open tree node would incorrectly select it. (#7850)
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
   when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- Tables: revert 1.90 extension of bottom-most and right-most outer border offset by one.
+  This is not the right solution. (#6765, #3752)
 - InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)
 - InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
