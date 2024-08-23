@@ -4461,7 +4461,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             SetKeyOwner(ImGuiMod_Alt, id);
 
         // Expose scroll in a manner that is agnostic to us using a child window
-        if (is_multiline)
+        if (is_multiline && state != NULL)
             state->Scroll.y = draw_window->Scroll.y;
     }
 
