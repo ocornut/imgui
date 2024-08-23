@@ -95,6 +95,8 @@ Other changes:
 - Backends:
   - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
     provide a way to do a portable sleep. (#7844)
+  - Backends: GLFW+Emscripten: Use OpenURL() from GLFW3 contrib port when available and using
+    the contrib port instead of Emscripten own GLFW3 implementation. (#7647, #7915, #7660) [@ypujante]
   - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
   - Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
   - Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership logic was reverted back
@@ -103,6 +105,7 @@ Other changes:
     since GLFW own tests are doing that and it seems unnecessary.
   - Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
     instead of ImGuiIO.
+
 - Examples:
   - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
     to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
@@ -262,7 +265,7 @@ Other changes:
   - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
   - Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
     [@ypujante, @ocornut]
-  - Backends; GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
+  - Backends: GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
     not supported by the embedded GLFW: gamepad support, mouse cursor shapes, copy to clipboard,
     workaround for Super/Meta key, different ways of resizing, multi-window (glfw/canvas) support.
     (#7647) [@ypujante]
