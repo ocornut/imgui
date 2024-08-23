@@ -4407,7 +4407,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         else
         {
-            state->ScrollX = 0.0f;
+            state->Scroll = ImVec2(0.0f, 0.0f);
             stb_textedit_initialize_state(&state->Stb, !is_multiline);
         }
 
@@ -4459,6 +4459,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // FIXME: May be a problem to always steal Alt on OSX, would ideally still allow an uninterrupted Alt down-up to toggle menu
         if (is_osx)
             SetKeyOwner(ImGuiMod_Alt, id);
+
+        // Expose scroll in a manner that is agnostic to us using a child window
+        if (is_multiline)
+            state->Scroll.y = draw_window->Scroll.y;
     }
 
     // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)
@@ -4522,7 +4526,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
 
         // Edit in progress
-        const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + state->ScrollX;
+        const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + state->Scroll.x;
         const float mouse_y = (is_multiline ? (io.MousePos.y - draw_window->DC.CursorPos.y) : (g.FontSize * 0.5f));
 
         if (select_all)
@@ -5078,14 +5082,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 const float scroll_increment_x = inner_size.x * 0.25f;
                 const float visible_width = inner_size.x - style.FramePadding.x;
-                if (cursor_offset.x < state->ScrollX)
-                    state->ScrollX = IM_TRUNC(ImMax(0.0f, cursor_offset.x - scroll_increment_x));
-                else if (cursor_offset.x - visible_width >= state->ScrollX)
-                    state->ScrollX = IM_TRUNC(cursor_offset.x - visible_width + scroll_increment_x);
+                if (cursor_offset.x < state->Scroll.x)
+                    state->Scroll.x = IM_TRUNC(ImMax(0.0f, cursor_offset.x - scroll_increment_x));
+                else if (cursor_offset.x - visible_width >= state->Scroll.x)
+                    state->Scroll.x = IM_TRUNC(cursor_offset.x - visible_width + scroll_increment_x);
             }
             else
             {
-                state->ScrollX = 0.0f;
+                state->Scroll.y = 0.0f;
             }
 
             // Vertical scroll
@@ -5106,7 +5110,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
 
         // Draw selection
-        const ImVec2 draw_scroll = ImVec2(state->ScrollX, 0.0f);
+        const ImVec2 draw_scroll = ImVec2(state->Scroll.x, 0.0f);
         if (render_selection)
         {
             const ImWchar* text_selected_begin = text_begin + ImMin(state->Stb.select_start, state->Stb.select_end);
