@@ -41,6 +41,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- BeginChild(): renamed ImGuiChildFlags_Border to ImGuiChildFlags_Borders for consistency. [@cfillion]
+  Kept inline redirection flag (will obsolete).
 - IO: moved clipboard functions from ImGuiIO to ImGuiPlatformIO:
     - io.GetClipboardTextFn         -> platform_io.Platform_GetClipboardTextFn
     - io.SetClipboardTextFn         -> platform_io.Platform_SetClipboardTextFn
@@ -845,6 +847,7 @@ Breaking changes:
       Before:  BeginChild("Name", size, false)
       After:   BeginChild("Name", size) or BeginChild("Name", 0) or BeginChild("Name", size, ImGuiChildFlags_None)
    Existing code will still work as 'ImGuiChildFlags_Border == true', but you are encouraged to update call sites.
+   **AMEND FROM THE FUTURE: from 1.91.1, 'ImGuiChildFlags_Border' is called 'ImGuiChildFlags_Borders'**
  - BeginChild(): Added child-flag ImGuiChildFlags_AlwaysUseWindowPadding as a replacement for
    the window-flag ImGuiWindowFlags_AlwaysUseWindowPadding: the feature only ever made sense
    for use with BeginChild() anyhow, passing it to Begin() had no effect. Now that we accept
@@ -894,6 +897,7 @@ Other changes:
     child windows from the bottom/right border (toward layout direction). Resized child windows
     settings are saved and persistent in .ini file. (#1710)
   - BeginChild(): Added ImGuiChildFlags_Border as a replacement for 'bool border = true' parameter.
+    **AMEND FROM THE FUTURE: from 1.91.1, 'ImGuiChildFlags_Border' is called 'ImGuiChildFlags_Borders'**
   - BeginChild(): Added ImGuiChildFlags_AutoResizeX and ImGuiChildFlags_AutoResizeY to auto-resize
     on one axis, while generally providing a size on the other axis. (#1666, #1395, #1496, #1710)
     e.g. BeginChild("name", {-FLT_MIN, 0.0f}, ImGuiChildFlags_AutoResizeY);
