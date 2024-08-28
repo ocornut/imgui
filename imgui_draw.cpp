@@ -4137,8 +4137,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
             // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
             float x1 = x + glyph->X0 * scale;
             float x2 = x + glyph->X1 * scale;
-            float y1 = y + glyph->Y0 * scale;
-            float y2 = y + glyph->Y1 * scale;
+            float y1 = y + IM_TRUNC(glyph->Y0 * scale);
+            float y2 = y + IM_TRUNC(glyph->Y1 * scale);
             if (x1 <= clip_rect.z && x2 >= clip_rect.x)
             {
                 // Render a character
