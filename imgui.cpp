@@ -14757,7 +14757,7 @@ void ImGui::UpdateDebugToolFlashStyleColor()
     ImGuiContext& g = *GImGui;
     if (g.DebugFlashStyleColorTime <= 0.0f)
         return;
-    ColorConvertHSVtoRGB(cosf(g.DebugFlashStyleColorTime * 6.0f) * 0.5f + 0.5f, 0.5f, 0.5f, g.Style.Colors[g.DebugFlashStyleColorIdx].x, g.Style.Colors[g.DebugFlashStyleColorIdx].y, g.Style.Colors[g.DebugFlashStyleColorIdx].z);
+    ColorConvertHSVtoRGB(ImCos(g.DebugFlashStyleColorTime * 6.0f) * 0.5f + 0.5f, 0.5f, 0.5f, g.Style.Colors[g.DebugFlashStyleColorIdx].x, g.Style.Colors[g.DebugFlashStyleColorIdx].y, g.Style.Colors[g.DebugFlashStyleColorIdx].z);
     g.Style.Colors[g.DebugFlashStyleColorIdx].w = 1.0f;
     if ((g.DebugFlashStyleColorTime -= g.IO.DeltaTime) <= 0.0f)
         DebugFlashStyleColorStop();
