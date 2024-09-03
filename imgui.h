@@ -3447,7 +3447,7 @@ enum ImGuiViewportFlags_
     ImGuiViewportFlags_None                     = 0,
     ImGuiViewportFlags_IsPlatformWindow         = 1 << 0,   // Represent a Platform Window
     ImGuiViewportFlags_IsPlatformMonitor        = 1 << 1,   // Represent a Platform Monitor (unused yet)
-    ImGuiViewportFlags_OwnedByApp               = 1 << 2,   // Platform Window: is created/managed by the application (rather than a dear imgui backend)
+    ImGuiViewportFlags_OwnedByApp               = 1 << 2,   // Platform Window: Is created/managed by the application (rather than a dear imgui backend)
 };
 
 // - Currently represents the Platform Window created by the application which is hosting our Dear ImGui windows.
@@ -3487,7 +3487,7 @@ struct ImGuiPlatformIO
     IMGUI_API ImGuiPlatformIO();
 
     //------------------------------------------------------------------
-    // Inputs - Interface with OS/backends
+    // Input - Interface with OS/backends
     //------------------------------------------------------------------
 
     // Optional: Access OS clipboard

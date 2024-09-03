@@ -105,13 +105,10 @@ Other changes:
     since GLFW own tests are doing that and it seems unnecessary.
   - Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
     instead of ImGuiIO.
-
 - Examples:
   - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
     to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
   - Examples: SDL3: Update for API changes: SDL_Init() returns 0 on failure.
-
-Backends: SDL3: following SDL3 reverting their change, result of SDL_GetGamepads must be freed. (#7918, #7898)
 
 -----------------------------------------------------------------------
  VERSION 1.91.0 (Released 2024-07-30)
