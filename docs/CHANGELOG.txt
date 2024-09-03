@@ -92,18 +92,21 @@ Other changes:
   a drag and drop source or target: a SetNextWindowPos() call won't be overriden. (#6973)
 - Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
 - Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
-- Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
-  provide a way to do a portable sleep. (#7844)
-- Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
-- Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
-- Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership logic was reverted back
-  by SDL3 on July 27. (#7918, #7898, #7807) [@cheyao, @MattGuerrette]
-- Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
-  since GLFW own tests are doing that and it seems unnecessary.
-- Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
-  instead of ImGuiIO.
-- Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
-  to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
+- Backends:
+  - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
+    provide a way to do a portable sleep. (#7844)
+  - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
+  - Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
+  - Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership logic was reverted back
+    by SDL3 on July 27. (#7918, #7898, #7807) [@cheyao, @MattGuerrette]
+  - Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
+    since GLFW own tests are doing that and it seems unnecessary.
+  - Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
+    instead of ImGuiIO.
+- Examples:
+  - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
+    to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
+  - Examples: SDL3: Update for API changes: SDL_Init() returns 0 on failure.
 
 Backends: SDL3: following SDL3 reverting their change, result of SDL_GetGamepads must be freed. (#7918, #7898)
 
