@@ -8226,7 +8226,8 @@ int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_get
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb, ImGuiItemFlags_NoNav))
         return -1;
-    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+    bool hovered;
+    ButtonBehavior(frame_bb, id, &hovered, NULL);
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX)
