@@ -4261,7 +4261,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     const float delay = CalcDelayFromHoveredFlags(flags);
     if (delay > 0.0f || (flags & ImGuiHoveredFlags_Stationary))
     {
-        ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromRectangle(g.LastItemData.Rect);
+        ImGuiID hover_delay_id = (g.LastItemData.ID != 0) ? g.LastItemData.ID : window->GetIDFromPos(g.LastItemData.Rect.Min);
         if ((flags & ImGuiHoveredFlags_NoSharedDelay) && (g.HoverItemDelayIdPreviousFrame != hover_delay_id))
             g.HoverItemDelayTimer = 0.0f;
         g.HoverItemDelayId = hover_delay_id;
@@ -8367,6 +8367,16 @@ ImGuiID ImGuiWindow::GetID(int n)
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
+// FIXME: Consider instead storing last non-zero ID + count of successive zero-ID, and combine those?
+ImGuiID ImGuiWindow::GetIDFromPos(const ImVec2& p_abs)
+{
+    ImGuiID seed = IDStack.back();
+    ImVec2 p_rel = ImGui::WindowPosAbsToRel(this, p_abs);
+    ImGuiID id = ImHashData(&p_rel, sizeof(p_rel), seed);
+    return id;
+}
+
+// "
 ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 {
     ImGuiID seed = IDStack.back();

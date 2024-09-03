@@ -76,6 +76,8 @@ Other changes:
 - Windows: adjust default ClipRect to better match rendering of thick borders (which are in
   theory not supported). Compensate for the fact that borders are centered around the windows
   edge rather than inner. (#7887, #7888 + #3312, #7540, #3756, #6170, #6365)
+- Made BeginItemTooltip() and IsItemHovered() with delay flag infer an implicit ID (for
+  ID-less items such as Text element) in a way that works when item resizes. (#7945, #1485)
 - MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
   payload over an already open tree node would incorrectly select it. (#7850)
 - MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
