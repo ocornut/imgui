@@ -818,7 +818,7 @@ static void ImGui_ImplSDL3_UpdateMonitors()
     bd->WantUpdateMonitors = false;
 
     int display_count;
-    const SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
+    SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
     for (int n = 0; n < display_count; n++)
     {
         // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
@@ -839,6 +839,7 @@ static void ImGui_ImplSDL3_UpdateMonitors()
             continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
         platform_io.Monitors.push_back(monitor);
     }
+    SDL_free(displays);
 }
 
 void ImGui_ImplSDL3_NewFrame()
