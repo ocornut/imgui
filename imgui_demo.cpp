@@ -2004,6 +2004,10 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
         ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
         ImGui::Separator();
 
+        ImGui::Text("Need better plotting and graphing? Consider using ImPlot:");
+        ImGui::TextLinkOpenURL("https://github.com/epezent/implot");
+        ImGui::Separator();
+
         ImGui::TreePop();
     }
 
@@ -6448,6 +6452,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("_ScrollX", &table_flags, ImGuiTableFlags_ScrollX);
         ImGui::CheckboxFlags("_ScrollY", &table_flags, ImGuiTableFlags_ScrollY);
         ImGui::CheckboxFlags("_Resizable", &table_flags, ImGuiTableFlags_Resizable);
+        ImGui::CheckboxFlags("_Sortable", &table_flags, ImGuiTableFlags_Sortable);
         ImGui::CheckboxFlags("_NoBordersInBody", &table_flags, ImGuiTableFlags_NoBordersInBody);
         ImGui::CheckboxFlags("_HighlightHoveredColumn", &table_flags, ImGuiTableFlags_HighlightHoveredColumn);
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);

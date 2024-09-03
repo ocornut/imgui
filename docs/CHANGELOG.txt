@@ -92,6 +92,8 @@ Other changes:
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
 - Tooltips, Drag and Drop: made it possible to override BeginTooltip() position while inside
   a drag and drop source or target: a SetNextWindowPos() call won't be overriden. (#6973)
+- PlotHistogram, PlotLines: register item ID in a more idiomatic manner, fixes preventing
+  e.g. GetItemID() and other ID-based helper to work. (#7935, #3072)
 - Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
 - Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
 - Backends:
