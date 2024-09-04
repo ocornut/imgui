@@ -85,8 +85,8 @@ Other changes:
 - Tables: fixes/revert a 1.90 change were outer border would be moved bottom and right
   by an extra pixel + rework the change so that contents doesn't overlap the bottom and
   right border in a scrolling table. (#6765, #3752, #7428)
-- Tables: fixed an issue detecting hovering column/row when using multiple synched instances,
-  layed out at different X positions. (#7932)
+- Tables: fixed an issue resizing columns or querying hovered column/row when using multiple
+  synched instances that are layed out at different X positions. (#7933)
 - Tabs: avoid queuing a refocus when tab is already focused, which would have the
   side-effect of e.g. closing popup on a mouse release. (#7914)
 - InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)

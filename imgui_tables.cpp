@@ -1074,8 +1074,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->MinX = offset_x;
 
         // Lock width based on start position and minimum/maximum width for this position
-        float max_width = TableGetMaxColumnWidth(table, column_n);
-        column->WidthGiven = ImMin(column->WidthGiven, max_width);
+        column->WidthMax = TableCalcMaxColumnWidth(table, column_n);
+        column->WidthGiven = ImMin(column->WidthGiven, column->WidthMax);
         column->WidthGiven = ImMax(column->WidthGiven, ImMin(column->WidthRequest, table->MinColumnWidth));
         column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
 
@@ -2207,8 +2207,8 @@ void ImGui::TableEndCell(ImGuiTable* table)
 // Note that actual columns widths are computed in TableUpdateLayout().
 //-------------------------------------------------------------------------
 
-// Maximum column content width given current layout. Use column->MinX so this value on a per-column basis.
-float ImGui::TableGetMaxColumnWidth(const ImGuiTable* table, int column_n)
+// Maximum column content width given current layout. Use column->MinX so this value differs on a per-column basis.
+float ImGui::TableCalcMaxColumnWidth(const ImGuiTable* table, int column_n)
 {
     const ImGuiTableColumn* column = &table->Columns[column_n];
     float max_width = FLT_MAX;
@@ -2270,7 +2270,7 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
     // Compare both requested and actual given width to avoid overwriting requested width when column is stuck (minimum size, bounded)
     IM_ASSERT(table->MinColumnWidth > 0.0f);
     const float min_width = table->MinColumnWidth;
-    const float max_width = ImMax(min_width, TableGetMaxColumnWidth(table, column_n));
+    const float max_width = ImMax(min_width, column_0->WidthMax); // Don't use TableCalcMaxColumnWidth() here as it would rely on MinX from last instance (#7933)
     column_0_width = ImClamp(column_0_width, min_width, max_width);
     if (column_0->WidthGiven == column_0_width || column_0->WidthRequest == column_0_width)
         return;
