@@ -1070,10 +1070,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             continue;
         }
 
-        // Detect hovered column
-        if (is_hovering_table && mouse_skewed_x >= column->ClipRect.Min.x && mouse_skewed_x < column->ClipRect.Max.x)
-            table->HoveredColumnBody = (ImGuiTableColumnIdx)column_n;
-
         // Lock start position
         column->MinX = offset_x;
 
@@ -1128,8 +1124,13 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             column->Flags |= ImGuiTableColumnFlags_IsVisible;
         if (column->SortOrder != -1)
             column->Flags |= ImGuiTableColumnFlags_IsSorted;
-        if (table->HoveredColumnBody == column_n)
+
+        // Detect hovered column
+        if (is_hovering_table && mouse_skewed_x >= column->ClipRect.Min.x && mouse_skewed_x < column->ClipRect.Max.x)
+        {
             column->Flags |= ImGuiTableColumnFlags_IsHovered;
+            table->HoveredColumnBody = (ImGuiTableColumnIdx)column_n;
+        }
 
         // Alignment
         // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in
