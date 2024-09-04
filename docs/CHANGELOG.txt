@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.1 WIP (In Progress)
+ VERSION 1.91.1 (Released 2024-09-04)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.1
 
 Breaking changes:
 
@@ -54,7 +56,6 @@ Breaking changes:
     - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn (#7660)
     - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn
     - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint (#7389, #6719, #2278)
-    - clipboard function signature changed:
     - access those via GetPlatformIO() instead of GetIO().
   (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
   often automatically set by core library and backends, we are exceptionally not maintaining
@@ -63,14 +64,14 @@ Breaking changes:
    - old ImageButton() used ImTextureId as item id (created issue with e.g. multiple buttons in same scope, transient texture id values, opaque computation of ID)
    - new ImageButton() requires an explicit 'const char* str_id'
    - old ImageButton() had frame_padding' override argument.
-   - new ImageButton() always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
+   - new ImageButton() always use style.FramePadding, which you can modify using PushStyleVar()/PopStyleVar().
 
 Other changes:
 
 - IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
   is a centralized spot to connect os/platform/renderer related functions.
   Clipboard, IME and OpenInShell hooks are moved here. (#7660)
-- IO, InputText: fixed an issue where typing text in a InputText() would defer character
+- IO, InputText: fixed an issue where typing text in an InputText() would defer character
   processing by one frame, because of the trickling input queue. Reworked interleaved
   keys<>char trickling to take account for keys known to input characters. (#7889, #4921, #4858)
 - Windows: adjust default ClipRect to better match rendering of thick borders (which are in
@@ -78,10 +79,10 @@ Other changes:
   edge rather than inner. (#7887, #7888 + #3312, #7540, #3756, #6170, #6365)
 - Made BeginItemTooltip() and IsItemHovered() with delay flag infer an implicit ID (for
   ID-less items such as Text element) in a way that works when item resizes. (#7945, #1485)
-- MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
-  payload over an already open tree node would incorrectly select it. (#7850)
-- MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
-  when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop payload
+  over an already open tree node using multi-select would incorrectly select it. (#7850)
+- MultiSelect+TreeNode: default open behavior is _OpenOnDoubleClick + _OpenOnArrow when
+  used in a multi-select context without any ImGuiTreeNode_OpenOnXXX flags set. (#7850)
 - Tables: fixes/revert a 1.90 change were outer border would be moved bottom and right
   by an extra pixel + rework the change so that contents doesn't overlap the bottom and
   right border in a scrolling table. (#6765, #3752, #7428)
@@ -93,11 +94,12 @@ Other changes:
 - InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
 - Tooltips, Drag and Drop: made it possible to override BeginTooltip() position while inside
-  a drag and drop source or target: a SetNextWindowPos() call won't be overriden. (#6973)
+  a drag and drop source or target: a SetNextWindowPos() call won't be overridden. (#6973)
 - PlotHistogram, PlotLines: register item ID and use button behavior in a more idiomatic manner,
   fixes preventing e.g. GetItemID() and other ID-based helper to work. (#7935, #3072)
-- Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
-- Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
+- Style: added PushStyleVarX(), PushStyleVarY() helpers to conveniently modify only
+  one component of a ImVec2 var.
+- Fonts: made it possible to use PushFont()/PopFont() calls across Begin() calls. (#3224, #3875, #6398, #7903)
 - Backends:
   - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
     provide a way to do a portable sleep. (#7844)
