@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.1 WIP (In Progress)
+ VERSION 1.91.1 (Released 2024-09-04)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.1
 
 Breaking changes:
 
@@ -54,7 +56,6 @@ Breaking changes:
     - io.PlatformOpenInShellFn      -> platform_io.Platform_OpenInShellFn (#7660)
     - io.PlatformSetImeDataFn       -> platform_io.Platform_SetImeDataFn
     - io.PlatformLocaleDecimalPoint -> platform_io.Platform_LocaleDecimalPoint (#7389, #6719, #2278)
-    - clipboard function signature changed:
     - access those via GetPlatformIO() instead of GetIO().
   (Because PlatformOpenInShellFn and PlatformSetImeDataFn were introduced very recently and
   often automatically set by core library and backends, we are exceptionally not maintaining
@@ -63,45 +64,59 @@ Breaking changes:
    - old ImageButton() used ImTextureId as item id (created issue with e.g. multiple buttons in same scope, transient texture id values, opaque computation of ID)
    - new ImageButton() requires an explicit 'const char* str_id'
    - old ImageButton() had frame_padding' override argument.
-   - new ImageButton() always use style.FramePadding, which you can freely override with PushStyleVar()/PopStyleVar().
+   - new ImageButton() always use style.FramePadding, which you can modify using PushStyleVar()/PopStyleVar().
 
 Other changes:
 
 - IO: Added GetPlatformIO() and ImGuiPlatformIO, pulled from 'docking' branch, which
   is a centralized spot to connect os/platform/renderer related functions.
   Clipboard, IME and OpenInShell hooks are moved here. (#7660)
-- IO, InputText: fixed an issue where typing text in a InputText() would defer character
+- IO, InputText: fixed an issue where typing text in an InputText() would defer character
   processing by one frame, because of the trickling input queue. Reworked interleaved
   keys<>char trickling to take account for keys known to input characters. (#7889, #4921, #4858)
 - Windows: adjust default ClipRect to better match rendering of thick borders (which are in
   theory not supported). Compensate for the fact that borders are centered around the windows
   edge rather than inner. (#7887, #7888 + #3312, #7540, #3756, #6170, #6365)
-- MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop
-  payload over an already open tree node would incorrectly select it. (#7850)
-- MultiSelect+TreeNode: default open behavior is OpenOnDoubleClick + OpenOnArrow
-  when used in a multi-select context without any OpenOnXXX flags set. (#7850)
+- Made BeginItemTooltip() and IsItemHovered() with delay flag infer an implicit ID (for
+  ID-less items such as Text element) in a way that works when item resizes. (#7945, #1485)
+- MultiSelect+TreeNode+Drag and Drop: fixed an issue where carrying a drag and drop payload
+  over an already open tree node using multi-select would incorrectly select it. (#7850)
+- MultiSelect+TreeNode: default open behavior is _OpenOnDoubleClick + _OpenOnArrow when
+  used in a multi-select context without any ImGuiTreeNode_OpenOnXXX flags set. (#7850)
 - Tables: fixes/revert a 1.90 change were outer border would be moved bottom and right
   by an extra pixel + rework the change so that contents doesn't overlap the bottom and
   right border in a scrolling table. (#6765, #3752, #7428)
+- Tables: fixed an issue resizing columns or querying hovered column/row when using multiple
+  synched instances that are layed out at different X positions. (#7933)
 - Tabs: avoid queuing a refocus when tab is already focused, which would have the
   side-effect of e.g. closing popup on a mouse release. (#7914)
 - InputText: allow callback to update buffer while in read-only mode. (imgui_club/#46)
 - InputText: fixed an issue programmatically refocusing a multi-line input which was just active. (#4761, #7870)
 - TextLink(), TextLinkOpenURL(): change mouse cursor to Hand shape when hovered. (#7885, #7660)
 - Tooltips, Drag and Drop: made it possible to override BeginTooltip() position while inside
-  a drag and drop source or target: a SetNextWindowPos() call won't be overriden. (#6973)
-- Style: added PushStyleVarX(), PushStyleVarY() helpers to modify only one component of a ImVec2 var.
-- Fonts: made it possible to use PushFont()/PopFont() calls accross Begin() calls. (#3224, #3875, #6398, #7903)
-- Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
-  provide a way to do a portable sleep. (#7844)
-- Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
-- Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
-- Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
-  since GLFW own tests are doing that and it seems unnecessary.
-- Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
-  instead of ImGuiIO.
-- Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
-  to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
+  a drag and drop source or target: a SetNextWindowPos() call won't be overridden. (#6973)
+- PlotHistogram, PlotLines: register item ID and use button behavior in a more idiomatic manner,
+  fixes preventing e.g. GetItemID() and other ID-based helper to work. (#7935, #3072)
+- Style: added PushStyleVarX(), PushStyleVarY() helpers to conveniently modify only
+  one component of a ImVec2 var.
+- Fonts: made it possible to use PushFont()/PopFont() calls across Begin() calls. (#3224, #3875, #6398, #7903)
+- Backends:
+  - Backends: GLFW: added ImGui_ImplGlfw_Sleep() helper function because GLFW does not
+    provide a way to do a portable sleep. (#7844)
+  - Backends: GLFW+Emscripten: Use OpenURL() from GLFW3 contrib port when available and using
+    the contrib port instead of Emscripten own GLFW3 implementation. (#7647, #7915, #7660) [@ypujante]
+  - Backends: SDL2, SDL3: ignore events of other SDL windows. (#7853) [@madebr, @ocornut]
+  - Backends: SDL2, SDL3: storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
+  - Backends: SDL3: Update for API changes: SDL_GetGamepads() memory ownership logic was reverted back
+    by SDL3 on July 27. (#7918, #7898, #7807) [@cheyao, @MattGuerrette]
+  - Backends: GLFW: passing null window to glfwGetClipboardString()/glfwSetClipboardString()
+    since GLFW own tests are doing that and it seems unnecessary.
+  - Backends: SDL2, SDL3, GLFW, OSX, Allegro: update to set function handlers in ImGuiPlatformIO
+    instead of ImGuiIO.
+- Examples:
+  - Examples: GLFW (all), SDL2 (all), SDL3 (all), Win32+OpenGL3: rework examples main loop
+    to handle minimization without burning CPU or GPU by running unthrottled code. (#7844)
+  - Examples: SDL3: Update for API changes: SDL_Init() returns 0 on failure.
 
 Docking+Viewports Branch:
 
@@ -112,7 +127,6 @@ Docking+Viewports Branch:
 - Backends: SDL2, SDL3: using SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN to support the
   ImGuiViewportFlags_NoFocusOnAppearing flag, instead of using a Win32-specific hack.
   (#7896) [@RT2Code]
-
 
 -----------------------------------------------------------------------
  VERSION 1.91.0 (Released 2024-07-30)
@@ -266,7 +280,7 @@ Other changes:
   - Backends: SDL2,SDL3,OSX: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() rename.
   - Backends: GLFW,SDL2: Added io.PlatformOpenInShellFn handler for web/Emscripten versions. (#7660)
     [@ypujante, @ocornut]
-  - Backends; GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
+  - Backends: GLFW+Emscripten: Added support for GLFW3 contrib port which fixes many of the things
     not supported by the embedded GLFW: gamepad support, mouse cursor shapes, copy to clipboard,
     workaround for Super/Meta key, different ways of resizing, multi-window (glfw/canvas) support.
     (#7647) [@ypujante]

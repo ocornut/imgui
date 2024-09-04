@@ -2,7 +2,7 @@
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 // (Info: SDL3 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
 
-// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN**)
+// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN AS SDL3 CHANGES.**)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-09-03: Update for SDL3 api changes: SDL_GetGamepads() memory ownership revert. (#7918, #7898, #7807)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
 //               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
@@ -763,7 +764,7 @@ static void ImGui_ImplSDL3_UpdateGamepads()
     {
         ImGui_ImplSDL3_CloseGamepads();
         int sdl_gamepads_count = 0;
-        const SDL_JoystickID* sdl_gamepads = SDL_GetGamepads(&sdl_gamepads_count);
+        SDL_JoystickID* sdl_gamepads = SDL_GetGamepads(&sdl_gamepads_count);
         for (int n = 0; n < sdl_gamepads_count; n++)
             if (SDL_Gamepad* gamepad = SDL_OpenGamepad(sdl_gamepads[n]))
             {
@@ -772,6 +773,7 @@ static void ImGui_ImplSDL3_UpdateGamepads()
                     break;
             }
         bd->WantUpdateGamepadsList = false;
+        SDL_free(sdl_gamepads);
     }
 
     // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
