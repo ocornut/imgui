@@ -393,6 +393,18 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (C++26, Clang)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_IMPLEMENTATION
+        #define IMGUI_DISABLE_DEMO_WINDOWS
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        clang++ -I. -std=c++26 -Wall -Wformat -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+
     - name: Build example_null (without c++ runtime, Clang)
       run: |
         cat > example_single_file.cpp <<'EOF'
