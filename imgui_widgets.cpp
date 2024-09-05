@@ -3911,6 +3911,25 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* ob
     r->num_chars = (int)(text_remaining - (text + line_start_idx));
 }
 
+#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX  IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL
+#define IMSTB_TEXTEDIT_GETPREVCHARINDEX  IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL
+
+static int IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
+{
+    if (idx >= obj->CurLenA)
+        return obj->CurLenA + 1;
+    unsigned int c;
+    return idx + ImTextCharFromUtf8(&c, obj->TextA.Data + idx, obj->TextA.Data + obj->TextA.Size);
+}
+
+static int IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
+{
+    if (idx <= 0)
+        return -1;
+    const char* p = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, obj->TextA.Data + idx);
+    return (int)(p - obj->TextA.Data);
+}
+
 static bool ImCharIsSeparatorW(unsigned int c)
 {
     static const unsigned int separator_list[] =
@@ -3958,58 +3977,32 @@ static int is_word_boundary_from_left(ImGuiInputTextState* obj, int idx)
     bool curr_separ = ImCharIsSeparatorW(curr_c);
     return ((prev_white) && !(curr_separ || curr_white)) || (curr_separ && !prev_separ);
 }
-static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(ImGuiInputTextState* obj, int idx)   { idx--; while (idx >= 0 && !is_word_boundary_from_right(obj, idx)) idx--; return idx < 0 ? 0 : idx; }
-static int  STB_TEXTEDIT_MOVEWORDRIGHT_MAC(ImGuiInputTextState* obj, int idx)   { idx++; int len = obj->CurLenA; while (idx < len && !is_word_boundary_from_left(obj, idx)) idx++; return idx > len ? len : idx; }
-static int  STB_TEXTEDIT_MOVEWORDRIGHT_WIN(ImGuiInputTextState* obj, int idx)   { idx++; int len = obj->CurLenA; while (idx < len && !is_word_boundary_from_right(obj, idx)) idx++; return idx > len ? len : idx; }
+static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(ImGuiInputTextState* obj, int idx)
+{
+    idx = IMSTB_TEXTEDIT_GETPREVCHARINDEX(obj, idx);
+    while (idx >= 0 && !is_word_boundary_from_right(obj, idx))
+        idx = IMSTB_TEXTEDIT_GETPREVCHARINDEX(obj, idx);
+    return idx < 0 ? 0 : idx;
+}
+static int  STB_TEXTEDIT_MOVEWORDRIGHT_MAC(ImGuiInputTextState* obj, int idx)
+{
+    int len = obj->CurLenA;
+    idx = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx);
+    while (idx < len && !is_word_boundary_from_left(obj, idx))
+        idx = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx);
+    return idx > len ? len : idx;
+}
+static int  STB_TEXTEDIT_MOVEWORDRIGHT_WIN(ImGuiInputTextState* obj, int idx)
+{
+    idx = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx);
+    int len = obj->CurLenA;
+    while (idx < len && !is_word_boundary_from_right(obj, idx))
+        idx = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx);
+    return idx > len ? len : idx;
+}
 static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(ImGuiInputTextState* obj, int idx)  { ImGuiContext& g = *obj->Ctx; if (g.IO.ConfigMacOSXBehaviors) return STB_TEXTEDIT_MOVEWORDRIGHT_MAC(obj, idx); else return STB_TEXTEDIT_MOVEWORDRIGHT_WIN(obj, idx); }
 #define STB_TEXTEDIT_MOVEWORDLEFT       STB_TEXTEDIT_MOVEWORDLEFT_IMPL  // They need to be #define for stb_textedit.h
 #define STB_TEXTEDIT_MOVEWORDRIGHT      STB_TEXTEDIT_MOVEWORDRIGHT_IMPL
-#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX  IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL
-#define IMSTB_TEXTEDIT_GETPREVCHARINDEX  IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL
-
-static int IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
-{
-    unsigned int c;
-    return idx + ImTextCharFromUtf8(&c, obj->TextA.Data + idx, obj->TextA.Data + obj->TextA.Size);
-}
-
-static int CountLeadingHighBits(unsigned char b)
-{
-    for (int i = 0; i < (int)sizeof(b) * 8; i++)
-    {
-        bool set = (b >> (7 - i)) & 1;
-        if (!set)
-            return i;
-    }
-
-    return sizeof(b) * 8;
-}
-
-static int IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
-{
-    // Backwards check/count for UTF-8 multi byte sequence
-    int num_seq_bytes = 0;
-    for (int i = idx - 1; i >= 0; i -= 1)
-    {
-        bool is_seq_byte = (obj->TextA.Data[i] & 0x80) == 0x80 && (obj->TextA.Data[i] & 0x40) == 0;
-        num_seq_bytes += is_seq_byte;
-        if (!is_seq_byte)
-        {
-            if (num_seq_bytes > 0)
-            {
-                char initial_byte = obj->TextA.Data[i];
-                char num_leading_bits = (char)CountLeadingHighBits(initial_byte);
-                bool is_multi_byte_seq = num_leading_bits == num_seq_bytes + 1;
-                if (is_multi_byte_seq)
-                {
-                    return idx - (num_seq_bytes + 1);
-                }
-            }
-            break;
-        }
-    }
-    return idx - 1;
-}
 
 static void STB_TEXTEDIT_DELETECHARS(ImGuiInputTextState* obj, int pos, int n)
 {
