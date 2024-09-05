@@ -3836,6 +3836,7 @@ static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char**
     return line_count;
 }
 
+// FIXME: Ideally we'd share code with ImFont::CalcTextSizeA()
 static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end, const char** remaining, ImVec2* out_offset, bool stop_on_new_line)
 {
     ImGuiContext& g = *ctx;
@@ -3849,8 +3850,12 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
     const char* s = text_begin;
     while (s < text_end)
     {
-        unsigned int c;
-        s += ImTextCharFromUtf8(&c, s, text_end);
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)
+            s += 1;
+        else
+            s += ImTextCharFromUtf8(&c, s, text_end);
+
         if (c == '\n')
         {
             text_size.x = ImMax(text_size.x, line_width);
@@ -3863,7 +3868,7 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
         if (c == '\r')
             continue;
 
-        const float char_width = font->GetCharAdvance((ImWchar)c) * scale;
+        const float char_width = ((int)c < font->IndexAdvanceX.Size ? font->IndexAdvanceX.Data[c] : font->FallbackAdvanceX) * scale;
         line_width += char_width;
     }
 
@@ -3883,23 +3888,27 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
 }
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
+// With our UTF-8 use of stb_textedit:
+// - STB_TEXTEDIT_GETCHAR is nothing more than a a "GETBYTE". It's only used to compare to ascii or to copy blocks of text so we are fine.
+// - One exception is the STB_TEXTEDIT_IS_SPACE feature which would expect a full char in order to handle full-width space such as 0x3000 (see ImCharIsBlankW).
+// - ...but we don't use that feature.
 namespace ImStb
 {
-
 static int     STB_TEXTEDIT_STRINGLEN(const ImGuiInputTextState* obj)                             { return obj->CurLenA; }
 static char    STB_TEXTEDIT_GETCHAR(const ImGuiInputTextState* obj, int idx)                      { IM_ASSERT(idx <= obj->CurLenA); return obj->TextA[idx]; }
 static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextA.Data + line_start_idx + char_idx, obj->TextA.Data + obj->TextA.Size); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance((ImWchar)c) * g.FontScale; }
 static char    STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* obj, int line_start_idx)
 {
+    const char* text = obj->TextA.Data;
     const char* text_remaining = NULL;
-    const ImVec2 size = InputTextCalcTextSize(obj->Ctx, obj->TextA.Data + line_start_idx, obj->TextA.Data + obj->CurLenA, &text_remaining, NULL, true);
+    const ImVec2 size = InputTextCalcTextSize(obj->Ctx, text + line_start_idx, text + obj->CurLenA, &text_remaining, NULL, true);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
     r->ymin = 0.0f;
     r->ymax = size.y;
-    r->num_chars = (int)(text_remaining - (obj->TextA.Data + line_start_idx));
+    r->num_chars = (int)(text_remaining - (text + line_start_idx));
 }
 
 static bool ImCharIsSeparatorW(unsigned int c)
@@ -3922,14 +3931,15 @@ static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
     if ((obj->Flags & ImGuiInputTextFlags_Password) || idx <= 0)
         return 0;
 
-    const char* prevPtr = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, obj->TextA.Data + idx);
-    unsigned int curr; ImTextCharFromUtf8(&curr, obj->TextA.Data + idx, obj->TextA.Data + obj->TextA.Size);
-    unsigned int prev; ImTextCharFromUtf8(&prev, prevPtr, obj->TextA.Data + obj->TextA.Size);
+    const char* curr_p = obj->TextA.Data + idx;
+    const char* prev_p = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, curr_p);
+    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, curr_p, obj->TextA.Data + obj->TextA.Size);
+    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, prev_p, obj->TextA.Data + obj->TextA.Size);
 
-    bool prev_white = ImCharIsBlankW(prev);
-    bool prev_separ = ImCharIsSeparatorW(prev);
-    bool curr_white = ImCharIsBlankW(curr);
-    bool curr_separ = ImCharIsSeparatorW(curr);
+    bool prev_white = ImCharIsBlankW(prev_c);
+    bool prev_separ = ImCharIsSeparatorW(prev_c);
+    bool curr_white = ImCharIsBlankW(curr_c);
+    bool curr_separ = ImCharIsSeparatorW(curr_c);
     return ((prev_white || prev_separ) && !(curr_separ || curr_white)) || (curr_separ && !prev_separ);
 }
 static int is_word_boundary_from_left(ImGuiInputTextState* obj, int idx)
@@ -3937,14 +3947,15 @@ static int is_word_boundary_from_left(ImGuiInputTextState* obj, int idx)
     if ((obj->Flags & ImGuiInputTextFlags_Password) || idx <= 0)
         return 0;
 
-    const char* prevPtr = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, obj->TextA.Data + idx);
-    unsigned int prev; ImTextCharFromUtf8(&prev, obj->TextA.Data + idx, obj->TextA.Data + obj->TextA.Size);
-    unsigned int curr; ImTextCharFromUtf8(&curr, prevPtr, obj->TextA.Data + obj->TextA.Size);
+    const char* curr_p = obj->TextA.Data + idx;
+    const char* prev_p = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, curr_p);
+    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, curr_p, obj->TextA.Data + obj->TextA.Size);
+    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, prev_p, obj->TextA.Data + obj->TextA.Size);
 
-    bool prev_white = ImCharIsBlankW(prev);
-    bool prev_separ = ImCharIsSeparatorW(prev);
-    bool curr_white = ImCharIsBlankW(curr);
-    bool curr_separ = ImCharIsSeparatorW(curr);
+    bool prev_white = ImCharIsBlankW(prev_c);
+    bool prev_separ = ImCharIsSeparatorW(prev_c);
+    bool curr_white = ImCharIsBlankW(curr_c);
+    bool curr_separ = ImCharIsSeparatorW(curr_c);
     return ((prev_white) && !(curr_separ || curr_white)) || (curr_separ && !prev_separ);
 }
 static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(ImGuiInputTextState* obj, int idx)   { idx--; while (idx >= 0 && !is_word_boundary_from_right(obj, idx)) idx--; return idx < 0 ? 0 : idx; }
