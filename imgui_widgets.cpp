@@ -3889,7 +3889,6 @@ namespace ImStb
 static int     STB_TEXTEDIT_STRINGLEN(const ImGuiInputTextState* obj)                             { return obj->CurLenA; }
 static char    STB_TEXTEDIT_GETCHAR(const ImGuiInputTextState* obj, int idx)                      { IM_ASSERT(idx <= obj->CurLenA); return obj->TextA[idx]; }
 static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextA.Data + line_start_idx + char_idx, obj->TextA.Data + obj->TextA.Size); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance((ImWchar)c) * g.FontScale; }
-static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x200000 ? 0 : key; }
 static char    STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* obj, int line_start_idx)
 {
@@ -4101,12 +4100,18 @@ ImGuiInputTextState::~ImGuiInputTextState()
 
 void ImGuiInputTextState::OnKeyPressed(int key)
 {
-    //We prematurely convert the key to a UTF8 byte sequence, even for keys where that doesn't even make sense (e.g. arrow keys).
-    //Not optimal but stb_textedit_key will only use the UTF8 values for valid character keys anyways.
-    //The changes we had to make to stb_textedit_key make it very much UTF8 specific which is not too great.
+    stb_textedit_key(this, Stb, key);
+    CursorFollow = true;
+    CursorAnimReset();
+}
+
+void ImGuiInputTextState::OnCharPressed(unsigned int c)
+{
+    // Convert the key to a UTF8 byte sequence.
+    // The changes we had to make to stb_textedit_key made it very much UTF-8 specific which is not too great.
     char utf8[5];
-    ImTextCharToUtf8(utf8, key);
-    stb_textedit_key(this, Stb, key, utf8, (int)strlen(utf8));
+    ImTextCharToUtf8(utf8, c);
+    stb_textedit_text(this, Stb, utf8, (int)strlen(utf8));
     CursorFollow = true;
     CursorAnimReset();
 }
@@ -4674,7 +4679,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 unsigned int c = '\t'; // Insert TAB
                 if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data))
-                    state->OnKeyPressed((int)c);
+                    state->OnCharPressed(c);
             }
             // FIXME: Implement Shift+Tab
             /*
@@ -4697,7 +4702,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     if (c == '\t') // Skip Tab, see above.
                         continue;
                     if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data))
-                        state->OnKeyPressed((int)c);
+                        state->OnCharPressed(c);
                 }
 
             // Consume characters
@@ -4781,7 +4786,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 unsigned int c = '\n'; // Insert new line
                 if (InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data))
-                    state->OnKeyPressed((int)c);
+                    state->OnCharPressed(c);
             }
         }
         else if (is_cancel)
