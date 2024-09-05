@@ -4,7 +4,7 @@
 // - Fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
 // - Fix in stb_textedit_find_charpos to handle last line (see https://github.com/ocornut/imgui/issues/6000 + #6783)
 // - Added name to struct or it may be forward declared in our code.
-// - Added UTF8 support https://github.com/nothings/stb/issues/188
+// - Added UTF-8 support (see https://github.com/nothings/stb/issues/188 + https://github.com/ocornut/imgui/pull/7925)
 // Grep for [DEAR IMGUI] to find the changes.
 // - Also renamed macros used or defined outside of IMSTB_TEXTEDIT_IMPLEMENTATION block from STB_TEXTEDIT_* to IMSTB_TEXTEDIT_*
 
@@ -642,15 +642,15 @@ static void stb_textedit_move_to_last(IMSTB_TEXTEDIT_STRING *str, STB_TexteditSt
    }
 }
 
-//[DEAR IMGUI]
-//Functions must be implemented for UTF8 support
-//Code in this file that uses them, is modified for [DEAR IMGUI] and deviates from the original stb_textedit.
-//There is not necessarily a '[DEAR IMGUI]' at the usage sites
-#ifndef IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX
-#define IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX(obj, idx) idx - 1
+// [DEAR IMGUI]
+// Functions must be implemented for UTF8 support
+// Code in this file that uses those functions is modified for [DEAR IMGUI] and deviates from the original stb_textedit.
+// There is not necessarily a '[DEAR IMGUI]' at the usage sites.
+#ifndef IMSTB_TEXTEDIT_GETPREVCHARINDEX
+#define IMSTB_TEXTEDIT_GETPREVCHARINDEX(obj, idx) (idx - 1)
 #endif
 #ifndef IMSTB_TEXTEDIT_GETNEXTCHARINDEX
-#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx) idx + 1
+#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx) (idx + 1)
 #endif
 
 #ifdef STB_TEXTEDIT_IS_SPACE
@@ -789,7 +789,7 @@ retry:
             stb_textedit_move_to_first(state);
          else
             if (state->cursor > 0)
-               state->cursor = IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX(str, state->cursor);
+               state->cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
          state->has_preferred_x = 0;
          break;
 
@@ -808,7 +808,7 @@ retry:
          stb_textedit_prep_selection_at_cursor(state);
          // move selection left
          if (state->select_end > 0)
-            state->select_end = IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX(str, state->select_end);
+            state->select_end = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->select_end);
          state->cursor = state->select_end;
          state->has_preferred_x = 0;
          break;
@@ -1016,7 +1016,7 @@ retry:
          else {
             stb_textedit_clamp(str, state);
             if (state->cursor > 0) {
-               int prev = IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX(str, state->cursor);
+               int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
                stb_textedit_delete(str, state, prev, state->cursor - prev);
                state->cursor = prev;
             }
