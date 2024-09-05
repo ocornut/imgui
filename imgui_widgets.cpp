@@ -3952,10 +3952,10 @@ static int  STB_TEXTEDIT_MOVEWORDLEFT_IMPL(ImGuiInputTextState* obj, int idx)   
 static int  STB_TEXTEDIT_MOVEWORDRIGHT_MAC(ImGuiInputTextState* obj, int idx)   { idx++; int len = obj->CurLenA; while (idx < len && !is_word_boundary_from_left(obj, idx)) idx++; return idx > len ? len : idx; }
 static int  STB_TEXTEDIT_MOVEWORDRIGHT_WIN(ImGuiInputTextState* obj, int idx)   { idx++; int len = obj->CurLenA; while (idx < len && !is_word_boundary_from_right(obj, idx)) idx++; return idx > len ? len : idx; }
 static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(ImGuiInputTextState* obj, int idx)  { ImGuiContext& g = *obj->Ctx; if (g.IO.ConfigMacOSXBehaviors) return STB_TEXTEDIT_MOVEWORDRIGHT_MAC(obj, idx); else return STB_TEXTEDIT_MOVEWORDRIGHT_WIN(obj, idx); }
-#define STB_TEXTEDIT_MOVEWORDLEFT   STB_TEXTEDIT_MOVEWORDLEFT_IMPL  // They need to be #define for stb_textedit.h
-#define STB_TEXTEDIT_MOVEWORDRIGHT  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL
+#define STB_TEXTEDIT_MOVEWORDLEFT       STB_TEXTEDIT_MOVEWORDLEFT_IMPL  // They need to be #define for stb_textedit.h
+#define STB_TEXTEDIT_MOVEWORDRIGHT      STB_TEXTEDIT_MOVEWORDRIGHT_IMPL
 #define IMSTB_TEXTEDIT_GETNEXTCHARINDEX  IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL
-#define IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX  IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX_IMPL
+#define IMSTB_TEXTEDIT_GETPREVCHARINDEX  IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL
 
 static int IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
 {
@@ -3975,9 +3975,9 @@ static int CountLeadingHighBits(unsigned char b)
     return sizeof(b) * 8;
 }
 
-static int IMSTB_TEXTEDIT_GETPREVIOUSCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
+static int IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
 {
-    //Backwards check/count for UTF-8 multi byte sequence
+    // Backwards check/count for UTF-8 multi byte sequence
     int num_seq_bytes = 0;
     for (int i = idx - 1; i >= 0; i -= 1)
     {
@@ -4479,13 +4479,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Preserve cursor position and undo/redo stack if we come back to same widget
         // FIXME: Since we reworked this on 2022/06, may want to differentiate recycle_cursor vs recycle_undostate?
         bool recycle_state = (state->ID == id && !init_changed_specs && !init_reload_from_user_buf);
-        if (recycle_state && (state->CurLenA != buf_len || (state->TextAIsValid && strncmp(state->TextA.Data, buf, buf_len) != 0)))
+        if (recycle_state && (state->CurLenA != buf_len || (strncmp(state->TextA.Data, buf, buf_len) != 0)))
             recycle_state = false;
 
         // Start edition
         state->ID = id;
         state->TextA.resize(buf_size + 1);          // we use +1 to make sure that .Data is always pointing to at least an empty string.
-        state->TextAIsValid = true;
         state->CurLenA = (int)strlen(buf);
         memcpy(state->TextA.Data, buf, state->CurLenA + 1);
 
@@ -4570,7 +4569,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     bool validated = false;
 
     // Select the buffer to render.
-    const bool buf_display_from_state = (render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state && state->TextAIsValid;
+    const bool buf_display_from_state = (render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state;
     const bool is_displaying_hint = (hint != NULL && (buf_display_from_state ? state->TextA.Data : buf)[0] == 0);
 
     // Password pushes a temporary font with only a fallback glyph
@@ -4842,7 +4841,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 // Filter pasted buffer
                 const int clipboard_len = (int)strlen(clipboard);
-                char* clipboard_filtered = (char*)IM_ALLOC((clipboard_len + 1));
+                char* clipboard_filtered = (char*)IM_ALLOC(clipboard_len + 1);
                 int clipboard_filtered_len = 0;
                 for (const char* s = clipboard; *s != 0; )
                 {
