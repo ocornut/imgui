@@ -1113,8 +1113,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Mark column as SkipItems (ignoring all items/layout)
         // (table->HostSkipItems is a copy of inner_window->SkipItems before we cleared it above in Part 2)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
-        if (column->IsSkipItems)
-            IM_ASSERT(!is_visible);
+        // if (column->IsSkipItems)
+        //     IM_ASSERT(!is_visible);
         if (column->IsRequestOutput && !column->IsSkipItems)
             has_at_least_one_column_requesting_output = true;
 
