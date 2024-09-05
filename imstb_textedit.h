@@ -211,6 +211,7 @@
 //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
 //    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXEDIT_KEYTYPE key)
+//    void stb_textedit_text(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int text_len)
 //
 //    Each of these functions potentially updates the string and updates the
 //    state.
@@ -245,7 +246,12 @@
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
 //          clear. STB_TEXTEDIT_KEYTYPE defaults to int, but you can #define it to
-//          anything other type you wante before including.
+//          anything other type you want before including.
+//          if the STB_TEXTEDIT_KEYTOTEXT function is defined, selected keys are
+//          transformed into text and stb_textedit_text() is automatically called.
+//
+//      text: [DEAR IMGUI] added 2024-09
+//          call this to text inputs sent to the textfield.
 //
 //
 //   When rendering, you can read the cursor position and selection state from
@@ -733,37 +739,44 @@ static int stb_textedit_paste_internal(IMSTB_TEXTEDIT_STRING *str, STB_TexteditS
 #define STB_TEXTEDIT_KEYTYPE int
 #endif
 
+// [DEAR IMGUI] Added stb_textedit_text(), extracted out and called by stb_textedit_key() for backward compatibility.
+static void stb_textedit_text(IMSTB_TEXTEDIT_STRING* str, STB_TexteditState* state, const IMSTB_TEXTEDIT_CHARTYPE* text, int text_len)
+{
+   // can't add newline in single-line mode
+   if (text[0] == '\n' && state->single_line)
+      return;
+
+   if (state->insert_mode && !STB_TEXT_HAS_SELECTION(state) && state->cursor < STB_TEXTEDIT_STRINGLEN(str)) {
+      stb_text_makeundo_replace(str, state, state->cursor, 1, 1);
+      STB_TEXTEDIT_DELETECHARS(str, state->cursor, 1);
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, text, text_len)) {
+         state->cursor += text_len;
+         state->has_preferred_x = 0;
+      }
+   }
+   else {
+      stb_textedit_delete_selection(str, state); // implicitly clamps
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, text, text_len)) {
+         stb_text_makeundo_insert(state, state->cursor, text_len);
+         state->cursor += text_len;
+         state->has_preferred_x = 0;
+      }
+   }
+}
+
 // API key: process a keyboard input
-//[DEAR IMGUI] In addition to the key we also pass in the decoded UTF8 byte sequence, if it is a character key.
-//This is a bit ugly and only makes sense for UTF8. One could think of other solutions that wouldn't make this function so UTF8 specific.
-//If the idea is to push the changes upstream to stb_textedit it might be worth thinking about but since this is just for [DEAR IMGUI], it might not be worth the complication
-static void stb_textedit_key(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key, const IMSTB_TEXTEDIT_CHARTYPE* decoded, int decoded_size)
+static void stb_textedit_key(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key)
 {
 retry:
    switch (key) {
       default: {
+#ifdef STB_TEXTEDIT_KEYTOTEXT
          int c = STB_TEXTEDIT_KEYTOTEXT(key);
          if (c > 0) {
-            // can't add newline in single-line mode
-            if (c == '\n' && state->single_line)
-               break;
-
-            if (state->insert_mode && !STB_TEXT_HAS_SELECTION(state) && state->cursor < STB_TEXTEDIT_STRINGLEN(str)) {
-               stb_text_makeundo_replace(str, state, state->cursor, 1, 1);
-               STB_TEXTEDIT_DELETECHARS(str, state->cursor, 1);
-               if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, decoded, decoded_size)) {
-                  state->cursor += decoded_size;
-                  state->has_preferred_x = 0;
-               }
-            } else {
-               stb_textedit_delete_selection(str,state); // implicitly clamps
-               if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, decoded, decoded_size)) {
-                  stb_text_makeundo_insert(state, state->cursor, decoded_size);
-                  state->cursor += decoded_size;
-                  state->has_preferred_x = 0;
-               }
-            }
+            IMSTB_TEXTEDIT_CHARTYPE ch = (IMSTB_TEXTEDIT_CHARTYPE)c;
+            stb_textedit_text(str, state, &ch, 1);
          }
+#endif
          break;
       }
 

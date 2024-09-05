@@ -1130,6 +1130,7 @@ struct IMGUI_API ImGuiInputTextState
     void        ClearText()                 { CurLenA = 0; TextA[0] = 0; CursorClamp(); }
     void        ClearFreeMemory()           { TextA.clear(); InitialTextA.clear(); }
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
+    void        OnCharPressed(unsigned int c);
 
     // Cursor & Selection
     void        CursorAnimReset();
