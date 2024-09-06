@@ -2079,6 +2079,18 @@ struct ImGuiContext
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
+    // TRKID: struct ImGuiContext: added fields UidIXXX (UidsThisFrame & co)
+    // Technical note (to remove upon merging):
+    //     I considered adding these fields to ImGuiWindowTempData, but had to revert:
+    //     since it is legal to call several times ImGui::Begin("MyWindow") within the same frame,
+    //     clearing the list of ItemID inside ImGui::End() would not be sufficient, as identical
+    //     IDs may appear within different calls to ImGui::Begin("MyWindow")/ImGui::End() and not be detected.
+    ImVector<ImGuiID>       UidsThisFrame;                      // A list of item IDs submitted this frame (used to detect and warn about duplicate ID usage).
+    int                     UidAllowDuplicatesStack;            // Stack depth for allowing duplicate IDs (if > 0, duplicate IDs are allowed). See PushAllowDuplicateID / PopAllowDuplicateID
+    ImGuiID                 UidHighlightedDuplicate;            // Will be set if a duplicated item is hovered (all duplicated items will appear with a red dot in the top left corner on the next frame)
+    int                     UidHighlightedTimestamp;            // Timestamp (FrameCount) of the highlight (which will be shown on the next frame)
+    bool                    UidWasTipDisplayed;                 // Will be set to true to avoid displaying multiple times the same tooltip
+
     // Key/Input Ownership + Shortcut Routing system
     // - The idea is that instead of "eating" a given key, we can link to an owner.
     // - Input query can then read input by specifying ImGuiKeyOwner_Any (== 0), ImGuiKeyOwner_NoOwner (== -1) or a custom ID.
@@ -2400,6 +2412,13 @@ struct ImGuiContext
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
 
+        // TRKID: initialize ImGuiContext UidXXX fields
+        UidsThisFrame.clear();
+        UidAllowDuplicatesStack = 0;
+        UidHighlightedDuplicate = 0;
+        UidHighlightedTimestamp = 0;
+        UidWasTipDisplayed = false;
+
         LastKeyboardKeyPressTime = LastKeyModsChangeTime = LastKeyModsChangeFromNoneTime = -1.0;
 
         ActiveIdUsingNavDirMask = 0x00;
@@ -2718,6 +2737,8 @@ public:
     ImGuiID     GetID(int n);
     ImGuiID     GetIDFromPos(const ImVec2& p_abs);
     ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
+    // TRKID: ReserveUniqueID declaration: returns GetID(), but may display a warning. Should be called only once per frame with a given ID
+    ImGuiID     ReserveUniqueID(const char* str_id);  // returns GetID(), but may display a warning tooltip if the ID is not unique. Should be called only once per frame with a given ID stack.
 
     // We don't use g.FontSize because the window may be != g.CurrentWindow.
     ImRect      Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
@@ -3219,6 +3240,10 @@ namespace ImGui
     IMGUI_API ImGuiID       GetIDWithSeed(const char* str_id_begin, const char* str_id_end, ImGuiID seed);
     IMGUI_API ImGuiID       GetIDWithSeed(int n, ImGuiID seed);
 
+    // TRKID: PushAllowDuplicateID() / PopAllowDuplicateID() declared inside imgui_internal
+    IMGUI_API void          PushAllowDuplicateID();         // Disables the tooltip warning when duplicate IDs are detected.
+    IMGUI_API void          PopAllowDuplicateID();          // Re-enables the tooltip warning when duplicate IDs are detected.
+
     // Basic Helpers for widget code
     IMGUI_API void          ItemSize(const ImVec2& size, float text_baseline_y = -1.0f);
     inline void             ItemSize(const ImRect& bb, float text_baseline_y = -1.0f) { ItemSize(bb.GetSize(), text_baseline_y); } // FIXME: This is a misleading API since we expect CursorPos to be bb.Min.
@@ -3548,6 +3573,7 @@ namespace ImGui
     IMGUI_API void          Scrollbar(ImGuiAxis axis);
     IMGUI_API bool          ScrollbarEx(const ImRect& bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v, ImS64 avail_v, ImS64 contents_v, ImDrawFlags flags);
     IMGUI_API ImRect        GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis);
+    IMGUI_API ImGuiID       ReserveWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis);
     IMGUI_API ImGuiID       GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis);
     IMGUI_API ImGuiID       GetWindowResizeCornerID(ImGuiWindow* window, int n); // 0..3: corners
     IMGUI_API ImGuiID       GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir);

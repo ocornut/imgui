@@ -4904,6 +4904,10 @@ void ImGui::NewFrame()
             g.HoverItemDelayTimer = g.HoverItemDelayClearTimer = 0.0f; // May want a decaying timer, in which case need to clamp at max first, based on max of caller last requested timer.
     }
 
+    // TRKID: inside ImGui::NewFrame, empty the list of items, but keep its allocated data. Also reset WasDuplicateTipDisplayedAlready
+    g.UidsThisFrame.resize(0);  // Empty the list of items, but keep its allocated data
+    g.UidWasTipDisplayed = false;
+
     // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
@@ -5234,6 +5238,14 @@ void ImGui::EndFrame()
     if (g.FrameCountEnded == g.FrameCount)
         return;
     IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
+
+    // TRKID: inside ImGui::EndFrame(), ensure matched calls to Push/PopAllowDuplicateID, reset UidHighlightedDuplicate
+    IM_ASSERT(g.UidAllowDuplicatesStack == 0 && "Mismatched Push/PopAllowDuplicateID");
+    if (g.UidHighlightedTimestamp != ImGui::GetFrameCount())
+    {
+        g.UidHighlightedTimestamp = 0;
+        g.UidHighlightedDuplicate = 0;
+    }
 
     CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
 
@@ -8485,7 +8497,105 @@ ImGuiID ImGui::GetID(int int_id)
     ImGuiWindow* window = GImGui->CurrentWindow;
     return window->GetID(int_id);
 }
+
 IM_MSVC_RUNTIME_CHECKS_RESTORE
+
+// TRKID: ReserveUniqueID impl: returns GetID(), but may display a warning. Should be called only once per frame with a given ID
+// Developer notes (to be removed before merging)
+//    - The prefix "Reserve" is an attempt to make it clear that this method should be called only once per frame for each str id.
+//      It is already the case in the existing codebase of Dear ImGui. However, I opted to make it clear in the name of the function.
+//    - Some calls to GetID() were changed to ReserveUniqueID() inside imgui_widgets.cpp.
+IMGUI_API ImGuiID ImGuiWindow::ReserveUniqueID(const char* str_id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiID id = GetID(str_id);
+
+    // If PushAllowDuplicateID was called, do not check for uniqueness
+    if (g.UidAllowDuplicatesStack != 0)
+        return id;
+
+    // Visual aid: a red circle in the top-left corner of all widgets that use a duplicate of the id
+    if (id == g.UidHighlightedDuplicate)
+    {
+        ImGui::GetWindowDrawList()->AddCircleFilled(ImGui::GetCursorScreenPos(), 3.f, 0xFF0000FF);
+    }
+
+    // TRKID: Debug duplicates during development
+    // Only enable this temporarily when looking for duplicate ID throughout the code. Never enable in production, as it result in a O(n^2) search!
+#ifdef IMGUI_DEBUG_PARANOID  // can be defined inside imconfig.h
+    if (g.UidsThisFrame.contains(id))
+    {
+        IMGUI_DEBUG_LOG("Detected Duplicated ID : 0x%08X (\"%s\")\n", id, str_id);
+        IM_ASSERT_PARANOID(false && "Duplicated ID detected");
+    }
+#endif
+
+    // Only check for uniqueness if hovered (this avoid a O(n^2) search at each frame)
+    if (id == ImGui::GetHoveredID())
+    {
+        if (g.UidsThisFrame.contains(id) && !g.UidWasTipDisplayed)
+        {
+            // Prepare highlight on the next frame for widgets that use this ID
+            g.UidHighlightedDuplicate = id;
+            g.UidHighlightedTimestamp = ImGui::GetFrameCount();
+            if (ImGui::BeginTooltip())
+            {
+                if (! g.DebugItemPickerActive)
+                {
+                    ImGui::Text("Duplicate ID detected: \"%s\"!", str_id);
+                    ImGui::Text("Widgets with a red dot (");
+                    ImGui::SameLine();
+                    ImVec2 dot_position = ImGui::GetCursorScreenPos();
+                    dot_position.y += ImGui::GetFontSize() / 2.f;
+                    dot_position.x -= ImGui::GetFontSize() / 15.f;
+                    ImGui::GetWindowDrawList()->AddCircleFilled(dot_position, 3.f, 0xFF0000FF);
+                    ImGui::Text(" )in their top-left corner use this same ID");
+                    ImGui::Separator();
+                    ImGui::BulletText("Either use \"##\" to pass a complement to the ID that \nwon't be visible to the end-user, for example:");
+                    ImGui::Text("        if (ImGui::Button(\"Save##foo1\")");
+                    ImGui::Text("            // Handle click action");
+                    ImGui::BulletText("Or use ImGui::PushID() / PopID() to change the ID stack in a given \ncontext, for example:");
+                    ImGui::Text("        ImGui::PushID(\"MyContext\")");
+                    ImGui::Text("        if (ImGui::Button(\"Save\")");
+                    ImGui::Text("            // Handle click action");
+                    ImGui::Text("        ImGui::PopID();");
+                    ImGui::Separator();
+
+                    // Launch ItemPicker if Ctrl-P is pressed
+                    ImGui::Text("    Press Ctrl-P to break in any of those items    ");
+                    ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 32));
+                    if (ImGui::IsKeyPressed(ImGuiKey_P) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))
+                        g.DebugItemPickerActive = true;
+                }
+                else
+                {
+                    // Add additional info at the bottom of the ItemPicker tooltip
+                    ImGui::Separator();
+                    ImGui::Text("Click on one of the widgets which uses a duplicated item");
+                }
+                ImGui::EndTooltip();
+            }
+            g.UidWasTipDisplayed = true;
+        }
+    }
+    g.UidsThisFrame.push_back(id);
+    return id;
+}
+
+// TRKID: Implement PushAllowDuplicateID / PopAllowDuplicateID
+IMGUI_API void ImGui::PushAllowDuplicateID()
+{
+    ImGuiContext& g = *GImGui;
+    g.UidAllowDuplicatesStack++;
+}
+
+IMGUI_API void ImGui::PopAllowDuplicateID()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.UidAllowDuplicatesStack > 0 && "Mismatched PopAllowDuplicateID()");
+    g.UidAllowDuplicatesStack--;
+}
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] INPUTS

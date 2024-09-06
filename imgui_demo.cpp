@@ -2000,8 +2000,9 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
         ImGui::SameLine();
         ImGui::SliderInt("Sample count", &display_count, 1, 400);
         float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
-        ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
-        ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
+        // TRKID: imgui_demo.cpp / Widgets/Plotting: simple id fix
+        ImGui::PlotLines("Lines##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
+        ImGui::PlotHistogram("Histogram##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
         ImGui::Separator();
 
         ImGui::Text("Need better plotting and graphing? Consider using ImPlot:");
@@ -2596,6 +2597,10 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
         IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Drag to reorder items (simple)");
         if (ImGui::TreeNode("Drag to reorder items (simple)"))
         {
+            // TRKID: Widgets/Drag and Drop/Drag to reorder items (simple) this demo will trigger a duplicated id during *one* frame (and *one* frame only)
+            // This is because it reorders items mid-flight, and may redisplay the same item in the frame where reordering happens.
+            // This is not a big issue : a red dot may flash for *one* frame (an assert may trigger if IMGUI_DEBUG_PARANOID is defined)
+
             // Simple reordering
             HelpMarker(
                 "We don't use the drag and drop api at all here! "
@@ -4225,7 +4230,8 @@ static void ShowDemoWindowLayout()
             // down by FramePadding.y ahead of time)
             ImGui::AlignTextToFramePadding();
             ImGui::Text("OK Blahblah"); ImGui::SameLine();
-            ImGui::Button("Some framed item"); ImGui::SameLine();
+            // TRKID: imgui_demo.cpp, "Layout/Text Baseline Alignment": simple ID fix
+            ImGui::Button("Some framed item##2"); ImGui::SameLine();
             HelpMarker("We call AlignTextToFramePadding() to vertically align the text baseline by +FramePadding.y");
 
             // SmallButton() uses the same vertical padding as Text
@@ -7146,6 +7152,8 @@ static void ShowDemoWindowColumns()
         ImGui::Columns(columns_count, NULL, v_borders);
         for (int i = 0; i < columns_count * lines_count; i++)
         {
+            // TRKID: imgui_demo.cpp / Columns (legacy API)/Borders: added ImGui::PushID for each cell
+            ImGui::PushID(i);
             if (h_borders && ImGui::GetColumnIndex() == 0)
                 ImGui::Separator();
             ImGui::Text("%c%c%c", 'a' + i, 'a' + i, 'a' + i);
@@ -7155,6 +7163,7 @@ static void ShowDemoWindowColumns()
             ImGui::Text("Long text that is likely to clip");
             ImGui::Button("Button", ImVec2(-FLT_MIN, 0.0f));
             ImGui::NextColumn();
+            ImGui::PopID();
         }
         ImGui::Columns(1);
         if (h_borders)

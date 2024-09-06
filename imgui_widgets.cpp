@@ -717,7 +717,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
     ImVec2 pos = window->DC.CursorPos;
@@ -778,7 +778,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg, ImGuiBut
     // Cannot use zero-size for InvisibleButton(). Unlike Button() there is not way to fallback using the label size.
     IM_ASSERT(size_arg.x != 0.0f && size_arg.y != 0.0f);
 
-    const ImGuiID id = window->GetID(str_id);
+    const ImGuiID id = window->ReserveUniqueID(str_id);
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(size);
@@ -799,7 +799,7 @@ bool ImGui::ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size, ImGuiBu
     if (window->SkipItems)
         return false;
 
-    const ImGuiID id = window->GetID(str_id);
+    const ImGuiID id = window->ReserveUniqueID(str_id);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     const float default_size = GetFrameHeight();
     ItemSize(size, (size.y >= default_size) ? g.Style.FramePadding.y : -1.0f);
@@ -890,6 +890,12 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     return pressed;
 }
 
+// TRKID: ReserveWindowScrollbarID will perform the ID reservation, while GetWindowScrollbarID is only a query
+ImGuiID ImGui::ReserveWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
+{
+    return window->ReserveUniqueID(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
+}
+
 ImGuiID ImGui::GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
 {
     return window->GetID(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
@@ -913,7 +919,7 @@ void ImGui::Scrollbar(ImGuiAxis axis)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiID id = GetWindowScrollbarID(window, axis);
+    const ImGuiID id = ReserveWindowScrollbarID(window, axis);
 
     // Calculate scrollbar bounding box
     ImRect bb = GetWindowScrollbarRect(window, axis);
@@ -1103,7 +1109,7 @@ bool ImGui::ImageButton(const char* str_id, ImTextureID user_texture_id, const I
     if (window->SkipItems)
         return false;
 
-    return ImageButtonEx(window->GetID(str_id), user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
+    return ImageButtonEx(window->ReserveUniqueID(str_id), user_texture_id, image_size, uv0, uv1, bg_col, tint_col);
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -1117,6 +1123,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 {
     // Default to using texture ID as ID. User can still push string/integer prefixes.
     PushID((void*)(intptr_t)user_texture_id);
+    const ImGuiID id = window->GetID("#image");
     if (frame_padding >= 0)
         PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
     bool ret = ImageButton("", user_texture_id, size, uv0, uv1, bg_col, tint_col);
@@ -1136,7 +1143,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
     const float square_sz = GetFrameHeight();
@@ -1258,7 +1265,7 @@ bool ImGui::RadioButton(const char* label, bool active)
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
     const float square_sz = GetFrameHeight();
@@ -1407,7 +1414,7 @@ bool ImGui::TextLink(const char* label)
         return false;
 
     ImGuiContext& g = *GImGui;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const char* label_end = FindRenderedTextEnd(label);
 
     ImVec2 pos = window->DC.CursorPos;
@@ -1821,7 +1828,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     IM_ASSERT((flags & (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)) != (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)); // Can't use both flags together
     if (flags & ImGuiComboFlags_WidthFitPreview)
         IM_ASSERT((flags & (ImGuiComboFlags_NoPreview | (ImGuiComboFlags)ImGuiComboFlags_CustomPreview)) == 0);
@@ -2581,7 +2588,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
@@ -3173,7 +3180,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
@@ -3341,7 +3348,7 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size);
@@ -3556,6 +3563,8 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     // On the first frame, g.TempInputTextId == 0, then on subsequent frames it becomes == id.
     // We clear ActiveID on the first frame to allow the InputText() taking it back.
     ImGuiContext& g = *GImGui;
+    // TRKID: TempInputText reuses the widget ID, so we allow it temporarily (Push)
+    ImGui::PushAllowDuplicateID();
     const bool init = (g.TempInputId != id);
     if (init)
         ClearActiveID();
@@ -3568,6 +3577,8 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
         IM_ASSERT(g.ActiveId == id);
         g.TempInputId = g.ActiveId;
     }
+    // TRKID: TempInputText reuses the widget ID, so we allow it temporarily (Pop)
+    ImGui::PopAllowDuplicateID();
     return value_changed;
 }
 
@@ -4284,7 +4295,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     if (is_multiline) // Open group before calling GetID() because groups tracks id created within their scope (including the scrollbar)
         BeginGroup();
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 frame_size = CalcItemSize(size_arg, CalcItemWidth(), (is_multiline ? g.FontSize * 8.0f : label_size.y) + style.FramePadding.y * 2.0f); // Arbitrary default of 8 lines high for multi-line
     const ImVec2 total_size = ImVec2(frame_size.x + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), frame_size.y);
@@ -5978,7 +5989,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         return false;
 
     ImGuiContext& g = *GImGui;
-    const ImGuiID id = window->GetID(desc_id);
+    const ImGuiID id = window->ReserveUniqueID(desc_id);
     const float default_size = GetFrameHeight();
     const ImVec2 size(size_arg.x == 0.0f ? default_size : size_arg.x, size_arg.y == 0.0f ? default_size : size_arg.y);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
@@ -6237,8 +6248,8 @@ bool ImGui::TreeNode(const char* label)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
-    ImGuiID id = window->GetID(label);
-    return TreeNodeBehavior(id, ImGuiTreeNodeFlags_None, label, NULL);
+    ImGuiID id = window->ReserveUniqueID(label);
+    return TreeNodeBehavior(id, 0, label, NULL);
 }
 
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
@@ -6256,7 +6267,7 @@ bool ImGui::TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
-    ImGuiID id = window->GetID(label);
+    ImGuiID id = window->ReserveUniqueID(label);
     return TreeNodeBehavior(id, flags, label, NULL);
 }
 
@@ -6284,7 +6295,7 @@ bool ImGui::TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char
     if (window->SkipItems)
         return false;
 
-    ImGuiID id = window->GetID(str_id);
+    ImGuiID id = window->ReserveUniqueID(str_id);
     const char* label, *label_end;
     ImFormatStringToTempBufferV(&label, &label_end, fmt, args);
     return TreeNodeBehavior(id, flags, label, label_end);
@@ -6299,6 +6310,9 @@ bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char
     ImGuiID id = window->GetID(ptr_id);
     const char* label, *label_end;
     ImFormatStringToTempBufferV(&label, &label_end, fmt, args);
+
+    // TRKID: ImGui::TreeNodeExV uses GetID(void *) => this is the only place where I could not ensure uniqueness
+    // (all other calls use GetID(const char *)
     return TreeNodeBehavior(id, flags, label, label_end);
 }
 
@@ -6726,7 +6740,7 @@ bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
-    ImGuiID id = window->GetID(label);
+    ImGuiID id = window->ReserveUniqueID(label);
     return TreeNodeBehavior(id, flags | ImGuiTreeNodeFlags_CollapsingHeader, label);
 }
 
@@ -6743,7 +6757,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFl
     if (p_visible && !*p_visible)
         return false;
 
-    ImGuiID id = window->GetID(label);
+    ImGuiID id = window->ReserveUniqueID(label);
     flags |= ImGuiTreeNodeFlags_CollapsingHeader;
     if (p_visible)
         flags |= ImGuiTreeNodeFlags_AllowOverlap | (ImGuiTreeNodeFlags)ImGuiTreeNodeFlags_ClipLabelForTrailingButton;
@@ -6787,7 +6801,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     const ImGuiStyle& style = g.Style;
 
     // Submit label or explicit size to ItemSize(), whereas ItemAdd() will submit a larger/spanning rectangle.
-    ImGuiID id = window->GetID(label);
+    ImGuiID id = window->ReserveUniqueID(label);
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImVec2 pos = window->DC.CursorPos;
@@ -8224,7 +8238,7 @@ int ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_get
         return -1;
 
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID id = window->ReserveUniqueID(label);
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 frame_size = CalcItemSize(size_arg, CalcItemWidth(), label_size.y + style.FramePadding.y * 2.0f);
@@ -8647,6 +8661,9 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+
+    // TRKID: In BeginMenuEx, We call GetID() instead of ReserveUniqueID() because were are not "consuming" this ID, instead, we are only querying IsPopupOpen().
+    // The ID will be consumed later by calling ImGui::PushID(label) + Selectable("") (which will lead to the same ID)
     const ImGuiID id = window->GetID(label);
     bool menu_is_open = IsPopupOpen(id, ImGuiPopupFlags_None);
 
@@ -9060,7 +9077,7 @@ bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
     if (window->SkipItems)
         return false;
 
-    ImGuiID id = window->GetID(str_id);
+    ImGuiID id = window->ReserveUniqueID(str_id);
     ImGuiTabBar* tab_bar = g.TabBars.GetOrAddByKey(id);
     ImRect tab_bar_bb = ImRect(window->DC.CursorPos.x, window->DC.CursorPos.y, window->WorkRect.Max.x, window->DC.CursorPos.y + g.FontSize + g.Style.FramePadding.y * 2);
     tab_bar->ID = id;
