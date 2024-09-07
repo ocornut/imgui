@@ -71,6 +71,8 @@ Other changes:
 - Fonts: fixed ellipsis "..." rendering width miscalculation bug introduced in 1.91.0. (#7976) [@DDeimos]
 - TextLinkOpenURL(): modified tooltip to display a verb "Open 'xxxx'". (#7885, #7660)
 - Backends: SDL2: use SDL_Vulkan_GetDrawableSize() when available. (#7967, #3190) [@scribam]
+- Backends: GLFW+Emscripten: use OSX behaviors automatically when using contrib glfw port. (#7965, #7915)
+  [@ypujante]
 
 -----------------------------------------------------------------------
  VERSION 1.91.1 (Released 2024-09-04)
