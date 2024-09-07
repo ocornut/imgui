@@ -646,6 +646,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Emscripten: the same application can run on various platforms, so we detect the Apple platform at runtime
     // to override io.ConfigMacOSXBehaviors from its default (which is always false in Emscripten).
+#ifdef __EMSCRIPTEN__
 #if EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3 >= 34020240817
     if (emscripten::glfw3::IsRuntimePlatformApple())
     {
@@ -657,6 +658,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         // See https://github.com/pongasoft/emscripten-glfw/blob/v3.4.0.20240817/docs/Usage.md#the-problem-of-the-super-key
         emscripten::glfw3::SetSuperPlusKeyTimeouts(10, 10);
     }
+#endif
 #endif
 
     bd->ClientApi = client_api;
