@@ -2296,7 +2296,7 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
 template<typename T>
 static int DataTypeCompareT(const T* lhs, const T* rhs)
 {
-    if (*lhs <= *rhs) return -1;
+    if (*lhs < *rhs) return -1;
     if (*lhs > *rhs) return +1;
     return 0;
 }
@@ -2632,7 +2632,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     if (temp_input_is_active)
     {
         // Only clamp CTRL+Click input when ImGuiSliderFlags_AlwaysClamp is set
-        const bool is_clamp_input = (flags & ImGuiSliderFlags_AlwaysClamp) != 0 && (p_min == NULL || p_max == NULL || DataTypeCompare(data_type, p_min, p_max) < 0);
+        const bool is_clamp_input = (flags & ImGuiSliderFlags_AlwaysClamp) != 0 && (p_min == NULL || p_max == NULL || DataTypeCompare(data_type, p_min, p_max) <= 0);
         return TempInputScalar(frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL);
     }
 
