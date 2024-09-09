@@ -4048,6 +4048,19 @@ void ImGuiInputTextState::OnKeyPressed(int key)
     CursorAnimReset();
 }
 
+// Those functions are not inlined in imgui_internal.h, allowing us to hide ImStbTexteditState from that header.
+void ImGuiInputTextState::CursorAnimReset()                 { CursorAnim = -0.30f; } // After a user-input the cursor stays on for a while without blinking
+void ImGuiInputTextState::CursorClamp()                     { Stb->cursor = ImMin(Stb->cursor, CurLenW); Stb->select_start = ImMin(Stb->select_start, CurLenW); Stb->select_end = ImMin(Stb->select_end, CurLenW); }
+bool ImGuiInputTextState::HasSelection() const              { return Stb->select_start != Stb->select_end; }
+void ImGuiInputTextState::ClearSelection()                  { Stb->select_start = Stb->select_end = Stb->cursor; }
+int  ImGuiInputTextState::GetCursorPos() const              { return Stb->cursor; }
+int  ImGuiInputTextState::GetSelectionStart() const         { return Stb->select_start; }
+int  ImGuiInputTextState::GetSelectionEnd() const           { return Stb->select_end; }
+void ImGuiInputTextState::SelectAll()                       { Stb->select_start = 0; Stb->cursor = Stb->select_end = CurLenW; Stb->has_preferred_x = 0; }
+void ImGuiInputTextState::ReloadUserBufAndSelectAll()       { ReloadUserBuf = true; ReloadSelectionStart = 0; ReloadSelectionEnd = INT_MAX; }
+void ImGuiInputTextState::ReloadUserBufAndKeepSelection()   { ReloadUserBuf = true; ReloadSelectionStart = Stb->select_start; ReloadSelectionEnd = Stb->select_end; }
+void ImGuiInputTextState::ReloadUserBufAndMoveToEnd()       { ReloadUserBuf = true; ReloadSelectionStart = ReloadSelectionEnd = INT_MAX; }
+
 ImGuiInputTextCallbackData::ImGuiInputTextCallbackData()
 {
     memset(this, 0, sizeof(*this));

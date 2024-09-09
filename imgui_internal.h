@@ -1127,7 +1127,6 @@ struct IMGUI_API ImGuiInputTextState
     bool                    TextAIsValid;           // temporary UTF8 buffer is not initially valid before we make the widget active (until then we pull the data from user argument)
     int                     BufCapacityA;           // end-user buffer capacity
     ImVec2                  Scroll;                 // horizontal offset (managed manually) + vertical scrolling (pulled from child window's own Scroll.y)
-
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
@@ -1144,24 +1143,23 @@ struct IMGUI_API ImGuiInputTextState
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
 
     // Cursor & Selection
-    void        CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
-    void        CursorClamp()               { Stb->cursor = ImMin(Stb->cursor, CurLenW); Stb->select_start = ImMin(Stb->select_start, CurLenW); Stb->select_end = ImMin(Stb->select_end, CurLenW); }
-    bool        HasSelection() const        { return Stb->select_start != Stb->select_end; }
-    void        ClearSelection()            { Stb->select_start = Stb->select_end = Stb->cursor; }
-    int         GetCursorPos() const        { return Stb->cursor; }
-    int         GetSelectionStart() const   { return Stb->select_start; }
-    int         GetSelectionEnd() const     { return Stb->select_end; }
-    void        SelectAll()                 { Stb->select_start = 0; Stb->cursor = Stb->select_end = CurLenW; Stb->has_preferred_x = 0; }
+    void        CursorAnimReset();
+    void        CursorClamp();
+    bool        HasSelection() const;
+    void        ClearSelection();
+    int         GetCursorPos() const;
+    int         GetSelectionStart() const;
+    int         GetSelectionEnd() const;
+    void        SelectAll();
 
     // Reload user buf (WIP #2890)
     // If you modify underlying user-passed const char* while active you need to call this (InputText V2 may lift this)
     //   strcpy(my_buf, "hello");
     //   if (ImGuiInputTextState* state = ImGui::GetInputTextState(id)) // id may be ImGui::GetItemID() is last item
     //       state->ReloadUserBufAndSelectAll();
-    void        ReloadUserBufAndSelectAll()     { ReloadUserBuf = true; ReloadSelectionStart = 0; ReloadSelectionEnd = INT_MAX; }
-    void        ReloadUserBufAndKeepSelection() { ReloadUserBuf = true; ReloadSelectionStart = Stb->select_start; ReloadSelectionEnd = Stb->select_end; }
-    void        ReloadUserBufAndMoveToEnd()     { ReloadUserBuf = true; ReloadSelectionStart = ReloadSelectionEnd = INT_MAX; }
-
+    void        ReloadUserBufAndSelectAll();
+    void        ReloadUserBufAndKeepSelection();
+    void        ReloadUserBufAndMoveToEnd();
 };
 
 enum ImGuiWindowRefreshFlags_
