@@ -36,6 +36,18 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Nav: pressing any keyboard key while holding Alt disable toggling nav layer on Alt release. (#4439)
+- InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
+- TextLinkOpenURL(): modified tooltip to display a verb "Open 'xxxx'". (#7885, #7660)
+
+-----------------------------------------------------------------------
  VERSION 1.91.1 (Released 2024-09-04)
 -----------------------------------------------------------------------
 

@@ -218,7 +218,7 @@ jobs:
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
   Linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
@@ -324,6 +324,18 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (with C++20)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_DISABLE_OBSOLETE_KEYIO
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        g++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
+
     - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_DEBUG_TOOLS)
       run: |
         cat > example_single_file.cpp <<'EOF'
@@ -381,6 +393,18 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (C++26, Clang)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_IMPLEMENTATION
+        #define IMGUI_DISABLE_DEMO_WINDOWS
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        clang++ -I. -std=c++26 -Wall -Wformat -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+
     - name: Build example_null (without c++ runtime, Clang)
       run: |
         cat > example_single_file.cpp <<'EOF'
@@ -433,6 +457,17 @@ jobs:
         EOF
         clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (single file build, c++20)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        clang++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
+
     - name: Build example_null (without c++ runtime)
       run: |
         cat > example_single_file.cpp <<'EOF'
@@ -481,7 +516,7 @@ jobs:
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
   Emscripten:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
@@ -508,7 +543,7 @@ jobs:
         make -C examples/example_glfw_wgpu -f Makefile.emscripten
 
   Android:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 

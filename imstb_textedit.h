@@ -3,6 +3,7 @@
 // Those changes would need to be pushed into nothings/stb:
 // - Fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
 // - Fix in stb_textedit_find_charpos to handle last line (see https://github.com/ocornut/imgui/issues/6000 + #6783)
+// - Added name to struct or it may be forward declared in our code.
 // Grep for [DEAR IMGUI] to find the changes.
 // - Also renamed macros used or defined outside of IMSTB_TEXTEDIT_IMPLEMENTATION block from STB_TEXTEDIT_* to IMSTB_TEXTEDIT_*
 
@@ -318,7 +319,7 @@ typedef struct
    int undo_char_point, redo_char_point;
 } StbUndoState;
 
-typedef struct
+typedef struct STB_TexteditState
 {
    /////////////////////
    //
