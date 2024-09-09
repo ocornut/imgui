@@ -198,26 +198,6 @@ typedef void (*ImGuiErrorLogCallback)(void* user_data, const char* fmt, ...);
 extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #endif
 
-//-------------------------------------------------------------------------
-// [SECTION] STB libraries includes
-//-------------------------------------------------------------------------
-
-namespace ImStb
-{
-
-#undef IMSTB_TEXTEDIT_STRING
-#undef IMSTB_TEXTEDIT_CHARTYPE
-#define IMSTB_TEXTEDIT_STRING             ImGuiInputTextState
-#define IMSTB_TEXTEDIT_CHARTYPE           ImWchar
-#define IMSTB_TEXTEDIT_GETWIDTH_NEWLINE   (-1.0f)
-#define IMSTB_TEXTEDIT_UNDOSTATECOUNT     99
-#define IMSTB_TEXTEDIT_UNDOCHARCOUNT      999
-#include "imstb_textedit.h"
-
-} // namespace ImStb
-
-typedef ImStb::STB_TexteditState ImStbTexteditState;
-
 //-----------------------------------------------------------------------------
 // [SECTION] Macros
 //-----------------------------------------------------------------------------
@@ -1112,6 +1092,17 @@ struct IMGUI_API ImGuiInputTextDeactivatedState
     ImGuiInputTextDeactivatedState()    { memset(this, 0, sizeof(*this)); }
     void    ClearFreeMemory()           { ID = 0; TextA.clear(); }
 };
+
+// Forward declare imstb_textedit.h structure + make its main configuration define accessible
+#undef IMSTB_TEXTEDIT_STRING
+#undef IMSTB_TEXTEDIT_CHARTYPE
+#define IMSTB_TEXTEDIT_STRING             ImGuiInputTextState
+#define IMSTB_TEXTEDIT_CHARTYPE           ImWchar
+#define IMSTB_TEXTEDIT_GETWIDTH_NEWLINE   (-1.0f)
+#define IMSTB_TEXTEDIT_UNDOSTATECOUNT     99
+#define IMSTB_TEXTEDIT_UNDOCHARCOUNT      999
+namespace ImStb { struct STB_TexteditState; }
+typedef ImStb::STB_TexteditState ImStbTexteditState;
 
 // Internal state of the currently focused/edited text input box
 // For a given item ID, access with ImGui::GetInputTextState()

@@ -3786,6 +3786,7 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: InputText, InputTextMultiline, InputTextWithHint
 //-------------------------------------------------------------------------
+// - imstb_textedit.h include
 // - InputText()
 // - InputTextWithHint()
 // - InputTextMultiline()
@@ -3795,6 +3796,11 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 // - InputTextEx() [Internal]
 // - DebugNodeInputTextState() [Internal]
 //-------------------------------------------------------------------------
+
+namespace ImStb
+{
+#include "imstb_textedit.h"
+}
 
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
