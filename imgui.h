@@ -163,6 +163,7 @@ struct ImDrawData;                  // All draw command lists required to render
 struct ImDrawList;                  // A single draw command list (generally one per window, conceptually you may see this as a dynamic "mesh" builder)
 struct ImDrawListSharedData;        // Data shared among multiple draw lists (typically owned by parent ImGui context, but you may create one yourself)
 struct ImDrawListSplitter;          // Helper to split a draw list into different layers which can be drawn into out of order, then flattened back.
+struct ImDrawListPolyline;          // Helper to draw a polyline
 struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 bytes by default. Override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
@@ -3027,6 +3028,18 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersAll             = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
     ImDrawFlags_RoundCornersDefault_        = ImDrawFlags_RoundCornersAll, // Default to ALL corners if none of the _RoundCornersXX flags are specified.
     ImDrawFlags_RoundCornersMask_           = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone,
+    ImDrawFlags_JoinMiter                   = 1 << 9, // PathStroke(), AddPolyline(): join vertices with a sharp (i.e. not rounded) corner. When miter length exceed miter limit join is converted to Bevel
+    ImDrawFlags_JoinMiterClip               = 2 << 9, // PathStroke(), AddPolyline(): as above but clipped at the miter limit (reduces visual artifacts at junctions)
+    ImDrawFlags_JoinBevel                   = 3 << 9, // PathStroke(), AddPolyline(): join vertices with a beveled corner (i.e. not rounded)
+    ImDrawFlags_JoinRound                   = 4 << 9, // PathStroke(), AddPolyline(): join vertices with a rounded corner
+    ImDrawFlags_JoinDefault_                = ImDrawFlags_JoinMiter, // Default to Miter join
+    ImDrawFlags_JoinMask_                   = 7 << 9,
+    ImDrawFlags_CapNone                     = 1 << 12, // PathStroke(), AddPolyline(): do not render end caps
+    ImDrawFlags_CapButt                     = 2 << 12, // PathStroke(), AddPolyline(): render end caps as a rectangle for anti-aliased polyline, otherwise same as CapNone for aliased polyline
+    ImDrawFlags_CapSquare                   = 3 << 12, // PathStroke(), AddPolyline(): render end caps as a square
+    ImDrawFlags_CapRound                    = 4 << 12, // PathStroke(), AddPolyline(): render end caps as a semi-circle
+    ImDrawFlags_CapDefault_                 = ImDrawFlags_CapNone, // Default to no cap
+    ImDrawFlags_CapMask_                    = 7 << 12,
 };
 
 // Flags for ImDrawList instance. Those are set automatically by ImGui:: functions from ImGuiIO settings, and generally not manipulated directly.
@@ -3110,8 +3123,9 @@ struct ImDrawList
 
     // General polygon
     // - Only simple polygons are supported by filling functions (no self-intersections, no holes).
-    // - Concave polygon fill is more expensive than convex one: it has O(N^2) complexity. Provided as a convenience fo user but not used by main library.
-    IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
+    // - Concave polygon fill is more expensive than convex one: it has O(N^2) complexity. Provided as a convenience of user but not used by main library.
+    IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness, float miter_limit = -1.0f);
+    IMGUI_API void  AddPolylineLegacy(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
     IMGUI_API void  AddConcavePolyFilled(const ImVec2* points, int num_points, ImU32 col);
 
@@ -3131,7 +3145,7 @@ struct ImDrawList
     inline    void  PathLineToMergeDuplicate(const ImVec2& pos)                 { if (_Path.Size == 0 || memcmp(&_Path.Data[_Path.Size - 1], &pos, 8) != 0) _Path.push_back(pos); }
     inline    void  PathFillConvex(ImU32 col)                                   { AddConvexPolyFilled(_Path.Data, _Path.Size, col); _Path.Size = 0; }
     inline    void  PathFillConcave(ImU32 col)                                  { AddConcavePolyFilled(_Path.Data, _Path.Size, col); _Path.Size = 0; }
-    inline    void  PathStroke(ImU32 col, ImDrawFlags flags = 0, float thickness = 1.0f) { AddPolyline(_Path.Data, _Path.Size, col, flags, thickness); _Path.Size = 0; }
+    inline    void  PathStroke(ImU32 col, ImDrawFlags flags = 0, float thickness = 1.0f, float miter_limit = -1.0f) { AddPolyline(_Path.Data, _Path.Size, col, flags, thickness, miter_limit); _Path.Size = 0; }
     IMGUI_API void  PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments = 0);
     IMGUI_API void  PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12);                // Use precomputed angles for a 12 steps circle
     IMGUI_API void  PathEllipticalArcTo(const ImVec2& center, const ImVec2& radius, float rot, float a_min, float a_max, int num_segments = 0); // Ellipse
@@ -3185,6 +3199,10 @@ struct ImDrawList
     IMGUI_API int   _CalcCircleAutoSegmentCount(float radius) const;
     IMGUI_API void  _PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step);
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
+    IMGUI_API void  _PolylineEmitArcs(const ImDrawListPolyline& polyline, int arc_count, float core_radius, float fringe_radius);
+    IMGUI_API void  _PolylineThinAntiAliased(const ImDrawListPolyline& polyline);
+    IMGUI_API void  _PolylineThickAntiAliased(const ImDrawListPolyline& polyline);
+    IMGUI_API void  _PolylineAliased(const ImDrawListPolyline& polyline);
 };
 
 // All draw data to render a Dear ImGui frame
