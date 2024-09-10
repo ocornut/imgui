@@ -546,6 +546,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SeparatorText("Debug");
             ImGui::Checkbox("io.ConfigDebugIsDebuggerPresent", &io.ConfigDebugIsDebuggerPresent);
             ImGui::SameLine(); HelpMarker("Enable various tools calling IM_DEBUG_BREAK().\n\nRequires a debugger being attached, otherwise IM_DEBUG_BREAK() options will appear to crash your application.");
+            ImGui::Checkbox("io.ConfigDebugHighlightIdConflicts", &io.ConfigDebugHighlightIdConflicts);
+            ImGui::SameLine(); HelpMarker("Highlight and show an error message when multiple items have conflicting identifiers.");
             ImGui::BeginDisabled();
             ImGui::Checkbox("io.ConfigDebugBeginReturnValueOnce", &io.ConfigDebugBeginReturnValueOnce);
             ImGui::EndDisabled();
@@ -684,6 +686,7 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
         if (ImGui::BeginMenu("Tools"))
         {
             IMGUI_DEMO_MARKER("Menu/Tools");
+            ImGuiIO& io = ImGui::GetIO();
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
             const bool has_debug_tools = true;
 #else
@@ -692,14 +695,16 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
             ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
             ImGui::MenuItem("Debug Log", NULL, &demo_data->ShowDebugLog, has_debug_tools);
             ImGui::MenuItem("ID Stack Tool", NULL, &demo_data->ShowIDStackTool, has_debug_tools);
-            ImGui::MenuItem("Style Editor", NULL, &demo_data->ShowStyleEditor);
-            bool is_debugger_present = ImGui::GetIO().ConfigDebugIsDebuggerPresent;
+            bool is_debugger_present = io.ConfigDebugIsDebuggerPresent;
             if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
                 ImGui::DebugStartItemPicker();
             if (!is_debugger_present)
                 ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
-            ImGui::Separator();
+            ImGui::MenuItem("Style Editor", NULL, &demo_data->ShowStyleEditor);
             ImGui::MenuItem("About Dear ImGui", NULL, &demo_data->ShowAbout);
+
+            ImGui::SeparatorText("Debug Options");
+            ImGui::MenuItem("Highlight ID Conflicts", NULL, &io.ConfigDebugHighlightIdConflicts, has_debug_tools);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -2596,7 +2601,10 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
         IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Drag to reorder items (simple)");
         if (ImGui::TreeNode("Drag to reorder items (simple)"))
         {
-            // FIXME: temporary ID Conflict during reordering as a same item may be submitting twice.
+            // FIXME: there is temporary (usually single-frame) ID Conflict during reordering as a same item may be submitting twice.
+            // This code was always slightly faulty but in a way which was not easily noticeable.
+            // Until we fix this, enable ImGuiItemFlags_AllowDuplicateId to disable detecting the issue.
+            ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
 
             // Simple reordering
             HelpMarker(
@@ -2619,6 +2627,8 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
                     }
                 }
             }
+
+            ImGui::PopItemFlag();
             ImGui::TreePop();
         }
 

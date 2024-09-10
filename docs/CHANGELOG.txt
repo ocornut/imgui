@@ -43,6 +43,25 @@ Breaking changes:
 
 Other changes:
 
+- Added io.ConfigDebugHighlightIdConflicts debug feature! (#7961, #7669)
+  THIS DETECTS THE MOST COMMON USER ERROR BY FIRST-TIME DEAR IMGUI PROGRAMMERS!
+  - The tool detects when multiple items are sharing the same identifier, due to not
+    using PushID/PopID in loops, or not using ID stack facilities such as "##" suffixes.
+    Very frequently it happens when using empty "" labels.
+  - When hovering an item with a conflicting ID, all visible items with the same ID will
+    be highlighted and an explanatory tooltip is made visible.
+  - The feature may be disabled and is exposed in Demo->Tools menu.
+  - I've been wanting to add this tool for a long time, but was stalled by finding a way to
+    not make it spammy + make it practically zero cost. After @pthom made various proposals to
+    solve the same problem (thanks for pushing me!), I decided it was time to finish it.
+  - Added ImGuiItemFlags_AllowDuplicateId to use with PushItemFlag/PopItemFlag() if for some
+    reason you intend to have duplicate identifiers.
+  - (#74, #96, #480, #501, #647, #654, #719, #843, #894, #1057, #1173, #1390, #1414, #1556, #1768,
+     #2041, #2116, #2330, #2475, #2562, #2667, #2807, #2885, #3102, #3375, #3526, #3964, #4008,
+     #4070, #4158, #4172, #4199, #4375, #4395, #4471, #4548, #4612, #4631, #4657, #4796, #5210,
+     #5303, #5360, #5393, #5533, #5692, #5707, #5729, #5773, #5787, #5884, #6046, #6093, #6186,
+     #6223, #6364, #6387, #6567, #6692, #6724, #6939, #6984, #7246, #7270, #7375, #7421, #7434,
+     #7472, #7581, #7724, #7926, #7937 and probably more..)
 - Nav: pressing any keyboard key while holding Alt disable toggling nav layer on Alt release. (#4439)
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
 - TextLinkOpenURL(): modified tooltip to display a verb "Open 'xxxx'". (#7885, #7660)
