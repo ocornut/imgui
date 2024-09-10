@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-09-09: use SDL_Vulkan_GetDrawableSize() when available. (#7967, #3190)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
 //               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
@@ -124,7 +125,9 @@
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 #define SDL_HAS_DISPLAY_EVENT               SDL_VERSION_ATLEAST(2,0,9)
 #define SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT SDL_VERSION_ATLEAST(2,0,18)
-#if !SDL_HAS_VULKAN
+#if SDL_HAS_VULKAN
+extern "C" { extern DECLSPEC void SDLCALL SDL_Vulkan_GetDrawableSize(SDL_Window* window, int* w, int* h); }
+#elif
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
 
@@ -895,6 +898,10 @@ void ImGui_ImplSDL2_NewFrame()
         w = h = 0;
     if (bd->Renderer != nullptr)
         SDL_GetRendererOutputSize(bd->Renderer, &display_w, &display_h);
+#if SDL_HAS_VULKAN
+    else if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_VULKAN)
+        SDL_Vulkan_GetDrawableSize(bd->Window, &display_w, &display_h);
+#endif
     else
         SDL_GL_GetDrawableSize(bd->Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);

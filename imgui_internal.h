@@ -2237,9 +2237,11 @@ struct ImGuiContext
     ImVec2                  WheelingAxisAvg;
 
     // Item/widgets state and tracking information
+    ImGuiID                 DebugDrawIdConflicts;               // Set when we detect multiple items with the same identifier
     ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by ID Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
+    int                     HoveredIdPreviousFrameItemCount;    // Count numbers of items using the same ID as last frame's hovered id
     float                   HoveredIdTimer;                     // Measure contiguous hovering time
     float                   HoveredIdNotActiveTimer;            // Measure contiguous hovering time where the item has not been active
     bool                    HoveredIdAllowOverlap;
@@ -2577,8 +2579,10 @@ struct ImGuiContext
         WheelingWindowStartFrame = WheelingWindowScrolledFrame = -1;
         WheelingWindowReleaseTimer = 0.0f;
 
+        DebugDrawIdConflicts = 0;
         DebugHookIdInfo = 0;
         HoveredId = HoveredIdPreviousFrame = 0;
+        HoveredIdPreviousFrameItemCount = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdIsDisabled = false;
         HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;

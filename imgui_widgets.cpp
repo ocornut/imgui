@@ -3557,6 +3557,8 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
 
 // Create text input in place of another active widget (e.g. used when doing a CTRL+Click on drag/slider widgets)
 // FIXME: Facilitate using this in variety of other situations.
+// FIXME: Among other things, setting ImGuiItemFlags_AllowDuplicateId in LastItemData is currently correct but
+// the expected relationship between TempInputXXX functions and LastItemData is a little fishy.
 bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char* buf, int buf_size, ImGuiInputTextFlags flags)
 {
     // On the first frame, g.TempInputTextId == 0, then on subsequent frames it becomes == id.
@@ -3567,6 +3569,7 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
         ClearActiveID();
 
     g.CurrentWindow->DC.CursorPos = bb.Min;
+    g.LastItemData.InFlags |= ImGuiItemFlags_AllowDuplicateId;
     bool value_changed = InputTextEx(label, NULL, buf, buf_size, bb.GetSize(), flags | ImGuiInputTextFlags_MergedItem);
     if (init)
     {

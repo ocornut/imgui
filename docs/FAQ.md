@@ -204,10 +204,11 @@ ctx->RSSetScissorRects(1, &r);
 ### Q: How can I have multiple widgets with the same label?
 ### Q: How can I have multiple windows with the same label?
 
-**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE:**
+**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE!**
+<br>**USING AN EMPTY LABEL IS THE SAME AS USING THE SAME LABEL AS YOUR PARENT WIDGET!**
 <table>
 <tr>
-<td><img src="https://github.com/ocornut/imgui/assets/8225057/76eb9467-74d1-4e95-9f56-be81c6dd029d"></td>
+<td><img src="https://github.com/user-attachments/assets/776a8315-1164-4178-9a8c-df52e0ff28aa"></td>
 <td>
 <pre lang="cpp">
 ImGui::Begin("Incorrect!");

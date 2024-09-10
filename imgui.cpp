@@ -1434,6 +1434,8 @@ ImGuiIO::ImGuiIO()
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigMemoryCompactTimer = 60.0f;
+    ConfigDebugIsDebuggerPresent = false;
+    ConfigDebugHighlightIdConflicts = true;
     ConfigDebugBeginReturnValueOnce = false;
     ConfigDebugBeginReturnValueLoop = false;
 
@@ -4386,6 +4388,17 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+
+    // Detect ID conflicts
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    if (id != 0 && g.HoveredIdPreviousFrame == id && (item_flags & ImGuiItemFlags_AllowDuplicateId) == 0)
+    {
+        g.HoveredIdPreviousFrameItemCount++;
+        if (g.DebugDrawIdConflicts == id)
+            window->DrawList->AddRect(bb.Min - ImVec2(1,1), bb.Max + ImVec2(1,1), IM_COL32(255, 0, 0, 255), 0.0f, ImDrawFlags_None, 2.0f);
+    }
+#endif
+
     if (g.HoveredWindow != window)
         return false;
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
@@ -5004,6 +5017,11 @@ void ImGui::NewFrame()
     if (g.DragDropActive && g.DragDropPayload.SourceId == g.ActiveId)
         KeepAliveID(g.DragDropPayload.SourceId);
 
+    // [DEBUG]
+    g.DebugDrawIdConflicts = 0;
+    if (g.IO.ConfigDebugHighlightIdConflicts && g.HoveredIdPreviousFrameItemCount > 1)
+        g.DebugDrawIdConflicts = g.HoveredIdPreviousFrame;
+
     // Update HoveredId data
     if (!g.HoveredIdPreviousFrame)
         g.HoveredIdTimer = 0.0f;
@@ -5014,6 +5032,7 @@ void ImGui::NewFrame()
     if (g.HoveredId && g.ActiveId != g.HoveredId)
         g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
+    g.HoveredIdPreviousFrameItemCount = 0;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
     g.HoveredIdIsDisabled = false;
@@ -5462,6 +5481,29 @@ void ImGui::EndFrame()
     if (g.FrameCountEnded == g.FrameCount)
         return;
     IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
+
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    if (g.DebugDrawIdConflicts != 0)
+    {
+        PushStyleColor(ImGuiCol_PopupBg, ImLerp(g.Style.Colors[ImGuiCol_PopupBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.10f));
+        if (g.DebugItemPickerActive == false && BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
+        {
+            SeparatorText("MESSAGE FROM DEAR IMGUI");
+            Text("Programmer error: %d visible items with conflicting ID!", g.HoveredIdPreviousFrameItemCount);
+            BulletText("Code should use PushID()/PopID() in loops, or append \"##xx\" to same-label identifiers!");
+            BulletText("Empty label e.g. Button(\"\") == same ID as parent widget/node. Use Button(\"##xx\") instead!");
+            BulletText("Press F1 to open \"FAQ -> About the ID Stack System\" and read details.");
+            BulletText("Press CTRL+P to activate Item Picker and debug-break in item call-stack.");
+            BulletText("Set io.ConfigDebugDetectIdConflicts=false to disable this warning in non-programmers builds.");
+            EndTooltip();
+        }
+        PopStyleColor();
+        if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_P, ImGuiInputFlags_RouteGlobal))
+            DebugStartItemPicker();
+        if (Shortcut(ImGuiKey_F1, ImGuiInputFlags_RouteGlobal) && g.PlatformIO.Platform_OpenInShellFn != NULL)
+            g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
+    }
+#endif
 
     CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
 
