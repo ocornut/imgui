@@ -8065,6 +8065,11 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             HelpMarker("Faster lines using texture data. Require backend to render with bilinear filtering (not point/nearest filtering).");
 
             ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
+
+            ImGui::Checkbox("Legacy polyline", &style.LegacyPolyline);
+            ImGui::SameLine();
+            HelpMarker("Legacy polyline is faster for drawing lots of geometry, but does lack of features and robustness.");
+
             ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
             ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
             if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
