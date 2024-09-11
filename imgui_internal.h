@@ -1112,8 +1112,9 @@ struct IMGUI_API ImGuiInputTextState
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
     ImGuiID                 ID;                     // widget id owning the text state
     int                     CurLenA;                // UTF-8 length of the string in TextA (in bytes)
-    ImVector<char>          TextA;                  // temporary UTF8 buffer for callbacks and other operations. this is not updated in every code-path! size=capacity.
+    ImVector<char>          TextA;                  // main UTF8 buffer.
     ImVector<char>          InitialTextA;           // value to revert to when pressing Escape = backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
     int                     BufCapacityA;           // end-user buffer capacity
     ImVec2                  Scroll;                 // horizontal offset (managed manually) + vertical scrolling (pulled from child window's own Scroll.y)
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
