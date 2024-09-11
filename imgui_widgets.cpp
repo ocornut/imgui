@@ -4301,8 +4301,8 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, Im
 // FIXME: Ideally we should transition toward (1) making InsertChars()/DeleteChars() update undo-stack (2) discourage (and keep reconcile) or obsolete (and remove reconcile) accessing buffer directly.
 static void InputTextReconcileUndoStateAfterUserCallback(ImGuiInputTextState* state, const char* new_buf_a, int new_length_a)
 {
-    const char* old_buf = state->TextA.Data;
-    const int old_length = state->CurLenA;
+    const char* old_buf = state->CallbackTextBackup.Data;
+    const int old_length = state->CallbackTextBackup.Size - 1;
 
     const int shorter_length = ImMin(old_length, new_length_a);
     int first_diff;
@@ -4323,7 +4323,7 @@ static void InputTextReconcileUndoStateAfterUserCallback(ImGuiInputTextState* st
     if (insert_len > 0 || delete_len > 0)
         if (IMSTB_TEXTEDIT_CHARTYPE* p = stb_text_createundo(&state->Stb->undostate, first_diff, delete_len, insert_len))
             for (int i = 0; i < delete_len; i++)
-                p[i] = ImStb::STB_TEXTEDIT_GETCHAR(state, first_diff + i);
+                p[i] = old_buf[first_diff + i];
 }
 
 // As InputText() retain textual data and we currently provide a path for user to not retain it (via local variables)
@@ -4598,11 +4598,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Process mouse inputs and character inputs
-    int backup_current_text_length = 0;
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
-        backup_current_text_length = state->CurLenA;
         state->Edited = false;
         state->BufCapacityA = buf_size;
         state->Flags = flags;
@@ -4856,11 +4854,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 {
                     unsigned int c;
                     int len = ImTextCharFromUtf8(&c, s, NULL);
+                    s += len;
                     if (!InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, true))
                         continue;
-                    memcpy(clipboard_filtered + clipboard_filtered_len, s, len);
+                    memcpy(clipboard_filtered + clipboard_filtered_len, s - len, len);
                     clipboard_filtered_len += len;
-                    s += len;
                 }
                 clipboard_filtered[clipboard_filtered_len] = 0;
                 if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
@@ -4960,6 +4958,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback_data.Flags = flags;
                     callback_data.UserData = callback_user_data;
 
+                    // FIXME-OPT: Undo stack reconcile needs a backup of the data until we rework API, see #7925
+                    state->CallbackTextBackup.resize(state->CurLenA + 1);
+                    memcpy(state->CallbackTextBackup.Data, state->TextA.Data, state->CurLenA + 1);
+
                     char* callback_buf = is_readonly ? buf : state->TextA.Data;
                     callback_data.EventKey = event_key;
                     callback_data.Buf = callback_buf;
@@ -4988,11 +4990,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                         // Callback may update buffer and thus set buf_dirty even in read-only mode.
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
                         InputTextReconcileUndoStateAfterUserCallback(state, callback_data.Buf, callback_data.BufTextLen); // FIXME: Move the rest of this block inside function and rename to InputTextReconcileStateAfterUserCallback() ?
-                        if (callback_data.BufTextLen > backup_current_text_length && is_resizable)
-                            state->TextA.resize(state->TextA.Size + (callback_data.BufTextLen - backup_current_text_length)); // Worse case scenario resize
-
-                        memcpy(state->TextA.Data, callback_data.Buf, callback_data.BufTextLen);
                         state->CurLenA = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
+                        state->TextA.Size = state->CurLenA + 1;
                         state->CursorAnimReset();
                     }
                 }
@@ -5024,9 +5023,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)
     if (apply_new_text != NULL)
     {
-        // We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
-        // of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
-        // without any storage on user's side.
+        //// We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
+        //// of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
+        //// without any storage on user's side.
         IM_ASSERT(apply_new_text_length >= 0);
         if (is_resizable)
         {
@@ -5325,8 +5324,10 @@ void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
             const char undo_rec_type = (n < undo_state->undo_point) ? 'u' : (n >= undo_state->redo_point) ? 'r' : ' ';
             if (undo_rec_type == ' ')
                 BeginDisabled();
+            const int buf_preview_len = (undo_rec_type != ' ' && undo_rec->char_storage != -1) ? undo_rec->insert_length : 0;
+            const char* buf_preview_str = undo_state->undo_char + undo_rec->char_storage;
             Text("%c [%02d] where %03d, insert %03d, delete %03d, char_storage %03d \"%.*s\"",
-                undo_rec_type, n, undo_rec->where, undo_rec->insert_length, undo_rec->delete_length, undo_rec->char_storage, undo_rec->insert_length, undo_state->undo_char + undo_rec->char_storage);
+                undo_rec_type, n, undo_rec->where, undo_rec->insert_length, undo_rec->delete_length, undo_rec->char_storage, buf_preview_len, buf_preview_str);
             if (undo_rec_type == ' ')
                 EndDisabled();
         }
