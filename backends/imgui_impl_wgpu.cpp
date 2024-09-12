@@ -748,7 +748,15 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     // Setup backend capabilities flags
     ImGui_ImplWGPU_Data* bd = IM_NEW(ImGui_ImplWGPU_Data)();
     io.BackendRendererUserData = (void*)bd;
+#if defined(__EMSCRIPTEN__)
+    io.BackendRendererName = "imgui_impl_webgpu__emscripten";
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    io.BackendRendererName = "imgui_impl_webgpu__dawn";
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    io.BackendRendererName = "imgui_impl_webgpu__wgpu";
+#else
     io.BackendRendererName = "imgui_impl_webgpu";
+#endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     bd->initInfo = *init_info;
