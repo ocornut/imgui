@@ -91,7 +91,6 @@ if(EMSCRIPTEN)
   if("${IMGUI_EMSCRIPTEN_GLFW3}" STREQUAL "--use-port=contrib.glfw3")
     target_compile_options(example_glfw_wgpu PUBLIC
         "${IMGUI_EMSCRIPTEN_GLFW3}"
-        "-DEMSCRIPTEN_USE_PORT_CONTRIB_GLFW3" # unnecessary beyond emscripten 3.1.59
     )
   endif()
   message(STATUS "Using ${IMGUI_EMSCRIPTEN_GLFW3} GLFW implementation")

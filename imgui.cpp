@@ -2035,7 +2035,7 @@ const char* ImStreolRange(const char* str, const char* str_end)
     return p ? p : str_end;
 }
 
-const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) // find beginning-of-line
+const char* ImStrbol(const char* buf_mid_line, const char* buf_begin) // find beginning-of-line
 {
     while (buf_mid_line > buf_begin && buf_mid_line[-1] != '\n')
         buf_mid_line--;
@@ -4097,7 +4097,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-        g.FontScale = g.FontSize / g.Font->FontSize;
+        g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -9663,7 +9663,7 @@ bool ImGui::IsKeyPressed(ImGuiKey key, bool repeat)
     return IsKeyPressed(key, repeat ? ImGuiInputFlags_Repeat : ImGuiInputFlags_None, ImGuiKeyOwner_Any);
 }
 
-// Important: unless legacy IsKeyPressed(ImGuiKey, bool repeat=true) which DEFAULT to repeat, this requires EXPLICIT repeat.
+// Important: unlike legacy IsKeyPressed(ImGuiKey, bool repeat=true) which DEFAULT to repeat, this requires EXPLICIT repeat.
 bool ImGui::IsKeyPressed(ImGuiKey key, ImGuiInputFlags flags, ImGuiID owner_id)
 {
     const ImGuiKeyData* key_data = GetKeyData(key);

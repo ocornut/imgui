@@ -377,7 +377,7 @@ IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end
 IMGUI_API void          ImStrTrimBlanks(char* str);                                         // Remove leading and trailing blanks from a buffer.
 IMGUI_API const char*   ImStrSkipBlank(const char* str);                                    // Find first non-blank character.
 IMGUI_API int           ImStrlenW(const ImWchar* str);                                      // Computer string length (ImWchar string)
-IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin);   // Find beginning-of-line (ImWchar string)
+IMGUI_API const char*   ImStrbol(const char* buf_mid_line, const char* buf_begin);          // Find beginning-of-line
 IM_MSVC_RUNTIME_CHECKS_OFF
 static inline char      ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
 static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
@@ -1108,7 +1108,7 @@ struct IMGUI_API ImGuiInputTextDeactivatedState
 #undef IMSTB_TEXTEDIT_STRING
 #undef IMSTB_TEXTEDIT_CHARTYPE
 #define IMSTB_TEXTEDIT_STRING             ImGuiInputTextState
-#define IMSTB_TEXTEDIT_CHARTYPE           ImWchar
+#define IMSTB_TEXTEDIT_CHARTYPE           char
 #define IMSTB_TEXTEDIT_GETWIDTH_NEWLINE   (-1.0f)
 #define IMSTB_TEXTEDIT_UNDOSTATECOUNT     99
 #define IMSTB_TEXTEDIT_UNDOCHARCOUNT      999
@@ -1122,11 +1122,10 @@ struct IMGUI_API ImGuiInputTextState
     ImGuiContext*           Ctx;                    // parent UI context (needs to be set explicitly by parent).
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
     ImGuiID                 ID;                     // widget id owning the text state
-    int                     CurLenW, CurLenA;       // we need to maintain our buffer length in both UTF-8 and wchar format. UTF-8 length is valid even if TextA is not.
-    ImVector<ImWchar>       TextW;                  // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    ImVector<char>          TextA;                  // temporary UTF8 buffer for callbacks and other operations. this is not updated in every code-path! size=capacity.
+    int                     CurLenA;                // UTF-8 length of the string in TextA (in bytes)
+    ImVector<char>          TextA;                  // main UTF8 buffer.
     ImVector<char>          InitialTextA;           // value to revert to when pressing Escape = backup of end-user buffer at the time of focus (in UTF-8, unaltered)
-    bool                    TextAIsValid;           // temporary UTF8 buffer is not initially valid before we make the widget active (until then we pull the data from user argument)
+    ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
     int                     BufCapacityA;           // end-user buffer capacity
     ImVec2                  Scroll;                 // horizontal offset (managed manually) + vertical scrolling (pulled from child window's own Scroll.y)
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
@@ -1140,9 +1139,10 @@ struct IMGUI_API ImGuiInputTextState
 
     ImGuiInputTextState();
     ~ImGuiInputTextState();
-    void        ClearText()                 { CurLenW = CurLenA = 0; TextW[0] = 0; TextA[0] = 0; CursorClamp(); }
-    void        ClearFreeMemory()           { TextW.clear(); TextA.clear(); InitialTextA.clear(); }
+    void        ClearText()                 { CurLenA = 0; TextA[0] = 0; CursorClamp(); }
+    void        ClearFreeMemory()           { TextA.clear(); InitialTextA.clear(); }
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
+    void        OnCharPressed(unsigned int c);
 
     // Cursor & Selection
     void        CursorAnimReset();
