@@ -245,7 +245,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
     WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
-    wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+    wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
     wgsl_desc.code = wgsl_source;
 
     WGPUShaderModuleDescriptor desc = {};
