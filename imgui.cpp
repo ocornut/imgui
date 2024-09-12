@@ -4007,7 +4007,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-        g.FontScale = g.FontSize / g.Font->FontSize;
+        g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
