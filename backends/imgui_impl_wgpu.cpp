@@ -255,7 +255,11 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
     WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
+#ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+#else
+    wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+#endif
     wgsl_desc.code = wgsl_source;
 
     WGPUShaderModuleDescriptor desc = {};
@@ -670,7 +674,11 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Create depth-stencil State
     WGPUDepthStencilState depth_stencil_state = {};
     depth_stencil_state.format = bd->depthStencilFormat;
+#ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
     depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
+#else
+    depth_stencil_state.depthWriteEnabled = false;
+#endif
     depth_stencil_state.depthCompare = WGPUCompareFunction_Always;
     depth_stencil_state.stencilFront.compare = WGPUCompareFunction_Always;
     depth_stencil_state.stencilFront.failOp = WGPUStencilOperation_Keep;
