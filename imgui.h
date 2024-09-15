@@ -3205,6 +3205,8 @@ struct ImDrawList
     IMGUI_API void  _PolylineThinAntiAliased(const ImDrawListPolyline& polyline);
     IMGUI_API void  _PolylineThickAntiAliased(const ImDrawListPolyline& polyline);
     IMGUI_API void  _PolylineAliased(const ImDrawListPolyline& polyline);
+    IMGUI_API void  _RectFast(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness);
+    IMGUI_API void  _RectRounded(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, ImDrawFlags flags, float thickness);
 };
 
 // All draw data to render a Dear ImGui frame
