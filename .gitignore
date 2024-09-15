@@ -3,12 +3,12 @@
 
 ## Dear ImGui artifacts
 imgui.ini
+imgui*.ini
 
 ## General build artifacts
 *.o
 *.obj
 *.exe
-examples/build/*
 examples/*/Debug/*
 examples/*/Release/*
 examples/*/x64/*
@@ -30,7 +30,7 @@ ipch
 JSON/
 
 ## Commonly used CMake directories
-/build*/
+build*/
 
 ## Xcode artifacts
 project.xcworkspace
@@ -41,8 +41,9 @@ examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
 examples/example_glfw_opengl3/web/*
+examples/example_glfw_wgpu/web/*
+examples/example_glfw_wgpu/external/*
 examples/example_sdl2_opengl3/web/*
-examples/example_emscripten_wgpu/web/*
 
 ## JetBrains IDE artifacts
 .idea

@@ -10,7 +10,7 @@ integrating Dear ImGui in your own application/game/engine.
 **Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
 
 You can find Windows binaries for some of those example applications at:
-  http://www.dearimgui.com/binaries
+  https://www.dearimgui.com/binaries
 
 
 ### Getting Started
@@ -35,46 +35,13 @@ At shutdown:
   call ImGui::DestroyContext()
 ```
 
-Example (using [backends/imgui_impl_win32.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_win32.cpp) + [backends/imgui_impl_dx11.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)):
+Main resource:
+- Read **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** for detailed examples of how to integrate Dear ImGui in an existing application.
 
-```cpp
-// Create a Dear ImGui context, setup some options
-ImGui::CreateContext();
-ImGuiIO& io = ImGui::GetIO();
-io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-
-// Initialize Platform + Renderer backends (here: using imgui_impl_win32.cpp + imgui_impl_dx11.cpp)
-ImGui_ImplWin32_Init(my_hwnd);
-ImGui_ImplDX11_Init(my_d3d_device, my_d3d_device_context);
-
-// Application main loop
-while (true)
-{
-    // Beginning of frame: update Renderer + Platform backend, start Dear ImGui frame
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-
-    // Any application code here
-    ImGui::Text("Hello, world!");
-
-    // End of frame: render Dear ImGui
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-    // Swap
-    g_pSwapChain->Present(1, 0);
-}
-
-// Shutdown
-ImGui_ImplDX11_Shutdown();
-ImGui_ImplWin32_Shutdown();
-ImGui::DestroyContext();
-```
-
-Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
-Please read the comments and instruction at the top of each file.
-Please read FAQ at http://www.dearimgui.com/faq
+Additional resources:
+- Read FAQ at https://www.dearimgui.com/faq
+- Read 'PROGRAMMER GUIDE' section in imgui.cpp.
+- Read the comments and instruction at the top of each file.
 
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
@@ -104,8 +71,8 @@ OSX + OpenGL2 example. <BR>
 (NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
  You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
-[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
-Emcripten + GLFW + WebGPU example. <BR>
+[example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
+GLFW + WebGPU example. Supports Emscripten (web) or Dawn (desktop) <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
 Note that the 'example_glfw_opengl3' and 'example_sdl2_opengl3' examples also supports Emscripten!
 
@@ -126,7 +93,7 @@ state, and might confuse your GPU driver. One star, not recommended.
 GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (modern, programmable pipeline). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders.<BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_glfw_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/) <BR>
@@ -168,14 +135,13 @@ state, and might confuse your GPU driver. One star, not recommended.
 SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders. <BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
-[example_sdl2_sdlrenderer/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer/) <BR>
-SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer (most graphics backends are supported underneath) <BR>
+[example_sdl2_sdlrenderer2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer2/) <BR>
+SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 (most graphics backends are supported underneath) <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer.cpp <BR>
 This requires SDL 2.0.18+ (released November 2021) <BR>
-We do not really recommend using SDL_Renderer as it is a rather primitive API.
 
 [example_sdl2_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>

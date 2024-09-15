@@ -200,7 +200,7 @@ typedef void		(*uSynergySleepFunc)(uSynergyCookie cookie, int timeMs);
 @brief Get time function
 
 This function is called when uSynergy needs to know the current time. This is used to determine when timeouts
-have occured. The time base should be a cyclic millisecond time value.
+have occurred. The time base should be a cyclic millisecond time value.
 
 @returns			Time value in milliseconds
 **/
