@@ -951,10 +951,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= SDL_GetWindowFlags(bd->Window);
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
-#if !defined(_WIN32)
-    // See SDL hack in ImGui_ImplSDL3_ShowWindow().
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
-#endif
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
@@ -992,13 +989,14 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
 #if defined(_WIN32)
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
-    // SDL hack: Hide icon from task bar
-    // Note: SDL 3.0.0+ has a SDL_WINDOW_UTILITY flag which is supported under Windows but the way it create the window breaks our seamless transition.
-    if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon)
+    // SDL hack: Show icon in task bar (#7989)
+    // Note: SDL_WINDOW_UTILITY can be used to control task bar visibility, but on Windows, it does not affect child windows.
+    if (!(viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon))
     {
         LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
-        ex_style &= ~WS_EX_APPWINDOW;
-        ex_style |= WS_EX_TOOLWINDOW;
+        ex_style |= WS_EX_APPWINDOW;
+        ex_style &= ~WS_EX_TOOLWINDOW;
+        ::ShowWindow(hwnd, SW_HIDE);
         ::SetWindowLong(hwnd, GWL_EXSTYLE, ex_style);
     }
 #endif

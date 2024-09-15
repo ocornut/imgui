@@ -86,6 +86,7 @@ Docking+Viewports Branch:
   mouse tracking and temporary lead to incorrect update of HoveredWindow. (#7971)
 - Backends: SDL3: added support for viewport->ParentViewportId field to support parenting
   windows at OS level. (#7973) [@RT2code]
+- Backends: SDL3: rework implementation of _NoTaskBarIcon. (#7989) [@RT2code]
 
 -----------------------------------------------------------------------
  VERSION 1.91.1 (Released 2024-09-04)
