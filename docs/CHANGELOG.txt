@@ -82,6 +82,8 @@ Docking+Viewports Branch:
   over main viewport bounds isn't translated properly. (#7985)
 - Backends: Win32: fixed direct calls to platform_io.Platform_SetWindowPos()/Platform_SetWindowSize()
   on windows created by application (typically main viewport).
+- Backends: Win32: fixed an issue where a viewport destroyed while clicking would hog
+  mouse tracking and temporary lead to incorrect update of HoveredWindow. (#7971)
 - Backends: SDL3: added support for viewport->ParentViewportId field to support parenting
   windows at OS level. (#7973) [@RT2code]
 
