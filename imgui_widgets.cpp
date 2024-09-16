@@ -5100,33 +5100,30 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         {
             // Find lines numbers straddling 'cursor' (slot 0) and 'select_start' (slot 1) positions.
-            const char* searches_input_ptr[2] = { NULL, NULL };
             int searches_result_line_no[2] = { -1000, -1000 };
-            int searches_remaining = 0;
+            const char* searches_input_ptr[2] = { NULL, NULL };
             if (render_cursor)
             {
                 searches_input_ptr[0] = text_begin + state->Stb->cursor;
                 searches_result_line_no[0] = -1;
-                searches_remaining++;
             }
             if (render_selection)
             {
                 searches_input_ptr[1] = text_begin + ImMin(state->Stb->select_start, state->Stb->select_end);
                 searches_result_line_no[1] = -1;
-                searches_remaining++;
             }
 
-            // Iterate all lines to find our line numbers
-            // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
-            searches_remaining += is_multiline ? 1 : 0;
-            int line_count = 0;
-            for (const char* s = text_begin; (s = (const char*)memchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
+            // Count lines and find line number for cursor and selection ends
+            int line_count = 1;
+            if (is_multiline)
             {
-                line_count++;
-                if (searches_result_line_no[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_no[0] = line_count; if (--searches_remaining <= 0) break; }
-                if (searches_result_line_no[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_no[1] = line_count; if (--searches_remaining <= 0) break; }
+                for (const char* s = text_begin; (s = (const char*)memchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
+                {
+                    if (searches_result_line_no[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_no[0] = line_count; }
+                    if (searches_result_line_no[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_no[1] = line_count; }
+                    line_count++;
+                }
             }
-            line_count++;
             if (searches_result_line_no[0] == -1)
                 searches_result_line_no[0] = line_count;
             if (searches_result_line_no[1] == -1)
