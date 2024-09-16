@@ -77,6 +77,8 @@ Other changes:
 - Backends: SDL2: use SDL_Vulkan_GetDrawableSize() when available. (#7967, #3190) [@scribam]
 - Backends: GLFW+Emscripten: use OSX behaviors automatically when using contrib glfw port. (#7965, #7915)
   [@ypujante]
+- Backends: WebGPU: Added support for optional IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU
+  defines to handle ever-changing native implementations. (#7977, #7969, #6602, #6188, #7523) [@acgaudette]
 
 -----------------------------------------------------------------------
  VERSION 1.91.1 (Released 2024-09-04)
