@@ -3822,16 +3822,22 @@ bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, si
     return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0, 0), flags, callback, user_data);
 }
 
+// This is only used in the path where the multiline widget is inactivate.
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
 {
     int line_count = 0;
     const char* s = text_begin;
-    while (char c = *s++) // We are only matching for \n so we can ignore UTF-8 decoding
-        if (c == '\n')
-            line_count++;
-    s--;
-    if (s[0] != '\n' && s[0] != '\r')
+    while (true)
+    {
+        const char* s_eol = strchr(s, '\n');
         line_count++;
+        if (s_eol == NULL)
+        {
+            s = s + strlen(s);
+            break;
+        }
+        s = s_eol + 1;
+    }
     *out_text_end = s;
     return line_count;
 }
