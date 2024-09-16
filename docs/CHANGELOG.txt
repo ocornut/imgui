@@ -78,6 +78,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Viewports: fixed an issue where a window manually constrained to the main viewport while crossing
+  over main viewport bounds isn't translated properly. (#7985)
 - Backends: SDL3: added support for viewport->ParentViewportId field to support parenting
   windows at OS level. (#7973) [@RT2code]
 
