@@ -4409,7 +4409,7 @@ void ImGui::EndColumns()
             {
                 ButtonBehavior(column_hit_rect, column_id, &hovered, &held);
                 if (hovered || held)
-                    g.MouseCursor = ImGuiMouseCursor_ResizeEW;
+                    SetMouseCursor(ImGuiMouseCursor_ResizeEW);
                 if (held && !(column->Flags & ImGuiOldColumnFlags_NoResize))
                     dragging_column = n;
             }

@@ -4438,7 +4438,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
     if (hovered)
-        g.MouseCursor = ImGuiMouseCursor_TextInput;
+        SetMouseCursor(ImGuiMouseCursor_TextInput);
 
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
