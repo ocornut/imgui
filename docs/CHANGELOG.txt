@@ -68,7 +68,7 @@ Other changes:
 - InputText: internal refactoring to simplify and optimize the code. The ImWchar buffer has been
   removed. Simplifications allowed to implement new optimizations for handling very large text buffers
   (e.g. in our testing, handling of a 1 MB text buffer is now 3 times faster in VS2022 Debug build).
-  This is the first step toward more refactorig. (#7925) [@alektron, @ocornut]
+  This is the first step toward more refactoring. (#7925) [@alektron, @ocornut]
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
 - Misc: Made it accepted to call SetMouseCursor() with any out-of-bound value, as a way to allow
   hacking in custom cursors if desirable.

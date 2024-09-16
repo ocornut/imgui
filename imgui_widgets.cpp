@@ -5095,6 +5095,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
         // FIXME: This should occur on buf_display but we'd need to maintain cursor/select_start/select_end for UTF-8.
         const char* text_begin = state->TextA.Data;
+        const char* text_end = text_begin + state->CurLenA;
         ImVec2 cursor_offset, select_start_offset;
 
         {
@@ -5119,7 +5120,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
             searches_remaining += is_multiline ? 1 : 0;
             int line_count = 0;
-            for (const char* s = text_begin; (s = strchr(s, '\n')) != NULL; s++) // FIXME-OPT: memchr() would be faster?
+            for (const char* s = text_begin; (s = (const char*)memchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
             {
                 line_count++;
                 if (searches_result_line_no[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_no[0] = line_count; if (--searches_remaining <= 0) break; }
