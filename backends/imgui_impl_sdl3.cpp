@@ -991,7 +991,7 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
 
     // SDL hack: Show icon in task bar
     // Note: SDL_WINDOW_UTILITY can be used to control task bar visibility, but on Windows, it does not affect child windows.
-    if (viewport->ParentViewportId != 0 && !(viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon))
+    if (!(viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon))
     {
         LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
         ex_style |= WS_EX_APPWINDOW;
