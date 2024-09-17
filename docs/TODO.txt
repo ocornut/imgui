@@ -65,7 +65,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - selectable: generic BeginSelectable()/EndSelectable() mechanism. (work out alongside range-select branch)
  - selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
- - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile. (WIP branch)
  - input text: preserve scrolling when unfocused?
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text: expose CursorPos in char filter event (#816)
@@ -190,11 +189,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height? format only %s/%c to be able to count height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
+ - settings: facilitate extension lazily calling AddSettingsHandler() while running and still getting their data call the ReadXXX handlers immediately.
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 
  - style: better default styles. (#707)
- - style: PushStyleVar: allow direct access to individual float X/Y elements.
  - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)

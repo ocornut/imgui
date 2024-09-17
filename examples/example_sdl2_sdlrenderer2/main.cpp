@@ -47,7 +47,7 @@ int main(int, char**)
     if (renderer == nullptr)
     {
         SDL_Log("Error creating SDL_Renderer!");
-        return 0;
+        return -1;
     }
     //SDL_RendererInfo info;
     //SDL_GetRendererInfo(renderer, &info);
@@ -106,6 +106,11 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+        }
+        if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
+        {
+            SDL_Delay(10);
+            continue;
         }
 
         // Start the Dear ImGui frame

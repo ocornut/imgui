@@ -28,6 +28,7 @@
 struct ANativeWindow;
 struct AInputEvent;
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplAndroid_Init(ANativeWindow* window);
 IMGUI_IMPL_API int32_t  ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event);
 IMGUI_IMPL_API void     ImGui_ImplAndroid_Shutdown();

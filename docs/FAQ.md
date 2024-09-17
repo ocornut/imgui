@@ -77,9 +77,9 @@ or view this file with any Markdown viewer.
 ### Q: Which version should I get?
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported.
 
-You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch which includes:
-- [Docking features](https://github.com/ocornut/imgui/issues/2109)
-- [Multi-viewport features](https://github.com/ocornut/imgui/issues/1542)
+You may use the ['docking'](https://github.com/ocornut/imgui/tree/docking) branch which includes:
+- [Docking features](https://github.com/ocornut/imgui/wiki/Docking)
+- [Multi-viewport features](https://github.com/ocornut/imgui/wiki/Multi-Viewports)
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
@@ -204,10 +204,11 @@ ctx->RSSetScissorRects(1, &r);
 ### Q: How can I have multiple widgets with the same label?
 ### Q: How can I have multiple windows with the same label?
 
-**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE:**
+**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE!**
+<br>**USING AN EMPTY LABEL IS THE SAME AS USING THE SAME LABEL AS YOUR PARENT WIDGET!**
 <table>
 <tr>
-<td><img src="https://github.com/ocornut/imgui/assets/8225057/76eb9467-74d1-4e95-9f56-be81c6dd029d"></td>
+<td><img src="https://github.com/user-attachments/assets/776a8315-1164-4178-9a8c-df52e0ff28aa"></td>
 <td>
 <pre lang="cpp">
 ImGui::Begin("Incorrect!");
@@ -639,7 +640,7 @@ The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use `MultiByteToWideChar()` or `ToUnicode()` to retrieve Unicode codepoints from MultiByte characters or keyboard state.
 Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to ImGui::GetMainViewport()->PlatformHandleRaw
-for the default implementation of io.PlatformSetImeDataFn() to set your Microsoft IME position correctly.
+for the default implementation of GetPlatformIO().Platform_SetImeDataFn() to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
 
@@ -654,7 +655,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Funding & Sponsors](https://github.com/ocornut/imgui/wiki/Funding)
-- [Gallery](https://github.com/ocornut/imgui/issues/7503)
+- [Gallery](https://github.com/ocornut/imgui/issues?q=label%3Agallery)
 
 ##### [Return to Index](#index)
 
@@ -700,7 +701,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.
-You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/7503). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
+You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues?q=label%3Agallery). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)
