@@ -946,19 +946,23 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
         SDL_GL_MakeCurrent(main_viewport_data->Window, main_viewport_data->GLContext);
     }
 
-    Uint32 sdl_flags = 0;
-    sdl_flags |= use_opengl ? SDL_WINDOW_OPENGL : (bd->UseVulkan ? SDL_WINDOW_VULKAN : 0);
-    sdl_flags |= SDL_GetWindowFlags(bd->Window);
-    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
-    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
+    SDL_PropertiesID properties = SDL_CreateProperties();
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, use_opengl);
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, bd->UseVulkan);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_GetWindowFlags(bd->Window));
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, (viewport->Flags & ImGuiViewportFlags_NoDecoration));
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, !(viewport->Flags & ImGuiViewportFlags_NoDecoration));
 #if !defined(_WIN32)
     // See SDL hack in ImGui_ImplSDL3_ShowWindow().
-    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_UTILITY_BOOLEAN, (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon));
 #endif
-    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
-    vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    SDL_SetWindowParent(vd->Window, vd->ParentWindow);
-    SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, (viewport->Flags & ImGuiViewportFlags_TopMost));
+    SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "No Title Yet");
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, (int)viewport->Pos.x);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, (int)viewport->Pos.y);
+    SDL_SetPointerProperty(properties, SDL_PROP_WINDOW_CREATE_PARENT_POINTER, vd->ParentWindow);
+    vd->Window = SDL_CreateWindowWithProperties(properties);
+    SDL_DestroyProperties(properties);
     vd->WindowOwned = true;
     if (use_opengl)
     {
