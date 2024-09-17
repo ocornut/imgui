@@ -1,0 +1,7 @@
+find_package(Freetype)
+if(Freetype_FOUND)
+add_library(imgui-freetype STATIC)
+target_include_directories(imgui-freetype PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} PRIVATE ${IMGUI_INC_DIR})
+target_sources(imgui-freetype PUBLIC imgui_freetype.cpp)
+target_link_libraries(imgui-freetype Freetype::Freetype)
+endif()
