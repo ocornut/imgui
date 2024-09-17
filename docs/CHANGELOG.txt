@@ -72,6 +72,8 @@ Other changes:
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
 - Tables: fixed assertion related to inconsistent outer clipping when sizes are not rounded. (#7957) [@eclbtownsend]
 - Tables: fixed assertion with tables with borders when clipped by parent. (#6765, #3752, #7428)
+- Windows: fixed an issue where double-click to collapse could be triggered even while another
+  item is active, if the item didn't use the left mouse button. (#7841)
 - Misc: Made it accepted to call SetMouseCursor() with any out-of-bound value, as a way to allow
   hacking in custom cursors if desirable.
 - Fonts: fixed ellipsis "..." rendering width miscalculation bug introduced in 1.91.0. (#7976) [@DDeimos]
