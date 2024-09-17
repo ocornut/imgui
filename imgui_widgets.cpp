@@ -4977,7 +4977,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
                     const int utf8_cursor_pos = callback_data.CursorPos = state->Stb->cursor;
                     const int utf8_selection_start = callback_data.SelectionStart = state->Stb->select_start;
-                    const int utf8_selection_end = state->Stb->select_end;
+                    const int utf8_selection_end = callback_data.SelectionEnd = state->Stb->select_end;
 
                     // Call user code
                     callback(&callback_data);
