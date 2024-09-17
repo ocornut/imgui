@@ -71,6 +71,8 @@ Other changes:
   (e.g. in our testing, handling of a 1 MB text buffer is now 3 times faster in VS2022 Debug build).
   This is the first step toward more refactoring. (#7925) [@alektron, @ocornut]
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
+- Tables: fixed auto-width columns when using synced-instances of same table. The previous fix
+  done in v1.90.5 was incomplete. (#7218)
 - Tables: fixed assertion related to inconsistent outer clipping when sizes are not rounded. (#7957) [@eclbtownsend]
 - Tables: fixed assertion with tables with borders when clipped by parent. (#6765, #3752, #7428)
 - Windows: fixed an issue where double-click to collapse could be triggered even while another

@@ -866,7 +866,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Calculate ideal/auto column width (that's the width required for all contents to be visible without clipping)
         // Combine width from regular rows + width from headers unless requested not to.
-        if (!column->IsPreserveWidthAuto)
+        if (!column->IsPreserveWidthAuto && table->InstanceCurrent == 0)
             column->WidthAuto = TableGetColumnWidthAuto(table, column);
 
         // Non-resizable columns keep their requested width (apply user value regardless of IsPreserveWidthAuto)
