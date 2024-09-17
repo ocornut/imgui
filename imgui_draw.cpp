@@ -2505,13 +2505,14 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     IM_ASSERT(font_cfg->FontData != NULL && font_cfg->FontDataSize > 0);
-    IM_ASSERT(font_cfg->SizePixels > 0.0f);
+    IM_ASSERT(font_cfg->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    IM_ASSERT(font_cfg->OversampleH > 0 && font_cfg->OversampleV > 0 && "Is ImFontConfig struct correctly initialized?");
 
     // Create new font
     if (!font_cfg->MergeMode)
         Fonts.push_back(IM_NEW(ImFont));
     else
-        IM_ASSERT(!Fonts.empty() && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
+        IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();

@@ -328,7 +328,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // - always performing the GetOrAddByKey() O(log N) query in g.Tables.Map[].
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
-    const ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
+    const ImVec2 actual_outer_size = ImTrunc(CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f));
     const ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
     const bool outer_window_is_measuring_size = (outer_window->AutoFitFramesX > 0) || (outer_window->AutoFitFramesY > 0); // Doesn't apply to AlwaysAutoResize windows!
     if (use_child_window && IsClippedEx(outer_rect, 0) && !outer_window_is_measuring_size)
@@ -866,7 +866,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Calculate ideal/auto column width (that's the width required for all contents to be visible without clipping)
         // Combine width from regular rows + width from headers unless requested not to.
-        if (!column->IsPreserveWidthAuto)
+        if (!column->IsPreserveWidthAuto && table->InstanceCurrent == 0)
             column->WidthAuto = TableGetColumnWidthAuto(table, column);
 
         // Non-resizable columns keep their requested width (apply user value regardless of IsPreserveWidthAuto)
@@ -1261,7 +1261,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if (table->Flags & ImGuiTableFlags_NoClip)
         table->DrawSplitter->SetCurrentChannel(inner_window->DrawList, TABLE_DRAW_CHANNEL_NOCLIP);
     else
-        inner_window->DrawList->PushClipRect(inner_window->InnerClipRect.Min, inner_window->InnerClipRect.Max, false);
+        inner_window->DrawList->PushClipRect(inner_window->InnerClipRect.Min, inner_window->InnerClipRect.Max, false); // FIXME: use table->InnerClipRect?
 }
 
 // Process hit-testing on resizing borders. Actual size change will be applied in EndTable()
@@ -2011,7 +2011,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
     {
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
             table->Columns[column_n].NavLayerCurrent = ImGuiNavLayer_Main;
-        const float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
+        const float y0 = ImMax(table->RowPosY2 + 1, table->InnerClipRect.Min.y);
         table_instance->LastFrozenHeight = y0 - table->OuterRect.Min.y;
 
         if (unfreeze_rows_actual)
@@ -2020,8 +2020,8 @@ void ImGui::TableEndRow(ImGuiTable* table)
             table->IsUnfrozenRows = true;
 
             // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
-            table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
-            table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
+            table->BgClipRect.Min.y = table->Bg2ClipRectForDrawCmd.Min.y = ImMin(y0, table->InnerClipRect.Max.y);
+            table->BgClipRect.Max.y = table->Bg2ClipRectForDrawCmd.Max.y = table->InnerClipRect.Max.y;
             table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
             IM_ASSERT(table->Bg2ClipRectForDrawCmd.Min.y <= table->Bg2ClipRectForDrawCmd.Max.y);
 
@@ -4409,7 +4409,7 @@ void ImGui::EndColumns()
             {
                 ButtonBehavior(column_hit_rect, column_id, &hovered, &held);
                 if (hovered || held)
-                    g.MouseCursor = ImGuiMouseCursor_ResizeEW;
+                    SetMouseCursor(ImGuiMouseCursor_ResizeEW);
                 if (held && !(column->Flags & ImGuiOldColumnFlags_NoResize))
                     dragging_column = n;
             }

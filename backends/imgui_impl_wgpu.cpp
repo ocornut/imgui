@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-09-16: Added support for optional IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU define to handle ever-changing native implementations. (#7977)
 //  2024-01-22: Added configurable PipelineMultisampleState struct. (#7240)
 //  2024-01-22: (Breaking) ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure instead of variety of parameters, allowing for easier further changes.
 //  2024-01-22: Fixed pipeline layout leak. (#7245)
@@ -36,6 +37,18 @@
 //  2021-05-16: Update to latest WebGPU specs (compatible with Emscripten 2.0.20 and Chrome Canary 92).
 //  2021-02-18: Change blending equation to preserve alpha in output buffer.
 //  2021-01-28: Initial version.
+
+// When targeting native platforms (i.e. NOT emscripten), one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+// or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
+#ifndef __EMSCRIPTEN__
+    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    #error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
+    #endif
+#else
+    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    #error neither IMGUI_IMPL_WEBGPU_BACKEND_DAWN nor IMGUI_IMPL_WEBGPU_BACKEND_WGPU may be defined if targeting emscripten!
+    #endif
+#endif
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
@@ -247,7 +260,11 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
     WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
+#ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+    wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+#else
     wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+#endif
     wgsl_desc.code = wgsl_source;
 
     WGPUShaderModuleDescriptor desc = {};
@@ -662,7 +679,11 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Create depth-stencil State
     WGPUDepthStencilState depth_stencil_state = {};
     depth_stencil_state.format = bd->depthStencilFormat;
+#ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+    depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
+#else
     depth_stencil_state.depthWriteEnabled = false;
+#endif
     depth_stencil_state.depthCompare = WGPUCompareFunction_Always;
     depth_stencil_state.stencilFront.compare = WGPUCompareFunction_Always;
     depth_stencil_state.stencilFront.failOp = WGPUStencilOperation_Keep;
@@ -732,7 +753,15 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     // Setup backend capabilities flags
     ImGui_ImplWGPU_Data* bd = IM_NEW(ImGui_ImplWGPU_Data)();
     io.BackendRendererUserData = (void*)bd;
+#if defined(__EMSCRIPTEN__)
+    io.BackendRendererName = "imgui_impl_webgpu_emscripten";
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    io.BackendRendererName = "imgui_impl_webgpu_dawn";
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    io.BackendRendererName = "imgui_impl_webgpu_wgpu";
+#else
     io.BackendRendererName = "imgui_impl_webgpu";
+#endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     bd->initInfo = *init_info;

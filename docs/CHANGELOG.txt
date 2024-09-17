@@ -65,16 +65,27 @@ Other changes:
 - Nav: pressing any keyboard key while holding Alt disable toggling nav layer on Alt release. (#4439)
 - MultiSelect+Tables: fixed an issue where box-select would skip items while drag-scrolling
   in a table with outer borders. (#7970, #7821).
+- Inputs: SetNextItemShortcut() with ImGuiInputFlags_Tooltip doesn't show tooltip when item is active.
 - InputText: internal refactoring to simplify and optimize the code. The ImWchar buffer has been
   removed. Simplifications allowed to implement new optimizations for handling very large text buffers
   (e.g. in our testing, handling of a 1 MB text buffer is now 3 times faster in VS2022 Debug build).
-  This is the first step toward more refactorig. (#7925) [@alektron, @ocornut]
+  This is the first step toward more refactoring. (#7925) [@alektron, @ocornut]
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
+- Tables: fixed auto-width columns when using synced-instances of same table. The previous fix
+  done in v1.90.5 was incomplete. (#7218)
+- Tables: fixed assertion related to inconsistent outer clipping when sizes are not rounded. (#7957) [@eclbtownsend]
+- Tables: fixed assertion with tables with borders when clipped by parent. (#6765, #3752, #7428)
+- Windows: fixed an issue where double-click to collapse could be triggered even while another
+  item is active, if the item didn't use the left mouse button. (#7841)
+- Misc: Made it accepted to call SetMouseCursor() with any out-of-bound value, as a way to allow
+  hacking in custom cursors if desirable.
 - Fonts: fixed ellipsis "..." rendering width miscalculation bug introduced in 1.91.0. (#7976) [@DDeimos]
 - TextLinkOpenURL(): modified tooltip to display a verb "Open 'xxxx'". (#7885, #7660)
 - Backends: SDL2: use SDL_Vulkan_GetDrawableSize() when available. (#7967, #3190) [@scribam]
 - Backends: GLFW+Emscripten: use OSX behaviors automatically when using contrib glfw port. (#7965, #7915)
   [@ypujante]
+- Backends: WebGPU: Added support for optional IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU
+  defines to handle ever-changing native implementations. (#7977, #7969, #6602, #6188, #7523) [@acgaudette]
 
 Docking+Viewports Branch:
 

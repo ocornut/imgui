@@ -3828,16 +3828,22 @@ bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, si
     return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0, 0), flags, callback, user_data);
 }
 
+// This is only used in the path where the multiline widget is inactivate.
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
 {
     int line_count = 0;
     const char* s = text_begin;
-    while (char c = *s++) // We are only matching for \n so we can ignore UTF-8 decoding
-        if (c == '\n')
-            line_count++;
-    s--;
-    if (s[0] != '\n' && s[0] != '\r')
+    while (true)
+    {
+        const char* s_eol = strchr(s, '\n');
         line_count++;
+        if (s_eol == NULL)
+        {
+            s = s + strlen(s);
+            break;
+        }
+        s = s_eol + 1;
+    }
     *out_text_end = s;
     return line_count;
 }
@@ -4444,7 +4450,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
     if (hovered)
-        g.MouseCursor = ImGuiMouseCursor_TextInput;
+        SetMouseCursor(ImGuiMouseCursor_TextInput);
 
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
@@ -4977,7 +4983,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
                     const int utf8_cursor_pos = callback_data.CursorPos = state->Stb->cursor;
                     const int utf8_selection_start = callback_data.SelectionStart = state->Stb->select_start;
-                    const int utf8_selection_end = state->Stb->select_end;
+                    const int utf8_selection_end = callback_data.SelectionEnd = state->Stb->select_end;
 
                     // Call user code
                     callback(&callback_data);
@@ -5101,49 +5107,39 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
         // FIXME: This should occur on buf_display but we'd need to maintain cursor/select_start/select_end for UTF-8.
         const char* text_begin = state->TextA.Data;
+        const char* text_end = text_begin + state->CurLenA;
         ImVec2 cursor_offset, select_start_offset;
 
         {
-            // Find lines numbers straddling 'cursor' (slot 0) and 'select_start' (slot 1) positions.
-            const char* searches_input_ptr[2] = { NULL, NULL };
-            int searches_result_line_no[2] = { -1000, -1000 };
-            int searches_remaining = 0;
-            if (render_cursor)
-            {
-                searches_input_ptr[0] = text_begin + state->Stb->cursor;
-                searches_result_line_no[0] = -1;
-                searches_remaining++;
-            }
-            if (render_selection)
-            {
-                searches_input_ptr[1] = text_begin + ImMin(state->Stb->select_start, state->Stb->select_end);
-                searches_result_line_no[1] = -1;
-                searches_remaining++;
-            }
+            // Find lines numbers straddling cursor and selection min position
+            int cursor_line_no = render_cursor ? -1 : -1000;
+            int selmin_line_no = render_selection ? -1 : -1000;
+            const char* cursor_ptr = render_cursor ? text_begin + state->Stb->cursor : NULL;
+            const char* selmin_ptr = render_selection ? text_begin + ImMin(state->Stb->select_start, state->Stb->select_end) : NULL;
 
-            // Iterate all lines to find our line numbers
-            // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
-            searches_remaining += is_multiline ? 1 : 0;
-            int line_count = 0;
-            for (const char* s = text_begin; (s = strchr(s, '\n')) != NULL; s++) // FIXME-OPT: memchr() would be faster?
+            // Count lines and find line number for cursor and selection ends
+            int line_count = 1;
+            if (is_multiline)
             {
-                line_count++;
-                if (searches_result_line_no[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_no[0] = line_count; if (--searches_remaining <= 0) break; }
-                if (searches_result_line_no[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_no[1] = line_count; if (--searches_remaining <= 0) break; }
+                for (const char* s = text_begin; (s = (const char*)memchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
+                {
+                    if (cursor_line_no == -1 && s >= cursor_ptr) { cursor_line_no = line_count; }
+                    if (selmin_line_no == -1 && s >= selmin_ptr) { selmin_line_no = line_count; }
+                    line_count++;
+                }
             }
-            line_count++;
-            if (searches_result_line_no[0] == -1)
-                searches_result_line_no[0] = line_count;
-            if (searches_result_line_no[1] == -1)
-                searches_result_line_no[1] = line_count;
+            if (cursor_line_no == -1)
+                cursor_line_no = line_count;
+            if (selmin_line_no == -1)
+                selmin_line_no = line_count;
 
             // Calculate 2d position by finding the beginning of the line and measuring distance
-            cursor_offset.x = InputTextCalcTextSize(&g, ImStrbol(searches_input_ptr[0], text_begin), searches_input_ptr[0]).x;
-            cursor_offset.y = searches_result_line_no[0] * g.FontSize;
-            if (searches_result_line_no[1] >= 0)
+            cursor_offset.x = InputTextCalcTextSize(&g, ImStrbol(cursor_ptr, text_begin), cursor_ptr).x;
+            cursor_offset.y = cursor_line_no * g.FontSize;
+            if (selmin_line_no >= 0)
             {
-                select_start_offset.x = InputTextCalcTextSize(&g, ImStrbol(searches_input_ptr[1], text_begin), searches_input_ptr[1]).x;
-                select_start_offset.y = searches_result_line_no[1] * g.FontSize;
+                select_start_offset.x = InputTextCalcTextSize(&g, ImStrbol(selmin_ptr, text_begin), selmin_ptr).x;
+                select_start_offset.y = selmin_line_no * g.FontSize;
             }
 
             // Store text height (note that we haven't calculated text width at all, see GitHub issues #383, #1224)

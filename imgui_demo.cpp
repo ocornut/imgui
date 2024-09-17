@@ -7565,7 +7565,8 @@ static void ShowDemoWindowInputs()
             IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
 
             ImGuiMouseCursor current = ImGui::GetMouseCursor();
-            ImGui::Text("Current mouse cursor = %d: %s", current, mouse_cursors_names[current]);
+            const char* cursor_name = (current >= ImGuiMouseCursor_Arrow) && (current < ImGuiMouseCursor_COUNT) ? mouse_cursors_names[current] : "N/A";
+            ImGui::Text("Current mouse cursor = %d: %s", current, cursor_name);
             ImGui::BeginDisabled(true);
             ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", &io.BackendFlags, ImGuiBackendFlags_HasMouseCursors);
             ImGui::EndDisabled();
