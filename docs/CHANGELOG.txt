@@ -70,6 +70,7 @@ Other changes:
   (e.g. in our testing, handling of a 1 MB text buffer is now 3 times faster in VS2022 Debug build).
   This is the first step toward more refactoring. (#7925) [@alektron, @ocornut]
 - InputText: added CJK double-width punctuation to list of separators considered for CTRL+Arrow.
+- Tables: fixes an assertion with tables with borders when clipped by parent. (#6765, #3752, #7428)
 - Misc: Made it accepted to call SetMouseCursor() with any out-of-bound value, as a way to allow
   hacking in custom cursors if desirable.
 - Fonts: fixed ellipsis "..." rendering width miscalculation bug introduced in 1.91.0. (#7976) [@DDeimos]
