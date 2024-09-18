@@ -37,6 +37,17 @@ Dear ImGui is particularly suited to integration in game engines (for tooling), 
  - Efficient runtime and memory consumption.
  - Battle-tested, used by [many major actors in the game industry](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui).
 
+If you are using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager you can download and install Dear ImGui with a single command:
+- Mac and Linux
+```
+./vcpkg install imgui
+```
+- Windows
+```
+.\vcpkg.exe install imgui
+```
+This command will also provide usage instructions for your CMake-based projects.
+
 ### Usage
 
 **The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (imgui*.cpp, imgui*.h). **No specific build process is required**. You can add the .cpp files into your existing project.
