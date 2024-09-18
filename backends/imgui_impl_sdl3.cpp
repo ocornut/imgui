@@ -958,6 +958,8 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
 #endif
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN, (viewport->Flags & ImGuiViewportFlags_TopMost));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "No Title Yet");
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, (int)viewport->Size.x);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, (int)viewport->Size.y);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, (int)viewport->Pos.x);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, (int)viewport->Pos.y);
     SDL_SetPointerProperty(properties, SDL_PROP_WINDOW_CREATE_PARENT_POINTER, vd->ParentWindow);
