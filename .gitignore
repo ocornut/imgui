@@ -62,3 +62,4 @@ examples/example_sdl2_sdlrenderer/example_sdl2_sdlrenderer
 
 ## User Playground
 playground/*
+CMakeSettings.json
