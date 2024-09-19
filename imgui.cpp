@@ -1,4 +1,4 @@
-// dear imgui, v1.91.2
+// dear imgui, v1.91.3 WIP
 // (main code and documentation)
 
 // Help:
@@ -7736,6 +7736,7 @@ void ImGui::PopItemFlag()
 // - Feedback welcome at https://github.com/ocornut/imgui/issues/211
 // - BeginDisabled(false) essentially does nothing useful but is provided to facilitate use of boolean expressions. If you can avoid calling BeginDisabled(False)/EndDisabled() best to avoid it.
 // - Optimized shortcuts instead of PushStyleVar() + PushItemFlag()
+// - Note: mixing up BeginDisabled() and PushItemFlag(ImGuiItemFlags_Disabled) is currently NOT SUPPORTED.
 void ImGui::BeginDisabled(bool disabled)
 {
     ImGuiContext& g = *GImGui;
