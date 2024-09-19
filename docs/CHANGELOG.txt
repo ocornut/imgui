@@ -91,6 +91,7 @@ Docking+Viewports Branch:
 
 - Viewports: fixed an issue where a window manually constrained to the main viewport while crossing
   over main viewport bounds isn't translated properly. (#7985)
+- Backends: SDL2, SDL3, Win32: ensure that ImGuiPlatformMonitor list is available after backend Init call. (#7995)
 - Backends: Win32: fixed direct calls to platform_io.Platform_SetWindowPos()/Platform_SetWindowSize()
   on windows created by application (typically main viewport).
 - Backends: Win32: fixed an issue where a viewport destroyed while clicking would hog
