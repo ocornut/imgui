@@ -28,3 +28,19 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-opengl3-targets.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/imgui-opengl3-targets.cmake")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx9-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx9-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx10-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx10-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx11-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx11-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx12-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx12-targets.cmake")
+endif()
+
