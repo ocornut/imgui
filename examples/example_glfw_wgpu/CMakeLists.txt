@@ -79,6 +79,11 @@ add_executable(example_glfw_wgpu
   ${IMGUI_DIR}/imgui_tables.cpp
   ${IMGUI_DIR}/imgui_widgets.cpp
 )
+IF(NOT EMSCRIPTEN)
+  target_compile_definitions(example_glfw_wgpu PUBLIC
+    "IMGUI_IMPL_WEBGPU_BACKEND_DAWN"
+  )
+endif()
 target_include_directories(example_glfw_wgpu PUBLIC
   ${IMGUI_DIR}
   ${IMGUI_DIR}/backends
