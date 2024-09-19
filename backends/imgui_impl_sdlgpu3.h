@@ -18,7 +18,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 #pragma once
-#include "imgui.h"	// IMGUI_IMPL_API
+#include "imgui.h"  // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
 struct SDL_GPUDevice;
@@ -27,15 +27,15 @@ struct SDL_GPUCommandBuffer;
 struct SDL_GPUTexture;
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool ImGui_ImplSDLGpu_Init(SDL_GPUDevice* device, SDL_Window* window);
-IMGUI_IMPL_API void ImGui_ImplSDLGpu_Shutdown();
-IMGUI_IMPL_API void ImGui_ImplSDLGpu_NewFrame();
-IMGUI_IMPL_API void ImGui_ImplSDLGpu_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* render_target);
+IMGUI_IMPL_API bool ImGui_ImplSDLGPU3_Init(SDL_GPUDevice* device, SDL_Window* window);
+IMGUI_IMPL_API void ImGui_ImplSDLGPU3_Shutdown();
+IMGUI_IMPL_API void ImGui_ImplSDLGPU3_NewFrame();
+IMGUI_IMPL_API void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* render_target);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API bool ImGui_ImplSDLGpu_CreateFontsTexture();
-IMGUI_IMPL_API void ImGui_ImplSDLGpu_DestroyFontsTexture();
-IMGUI_IMPL_API bool ImGui_ImplSDLGpu_CreateDeviceObjects();
-IMGUI_IMPL_API void ImGui_ImplSDLGpu_DestroyDeviceObjects();
+IMGUI_IMPL_API bool ImGui_ImplSDLGPU3_CreateFontsTexture();
+IMGUI_IMPL_API void ImGui_ImplSDLGPU3_DestroyFontsTexture();
+IMGUI_IMPL_API bool ImGui_ImplSDLGPU3_CreateDeviceObjects();
+IMGUI_IMPL_API void ImGui_ImplSDLGPU3_DestroyDeviceObjects();
 
-#endif	// #ifndef IMGUI_DISABLE
+#endif  // #ifndef IMGUI_DISABLE
