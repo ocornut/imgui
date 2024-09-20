@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Scrollbar: Shift+Click always use absolute positionning scroll (which was the default
+  before 1.90.8). (#8002, #7328)
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 
 
