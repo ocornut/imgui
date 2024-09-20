@@ -160,8 +160,8 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
         SDL_Rect    ClipRect;
     };
     BackupSDLRendererState old = {};
-    old.ViewportEnabled = SDL_RenderViewportSet(renderer) == SDL_TRUE;
-    old.ClipEnabled = SDL_RenderClipEnabled(renderer) == SDL_TRUE;
+    old.ViewportEnabled = SDL_RenderViewportSet(renderer);
+    old.ClipEnabled = SDL_RenderClipEnabled(renderer);
     SDL_GetRenderViewport(renderer, &old.Viewport);
     SDL_GetRenderClipRect(renderer, &old.ClipRect);
 
