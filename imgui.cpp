@@ -10227,10 +10227,14 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
 // Default implementation of ImGuiErrorLogCallback that pipe errors to DebugLog: appears in tty + Tools->DebugLog
 void    ImGui::ErrorLogCallbackToDebugLog(void*, const char* fmt, ...)
 {
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     va_list args;
     va_start(args, fmt);
-    ImGui::DebugLogV(fmt, args);
+    DebugLogV(fmt, args);
     va_end(args);
+#else
+    IM_UNUSED(fmt);
+#endif
 }
 
 // Experimental recovery from incorrect usage of BeginXXX/EndXXX/PushXXX/PopXXX calls.
