@@ -43,8 +43,9 @@ Breaking changes:
 
 Other changes:
 
-- Scrollbar: Shift+Click always use absolute positionning scroll (which was the default
-  before 1.90.8). (#8002, #7328)
+- Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
+- Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
+  Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 
 
