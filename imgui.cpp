@@ -10242,7 +10242,6 @@ void    ImGui::ErrorLogCallbackToDebugLog(void*, const char* fmt, ...)
 // Must be called during or before EndFrame().
 // This is generally flawed as we are not necessarily End/Popping things in the right order.
 // FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
-// FIXME: Can't recover from interleaved BeginTabBar/Begin
 void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data)
 {
     // PVS-Studio V1044 is "Loop break conditions do not depend on the number of iterations"
@@ -10273,7 +10272,7 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
 void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data)
 {
     ImGuiContext& g = *GImGui;
-    while (g.CurrentTable && (g.CurrentTable->OuterWindow == g.CurrentWindow || g.CurrentTable->InnerWindow == g.CurrentWindow))
+    while (g.CurrentTable != NULL && g.CurrentTable->InnerWindow == g.CurrentWindow)
     {
         if (log_callback) log_callback(user_data, "Recovered from missing EndTable() in '%s'\n", g.CurrentTable->OuterWindow->Name);
         EndTable();
@@ -10282,7 +10281,7 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiStackSizes* stack_sizes = &g.CurrentWindowStack.back().StackSizesOnBegin;
     IM_ASSERT(window != NULL);
-    while (g.CurrentTabBar != NULL) //-V1044
+    while (g.CurrentTabBar != NULL && g.CurrentTabBar->Window == window) //-V1044
     {
         if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'\n", window->Name);
         EndTabBar();
