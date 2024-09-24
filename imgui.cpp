@@ -3273,7 +3273,7 @@ void ImGui::PopStyleColor(int count)
     ImGuiContext& g = *GImGui;
     if (g.ColorStack.Size < count)
     {
-        IM_ASSERT_USER_ERROR(g.ColorStack.Size > count, "Calling PopStyleColor() too many times!");
+        IM_ASSERT_USER_ERROR(0, "Calling PopStyleColor() too many times!");
         count = g.ColorStack.Size;
     }
     while (count > 0)
@@ -3390,7 +3390,7 @@ void ImGui::PopStyleVar(int count)
     ImGuiContext& g = *GImGui;
     if (g.StyleVarStack.Size < count)
     {
-        IM_ASSERT_USER_ERROR(g.StyleVarStack.Size > count, "Calling PopStyleVar() too many times!");
+        IM_ASSERT_USER_ERROR(0, "Calling PopStyleVar() too many times!");
         count = g.StyleVarStack.Size;
     }
     while (count > 0)
@@ -7907,7 +7907,11 @@ void ImGui::PushFont(ImFont* font)
 void  ImGui::PopFont()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.FontStack.Size > 0);
+    if (g.FontStack.Size <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PopFont() too many times!");
+        return;
+    }
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
     SetCurrentFont(font);
@@ -7930,7 +7934,11 @@ void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 void ImGui::PopItemFlag()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.ItemFlagsStack.Size > 1); // Too many calls to PopItemFlag() - we always leave a 0 at the bottom of the stack.
+    if (g.ItemFlagsStack.Size <= 1)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PopItemFlag() too many times!");
+        return;
+    }
     g.ItemFlagsStack.pop_back();
     g.CurrentItemFlags = g.ItemFlagsStack.back();
 }
@@ -7960,7 +7968,11 @@ void ImGui::BeginDisabled(bool disabled)
 void ImGui::EndDisabled()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.DisabledStackSize > 0);
+    if (g.DisabledStackSize <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling EndDisabled() too many times!");
+        return;
+    }
     g.DisabledStackSize--;
     bool was_disabled = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
     //PopItemFlag();
@@ -7995,14 +8007,21 @@ void ImGui::EndDisabledOverrideReenable()
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     window->DC.TextWrapPosStack.push_back(window->DC.TextWrapPos);
     window->DC.TextWrapPos = wrap_pos_x;
 }
 
 void ImGui::PopTextWrapPos()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->DC.TextWrapPosStack.Size <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PopTextWrapPos() too many times!");
+        return;
+    }
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
     window->DC.TextWrapPosStack.pop_back();
 }
@@ -8435,9 +8454,9 @@ void ImGui::PushFocusScope(ImGuiID id)
 void ImGui::PopFocusScope()
 {
     ImGuiContext& g = *GImGui;
-    if (g.FocusScopeStack.Size == 0)
+    if (g.FocusScopeStack.Size <= 0)
     {
-        IM_ASSERT_USER_ERROR(g.FocusScopeStack.Size > 0, "Calling PopFocusScope() too many times!");
+        IM_ASSERT_USER_ERROR(0, "Calling PopFocusScope() too many times!");
         return;
     }
     g.FocusScopeStack.pop_back();
@@ -8708,7 +8727,11 @@ ImGuiID ImGui::GetIDWithSeed(int n, ImGuiID seed)
 void ImGui::PopID()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    IM_ASSERT(window->IDStack.Size > 1); // Too many PopID(), or could be popping in a wrong/different window?
+    if (window->IDStack.Size <= 1)
+    {
+        IM_ASSERT_USER_ERROR(0, "Too many PopID(), or popping from wrong window?");
+        return;
+    }
     window->IDStack.pop_back();
 }
 
@@ -10424,6 +10447,8 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you call End/EndChild too much?");
         }
     }
+    if (g.CurrentWindowStack.Size >= 1)
+        IM_ASSERT(g.CurrentWindowStack[0].Window->IsFallbackWindow);
 
     IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
 }
@@ -10453,11 +10478,6 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
     {
         ErrorCheckEndWindowRecover(log_callback, user_data);
         ImGuiWindow* window = g.CurrentWindow;
-        if (g.CurrentWindowStack.Size == 1)
-        {
-            IM_ASSERT(window->IsFallbackWindow);
-            break;
-        }
         if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'\n", window->Name);
@@ -10972,7 +10992,13 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
 
 void ImGui::PopItemWidth()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->DC.ItemWidthStack.Size <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling PopTextWrapPos() too many times!");
+        return;
+    }
     window->DC.ItemWidth = window->DC.ItemWidthStack.back();
     window->DC.ItemWidthStack.pop_back();
 }

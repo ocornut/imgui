@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Error Handling: rewired asserts in PopID(), PopFont(), PopItemFlag(), EndDisabled(),
+  PopTextWrapPos(), PopFocusScope(), PopItemWidth() to use IM_ASSERT_USER_ERROR(). (#1651)
 - Windows: BeginChild(): made it possible to call SetNextWindowSize() on a child window
   using ImGuiChildFlags_ResizeX,ImGuiChildFlags_ResizeY in order to override its current
   size. (#1710, #8020)
