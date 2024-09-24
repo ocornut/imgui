@@ -3979,8 +3979,9 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     LogDepthToExpand = LogDepthToExpandDefault = 2;
 
     DebugDrawIdConflictsCount = 0;
-    DebugLogFlags = ImGuiDebugLogFlags_OutputToTTY;
+    DebugLogFlags = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_OutputToTTY;
     DebugLocateId = 0;
+    DebugLogSkippedErrors = 0;
     DebugLogAutoDisableFlags = ImGuiDebugLogFlags_None;
     DebugLogAutoDisableFrames = 0;
     DebugLocateFrames = 0;
@@ -16281,12 +16282,24 @@ static void ShowDebugLogFlag(const char* name, ImGuiDebugLogFlags flags)
     ImGuiContext& g = *GImGui;
     ImVec2 size(ImGui::GetFrameHeight() + g.Style.ItemInnerSpacing.x + ImGui::CalcTextSize(name).x, ImGui::GetFrameHeight());
     SameLineOrWrap(size); // FIXME-LAYOUT: To be done automatically once we rework ItemSize/ItemAdd into ItemLayout.
+
+    bool highlight_errors = (flags == ImGuiDebugLogFlags_EventError && g.DebugLogSkippedErrors > 0);
+    if (highlight_errors)
+        ImGui::PushStyleColor(ImGuiCol_Text, ImLerp(g.Style.Colors[ImGuiCol_Text], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.30f));
     if (ImGui::CheckboxFlags(name, &g.DebugLogFlags, flags) && g.IO.KeyShift && (g.DebugLogFlags & flags) != 0)
     {
         g.DebugLogAutoDisableFrames = 2;
         g.DebugLogAutoDisableFlags |= flags;
     }
-    ImGui::SetItemTooltip("Hold SHIFT when clicking to enable for 2 frames only (useful for spammy log entries)");
+    if (highlight_errors)
+    {
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("%d past errors skipped.", g.DebugLogSkippedErrors);
+    }
+    else
+    {
+        ImGui::SetItemTooltip("Hold SHIFT when clicking to enable for 2 frames only (useful for spammy log entries)");
+    }
 }
 
 void ImGui::ShowDebugLogWindow(bool* p_open)
@@ -16304,6 +16317,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     CheckboxFlags("All", &g.DebugLogFlags, all_enable_flags);
     SetItemTooltip("(except InputRouting which is spammy)");
 
+    ShowDebugLogFlag("Errors", ImGuiDebugLogFlags_EventError);
     ShowDebugLogFlag("ActiveId", ImGuiDebugLogFlags_EventActiveId);
     ShowDebugLogFlag("Clipper", ImGuiDebugLogFlags_EventClipper);
     ShowDebugLogFlag("Focus", ImGuiDebugLogFlags_EventFocus);
@@ -16317,6 +16331,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     {
         g.DebugLogBuf.clear();
         g.DebugLogIndex.clear();
+        g.DebugLogSkippedErrors = 0;
     }
     SameLine();
     if (SmallButton("Copy"))
