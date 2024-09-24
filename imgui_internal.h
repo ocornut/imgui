@@ -28,6 +28,7 @@ Index of this file:
 // [SECTION] Viewport support
 // [SECTION] Settings support
 // [SECTION] Localization support
+// [SECTION] Error handling, State recovery support
 // [SECTION] Metrics, Debug tools
 // [SECTION] Generic context hooks
 // [SECTION] ImGuiContext (main imgui context)
@@ -173,7 +174,7 @@ typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // E
 // Flags
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
-typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow();
+typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for g.LastItemData.StatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
 typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
@@ -186,8 +187,6 @@ typedef int ImGuiTextFlags;             // -> enum ImGuiTextFlags_          // F
 typedef int ImGuiTooltipFlags;          // -> enum ImGuiTooltipFlags_       // Flags: for BeginTooltipEx()
 typedef int ImGuiTypingSelectFlags;     // -> enum ImGuiTypingSelectFlags_  // Flags: for GetTypingSelectRequest()
 typedef int ImGuiWindowRefreshFlags;    // -> enum ImGuiWindowRefreshFlags_ // Flags: for SetNextWindowRefreshPolicy()
-
-typedef void (*ImGuiErrorLogCallback)(void* user_data, const char* fmt, ...);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Context pointer
@@ -237,12 +236,6 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_ASSERT_PARANOID(_EXPR)       IM_ASSERT(_EXPR)
 #else
 #define IM_ASSERT_PARANOID(_EXPR)
-#endif
-
-// Error handling
-// Down the line in some frameworks/languages we would like to have a way to redirect those to the programmer and recover from more faults.
-#ifndef IM_ASSERT_USER_ERROR
-#define IM_ASSERT_USER_ERROR(_EXP,_MSG) IM_ASSERT((_EXP) && _MSG)   // Recoverable User Error
 #endif
 
 // Misc Macros
@@ -1886,6 +1879,17 @@ struct ImGuiLocEntry
     const char*     Text;
 };
 
+//-----------------------------------------------------------------------------
+// [SECTION] Error handling, State recovery support
+//-----------------------------------------------------------------------------
+
+// Macros used by Recoverable Error handling
+// Down the line in some frameworks/languages we would like to have a way to redirect those to the programmer and recover from more faults.
+#ifndef IM_ASSERT_USER_ERROR
+#define IM_ASSERT_USER_ERROR(_EXPR,_MSG)    IM_ASSERT((_EXPR) && _MSG)
+#endif
+
+typedef void (*ImGuiErrorLogCallback)(void* user_data, const char* fmt, ...);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Metrics, Debug Tools
@@ -1895,16 +1899,19 @@ enum ImGuiDebugLogFlags_
 {
     // Event types
     ImGuiDebugLogFlags_None                 = 0,
-    ImGuiDebugLogFlags_EventActiveId        = 1 << 0,
-    ImGuiDebugLogFlags_EventFocus           = 1 << 1,
-    ImGuiDebugLogFlags_EventPopup           = 1 << 2,
-    ImGuiDebugLogFlags_EventNav             = 1 << 3,
-    ImGuiDebugLogFlags_EventClipper         = 1 << 4,
-    ImGuiDebugLogFlags_EventSelection       = 1 << 5,
-    ImGuiDebugLogFlags_EventIO              = 1 << 6,
-    ImGuiDebugLogFlags_EventInputRouting    = 1 << 7,
+    ImGuiDebugLogFlags_EventError           = 1 << 0,   // Error submitted by IM_ASSERT_USER_ERROR()
+    ImGuiDebugLogFlags_EventActiveId        = 1 << 1,
+    ImGuiDebugLogFlags_EventFocus           = 1 << 2,
+    ImGuiDebugLogFlags_EventPopup           = 1 << 3,
+    ImGuiDebugLogFlags_EventNav             = 1 << 4,
+    ImGuiDebugLogFlags_EventClipper         = 1 << 5,
+    ImGuiDebugLogFlags_EventSelection       = 1 << 6,
+    ImGuiDebugLogFlags_EventIO              = 1 << 7,
+    ImGuiDebugLogFlags_EventInputRouting    = 1 << 8,
+    ImGuiDebugLogFlags_EventDocking         = 1 << 9,   // Unused in this branch
+    ImGuiDebugLogFlags_EventViewport        = 1 << 10,  // Unused in this branch
 
-    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting,
+    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
     ImGuiDebugLogFlags_OutputToTTY          = 1 << 20,  // Also send output to TTY
     ImGuiDebugLogFlags_OutputToTestEngine   = 1 << 21,  // Also send output to Test Engine
 };
