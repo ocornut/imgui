@@ -47,11 +47,12 @@ Other changes:
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
+- Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
+  (#8009, #8010) [@blitz-research]
 
 Docking+Viewports Branch:
 
 - Backends: SDL2, SDL3: Fixed building for UWP platforms. (#8008)
-
 
 -----------------------------------------------------------------------
  VERSION 1.91.2 (Released 2024-09-19)

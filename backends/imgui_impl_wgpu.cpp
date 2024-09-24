@@ -259,13 +259,15 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
-    WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+	WGPUShaderSourceWGSL wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+	wgsl_desc.code = { wgsl_source, WGPU_STRLEN };
 #else
+	WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+	wgsl_desc.code = wgsl_source;
 #endif
-    wgsl_desc.code = wgsl_source;
 
     WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
