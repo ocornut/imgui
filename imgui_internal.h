@@ -3419,10 +3419,9 @@ namespace ImGui
     IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
     // Error handling, State Recovery
-    IMGUI_API void          ErrorLogCallbackToDebugLog(void* user_data, const char* fmt, ...);
-    IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
-    IMGUI_API void          ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
     IMGUI_API void          ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
+    IMGUI_API void          ErrorCheckEndFrameRecover();
+    IMGUI_API void          ErrorCheckEndWindowRecover();
     IMGUI_API void          ErrorCheckEndFrameFinalizeErrorTooltip();
     IMGUI_API bool          BeginErrorTooltip();
     IMGUI_API void          EndErrorTooltip();

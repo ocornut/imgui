@@ -8729,7 +8729,7 @@ void ImGui::PopID()
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (window->IDStack.Size <= 1)
     {
-        IM_ASSERT_USER_ERROR(0, "Too many PopID(), or popping from wrong window?");
+        IM_ASSERT_USER_ERROR(0, "Calling PopID() too many times!");
         return;
     }
     window->IDStack.pop_back();
@@ -10415,14 +10415,13 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
 
 static void ImGui::ErrorCheckEndFrameSanityChecks()
 {
-    ImGuiContext& g = *GImGui;
-
     // Verify that io.KeyXXX fields haven't been tampered with. Key mods should not be modified between NewFrame() and EndFrame()
     // One possible reason leading to this assert is that your backends update inputs _AFTER_ NewFrame().
     // It is known that when some modal native windows called mid-frame takes focus away, some backends such as GLFW will
     // send key release events mid-frame. This would normally trigger this assertion and lead to sheared inputs.
     // We silently accommodate for this case by ignoring the case where all io.KeyXXX modifiers were released (aka key_mod_flags == 0),
     // while still correctly asserting on mid-frame key press events.
+    ImGuiContext& g = *GImGui;
     const ImGuiKeyChord key_mods = GetMergedModsFromKeys();
     IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mods);
@@ -10453,85 +10452,80 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
 }
 
-// Default implementation of ImGuiErrorLogCallback that pipe errors to DebugLog: appears in tty + Tools->DebugLog
-void    ImGui::ErrorLogCallbackToDebugLog(void*, const char* fmt, ...)
-{
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-    va_list args;
-    va_start(args, fmt);
-    DebugLogV(fmt, args);
-    va_end(args);
-#else
-    IM_UNUSED(fmt);
-#endif
-}
-
 // Experimental recovery from incorrect usage of BeginXXX/EndXXX/PushXXX/PopXXX calls.
 // Must be called during or before EndFrame().
 // This is generally flawed as we are not necessarily End/Popping things in the right order.
 // FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
-void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data)
+void    ImGui::ErrorCheckEndFrameRecover()
 {
     // PVS-Studio V1044 is "Loop break conditions do not depend on the number of iterations"
     ImGuiContext& g = *GImGui;
     while (g.CurrentWindowStack.Size > 0) //-V1044
     {
-        ErrorCheckEndWindowRecover(log_callback, user_data);
+        ErrorCheckEndWindowRecover();
+        // Recap:
+        // - Begin()/BeginChild() return false to indicate the window is collapsed or fully clipped.
+        // - Always call a matching End() for each Begin() call, regardless of its return value!
+        // - Begin/End and BeginChild/EndChild logic is KNOWN TO BE INCONSISTENT WITH ALL OTHER BEGIN/END FUNCTIONS.
+        // - We will fix that in a future major update.
         ImGuiWindow* window = g.CurrentWindow;
         if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
-            if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'\n", window->Name);
+            IM_ASSERT_USER_ERROR(0, "Missing EndChild()");
             EndChild();
         }
         else
         {
-            if (log_callback) log_callback(user_data, "Recovered from missing End() for '%s'\n", window->Name);
+            IM_ASSERT_USER_ERROR(0, "Missing End()");
             End();
         }
     }
 }
 
 // Must be called before End()/EndChild()
-void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data)
+void    ImGui::ErrorCheckEndWindowRecover()
 {
     ImGuiContext& g = *GImGui;
     while (g.CurrentTable != NULL && g.CurrentTable->InnerWindow == g.CurrentWindow)
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing EndTable() in '%s'\n", g.CurrentTable->OuterWindow->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing EndTable()");
         EndTable();
     }
 
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiStackSizes* stack_sizes = &g.CurrentWindowStack.back().StackSizesOnBegin;
     IM_ASSERT(window != NULL);
+    ImGuiStackSizes* state_in = &g.CurrentWindowStack.back().StackSizesOnBegin;
+
+    // FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
     while (g.CurrentTabBar != NULL && g.CurrentTabBar->Window == window) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing EndTabBar()");
         EndTabBar();
     }
     while (g.CurrentMultiSelect != NULL && g.CurrentMultiSelect->Storage->Window == window)
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing EndMultiSelect() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing EndMultiSelect()");
         EndMultiSelect();
     }
     while (window->DC.TreeDepth > 0)
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing TreePop()");
         TreePop();
     }
-    while (g.GroupStack.Size > stack_sizes->SizeOfGroupStack) //-V1044
+    while (g.GroupStack.Size > state_in->SizeOfGroupStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing EndGroup()");
         EndGroup();
     }
+    IM_ASSERT(g.GroupStack.Size == state_in->SizeOfGroupStack);
     while (window->IDStack.Size > 1)
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing PopID()");
         PopID();
     }
-    while (g.DisabledStackSize > stack_sizes->SizeOfDisabledStack) //-V1044
+    while (g.DisabledStackSize > state_in->SizeOfDisabledStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing EndDisabled() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing EndDisabled()");
         if (g.CurrentItemFlags & ImGuiItemFlags_Disabled)
             EndDisabled();
         else
@@ -10540,29 +10534,30 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
             g.CurrentWindowStack.back().DisabledOverrideReenable = false;
         }
     }
-    while (g.ColorStack.Size > stack_sizes->SizeOfColorStack)
+    IM_ASSERT(g.DisabledStackSize == state_in->SizeOfDisabledStack);
+    while (g.ColorStack.Size > state_in->SizeOfColorStack)
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s\n", window->Name, GetStyleColorName(g.ColorStack.back().Col));
+        IM_ASSERT_USER_ERROR(0, "Missing PopStyleColor()");
         PopStyleColor();
     }
-    while (g.ItemFlagsStack.Size > stack_sizes->SizeOfItemFlagsStack) //-V1044
+    while (g.ItemFlagsStack.Size > state_in->SizeOfItemFlagsStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopItemFlag() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing PopItemFlag()");
         PopItemFlag();
     }
-    while (g.StyleVarStack.Size > stack_sizes->SizeOfStyleVarStack) //-V1044
+    while (g.StyleVarStack.Size > state_in->SizeOfStyleVarStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing PopStyleVar()");
         PopStyleVar();
     }
-    while (g.FontStack.Size > stack_sizes->SizeOfFontStack) //-V1044
+    while (g.FontStack.Size > state_in->SizeOfFontStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopFont() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing PopFont()");
         PopFont();
     }
-    while (g.FocusScopeStack.Size > stack_sizes->SizeOfFocusScopeStack + 1) //-V1044
+    while (g.FocusScopeStack.Size > state_in->SizeOfFocusScopeStack) //-V1044
     {
-        if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'\n", window->Name);
+        IM_ASSERT_USER_ERROR(0, "Missing PopFocusScope()");
         PopFocusScope();
     }
 }
@@ -10996,7 +10991,7 @@ void ImGui::PopItemWidth()
     ImGuiWindow* window = g.CurrentWindow;
     if (window->DC.ItemWidthStack.Size <= 0)
     {
-        IM_ASSERT_USER_ERROR(0, "Calling PopTextWrapPos() too many times!");
+        IM_ASSERT_USER_ERROR(0, "Calling PopItemWidth() too many times!");
         return;
     }
     window->DC.ItemWidth = window->DC.ItemWidthStack.back();
