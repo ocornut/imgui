@@ -1401,6 +1401,11 @@ ImGuiIO::ImGuiIO()
     ConfigDebugBeginReturnValueOnce = false;
     ConfigDebugBeginReturnValueLoop = false;
 
+    ConfigErrorRecovery = true;
+    ConfigErrorRecoveryEnableAssert = true;
+    ConfigErrorRecoveryEnableDebugLog = true;
+    ConfigErrorRecoveryEnableTooltip = true;
+
     // Inputs Behaviors
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
@@ -3978,6 +3983,12 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     LogDepthRef = 0;
     LogDepthToExpand = LogDepthToExpandDefault = 2;
 
+    ErrorCallback = NULL;
+    ErrorCallbackUserData = NULL;
+    ErrorFirst = true;
+    ErrorCountCurrentFrame = 0;
+    StackSizesInBeginForCurrentWindow = NULL;
+
     DebugDrawIdConflictsCount = 0;
     DebugLogFlags = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_OutputToTTY;
     DebugLocateId = 0;
@@ -4211,6 +4222,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
+    g.StackSizesInBeginForCurrentWindow = g.CurrentWindow ? &g.CurrentWindowStack.back().StackSizesInBegin : NULL;
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
     g.CurrentDpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
     if (window)
@@ -5249,6 +5261,10 @@ void ImGui::NewFrame()
     Begin("Debug##Default");
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
+    // Store stack sizes
+    g.ErrorCountCurrentFrame = 0;
+    ErrorRecoveryStoreState(&g.StackSizesInNewFrame);
+
     // [DEBUG] When io.ConfigDebugBeginReturnValue is set, we make Begin()/BeginChild() return false at different level of the window-stack,
     // allowing to validate correct Begin/End behavior in user code.
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
@@ -5467,6 +5483,9 @@ void ImGui::EndFrame()
 
     CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
 
+    // [EXPERIMENTAL] Recover from errors
+    if (g.IO.ConfigErrorRecovery)
+        ErrorRecoveryTryToRecoverState(&g.StackSizesInNewFrame);
     ErrorCheckEndFrameSanityChecks();
     ErrorCheckEndFrameFinalizeErrorTooltip();
 
@@ -6960,12 +6979,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Add to stack
     g.CurrentWindow = window;
-    ImGuiWindowStackData window_stack_data;
+    g.CurrentWindowStack.resize(g.CurrentWindowStack.Size + 1);
+    ImGuiWindowStackData& window_stack_data = g.CurrentWindowStack.back();
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
-    window_stack_data.StackSizesOnBegin.SetToContextState(&g);
     window_stack_data.DisabledOverrideReenable = (flags & ImGuiWindowFlags_Tooltip) && (g.CurrentItemFlags & ImGuiItemFlags_Disabled);
-    g.CurrentWindowStack.push_back(window_stack_data);
+    ErrorRecoveryStoreState(&window_stack_data.StackSizesInBegin);
+    g.StackSizesInBeginForCurrentWindow = &window_stack_data.StackSizesInBegin;
     if (flags & ImGuiWindowFlags_ChildMenu)
         g.BeginMenuDepth++;
 
@@ -7693,7 +7713,11 @@ void ImGui::End()
         g.BeginMenuDepth--;
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    window_stack_data.StackSizesOnBegin.CompareWithContextState(&g);
+
+    // Error handling, state recovery
+    if (g.IO.ConfigErrorRecovery)
+        ErrorRecoveryTryToRecoverWindowState(&window_stack_data.StackSizesInBegin);
+
     g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
@@ -8454,7 +8478,7 @@ void ImGui::PushFocusScope(ImGuiID id)
 void ImGui::PopFocusScope()
 {
     ImGuiContext& g = *GImGui;
-    if (g.FocusScopeStack.Size <= 0)
+    if (g.FocusScopeStack.Size <= g.StackSizesInBeginForCurrentWindow->SizeOfFocusScopeStack)
     {
         IM_ASSERT_USER_ERROR(0, "Calling PopFocusScope() too many times!");
         return;
@@ -10303,9 +10327,10 @@ bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags, ImGuiID own
 // - ErrorCheckUsingSetCursorPosToExtendParentBoundaries()
 // - ErrorCheckNewFrameSanityChecks()
 // - ErrorCheckEndFrameSanityChecks()
-// - ErrorCheckEndFrameRecover()
-// - ErrorCheckEndWindowRecover()
-// - ImGuiStackSizes
+// - ErrorRecoveryStoreState()
+// - ErrorRecoveryTryToRecoverState()
+// - ErrorRecoveryTryToRecoverWindowState()
+// - ErrorLog()
 //-----------------------------------------------------------------------------
 
 // Verify ABI compatibility between caller code and compiled version of Dear ImGui. This helps detects some build issues.
@@ -10404,6 +10429,10 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 #endif
 
+    // Error handling: we do not accept 100% silent recovery! Please contact me if you feel this is getting in your way.
+    if (g.IO.ConfigErrorRecovery)
+        IM_ASSERT(g.IO.ConfigErrorRecoveryEnableAssert || g.IO.ConfigErrorRecoveryEnableDebugLog || g.IO.ConfigErrorRecoveryEnableTooltip || g.ErrorCallback != NULL);
+
     // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
@@ -10426,43 +10455,35 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mods);
 
-    // [EXPERIMENTAL] Recover from errors: You may call this yourself before EndFrame().
-    //ErrorCheckEndFrameRecover();
-
-    // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
-    // to always call End/EndChild even if Begin/BeginChild returns false! (this is unfortunately inconsistent with most other Begin* API).
-    if (g.CurrentWindowStack.Size != 1)
-    {
-        if (g.CurrentWindowStack.Size > 1)
-        {
-            ImGuiWindow* window = g.CurrentWindowStack.back().Window; // <-- This window was not Ended!
-            IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you forget to call End/EndChild?");
-            IM_UNUSED(window);
-            while (g.CurrentWindowStack.Size > 1)
-                End();
-        }
-        else
-        {
-            IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you call End/EndChild too much?");
-        }
-    }
-    if (g.CurrentWindowStack.Size >= 1)
-        IM_ASSERT(g.CurrentWindowStack[0].Window->IsFallbackWindow);
-
-    IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
+    IM_ASSERT(g.CurrentWindowStack.Size == 1);
+    IM_ASSERT(g.CurrentWindowStack[0].Window->IsFallbackWindow);
 }
 
-// Experimental recovery from incorrect usage of BeginXXX/EndXXX/PushXXX/PopXXX calls.
-// Must be called during or before EndFrame().
-// This is generally flawed as we are not necessarily End/Popping things in the right order.
-// FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
-void    ImGui::ErrorCheckEndFrameRecover()
+// Save current stack sizes. Called e.g. by NewFrame() and by Begin() but may be called for manual recovery.
+void ImGui::ErrorRecoveryStoreState(ImGuiErrorRecoveryState* state_out)
+{
+    ImGuiContext& g = *GImGui;
+    state_out->SizeOfWindowStack = (short)g.CurrentWindowStack.Size;
+    state_out->SizeOfIDStack = (short)g.CurrentWindow->IDStack.Size;
+    state_out->SizeOfColorStack = (short)g.ColorStack.Size;
+    state_out->SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
+    state_out->SizeOfFontStack = (short)g.FontStack.Size;
+    state_out->SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
+    state_out->SizeOfGroupStack = (short)g.GroupStack.Size;
+    state_out->SizeOfItemFlagsStack = (short)g.ItemFlagsStack.Size;
+    state_out->SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
+    state_out->SizeOfDisabledStack = (short)g.DisabledStackSize;
+}
+
+// Chosen name "Try to recover" over e.g. "Restore" to suggest this is not a 100% guaranteed recovery.
+// Called by e.g. EndFrame() but may be called for manual recovery.
+// Attempt to recover full window stack.
+void ImGui::ErrorRecoveryTryToRecoverState(const ImGuiErrorRecoveryState* state_in)
 {
     // PVS-Studio V1044 is "Loop break conditions do not depend on the number of iterations"
     ImGuiContext& g = *GImGui;
-    while (g.CurrentWindowStack.Size > 0) //-V1044
+    while (g.CurrentWindowStack.Size > state_in->SizeOfWindowStack) //-V1044
     {
-        ErrorCheckEndWindowRecover();
         // Recap:
         // - Begin()/BeginChild() return false to indicate the window is collapsed or fully clipped.
         // - Always call a matching End() for each Begin() call, regardless of its return value!
@@ -10480,12 +10501,17 @@ void    ImGui::ErrorCheckEndFrameRecover()
             End();
         }
     }
+    if (g.CurrentWindowStack.Size == state_in->SizeOfWindowStack)
+        ErrorRecoveryTryToRecoverWindowState(state_in);
 }
 
-// Must be called before End()/EndChild()
-void    ImGui::ErrorCheckEndWindowRecover()
+// Called by e.g. End() but may be called for manual recovery.
+// Read '// Error Handling [BETA]' block in imgui_internal.h for details.
+// Attempt to recover from incorrect usage of BeginXXX/EndXXX/PushXXX/PopXXX calls.
+void    ImGui::ErrorRecoveryTryToRecoverWindowState(const ImGuiErrorRecoveryState* state_in)
 {
     ImGuiContext& g = *GImGui;
+
     while (g.CurrentTable != NULL && g.CurrentTable->InnerWindow == g.CurrentWindow)
     {
         IM_ASSERT_USER_ERROR(0, "Missing EndTable()");
@@ -10493,8 +10519,6 @@ void    ImGui::ErrorCheckEndWindowRecover()
     }
 
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(window != NULL);
-    ImGuiStackSizes* state_in = &g.CurrentWindowStack.back().StackSizesOnBegin;
 
     // FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
     while (g.CurrentTabBar != NULL && g.CurrentTabBar->Window == window) //-V1044
@@ -10560,45 +10584,52 @@ void    ImGui::ErrorCheckEndWindowRecover()
         IM_ASSERT_USER_ERROR(0, "Missing PopFocusScope()");
         PopFocusScope();
     }
+    //IM_ASSERT(g.FocusScopeStack.Size == state_in->SizeOfFocusScopeStack);
 }
 
-// Save current stack sizes for later compare
-void ImGuiStackSizes::SetToContextState(ImGuiContext* ctx)
+bool    ImGui::ErrorLog(const char* msg)
 {
-    ImGuiContext& g = *ctx;
+    ImGuiContext& g = *GImGui;
+
+    // Output to debug log
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiWindow* window = g.CurrentWindow;
-    SizeOfIDStack = (short)window->IDStack.Size;
-    SizeOfColorStack = (short)g.ColorStack.Size;
-    SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
-    SizeOfFontStack = (short)g.FontStack.Size;
-    SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
-    SizeOfGroupStack = (short)g.GroupStack.Size;
-    SizeOfItemFlagsStack = (short)g.ItemFlagsStack.Size;
-    SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
-    SizeOfDisabledStack = (short)g.DisabledStackSize;
-}
 
-// Compare to detect usage errors
-void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
-{
-    ImGuiContext& g = *ctx;
-    ImGuiWindow* window = g.CurrentWindow;
-    IM_UNUSED(window);
+    if (g.IO.ConfigErrorRecoveryEnableDebugLog)
+    {
+        if (g.ErrorFirst)
+            IMGUI_DEBUG_LOG_ERROR("[imgui-error] (current settings: Assert=%d, Log=%d, Tooltip=%d)\n",
+                g.IO.ConfigErrorRecoveryEnableAssert, g.IO.ConfigErrorRecoveryEnableDebugLog, g.IO.ConfigErrorRecoveryEnableTooltip);
+        IMGUI_DEBUG_LOG_ERROR("[imgui-error] In window '%s': %s\n", window ? window->Name : "NULL", msg);
+    }
+    g.ErrorFirst = false;
 
-    // Window stacks
-    // NOT checking: DC.ItemWidth, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
-    IM_ASSERT(SizeOfIDStack         == window->IDStack.Size     && "PushID/PopID or TreeNode/TreePop Mismatch!");
+    // Output to tooltip
+    if (g.IO.ConfigErrorRecoveryEnableTooltip)
+    {
+        if (BeginErrorTooltip())
+        {
+            if (g.ErrorCountCurrentFrame < 20)
+            {
+                Text("In window '%s': %s", window ? window->Name : "NULL", msg);
+                if (window && (!window->IsFallbackWindow || window->WasActive))
+                    GetForegroundDrawList(window)->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 0, 0, 255));
+            }
+            if (g.ErrorCountCurrentFrame == 20)
+                Text("(and more errors)");
+            // EndFrame() will amend debug buttons to this window, after all errors have been submitted.
+            EndErrorTooltip();
+        }
+        g.ErrorCountCurrentFrame++;
+    }
+#endif
 
-    // Global stacks
-    // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
-    IM_ASSERT(SizeOfGroupStack      == g.GroupStack.Size        && "BeginGroup/EndGroup Mismatch!");
-    IM_ASSERT(SizeOfBeginPopupStack == g.BeginPopupStack.Size   && "BeginPopup/EndPopup or BeginMenu/EndMenu Mismatch!");
-    IM_ASSERT(SizeOfDisabledStack   == g.DisabledStackSize      && "BeginDisabled/EndDisabled Mismatch!");
-    IM_ASSERT(SizeOfItemFlagsStack  >= g.ItemFlagsStack.Size    && "PushItemFlag/PopItemFlag Mismatch!");
-    IM_ASSERT(SizeOfColorStack      >= g.ColorStack.Size        && "PushStyleColor/PopStyleColor Mismatch!");
-    IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
-    IM_ASSERT(SizeOfFontStack       >= g.FontStack.Size         && "PushFont/PopFont Mismatch!");
-    IM_ASSERT(SizeOfFocusScopeStack == g.FocusScopeStack.Size   && "PushFocusScope/PopFocusScope Mismatch!");
+    // Output to callback
+    if (g.ErrorCallback != NULL)
+        g.ErrorCallback(&g, g.ErrorCallbackUserData, msg);
+
+    // Return whether we should assert
+    return g.IO.ConfigErrorRecoveryEnableAssert;
 }
 
 void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
@@ -10623,6 +10654,21 @@ void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
         SameLine();
         if (SmallButton("Open FAQ->About ID Stack System") && g.PlatformIO.Platform_OpenInShellFn != NULL)
             g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
+        EndErrorTooltip();
+    }
+
+    if (g.ErrorCountCurrentFrame > 0 && BeginErrorTooltip()) // Amend at end of frame
+    {
+        Separator();
+        Text("(Hold CTRL and:");
+        SameLine();
+        if (SmallButton("Enable Asserts"))
+            g.IO.ConfigErrorRecoveryEnableAssert = true;
+        //SameLine();
+        //if (SmallButton("Hide Error Tooltips"))
+        //    g.IO.ConfigErrorRecoveryEnableTooltip = false; // Too dangerous
+        SameLine(0, 0);
+        Text(")");
         EndErrorTooltip();
     }
 #endif
