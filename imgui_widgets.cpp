@@ -8159,7 +8159,7 @@ void ImGuiSelectionExternalStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 // This is essentially a thin wrapper to using BeginChild/EndChild with the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
 // Tip: To have a list filling the entire window width, use size.x = -FLT_MIN and pass an non-visible label e.g. "##empty"
 // Tip: If your vertical size is calculated from an item count (e.g. 10 * item_height) consider adding a fractional part to facilitate seeing scrolling boundaries (e.g. 10.25 * item_height).
-bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
+bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg, ImGuiChildFlags child_flags, ImGuiWindowFlags window_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -8196,8 +8196,13 @@ bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
         AlignTextToFramePadding();
     }
 
-    BeginChild(id, frame_bb.GetSize(), ImGuiChildFlags_FrameStyle);
+    BeginChild(id, frame_bb.GetSize(), child_flags, window_flags);
     return true;
+}
+
+bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
+{
+    return BeginListBox(label, size_arg, ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_None);
 }
 
 void ImGui::EndListBox()
