@@ -3978,6 +3978,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     LogDepthRef = 0;
     LogDepthToExpand = LogDepthToExpandDefault = 2;
 
+    DebugDrawIdConflictsCount = 0;
     DebugLogFlags = ImGuiDebugLogFlags_OutputToTTY;
     DebugLocateId = 0;
     DebugLogAutoDisableFlags = ImGuiDebugLogFlags_None;
@@ -5054,7 +5055,8 @@ void ImGui::NewFrame()
         KeepAliveID(g.DragDropPayload.SourceId);
 
     // [DEBUG]
-    g.DebugDrawIdConflicts = 0;
+    if (!g.IO.ConfigDebugHighlightIdConflicts || !g.IO.KeyCtrl) // Count is locked while holding CTRL
+        g.DebugDrawIdConflicts = 0;
     if (g.IO.ConfigDebugHighlightIdConflicts && g.HoveredIdPreviousFrameItemCount > 1)
         g.DebugDrawIdConflicts = g.HoveredIdPreviousFrame;
 
@@ -5461,32 +5463,10 @@ void ImGui::EndFrame()
         return;
     IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
 
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-    if (g.DebugDrawIdConflicts != 0)
-    {
-        PushStyleColor(ImGuiCol_PopupBg, ImLerp(g.Style.Colors[ImGuiCol_PopupBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.10f));
-        if (g.DebugItemPickerActive == false && BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
-        {
-            SeparatorText("MESSAGE FROM DEAR IMGUI");
-            Text("Programmer error: %d visible items with conflicting ID!", g.HoveredIdPreviousFrameItemCount);
-            BulletText("Code should use PushID()/PopID() in loops, or append \"##xx\" to same-label identifiers!");
-            BulletText("Empty label e.g. Button(\"\") == same ID as parent widget/node. Use Button(\"##xx\") instead!");
-            BulletText("Press F1 to open \"FAQ -> About the ID Stack System\" and read details.");
-            BulletText("Press CTRL+P to activate Item Picker and debug-break in item call-stack.");
-            BulletText("Set io.ConfigDebugDetectIdConflicts=false to disable this warning in non-programmers builds.");
-            EndTooltip();
-        }
-        PopStyleColor();
-        if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_P, ImGuiInputFlags_RouteGlobal))
-            DebugStartItemPicker();
-        if (Shortcut(ImGuiKey_F1, ImGuiInputFlags_RouteGlobal) && g.PlatformIO.Platform_OpenInShellFn != NULL)
-            g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
-    }
-#endif
-
     CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
 
     ErrorCheckEndFrameSanityChecks();
+    ErrorCheckEndFrameFinalizeErrorTooltip();
 
     // Notify Platform/OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     ImGuiPlatformImeData* ime_data = &g.PlatformImeData;
@@ -10585,6 +10565,63 @@ void ImGuiStackSizes::CompareWithContextState(ImGuiContext* ctx)
     IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
     IM_ASSERT(SizeOfFontStack       >= g.FontStack.Size         && "PushFont/PopFont Mismatch!");
     IM_ASSERT(SizeOfFocusScopeStack == g.FocusScopeStack.Size   && "PushFocusScope/PopFocusScope Mismatch!");
+}
+
+void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
+{
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+    ImGuiContext& g = *GImGui;
+    if (g.DebugDrawIdConflicts != 0 && g.IO.KeyCtrl == false)
+        g.DebugDrawIdConflictsCount = g.HoveredIdPreviousFrameItemCount;
+    if (g.DebugDrawIdConflicts != 0 && g.DebugItemPickerActive == false && BeginErrorTooltip())
+    {
+        Text("Programmer error: %d visible items with conflicting ID!", g.DebugDrawIdConflictsCount);
+        BulletText("Code should use PushID()/PopID() in loops, or append \"##xx\" to same-label identifiers!");
+        BulletText("Empty label e.g. Button(\"\") == same ID as parent widget/node. Use Button(\"##xx\") instead!");
+        BulletText("Set io.ConfigDebugDetectIdConflicts=false to disable this warning in non-programmers builds.");
+        Separator();
+        Text("(Hold CTRL and: use");
+        SameLine();
+        if (SmallButton("Item Picker"))
+            DebugStartItemPicker();
+        SameLine();
+        Text("to break in item call-stack, or");
+        SameLine();
+        if (SmallButton("Open FAQ->About ID Stack System") && g.PlatformIO.Platform_OpenInShellFn != NULL)
+            g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
+        EndErrorTooltip();
+    }
+#endif
+}
+
+// Pseudo-tooltip. Follow mouse until CTRL is held. When CTRL is held we lock position, allowing to click it.
+bool ImGui::BeginErrorTooltip()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = FindWindowByName("##Tooltip_Error");
+    const bool use_locked_pos = (g.IO.KeyCtrl && window && window->WasActive);
+    PushStyleColor(ImGuiCol_PopupBg, ImLerp(g.Style.Colors[ImGuiCol_PopupBg], ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 0.15f));
+    if (use_locked_pos)
+        SetNextWindowPos(g.ErrorTooltipLockedPos);
+    bool is_visible = Begin("##Tooltip_Error", NULL, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+    PopStyleColor();
+    if (is_visible && g.CurrentWindow->BeginCount == 1)
+    {
+        SeparatorText("MESSAGE FROM DEAR IMGUI");
+        BringWindowToDisplayFront(g.CurrentWindow);
+        BringWindowToFocusFront(g.CurrentWindow);
+        g.ErrorTooltipLockedPos = GetWindowPos();
+    }
+    else if (!is_visible)
+    {
+        End();
+    }
+    return is_visible;
+}
+
+void ImGui::EndErrorTooltip()
+{
+    End();
 }
 
 //-----------------------------------------------------------------------------
