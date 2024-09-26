@@ -3931,6 +3931,9 @@ static void ShowDemoWindowLayout()
         ImGui::SeparatorText("Manual-resize");
         {
             HelpMarker("Drag bottom border to resize. Double-click bottom border to auto-fit to vertical contents.");
+            //if (ImGui::Button("Set Height to 200"))
+            //    ImGui::SetNextWindowSize(ImVec2(-FLT_MIN, 200.0f));
+
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
             if (ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
                 for (int n = 0; n < 10; n++)

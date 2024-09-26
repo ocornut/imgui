@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Windows: BeginChild(): made it possible to call SetNextWindowSize() on a child window
+  using ImGuiChildFlags_ResizeX,ImGuiChildFlags_ResizeY in order to override its current
+  size. (#1710, #8020)
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.

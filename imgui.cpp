@@ -5917,17 +5917,34 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
         window_flags |= ImGuiWindowFlags_NoMove;
     }
 
-    // Forward child flags
-    g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
-    g.NextWindowData.ChildFlags = child_flags;
-
     // Forward size
     // Important: Begin() has special processing to switch condition to ImGuiCond_FirstUseEver for a given axis when ImGuiChildFlags_ResizeXXX is set.
     // (the alternative would to store conditional flags per axis, which is possible but more code)
     const ImVec2 size_avail = GetContentRegionAvail();
     const ImVec2 size_default((child_flags & ImGuiChildFlags_AutoResizeX) ? 0.0f : size_avail.x, (child_flags & ImGuiChildFlags_AutoResizeY) ? 0.0f : size_avail.y);
-    const ImVec2 size = CalcItemSize(size_arg, size_default.x, size_default.y);
+    ImVec2 size = CalcItemSize(size_arg, size_default.x, size_default.y);
+
+    // A SetNextWindowSize() call always has priority (#8020)
+    // (since the code in Begin() never supported SizeVal==0.0f aka auto-resize via SetNextWindowSize() call, we don't support it here for now)
+    // FIXME: We only support ImGuiCond_Always in this path. Supporting other paths would requires to obtain window pointer.
+    if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSize) != 0 && (g.NextWindowData.SizeCond & ImGuiCond_Always) != 0)
+    {
+        if (g.NextWindowData.SizeVal.x > 0.0f)
+        {
+            size.x = g.NextWindowData.SizeVal.x;
+            child_flags &= ~ImGuiChildFlags_ResizeX;
+        }
+        if (g.NextWindowData.SizeVal.y > 0.0f)
+        {
+            size.y = g.NextWindowData.SizeVal.y;
+            child_flags &= ~ImGuiChildFlags_ResizeY;
+        }
+    }
     SetNextWindowSize(size);
+
+    // Forward child flags
+    g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
+    g.NextWindowData.ChildFlags = child_flags;
 
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
     // FIXME: 2023/11/14: commented out shorted version. We had an issue with multiple ### in child window path names, which the trailing hash helped workaround.
