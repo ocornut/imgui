@@ -1258,6 +1258,7 @@ struct IMGUI_API ImGuiErrorRecoveryState
 {
     short   SizeOfWindowStack;
     short   SizeOfIDStack;
+    short   SizeOfTreeStack;
     short   SizeOfColorStack;
     short   SizeOfStyleVarStack;
     short   SizeOfFontStack;

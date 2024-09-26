@@ -10465,6 +10465,7 @@ void ImGui::ErrorRecoveryStoreState(ImGuiErrorRecoveryState* state_out)
     ImGuiContext& g = *GImGui;
     state_out->SizeOfWindowStack = (short)g.CurrentWindowStack.Size;
     state_out->SizeOfIDStack = (short)g.CurrentWindow->IDStack.Size;
+    state_out->SizeOfTreeStack = (short)g.CurrentWindow->DC.TreeDepth; // NOT g.TreeNodeStack.Size which is a partial stack!
     state_out->SizeOfColorStack = (short)g.ColorStack.Size;
     state_out->SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
     state_out->SizeOfFontStack = (short)g.FontStack.Size;
@@ -10531,7 +10532,7 @@ void    ImGui::ErrorRecoveryTryToRecoverWindowState(const ImGuiErrorRecoveryStat
         IM_ASSERT_USER_ERROR(0, "Missing EndMultiSelect()");
         EndMultiSelect();
     }
-    while (window->DC.TreeDepth > 0)
+    while (window->DC.TreeDepth > state_in->SizeOfTreeStack) //-V1044
     {
         IM_ASSERT_USER_ERROR(0, "Missing TreePop()");
         TreePop();
@@ -10542,7 +10543,7 @@ void    ImGui::ErrorRecoveryTryToRecoverWindowState(const ImGuiErrorRecoveryStat
         EndGroup();
     }
     IM_ASSERT(g.GroupStack.Size == state_in->SizeOfGroupStack);
-    while (window->IDStack.Size > 1)
+    while (window->IDStack.Size > state_in->SizeOfIDStack) //-V1044
     {
         IM_ASSERT_USER_ERROR(0, "Missing PopID()");
         PopID();
