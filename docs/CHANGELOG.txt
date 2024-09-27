@@ -43,6 +43,25 @@ Breaking changes:
 
 Other changes:
 
+- Error Handling: Enabled/improved error recovery systems. (#1651, #5654)
+  - Error recovery is not perfect nor guaranteed! It is a feature to ease development.
+  - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
+  - You not are not supposed to rely on it in the course of a normal application run.
+  - Possible usage: facilitate recovery from errors triggered from a scripting language or
+    after specific exceptions handlers. Surface errors to programmers in less agressive ways.
+  - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled
+    when making direct imgui API calls! Otherwise it would severely hinder your ability to
+    catch and correct mistakes!
+  - Added io.ConfigErrorRecovery to enable error recovery support.
+  - Added io.ConfigErrorRecoveryEnableAssert to assert on recoverable errors.
+  - Added io.ConfigErrorRecoveryEnableDebugLog to output to debug log on recoverable errors.
+  - Added io.ConfigErrorRecoveryEnableTooltip to enable displaying an error tooltip on recoverable errors.
+    The tooltip include a way to enable asserts if they were disabled.
+  - All options are enabled by default.
+  - Read https://github.com/ocornut/imgui/wiki/Error-Handling for a bit more details.
+- Windows: BeginChild(): made it possible to call SetNextWindowSize() on a child window
+  using ImGuiChildFlags_ResizeX,ImGuiChildFlags_ResizeY in order to override its current
+  size. (#1710, #8020)
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
