@@ -25,7 +25,7 @@
 // 2024-09-07: Vlad Kirilin: convert to glfw
 
 #include "imgui.h"
-#include "imgui_impl_bgfx_glfw.h"
+#include "imgui_impl_bgfx.h"
 
 // BGFX/BX
 #include <GLFW/glfw3.h>
