@@ -599,8 +599,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Swap Cmd<>Ctrl keys, enable various MacOS style behaviors.");
             ImGui::Text("Also see Style->Rendering for rendering options.");
 
-            // Read https://github.com/ocornut/imgui/wiki/Error-Handling
+            // Also read: https://github.com/ocornut/imgui/wiki/Error-Handling
             ImGui::SeparatorText("Error Handling");
+
             ImGui::Checkbox("io.ConfigErrorRecovery", &io.ConfigErrorRecovery);
             ImGui::SameLine(); HelpMarker(
                 "Options to configure how we handle recoverable errors.\n"
@@ -615,6 +616,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             if (!io.ConfigErrorRecoveryEnableAssert && !io.ConfigErrorRecoveryEnableDebugLog && !io.ConfigErrorRecoveryEnableTooltip)
                 io.ConfigErrorRecoveryEnableAssert = io.ConfigErrorRecoveryEnableDebugLog = io.ConfigErrorRecoveryEnableTooltip = true;
 
+            // Also read: https://github.com/ocornut/imgui/wiki/Debug-Tools
             ImGui::SeparatorText("Debug");
             ImGui::Checkbox("io.ConfigDebugIsDebuggerPresent", &io.ConfigDebugIsDebuggerPresent);
             ImGui::SameLine(); HelpMarker("Enable various tools calling IM_DEBUG_BREAK().\n\nRequires a debugger being attached, otherwise IM_DEBUG_BREAK() options will appear to crash your application.");
@@ -653,6 +655,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.BackendFlags: RendererHasVtxOffset",   &io.BackendFlags, ImGuiBackendFlags_RendererHasVtxOffset);
             ImGui::CheckboxFlags("io.BackendFlags: RendererHasViewports",   &io.BackendFlags, ImGuiBackendFlags_RendererHasViewports);
             ImGui::EndDisabled();
+
             ImGui::TreePop();
             ImGui::Spacing();
         }
