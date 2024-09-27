@@ -10452,6 +10452,8 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     // while still correctly asserting on mid-frame key press events.
     ImGuiContext& g = *GImGui;
     const ImGuiKeyChord key_mods = GetMergedModsFromKeys();
+    IM_UNUSED(g);
+    IM_UNUSED(key_mods);
     IM_ASSERT((key_mods == 0 || g.IO.KeyMods == key_mods) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(key_mods);
 
