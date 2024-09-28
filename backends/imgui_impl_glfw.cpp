@@ -185,9 +185,12 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 }
 
 // Functions
-static ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int key)
+
+// Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
 {
-    switch (key)
+    IM_UNUSED(scancode);
+    switch (keycode)
     {
         case GLFW_KEY_TAB: return ImGuiKey_Tab;
         case GLFW_KEY_LEFT: return ImGuiKey_LeftArrow;
@@ -355,6 +358,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
     io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
 }
 
+// FIXME: should this be baked into ImGui_ImplGlfw_KeyToImGuiKey()? then what about the values passed to io.SetKeyEventNativeData()?
 static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
 {
 #if GLFW_HAS_GETKEYNAME && !defined(EMSCRIPTEN_USE_EMBEDDED_GLFW3)
@@ -402,7 +406,7 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, i
     keycode = ImGui_ImplGlfw_TranslateUntranslatedKey(keycode, scancode);
 
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(keycode);
+    ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(keycode, scancode);
     io.AddKeyEvent(imgui_key, (action == GLFW_PRESS));
     io.SetKeyEventNativeData(imgui_key, keycode, scancode); // To support legacy indexing (<1.87 user code)
 }

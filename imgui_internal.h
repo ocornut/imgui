@@ -1,4 +1,4 @@
-// dear imgui, v1.91.2 WIP
+// dear imgui, v1.91.3 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -28,6 +28,7 @@ Index of this file:
 // [SECTION] Viewport support
 // [SECTION] Settings support
 // [SECTION] Localization support
+// [SECTION] Error handling, State recovery support
 // [SECTION] Metrics, Debug tools
 // [SECTION] Generic context hooks
 // [SECTION] ImGuiContext (main imgui context)
@@ -131,6 +132,7 @@ struct ImGuiContext;                // Main Dear ImGui context
 struct ImGuiContextHook;            // Hook for extensions like ImGuiTestEngine
 struct ImGuiDataVarInfo;            // Variable information (e.g. to access style variables from an enum)
 struct ImGuiDataTypeInfo;           // Type information associated to a ImGuiDataType enum
+struct ImGuiErrorRecoveryState;     // Storage of stack sizes for error handling and recovery
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
 struct ImGuiInputTextDeactivateData;// Short term storage to backup text of a deactivating InputText() while another is stealing active id
@@ -147,7 +149,6 @@ struct ImGuiOldColumnData;          // Storage data for a single column for lega
 struct ImGuiOldColumns;             // Storage data for a columns set for legacy Columns() api
 struct ImGuiPopupData;              // Storage for current popup stack
 struct ImGuiSettingsHandler;        // Storage for one type registered in the .ini file
-struct ImGuiStackSizes;             // Storage of stack sizes for debugging/asserting
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
 struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
@@ -173,7 +174,7 @@ typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // E
 // Flags
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
-typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow();
+typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for g.LastItemData.StatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
 typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
@@ -186,8 +187,6 @@ typedef int ImGuiTextFlags;             // -> enum ImGuiTextFlags_          // F
 typedef int ImGuiTooltipFlags;          // -> enum ImGuiTooltipFlags_       // Flags: for BeginTooltipEx()
 typedef int ImGuiTypingSelectFlags;     // -> enum ImGuiTypingSelectFlags_  // Flags: for GetTypingSelectRequest()
 typedef int ImGuiWindowRefreshFlags;    // -> enum ImGuiWindowRefreshFlags_ // Flags: for SetNextWindowRefreshPolicy()
-
-typedef void (*ImGuiErrorLogCallback)(void* user_data, const char* fmt, ...);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Context pointer
@@ -218,6 +217,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #else
 #define IMGUI_DEBUG_LOG(...)            ((void)0)
 #endif
+#define IMGUI_DEBUG_LOG_ERROR(...)      do { ImGuiContext& g2 = *GImGui; if (g2.DebugLogFlags & ImGuiDebugLogFlags_EventError) IMGUI_DEBUG_LOG(__VA_ARGS__); else g2.DebugLogSkippedErrors++; } while (0)
 #define IMGUI_DEBUG_LOG_ACTIVEID(...)   do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventActiveId)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_FOCUS(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventFocus)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_POPUP(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventPopup)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
@@ -237,12 +237,6 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_ASSERT_PARANOID(_EXPR)       IM_ASSERT(_EXPR)
 #else
 #define IM_ASSERT_PARANOID(_EXPR)
-#endif
-
-// Error handling
-// Down the line in some frameworks/languages we would like to have a way to redirect those to the programmer and recover from more faults.
-#ifndef IM_ASSERT_USER_ERROR
-#define IM_ASSERT_USER_ERROR(_EXP,_MSG) IM_ASSERT((_EXP) && _MSG)   // Recoverable User Error
 #endif
 
 // Misc Macros
@@ -834,7 +828,7 @@ enum ImGuiDataTypePrivate_
 enum ImGuiItemFlagsPrivate_
 {
     // Controlled by user
-    ImGuiItemFlags_Disabled                 = 1 << 10, // false     // Disable interactions (DOES NOT affect visuals, see BeginDisabled()/EndDisabled() for full disable feature, and github #211).
+    ImGuiItemFlags_Disabled                 = 1 << 10, // false     // Disable interactions (DOES NOT affect visuals. DO NOT mix direct use of this with BeginDisabled(). See BeginDisabled()/EndDisabled() for full disable feature, and github #211).
     ImGuiItemFlags_ReadOnly                 = 1 << 11, // false     // [ALPHA] Allow hovering interactions but underlying value is not changed.
     ImGuiItemFlags_MixedValue               = 1 << 12, // false     // [BETA] Represent a mixed/indeterminate value, generally multi-selection where values differ. Currently only supported by Checkbox() (later should support all sorts of widgets)
     ImGuiItemFlags_NoWindowHoverableCheck   = 1 << 13, // false     // Disable hoverable check in ItemHoverable()
@@ -1259,9 +1253,12 @@ struct ImGuiTreeNodeStackData
     ImRect                  NavRect;    // Used for nav landing
 };
 
-struct IMGUI_API ImGuiStackSizes
+// sizeof() = 20
+struct IMGUI_API ImGuiErrorRecoveryState
 {
+    short   SizeOfWindowStack;
     short   SizeOfIDStack;
+    short   SizeOfTreeStack;
     short   SizeOfColorStack;
     short   SizeOfStyleVarStack;
     short   SizeOfFontStack;
@@ -1271,18 +1268,16 @@ struct IMGUI_API ImGuiStackSizes
     short   SizeOfBeginPopupStack;
     short   SizeOfDisabledStack;
 
-    ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
-    void SetToContextState(ImGuiContext* ctx);
-    void CompareWithContextState(ImGuiContext* ctx);
+    ImGuiErrorRecoveryState() { memset(this, 0, sizeof(*this)); }
 };
 
 // Data saved for each window pushed into the stack
 struct ImGuiWindowStackData
 {
-    ImGuiWindow*        Window;
-    ImGuiLastItemData   ParentLastItemDataBackup;
-    ImGuiStackSizes     StackSizesOnBegin;          // Store size of various stacks for asserting
-    bool                DisabledOverrideReenable;   // Non-child window override disabled flag
+    ImGuiWindow*            Window;
+    ImGuiLastItemData       ParentLastItemDataBackup;
+    ImGuiErrorRecoveryState StackSizesInBegin;          // Store size of various stacks for asserting
+    bool                    DisabledOverrideReenable;   // Non-child window override disabled flag
 };
 
 struct ImGuiShrinkWidthItem
@@ -1885,6 +1880,21 @@ struct ImGuiLocEntry
     const char*     Text;
 };
 
+//-----------------------------------------------------------------------------
+// [SECTION] Error handling, State recovery support
+//-----------------------------------------------------------------------------
+
+// Macros used by Recoverable Error handling
+// - Only dispatch error if _EXPR: evaluate as assert (similar to an assert macro).
+// - The message will always be a string literal, in order to increase likelihood of being display by an assert handler.
+// - See 'Demo->Configuration->Error Handling' and ImGuiIO definitions for details on error handling.
+// - Read https://github.com/ocornut/imgui/wiki/Error-Handling for details on error handling.
+#ifndef IM_ASSERT_USER_ERROR
+#define IM_ASSERT_USER_ERROR(_EXPR,_MSG)    do { if (!(_EXPR) && ImGui::ErrorLog(_MSG)) { IM_ASSERT((_EXPR) && _MSG); } } while (0)    // Recoverable User Error
+#endif
+
+// The error callback is currently not public, as it is expected that only advanced users will rely on it.
+typedef void (*ImGuiErrorCallback)(ImGuiContext* ctx, void* user_data, const char* msg); // Function signature for g.ErrorCallback
 
 //-----------------------------------------------------------------------------
 // [SECTION] Metrics, Debug Tools
@@ -1894,16 +1904,19 @@ enum ImGuiDebugLogFlags_
 {
     // Event types
     ImGuiDebugLogFlags_None                 = 0,
-    ImGuiDebugLogFlags_EventActiveId        = 1 << 0,
-    ImGuiDebugLogFlags_EventFocus           = 1 << 1,
-    ImGuiDebugLogFlags_EventPopup           = 1 << 2,
-    ImGuiDebugLogFlags_EventNav             = 1 << 3,
-    ImGuiDebugLogFlags_EventClipper         = 1 << 4,
-    ImGuiDebugLogFlags_EventSelection       = 1 << 5,
-    ImGuiDebugLogFlags_EventIO              = 1 << 6,
-    ImGuiDebugLogFlags_EventInputRouting    = 1 << 7,
+    ImGuiDebugLogFlags_EventError           = 1 << 0,   // Error submitted by IM_ASSERT_USER_ERROR()
+    ImGuiDebugLogFlags_EventActiveId        = 1 << 1,
+    ImGuiDebugLogFlags_EventFocus           = 1 << 2,
+    ImGuiDebugLogFlags_EventPopup           = 1 << 3,
+    ImGuiDebugLogFlags_EventNav             = 1 << 4,
+    ImGuiDebugLogFlags_EventClipper         = 1 << 5,
+    ImGuiDebugLogFlags_EventSelection       = 1 << 6,
+    ImGuiDebugLogFlags_EventIO              = 1 << 7,
+    ImGuiDebugLogFlags_EventInputRouting    = 1 << 8,
+    ImGuiDebugLogFlags_EventDocking         = 1 << 9,   // Unused in this branch
+    ImGuiDebugLogFlags_EventViewport        = 1 << 10,  // Unused in this branch
 
-    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventActiveId  | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting,
+    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
     ImGuiDebugLogFlags_OutputToTTY          = 1 << 20,  // Also send output to TTY
     ImGuiDebugLogFlags_OutputToTestEngine   = 1 << 21,  // Also send output to Test Engine
 };
@@ -2258,8 +2271,8 @@ struct ImGuiContext
     ImGuiComboPreviewData   ComboPreviewData;
     ImRect                  WindowResizeBorderExpectedRect;     // Expected border rect, switch to relative edit if moving
     bool                    WindowResizeRelativeMode;
-    short                   ScrollbarSeekMode;                  // 0: relative, -1/+1: prev/next page.
-    float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
+    short                   ScrollbarSeekMode;                  // 0: scroll to clicked location, -1/+1: prev/next page.
+    float                   ScrollbarClickDeltaToGrabCenter;    // When scrolling to mouse location: distance between mouse and center of grab box, normalized in parent space.
     float                   SliderGrabClickOffset;
     float                   SliderCurrentAccum;                 // Accumulated slider delta when using navigation controls.
     bool                    SliderCurrentAccumDirty;            // Has the accumulated slider delta changed since last time we tried to apply it?
@@ -2304,11 +2317,22 @@ struct ImGuiContext
     int                     LogDepthToExpand;
     int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
 
+    // Error Handling
+    ImGuiErrorCallback      ErrorCallback;                      // = NULL. May be exposed in public API eventually.
+    void*                   ErrorCallbackUserData;              // = NULL
+    ImVec2                  ErrorTooltipLockedPos;
+    bool                    ErrorFirst;
+    int                     ErrorCountCurrentFrame;             // [Internal] Number of errors submitted this frame.
+    ImGuiErrorRecoveryState StackSizesInNewFrame;               // [Internal]
+    ImGuiErrorRecoveryState*StackSizesInBeginForCurrentWindow;  // [Internal]
+
     // Debug Tools
     // (some of the highly frequently used data are interleaved in other structures above: DebugBreakXXX fields, DebugHookIdInfo, DebugLocateId etc.)
+    int                     DebugDrawIdConflictsCount;          // Locked count (preserved when holding CTRL)
     ImGuiDebugLogFlags      DebugLogFlags;
     ImGuiTextBuffer         DebugLogBuf;
     ImGuiTextIndex          DebugLogIndex;
+    int                     DebugLogSkippedErrors;
     ImGuiDebugLogFlags      DebugLogAutoDisableFlags;
     ImU8                    DebugLogAutoDisableFrames;
     ImU8                    DebugLocateFrames;                  // For DebugLocateItemOnHover(). This is used together with DebugLocateId which is in a hot/cached spot above.
@@ -2335,210 +2359,7 @@ struct ImGuiContext
     ImVector<char>          TempBuffer;                         // Temporary text buffer
     char                    TempKeychordName[64];
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas)
-    {
-        IO.Ctx = this;
-        InputTextState.Ctx = this;
-
-        Initialized = false;
-        FontAtlasOwnedByContext = shared_font_atlas ? false : true;
-        Font = NULL;
-        FontSize = FontBaseSize = FontScale = CurrentDpiScale = 0.0f;
-        IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
-        Time = 0.0f;
-        FrameCount = 0;
-        FrameCountEnded = FrameCountRendered = -1;
-        WithinFrameScope = WithinFrameScopeWithImplicitWindow = WithinEndChild = false;
-        GcCompactAll = false;
-        TestEngineHookItems = false;
-        TestEngine = NULL;
-        memset(ContextName, 0, sizeof(ContextName));
-
-        InputEventsNextMouseSource = ImGuiMouseSource_Mouse;
-        InputEventsNextEventId = 1;
-
-        WindowsActiveCount = 0;
-        CurrentWindow = NULL;
-        HoveredWindow = NULL;
-        HoveredWindowUnderMovingWindow = NULL;
-        HoveredWindowBeforeClear = NULL;
-        MovingWindow = NULL;
-        WheelingWindow = NULL;
-        WheelingWindowStartFrame = WheelingWindowScrolledFrame = -1;
-        WheelingWindowReleaseTimer = 0.0f;
-
-        DebugDrawIdConflicts = 0;
-        DebugHookIdInfo = 0;
-        HoveredId = HoveredIdPreviousFrame = 0;
-        HoveredIdPreviousFrameItemCount = 0;
-        HoveredIdAllowOverlap = false;
-        HoveredIdIsDisabled = false;
-        HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
-        ItemUnclipByLog = false;
-        ActiveId = 0;
-        ActiveIdIsAlive = 0;
-        ActiveIdTimer = 0.0f;
-        ActiveIdIsJustActivated = false;
-        ActiveIdAllowOverlap = false;
-        ActiveIdNoClearOnFocusLoss = false;
-        ActiveIdHasBeenPressedBefore = false;
-        ActiveIdHasBeenEditedBefore = false;
-        ActiveIdHasBeenEditedThisFrame = false;
-        ActiveIdFromShortcut = false;
-        ActiveIdClickOffset = ImVec2(-1, -1);
-        ActiveIdWindow = NULL;
-        ActiveIdSource = ImGuiInputSource_None;
-        ActiveIdMouseButton = -1;
-        ActiveIdPreviousFrame = 0;
-        ActiveIdPreviousFrameIsAlive = false;
-        ActiveIdPreviousFrameHasBeenEditedBefore = false;
-        ActiveIdPreviousFrameWindow = NULL;
-        LastActiveId = 0;
-        LastActiveIdTimer = 0.0f;
-
-        LastKeyboardKeyPressTime = LastKeyModsChangeTime = LastKeyModsChangeFromNoneTime = -1.0;
-
-        ActiveIdUsingNavDirMask = 0x00;
-        ActiveIdUsingAllKeyboardKeys = false;
-
-        CurrentFocusScopeId = 0;
-        CurrentItemFlags = ImGuiItemFlags_None;
-        DebugShowGroupRects = false;
-
-        NavWindow = NULL;
-        NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = 0;
-        NavLayer = ImGuiNavLayer_Main;
-        NavNextActivateId = 0;
-        NavActivateFlags = NavNextActivateFlags = ImGuiActivateFlags_None;
-        NavHighlightActivatedId = 0;
-        NavHighlightActivatedTimer = 0.0f;
-        NavInputSource = ImGuiInputSource_Keyboard;
-        NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
-        NavIdIsAlive = false;
-        NavMousePosDirty = false;
-        NavDisableHighlight = true;
-        NavDisableMouseHover = false;
-
-        NavAnyRequest = false;
-        NavInitRequest = false;
-        NavInitRequestFromMove = false;
-        NavMoveSubmitted = false;
-        NavMoveScoringItems = false;
-        NavMoveForwardToNextFrame = false;
-        NavMoveFlags = ImGuiNavMoveFlags_None;
-        NavMoveScrollFlags = ImGuiScrollFlags_None;
-        NavMoveKeyMods = ImGuiMod_None;
-        NavMoveDir = NavMoveDirForDebug = NavMoveClipDir = ImGuiDir_None;
-        NavScoringDebugCount = 0;
-        NavTabbingDir = 0;
-        NavTabbingCounter = 0;
-
-        NavJustMovedFromFocusScopeId = NavJustMovedToId = NavJustMovedToFocusScopeId = 0;
-        NavJustMovedToKeyMods = ImGuiMod_None;
-        NavJustMovedToIsTabbing = false;
-        NavJustMovedToHasSelectionData = false;
-
-        // All platforms use Ctrl+Tab but Ctrl<>Super are swapped on Mac...
-        // FIXME: Because this value is stored, it annoyingly interfere with toggling io.ConfigMacOSXBehaviors updating this..
-        ConfigNavWindowingKeyNext = IO.ConfigMacOSXBehaviors ? (ImGuiMod_Super | ImGuiKey_Tab) : (ImGuiMod_Ctrl | ImGuiKey_Tab);
-        ConfigNavWindowingKeyPrev = IO.ConfigMacOSXBehaviors ? (ImGuiMod_Super | ImGuiMod_Shift | ImGuiKey_Tab) : (ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab);
-        NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
-        NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
-        NavWindowingToggleLayer = false;
-        NavWindowingToggleKey = ImGuiKey_None;
-
-        DimBgRatio = 0.0f;
-
-        DragDropActive = DragDropWithinSource = DragDropWithinTarget = false;
-        DragDropSourceFlags = ImGuiDragDropFlags_None;
-        DragDropSourceFrameCount = -1;
-        DragDropMouseButton = -1;
-        DragDropTargetId = 0;
-        DragDropAcceptFlags = ImGuiDragDropFlags_None;
-        DragDropAcceptIdCurrRectSurface = 0.0f;
-        DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
-        DragDropAcceptFrameCount = -1;
-        DragDropHoldJustPressedId = 0;
-        memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
-
-        ClipperTempDataStacked = 0;
-
-        CurrentTable = NULL;
-        TablesTempDataStacked = 0;
-        CurrentTabBar = NULL;
-        CurrentMultiSelect = NULL;
-        MultiSelectTempDataStacked = 0;
-
-        HoverItemDelayId = HoverItemDelayIdPreviousFrame = HoverItemUnlockedStationaryId = HoverWindowUnlockedStationaryId = 0;
-        HoverItemDelayTimer = HoverItemDelayClearTimer = 0.0f;
-
-        MouseCursor = ImGuiMouseCursor_Arrow;
-        MouseStationaryTimer = 0.0f;
-
-        TempInputId = 0;
-        memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
-        BeginMenuDepth = BeginComboDepth = 0;
-        ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;
-        ColorEditCurrentID = ColorEditSavedID = 0;
-        ColorEditSavedHue = ColorEditSavedSat = 0.0f;
-        ColorEditSavedColor = 0;
-        WindowResizeRelativeMode = false;
-        ScrollbarSeekMode = 0;
-        ScrollbarClickDeltaToGrabCenter = 0.0f;
-        SliderGrabClickOffset = 0.0f;
-        SliderCurrentAccum = 0.0f;
-        SliderCurrentAccumDirty = false;
-        DragCurrentAccumDirty = false;
-        DragCurrentAccum = 0.0f;
-        DragSpeedDefaultRatio = 1.0f / 100.0f;
-        DisabledAlphaBackup = 0.0f;
-        DisabledStackSize = 0;
-        LockMarkEdited = 0;
-        TooltipOverrideCount = 0;
-
-        PlatformImeData.InputPos = ImVec2(0.0f, 0.0f);
-        PlatformImeDataPrev.InputPos = ImVec2(-1.0f, -1.0f); // Different to ensure initial submission
-
-        SettingsLoaded = false;
-        SettingsDirtyTimer = 0.0f;
-        HookIdNext = 0;
-
-        memset(LocalizationTable, 0, sizeof(LocalizationTable));
-
-        LogEnabled = false;
-        LogType = ImGuiLogType_None;
-        LogNextPrefix = LogNextSuffix = NULL;
-        LogFile = NULL;
-        LogLinePosY = FLT_MAX;
-        LogLineFirstItem = false;
-        LogDepthRef = 0;
-        LogDepthToExpand = LogDepthToExpandDefault = 2;
-
-        DebugLogFlags = ImGuiDebugLogFlags_OutputToTTY;
-        DebugLocateId = 0;
-        DebugLogAutoDisableFlags = ImGuiDebugLogFlags_None;
-        DebugLogAutoDisableFrames = 0;
-        DebugLocateFrames = 0;
-        DebugBeginReturnValueCullDepth = -1;
-        DebugItemPickerActive = false;
-        DebugItemPickerMouseButton = ImGuiMouseButton_Left;
-        DebugItemPickerBreakId = 0;
-        DebugFlashStyleColorTime = 0.0f;
-        DebugFlashStyleColorIdx = ImGuiCol_COUNT;
-
-        // Same as DebugBreakClearData(). Those fields are scattered in their respective subsystem to stay in hot-data locations
-        DebugBreakInWindow = 0;
-        DebugBreakInTable = 0;
-        DebugBreakInLocateId = false;
-        DebugBreakKeyChord = ImGuiKey_Pause;
-        DebugBreakInShortcutRouting = ImGuiKey_None;
-
-        memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
-        FramerateSecPerFrameIdx = FramerateSecPerFrameCount = 0;
-        FramerateSecPerFrameAccum = 0.0f;
-        WantCaptureMouseNextFrame = WantCaptureKeyboardNextFrame = WantTextInputNextFrame = -1;
-        memset(TempKeychordName, 0, sizeof(TempKeychordName));
-    }
+    ImGuiContext(ImFontAtlas* shared_font_atlas);
 };
 
 //-----------------------------------------------------------------------------
@@ -2761,9 +2582,10 @@ struct ImGuiTabItem
     ImGuiTabItem()      { memset(this, 0, sizeof(*this)); LastFrameVisible = LastFrameSelected = -1; RequestedWidth = -1.0f; NameOffset = -1; BeginOrder = IndexDuringLayout = -1; }
 };
 
-// Storage for a tab bar (sizeof() 152 bytes)
+// Storage for a tab bar (sizeof() 160 bytes)
 struct IMGUI_API ImGuiTabBar
 {
+    ImGuiWindow*        Window;
     ImVector<ImGuiTabItem> Tabs;
     ImGuiTabBarFlags    Flags;
     ImGuiID             ID;                     // Zero for tab-bars used by docking
@@ -3606,11 +3428,18 @@ namespace ImGui
     IMGUI_API void          GcCompactTransientWindowBuffers(ImGuiWindow* window);
     IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
+    // Error handling, State Recovery
+    IMGUI_API bool          ErrorLog(const char* msg);
+    IMGUI_API void          ErrorRecoveryStoreState(ImGuiErrorRecoveryState* state_out);
+    IMGUI_API void          ErrorRecoveryTryToRecoverState(const ImGuiErrorRecoveryState* state_in);
+    IMGUI_API void          ErrorRecoveryTryToRecoverWindowState(const ImGuiErrorRecoveryState* state_in);
+    IMGUI_API void          ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
+    IMGUI_API void          ErrorCheckEndFrameFinalizeErrorTooltip();
+    IMGUI_API bool          BeginErrorTooltip();
+    IMGUI_API void          EndErrorTooltip();
+
     // Debug Tools
     IMGUI_API void          DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size); // size >= 0 : alloc, size = -1 : free
-    IMGUI_API void          ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
-    IMGUI_API void          ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, void* user_data = NULL);
-    IMGUI_API void          ErrorCheckUsingSetCursorPosToExtendParentBoundaries();
     IMGUI_API void          DebugDrawCursorPos(ImU32 col = IM_COL32(255, 0, 0, 255));
     IMGUI_API void          DebugDrawLineExtents(ImU32 col = IM_COL32(255, 0, 0, 255));
     IMGUI_API void          DebugDrawItemRect(ImU32 col = IM_COL32(255, 0, 0, 255));
@@ -3698,7 +3527,7 @@ extern const char*  ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiI
 // In IMGUI_VERSION_NUM >= 18934: changed IMGUI_TEST_ENGINE_ITEM_ADD(bb,id) to IMGUI_TEST_ENGINE_ITEM_ADD(id,bb,item_data);
 #define IMGUI_TEST_ENGINE_ITEM_ADD(_ID,_BB,_ITEM_DATA)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemAdd(&g, _ID, _BB, _ITEM_DATA)    // Register item bounding box
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemInfo(&g, _ID, _LABEL, _FLAGS)    // Register item label and status flags (optional)
-#define IMGUI_TEST_ENGINE_LOG(_FMT,...)                     if (g.TestEngineHookItems) ImGuiTestEngineHook_Log(&g, _FMT, __VA_ARGS__)           // Custom log entry from user land into test log
+#define IMGUI_TEST_ENGINE_LOG(_FMT,...)                     ImGuiTestEngineHook_Log(&g, _FMT, __VA_ARGS__)                                      // Custom log entry from user land into test log
 #else
 #define IMGUI_TEST_ENGINE_ITEM_ADD(_BB,_ID)                 ((void)0)
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      ((void)g)

@@ -1,4 +1,4 @@
-// dear imgui, v1.91.2 WIP
+// dear imgui, v1.91.3 WIP
 // (headers)
 
 // Help:
@@ -28,8 +28,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.91.2 WIP"
-#define IMGUI_VERSION_NUM   19115
+#define IMGUI_VERSION       "1.91.3 WIP"
+#define IMGUI_VERSION_NUM   19123
 #define IMGUI_HAS_TABLE
 
 /*
@@ -888,7 +888,7 @@ namespace ImGui
     // - Disable all user interactions and dim items visuals (applying style.DisabledAlpha over current colors)
     // - Those can be nested but it cannot be used to enable an already disabled section (a single BeginDisabled(true) in the stack is enough to keep everything disabled)
     // - Tooltips windows by exception are opted out of disabling.
-    // - BeginDisabled(false) essentially does nothing useful but is provided to facilitate use of boolean expressions. If you can avoid calling BeginDisabled(False)/EndDisabled() best to avoid it.
+    // - BeginDisabled(false)/EndDisabled() essentially does nothing but is provided to facilitate use of boolean expressions (as a micro-optimization: if you have tens of thousands of BeginDisabled(false)/EndDisabled() pairs, you might want to reformulate your code to avoid making those calls)
     IMGUI_API void          BeginDisabled(bool disabled = true);
     IMGUI_API void          EndDisabled();
 
@@ -2250,6 +2250,7 @@ struct ImGuiIO
     bool        ConfigDragClickToInputText;     // = false          // [BETA] Enable turning DragXXX widgets into text input with a simple mouse click-release (without moving). Not desirable on devices without a keyboard.
     bool        ConfigWindowsResizeFromEdges;   // = true           // Enable resizing of windows from their edges and from the lower-left corner. This requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback. (This used to be a per-window ImGuiWindowFlags_ResizeFromAnySide flag)
     bool        ConfigWindowsMoveFromTitleBarOnly; // = false       // Enable allowing to move windows only when clicking on their title bar. Does not apply to windows without a title bar.
+    bool        ConfigScrollbarScrollByPage;    // = true           // Enable scrolling page by page when clicking outside the scrollbar grab. When disabled, always scroll to clicked location. When enabled, Shift+Click scrolls to clicked location.
     float       ConfigMemoryCompactTimer;       // = 60.0f          // Timer (in seconds) to free transient windows/tables memory buffers when unused. Set to -1.0f to disable.
 
     // Inputs Behaviors
@@ -2263,6 +2264,23 @@ struct ImGuiIO
     //------------------------------------------------------------------
     // Debug options
     //------------------------------------------------------------------
+
+    // Options to configure how we handle recoverable errors [EXPERIMENTAL]
+    // - Error recovery is not perfect nor guaranteed! It is a feature to ease development.
+    // - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
+    // - You not are not supposed to rely on it in the course of a normal application run.
+    // - Possible usage: facilitate recovery from errors triggered from a scripting language or after specific exceptions handlers.
+    // - Always ensure that on programmers seat you have at minimum Asserts or Tooltips enabled when making direct imgui API calls!
+    //   Otherwise it would severely hinder your ability to catch and correct mistakes!
+    // Read https://github.com/ocornut/imgui/wiki/Error-Handling for details about typical usage scenarios:
+    // - Programmer seats: keep asserts (default), or disable asserts and keep error tooltips (new and nice!)
+    // - Non-programmer seats: maybe disable asserts, but make sure errors are resurfaced (visible log entries, use callback etc.)
+    // - Recovery after error from scripting language: record stack sizes before running script, disable assert, trigger breakpoint from ErrorCallback, recover with ErrorRecoveryTryToRecoverState(), restore settings.
+    // - Recovery after an exception handler:  record stack sizes before try {} block, disable assert, set log callback, recover with ErrorRecoveryTryToRecoverState(), restore settings.
+    bool        ConfigErrorRecovery;                // = true       // Enable error recovery support. Some errors won't be detected and lead to direct crashes if recovery is disabled.
+    bool        ConfigErrorRecoveryEnableAssert;    // = true       // Enable asserts on recoverable error. By default call IM_ASSERT() when returning from a failing IM_ASSERT_USER_ERROR()
+    bool        ConfigErrorRecoveryEnableDebugLog;  // = true       // Enable debug log output on recoverable errors.
+    bool        ConfigErrorRecoveryEnableTooltip;   // = true       // Enable tooltip on recoverable errors. The tooltip include a way to enable asserts if they were disabled.
 
     // Option to enable various debug tools showing buttons that will call the IM_DEBUG_BREAK() macro.
     // - The Item Picker tool will be available regardless of this being enabled, in order to maximize its discoverability.
@@ -2292,7 +2310,7 @@ struct ImGuiIO
     bool        ConfigDebugIniSettings;         // = false          // Save .ini data with extra comments (particularly helpful for Docking, but makes saving slower)
 
     //------------------------------------------------------------------
-    // Platform Functions
+    // Platform Identifiers
     // (the imgui_impl_xxxx backend files are setting those up for you)
     //------------------------------------------------------------------
 

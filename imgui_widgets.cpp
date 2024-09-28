@@ -1,4 +1,4 @@
-// dear imgui, v1.91.2 WIP
+// dear imgui, v1.91.3 WIP
 // (widgets code)
 
 /*
@@ -999,9 +999,10 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
         const int held_dir = (clicked_v_norm < grab_v_norm) ? -1 : (clicked_v_norm > grab_v_norm + grab_h_norm) ? +1 : 0;
         if (g.ActiveIdIsJustActivated)
         {
-            // On initial click calculate the distance between mouse and the center of the grab
-            g.ScrollbarSeekMode = (short)held_dir;
-            g.ScrollbarClickDeltaToGrabCenter = (g.ScrollbarSeekMode == 0.0f) ? clicked_v_norm - grab_v_norm - grab_h_norm * 0.5f : 0.0f;
+            // On initial click when held_dir == 0 (clicked over grab): calculate the distance between mouse and the center of the grab
+            const bool scroll_to_clicked_location = (g.IO.ConfigScrollbarScrollByPage == false || g.IO.KeyShift || held_dir == 0);
+            g.ScrollbarSeekMode = scroll_to_clicked_location ? 0 : (short)held_dir;
+            g.ScrollbarClickDeltaToGrabCenter = (held_dir == 0 && !g.IO.KeyShift) ? clicked_v_norm - grab_v_norm - grab_h_norm * 0.5f : 0.0f;
         }
 
         // Apply scroll (p_scroll_v will generally point on one member of window->Scroll)
@@ -7390,6 +7391,7 @@ void ImGui::EndBoxSelect(const ImRect& scope_rect, ImGuiMultiSelectFlags ms_flag
 static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSelectIO* io)
 {
     ImGuiContext& g = *GImGui;
+    IM_UNUSED(function);
     for (const ImGuiSelectionRequest& req : io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
@@ -7549,7 +7551,7 @@ ImGuiMultiSelectIO* ImGui::EndMultiSelect()
     ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect;
     ImGuiMultiSelectState* storage = ms->Storage;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(ms->FocusScopeId == g.CurrentFocusScopeId);
+    IM_ASSERT_USER_ERROR(ms->FocusScopeId == g.CurrentFocusScopeId, "EndMultiSelect() FocusScope mismatch!");
     IM_ASSERT(g.CurrentMultiSelect != NULL && storage->Window == g.CurrentWindow);
     IM_ASSERT(g.MultiSelectTempDataStacked > 0 && &g.MultiSelectTempData[g.MultiSelectTempDataStacked - 1] == g.CurrentMultiSelect);
 
@@ -8156,6 +8158,13 @@ void ImGuiSelectionExternalStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 //-------------------------------------------------------------------------
 
 // This is essentially a thin wrapper to using BeginChild/EndChild with the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
+// This handle some subtleties with capturing info from the label, but for 99% uses it could essentially be rewritten as:
+//    if (ImGui::BeginChild("...", ImVec2(ImGui::CalcItemWidth(), ImGui::GetTextLineHeight() * 7.5f), ImGuiChildFlags_FrameStyle))
+//        { .... }
+//    ImGui::EndChild();
+//    ImGui::SameLine();
+//    ImGui::AlignTextToFramePadding();
+//    ImGui::Text("Label");
 // Tip: To have a list filling the entire window width, use size.x = -FLT_MIN and pass an non-visible label e.g. "##empty"
 // Tip: If your vertical size is calculated from an item count (e.g. 10 * item_height) consider adding a fractional part to facilitate seeing scrolling boundaries (e.g. 10.25 * item_height).
 bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
@@ -9145,6 +9154,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     // Add to stack
     g.CurrentTabBarStack.push_back(GetTabBarRefFromTabBar(tab_bar));
     g.CurrentTabBar = tab_bar;
+    tab_bar->Window = window;
 
     // Append with multiple BeginTabBar()/EndTabBar() pairs.
     tab_bar->BackupCursorPos = window->DC.CursorPos;

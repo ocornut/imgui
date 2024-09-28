@@ -36,10 +36,44 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.2 WIP (In Progress)
+ VERSION 1.91.3 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
+
+Other changes:
+
+- Error Handling: Enabled/improved error recovery systems. (#1651, #5654)
+  - Error recovery is not perfect nor guaranteed! It is a feature to ease development.
+  - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
+  - You not are not supposed to rely on it in the course of a normal application run.
+  - Possible usage: facilitate recovery from errors triggered from a scripting language or
+    after specific exceptions handlers. Surface errors to programmers in less agressive ways.
+  - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled
+    when making direct imgui API calls! Otherwise it would severely hinder your ability to
+    catch and correct mistakes!
+  - Added io.ConfigErrorRecovery to enable error recovery support.
+  - Added io.ConfigErrorRecoveryEnableAssert to assert on recoverable errors.
+  - Added io.ConfigErrorRecoveryEnableDebugLog to output to debug log on recoverable errors.
+  - Added io.ConfigErrorRecoveryEnableTooltip to enable displaying an error tooltip on recoverable errors.
+    The tooltip include a way to enable asserts if they were disabled.
+  - All options are enabled by default.
+  - Read https://github.com/ocornut/imgui/wiki/Error-Handling for a bit more details.
+- Windows: BeginChild(): made it possible to call SetNextWindowSize() on a child window
+  using ImGuiChildFlags_ResizeX,ImGuiChildFlags_ResizeY in order to override its current
+  size. (#1710, #8020)
+- Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
+- Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
+  Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
+- Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
+- Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
+  (#8009, #8010) [@blitz-research]
+
+-----------------------------------------------------------------------
+ VERSION 1.91.2 (Released 2024-09-19)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.2
 
 Other changes:
 
@@ -54,7 +88,7 @@ Other changes:
   - I've been wanting to add this tool for a long time, but was stalled by finding a way to
     not make it spammy + make it practically zero cost. After @pthom made various proposals to
     solve the same problem (thanks for pushing me!), I decided it was time to finish it.
-  - Added ImGuiItemFlags_AllowDuplicateId to use with PushItemFlag/PopItemFlag() if for some
+  - Added ImGuiItemFlags_AllowDuplicateId to use with PushItemFlag()/PopItemFlag() if for some
     reason you intend to have duplicate identifiers.
   - (#74, #96, #480, #501, #647, #654, #719, #843, #894, #1057, #1173, #1390, #1414, #1556, #1768,
      #2041, #2116, #2330, #2475, #2562, #2667, #2807, #2885, #3102, #3375, #3526, #3964, #4008,
