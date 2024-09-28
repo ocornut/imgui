@@ -22,20 +22,20 @@ project "ImGui"
     }
 
     filter "system:windows"
-	systemversion "latest"
-	cppdialect "C++17"
+        systemversion "latest"
+        cppdialect "C++17"
 
     filter "system:linux"
-	pic "On"
-	systemversion "latest"
-	cppdialect "C++17"
+        pic "On"
+        systemversion "latest"
+        cppdialect "C++17"
 
     filter "configurations:Debug"
-	runtime "Debug"
-	symbols "on"
+        runtime "Debug"
+        symbols "on"
 
     filter "configurations:Release"
-	runtime "Release"
-	optimize "on"
+        runtime "Release"
+        optimize "on"
         symbols "off"
 
