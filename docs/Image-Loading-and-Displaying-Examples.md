@@ -10,6 +10,7 @@
 - [Example for DirectX12 users](#example-for-directx12-users)
 - [Example for SDL_Renderer users](#example-for-sdl_renderer-users)
 - [Example for Vulkan users](#example-for-vulkan-users)
+- [Example for WebGPU users](#example-for-webgpu-users)
 - [Loading from Memory](#loading-from-memory)
 - [About Texture Coordinates](#about-texture-coordinates)
 
@@ -937,11 +938,176 @@ RemoveTexture(&my_texture);
 
 ----
 
+## Example for WebGPU users
+
+We will here use [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) to load images from disk.
+
+Add at the top of one of your source file:
+```cpp
+#define _CRT_SECURE_NO_WARNINGS
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+// Simple helper function to load an image into a WebGPU texture with common settings
+bool LoadTextureFromMemory(const void * data,
+                           size_t data_size,
+                           WGPUDevice device,
+                           WGPUQueue queue,
+                           WGPUTexture * out_texture,
+                           WGPUTextureView * out_texture_view,
+                           int * out_width,
+                           int * out_height) {
+    // Load image
+    int image_width = 0;
+    int image_height = 0;
+    // Ask stbi to output 4 channels since WebGPU doesn't have 3-channels texture format
+    const int output_channels = 4;
+    void * const image_data = stbi_load_from_memory((const unsigned char *)data,
+                                                    (int)data_size,
+                                                    &image_width,
+                                                    &image_height,
+                                                    NULL,
+                                                    output_channels);
+    if (image_data == NULL)
+        return false;
+
+    // Create a WebGPU texture
+    WGPUTextureDescriptor texture_desc;
+    texture_desc.nextInChain = NULL;
+    texture_desc.label = NULL;
+    texture_desc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding;
+    texture_desc.dimension = WGPUTextureDimension_2D;
+    texture_desc.size.width = (uint32_t)image_width;
+    texture_desc.size.height = (uint32_t)image_height;
+    texture_desc.size.depthOrArrayLayers = 1;
+    texture_desc.format = WGPUTextureFormat_RGBA8Unorm;
+    texture_desc.mipLevelCount = 1;
+    texture_desc.sampleCount = 1;
+    texture_desc.viewFormatCount = 0;
+    texture_desc.viewFormats = NULL;
+    WGPUTexture image_texture = wgpuDeviceCreateTexture(device, &texture_desc);
+
+    // Write loaded data to texture
+    WGPUImageCopyTexture dest;
+    dest.nextInChain = NULL;
+    dest.texture = image_texture;
+    dest.mipLevel = 0;
+    dest.origin.x = 0;
+    dest.origin.y = 0;
+    dest.origin.z = 0;
+    dest.aspect = WGPUTextureAspect_All;
+
+    WGPUTextureDataLayout src;
+    src.nextInChain = NULL;
+    src.offset = 0;
+    src.bytesPerRow = (uint32_t)(output_channels * image_width);
+    src.rowsPerImage = (uint32_t)image_height;
+
+    const size_t bytes = src.bytesPerRow * src.rowsPerImage;
+    WGPUExtent3D write_size;
+    write_size.width = (uint32_t)image_width;
+    write_size.height = (uint32_t)image_height;
+    write_size.depthOrArrayLayers = 1;
+    wgpuQueueWriteTexture(queue, &dest, image_data, bytes, &src, &write_size);
+
+    // Create a WebGPU texture view
+    WGPUTextureViewDescriptor view_desc;
+    view_desc.nextInChain = NULL;
+    view_desc.label = NULL;
+    view_desc.format = WGPUTextureFormat_RGBA8Unorm;
+    view_desc.dimension = WGPUTextureViewDimension_2D;
+    view_desc.baseMipLevel = 0;
+    view_desc.mipLevelCount = 1;
+    view_desc.baseArrayLayer = 0;
+    view_desc.arrayLayerCount = 1;
+    view_desc.aspect = WGPUTextureAspect_All;
+
+    *out_texture = image_texture;
+    *out_texture_view = wgpuTextureCreateView(image_texture, &view_desc);
+    *out_width = image_width;
+    *out_height = image_height;
+
+    return true;
+}
+
+// Open and read a file, then forward to LoadTextureFromMemory()
+bool LoadTextureFromFile(const char * file_name,
+                         WGPUDevice device,
+                         WGPUQueue queue,
+                         WGPUTexture * out_texture,
+                         WGPUTextureView * out_texture_view,
+                         int * out_width,
+                         int * out_height) {
+    FILE * f = fopen(file_name, "rb");
+    if (f == NULL)
+        return false;
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    if (file_size == -1)
+        return false;
+    fseek(f, 0, SEEK_SET);
+    void * file_data = IM_ALLOC(file_size);
+    fread(file_data, 1, (size_t)file_size, f);
+    bool ret = LoadTextureFromMemory(file_data,
+                                     (size_t)file_size,
+                                     device,
+                                     queue,
+                                     out_texture,
+                                     out_texture_view,
+                                     out_width,
+                                     out_height);
+    IM_FREE(file_data);
+    return ret;
+}
+```
+
+After initializing a `WGPUDevice` and a `WGPUQueue`, load our texture:
+```cpp
+WGPUDevice device = /* ... */;
+WGPUQueue queue = /* ... */;
+
+WGPUTexture my_texture = NULL;
+WGPUTextureView my_texture_view = NULL;
+int my_image_width = 0;
+int my_image_height = 0;
+bool ret = LoadTextureFromFile("../../MyImage01.jpg",
+                               device,
+                               queue,
+                               &my_texture,
+                               &my_texture_view,
+                               &my_image_width,
+                               &my_image_height);
+IM_ASSERT(ret);
+```
+
+In the snippet of code above, we added an assert `IM_ASSERT(ret)` to check if the image file was loaded correctly. You may also use your Debugger and confirm that `my_image_texture` is not zero and that `my_image_width` `my_image_height` are correct.
+
+Now that we have a WebGPU texture view and its dimensions, we can display it in our main loop:
+```cpp
+ImGui::Begin("WebGPU Texture Test");
+ImGui::Text("pointer = %p", my_texture_view);
+ImGui::Text("size = %d x %d", my_image_width, my_image_height);
+ImGui::Image((void *)my_texture_view, ImVec2(my_image_width, my_image_height));
+ImGui::End();
+```
+
+Don't forget to clean the memory at the end of the program:
+```cpp
+wgpuTextureViewRelease(my_texture_view);
+wgpuTextureRelease(my_texture);
+```
+
+![image](WebGPU_image_loading_screenshot.png)
+
+##### [Return to Index](#index)
+
+----
+
 ## Loading from Memory
 
 If instead of loading from a file you would like to load from memory, you can call `stbi_load_from_memory()` instead of `stbi_load()`. 
 All `LoadTextureFromFile()` function could be reworked to call `LoadTextureFromMemory()` which contains most of the code.
-See our implementation of `LoadTextureFromFile()` for OpenGL, DX11 and DX12 examples.
+See our implementation of `LoadTextureFromFile()` for OpenGL, DX11, DX12 and WebGPU examples.
 
 ##### [Return to Index](#index)
 
