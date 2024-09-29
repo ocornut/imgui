@@ -176,7 +176,7 @@ bool ret = LoadTextureFromFile("../../MyImage01.jpg", &my_image_texture, &my_ima
 IM_ASSERT(ret);
 ```
 
-In the snippet of code above, we added an assert `IM_ASSERT(ret)` to check if the image file was loaded correctly. You may also use your Debugger and confirm that `my_image_texture` is not zero and that `my_image_width` `my_image_width` are correct.
+In the snippet of code above, we added an assert `IM_ASSERT(ret)` to check if the image file was loaded correctly. You may also use your Debugger and confirm that `my_image_texture` is not zero and that `my_image_width` `my_image_height` are correct.
 
 Now that we have an OpenGL texture and its dimensions, we can display it in our main loop:
 ```cpp
