@@ -731,46 +731,39 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 #define IM_POLYLINE_IDX_16_BIT 0
 #else
 #define IM_POLYLINE_IDX_16_BIT 1
-# endif
-
-// Macros that declare, load and save write pointers as local variables
-#if 1 // FIXME-NEWPOLYLINE: choose local or shared write pointers
-#define IM_POLYLINE_PRIM_VTX_WRITE      vtx_write
-#define IM_POLYLINE_PRIM_IDX_WRITE      idx_write
-#define IM_POLYLINE_PRIM_IDX_BASE       idx_base
-
-#define IM_POLYLINE_PRIM_MAKE_LOCAL()   ImDrawVert*  IM_POLYLINE_PRIM_VTX_WRITE = this->_VtxWritePtr;         ImDrawIdx*   IM_POLYLINE_PRIM_IDX_WRITE = this->_IdxWritePtr;   unsigned int IM_POLYLINE_PRIM_IDX_BASE  = this->_VtxCurrentIdx
-#define IM_POLYLINE_PRIM_LOAD_LOCAL()                IM_POLYLINE_PRIM_VTX_WRITE = this->_VtxWritePtr;                      IM_POLYLINE_PRIM_IDX_WRITE = this->_IdxWritePtr;                IM_POLYLINE_PRIM_IDX_BASE  = this->_VtxCurrentIdx
-#define IM_POLYLINE_PRIM_SAVE_LOCAL()                this->_VtxWritePtr         = IM_POLYLINE_PRIM_VTX_WRITE;              this->_IdxWritePtr   = IM_POLYLINE_PRIM_IDX_WRITE;              this->_VtxCurrentIdx = IM_POLYLINE_PRIM_IDX_BASE
-#else
-#define IM_POLYLINE_PRIM_VTX_WRITE      this->_VtxWritePtr
-#define IM_POLYLINE_PRIM_IDX_WRITE      this->_IdxWritePtr
-#define IM_POLYLINE_PRIM_IDX_BASE       this->_VtxCurrentIdx
-
-#define IM_POLYLINE_PRIM_MAKE_LOCAL()   (void)0
-#define IM_POLYLINE_PRIM_LOAD_LOCAL()   (void)0
-#define IM_POLYLINE_PRIM_SAVE_LOCAL()   (void)0
 #endif
 
 // Macros that commit, split and handle vertex offset overflow
-#define IM_POLYLINE_PRIM_RESERVE(IDX_COUNT, VTX_COUNT)  this->PrimReserve((IDX_COUNT) + IM_POLYLINE_PRIM_EXTRA_IDX_COUNT, VTX_COUNT); IM_POLYLINE_PRIM_MAKE_LOCAL()
-#define IM_POLYLINE_PRIM_COMMIT()                                                                           \
-    IM_POLYLINE_PRIM_SAVE_LOCAL();                                                                          \
-    const int unused_vtx_count = (int)((this->VtxBuffer.Data + this->VtxBuffer.Size) - this->_VtxWritePtr); \
-    const int unused_idx_count = (int)((this->IdxBuffer.Data + this->IdxBuffer.Size) - this->_IdxWritePtr); \
+#define IM_POLYLINE_PRIM_RESERVE(IDX_COUNT, VTX_COUNT)                                                  \
+    this->PrimReserve((IDX_COUNT) + IM_POLYLINE_PRIM_EXTRA_IDX_COUNT, VTX_COUNT);                       \
+    ImDrawVert* vtx_write = this->_VtxWritePtr;                                                         \
+    ImDrawIdx* idx_write = this->_IdxWritePtr;                                                          \
+    unsigned int idx_base = this->_VtxCurrentIdx;
+
+#define IM_POLYLINE_PRIM_COMMIT()                                                                       \
+    this->_VtxWritePtr = vtx_write;                                                                     \
+    this->_IdxWritePtr = idx_write;                                                                     \
+    this->_VtxCurrentIdx = idx_base;                                                                    \
+    const int unused_vtx_count = (int)((this->VtxBuffer.Data + this->VtxBuffer.Size) - vtx_write);      \
+    const int unused_idx_count = (int)((this->IdxBuffer.Data + this->IdxBuffer.Size) - idx_write);      \
     this->PrimUnreserve(unused_idx_count, unused_vtx_count)
 
-#define IM_POLYLINE_PRIM_SPLT()                         IM_POLYLINE_PRIM_COMMIT(); this->PrimReserve(unused_idx_count, unused_vtx_count); IM_POLYLINE_PRIM_LOAD_LOCAL()
+#define IM_POLYLINE_PRIM_SPLIT()                            \
+    IM_POLYLINE_PRIM_COMMIT();                              \
+    this->PrimReserve(unused_idx_count, unused_vtx_count);  \
+    vtx_write = this->_VtxWritePtr;                         \
+    idx_write = this->_IdxWritePtr;                         \
+    idx_base  = this->_VtxCurrentIdx;
 
 #define IM_POLYLINE_VTX_COMMIT(N)                                                                                \
     {                                                                                                            \
-        IM_ASSERT_PARANOID((IM_POLYLINE_PRIM_VTX_WRITE + (N)) <= (this->VtxBuffer.Data + this->VtxBuffer.Size) && "IM_POLYLINE_VTX_COMMIT: VtxWritePtr moved out of bounds!"); \
-        IM_POLYLINE_PRIM_VTX_WRITE += N;                                                                         \
-        IM_POLYLINE_PRIM_IDX_BASE += N;                                                                          \
+        IM_ASSERT_PARANOID((idx_base + (N)) <= (this->VtxBuffer.Data + this->VtxBuffer.Size) && "IM_POLYLINE_VTX_COMMIT: VtxWritePtr moved out of bounds!"); \
+        vtx_write += N;                                                                         \
+        idx_base += N;                                                                          \
     }
 
 #if IM_POLYLINE_IDX_16_BIT
-#define IM_POLYLINE_PRIM_HANDLE_VTX_OFFSET_OVERFLOW(NEXT_BATCH_VTX_COUNT) if (sizeof(ImDrawIdx) == 2 && ((IM_POLYLINE_PRIM_IDX_BASE) + (NEXT_BATCH_VTX_COUNT) >= (1 << 16)) && (Flags & ImDrawListFlags_AllowVtxOffset)) IM_UNLIKELY { IM_POLYLINE_PRIM_SPLT(); }
+#define IM_POLYLINE_PRIM_HANDLE_VTX_OFFSET_OVERFLOW(NEXT_BATCH_VTX_COUNT) if (sizeof(ImDrawIdx) == 2 && (idx_base + (NEXT_BATCH_VTX_COUNT) >= (1 << 16)) && (Flags & ImDrawListFlags_AllowVtxOffset)) IM_UNLIKELY { IM_POLYLINE_PRIM_SPLIT(); }
 #else
 #define IM_POLYLINE_PRIM_HANDLE_VTX_OFFSET_OVERFLOW(NEXT_BATCH_VTX_COUNT) (void)0
 #endif
@@ -778,11 +771,11 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 // Macros for filling vertices
 #define IM_POLYLINE_VERTEX(N, X, Y, UV, C)        \
     {                                             \
-        IM_ASSERT_PARANOID((IM_POLYLINE_PRIM_VTX_WRITE + (N)) < (this->VtxBuffer.Data + this->VtxBuffer.Size) && "IM_POLYLINE_VERTEX: Writing outside of allocated buffer!"); \
-        IM_POLYLINE_PRIM_VTX_WRITE[N].pos.x = X;  \
-        IM_POLYLINE_PRIM_VTX_WRITE[N].pos.y = Y;  \
-        IM_POLYLINE_PRIM_VTX_WRITE[N].uv    = UV; \
-        IM_POLYLINE_PRIM_VTX_WRITE[N].col   = C;  \
+        IM_ASSERT_PARANOID((vtx_write + (N)) < (this->VtxBuffer.Data + this->VtxBuffer.Size) && "IM_POLYLINE_VERTEX: Writing outside of allocated buffer!"); \
+        vtx_write[N].pos.x = X;  \
+        vtx_write[N].pos.y = Y;  \
+        vtx_write[N].uv    = UV; \
+        vtx_write[N].col   = C;  \
     }
 
 // Macros for filling indices
@@ -811,7 +804,7 @@ IM_STATIC_ASSERT(2 * sizeof(ImDrawIdx) == sizeof(ImU64)); // assumption: ImU64 m
     I[(N) * 3 + 2] = (ImDrawIdx)(Z + C)
 #endif
 
-#define IM_POLYLINE_TRIANGLE(N, A, B, C) (void)(N); IM_POLYLINE_TRIANGLE_EX(IM_POLYLINE_PRIM_IDX_WRITE, N, IM_POLYLINE_PRIM_IDX_BASE, A, B, C)
+#define IM_POLYLINE_TRIANGLE(N, A, B, C) (void)(N); IM_POLYLINE_TRIANGLE_EX(idx_write, N, idx_base, A, B, C)
 
 // Extra indices to allocate for primitives
 #ifndef IM_POLYLINE_PRIM_EXTRA_IDX_COUNT
@@ -1020,17 +1013,17 @@ void ImDrawList::_PolylineThinAntiAliased(const ImDrawListPolyline& polyline)
             const float d_x = n0.x * t;                                                             \
             const float d_y = n0.y * t;                                                             \
                                                                                                     \
-            IM_POLYLINE_PRIM_VTX_WRITE[0].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[0].pos.y += d_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[1].pos.x += d_y; IM_POLYLINE_PRIM_VTX_WRITE[1].pos.y -= d_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[2].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[2].pos.y += d_x; \
+            vtx_write[0].pos.x -= d_y; vtx_write[0].pos.y += d_x;                                   \
+            vtx_write[1].pos.x += d_y; vtx_write[1].pos.y -= d_x;                                   \
+            vtx_write[2].pos.x -= d_y; vtx_write[2].pos.y += d_x;                                   \
         }                                                                                           \
         else IM_UNLIKELY                                                                            \
         {                                                                                           \
             const float d_x = n0.x * half_thickness * scale;                                        \
             const float d_y = n0.y * half_thickness * scale;                                        \
                                                                                                     \
-            IM_POLYLINE_PRIM_VTX_WRITE[0].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[0].pos.y += d_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[2].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[2].pos.y += d_x; \
+            vtx_write[0].pos.x -= d_y; vtx_write[0].pos.y += d_x;                                   \
+            vtx_write[2].pos.x -= d_y; vtx_write[2].pos.y += d_x;                                   \
         }                                                                                           \
                                                                                                     \
         IM_POLYLINE_TRIANGLE_BEGIN(3);                                                              \
@@ -1367,10 +1360,10 @@ void ImDrawList::_PolylineThinAntiAliased(const ImDrawListPolyline& polyline)
                     //
                     // 1 join triangles
                     //
-                    IM_POLYLINE_PRIM_VTX_WRITE[6].pos.x -= n1.y * polyline.fringe_width;
-                    IM_POLYLINE_PRIM_VTX_WRITE[6].pos.y += n1.x * polyline.fringe_width;
-                    IM_POLYLINE_PRIM_VTX_WRITE[8].pos.x -= n1.y * polyline.fringe_width;
-                    IM_POLYLINE_PRIM_VTX_WRITE[8].pos.y += n1.x * polyline.fringe_width;
+                    vtx_write[6].pos.x -= n1.y * polyline.fringe_width;
+                    vtx_write[6].pos.y += n1.x * polyline.fringe_width;
+                    vtx_write[8].pos.x -= n1.y * polyline.fringe_width;
+                    vtx_write[8].pos.y += n1.x * polyline.fringe_width;
 
                     IM_POLYLINE_TRIANGLE_BEGIN(3);
                     IM_POLYLINE_TRIANGLE(0, 6, 8, 7);
@@ -1399,9 +1392,9 @@ void ImDrawList::_PolylineThinAntiAliased(const ImDrawListPolyline& polyline)
     {
         ImDrawVert* vtx_start = this->VtxBuffer.Data + vtx_start_idx;
 
-        vtx_start[0].pos = IM_POLYLINE_PRIM_VTX_WRITE[0].pos;
-        vtx_start[1].pos = IM_POLYLINE_PRIM_VTX_WRITE[1].pos;
-        vtx_start[2].pos = IM_POLYLINE_PRIM_VTX_WRITE[2].pos;
+        vtx_start[0].pos = vtx_write[0].pos;
+        vtx_start[1].pos = vtx_write[1].pos;
+        vtx_start[2].pos = vtx_write[2].pos;
     }
     else IM_UNLIKELY
     {
@@ -1466,10 +1459,10 @@ void ImDrawList::_PolylineThickAntiAliased(const ImDrawListPolyline& polyline)
             const float d_x = n0.x * t;                                                                         \
             const float d_y = n0.y * t;                                                                         \
                                                                                                                 \
-            IM_POLYLINE_PRIM_VTX_WRITE[0].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[0].pos.y += d_x;             \
-            IM_POLYLINE_PRIM_VTX_WRITE[1].pos.x += d_y; IM_POLYLINE_PRIM_VTX_WRITE[1].pos.y -= d_x;             \
-            IM_POLYLINE_PRIM_VTX_WRITE[2].pos.x += d_y; IM_POLYLINE_PRIM_VTX_WRITE[2].pos.y -= d_x;             \
-            IM_POLYLINE_PRIM_VTX_WRITE[3].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[3].pos.y += d_x;             \
+            vtx_write[0].pos.x -= d_y; vtx_write[0].pos.y += d_x;                                               \
+            vtx_write[1].pos.x += d_y; vtx_write[1].pos.y -= d_x;                                               \
+            vtx_write[2].pos.x += d_y; vtx_write[2].pos.y -= d_x;                                               \
+            vtx_write[3].pos.x -= d_y; vtx_write[3].pos.y += d_x;                                               \
         }                                                                                                       \
         else                                                                                                    \
         {                                                                                                       \
@@ -1478,10 +1471,10 @@ void ImDrawList::_PolylineThickAntiAliased(const ImDrawListPolyline& polyline)
             const float d_outer_x = n0.x * half_fringe_thickness * scale;                                       \
             const float d_outer_y = n0.y * half_fringe_thickness * scale;                                       \
                                                                                                                 \
-            IM_POLYLINE_PRIM_VTX_WRITE[0].pos.x -= d_outer_y; IM_POLYLINE_PRIM_VTX_WRITE[0].pos.y += d_outer_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[1].pos.x -= d_inner_y; IM_POLYLINE_PRIM_VTX_WRITE[1].pos.y += d_inner_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[2].pos.x -= d_inner_y; IM_POLYLINE_PRIM_VTX_WRITE[2].pos.y += d_inner_x; \
-            IM_POLYLINE_PRIM_VTX_WRITE[3].pos.x -= d_outer_y; IM_POLYLINE_PRIM_VTX_WRITE[3].pos.y += d_outer_x; \
+            vtx_write[0].pos.x -= d_outer_y; vtx_write[0].pos.y += d_outer_x;                                   \
+            vtx_write[1].pos.x -= d_inner_y; vtx_write[1].pos.y += d_inner_x;                                   \
+            vtx_write[2].pos.x -= d_inner_y; vtx_write[2].pos.y += d_inner_x;                                   \
+            vtx_write[3].pos.x -= d_outer_y; vtx_write[3].pos.y += d_outer_x;                                   \
         }                                                                                                       \
                                                                                                                 \
         IM_POLYLINE_TRIANGLE_BEGIN(6);                                                                          \
@@ -2085,10 +2078,10 @@ void ImDrawList::_PolylineThickAntiAliased(const ImDrawListPolyline& polyline)
     {
         ImDrawVert* vtx_start = this->VtxBuffer.Data + vtx_start_idx;
 
-        vtx_start[0].pos = IM_POLYLINE_PRIM_VTX_WRITE[0].pos;
-        vtx_start[1].pos = IM_POLYLINE_PRIM_VTX_WRITE[1].pos;
-        vtx_start[2].pos = IM_POLYLINE_PRIM_VTX_WRITE[2].pos;
-        vtx_start[3].pos = IM_POLYLINE_PRIM_VTX_WRITE[3].pos;
+        vtx_start[0].pos = vtx_write[0].pos;
+        vtx_start[1].pos = vtx_write[1].pos;
+        vtx_start[2].pos = vtx_write[2].pos;
+        vtx_start[3].pos = vtx_write[3].pos;
     }
     else IM_UNLIKELY
     {
@@ -2142,8 +2135,8 @@ void ImDrawList::_PolylineAliased(const ImDrawListPolyline& polyline)
         const float d_x = n0.x * half_thickness * scale;                                        \
         const float d_y = n0.y * half_thickness * scale;                                        \
                                                                                                 \
-        IM_POLYLINE_PRIM_VTX_WRITE[0].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[0].pos.y += d_x; \
-        IM_POLYLINE_PRIM_VTX_WRITE[1].pos.x -= d_y; IM_POLYLINE_PRIM_VTX_WRITE[1].pos.y += d_x; \
+        vtx_write[0].pos.x -= d_y; vtx_write[0].pos.y += d_x;                                   \
+        vtx_write[1].pos.x -= d_y; vtx_write[1].pos.y += d_x;                                   \
     }                                                                                           \
     else if (polyline.cap == ImDrawFlags_CapRound) IM_UNLIKELY                                  \
     {                                                                                           \
@@ -2555,8 +2548,8 @@ void ImDrawList::_PolylineAliased(const ImDrawListPolyline& polyline)
     {
         ImDrawVert* vtx_start = this->VtxBuffer.Data + vtx_start_idx;
 
-        vtx_start[0].pos = IM_POLYLINE_PRIM_VTX_WRITE[0].pos;
-        vtx_start[1].pos = IM_POLYLINE_PRIM_VTX_WRITE[1].pos;
+        vtx_start[0].pos = vtx_write[0].pos;
+        vtx_start[1].pos = vtx_write[1].pos;
     }
     else IM_UNLIKELY
     {
@@ -3656,7 +3649,7 @@ void  ImDrawList::_RectRounded(const ImVec2& a, const ImVec2& b, ImU32 col, floa
                     uv, path_colors[j]);                                                                                                             \
             }                                                                                                                                        \
                                                                                                                                                      \
-            IM_POLYLINE_PRIM_VTX_WRITE += path_count;                                                                                                \
+            vtx_write += path_count;                                                                                                                 \
         }                                                                                                                                            \
                                                                                                                                                      \
         path_size += arc_size;                                                                                                                       \
@@ -3668,7 +3661,7 @@ void  ImDrawList::_RectRounded(const ImVec2& a, const ImVec2& b, ImU32 col, floa
             IM_POLYLINE_VERTEX(j, X X_SIGN path_offsets[j].x, Y Y_SIGN path_offsets[j].y, uv, path_colors[j]);                                       \
         }                                                                                                                                            \
                                                                                                                                                      \
-        IM_POLYLINE_PRIM_VTX_WRITE += path_count;                                                                                                    \
+        vtx_write += path_count;                                                                                                                     \
         ++path_size;                                                                                                                                 \
     }
 
@@ -3691,13 +3684,11 @@ void  ImDrawList::_RectRounded(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     }
     IM_POLYLINE_TRIANGLE_END(path_size * strip_count * 2 * 3);
 
-    IM_POLYLINE_PRIM_IDX_BASE += vtx_count;
+    idx_base += vtx_count;
 
     for (int j = 0; j < (path_count - 1) * 6; j++)
-    {
-        if (IM_POLYLINE_PRIM_IDX_WRITE[-j - 1] >= IM_POLYLINE_PRIM_IDX_BASE)
-            IM_POLYLINE_PRIM_IDX_WRITE[-j - 1] -= (ImDrawIdx)vtx_count;
-    }
+        if (idx_write[-j - 1] >= idx_base)
+            idx_write[-j - 1] -= (ImDrawIdx)vtx_count;
 
     IM_POLYLINE_PRIM_COMMIT();
 }
