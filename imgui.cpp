@@ -5014,7 +5014,7 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_LegacyPolyline;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
-    g.DrawListSharedData.InitialFringeScale = g.IO.DisplayFramebufferScale.x ? 1.0f / g.IO.DisplayFramebufferScale.x : 1.0f;
+    g.DrawListSharedData.InitialFringeScale = 1.0f / g.IO.DisplayFramebufferScale.x;
 }
 
 void ImGui::NewFrame()
@@ -10417,6 +10417,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
+    IM_ASSERT(g.IO.DisplayFramebufferScale.x > 0.0f && g.IO.DisplayFramebufferScale.y > 0.0f && "Invalid DisplayFramebufferScale value!");
     IM_ASSERT(g.IO.Fonts->IsBuilt()                                     && "Font Atlas not built! Make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()");
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
     IM_ASSERT(g.Style.CircleTessellationMaxError > 0.0f                 && "Invalid style setting!");

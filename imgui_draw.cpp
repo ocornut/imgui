@@ -723,7 +723,6 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 // - Those macros expects l-values and need to be used as their own statement.
 // - Those macros are intentionally not surrounded by the 'do {} while (0)' idiom because even that translates to runtime with debug compilers.
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)         { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrt(d2); VX *= inv_len; VY *= inv_len; } } (void)0
-#define IM_NORMALIZE2F_OVER_ZERO_PRECISE(VX,VY) { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrtPrecise(d2); VX *= inv_len; VY *= inv_len; } } (void)0
 #define IM_FIXNORMAL2F_MAX_INVLEN2              100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)                   { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
@@ -877,6 +876,12 @@ IM_STATIC_ASSERT(2 * sizeof(ImDrawIdx) == sizeof(ImU64)); // assumption: ImU64 m
 
 #define IM_POLYLINE_MITER_ANGLE_LIMIT -0.9999619f // cos(179.5)
 
+#if defined(__clang__)
+// Make macros call site look nicer, without needing us to add do { } while (0) statements
+#pragma clang diagnostic ignored "-Wextra-semi-stmt" // warning: empty expression statement has no effect; remove unnecessary ';' to silence this
+//#pragma clang diagnostic ignored "-Wcast-align" //// warning: empty expression statement has no effect; remove unnecessary ';' to silence this
+#endif
+
 void ImDrawList::_PolylineEmitArcs(const ImDrawListPolyline& polyline, const int arc_count, const float core_radius, const float fringe_radius)
 {
     if (arc_count == 0) IM_UNLIKELY
@@ -884,10 +889,7 @@ void ImDrawList::_PolylineEmitArcs(const ImDrawListPolyline& polyline, const int
 
     const float max_radius            = ImMax(core_radius, fringe_radius);
     const int   max_arc_segment_count = ImMax((_CalcCircleAutoSegmentCount(max_radius) + 1) / 2, 2);
-    const int   arc_arm_point_count   = (core_radius > 0.0f ? 1 : 0) + (fringe_radius > 0.0f ? 1 : 0);
-
-    if (arc_arm_point_count < 0 || arc_arm_point_count > 2) IM_UNLIKELY
-        return;
+    const int   arc_arm_point_count   = (core_radius > 0.0f ? 1 : 0) + (fringe_radius > 0.0f ? 1 : 0); // Output 0..2
 
     const int max_arc_vtx_count = arc_arm_point_count * (max_arc_segment_count + 2) + 1; // 1 for the center vertex
     const int max_arc_idx_count = max_arc_segment_count * (1 + (arc_arm_point_count - 1) * 2) * 3;
@@ -3583,7 +3585,7 @@ void  ImDrawList::_RectRounded(const ImVec2& a, const ImVec2& b, ImU32 col, floa
             col = (col & ~IM_COL32_A_MASK) | (alpha << IM_COL32_A_SHIFT);
         }
 
-        if (screen_thickness <= 1.0f) IM_LIKELY // thin
+        if (screen_thickness <= 1.0f) IM_UNLIKELY // thin
         {
             path_offsets[0].x = thickness;                             path_offsets[0].y = thickness;
             path_offsets[1].x = 0.0f;                                  path_offsets[1].y = 0.0f;
