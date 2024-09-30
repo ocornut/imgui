@@ -15240,7 +15240,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     DebugBreakClearData();
 
     // Basic info
-    Text("Dear ImGui %s", GetVersion());
+    Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     if (g.ContextName[0] != 0)
     {
         SameLine();
