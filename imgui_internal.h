@@ -1119,6 +1119,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
     int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
     int                     ReloadSelectionEnd;
+    int                     SelectionClicks;        // double/triple-click word/line selection mode.
+    int                     SelectionOrigin;        // char-index/cursor-position under the mouse click that started current selection.
 
     ImGuiInputTextState();
     ~ImGuiInputTextState();
