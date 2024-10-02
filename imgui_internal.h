@@ -2283,6 +2283,7 @@ struct ImGuiContext
     short                   DisabledStackSize;
     short                   LockMarkEdited;
     short                   TooltipOverrideCount;
+    ImGuiWindow*            TooltipPreviousWindow;              // Window of last tooltip submitted during the frame
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
     ImGuiTypingSelectState  TypingSelectState;                  // State for GetTypingSelectRequest()
