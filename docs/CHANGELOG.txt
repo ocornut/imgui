@@ -71,6 +71,8 @@ Other changes:
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
+- Tooltips, Drag and Drop: Fixed an issue where the fallback drag and drop payload tooltip
+  appeared during drag and drop release.
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 - Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
   (#8009, #8010) [@blitz-research]

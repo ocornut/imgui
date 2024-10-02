@@ -5521,7 +5521,7 @@ void ImGui::EndFrame()
     // in the BeginDragDropSource() block of the dragged item, you can submit them from a safe single spot
     // (e.g. end of your item loop, or before EndFrame) by reading payload data.
     // In the typical case, the contents of drag tooltip should be possible to infer solely from payload data.
-    if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
+    if (g.DragDropActive && g.DragDropSourceFrameCount + 1 < g.FrameCount && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
     {
         g.DragDropWithinSource = true;
         SetTooltip("...");
