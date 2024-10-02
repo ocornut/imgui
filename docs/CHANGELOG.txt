@@ -76,6 +76,7 @@ Other changes:
 - Tooltips, Drag and Drop: Stabilized name of drag and drop tooltip window so that
   transitioning from an item tooltip to a drag tooltip doesn't leak window auto-sizing
   info from one to the other. (#8036)
+- Tooltips: Tooltips triggered from touch inputs are positionned above the item. (#8036)
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 - Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
   (#8009, #8010) [@blitz-research]

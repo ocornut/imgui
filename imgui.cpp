@@ -1136,7 +1136,9 @@ static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduc
 static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 0.70f;    // Lock scrolled window (so it doesn't pick child windows that are scrolling through) for a certain time, unless mouse moved.
 
 // Tooltip offset
-static const ImVec2 TOOLTIP_DEFAULT_OFFSET = ImVec2(16, 10);            // Multiplied by g.Style.MouseCursorScale
+static const ImVec2 TOOLTIP_DEFAULT_OFFSET_MOUSE = ImVec2(16, 10);      // Multiplied by g.Style.MouseCursorScale
+static const ImVec2 TOOLTIP_DEFAULT_OFFSET_TOUCH = ImVec2(0, -20);      // Multiplied by g.Style.MouseCursorScale
+static const ImVec2 TOOLTIP_DEFAULT_PIVOT_TOUCH = ImVec2(0.5f, 1.0f);   // Multiplied by g.Style.MouseCursorScale
 
 //-------------------------------------------------------------------------
 // [SECTION] FORWARD DECLARATIONS
@@ -11518,9 +11520,14 @@ bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags ext
         // We call SetNextWindowPos() to enforce position and disable clamping.
         // See FindBestWindowPosForPopup() for positionning logic of other tooltips (not drag and drop ones).
         //ImVec2 tooltip_pos = g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding;
-        ImVec2 tooltip_pos = g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET * g.Style.MouseCursorScale;
+        const bool is_touchscreen = (g.IO.MouseSource == ImGuiMouseSource_TouchScreen);
         if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasPos) == 0)
-            SetNextWindowPos(tooltip_pos);
+        {
+            ImVec2 tooltip_pos = is_touchscreen ? (g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_TOUCH * g.Style.MouseCursorScale) : (g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_MOUSE * g.Style.MouseCursorScale);
+            ImVec2 tooltip_pivot = is_touchscreen ? TOOLTIP_DEFAULT_PIVOT_TOUCH : ImVec2(0.0f, 0.0f);
+            SetNextWindowPos(tooltip_pos, ImGuiCond_None, tooltip_pivot);
+        }
+
         SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
         //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkboard has issue with transparent colors :(
         tooltip_flags |= ImGuiTooltipFlags_OverridePrevious;
@@ -12126,18 +12133,30 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
     if (window->Flags & ImGuiWindowFlags_Tooltip)
     {
         // Position tooltip (always follows mouse + clamp within outer boundaries)
-        // Note that drag and drop tooltips are NOT using this path: BeginTooltipEx() manually sets their position.
-        // In theory we could handle both cases in same location, but requires a bit of shuffling as drag and drop tooltips are calling SetWindowPos() leading to 'window_pos_set_by_api' being set in Begin()
+        // FIXME:
+        // - Too many paths. One problem is that FindBestWindowPosForPopupEx() doesn't allow passing a suggested position (so touch screen path doesn't use it by default).
+        // - Drag and drop tooltips are not using this path either: BeginTooltipEx() manually sets their position.
+        // - Require some tidying up. In theory we could handle both cases in same location, but requires a bit of shuffling
+        //   as drag and drop tooltips are calling SetNextWindowPos() leading to 'window_pos_set_by_api' being set in Begin().
         IM_ASSERT(g.CurrentWindow == window);
         const float scale = g.Style.MouseCursorScale;
         const ImVec2 ref_pos = NavCalcPreferredRefPos();
-        const ImVec2 tooltip_pos = ref_pos + TOOLTIP_DEFAULT_OFFSET * scale;
+
+        if (g.IO.MouseSource == ImGuiMouseSource_TouchScreen)
+        {
+            ImVec2 tooltip_pos = g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_TOUCH * scale - (TOOLTIP_DEFAULT_PIVOT_TOUCH * window->Size);
+            if (r_outer.Contains(ImRect(tooltip_pos, tooltip_pos + window->Size)))
+                return tooltip_pos;
+        }
+
+        ImVec2 tooltip_pos = g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_MOUSE * scale;
         ImRect r_avoid;
         if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * scale, ref_pos.y + 24 * scale); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
         //GetForegroundDrawList()->AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255, 0, 255, 255));
+
         return FindBestWindowPosForPopupEx(tooltip_pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid, ImGuiPopupPositionPolicy_Tooltip);
     }
     IM_ASSERT(0);
