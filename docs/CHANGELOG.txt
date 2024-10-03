@@ -84,6 +84,9 @@ Other changes:
 Docking+Viewports Branch:
 
 - Backends: SDL2, SDL3: Fixed building for UWP platforms. (#8008)
+- Backends: Win32: Use ResisterClassW()/CreateWindowExW() for secondary viewports, to
+  ensure correct IME input even if the backend was compiled in MBCS mode. (#7979, #5725)
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.2 (Released 2024-09-19)
