@@ -101,6 +101,14 @@ Other changes:
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.2
 
+Breaking changes:
+
+ - Internals: using multiple overlayed ButtonBehavior() with same ID will now have the
+   io.ConfigDebugHighlightIdConflicts=true feature emit a warning. (#8030)
+   It was one of the rare case where using same ID is legal. Workarounds:
+   - use single ButtonBehavior() call with multiple _MouseButton flags
+   - or surround the calls with PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true); ... PopItemFlag()
+
 Other changes:
 
 - Added io.ConfigDebugHighlightIdConflicts debug feature! (#7961, #7669)
