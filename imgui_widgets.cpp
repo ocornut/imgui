@@ -2650,7 +2650,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
             const int clamp_range_dir = (p_min != NULL && p_max != NULL) ? DataTypeCompare(data_type, p_min, p_max) : 0; // -1 when *p_min < *p_max, == 0 when *p_min == *p_max
             if (p_min == NULL || p_max == NULL || clamp_range_dir < 0)
                 clamp_enabled = true;
-            else if ((p_min != NULL && p_max != NULL) && clamp_range_dir == 0)
+            else if (clamp_range_dir == 0)
                 clamp_enabled = DataTypeIsZero(data_type, p_min) ? ((flags & ImGuiSliderFlags_ClampZeroRange) != 0) : true;
         }
         return TempInputScalar(frame_bb, id, label, data_type, p_data, format, clamp_enabled ? p_min : NULL, clamp_enabled ? p_max : NULL);
