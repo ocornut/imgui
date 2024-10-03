@@ -9682,6 +9682,13 @@ void ImGui::TabBarQueueFocus(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     tab_bar->NextSelectedTabId = tab->ID;
 }
 
+void ImGui::TabBarQueueFocus(ImGuiTabBar* tab_bar, const char* tab_name)
+{
+    IM_ASSERT((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0); // Only supported for manual/explicit tab bars
+    ImGuiID tab_id = TabBarCalcTabID(tab_bar, tab_name, NULL);
+    tab_bar->NextSelectedTabId = tab_id;
+}
+
 void ImGui::TabBarQueueReorder(ImGuiTabBar* tab_bar, ImGuiTabItem* tab, int offset)
 {
     IM_ASSERT(offset != 0);

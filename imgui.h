@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.3 WIP"
-#define IMGUI_VERSION_NUM   19123
+#define IMGUI_VERSION_NUM   19124
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -2355,18 +2355,20 @@ struct ImGuiIO
     // Debug options
     //------------------------------------------------------------------
 
-    // Options to configure how we handle recoverable errors [EXPERIMENTAL]
+    // Options to configure Error Handling and how we handle recoverable errors [EXPERIMENTAL]
+    // - Error recovery is provided as a way to facilitate:
+    //    - Recovery after a programming error (native code or scripting language - the later tends to facilitate iterating on code while running).
+    //    - Recovery after running an exception handler or any error processing which may skip code after an error has been detected.
     // - Error recovery is not perfect nor guaranteed! It is a feature to ease development.
+    //   You not are not supposed to rely on it in the course of a normal application run.
     // - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
-    // - You not are not supposed to rely on it in the course of a normal application run.
-    // - Possible usage: facilitate recovery from errors triggered from a scripting language or after specific exceptions handlers.
-    // - Always ensure that on programmers seat you have at minimum Asserts or Tooltips enabled when making direct imgui API calls!
+    // - By design, we do NOT allow error recovery to be 100% silent. One of the three options needs to be checked!
+    // - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled when making direct imgui API calls!
     //   Otherwise it would severely hinder your ability to catch and correct mistakes!
-    // Read https://github.com/ocornut/imgui/wiki/Error-Handling for details about typical usage scenarios:
+    // Read https://github.com/ocornut/imgui/wiki/Error-Handling for details.
     // - Programmer seats: keep asserts (default), or disable asserts and keep error tooltips (new and nice!)
-    // - Non-programmer seats: maybe disable asserts, but make sure errors are resurfaced (visible log entries, use callback etc.)
-    // - Recovery after error from scripting language: record stack sizes before running script, disable assert, trigger breakpoint from ErrorCallback, recover with ErrorRecoveryTryToRecoverState(), restore settings.
-    // - Recovery after an exception handler:  record stack sizes before try {} block, disable assert, set log callback, recover with ErrorRecoveryTryToRecoverState(), restore settings.
+    // - Non-programmer seats: maybe disable asserts, but make sure errors are resurfaced (tooltips, visible log entries, use callback etc.)
+    // - Recovery after error/exception: record stack sizes with ErrorRecoveryStoreState(), disable assert, set log callback (to e.g. trigger high-level breakpoint), recover with ErrorRecoveryTryToRecoverState(), restore settings.
     bool        ConfigErrorRecovery;                // = true       // Enable error recovery support. Some errors won't be detected and lead to direct crashes if recovery is disabled.
     bool        ConfigErrorRecoveryEnableAssert;    // = true       // Enable asserts on recoverable error. By default call IM_ASSERT() when returning from a failing IM_ASSERT_USER_ERROR()
     bool        ConfigErrorRecoveryEnableDebugLog;  // = true       // Enable debug log output on recoverable errors.

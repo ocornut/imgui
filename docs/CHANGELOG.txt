@@ -44,9 +44,15 @@ Breaking changes:
 Other changes:
 
 - Error Handling: Enabled/improved error recovery systems. (#1651, #5654)
+  - Error recovery is provided as a way to facilitate:
+    - Recovery after a programming error. Native code or scripting language (the later
+      tends to facilitate iterating on code while running).
+    - Recovery after running an exception handler or any error processing which may skip code
+      after an error has been detected.
   - Error recovery is not perfect nor guaranteed! It is a feature to ease development.
+    You not are not supposed to rely on it in the course of a normal application run.
   - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
-  - You not are not supposed to rely on it in the course of a normal application run.
+  - By design, we do not allow error recovery to be 100% silent. One of the options needs to be enabled!
   - Possible usage: facilitate recovery from errors triggered from a scripting language or
     after specific exceptions handlers. Surface errors to programmers in less agressive ways.
   - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled
@@ -65,6 +71,12 @@ Other changes:
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
+- Tooltips, Drag and Drop: Fixed an issue where the fallback drag and drop payload tooltip
+  appeared during drag and drop release.
+- Tooltips, Drag and Drop: Stabilized name of drag and drop tooltip window so that
+  transitioning from an item tooltip to a drag tooltip doesn't leak window auto-sizing
+  info from one to the other. (#8036)
+- Tooltips: Tooltips triggered from touch inputs are positionned above the item. (#8036)
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 - Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
   (#8009, #8010) [@blitz-research]
