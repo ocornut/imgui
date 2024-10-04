@@ -399,8 +399,8 @@ void ImDrawList::_ResetForNewFrame()
 {
     // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, ClipRect) == 0);
-    IM_STATIC_ASSERT(offsetof(ImDrawCmd, TextureId) == sizeof(ImVec4));
-    IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTextureID));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, Texture) == sizeof(ImVec4));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTexture));
     if (_Splitter._Count > 1)
         _Splitter.Merge(this);
 
@@ -413,7 +413,7 @@ void ImDrawList::_ResetForNewFrame()
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
     _ClipRectStack.resize(0);
-    _TextureIdStack.resize(0);
+    _TextureStack.resize(0);
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
@@ -430,7 +430,7 @@ void ImDrawList::_ClearFreeMemory()
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
     _ClipRectStack.clear();
-    _TextureIdStack.clear();
+    _TextureStack.clear();
     _Path.clear();
     _Splitter.ClearFreeMemory();
 }
@@ -449,7 +449,7 @@ void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
     draw_cmd.ClipRect = _CmdHeader.ClipRect;    // Same as calling ImDrawCmd_HeaderCopy()
-    draw_cmd.TextureId = _CmdHeader.TextureId;
+    draw_cmd.Texture = _CmdHeader.Texture;
     draw_cmd.VtxOffset = _CmdHeader.VtxOffset;
     draw_cmd.IdxOffset = IdxBuffer.Size;
 
@@ -529,12 +529,12 @@ void ImDrawList::_OnChangedClipRect()
     curr_cmd->ClipRect = _CmdHeader.ClipRect;
 }
 
-void ImDrawList::_OnChangedTextureID()
+void ImDrawList::_OnChangedTexture()
 {
     // If current command is used with different settings we need to add a new command
     IM_ASSERT_PARANOID(CmdBuffer.Size > 0);
     ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
-    if (curr_cmd->ElemCount != 0 && curr_cmd->TextureId != _CmdHeader.TextureId)
+    if (curr_cmd->ElemCount != 0 && curr_cmd->Texture != _CmdHeader.Texture)
     {
         AddDrawCmd();
         return;
@@ -548,7 +548,7 @@ void ImDrawList::_OnChangedTextureID()
         CmdBuffer.pop_back();
         return;
     }
-    curr_cmd->TextureId = _CmdHeader.TextureId;
+    curr_cmd->Texture = _CmdHeader.Texture;
 }
 
 void ImDrawList::_OnChangedVtxOffset()
@@ -609,27 +609,40 @@ void ImDrawList::PopClipRect()
     _OnChangedClipRect();
 }
 
+void ImDrawList::PushTexture(ImTexture texture)
+{
+    _CmdHeader.Texture = texture;
+    _TextureStack.push_back(_CmdHeader.Texture);
+    _OnChangedTexture();
+}
+
+void ImDrawList::PopTexture()
+{
+    _TextureStack.pop_back();
+    if (_TextureStack.Size == 0)
+        memset(&_CmdHeader.Texture, 0, sizeof(ImTexture));
+    else
+        _CmdHeader.Texture = _TextureStack.Data[_TextureStack.Size - 1];
+    _OnChangedTexture();
+}
+
 void ImDrawList::PushTextureID(ImTextureID texture_id)
 {
-    _TextureIdStack.push_back(texture_id);
-    _CmdHeader.TextureId = texture_id;
-    _OnChangedTextureID();
+    PushTexture(ImTexture(texture_id));
 }
 
 void ImDrawList::PopTextureID()
 {
-    _TextureIdStack.pop_back();
-    _CmdHeader.TextureId = (_TextureIdStack.Size == 0) ? (ImTextureID)NULL : _TextureIdStack.Data[_TextureIdStack.Size - 1];
-    _OnChangedTextureID();
+    PopTexture();
 }
 
 // This is used by ImGui::PushFont()/PopFont(). It works because we never use _TextureIdStack[] elsewhere than in PushTextureID()/PopTextureID().
-void ImDrawList::_SetTextureID(ImTextureID texture_id)
+void ImDrawList::_SetTexture(ImTexture texture)
 {
-    if (_CmdHeader.TextureId == texture_id)
+    if (_CmdHeader.Texture == texture)
         return;
-    _CmdHeader.TextureId = texture_id;
-    _OnChangedTextureID();
+    _CmdHeader.Texture = texture;
+    _OnChangedTexture();
 }
 
 // Reserve space for a number of vertices and indices.
@@ -1643,7 +1656,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (font_size == 0.0f)
         font_size = _Data->FontSize;
 
-    IM_ASSERT(font->ContainerAtlas->TexID == _CmdHeader.TextureId);  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
+    IM_ASSERT(ImTexture(font->ContainerAtlas) == _CmdHeader.Texture);  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     ImVec4 clip_rect = _CmdHeader.ClipRect;
     if (cpu_fine_clip_rect)
@@ -1661,39 +1674,49 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
     AddText(NULL, 0.0f, pos, col, text_begin, text_end);
 }
 
-void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+void ImDrawList::AddImage(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     PrimReserve(6, 4);
     PrimRectUV(p_min, p_max, uv_min, uv_max, col);
 
-    if (push_texture_id)
+    if (push_texture)
         PopTextureID();
 }
 
-void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+{
+    AddImage(ImTexture(user_texture_id), p_min, p_max, uv_min, uv_max, col);
+}
+
+void ImDrawList::AddImageQuad(ImTexture texture, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     PrimReserve(6, 4);
     PrimQuadUV(p1, p2, p3, p4, uv1, uv2, uv3, uv4, col);
 
-    if (push_texture_id)
-        PopTextureID();
+    if (push_texture)
+        PopTexture();
 }
 
-void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
+void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)
+{
+    AddImageQuad(ImTexture(user_texture_id), p1, p2, p3, p4, uv1, uv2, uv3, uv4, col);
+}
+
+void ImDrawList::AddImageRounded(ImTexture texture, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1701,13 +1724,13 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
     flags = FixRectCornerFlags(flags);
     if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
-        AddImage(user_texture_id, p_min, p_max, uv_min, uv_max, col);
+        AddImage(texture, p_min, p_max, uv_min, uv_max, col);
         return;
     }
 
-    const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
-    if (push_texture_id)
-        PushTextureID(user_texture_id);
+    const bool push_texture = texture != _CmdHeader.Texture;
+    if (push_texture)
+        PushTexture(texture);
 
     int vert_start_idx = VtxBuffer.Size;
     PathRect(p_min, p_max, rounding, flags);
@@ -1715,8 +1738,13 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
     int vert_end_idx = VtxBuffer.Size;
     ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, p_min, p_max, uv_min, uv_max, true);
 
-    if (push_texture_id)
-        PopTextureID();
+    if (push_texture)
+        PopTexture();
+}
+
+void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, float rounding, ImDrawFlags flags)
+{
+    AddImageRounded(ImTexture(user_texture_id), p_min, p_max, uv_min, uv_max, col, rounding, flags);
 }
 
 //-----------------------------------------------------------------------------
@@ -2343,6 +2371,110 @@ ImFontConfig::ImFontConfig()
 }
 
 //-----------------------------------------------------------------------------
+// [SECTION] ImTextureData
+//-----------------------------------------------------------------------------
+
+ImTextureData::ImTextureData()
+{
+    memset(this, 0, sizeof(*this));
+}
+
+ImTextureData::~ImTextureData()
+{
+    DiscardPixels();
+}
+
+void ImTextureData::Reset()
+{
+    memset(this, 0, sizeof(*this));
+}
+
+void ImTextureData::AllocatePixels(int width, int height, ImTextureFormat format, bool clear)
+{
+    DiscardPixels();
+
+    int bytes_per_pixel = format == ImTextureFormat_Alpha8 ? 1 : 4;
+
+    TexFormat = format;
+    TexPixels = IM_ALLOC(width * height * bytes_per_pixel);
+    TexWidth  = width;
+    TexHeight = height;
+
+    if (clear)
+        memset(TexPixels, 0, width * height * bytes_per_pixel);
+}
+
+void ImTextureData::DiscardPixels()
+{
+    if (TexPixels)
+    {
+        IM_FREE(TexPixels);
+        TexPixels = NULL;
+    }
+}
+
+void ImTextureData::EnsureFormat(ImTextureFormat new_format)
+{
+    // Skip conversion to same format.
+    const ImTextureFormat old_format = TexFormat;
+    if (old_format == new_format)
+        return;
+
+    TexFormat = new_format;
+    if (TexPixels == NULL)
+        return;
+
+    if (old_format == ImTextureFormat_Alpha8 && new_format == ImTextureFormat_RGBA32)
+    {
+        // Convert Alpha8 -> RGBA32 format on demand
+        const unsigned char* pixels = (unsigned char*)TexPixels;
+        unsigned int* pixels_rgba32 = (unsigned int*)IM_ALLOC((size_t)TexWidth * TexHeight * 4);
+        const unsigned char* src = pixels;
+        unsigned int* dst = pixels_rgba32;
+        for (int n = TexWidth * TexHeight; n > 0; n--)
+            *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
+        IM_FREE(TexPixels);
+        TexPixels = pixels_rgba32;
+    }
+    else if (old_format == ImTextureFormat_RGBA32 && new_format == ImTextureFormat_Alpha8)
+    {
+        // Convert RGBA8 -> Alpha8 format on demand
+        // Use Rec. 709 luma coefficients:
+        //   R = 0.2126   G = 0.7152   B = 0.0722
+        unsigned int r_coeff_fix24 =  3566836; // R * (1 << 24)
+        unsigned int g_coeff_fix24 = 11999065; // G * (1 << 24)
+        unsigned int b_coeff_fix24 =  1211315; // B * (1 << 24)
+        unsigned int a_coeff_fix16 =    65793; // A * (256 / 255) * (1 << 16)
+        unsigned int* pixels = (unsigned int*)TexPixels;
+        unsigned char* pixels_alpha8 = (unsigned char*)IM_ALLOC((size_t)TexWidth * TexHeight);
+        const unsigned int* src = pixels;
+        unsigned char* dst = pixels_alpha8;
+        for (int n = TexWidth * TexHeight; n > 0; n--)
+        {
+            // Calculate luma from RGB image, value is in range [0..255] in fixed format
+            unsigned int color = *src++;
+            unsigned int luma_fix24 =
+                ((color >> IM_COL32_R_SHIFT) & 0xFF) * r_coeff_fix24 +
+                ((color >> IM_COL32_G_SHIFT) & 0xFF) * g_coeff_fix24 +
+                ((color >> IM_COL32_B_SHIFT) & 0xFF) * b_coeff_fix24;
+
+            // Luma will be used as alpha. If original texture have transparency data, we're pre-multiplying it into luma.
+            // Multiplying by a_coeff_fix24 move alpha to range [0..256].
+            // Luma max value is 255, product brings value back to [0..255] range and can be used directly.
+            luma_fix24 = a_coeff_fix16 * (luma_fix24 >> 24) * ((color >> IM_COL32_A_SHIFT) & 0xFF);
+
+            *dst++ = luma_fix24 >> 24;
+        }
+        IM_FREE(TexPixels);
+        TexPixels = pixels_alpha8;
+    }
+    else
+    {
+        IM_ASSERT(0 && "Unsupported texture format convertion.");
+    }
+}
+
+//-----------------------------------------------------------------------------
 // [SECTION] ImFontAtlas
 //-----------------------------------------------------------------------------
 
@@ -2407,6 +2539,7 @@ ImFontAtlas::~ImFontAtlas()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     Clear();
+    ClearTransientTextures();
 }
 
 void    ImFontAtlas::ClearInputData()
@@ -2427,22 +2560,16 @@ void    ImFontAtlas::ClearInputData()
             font->ConfigDataCount = 0;
         }
     ConfigData.clear();
-    CustomRects.clear();
-    PackIdMouseCursors = PackIdLines = -1;
+    MarkDirty();
     // Important: we leave TexReady untouched
 }
 
 void    ImFontAtlas::ClearTexData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    if (TexPixelsAlpha8)
-        IM_FREE(TexPixelsAlpha8);
-    if (TexPixelsRGBA32)
-        IM_FREE(TexPixelsRGBA32);
-    TexPixelsAlpha8 = NULL;
-    TexPixelsRGBA32 = NULL;
-    TexPixelsUseColors = false;
     // Important: we leave TexReady untouched
+    TexData.DiscardPixels();
+    MarkDirty();
 }
 
 void    ImFontAtlas::ClearFonts()
@@ -2450,6 +2577,7 @@ void    ImFontAtlas::ClearFonts()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     Fonts.clear_delete();
     TexReady = false;
+    MarkDirty();
 }
 
 void    ImFontAtlas::Clear()
@@ -2459,15 +2587,49 @@ void    ImFontAtlas::Clear()
     ClearFonts();
 }
 
+void    ImFontAtlas::MarkDirty()
+{
+    TexDirty = true;
+}
+
+void    ImFontAtlas::MarkClean()
+{
+    TexDirty = false;
+}
+
+bool    ImFontAtlas::IsDirty()
+{
+    return TexDirty;
+}
+
+void    ImFontAtlas::PushTexPage()
+{
+    if (TexData.TexPixels == NULL)
+        return;
+
+    TexPages.push_back(TexData); // ImVector<> use memcpy
+    TexData.Reset();             // Reset (memset to zero) TexData, memory is now owned by copy in TexPages
+}
+
+void    ImFontAtlas::ClearTransientTextures()
+{
+    for (int i = 0; i < TexPages.Size; ++i)
+        TexPages[i].DiscardPixels();
+
+    TexPages.clear();
+}
+
 void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
     // Build atlas on demand
-    if (TexPixelsAlpha8 == NULL)
+    if (TexData.TexPixels == NULL || IsDirty())
         Build();
 
-    *out_pixels = TexPixelsAlpha8;
-    if (out_width) *out_width = TexWidth;
-    if (out_height) *out_height = TexHeight;
+    TexData.EnsureFormat(ImTextureFormat_Alpha8);
+
+    *out_pixels = (unsigned char*)TexData.TexPixels;
+    if (out_width) *out_width = TexData.TexWidth;
+    if (out_height) *out_height = TexData.TexHeight;
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 1;
 }
 
@@ -2475,24 +2637,26 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
 {
     // Convert to RGBA32 format on demand
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
-    if (!TexPixelsRGBA32)
-    {
-        unsigned char* pixels = NULL;
-        GetTexDataAsAlpha8(&pixels, NULL, NULL);
-        if (pixels)
-        {
-            TexPixelsRGBA32 = (unsigned int*)IM_ALLOC((size_t)TexWidth * (size_t)TexHeight * 4);
-            const unsigned char* src = pixels;
-            unsigned int* dst = TexPixelsRGBA32;
-            for (int n = TexWidth * TexHeight; n > 0; n--)
-                *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
-        }
-    }
+    if (TexData.TexPixels == NULL || IsDirty())
+        Build();
 
-    *out_pixels = (unsigned char*)TexPixelsRGBA32;
-    if (out_width) *out_width = TexWidth;
-    if (out_height) *out_height = TexHeight;
+    TexData.EnsureFormat(ImTextureFormat_RGBA32);
+
+    *out_pixels = (unsigned char*)TexData.TexPixels;
+    if (out_width) *out_width = TexData.TexWidth;
+    if (out_height) *out_height = TexData.TexHeight;
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 4;
+}
+
+ImTextureUpdateData* ImFontAtlas::GetTextureUpdateData()
+{
+    ImTextureUpdateData* tex_update_data = &TexUpdateData;
+    tex_update_data->Textures.resize(0);
+    tex_update_data->Textures.reserve(TexPages.Size + 1);
+    tex_update_data->Textures.push_back(&TexData);
+    for (int i = 0; i < TexPages.Size; ++i)
+        tex_update_data->Textures.push_back(&TexPages[i]);
+    return tex_update_data;
 }
 
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
@@ -2527,6 +2691,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     // Invalidate texture
     TexReady = false;
     ClearTexData();
+    MarkDirty();
     return new_font_cfg.DstFont;
 }
 
@@ -2658,8 +2823,8 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
 
 void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
-    IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
-    IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
+    IM_ASSERT(TexData.TexWidth > 0 && TexData.TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
+    IM_ASSERT(rect->IsPacked());                                // Make sure the rectangle has been packed
     *out_uv_min = ImVec2((float)rect->X * TexUvScale.x, (float)rect->Y * TexUvScale.y);
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
 }
@@ -2777,8 +2942,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
-    atlas->TexID = (ImTextureID)NULL;
-    atlas->TexWidth = atlas->TexHeight = 0;
+    atlas->TexData = ImTextureData();
     atlas->TexUvScale = ImVec2(0.0f, 0.0f);
     atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     atlas->ClearTexData();
@@ -2925,17 +3089,17 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     // The exact width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
     // User can override TexDesiredWidth and TexGlyphPadding if they wish, otherwise we use a simple heuristic to select the width based on expected surface.
     const int surface_sqrt = (int)ImSqrt((float)total_surface) + 1;
-    atlas->TexHeight = 0;
+    atlas->TexData.TexHeight = 0;
     if (atlas->TexDesiredWidth > 0)
-        atlas->TexWidth = atlas->TexDesiredWidth;
+        atlas->TexData.TexWidth = atlas->TexDesiredWidth;
     else
-        atlas->TexWidth = (surface_sqrt >= 4096 * 0.7f) ? 4096 : (surface_sqrt >= 2048 * 0.7f) ? 2048 : (surface_sqrt >= 1024 * 0.7f) ? 1024 : 512;
+        atlas->TexData.TexWidth = (surface_sqrt >= 4096 * 0.7f) ? 4096 : (surface_sqrt >= 2048 * 0.7f) ? 2048 : (surface_sqrt >= 1024 * 0.7f) ? 1024 : 512;
 
     // 5. Start packing
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     const int TEX_HEIGHT_MAX = 1024 * 32;
     stbtt_pack_context spc = {};
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
+    stbtt_PackBegin(&spc, NULL, atlas->TexData.TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
     ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
 
     // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
@@ -2951,16 +3115,16 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         // FIXME: We are not handling packing failure here (would happen if we got off TEX_HEIGHT_MAX or if a single if larger than TexWidth?)
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
             if (src_tmp.Rects[glyph_i].was_packed)
-                atlas->TexHeight = ImMax(atlas->TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
+                atlas->TexData.TexHeight = ImMax(atlas->TexData.TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
     }
 
     // 7. Allocate texture
-    atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
-    atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
-    atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
-    memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
-    spc.pixels = atlas->TexPixelsAlpha8;
-    spc.height = atlas->TexHeight;
+    atlas->TexData.TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexData.TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexData.TexHeight);
+    atlas->TexUvScale = ImVec2(1.0f / atlas->TexData.TexWidth, 1.0f / atlas->TexData.TexHeight);
+    atlas->TexData.TexPixels = (unsigned char*)IM_ALLOC(atlas->TexData.TexWidth * atlas->TexData.TexHeight);
+    memset(atlas->TexData.TexPixels, 0, atlas->TexData.TexWidth * atlas->TexData.TexHeight);
+    spc.pixels = (unsigned char*)atlas->TexData.TexPixels;
+    spc.height = atlas->TexData.TexHeight;
 
     // 8. Render/rasterize font characters into the texture
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
@@ -2980,7 +3144,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             stbrp_rect* r = &src_tmp.Rects[0];
             for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++, r++)
                 if (r->was_packed)
-                    ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, atlas->TexPixelsAlpha8, r->x, r->y, r->w, r->h, atlas->TexWidth * 1);
+                    ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, (unsigned char*)atlas->TexData.TexPixels, r->x, r->y, r->w, r->h, atlas->TexData.TexWidth * 1);
         }
         src_tmp.Rects = NULL;
     }
@@ -3018,7 +3182,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             const stbtt_packedchar& pc = src_tmp.PackedChars[glyph_i];
             stbtt_aligned_quad q;
             float unused_x = 0.0f, unused_y = 0.0f;
-            stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexWidth, atlas->TexHeight, glyph_i, &unused_x, &unused_y, &q, 0);
+            stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexData.TexWidth, atlas->TexData.TexHeight, glyph_i, &unused_x, &unused_y, &q, 0);
             float x0 = q.x0 * inv_rasterization_scale + font_off_x;
             float y0 = q.y0 * inv_rasterization_scale + font_off_y;
             float x1 = q.x1 * inv_rasterization_scale + font_off_x;
@@ -3096,26 +3260,28 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
             user_rects[i].X = (unsigned short)pack_rects[i].x;
             user_rects[i].Y = (unsigned short)pack_rects[i].y;
             IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
-            atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
+            atlas->TexData.TexHeight = ImMax(atlas->TexData.TexHeight, pack_rects[i].y + pack_rects[i].h);
         }
 }
 
 void ImFontAtlasBuildRender8bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value)
 {
-    IM_ASSERT(x >= 0 && x + w <= atlas->TexWidth);
-    IM_ASSERT(y >= 0 && y + h <= atlas->TexHeight);
-    unsigned char* out_pixel = atlas->TexPixelsAlpha8 + x + (y * atlas->TexWidth);
-    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexWidth, in_str += w)
+    IM_ASSERT(x >= 0 && x + w <= atlas->TexData.TexWidth);
+    IM_ASSERT(y >= 0 && y + h <= atlas->TexData.TexHeight);
+    IM_ASSERT(ImTextureFormat_Alpha8 == atlas->TexData.TexFormat);
+    unsigned char* out_pixel = (unsigned char*)atlas->TexData.TexPixels + x + (y * atlas->TexData.TexWidth);
+    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexData.TexWidth, in_str += w)
         for (int off_x = 0; off_x < w; off_x++)
             out_pixel[off_x] = (in_str[off_x] == in_marker_char) ? in_marker_pixel_value : 0x00;
 }
 
 void ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned int in_marker_pixel_value)
 {
-    IM_ASSERT(x >= 0 && x + w <= atlas->TexWidth);
-    IM_ASSERT(y >= 0 && y + h <= atlas->TexHeight);
-    unsigned int* out_pixel = atlas->TexPixelsRGBA32 + x + (y * atlas->TexWidth);
-    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexWidth, in_str += w)
+    IM_ASSERT(x >= 0 && x + w <= atlas->TexData.TexWidth);
+    IM_ASSERT(y >= 0 && y + h <= atlas->TexData.TexHeight);
+    IM_ASSERT(ImTextureFormat_RGBA32 == atlas->TexData.TexFormat);
+    unsigned int* out_pixel = (unsigned int*)atlas->TexData.TexPixels + x + (y * atlas->TexData.TexWidth);
+    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexData.TexWidth, in_str += w)
         for (int off_x = 0; off_x < w; off_x++)
             out_pixel[off_x] = (in_str[off_x] == in_marker_char) ? in_marker_pixel_value : IM_COL32_BLACK_TRANS;
 }
@@ -3125,14 +3291,14 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdMouseCursors);
     IM_ASSERT(r->IsPacked());
 
-    const int w = atlas->TexWidth;
+    const int w = atlas->TexData.TexWidth;
     if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
     {
         // Render/copy pixels
         IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
         const int x_for_white = r->X;
         const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
-        if (atlas->TexPixelsAlpha8 != NULL)
+        if (atlas->TexData.TexFormat == ImTextureFormat_Alpha8)
         {
             ImFontAtlasBuildRender8bppRectFromString(atlas, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
             ImFontAtlasBuildRender8bppRectFromString(atlas, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
@@ -3148,13 +3314,15 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
         // Render 4 white pixels
         IM_ASSERT(r->Width == 2 && r->Height == 2);
         const int offset = (int)r->X + (int)r->Y * w;
-        if (atlas->TexPixelsAlpha8 != NULL)
+        if (atlas->TexData.TexFormat == ImTextureFormat_Alpha8)
         {
-            atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
+            unsigned char* pixels_alpha8 = (unsigned char*)atlas->TexData.TexPixels;
+            pixels_alpha8[offset] = pixels_alpha8[offset + 1] = pixels_alpha8[offset + w] = pixels_alpha8[offset + w + 1] = 0xFF;
         }
         else
         {
-            atlas->TexPixelsRGBA32[offset] = atlas->TexPixelsRGBA32[offset + 1] = atlas->TexPixelsRGBA32[offset + w] = atlas->TexPixelsRGBA32[offset + w + 1] = IM_COL32_WHITE;
+            unsigned int* pixels_rgba32 = (unsigned int*)atlas->TexData.TexPixels;
+            pixels_rgba32[offset] = pixels_rgba32[offset + 1] = pixels_rgba32[offset + w] = pixels_rgba32[offset + w + 1] = IM_COL32_WHITE;
         }
     }
     atlas->TexUvWhitePixel = ImVec2((r->X + 0.5f) * atlas->TexUvScale.x, (r->Y + 0.5f) * atlas->TexUvScale.y);
@@ -3178,9 +3346,10 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
 
         // Write each slice
         IM_ASSERT(pad_left + line_width + pad_right == r->Width && y < r->Height); // Make sure we're inside the texture bounds before we start writing pixels
-        if (atlas->TexPixelsAlpha8 != NULL)
+        if (atlas->TexData.TexFormat == ImTextureFormat_Alpha8)
         {
-            unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
+            unsigned char* pixels_alpha8 = (unsigned char*)atlas->TexData.TexPixels;
+            unsigned char* write_ptr = &pixels_alpha8[r->X + ((r->Y + y) * atlas->TexData.TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = 0x00;
 
@@ -3192,7 +3361,8 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
         }
         else
         {
-            unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
+            unsigned int* pixels_rgba32 = (unsigned int*)atlas->TexData.TexPixels;
+            unsigned int* write_ptr = &pixels_rgba32[r->X + ((r->Y + y) * atlas->TexData.TexWidth)];
             for (unsigned int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
 
@@ -3221,6 +3391,8 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     for (ImFontConfig& cfg : atlas->ConfigData)
        cfg.SizePixels = ImTrunc(cfg.SizePixels);
 
+    atlas->PushTexPage();
+
     // Register texture region for mouse cursors or standard white pixels
     if (atlas->PackIdMouseCursors < 0)
     {
@@ -3243,7 +3415,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 {
     // Render into our custom data blocks
-    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL || atlas->TexPixelsRGBA32 != NULL);
+    IM_ASSERT(atlas->TexData.TexPixels != NULL);
     ImFontAtlasBuildRenderDefaultTexData(atlas);
     ImFontAtlasBuildRenderLinesTexData(atlas);
 
@@ -3267,6 +3439,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
             font->BuildLookupTable();
 
     atlas->TexReady = true;
+    atlas->TexData.MarkDirty();
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -3778,7 +3951,7 @@ void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, floa
     // We use (U1-U0)*TexWidth instead of X1-X0 to account for oversampling.
     float pad = ContainerAtlas->TexGlyphPadding + 0.99f;
     DirtyLookupTables = true;
-    MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + pad) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + pad);
+    MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexData.TexWidth + pad) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexData.TexHeight + pad);
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)

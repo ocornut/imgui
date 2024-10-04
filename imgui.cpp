@@ -3729,13 +3729,13 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
         if (!viewport->GetMainRect().Overlaps(ImRect(pos, pos + ImVec2(size.x + 2, size.y + 2) * scale)))
             continue;
         ImDrawList* draw_list = GetForegroundDrawList(viewport);
-        ImTextureID tex_id = font_atlas->TexID;
-        draw_list->PushTextureID(tex_id);
-        draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale, uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
-        draw_list->AddImage(tex_id, pos,                        pos + size * scale,                  uv[2], uv[3], col_border);
-        draw_list->AddImage(tex_id, pos,                        pos + size * scale,                  uv[0], uv[1], col_fill);
-        draw_list->PopTextureID();
+        draw_list->PushTexture(ImTexture(font_atlas));
+        ImTexture tex = draw_list->_CmdHeader.Texture;
+        draw_list->AddImage(tex, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale, uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex, pos, pos + size * scale, uv[2], uv[3], col_border);
+        draw_list->AddImage(tex, pos, pos + size * scale, uv[0], uv[1], col_fill);
+        draw_list->PopTexture();
     }
 }
 
@@ -4740,6 +4740,12 @@ ImDrawData* ImGui::GetDrawData()
     return viewport->DrawDataP.Valid ? &viewport->DrawDataP : NULL;
 }
 
+ImTextureUpdateData* ImGui::GetTextureUpdateData()
+{
+    ImGuiContext& g = *GImGui;
+    return g.IO.Fonts->GetTextureUpdateData();
+}
+
 double ImGui::GetTime()
 {
     return GImGui->Time;
@@ -4767,7 +4773,7 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     if (viewport->BgFgDrawListsLastFrame[drawlist_no] != g.FrameCount)
     {
         draw_list->_ResetForNewFrame();
-        draw_list->PushTextureID(g.IO.Fonts->TexID);
+        draw_list->PushTexture(ImTexture(g.IO.Fonts));
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
         viewport->BgFgDrawListsLastFrame[drawlist_no] = g.FrameCount;
     }
@@ -5034,6 +5040,11 @@ void ImGui::NewFrame()
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePre);
 
+    // Check that font atlas was built or backend support texture reload in which case we can build now
+    ImFontAtlas* atlas = g.IO.Fonts;
+    if (!atlas->IsBuilt() && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTexReload))
+        atlas->Build();
+
     // Check and assert for various common IO and Configuration mistakes
     ErrorCheckNewFrameSanityChecks();
 
@@ -5066,6 +5077,7 @@ void ImGui::NewFrame()
     SetupDrawListSharedData();
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
+    g.IO.Fonts->ClearTransientTextures();
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (ImGuiViewportP* viewport : g.Viewports)
@@ -7435,7 +7447,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Setup draw list and outer clipping rectangle
         IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
-        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        window->DrawList->PushTexture(ImTexture(g.Font->ContainerAtlas));
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
         // Child windows can render their decoration (bg color, border, scrollbars, etc.) within their parent to save a draw call (since 1.71)
@@ -7937,7 +7949,7 @@ void ImGui::PushFont(ImFont* font)
         font = GetDefaultFont();
     g.FontStack.push_back(font);
     SetCurrentFont(font);
-    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    g.CurrentWindow->DrawList->_SetTexture(ImTexture(font->ContainerAtlas));
 }
 
 void  ImGui::PopFont()
@@ -7951,7 +7963,7 @@ void  ImGui::PopFont()
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
     SetCurrentFont(font);
-    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    g.CurrentWindow->DrawList->_SetTexture(ImTexture(font->ContainerAtlas));
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
@@ -15239,14 +15251,14 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         DebugNodeFont(font);
         PopID();
     }
-    if (TreeNode("Font Atlas", "Font Atlas (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+    if (TreeNode("Font Atlas", "Font Atlas (%dx%d pixels)", atlas->TexData.TexWidth, atlas->TexData.TexHeight))
     {
         ImGuiContext& g = *GImGui;
         ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
         Checkbox("Tint with Text Color", &cfg->ShowAtlasTintedWithTextColor); // Using text color ensure visibility of core atlas data, but will alter custom colored icons
         ImVec4 tint_col = cfg->ShowAtlasTintedWithTextColor ? GetStyleColorVec4(ImGuiCol_Text) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border_col = GetStyleColorVec4(ImGuiCol_Border);
-        Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
+        Image(atlas->TexData.TexID, ImVec2((float)atlas->TexData.TexWidth, (float)atlas->TexData.TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
         TreePop();
     }
 }
@@ -15959,7 +15971,7 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
         }
 
         char texid_desc[20];
-        FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), pcmd->TextureId);
+        FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), pcmd->GetTexID());
         char buf[300];
         ImFormatString(buf, IM_ARRAYSIZE(buf), "DrawCmd:%5d tris, Tex %s, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
             pcmd->ElemCount / 3, texid_desc, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
