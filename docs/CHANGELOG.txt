@@ -36,10 +36,19 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.3 WIP (In Progress)
+ VERSION 1.91.3 (Released 2024-10-04)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.3
+
 Breaking changes:
+
+- Drags: treat v_min==v_max as a valid clamping range when != 0.0f. Zero is still a special
+  value due to legacy reasons, unless using ImGuiSliderFlags_ClampZeroRange. (#7968, #3361, #76)
+- Drags: extended behavior of ImGuiSliderFlags_AlwaysClamp to include _ClampZeroRange.
+  It considers v_min==v_max==0.0f as a valid clamping range (aka edits not allowed).
+  Although unlikely, it you wish to only clamp on text input but want v_min==v_max==0.0f
+  to mean unclamped drags, you can use _ClampOnInput instead of _AlwaysClamp. (#7968, #3361, #76)
 
 Other changes:
 
@@ -54,7 +63,7 @@ Other changes:
   - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
   - By design, we do not allow error recovery to be 100% silent. One of the options needs to be enabled!
   - Possible usage: facilitate recovery from errors triggered from a scripting language or
-    after specific exceptions handlers. Surface errors to programmers in less agressive ways.
+    after specific exceptions handlers. Surface errors to programmers in less aggressive ways.
   - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled
     when making direct imgui API calls! Otherwise it would severely hinder your ability to
     catch and correct mistakes!
@@ -71,12 +80,19 @@ Other changes:
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
+- Drags: split ImGuiSliderFlags_AlwaysClamp into two distinct flags: (#7968, #3361, #76)
+  - ImGuiSliderFlags_AlwaysClamp = ImGuiSliderFlags_ClampOnInput + ImGuiSliderFlags_ClampZeroRange.
+  - Previously _AlwaysClamp only did the equivalent of _ClampOnInput.
+  - Added ImGuiSliderFlags_ClampOnInput which is now a subset of AlwaysClamp.
+    (note that it was the old name of AlwaysClamp, but we are reintroducing that name).
+  - Added ImGuiSliderFlags_ClampZeroRange to enforce clamping even when v_min==v_max==0.0f
+    in drag functions. Sliders are not affected.
 - Tooltips, Drag and Drop: Fixed an issue where the fallback drag and drop payload tooltip
   appeared during drag and drop release.
 - Tooltips, Drag and Drop: Stabilized name of drag and drop tooltip window so that
   transitioning from an item tooltip to a drag tooltip doesn't leak window auto-sizing
   info from one to the other. (#8036)
-- Tooltips: Tooltips triggered from touch inputs are positionned above the item. (#8036)
+- Tooltips: Tooltips triggered from touch inputs are positioned above the item. (#8036)
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 - Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
   (#8009, #8010) [@blitz-research]
@@ -93,6 +109,14 @@ Docking+Viewports Branch:
 -----------------------------------------------------------------------
 
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.2
+
+Breaking changes:
+
+ - Internals: using multiple overlayed ButtonBehavior() with same ID will now have the
+   io.ConfigDebugHighlightIdConflicts=true feature emit a warning. (#8030)
+   It was one of the rare case where using same ID is legal. Workarounds:
+   - use single ButtonBehavior() call with multiple _MouseButton flags
+   - or surround the calls with PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true); ... PopItemFlag()
 
 Other changes:
 
