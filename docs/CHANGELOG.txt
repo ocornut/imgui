@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.3 WIP (In Progress)
+ VERSION 1.91.3 (Released 2024-10-04)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.3
 
 Breaking changes:
 
@@ -61,7 +63,7 @@ Other changes:
   - Functions that support error recovery are using IM_ASSERT_USER_ERROR() instead of IM_ASSERT().
   - By design, we do not allow error recovery to be 100% silent. One of the options needs to be enabled!
   - Possible usage: facilitate recovery from errors triggered from a scripting language or
-    after specific exceptions handlers. Surface errors to programmers in less agressive ways.
+    after specific exceptions handlers. Surface errors to programmers in less aggressive ways.
   - Always ensure that on programmers seats you have at minimum Asserts or Tooltips enabled
     when making direct imgui API calls! Otherwise it would severely hinder your ability to
     catch and correct mistakes!
@@ -78,7 +80,7 @@ Other changes:
 - Scrollbar: Shift+Click scroll to clicked location (pre-1.90.8 default). (#8002, #7328)
 - Scrollbar: added io.ConfigScrollbarScrollByPage setting (default to true). (#8002, #7328)
   Set io.ConfigScrollbarScrollByPage=false to enforce always scrolling to clicked location.
-- Drags: ImGuiSliderFlags_AlwaysClamp split into two distinct flags: (#7968, #3361, #76)
+- Drags: split ImGuiSliderFlags_AlwaysClamp into two distinct flags: (#7968, #3361, #76)
   - ImGuiSliderFlags_AlwaysClamp = ImGuiSliderFlags_ClampOnInput + ImGuiSliderFlags_ClampZeroRange.
   - Previously _AlwaysClamp only did the equivalent of _ClampOnInput.
   - Added ImGuiSliderFlags_ClampOnInput which is now a subset of AlwaysClamp.
@@ -90,7 +92,7 @@ Other changes:
 - Tooltips, Drag and Drop: Stabilized name of drag and drop tooltip window so that
   transitioning from an item tooltip to a drag tooltip doesn't leak window auto-sizing
   info from one to the other. (#8036)
-- Tooltips: Tooltips triggered from touch inputs are positionned above the item. (#8036)
+- Tooltips: Tooltips triggered from touch inputs are positioned above the item. (#8036)
 - Backends: SDL3: Update for API changes: SDL_bool removal. SDL_INIT_TIMER removal.
 - Backends: WebGPU: Fixed DAWN api change using WGPUStringView in WGPUShaderSourceWGSL.
   (#8009, #8010) [@blitz-research]
