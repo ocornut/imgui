@@ -63,6 +63,12 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+typedef VkPipelineRenderingCreateInfoKHR ImGui_ImplVulkan_PipelineRenderingInfo;
+#else
+typedef void ImGui_ImplVulkan_PipelineRenderingInfo;
+#endif
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
@@ -99,7 +105,8 @@ struct ImGui_ImplVulkan_InitInfo
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
+IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info); // The main pipeline will be created if possible (RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType is correct))
+IMGUI_IMPL_API void         ImGui_ImplVulkan_ReCreateMainPipeline(VkRenderPass render_pass, uint32_t subpass, VkSampleCountFlagBits MSAA_samples, const ImGui_ImplVulkan_PipelineRenderingInfo * p_dynamic_rendering = nullptr); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
 IMGUI_IMPL_API void         ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
