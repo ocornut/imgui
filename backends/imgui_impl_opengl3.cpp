@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748)
 //  2024-05-07: OpenGL: Update loader for Linux to support EGL/GLVND. (#7562)
 //  2024-04-16: OpenGL: Detect ES3 contexts on desktop based on version string, to e.g. avoid calling glPolygonMode() on them. (#7447)
@@ -681,6 +682,8 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     GL_CALL(glBindTexture(GL_TEXTURE_2D, bd->FontTexture));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
     GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
 #endif

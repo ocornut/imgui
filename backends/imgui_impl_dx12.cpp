@@ -24,6 +24,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-10-07: DirectX12: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: DirectX12: Expose selected render state in ImGui_ImplDX12_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
@@ -489,9 +490,9 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
         D3D12_STATIC_SAMPLER_DESC staticSampler = {};
         staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         staticSampler.MipLODBias = 0.f;
         staticSampler.MaxAnisotropy = 0;
         staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;

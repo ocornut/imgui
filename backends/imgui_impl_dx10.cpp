@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-10-07: DirectX10: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-05-19: DirectX10: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a requirement)
@@ -347,9 +348,9 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         D3D10_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
-        desc.AddressU = D3D10_TEXTURE_ADDRESS_WRAP;
-        desc.AddressV = D3D10_TEXTURE_ADDRESS_WRAP;
-        desc.AddressW = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.AddressU = D3D10_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressV = D3D10_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressW = D3D10_TEXTURE_ADDRESS_CLAMP;
         desc.MipLODBias = 0.f;
         desc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
         desc.MinLOD = 0.f;

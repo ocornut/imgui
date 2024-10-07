@@ -48,6 +48,8 @@ Other changes:
   state to draw callbacks. (#6969, #5834, #7468, #3590)
 - Backends: DX11, DX12, Vulkan, WGPU: expose selected state in ImGui_ImplXXXX_RenderState.
   structure during render loop. (#6969, #5834, #7468, #3590)
+- Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
+  to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502)
 
 
 -----------------------------------------------------------------------

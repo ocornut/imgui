@@ -18,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-10-07: Expose selected render state in ImGui_ImplWGPU_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
+//  2024-10-07: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-09-16: Added support for optional IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU define to handle ever-changing native implementations. (#7977)
 //  2024-01-22: Added configurable PipelineMultisampleState struct. (#7240)
 //  2024-01-22: (Breaking) ImGui_ImplWGPU_Init() now takes a ImGui_ImplWGPU_InitInfo structure instead of variety of parameters, allowing for easier further changes.
@@ -565,9 +566,9 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         sampler_desc.minFilter = WGPUFilterMode_Linear;
         sampler_desc.magFilter = WGPUFilterMode_Linear;
         sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
-        sampler_desc.addressModeU = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeV = WGPUAddressMode_Repeat;
-        sampler_desc.addressModeW = WGPUAddressMode_Repeat;
+        sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+        sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
         sampler_desc.maxAnisotropy = 1;
         bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
     }
