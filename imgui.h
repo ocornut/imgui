@@ -1,4 +1,4 @@
-// dear imgui, v1.91.3
+// dear imgui, v1.91.4 WIP
 // (headers)
 
 // Help:
@@ -28,8 +28,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.91.3"
-#define IMGUI_VERSION_NUM   19130
+#define IMGUI_VERSION       "1.91.4 WIP"
+#define IMGUI_VERSION_NUM   19131
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -3703,7 +3703,7 @@ struct ImGuiPlatformIO
     IMGUI_API ImGuiPlatformIO();
 
     //------------------------------------------------------------------
-    // Input - Interface with OS/backends (basic)
+    // Interface with OS and Platform backend (basic)
     //------------------------------------------------------------------
 
     // Optional: Access OS clipboard
@@ -3726,6 +3726,13 @@ struct ImGuiPlatformIO
     // Optional: Platform locale
     // [Experimental] Configure decimal point e.g. '.' or ',' useful for some languages (e.g. German), generally pulled from *localeconv()->decimal_point
     ImWchar     Platform_LocaleDecimalPoint;     // '.'
+
+    //------------------------------------------------------------------
+    // Interface with Renderer Backend
+    //------------------------------------------------------------------
+
+    // Written by some backends during ImGui_ImplXXXX_RenderDrawData() call to point backend_specific ImGui_ImplXXXX_RenderState* structure.
+    void*       Renderer_RenderState;
 
     //------------------------------------------------------------------
     // Input - Interface with OS/backends (Multi-Viewport support!)

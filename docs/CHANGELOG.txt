@@ -36,6 +36,23 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.4 WIP
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- IO: added 'void* platform_io.Renderer_RenderState' which is set during the
+  ImGui_ImplXXXX_RenderDrawData() of standard backend to expose selected render
+  state to draw callbacks. (#6969, #5834, #7468, #3590)
+- Backends: DX11, DX12, Vulkan, WGPU: expose selected state in ImGui_ImplXXXX_RenderState.
+  structure during render loop. (#6969, #5834, #7468, #3590)
+- Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
+  to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502)
+
+
+-----------------------------------------------------------------------
  VERSION 1.91.3 (Released 2024-10-04)
 -----------------------------------------------------------------------
 
