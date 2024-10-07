@@ -1122,7 +1122,7 @@ bool ImGui::ImageButton(const char* str_id, ImTextureID user_texture_id, const I
 bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
 {
     // Default to using texture ID as ID. User can still push string/integer prefixes.
-    PushID((void*)(intptr_t)user_texture_id);
+    PushID((ImTextureID)(intptr_t)user_texture_id);
     if (frame_padding >= 0)
         PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
     bool ret = ImageButton("", user_texture_id, size, uv0, uv1, bg_col, tint_col);

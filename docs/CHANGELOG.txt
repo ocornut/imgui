@@ -36,10 +36,24 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.4 WIP
+ VERSION 1.91.4 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
+
+- The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
+  - This removes the requirement to redefine it for backends which are e.g. storing
+    descriptor sets or other 64-bits structures when building on 32-bits archs.
+    It therefore simplify various building scripts/helpers.
+  - You may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID'
+    when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
+    In doubt it is almost always better to do an intermediate intptr_t cast, since it
+    allows casting any pointer/integer type without warning:
+    - May warn:     ImGui::Image((void*)MyTextureData, ...);
+    - May warn:     ImGui::Image((void*)(intptr_t)MyTextureData, ...);
+    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
+  - Note that you can always define ImTextureID to be your own high-level structures
+    (with dedicated constructors) if you like.
 
 Other changes:
 
