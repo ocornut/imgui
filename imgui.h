@@ -3515,7 +3515,7 @@ struct ImGuiPlatformIO
     IMGUI_API ImGuiPlatformIO();
 
     //------------------------------------------------------------------
-    // Input - Interface with OS/backends
+    // Interface with OS and Platform backend
     //------------------------------------------------------------------
 
     // Optional: Access OS clipboard
@@ -3538,6 +3538,13 @@ struct ImGuiPlatformIO
     // Optional: Platform locale
     // [Experimental] Configure decimal point e.g. '.' or ',' useful for some languages (e.g. German), generally pulled from *localeconv()->decimal_point
     ImWchar     Platform_LocaleDecimalPoint;     // '.'
+
+    //------------------------------------------------------------------
+    // Interface with Renderer Backend
+    //------------------------------------------------------------------
+
+    // Written by some backends during ImGui_ImplXXXX_RenderDrawData() call to point backend_specific ImGui_ImplXXXX_RenderState* structure.
+    void*       Renderer_RenderState;
 };
 
 // (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function.

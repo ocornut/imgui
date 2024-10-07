@@ -4,6 +4,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)platform_io.BackendRendererRenderState'.
 
 // Important: to compile on 32-bit systems, this backend requires code to be compiled with '#define ImTextureID ImU64'.
 // See imgui_impl_dx12.cpp file for details.
@@ -41,5 +42,14 @@ IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3
 // Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
+
+// [BETA] Selected render state data shared with callbacks.
+// This is temporarily stored in io.BackendRendererRenderState during the ImGui_ImplDX12_RenderDrawData() call.
+// (Please open an issue if you feel you need access to more data)
+struct ImGui_ImplDX12_RenderState
+{
+    ID3D12Device*               Device;
+    ID3D12GraphicsCommandList*  CommandList;
+};
 
 #endif // #ifndef IMGUI_DISABLE
