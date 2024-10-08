@@ -190,6 +190,15 @@ static void SafeRelease(WGPUBindGroup& res)
         wgpuBindGroupRelease(res);
     res = nullptr;
 }
+template <typename T>
+static void SafeRelease(ImGuiStorage& bind_groups_storage)
+{
+    for (int i = 0; i < bind_groups_storage.Data.size(); i++)
+    {
+        SafeRelease((T&)bind_groups_storage.Data[i].val_p);
+    }
+    bind_groups_storage.Clear();
+}
 static void SafeRelease(WGPUBuffer& res)
 {
     if (res)
@@ -816,6 +825,12 @@ void ImGui_ImplWGPU_NewFrame()
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
     if (!bd->pipelineState)
         ImGui_ImplWGPU_CreateDeviceObjects();
+
+    // The user could have deallocated a stored texture, and
+    // potentially allocated a new one that has the same id as
+    // a previously registered one.
+    // To mitigate this, we release the registered bind groups.
+    SafeRelease<WGPUBindGroup>(bd->renderResources.ImageBindGroups);
 }
 
 //-----------------------------------------------------------------------------
