@@ -539,6 +539,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Instruct backend to not alter mouse cursor shape and visibility.");
             ImGui::CheckboxFlags("io.ConfigFlags: NoKeyboard", &io.ConfigFlags, ImGuiConfigFlags_NoKeyboard);
             ImGui::SameLine(); HelpMarker("Instruct dear imgui to disable keyboard inputs and interactions.");
+            ImGui::CheckboxFlags("io.ConfigFlags: TransparentBackbuffers", &io.ConfigFlags, ImGuiConfigFlags_TransparentBackbuffers);
+            ImGui::SameLine(); HelpMarker("Enables or disables support for transparent background buffers. Note that platform support is not guaranteed!");
 
             ImGui::Checkbox("io.ConfigInputTrickleEventQueue", &io.ConfigInputTrickleEventQueue);
             ImGui::SameLine(); HelpMarker("Enable input queue trickling: some types of events submitted during the same frame (e.g. button down + up) will be spread over multiple frames, improving interactions with low framerates.");
