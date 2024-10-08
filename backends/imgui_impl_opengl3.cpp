@@ -253,8 +253,8 @@ static ImGui_ImplOpenGL3_Data* ImGui_ImplOpenGL3_GetBackendData()
 }
 
 // Forward Declarations
-static void ImGui_ImplOpenGL3_InitPlatformInterface();
-static void ImGui_ImplOpenGL3_ShutdownPlatformInterface();
+static void ImGui_ImplOpenGL3_InitMultiViewportSupport();
+static void ImGui_ImplOpenGL3_ShutdownMultiViewportSupport();
 
 // OpenGL vertex attribute state (for ES 1.0 and ES 2.0 only)
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
@@ -389,8 +389,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     }
 #endif
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplOpenGL3_InitPlatformInterface();
+    ImGui_ImplOpenGL3_InitMultiViewportSupport();
 
     return true;
 }
@@ -401,7 +400,7 @@ void    ImGui_ImplOpenGL3_Shutdown()
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui_ImplOpenGL3_ShutdownPlatformInterface();
+    ImGui_ImplOpenGL3_ShutdownMultiViewportSupport();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
@@ -980,13 +979,13 @@ static void ImGui_ImplOpenGL3_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplOpenGL3_RenderDrawData(viewport->DrawData);
 }
 
-static void ImGui_ImplOpenGL3_InitPlatformInterface()
+static void ImGui_ImplOpenGL3_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_RenderWindow = ImGui_ImplOpenGL3_RenderWindow;
 }
 
-static void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
+static void ImGui_ImplOpenGL3_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

@@ -277,8 +277,8 @@ struct ImGui_ImplVulkan_Data
 //-----------------------------------------------------------------------------
 
 // Forward Declarations
-static void ImGui_ImplVulkan_InitPlatformInterface();
-static void ImGui_ImplVulkan_ShutdownPlatformInterface();
+static void ImGui_ImplVulkan_InitMultiViewportSupport();
+static void ImGui_ImplVulkan_ShutdownMultiViewportSupport();
 
 // backends/vulkan/glsl_shader.vert, compiled with:
 // # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
@@ -1163,8 +1163,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->RendererUserData = IM_NEW(ImGui_ImplVulkan_ViewportData)();
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplVulkan_InitPlatformInterface();
+    ImGui_ImplVulkan_InitMultiViewportSupport();
 
     return true;
 }
@@ -1185,7 +1184,7 @@ void ImGui_ImplVulkan_Shutdown()
     main_viewport->RendererUserData = nullptr;
 
     // Clean up windows
-    ImGui_ImplVulkan_ShutdownPlatformInterface();
+    ImGui_ImplVulkan_ShutdownMultiViewportSupport();
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
@@ -1919,7 +1918,7 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
 }
 
-void ImGui_ImplVulkan_InitPlatformInterface()
+void ImGui_ImplVulkan_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -1931,7 +1930,7 @@ void ImGui_ImplVulkan_InitPlatformInterface()
     platform_io.Renderer_SwapBuffers = ImGui_ImplVulkan_SwapBuffers;
 }
 
-void ImGui_ImplVulkan_ShutdownPlatformInterface()
+void ImGui_ImplVulkan_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

@@ -51,6 +51,11 @@ Other changes:
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
   to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502)
 
+Docking+Viewports Branch:
+
+- Backends: changed all backends to allow enabling ImGuiConfigFlags_ViewportsEnable
+  after initialization. (#5371)
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.3 (Released 2024-10-04)

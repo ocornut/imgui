@@ -80,8 +80,8 @@ static ImGui_ImplDX9_Data* ImGui_ImplDX9_GetBackendData()
 }
 
 // Forward Declarations
-static void ImGui_ImplDX9_InitPlatformInterface();
-static void ImGui_ImplDX9_ShutdownPlatformInterface();
+static void ImGui_ImplDX9_InitMultiViewportSupport();
+static void ImGui_ImplDX9_ShutdownMultiViewportSupport();
 static void ImGui_ImplDX9_CreateDeviceObjectsForPlatformWindows();
 static void ImGui_ImplDX9_InvalidateDeviceObjectsForPlatformWindows();
 
@@ -320,8 +320,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     bd->pd3dDevice = device;
     bd->pd3dDevice->AddRef();
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX9_InitPlatformInterface();
+    ImGui_ImplDX9_InitMultiViewportSupport();
 
     return true;
 }
@@ -332,7 +331,7 @@ void ImGui_ImplDX9_Shutdown()
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui_ImplDX9_ShutdownPlatformInterface();
+    ImGui_ImplDX9_ShutdownMultiViewportSupport();
     ImGui_ImplDX9_InvalidateDeviceObjects();
     if (bd->pd3dDevice) { bd->pd3dDevice->Release(); }
     io.BackendRendererName = nullptr;
@@ -546,7 +545,7 @@ static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
     IM_ASSERT(SUCCEEDED(hr) || hr == D3DERR_DEVICELOST);
 }
 
-static void ImGui_ImplDX9_InitPlatformInterface()
+static void ImGui_ImplDX9_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_CreateWindow = ImGui_ImplDX9_CreateWindow;
@@ -556,7 +555,7 @@ static void ImGui_ImplDX9_InitPlatformInterface()
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX9_SwapBuffers;
 }
 
-static void ImGui_ImplDX9_ShutdownPlatformInterface()
+static void ImGui_ImplDX9_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

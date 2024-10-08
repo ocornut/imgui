@@ -130,8 +130,8 @@ static ImGui_ImplSDL3_Data* ImGui_ImplSDL3_GetBackendData()
 
 // Forward Declarations
 static void ImGui_ImplSDL3_UpdateMonitors();
-static void ImGui_ImplSDL3_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context);
-static void ImGui_ImplSDL3_ShutdownPlatformInterface();
+static void ImGui_ImplSDL3_InitMultiViewportSupport(SDL_Window* window, void* sdl_gl_context);
+static void ImGui_ImplSDL3_ShutdownMultiViewportSupport();
 
 // Functions
 static const char* ImGui_ImplSDL3_GetClipboardText(ImGuiContext*)
@@ -554,8 +554,8 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
 
     // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
     // We left the call to ImGui_ImplSDL3_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
-    if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports))
-        ImGui_ImplSDL3_InitPlatformInterface(window, sdl_gl_context);
+    if (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports)
+        ImGui_ImplSDL3_InitMultiViewportSupport(window, sdl_gl_context);
 
     return true;
 }
@@ -606,7 +606,7 @@ void ImGui_ImplSDL3_Shutdown()
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui_ImplSDL3_ShutdownPlatformInterface();
+    ImGui_ImplSDL3_ShutdownMultiViewportSupport();
 
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
@@ -1108,7 +1108,7 @@ static int ImGui_ImplSDL3_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
     return ret ? 0 : 1; // ret ? VK_SUCCESS : VK_NOT_READY
 }
 
-static void ImGui_ImplSDL3_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context)
+static void ImGui_ImplSDL3_InitMultiViewportSupport(SDL_Window* window, void* sdl_gl_context)
 {
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -1141,7 +1141,7 @@ static void ImGui_ImplSDL3_InitPlatformInterface(SDL_Window* window, void* sdl_g
     main_viewport->PlatformHandle = (void*)(intptr_t)vd->WindowID;
 }
 
-static void ImGui_ImplSDL3_ShutdownPlatformInterface()
+static void ImGui_ImplSDL3_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

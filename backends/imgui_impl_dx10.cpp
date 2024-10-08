@@ -83,8 +83,8 @@ static ImGui_ImplDX10_Data* ImGui_ImplDX10_GetBackendData()
 }
 
 // Forward Declarations
-static void ImGui_ImplDX10_InitPlatformInterface();
-static void ImGui_ImplDX10_ShutdownPlatformInterface();
+static void ImGui_ImplDX10_InitMultiViewportSupport();
+static void ImGui_ImplDX10_ShutdownMultiViewportSupport();
 
 // Functions
 static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device* device)
@@ -566,8 +566,8 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     if (pDXGIAdapter) pDXGIAdapter->Release();
     bd->pd3dDevice->AddRef();
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX10_InitPlatformInterface();
+    ImGui_ImplDX10_InitMultiViewportSupport();
+
     return true;
 }
 
@@ -577,7 +577,7 @@ void ImGui_ImplDX10_Shutdown()
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGui_ImplDX10_ShutdownPlatformInterface();
+    ImGui_ImplDX10_ShutdownMultiViewportSupport();
     ImGui_ImplDX10_InvalidateDeviceObjects();
     if (bd->pFactory) { bd->pFactory->Release(); }
     if (bd->pd3dDevice) { bd->pd3dDevice->Release(); }
@@ -704,7 +704,7 @@ static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport, void*)
     vd->SwapChain->Present(0, 0); // Present without vsync
 }
 
-void ImGui_ImplDX10_InitPlatformInterface()
+void ImGui_ImplDX10_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_CreateWindow = ImGui_ImplDX10_CreateWindow;
@@ -714,7 +714,7 @@ void ImGui_ImplDX10_InitPlatformInterface()
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX10_SwapBuffers;
 }
 
-void ImGui_ImplDX10_ShutdownPlatformInterface()
+void ImGui_ImplDX10_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

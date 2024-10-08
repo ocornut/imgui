@@ -41,8 +41,8 @@
 #import <Metal/Metal.h>
 
 // Forward Declarations
-static void ImGui_ImplMetal_InitPlatformInterface();
-static void ImGui_ImplMetal_ShutdownPlatformInterface();
+static void ImGui_ImplMetal_InitMultiViewportSupport();
+static void ImGui_ImplMetal_ShutdownMultiViewportSupport();
 static void ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
 static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 
@@ -145,8 +145,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
     bd->SharedMetalContext = [[MetalContext alloc] init];
     bd->SharedMetalContext.device = device;
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplMetal_InitPlatformInterface();
+    ImGui_ImplMetal_InitMultiViewportSupport();
 
     return true;
 }
@@ -155,7 +154,7 @@ void ImGui_ImplMetal_Shutdown()
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
-    ImGui_ImplMetal_ShutdownPlatformInterface();
+    ImGui_ImplMetal_ShutdownMultiViewportSupport();
     ImGui_ImplMetal_DestroyDeviceObjects();
     ImGui_ImplMetal_DestroyBackendData();
 
@@ -509,7 +508,7 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     [commandBuffer commit];
 }
 
-static void ImGui_ImplMetal_InitPlatformInterface()
+static void ImGui_ImplMetal_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_CreateWindow = ImGui_ImplMetal_CreateWindow;
@@ -518,7 +517,7 @@ static void ImGui_ImplMetal_InitPlatformInterface()
     platform_io.Renderer_RenderWindow = ImGui_ImplMetal_RenderWindow;
 }
 
-static void ImGui_ImplMetal_ShutdownPlatformInterface()
+static void ImGui_ImplMetal_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }
