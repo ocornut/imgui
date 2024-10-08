@@ -249,6 +249,7 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.Sampler);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
+    SafeRelease<WGPUBindGroup>(res.ImageBindGroups);
     SafeRelease(res.ImageBindGroupLayout);
 };
 
