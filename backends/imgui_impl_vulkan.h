@@ -69,6 +69,23 @@ typedef VkPipelineRenderingCreateInfoKHR ImGui_ImplVulkan_PipelineRenderingInfo;
 typedef void ImGui_ImplVulkan_PipelineRenderingInfo;
 #endif
 
+enum ImGui_ImplVulkan_ColorCorrectionMethod : uint32_t
+{
+    ImGui_ImplVulkan_ColorCorrection_None = 0, // Pass Through, no color correction
+    ImGui_ImplVulkan_ColorCorrection_Gamma = 1, // RGB gamma correction
+    ImGui_ImplVulkan_ColorCorrection_GammaAlpha = 2, // RGB Gamma correction + Alpha Gamma correction (with separate gamma factor)
+};
+struct ImGui_ImplVulkan_ColorCorrectionParameters
+{
+    // Gamma, GammaAlpha: gamma exponent
+    float param1;
+    // Gamma, GammaAlpha: exposure multiplier
+    float param2;
+    // GammaAlpha: alpha channel gamma
+    float param3;
+    float param4;
+};
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
@@ -86,11 +103,13 @@ struct ImGui_ImplVulkan_InitInfo
     uint32_t                        MinImageCount;                // >= 2
     uint32_t                        ImageCount;                   // >= MinImageCount
     VkSampleCountFlagBits           MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
-
+    ImGui_ImplVulkan_ColorCorrectionMethod      colorCorrectionMethod;
+    ImGui_ImplVulkan_ColorCorrectionParameters  colorCorrectionParams;
     // (Optional)
     VkPipelineCache                 PipelineCache;
     uint32_t                        Subpass;
 
+    bool                            useStaticColorCorrectionsParams;
     // (Optional) Dynamic Rendering
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
     bool                            UseDynamicRendering;
@@ -106,10 +125,20 @@ struct ImGui_ImplVulkan_InitInfo
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info); // The main pipeline will be created if possible (RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType is correct))
-IMGUI_IMPL_API void         ImGui_ImplVulkan_ReCreateMainPipeline(VkRenderPass render_pass, uint32_t subpass, VkSampleCountFlagBits MSAA_samples, const ImGui_ImplVulkan_PipelineRenderingInfo * p_dynamic_rendering = nullptr); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
+struct ImGui_ImplVulkan_MainPipelineCreateInfo
+{
+    VkRenderPass                    renderPass = VK_NULL_HANDLE;
+    uint32_t                        subpass = 0;
+    VkSampleCountFlagBits           MSAASamples = {};
+    const ImGui_ImplVulkan_PipelineRenderingInfo *          pDynamicRendering = nullptr;
+    ImGui_ImplVulkan_ColorCorrectionMethod                  colorCorrectionMethod = {};
+    const ImGui_ImplVulkan_ColorCorrectionParameters *      colorCorrectionParams = nullptr;
+};
+IMGUI_IMPL_API void         ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateInfo const& info);
+IMGUI_IMPL_API void         ImGui_ImplVulkan_SetMainColorCorrectionParams(const ImGui_ImplVulkan_ColorCorrectionParameters& params);
 IMGUI_IMPL_API void         ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
+IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE, const ImGui_ImplVulkan_ColorCorrectionParameters * color_correction_params = nullptr);
 IMGUI_IMPL_API bool         ImGui_ImplVulkan_CreateFontsTexture();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_DestroyFontsTexture();
 IMGUI_IMPL_API void         ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)

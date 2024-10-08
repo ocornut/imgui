@@ -314,44 +314,165 @@ static uint32_t __glsl_shader_vert_spv[] =
 };
 
 // backends/vulkan/glsl_shader.frag, compiled with:
-// # glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
-/*
-#version 450 core
-layout(location = 0) out vec4 fColor;
-layout(set=0, binding=0) uniform sampler2D sTexture;
-layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
-void main()
+// # glslangValidator -V -x -DUSE_SPEC_CONSTANT_PARAMS=1 -o glsl_shader.frag.u32 glsl_shader.frag
+static uint32_t __glsl_shader_frag_static_spv[] =
 {
-    fColor = In.Color * texture(sTexture, In.UV.st);
-}
-*/
-static uint32_t __glsl_shader_frag_spv[] =
-{
-    0x07230203,0x00010000,0x00080001,0x0000001e,0x00000000,0x00020011,0x00000001,0x0006000b,
+    0x07230203,0x00010000,0x0008000b,0x00000053,0x00000000,0x00020011,0x00000001,0x0006000b,
     0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
-    0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000009,0x0000000d,0x00030010,
+    0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000039,0x0000003d,0x00030010,
     0x00000004,0x00000007,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
-    0x00000000,0x00040005,0x00000009,0x6c6f4366,0x0000726f,0x00030005,0x0000000b,0x00000000,
-    0x00050006,0x0000000b,0x00000000,0x6f6c6f43,0x00000072,0x00040006,0x0000000b,0x00000001,
-    0x00005655,0x00030005,0x0000000d,0x00006e49,0x00050005,0x00000016,0x78655473,0x65727574,
-    0x00000000,0x00040047,0x00000009,0x0000001e,0x00000000,0x00040047,0x0000000d,0x0000001e,
-    0x00000000,0x00040047,0x00000016,0x00000022,0x00000000,0x00040047,0x00000016,0x00000021,
-    0x00000000,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,
-    0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,0x00000003,
-    0x00000007,0x0004003b,0x00000008,0x00000009,0x00000003,0x00040017,0x0000000a,0x00000006,
-    0x00000002,0x0004001e,0x0000000b,0x00000007,0x0000000a,0x00040020,0x0000000c,0x00000001,
-    0x0000000b,0x0004003b,0x0000000c,0x0000000d,0x00000001,0x00040015,0x0000000e,0x00000020,
-    0x00000001,0x0004002b,0x0000000e,0x0000000f,0x00000000,0x00040020,0x00000010,0x00000001,
-    0x00000007,0x00090019,0x00000013,0x00000006,0x00000001,0x00000000,0x00000000,0x00000000,
-    0x00000001,0x00000000,0x0003001b,0x00000014,0x00000013,0x00040020,0x00000015,0x00000000,
-    0x00000014,0x0004003b,0x00000015,0x00000016,0x00000000,0x0004002b,0x0000000e,0x00000018,
-    0x00000001,0x00040020,0x00000019,0x00000001,0x0000000a,0x00050036,0x00000002,0x00000004,
-    0x00000000,0x00000003,0x000200f8,0x00000005,0x00050041,0x00000010,0x00000011,0x0000000d,
-    0x0000000f,0x0004003d,0x00000007,0x00000012,0x00000011,0x0004003d,0x00000014,0x00000017,
-    0x00000016,0x00050041,0x00000019,0x0000001a,0x0000000d,0x00000018,0x0004003d,0x0000000a,
-    0x0000001b,0x0000001a,0x00050057,0x00000007,0x0000001c,0x00000017,0x0000001b,0x00050085,
-    0x00000007,0x0000001d,0x00000012,0x0000001c,0x0003003e,0x00000009,0x0000001d,0x000100fd,
-    0x00010038
+    0x00000000,0x00090005,0x0000000b,0x6c707041,0x6c6f4379,0x6f43726f,0x63657272,0x6e6f6974,
+    0x34667628,0x0000003b,0x00030005,0x0000000a,0x00637273,0x00030005,0x0000000d,0x00736572,
+    0x00080005,0x00000010,0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,0x74656d5f,0x00646f68,
+    0x00080005,0x00000019,0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,0x7261705f,0x00326d61,
+    0x00050005,0x00000019,0x6f707865,0x65727573,0x00000000,0x00080005,0x0000001d,0x6f6c6f63,
+    0x6f635f72,0x63657272,0x6e6f6974,0x7261705f,0x00316d61,0x00040005,0x0000001d,0x6d6d6167,
+    0x00000061,0x00080005,0x00000032,0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,0x7261705f,
+    0x00336d61,0x00050005,0x00000032,0x68706c61,0x61675f61,0x00616d6d,0x00040005,0x00000039,
+    0x6c6f4366,0x0000726f,0x00030005,0x0000003b,0x00000000,0x00050006,0x0000003b,0x00000000,
+    0x6f6c6f43,0x00000072,0x00040006,0x0000003b,0x00000001,0x00005655,0x00030005,0x0000003d,
+    0x00006e49,0x00050005,0x00000045,0x78655473,0x65727574,0x00000000,0x00040005,0x0000004f,
+    0x61726170,0x0000006d,0x00080005,0x00000052,0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,
+    0x7261705f,0x00346d61,0x00040047,0x00000010,0x00000001,0x00000000,0x00040047,0x00000019,
+    0x00000001,0x00000002,0x00040047,0x0000001d,0x00000001,0x00000001,0x00040047,0x00000032,
+    0x00000001,0x00000003,0x00040047,0x00000039,0x0000001e,0x00000000,0x00040047,0x0000003d,
+    0x0000001e,0x00000000,0x00040047,0x00000045,0x00000022,0x00000000,0x00040047,0x00000045,
+    0x00000021,0x00000000,0x00040047,0x00000052,0x00000001,0x00000004,0x00020013,0x00000002,
+    0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,
+    0x00000006,0x00000004,0x00040020,0x00000008,0x00000007,0x00000007,0x00040021,0x00000009,
+    0x00000007,0x00000008,0x00040015,0x0000000f,0x00000020,0x00000001,0x00040032,0x0000000f,
+    0x00000010,0x00000000,0x0004002b,0x0000000f,0x00000011,0x00000001,0x00020014,0x00000012,
+    0x00060034,0x00000012,0x00000013,0x000000aa,0x00000010,0x00000011,0x0004002b,0x0000000f,
+    0x00000014,0x00000002,0x00060034,0x00000012,0x00000015,0x000000aa,0x00000010,0x00000014,
+    0x00060034,0x00000012,0x00000016,0x000000a6,0x00000013,0x00000015,0x00040032,0x00000006,
+    0x00000019,0x3f800000,0x00040017,0x0000001a,0x00000006,0x00000003,0x00040032,0x00000006,
+    0x0000001d,0x3f800000,0x00060033,0x0000001a,0x0000001e,0x0000001d,0x0000001d,0x0000001d,
+    0x00040015,0x00000021,0x00000020,0x00000000,0x0004002b,0x00000021,0x00000022,0x00000000,
+    0x00040020,0x00000023,0x00000007,0x00000006,0x0004002b,0x00000021,0x00000026,0x00000001,
+    0x0004002b,0x00000021,0x00000029,0x00000002,0x00060034,0x00000012,0x0000002c,0x000000aa,
+    0x00000010,0x00000014,0x0004002b,0x00000021,0x0000002f,0x00000003,0x00040032,0x00000006,
+    0x00000032,0x3f800000,0x00040020,0x00000038,0x00000003,0x00000007,0x0004003b,0x00000038,
+    0x00000039,0x00000003,0x00040017,0x0000003a,0x00000006,0x00000002,0x0004001e,0x0000003b,
+    0x00000007,0x0000003a,0x00040020,0x0000003c,0x00000001,0x0000003b,0x0004003b,0x0000003c,
+    0x0000003d,0x00000001,0x0004002b,0x0000000f,0x0000003e,0x00000000,0x00040020,0x0000003f,
+    0x00000001,0x00000007,0x00090019,0x00000042,0x00000006,0x00000001,0x00000000,0x00000000,
+    0x00000000,0x00000001,0x00000000,0x0003001b,0x00000043,0x00000042,0x00040020,0x00000044,
+    0x00000000,0x00000043,0x0004003b,0x00000044,0x00000045,0x00000000,0x00040020,0x00000047,
+    0x00000001,0x0000003a,0x00060034,0x00000012,0x0000004c,0x000000ab,0x00000010,0x0000003e,
+    0x00040032,0x00000006,0x00000052,0x3f800000,0x00050036,0x00000002,0x00000004,0x00000000,
+    0x00000003,0x000200f8,0x00000005,0x0004003b,0x00000008,0x0000004f,0x00000007,0x00050041,
+    0x0000003f,0x00000040,0x0000003d,0x0000003e,0x0004003d,0x00000007,0x00000041,0x00000040,
+    0x0004003d,0x00000043,0x00000046,0x00000045,0x00050041,0x00000047,0x00000048,0x0000003d,
+    0x00000011,0x0004003d,0x0000003a,0x00000049,0x00000048,0x00050057,0x00000007,0x0000004a,
+    0x00000046,0x00000049,0x00050085,0x00000007,0x0000004b,0x00000041,0x0000004a,0x0003003e,
+    0x00000039,0x0000004b,0x000300f7,0x0000004e,0x00000000,0x000400fa,0x0000004c,0x0000004d,
+    0x0000004e,0x000200f8,0x0000004d,0x0004003d,0x00000007,0x00000050,0x00000039,0x0003003e,
+    0x0000004f,0x00000050,0x00050039,0x00000007,0x00000051,0x0000000b,0x0000004f,0x0003003e,
+    0x00000039,0x00000051,0x000200f9,0x0000004e,0x000200f8,0x0000004e,0x000100fd,0x00010038,
+    0x00050036,0x00000007,0x0000000b,0x00000000,0x00000009,0x00030037,0x00000008,0x0000000a,
+    0x000200f8,0x0000000c,0x0004003b,0x00000008,0x0000000d,0x00000007,0x0004003d,0x00000007,
+    0x0000000e,0x0000000a,0x0003003e,0x0000000d,0x0000000e,0x000300f7,0x00000018,0x00000000,
+    0x000400fa,0x00000016,0x00000017,0x00000018,0x000200f8,0x00000017,0x0004003d,0x00000007,
+    0x0000001b,0x0000000a,0x0008004f,0x0000001a,0x0000001c,0x0000001b,0x0000001b,0x00000000,
+    0x00000001,0x00000002,0x0007000c,0x0000001a,0x0000001f,0x00000001,0x0000001a,0x0000001c,
+    0x0000001e,0x0005008e,0x0000001a,0x00000020,0x0000001f,0x00000019,0x00050041,0x00000023,
+    0x00000024,0x0000000d,0x00000022,0x00050051,0x00000006,0x00000025,0x00000020,0x00000000,
+    0x0003003e,0x00000024,0x00000025,0x00050041,0x00000023,0x00000027,0x0000000d,0x00000026,
+    0x00050051,0x00000006,0x00000028,0x00000020,0x00000001,0x0003003e,0x00000027,0x00000028,
+    0x00050041,0x00000023,0x0000002a,0x0000000d,0x00000029,0x00050051,0x00000006,0x0000002b,
+    0x00000020,0x00000002,0x0003003e,0x0000002a,0x0000002b,0x000300f7,0x0000002e,0x00000000,
+    0x000400fa,0x0000002c,0x0000002d,0x0000002e,0x000200f8,0x0000002d,0x00050041,0x00000023,
+    0x00000030,0x0000000a,0x0000002f,0x0004003d,0x00000006,0x00000031,0x00000030,0x0007000c,
+    0x00000006,0x00000033,0x00000001,0x0000001a,0x00000031,0x00000032,0x00050041,0x00000023,
+    0x00000034,0x0000000d,0x0000002f,0x0003003e,0x00000034,0x00000033,0x000200f9,0x0000002e,
+    0x000200f8,0x0000002e,0x000200f9,0x00000018,0x000200f8,0x00000018,0x0004003d,0x00000007,
+    0x00000035,0x0000000d,0x000200fe,0x00000035,0x00010038
+
+};
+
+// # glslangValidator -V -x -DUSE_SPEC_CONSTANT_PARAMS=0 -o glsl_shader.frag.u32 glsl_shader.frag
+static uint32_t __glsl_shader_frag_dynamic_spv[] =
+{
+    0x07230203,0x00010000,0x0008000b,0x0000005f,0x00000000,0x00020011,0x00000001,0x0006000b,
+    0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
+    0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000047,0x0000004b,0x00030010,
+    0x00000004,0x00000007,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
+    0x00000000,0x00090005,0x0000000b,0x6c707041,0x6c6f4379,0x6f43726f,0x63657272,0x6e6f6974,
+    0x34667628,0x0000003b,0x00030005,0x0000000a,0x00637273,0x00030005,0x0000000d,0x00736572,
+    0x00080005,0x00000010,0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,0x74656d5f,0x00646f68,
+    0x00040005,0x0000001a,0x6d6d6167,0x00000061,0x00060005,0x0000001b,0x73755075,0x6e6f4368,
+    0x6e617473,0x00000074,0x00090006,0x0000001b,0x00000000,0x6f6c6f63,0x6f635f72,0x63657272,
+    0x6e6f6974,0x7261705f,0x00316d61,0x00090006,0x0000001b,0x00000001,0x6f6c6f63,0x6f635f72,
+    0x63657272,0x6e6f6974,0x7261705f,0x00326d61,0x00090006,0x0000001b,0x00000002,0x6f6c6f63,
+    0x6f635f72,0x63657272,0x6e6f6974,0x7261705f,0x00336d61,0x00090006,0x0000001b,0x00000003,
+    0x6f6c6f63,0x6f635f72,0x63657272,0x6e6f6974,0x7261705f,0x00346d61,0x00030005,0x0000001d,
+    0x00000000,0x00050005,0x00000022,0x6f707865,0x65727573,0x00000000,0x00050005,0x0000003a,
+    0x68706c61,0x61675f61,0x00616d6d,0x00040005,0x00000047,0x6c6f4366,0x0000726f,0x00030005,
+    0x00000049,0x00000000,0x00050006,0x00000049,0x00000000,0x6f6c6f43,0x00000072,0x00040006,
+    0x00000049,0x00000001,0x00005655,0x00030005,0x0000004b,0x00006e49,0x00050005,0x00000052,
+    0x78655473,0x65727574,0x00000000,0x00040005,0x0000005c,0x61726170,0x0000006d,0x00040047,
+    0x00000010,0x00000001,0x00000000,0x00050048,0x0000001b,0x00000000,0x00000023,0x00000010,
+    0x00050048,0x0000001b,0x00000001,0x00000023,0x00000014,0x00050048,0x0000001b,0x00000002,
+    0x00000023,0x00000018,0x00050048,0x0000001b,0x00000003,0x00000023,0x0000001c,0x00030047,
+    0x0000001b,0x00000002,0x00040047,0x00000047,0x0000001e,0x00000000,0x00040047,0x0000004b,
+    0x0000001e,0x00000000,0x00040047,0x00000052,0x00000022,0x00000000,0x00040047,0x00000052,
+    0x00000021,0x00000000,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,
+    0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,
+    0x00000007,0x00000007,0x00040021,0x00000009,0x00000007,0x00000008,0x00040015,0x0000000f,
+    0x00000020,0x00000001,0x00040032,0x0000000f,0x00000010,0x00000000,0x0004002b,0x0000000f,
+    0x00000011,0x00000001,0x00020014,0x00000012,0x00060034,0x00000012,0x00000013,0x000000aa,
+    0x00000010,0x00000011,0x0004002b,0x0000000f,0x00000014,0x00000002,0x00060034,0x00000012,
+    0x00000015,0x000000aa,0x00000010,0x00000014,0x00060034,0x00000012,0x00000016,0x000000a6,
+    0x00000013,0x00000015,0x00040020,0x00000019,0x00000007,0x00000006,0x0006001e,0x0000001b,
+    0x00000006,0x00000006,0x00000006,0x00000006,0x00040020,0x0000001c,0x00000009,0x0000001b,
+    0x0004003b,0x0000001c,0x0000001d,0x00000009,0x0004002b,0x0000000f,0x0000001e,0x00000000,
+    0x00040020,0x0000001f,0x00000009,0x00000006,0x00040017,0x00000026,0x00000006,0x00000003,
+    0x00040015,0x0000002d,0x00000020,0x00000000,0x0004002b,0x0000002d,0x0000002e,0x00000000,
+    0x0004002b,0x0000002d,0x00000031,0x00000001,0x0004002b,0x0000002d,0x00000034,0x00000002,
+    0x00060034,0x00000012,0x00000037,0x000000aa,0x00000010,0x00000014,0x0004002b,0x0000002d,
+    0x0000003d,0x00000003,0x00040020,0x00000046,0x00000003,0x00000007,0x0004003b,0x00000046,
+    0x00000047,0x00000003,0x00040017,0x00000048,0x00000006,0x00000002,0x0004001e,0x00000049,
+    0x00000007,0x00000048,0x00040020,0x0000004a,0x00000001,0x00000049,0x0004003b,0x0000004a,
+    0x0000004b,0x00000001,0x00040020,0x0000004c,0x00000001,0x00000007,0x00090019,0x0000004f,
+    0x00000006,0x00000001,0x00000000,0x00000000,0x00000000,0x00000001,0x00000000,0x0003001b,
+    0x00000050,0x0000004f,0x00040020,0x00000051,0x00000000,0x00000050,0x0004003b,0x00000051,
+    0x00000052,0x00000000,0x00040020,0x00000054,0x00000001,0x00000048,0x00060034,0x00000012,
+    0x00000059,0x000000ab,0x00000010,0x0000001e,0x00050036,0x00000002,0x00000004,0x00000000,
+    0x00000003,0x000200f8,0x00000005,0x0004003b,0x00000008,0x0000005c,0x00000007,0x00050041,
+    0x0000004c,0x0000004d,0x0000004b,0x0000001e,0x0004003d,0x00000007,0x0000004e,0x0000004d,
+    0x0004003d,0x00000050,0x00000053,0x00000052,0x00050041,0x00000054,0x00000055,0x0000004b,
+    0x00000011,0x0004003d,0x00000048,0x00000056,0x00000055,0x00050057,0x00000007,0x00000057,
+    0x00000053,0x00000056,0x00050085,0x00000007,0x00000058,0x0000004e,0x00000057,0x0003003e,
+    0x00000047,0x00000058,0x000300f7,0x0000005b,0x00000000,0x000400fa,0x00000059,0x0000005a,
+    0x0000005b,0x000200f8,0x0000005a,0x0004003d,0x00000007,0x0000005d,0x00000047,0x0003003e,
+    0x0000005c,0x0000005d,0x00050039,0x00000007,0x0000005e,0x0000000b,0x0000005c,0x0003003e,
+    0x00000047,0x0000005e,0x000200f9,0x0000005b,0x000200f8,0x0000005b,0x000100fd,0x00010038,
+    0x00050036,0x00000007,0x0000000b,0x00000000,0x00000009,0x00030037,0x00000008,0x0000000a,
+    0x000200f8,0x0000000c,0x0004003b,0x00000008,0x0000000d,0x00000007,0x0004003b,0x00000019,
+    0x0000001a,0x00000007,0x0004003b,0x00000019,0x00000022,0x00000007,0x0004003b,0x00000019,
+    0x0000003a,0x00000007,0x0004003d,0x00000007,0x0000000e,0x0000000a,0x0003003e,0x0000000d,
+    0x0000000e,0x000300f7,0x00000018,0x00000000,0x000400fa,0x00000016,0x00000017,0x00000018,
+    0x000200f8,0x00000017,0x00050041,0x0000001f,0x00000020,0x0000001d,0x0000001e,0x0004003d,
+    0x00000006,0x00000021,0x00000020,0x0003003e,0x0000001a,0x00000021,0x00050041,0x0000001f,
+    0x00000023,0x0000001d,0x00000011,0x0004003d,0x00000006,0x00000024,0x00000023,0x0003003e,
+    0x00000022,0x00000024,0x0004003d,0x00000006,0x00000025,0x00000022,0x0004003d,0x00000007,
+    0x00000027,0x0000000a,0x0008004f,0x00000026,0x00000028,0x00000027,0x00000027,0x00000000,
+    0x00000001,0x00000002,0x0004003d,0x00000006,0x00000029,0x0000001a,0x00060050,0x00000026,
+    0x0000002a,0x00000029,0x00000029,0x00000029,0x0007000c,0x00000026,0x0000002b,0x00000001,
+    0x0000001a,0x00000028,0x0000002a,0x0005008e,0x00000026,0x0000002c,0x0000002b,0x00000025,
+    0x00050041,0x00000019,0x0000002f,0x0000000d,0x0000002e,0x00050051,0x00000006,0x00000030,
+    0x0000002c,0x00000000,0x0003003e,0x0000002f,0x00000030,0x00050041,0x00000019,0x00000032,
+    0x0000000d,0x00000031,0x00050051,0x00000006,0x00000033,0x0000002c,0x00000001,0x0003003e,
+    0x00000032,0x00000033,0x00050041,0x00000019,0x00000035,0x0000000d,0x00000034,0x00050051,
+    0x00000006,0x00000036,0x0000002c,0x00000002,0x0003003e,0x00000035,0x00000036,0x000300f7,
+    0x00000039,0x00000000,0x000400fa,0x00000037,0x00000038,0x00000039,0x000200f8,0x00000038,
+    0x00050041,0x0000001f,0x0000003b,0x0000001d,0x00000014,0x0004003d,0x00000006,0x0000003c,
+    0x0000003b,0x0003003e,0x0000003a,0x0000003c,0x00050041,0x00000019,0x0000003e,0x0000000a,
+    0x0000003d,0x0004003d,0x00000006,0x0000003f,0x0000003e,0x0004003d,0x00000006,0x00000040,
+    0x0000003a,0x0007000c,0x00000006,0x00000041,0x00000001,0x0000001a,0x0000003f,0x00000040,
+    0x00050041,0x00000019,0x00000042,0x0000000d,0x0000003d,0x0003003e,0x00000042,0x00000041,
+    0x000200f9,0x00000039,0x000200f8,0x00000039,0x000200f9,0x00000018,0x000200f8,0x00000018,
+    0x0004003d,0x00000007,0x00000043,0x0000000d,0x000200fe,0x00000043,0x00010038
 };
 
 //-----------------------------------------------------------------------------
@@ -428,7 +549,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
+static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height, const ImGui_ImplVulkan_ColorCorrectionParameters* color_correction_params = nullptr)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
 
@@ -470,10 +591,15 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
         vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
         vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
+
+    if(color_correction_params)
+    {
+        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 4 * sizeof(float), sizeof(ImGui_ImplVulkan_ColorCorrectionParameters), color_correction_params);
+    } 
 }
 
 // Render function
-void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
+void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline, const ImGui_ImplVulkan_ColorCorrectionParameters* color_correction_params)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -485,6 +611,12 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (pipeline == VK_NULL_HANDLE)
         pipeline = bd->Pipeline;
+    if(!color_correction_params)
+        color_correction_params = &v->colorCorrectionParams;
+    if(v->useStaticColorCorrectionsParams)
+    {
+        color_correction_params = nullptr;
+    }
 
     // Allocate array to store enough vertex/index buffers
     ImGui_ImplVulkan_WindowRenderBuffers* wrb = &bd->MainWindowRenderBuffers;
@@ -538,7 +670,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     }
 
     // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height, color_correction_params);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -559,7 +691,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height, color_correction_params);
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }
@@ -845,27 +977,85 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     {
         VkShaderModuleCreateInfo frag_info = {};
         frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
-        frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+        const ImGui_ImplVulkan_InitInfo * v = &bd->VulkanInitInfo;
+        if(v->useStaticColorCorrectionsParams)
+        {
+            frag_info.codeSize = sizeof(__glsl_shader_frag_static_spv);
+            frag_info.pCode = (uint32_t*)__glsl_shader_frag_static_spv;
+        }
+        else
+        {
+            frag_info.codeSize = sizeof(__glsl_shader_frag_dynamic_spv);
+            frag_info.pCode = (uint32_t*)__glsl_shader_frag_dynamic_spv;
+        }
+        
         VkResult err = vkCreateShaderModule(device, &frag_info, allocator, &bd->ShaderModuleFrag);
         check_vk_result(err);
     }
 }
 
-static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, VkPipeline* pipeline, uint32_t subpass, const ImGui_ImplVulkan_PipelineRenderingInfo * p_rendering_info = nullptr)
+struct ImGui_ImplVulkan_PipelineCreateInfo
+{
+    VkDevice                                        device = VK_NULL_HANDLE;
+    const VkAllocationCallbacks *                   allocator = nullptr;
+    VkPipelineCache                                 pipelineCache = VK_NULL_HANDLE;
+    VkRenderPass                                    renderPass = VK_NULL_HANDLE;
+    uint32_t                                        subpass = 0;
+    VkSampleCountFlagBits                           MSAASamples = {};
+    const ImGui_ImplVulkan_PipelineRenderingInfo *  pRenderingInfo = nullptr;
+    ImGui_ImplVulkan_ColorCorrectionMethod          colorCorrectionMethod = {};
+    const ImGui_ImplVulkan_ColorCorrectionParameters * colorCorrectionParams = nullptr; 
+};
+
+static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreateInfo const& pci)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_CreateShaderModules(device, allocator);
+    ImGui_ImplVulkan_CreateShaderModules(pci.device, pci.allocator);
 
     VkPipelineShaderStageCreateInfo stage[2] = {};
+
     stage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     stage[0].module = bd->ShaderModuleVert;
     stage[0].pName = "main";
+
     stage[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     stage[1].module = bd->ShaderModuleFrag;
     stage[1].pName = "main";
+    VkSpecializationInfo frag_specialization_info = {};
+    VkSpecializationMapEntry frag_spec_constants[1 + 4] = {};
+    struct SpecConstantData
+    {
+        uint32_t method;
+        ImGui_ImplVulkan_ColorCorrectionParameters params;
+    };
+    SpecConstantData frag_spec_constant_data = {};
+    frag_spec_constant_data.method = (uint32_t)pci.colorCorrectionMethod;
+    frag_spec_constants[0].constantID = 0;
+    frag_spec_constants[0].offset = offsetof(SpecConstantData, method);
+    frag_spec_constants[0].size = sizeof(uint32_t);
+    if(pci.colorCorrectionParams)
+    {
+        frag_specialization_info.mapEntryCount = 3;
+        frag_specialization_info.dataSize = sizeof(SpecConstantData);
+        frag_spec_constant_data.params = *pci.colorCorrectionParams;
+        for (unsigned int i = 0; i < 4; ++i)
+        {
+            frag_spec_constants[1].constantID = 1 + i;
+            frag_spec_constants[1].offset = offsetof(SpecConstantData, params) + i * sizeof(float);
+            frag_spec_constants[1].size = sizeof(float);
+        }
+    }
+    else
+    {
+        frag_specialization_info.mapEntryCount = 1;
+        frag_specialization_info.dataSize = sizeof(uint32_t);
+    }
+    frag_specialization_info.pMapEntries = frag_spec_constants;
+    frag_specialization_info.pData = &frag_spec_constant_data;
+    stage[1].pSpecializationInfo = &frag_specialization_info;
+
 
     VkVertexInputBindingDescription binding_desc[1] = {};
     binding_desc[0].stride = sizeof(ImDrawVert);
@@ -910,7 +1100,7 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_info.rasterizationSamples = (MSAASamples != 0) ? MSAASamples : VK_SAMPLE_COUNT_1_BIT;
+    ms_info.rasterizationSamples = (pci.MSAASamples != 0) ? pci.MSAASamples : VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
     color_attachment[0].blendEnable = VK_TRUE;
@@ -950,21 +1140,24 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
     info.pColorBlendState = &blend_info;
     info.pDynamicState = &dynamic_state;
     info.layout = bd->PipelineLayout;
-    info.renderPass = renderPass;
-    info.subpass = subpass;
+    info.renderPass = pci.renderPass;
+    info.subpass = pci.subpass;
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
         info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
-        IM_ASSERT(p_rendering_info->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
-        IM_ASSERT(p_rendering_info->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be NULL");
-        info.pNext = p_rendering_info;
+        IM_ASSERT(!!pci.pRenderingInfo && "Dynamic Rendering requires a PipelineRenderingCreateInfo");
+        IM_ASSERT(pci.pRenderingInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
+        IM_ASSERT(pci.pRenderingInfo->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be NULL");
+        info.pNext = pci.pRenderingInfo;
     }
 #endif
 
-    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
+    VkPipeline result;
+    VkResult err = vkCreateGraphicsPipelines(pci.device, pci.pipelineCache, 1, &info, pci.allocator, &result);
     check_vk_result(err);
+    return result;
 }
 
 bool ImGui_ImplVulkan_CreateDeviceObjects()
@@ -1008,16 +1201,24 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     if (!bd->PipelineLayout)
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        VkPushConstantRange push_constants[1] = {};
+        VkPushConstantRange push_constants[2] = {};
         push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_constants[0].offset = sizeof(float) * 0;
         push_constants[0].size = sizeof(float) * 4;
+        uint32_t push_constants_count = 1;
+        if(!v->useStaticColorCorrectionsParams)
+        {
+            push_constants[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            push_constants[1].offset = 4 * sizeof(float);
+            push_constants[1].size = sizeof(ImGui_ImplVulkan_ColorCorrectionParameters);
+            ++push_constants_count;
+        }
         VkDescriptorSetLayout set_layout[1] = { bd->DescriptorSetLayout };
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.setLayoutCount = 1;
         layout_info.pSetLayouts = set_layout;
-        layout_info.pushConstantRangeCount = 1;
+        layout_info.pushConstantRangeCount = push_constants_count;
         layout_info.pPushConstantRanges = push_constants;
         err = vkCreatePipelineLayout(v->Device, &layout_info, v->Allocator, &bd->PipelineLayout);
         check_vk_result(err);
@@ -1026,7 +1227,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     return true;
 }
 
-void ImGui_ImplVulkan_ReCreateMainPipeline(VkRenderPass render_pass, uint32_t subpass, VkSampleCountFlagBits MSSA_samples, const ImGui_ImplVulkan_PipelineRenderingInfo * p_dynamic_rendering)
+void ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateInfo const& info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
@@ -1035,19 +1236,48 @@ void ImGui_ImplVulkan_ReCreateMainPipeline(VkRenderPass render_pass, uint32_t su
         vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator);
         bd->Pipeline = VK_NULL_HANDLE;
     }
-    v->RenderPass = render_pass;
-    v->MSAASamples = MSSA_samples;
-    v->Subpass = subpass;
+    v->RenderPass = info.renderPass;
+    v->MSAASamples = info.MSAASamples;
+    v->Subpass = info.subpass;
+
+    v->colorCorrectionMethod = info.colorCorrectionMethod;
+    if(v->useStaticColorCorrectionsParams && info.colorCorrectionParams)
+    {
+        v->colorCorrectionParams = *info.colorCorrectionParams;
+    }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    if (p_dynamic_rendering)
+    if (info.pDynamicRendering)
     {
-        v->PipelineRenderingCreateInfo = *p_dynamic_rendering;
+        v->PipelineRenderingCreateInfo = *info.pDynamicRendering;
     }
 #else
-    IM_ASSERT(p_dynamic_rendering == nullptr);
+    IM_ASSERT(info.pDynamicRendering == nullptr);
 #endif
-    ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, &bd->Pipeline, v->Subpass, p_dynamic_rendering);
+
+    ImGui_ImplVulkan_PipelineCreateInfo pci;
+    pci.device = v->Device;
+    pci.allocator = v->Allocator;
+    pci.pipelineCache = v->PipelineCache;
+    pci.renderPass = v->RenderPass;
+    pci.subpass = v->Subpass;
+    pci.MSAASamples = v->MSAASamples;
+    pci.pRenderingInfo = info.pDynamicRendering;
+
+    pci.colorCorrectionMethod = v->colorCorrectionMethod;
+    if (v->useStaticColorCorrectionsParams)
+    {
+        pci.colorCorrectionParams = &v->colorCorrectionParams;
+    }
+
+    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(pci);
+}
+
+void ImGui_ImplVulkan_SetMainColorCorrectionParams(const ImGui_ImplVulkan_ColorCorrectionParameters& params)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+    v->colorCorrectionParams = params;
 }
 
 void    ImGui_ImplVulkan_DestroyDeviceObjects()
@@ -1158,7 +1388,17 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         }
         if (create_pipeline)
         {
-            ImGui_ImplVulkan_ReCreateMainPipeline(v->RenderPass, v->Subpass, v->MSAASamples, p_dynamic_rendering);
+            ImGui_ImplVulkan_MainPipelineCreateInfo info = {};
+            info.renderPass = v->RenderPass;
+            info.subpass = v->Subpass;
+            info.MSAASamples = info.MSAASamples;
+            info.pDynamicRendering = p_dynamic_rendering;
+            info.colorCorrectionMethod = v->colorCorrectionMethod;
+            if(v->useStaticColorCorrectionsParams)
+            {
+                info.colorCorrectionParams = &v->colorCorrectionParams;
+            }
+            ImGui_ImplVulkan_ReCreateMainPipeline(info);
         }
     }
 
