@@ -70,7 +70,6 @@ struct RenderResources
     WGPUBuffer          Uniforms = nullptr;             // Shader uniforms
     WGPUBindGroup       CommonBindGroup = nullptr;      // Resources bind-group to bind the common resources to pipeline
     ImGuiStorage        ImageBindGroups;                // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
-    WGPUBindGroup       ImageBindGroup = nullptr;       // Default font-resource of Dear ImGui
     WGPUBindGroupLayout ImageBindGroupLayout = nullptr; // Cache layout used for the image bind group. Avoids allocating unnecessary JS objects when working with WebASM
 };
 
@@ -194,6 +193,15 @@ static void SafeRelease(WGPUBindGroup& res)
         wgpuBindGroupRelease(res);
     res = nullptr;
 }
+template <typename T>
+static void SafeRelease(ImGuiStorage& bind_groups_storage)
+{
+    for (int i = 0; i < bind_groups_storage.Data.size(); i++)
+    {
+        SafeRelease((T&)bind_groups_storage.Data[i].val_p);
+    }
+    bind_groups_storage.Clear();
+}
 static void SafeRelease(WGPUBuffer& res)
 {
     if (res)
@@ -244,7 +252,7 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.Sampler);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
-    SafeRelease(res.ImageBindGroup);
+    SafeRelease<WGPUBindGroup>(res.ImageBindGroups);
     SafeRelease(res.ImageBindGroupLayout);
 };
 
@@ -726,10 +734,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     common_bg_descriptor.entries = common_bg_entries;
     bd->renderResources.CommonBindGroup = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
 
-    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], bd->renderResources.FontTextureView);
-    bd->renderResources.ImageBindGroup = image_bind_group;
     bd->renderResources.ImageBindGroupLayout = bg_layouts[1];
-    bd->renderResources.ImageBindGroups.SetVoidPtr(ImHashData(&bd->renderResources.FontTextureView, sizeof(ImTextureID)), image_bind_group);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
@@ -789,7 +794,6 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     bd->renderResources.Uniforms = nullptr;
     bd->renderResources.CommonBindGroup = nullptr;
     bd->renderResources.ImageBindGroups.Data.reserve(100);
-    bd->renderResources.ImageBindGroup = nullptr;
     bd->renderResources.ImageBindGroupLayout = nullptr;
 
     // Create buffers with a default size (they will later be grown as needed)
@@ -833,6 +837,12 @@ void ImGui_ImplWGPU_NewFrame()
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
     if (!bd->pipelineState)
         ImGui_ImplWGPU_CreateDeviceObjects();
+
+    // The user could have deallocated a stored texture, and
+    // potentially allocated a new one that has the same id as
+    // a previously registered one.
+    // To mitigate this, we release the registered bind groups.
+    SafeRelease<WGPUBindGroup>(bd->renderResources.ImageBindGroups);
 }
 
 //-----------------------------------------------------------------------------
