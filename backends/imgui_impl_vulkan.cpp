@@ -1042,9 +1042,9 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreat
         frag_spec_constant_data.params = *pci.colorCorrectionParams;
         for (unsigned int i = 0; i < 4; ++i)
         {
-            frag_spec_constants[1].constantID = 1 + i;
-            frag_spec_constants[1].offset = offsetof(SpecConstantData, params) + i * sizeof(float);
-            frag_spec_constants[1].size = sizeof(float);
+            frag_spec_constants[1 + i].constantID = 1 + i;
+            frag_spec_constants[1 + i].offset = offsetof(SpecConstantData, params) + i * sizeof(float);
+            frag_spec_constants[1 + i].size = sizeof(float);
         }
     }
     else
