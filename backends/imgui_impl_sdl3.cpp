@@ -94,6 +94,7 @@ struct ImGui_ImplSDL3_Data
     SDL_Window*             Window;
     SDL_WindowID            WindowID;
     SDL_Renderer*           Renderer;
+    SDL_GPUDevice*          Device;
     Uint64                  Time;
     char*                   ClipboardTextData;
     bool                    UseVulkan;
@@ -471,7 +472,7 @@ static void ImGui_ImplSDL3_SetupPlatformHandles(ImGuiViewport* viewport, SDL_Win
 #endif
 }
 
-static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void* sdl_gl_context)
+static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, SDL_GPUDevice* device, void* sdl_gl_context)
 {
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
@@ -501,6 +502,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
+    bd->Device = device;
 
     // SDL on Linux/OSX doesn't report events for unfocused windows (see https://github.com/ocornut/imgui/issues/4960)
     // We will use 'MouseCanReportHoveredViewport' to set 'ImGuiBackendFlags_HasMouseHoveredViewport' dynamically each frame.
@@ -563,12 +565,12 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
 // Should technically be a SDL_GLContext but due to typedef it is sane to keep it void* in public interface.
 bool ImGui_ImplSDL3_InitForOpenGL(SDL_Window* window, void* sdl_gl_context)
 {
-    return ImGui_ImplSDL3_Init(window, nullptr, sdl_gl_context);
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr, sdl_gl_context);
 }
 
 bool ImGui_ImplSDL3_InitForVulkan(SDL_Window* window)
 {
-    if (!ImGui_ImplSDL3_Init(window, nullptr, nullptr))
+    if (!ImGui_ImplSDL3_Init(window, nullptr, nullptr, nullptr))
         return false;
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     bd->UseVulkan = true;
@@ -580,22 +582,27 @@ bool ImGui_ImplSDL3_InitForD3D(SDL_Window* window)
 #if !defined(_WIN32)
     IM_ASSERT(0 && "Unsupported");
 #endif
-    return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr, nullptr);
 }
 
 bool ImGui_ImplSDL3_InitForMetal(SDL_Window* window)
 {
-    return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr, nullptr);
 }
 
 bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* renderer)
 {
-    return ImGui_ImplSDL3_Init(window, renderer, nullptr);
+    return ImGui_ImplSDL3_Init(window, renderer, nullptr, nullptr);
+}
+
+bool ImGui_ImplSDL3_InitForSDLGPU3(SDL_Window* window, SDL_GPUDevice* device)
+{
+    return ImGui_ImplSDL3_Init(window, nullptr, device, nullptr);
 }
 
 bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
 {
-    return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr, nullptr);
 }
 
 static void ImGui_ImplSDL3_CloseGamepads();
