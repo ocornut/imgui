@@ -4569,10 +4569,18 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (user_clicked)
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+        SetKeyOwner(ImGuiKey_LeftArrow, id);
+        SetKeyOwner(ImGuiKey_RightArrow, id);
         if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
+        {
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+            SetKeyOwner(ImGuiKey_UpArrow, id);
+            SetKeyOwner(ImGuiKey_DownArrow, id);
+        }
         SetKeyOwner(ImGuiKey_Enter, id);
         SetKeyOwner(ImGuiKey_KeypadEnter, id);
+        SetKeyOwner(ImGuiKey_Delete, id);
+        SetKeyOwner(ImGuiKey_Backspace, id);
         SetKeyOwner(ImGuiKey_Home, id);
         SetKeyOwner(ImGuiKey_End, id);
         if (is_multiline)

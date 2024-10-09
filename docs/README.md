@@ -196,7 +196,7 @@ Ongoing Dear ImGui development is and has been financially supported by users an
 **THANK YOU to all past and present supporters for helping to keep this project alive and thriving!**
 
 Dear ImGui is using software and services provided free of charge for open source projects:
-- [PVS-Studio](https://www.viva64.com/en/b/0570/) for static analysis.
+- [PVS-Studio](https://pvs-studio.com/en/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) for static analysis (supports C/C++/C#/Java).
 - [GitHub actions](https://github.com/features/actions) for continuous integration systems.
 - [OpenCppCoverage](https://github.com/OpenCppCoverage/OpenCppCoverage) for code coverage analysis.
 
