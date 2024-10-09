@@ -63,8 +63,8 @@ Other changes:
 - Tables: fixed initial auto-sizing issue with synched-instances. (#8045, #7218)
 - InputText: fixed an issue with not declaring ownership of Delete/Backspace/Arrow keys,
   preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
-- Backends: DX11, DX12, Vulkan, WGPU: expose selected state in ImGui_ImplXXXX_RenderState.
-  structure during render loop. (#6969, #5834, #7468, #3590)
+- Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
+  ImGui_ImplXXXX_RenderState structures during render loop. (#6969, #5834, #7468, #3590)
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
   to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502, #7230)
 

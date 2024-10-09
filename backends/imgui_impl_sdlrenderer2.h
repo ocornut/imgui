@@ -10,6 +10,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -36,5 +37,13 @@ IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer2_CreateFontsTexture();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer2_DestroyFontsTexture();
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer2_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer2_DestroyDeviceObjects();
+
+// [BETA] Selected render state data shared with callbacks.
+// This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplSDLRenderer2_RenderDrawData() call.
+// (Please open an issue if you feel you need access to more data)
+struct ImGui_ImplSDLRenderer2_RenderState
+{
+    SDL_Renderer*       Renderer;
+};
 
 #endif // #ifndef IMGUI_DISABLE
