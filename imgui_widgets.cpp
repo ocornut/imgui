@@ -4566,23 +4566,19 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (g.ActiveId == id)
     {
         // Declare some inputs, the other are registered and polled via Shortcut() routing system.
+        // FIXME: The reason we don't use Shortcut() is we would need a routing flag to specify multiple mods, or to all mods combinaison into individual shortcuts.
+        const ImGuiKey always_owned_keys[] = { ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_Enter, ImGuiKey_KeypadEnter, ImGuiKey_Delete, ImGuiKey_Backspace, ImGuiKey_Home, ImGuiKey_End };
+        for (ImGuiKey key : always_owned_keys)
+            SetKeyOwner(key, id);
         if (user_clicked)
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-        SetKeyOwner(ImGuiKey_LeftArrow, id);
-        SetKeyOwner(ImGuiKey_RightArrow, id);
         if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
         {
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
             SetKeyOwner(ImGuiKey_UpArrow, id);
             SetKeyOwner(ImGuiKey_DownArrow, id);
         }
-        SetKeyOwner(ImGuiKey_Enter, id);
-        SetKeyOwner(ImGuiKey_KeypadEnter, id);
-        SetKeyOwner(ImGuiKey_Delete, id);
-        SetKeyOwner(ImGuiKey_Backspace, id);
-        SetKeyOwner(ImGuiKey_Home, id);
-        SetKeyOwner(ImGuiKey_End, id);
         if (is_multiline)
         {
             SetKeyOwner(ImGuiKey_PageUp, id);
