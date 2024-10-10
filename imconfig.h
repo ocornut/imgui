@@ -134,3 +134,8 @@ namespace ImGui
     void MyFunction(const char* name, MyMatrix44* mtx);
 }
 */
+#ifdef IMGUI_TLSCTX
+struct ImGuiContext;
+extern thread_local ImGuiContext* MyImGuiTLS;
+#define GImGui MyImGuiTLS
+#endif
