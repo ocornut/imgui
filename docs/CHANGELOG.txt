@@ -60,6 +60,14 @@ Other changes:
 - IO: added 'void* platform_io.Renderer_RenderState' which is set during the
   ImGui_ImplXXXX_RenderDrawData() of standard backend to expose selected render
   state to draw callbacks. (#6969, #5834, #7468, #3590)
+- DrawList: AddCallback() added an optional size parameter allowing to copy and
+  store any amount of user data for usage by callbacks: (#6969, #4770, #7665)
+  - If userdata_size == 0: we copy/store the 'userdata' argument as-is (existing behavior).
+    It will be available unmodified in ImDrawCmd::UserCallbackData during render.
+  - If userdata_size > 0, we copy/store 'userdata_size' bytes pointed to by 'userdata' (new behavior).
+    We store them in a buffer stored inside the drawlist. ImDrawCmd::UserCallbackData 
+    will point inside that buffer so you have to retrieve data from there. Your callback
+    may need to use ImDrawCmd::UserCallbackDataSize if you expect dynamically-sized data.
 - Tables: fixed initial auto-sizing issue with synched-instances. (#8045, #7218)
 - InputText: fixed an issue with not declaring ownership of Delete/Backspace/Arrow keys,
   preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
