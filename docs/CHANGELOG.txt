@@ -60,6 +60,7 @@ Other changes:
 - IO: added 'void* platform_io.Renderer_RenderState' which is set during the
   ImGui_ImplXXXX_RenderDrawData() of standard backend to expose selected render
   state to draw callbacks. (#6969, #5834, #7468, #3590)
+- IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - DrawList: AddCallback() added an optional size parameter allowing to copy and
   store any amount of user data for usage by callbacks: (#6969, #4770, #7665)
   - If userdata_size == 0: we copy/store the 'userdata' argument as-is (existing behavior).
@@ -480,6 +481,7 @@ Other changes:
   which was pressed over void/underlying app, which is consistent/needed to allow the
   mouse up event of a drag over void/underlying app to catch release. (#1392) [@Moka42]
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
+- IO: Added ImGuiConfigFlags_NoKeyboard for consistency and convenience. (#4921)
 - Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
   tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
   position could have temporarily be moved around by erroneous padding application. (#7706)
