@@ -85,6 +85,15 @@ struct ImGui_ImplVulkan_ColorCorrectionParameters
     // GammaAlpha: alpha channel gamma
     float param3;
     float param4;
+
+    static inline ImGui_ImplVulkan_ColorCorrectionParameters MakeGamma(float gamma, float exposure = 1.0f, float alpha_gamma = 1.0f)
+    {
+        ImGui_ImplVulkan_ColorCorrectionParameters res = {};
+        res.param1 = gamma;
+        res.param2 = exposure;
+        res.param3 = alpha_gamma;
+        return res;
+    }
 };
 
 // Initialization data, for ImGui_ImplVulkan_Init()
