@@ -1408,6 +1408,7 @@ ImGuiIO::ImGuiIO()
     ConfigNavSwapGamepadButtons = false;
     ConfigNavMoveSetMousePos = false;
     ConfigNavCaptureKeyboard = true;
+    ConfigNavEscapeClearFocusWindow = false;
     ConfigInputTrickleEventQueue = true;
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;
@@ -13316,7 +13317,7 @@ void ImGui::NavMoveRequestApplyResult()
         NavRestoreHighlightAfterMove();
 }
 
-// Process NavCancel input (to close a popup, get back to parent, clear focus)
+// Process Escape/NavCancel input (to close a popup, get back to parent, clear focus)
 // FIXME: In order to support e.g. Escape to clear a selection we'll need:
 // - either to store the equivalent of ActiveIdUsingKeyInputMask for a FocusScope and test for it.
 // - either to move most/all of those tests to the epilogue/end functions of the scope they are dealing with (e.g. exit child window in EndChild()) or in EndFrame(), to allow an earlier intercept
@@ -13358,11 +13359,13 @@ static void ImGui::NavUpdateCancelRequest()
     {
         // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
         // FIXME-NAV: This should happen on window appearing.
-        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
+        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup)))// || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
             g.NavWindow->NavLastIds[0] = 0;
 
         // Clear nav focus
         g.NavId = 0;
+        if (g.IO.ConfigNavEscapeClearFocusWindow)
+            FocusWindow(NULL);
     }
 }
 
