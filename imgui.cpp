@@ -3701,6 +3701,8 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
         return;
     if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
         return;
+    if (id == g.LastItemData.ID && (g.LastItemData.InFlags & ImGuiItemFlags_NoNav))
+        return;
     ImGuiWindow* window = g.CurrentWindow;
     if (window->DC.NavHideHighlightOneFrame)
         return;

@@ -72,6 +72,8 @@ Other changes:
   back into same window later.
 - Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
   window. (#3200)
+- Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
+  when e.g activating the item with mouse, then ctrl+tabbing back and forth. 
 - DrawList: AddCallback() added an optional size parameter allowing to copy and
   store any amount of user data for usage by callbacks: (#6969, #4770, #7665)
   - If userdata_size == 0: we copy/store the 'userdata' argument as-is (existing behavior).
