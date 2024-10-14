@@ -508,8 +508,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
     if (flags & ImGuiButtonFlags_AllowOverlap)
         item_flags |= ImGuiItemFlags_AllowOverlap;
-    if (flags & ImGuiButtonFlags_Repeat)
-        item_flags |= ImGuiItemFlags_ButtonRepeat;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
     const bool flatten_hovered_children = (flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredWindow && g.HoveredWindow->RootWindow == window;
@@ -3689,21 +3687,22 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         // Step buttons
         const ImVec2 backup_frame_padding = style.FramePadding;
         style.FramePadding.x = style.FramePadding.y;
-        ImGuiButtonFlags button_flags = ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups;
         if (flags & ImGuiInputTextFlags_ReadOnly)
             BeginDisabled();
+        PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("-", ImVec2(button_size, button_size), button_flags))
+        if (ButtonEx("-", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '-', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
         }
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("+", ImVec2(button_size, button_size), button_flags))
+        if (ButtonEx("+", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '+', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
         }
+        PopItemFlag();
         if (flags & ImGuiInputTextFlags_ReadOnly)
             EndDisabled();
 
@@ -9753,17 +9752,19 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
 
     PushStyleColor(ImGuiCol_Text, arrow_col);
     PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
     const float backup_repeat_delay = g.IO.KeyRepeatDelay;
     const float backup_repeat_rate = g.IO.KeyRepeatRate;
     g.IO.KeyRepeatDelay = 0.250f;
     g.IO.KeyRepeatRate = 0.200f;
     float x = ImMax(tab_bar->BarRect.Min.x, tab_bar->BarRect.Max.x - scrolling_buttons_width);
     window->DC.CursorPos = ImVec2(x, tab_bar->BarRect.Min.y);
-    if (ArrowButtonEx("##<", ImGuiDir_Left, arrow_button_size, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_Repeat))
+    if (ArrowButtonEx("##<", ImGuiDir_Left, arrow_button_size, ImGuiButtonFlags_PressedOnClick))
         select_dir = -1;
     window->DC.CursorPos = ImVec2(x + arrow_button_size.x, tab_bar->BarRect.Min.y);
-    if (ArrowButtonEx("##>", ImGuiDir_Right, arrow_button_size, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_Repeat))
+    if (ArrowButtonEx("##>", ImGuiDir_Right, arrow_button_size, ImGuiButtonFlags_PressedOnClick))
         select_dir = +1;
+    PopItemFlag();
     PopStyleColor(2);
     g.IO.KeyRepeatRate = backup_repeat_rate;
     g.IO.KeyRepeatDelay = backup_repeat_delay;
