@@ -4606,7 +4606,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     }
 #endif
 
-    if (g.NavDisableMouseHover)
+    if (g.NavDisableMouseHover && (item_flags & ImGuiItemFlags_NoNavDisableMouseHover) == 0)
         return false;
 
     return true;
@@ -13340,8 +13340,11 @@ static void ImGui::NavUpdateCancelRequest()
     else
     {
         // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
+        // FIXME-NAV: This should happen on window appearing.
         if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
             g.NavWindow->NavLastIds[0] = 0;
+
+        // Clear nav focus
         g.NavId = 0;
     }
 }

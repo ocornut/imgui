@@ -73,6 +73,8 @@ Other changes:
 - Tables: fixed initial auto-sizing issue with synched-instances. (#8045, #7218)
 - InputText: fixed an issue with not declaring ownership of Delete/Backspace/Arrow keys,
   preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
+- InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
+  enabled or not. (#6417)
 - Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
   ImGui_ImplXXXX_RenderState structures during render loop. (#6969, #5834, #7468, #3590)
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler

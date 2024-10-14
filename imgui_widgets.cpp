@@ -4462,9 +4462,13 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (!ItemAdd(total_bb, id, &frame_bb, ImGuiItemFlags_Inputable))
                 return false;
     }
-    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+
+    // Ensure mouse cursor is set even after switching to keyboard/gamepad mode. May generalize further? (#6417)
+    bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags | ImGuiItemFlags_NoNavDisableMouseHover);
     if (hovered)
         SetMouseCursor(ImGuiMouseCursor_TextInput);
+    if (hovered && g.NavDisableMouseHover)
+        hovered = false;
 
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
