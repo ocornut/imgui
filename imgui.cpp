@@ -4443,9 +4443,9 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 
     if (g.NavDisableMouseHover && !g.NavDisableHighlight && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
-        if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
+        if (g.LastItemData.ID == g.NavId && g.NavId != 0) // IsItemFocused()
             return false;
-        if (!IsItemFocused())
+        if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
             return false;
 
         if (flags & ImGuiHoveredFlags_ForTooltip)
@@ -5784,9 +5784,7 @@ bool ImGui::IsItemDeactivatedAfterEdit()
 bool ImGui::IsItemFocused()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavId != g.LastItemData.ID || g.NavId == 0)
-        return false;
-    return true;
+    return g.NavId == g.LastItemData.ID && g.NavId != 0;
 }
 
 // Important: this can be useful but it is NOT equivalent to the behavior of e.g.Button()!

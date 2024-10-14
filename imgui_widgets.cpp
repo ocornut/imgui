@@ -561,7 +561,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
 
         // Process initial action
-        if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
+        if (!(flags & ImGuiButtonFlags_NoKeyModsAllowed) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
@@ -6604,7 +6604,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     else
     {
         if (window != g.HoveredWindow || !is_mouse_x_over_arrow)
-            button_flags |= ImGuiButtonFlags_NoKeyModifiers;
+            button_flags |= ImGuiButtonFlags_NoKeyModsAllowed;
     }
 
     bool hovered, held;
