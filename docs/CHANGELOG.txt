@@ -54,6 +54,11 @@ Breaking changes:
     - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
   - Note that you can always define ImTextureID to be your own high-level structures
     (with dedicated constructors) if you like.
+- IO: moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
+- IO: moved ImGuiConfigFlags_NavNoCaptureKeyboard to standalone io.ConfigNavCaptureKeyboard bool 
+  (note the inverted value!). (#2517, #2009)
+  Kept legacy names (will obsolete) + code that copies settings once the first time. 
+  Dynamically changing the old value won't work. Switch to using the new value!
 
 Other changes:
 
