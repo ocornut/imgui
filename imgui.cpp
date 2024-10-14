@@ -13540,7 +13540,7 @@ static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir) // 
     return NULL;
 }
 
-static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
+static void NavUpdateWindowingTarget(int focus_change_dir)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindowingTarget);
@@ -13592,14 +13592,17 @@ static void ImGui::NavUpdateWindowing()
     const bool keyboard_prev_window = allow_windowing && g.ConfigNavWindowingKeyPrev && Shortcut(g.ConfigNavWindowingKeyPrev, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways, owner_id);
     const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, ImGuiInputFlags_None);
     const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && (keyboard_next_window || keyboard_prev_window); // Note: enabled even without NavEnableKeyboard!
+    bool just_started_windowing_from_null_focus = false;
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow;
+            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow; // Current location
             g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingAccumDeltaPos = g.NavWindowingAccumDeltaSize = ImVec2(0.0f, 0.0f);
             g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
+            if (g.NavWindow == NULL)
+                just_started_windowing_from_null_focus = true;
 
             // Manually register ownership of our mods. Using a global route in the Shortcut() calls instead would probably be correct but may have more side-effects.
             if (keyboard_next_window || keyboard_prev_window)
@@ -13615,9 +13618,9 @@ static void ImGui::NavUpdateWindowing()
 
         // Select window to focus
         const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
-        if (focus_change_dir != 0)
+        if (focus_change_dir != 0 && !just_started_windowing_from_null_focus)
         {
-            NavUpdateWindowingHighlightWindow(focus_change_dir);
+            NavUpdateWindowingTarget(focus_change_dir);
             g.NavWindowingHighlightAlpha = 1.0f;
         }
 
@@ -13640,8 +13643,8 @@ static void ImGui::NavUpdateWindowing()
         ImGuiKeyChord shared_mods = ((g.ConfigNavWindowingKeyNext ? g.ConfigNavWindowingKeyNext : ImGuiMod_Mask_) & (g.ConfigNavWindowingKeyPrev ? g.ConfigNavWindowingKeyPrev : ImGuiMod_Mask_)) & ImGuiMod_Mask_;
         IM_ASSERT(shared_mods != 0); // Next/Prev shortcut currently needs a shared modifier to "hold", otherwise Prev actions would keep cycling between two windows.
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
-        if (keyboard_next_window || keyboard_prev_window)
-            NavUpdateWindowingHighlightWindow(keyboard_next_window ? -1 : +1);
+        if ((keyboard_next_window || keyboard_prev_window) && !just_started_windowing_from_null_focus)
+            NavUpdateWindowingTarget(keyboard_next_window ? -1 : +1);
         else if ((io.KeyMods & shared_mods) != shared_mods)
             apply_focus_window = g.NavWindowingTarget;
     }

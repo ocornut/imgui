@@ -68,8 +68,10 @@ Other changes:
 - IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - Error Handling: turned a few more functions into recoverable errors. (#1651)
 - Nav: added io.ConfigNavEscapeClearFocusWindow to clear focused window on Escape. (#3200)
-- Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing back
-  into same window later.
+- Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing 
+  back into same window later.
+- Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
+  window. (#3200)
 - DrawList: AddCallback() added an optional size parameter allowing to copy and
   store any amount of user data for usage by callbacks: (#6969, #4770, #7665)
   - If userdata_size == 0: we copy/store the 'userdata' argument as-is (existing behavior).
