@@ -764,7 +764,7 @@ static void ImGui_ImplGlfw_UpdateMouseData()
 #endif
         if (is_window_focused)
         {
-            // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+            // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when io.ConfigNavMoveSetMousePos is enabled by user)
             // When multi-viewports are enabled, all Dear ImGui positions are same as OS positions.
             if (io.WantSetMousePos)
                 glfwSetCursorPos(window, (double)(mouse_pos_prev.x - viewport->Pos.x), (double)(mouse_pos_prev.y - viewport->Pos.y));

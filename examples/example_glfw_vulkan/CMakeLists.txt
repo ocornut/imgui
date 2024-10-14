@@ -42,4 +42,4 @@ file(GLOB sources *.cpp)
 
 add_executable(example_glfw_vulkan ${sources} ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_draw.cpp ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp)
 target_link_libraries(example_glfw_vulkan ${LIBRARIES})
-target_compile_definitions(example_glfw_vulkan PUBLIC -DImTextureID=ImU64)
+

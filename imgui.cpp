@@ -184,8 +184,8 @@ CODE
    - Consoles/Tablet/Phone users: Consider using a Synergy 1.x server (on your PC) + run examples/libs/synergy/uSynergy.c (on your console/tablet/phone app)
      in order to share your PC mouse/keyboard.
    - See https://github.com/ocornut/imgui/wiki/Useful-Extensions#remoting for other remoting solutions.
-   - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiConfigFlags_NavEnableSetMousePos flag.
-     Enabling ImGuiConfigFlags_NavEnableSetMousePos + ImGuiBackendFlags_HasSetMousePos instructs Dear ImGui to move your mouse cursor along with navigation movements.
+   - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the io.ConfigNavMoveSetMousePos flag.
+     Enabling io.ConfigNavMoveSetMousePos + ImGuiBackendFlags_HasSetMousePos instructs Dear ImGui to move your mouse cursor along with navigation movements.
      When enabled, the NewFrame() function may alter 'io.MousePos' and set 'io.WantSetMousePos' to notify you that it wants the mouse cursor to be moved.
      When that happens your backend NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the backends in examples/ do that.
      (If you set the NavEnableSetMousePos flag but don't honor 'io.WantSetMousePos' properly, Dear ImGui will misbehave as it will see your mouse moving back & forth!)
@@ -438,6 +438,17 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2024/10/14 (1.91.4) - moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
+                         moved ImGuiConfigFlags_NavNoCaptureKeyboard to standalone io.ConfigNavCaptureKeyboard bool (note the inverted value!).
+                         kept legacy names (will obsolete) + code that copies settings once the first time. Dynamically changing the old value won't work. Switch to using the new value!
+ - 2024/10/10 (1.91.4) - the typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
+                         this removes the requirement to redefine it for backends which are e.g. storing descriptor sets or other 64-bits structures when building on 32-bits archs. It therefore simplify various building scripts/helpers.
+                         you may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID' when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
+                         in doubt it is almost always better to do an intermediate intptr_t cast, since it allows casting any pointer/integer type without warning:
+                            - May warn:    ImGui::Image((void*)MyTextureData, ...);
+                            - May warn:    ImGui::Image((void*)(intptr_t)MyTextureData, ...);
+                            - Won't warn:  ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
+  -                      note that you can always define ImTextureID to be your own high-level structures (with dedicated constructors) if you like.
  - 2024/10/03 (1.91.3) - drags: treat v_min==v_max as a valid clamping range when != 0.0f. Zero is a still special value due to legacy reasons, unless using ImGuiSliderFlags_ClampZeroRange. (#7968, #3361, #76)
                        - drags: extended behavior of ImGuiSliderFlags_AlwaysClamp to include _ClampZeroRange. It considers v_min==v_max==0.0f as a valid clamping range (aka edits not allowed).
                          although unlikely, it you wish to only clamp on text input but want v_min==v_max==0.0f to mean unclamped drags, you can use _ClampOnInput instead of _AlwaysClamp. (#7968, #3361, #76)
@@ -1434,6 +1445,9 @@ ImGuiIO::ImGuiIO()
     ConfigMacOSXBehaviors = false;
 #endif
     ConfigNavSwapGamepadButtons = false;
+    ConfigNavMoveSetMousePos = false;
+    ConfigNavCaptureKeyboard = true;
+    ConfigNavEscapeClearFocusWindow = false;
     ConfigInputTrickleEventQueue = true;
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;
@@ -3755,6 +3769,8 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
         return;
     if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
         return;
+    if (id == g.LastItemData.ID && (g.LastItemData.InFlags & ImGuiItemFlags_NoNav))
+        return;
     ImGuiWindow* window = g.CurrentWindow;
     if (window->DC.NavHideHighlightOneFrame)
         return;
@@ -4532,13 +4548,13 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsItemHovered) == 0 && "Invalid flags for IsItemHovered()!");
+    IM_ASSERT_USER_ERROR((flags & ~ImGuiHoveredFlags_AllowedMaskForIsItemHovered) == 0, "Invalid flags for IsItemHovered()!");
 
     if (g.NavDisableMouseHover && !g.NavDisableHighlight && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
-        if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
-            return false;
         if (!IsItemFocused())
+            return false;
+        if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
             return false;
 
         if (flags & ImGuiHoveredFlags_ForTooltip)
@@ -4553,8 +4569,6 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 
         if (flags & ImGuiHoveredFlags_ForTooltip)
             flags = ApplyHoverFlagsForTooltip(flags, g.Style.HoverFlagsForTooltipMouse);
-
-        IM_ASSERT((flags & (ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_NoPopupHierarchy | ImGuiHoveredFlags_DockHierarchy)) == 0);   // Flags not supported by this function
 
         // Done with rectangle culling so we can perform heavier checks now
         // Test if we are hovering the right window (our window could be behind another window)
@@ -4707,7 +4721,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     }
 #endif
 
-    if (g.NavDisableMouseHover)
+    if (g.NavDisableMouseHover && (item_flags & ImGuiItemFlags_NoNavDisableMouseHover) == 0)
         return false;
 
     return true;
@@ -5166,9 +5180,14 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     }
 
     // Update io.WantCaptureKeyboard for the user application (true = dispatch keyboard info to Dear ImGui only, false = dispatch keyboard info to Dear ImGui + underlying app)
-    io.WantCaptureKeyboard = (g.ActiveId != 0) || (modal_window != NULL);
-    if (io.NavActive && (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && !(io.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard))
-        io.WantCaptureKeyboard = true;
+    io.WantCaptureKeyboard = false;
+    if ((io.ConfigFlags & ImGuiConfigFlags_NoKeyboard) == 0)
+    {
+        if ((g.ActiveId != 0) || (modal_window != NULL))
+            io.WantCaptureKeyboard = true;
+        else if (io.NavActive && (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && io.ConfigNavCaptureKeyboard)
+            io.WantCaptureKeyboard = true;
+    }
     if (g.WantCaptureKeyboardNextFrame != -1) // Manual override
         io.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != 0);
 
@@ -8706,9 +8725,9 @@ bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_b
 // Refer to FAQ entry "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?" for details.
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
-    IM_ASSERT((flags & ~ImGuiHoveredFlags_AllowedMaskForIsWindowHovered) == 0 && "Invalid flags for IsWindowHovered()!");
-
     ImGuiContext& g = *GImGui;
+    IM_ASSERT_USER_ERROR((flags & ~ImGuiHoveredFlags_AllowedMaskForIsWindowHovered) == 0, "Invalid flags for IsWindowHovered()!");
+
     ImGuiWindow* ref_window = g.HoveredWindow;
     ImGuiWindow* cur_window = g.CurrentWindow;
     if (ref_window == NULL)
@@ -11083,8 +11102,20 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     if (g.IO.ConfigErrorRecovery)
         IM_ASSERT(g.IO.ConfigErrorRecoveryEnableAssert || g.IO.ConfigErrorRecoveryEnableDebugLog || g.IO.ConfigErrorRecoveryEnableTooltip || g.ErrorCallback != NULL);
 
-    // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // Remap legacy names
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos)
+    {
+        g.IO.ConfigNavMoveSetMousePos = true;
+        g.IO.ConfigFlags &= ~ImGuiConfigFlags_NavEnableSetMousePos;
+    }
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard)
+    {
+        g.IO.ConfigNavCaptureKeyboard = false;
+        g.IO.ConfigFlags &= ~ImGuiConfigFlags_NavNoCaptureKeyboard;
+    }
+
+    // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
     if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
         g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
     if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
@@ -12846,7 +12877,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 
         ImVec2 tooltip_pos = g.IO.MousePos + TOOLTIP_DEFAULT_OFFSET_MOUSE * scale;
         ImRect r_avoid;
-        if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
+        if (!g.NavDisableHighlight && g.NavDisableMouseHover && !g.IO.ConfigNavMoveSetMousePos)
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * scale, ref_pos.y + 24 * scale); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
@@ -13655,7 +13686,7 @@ static void ImGui::NavUpdate()
 
     // Update mouse position if requested
     // (This will take into account the possibility that a Scroll was queued in the window to offset our absolute mouse position before scroll has been applied)
-    if (set_mouse_pos && (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
+    if (set_mouse_pos && io.ConfigNavMoveSetMousePos && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
         TeleportMousePos(NavCalcPreferredRefPos());
 
     // [DEBUG]
@@ -13981,7 +14012,7 @@ void ImGui::NavMoveRequestApplyResult()
         NavRestoreHighlightAfterMove();
 }
 
-// Process NavCancel input (to close a popup, get back to parent, clear focus)
+// Process Escape/NavCancel input (to close a popup, get back to parent, clear focus)
 // FIXME: In order to support e.g. Escape to clear a selection we'll need:
 // - either to store the equivalent of ActiveIdUsingKeyInputMask for a FocusScope and test for it.
 // - either to move most/all of those tests to the epilogue/end functions of the scope they are dealing with (e.g. exit child window in EndChild()) or in EndFrame(), to allow an earlier intercept
@@ -14022,9 +14053,14 @@ static void ImGui::NavUpdateCancelRequest()
     else
     {
         // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
-        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
+        // FIXME-NAV: This should happen on window appearing.
+        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup)))// || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
             g.NavWindow->NavLastIds[0] = 0;
+
+        // Clear nav focus
         g.NavId = 0;
+        if (g.IO.ConfigNavEscapeClearFocusWindow)
+            FocusWindow(NULL);
     }
 }
 
@@ -14199,7 +14235,7 @@ static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir) // 
     return NULL;
 }
 
-static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
+static void NavUpdateWindowingTarget(int focus_change_dir)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindowingTarget);
@@ -14251,14 +14287,17 @@ static void ImGui::NavUpdateWindowing()
     const bool keyboard_prev_window = allow_windowing && g.ConfigNavWindowingKeyPrev && Shortcut(g.ConfigNavWindowingKeyPrev, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways, owner_id);
     const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, ImGuiInputFlags_None);
     const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && (keyboard_next_window || keyboard_prev_window); // Note: enabled even without NavEnableKeyboard!
+    bool just_started_windowing_from_null_focus = false;
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow;
+            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow; // Current location
             g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingAccumDeltaPos = g.NavWindowingAccumDeltaSize = ImVec2(0.0f, 0.0f);
             g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
+            if (g.NavWindow == NULL)
+                just_started_windowing_from_null_focus = true;
 
             // Manually register ownership of our mods. Using a global route in the Shortcut() calls instead would probably be correct but may have more side-effects.
             if (keyboard_next_window || keyboard_prev_window)
@@ -14274,9 +14313,9 @@ static void ImGui::NavUpdateWindowing()
 
         // Select window to focus
         const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
-        if (focus_change_dir != 0)
+        if (focus_change_dir != 0 && !just_started_windowing_from_null_focus)
         {
-            NavUpdateWindowingHighlightWindow(focus_change_dir);
+            NavUpdateWindowingTarget(focus_change_dir);
             g.NavWindowingHighlightAlpha = 1.0f;
         }
 
@@ -14299,8 +14338,8 @@ static void ImGui::NavUpdateWindowing()
         ImGuiKeyChord shared_mods = ((g.ConfigNavWindowingKeyNext ? g.ConfigNavWindowingKeyNext : ImGuiMod_Mask_) & (g.ConfigNavWindowingKeyPrev ? g.ConfigNavWindowingKeyPrev : ImGuiMod_Mask_)) & ImGuiMod_Mask_;
         IM_ASSERT(shared_mods != 0); // Next/Prev shortcut currently needs a shared modifier to "hold", otherwise Prev actions would keep cycling between two windows.
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
-        if (keyboard_next_window || keyboard_prev_window)
-            NavUpdateWindowingHighlightWindow(keyboard_next_window ? -1 : +1);
+        if ((keyboard_next_window || keyboard_prev_window) && !just_started_windowing_from_null_focus)
+            NavUpdateWindowingTarget(keyboard_next_window ? -1 : +1);
         else if ((io.KeyMods & shared_mods) != shared_mods)
             apply_focus_window = g.NavWindowingTarget;
     }

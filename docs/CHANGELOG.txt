@@ -36,20 +36,61 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.4 WIP
+ VERSION 1.91.4 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking changes:
+
+- The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
+  - This removes the requirement to redefine it for backends which are e.g. storing
+    descriptor sets or other 64-bits structures when building on 32-bits archs.
+    It therefore simplify various building scripts/helpers.
+  - You may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID'
+    when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
+    In doubt it is almost always better to do an intermediate intptr_t cast, since it
+    allows casting any pointer/integer type without warning:
+    - May warn:     ImGui::Image((void*)MyTextureData, ...);
+    - May warn:     ImGui::Image((void*)(intptr_t)MyTextureData, ...);
+    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
+  - Note that you can always define ImTextureID to be your own high-level structures
+    (with dedicated constructors) if you like.
+- IO: moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
+- IO: moved ImGuiConfigFlags_NavNoCaptureKeyboard to standalone io.ConfigNavCaptureKeyboard bool 
+  (note the inverted value!). (#2517, #2009)
+  Kept legacy names (will obsolete) + code that copies settings once the first time. 
+  Dynamically changing the old value won't work. Switch to using the new value!
 
 Other changes:
 
 - IO: added 'void* platform_io.Renderer_RenderState' which is set during the
   ImGui_ImplXXXX_RenderDrawData() of standard backend to expose selected render
   state to draw callbacks. (#6969, #5834, #7468, #3590)
-- Backends: DX11, DX12, Vulkan, WGPU: expose selected state in ImGui_ImplXXXX_RenderState.
-  structure during render loop. (#6969, #5834, #7468, #3590)
+- IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
+- Error Handling: turned a few more functions into recoverable errors. (#1651)
+- Nav: added io.ConfigNavEscapeClearFocusWindow to clear focused window on Escape. (#3200)
+- Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing 
+  back into same window later.
+- Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
+  window. (#3200)
+- Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
+  when e.g activating the item with mouse, then ctrl+tabbing back and forth. 
+- DrawList: AddCallback() added an optional size parameter allowing to copy and
+  store any amount of user data for usage by callbacks: (#6969, #4770, #7665)
+  - If userdata_size == 0: we copy/store the 'userdata' argument as-is (existing behavior).
+    It will be available unmodified in ImDrawCmd::UserCallbackData during render.
+  - If userdata_size > 0, we copy/store 'userdata_size' bytes pointed to by 'userdata' (new behavior).
+    We store them in a buffer stored inside the drawlist. ImDrawCmd::UserCallbackData 
+    will point inside that buffer so you have to retrieve data from there. Your callback
+    may need to use ImDrawCmd::UserCallbackDataSize if you expect dynamically-sized data.
+- Tables: fixed initial auto-sizing issue with synched-instances. (#8045, #7218)
+- InputText: fixed an issue with not declaring ownership of Delete/Backspace/Arrow keys,
+  preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
+- InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
+  enabled or not. (#6417)
+- Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
+  ImGui_ImplXXXX_RenderState structures during render loop. (#6969, #5834, #7468, #3590)
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
-  to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502)
+  to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502, #7230)
 
 Docking+Viewports Branch:
 
@@ -499,6 +540,7 @@ Other changes:
   which was pressed over void/underlying app, which is consistent/needed to allow the
   mouse up event of a drag over void/underlying app to catch release. (#1392) [@Moka42]
 - IO: Added io.ClearInputMouse() to clear mouse state. (#4921)
+- IO: Added ImGuiConfigFlags_NoKeyboard for consistency and convenience. (#4921)
 - Windows: BeginChild(): fixed a glitch when during a resize of a child window which is
   tightly close to the boundaries of its parent (e.g. with zero WindowPadding), the child
   position could have temporarily be moved around by erroneous padding application. (#7706)

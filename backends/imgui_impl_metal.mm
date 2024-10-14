@@ -303,7 +303,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
 
                 // Bind texture, Draw
                 if (ImTextureID tex_id = pcmd->GetTexID())
-                    [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(tex_id) atIndex:0];
+                    [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(void*)(intptr_t)(tex_id) atIndex:0];
 
                 [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
                 [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
@@ -359,7 +359,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
     [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
     bd->SharedMetalContext.fontTexture = texture;
-    io.Fonts->SetTexID((__bridge void*)bd->SharedMetalContext.fontTexture); // ImTextureID == void*
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)(__bridge void*)bd->SharedMetalContext.fontTexture); // ImTextureID == ImU64
 
     return (bd->SharedMetalContext.fontTexture != nil);
 }

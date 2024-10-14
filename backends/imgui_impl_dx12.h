@@ -4,11 +4,8 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)platform_io.BackendRendererRenderState'.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
-
-// Important: to compile on 32-bit systems, this backend requires code to be compiled with '#define ImTextureID ImU64'.
-// See imgui_impl_dx12.cpp file for details.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -45,7 +42,7 @@ IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
 
 // [BETA] Selected render state data shared with callbacks.
-// This is temporarily stored in io.BackendRendererRenderState during the ImGui_ImplDX12_RenderDrawData() call.
+// This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplDX12_RenderDrawData() call.
 // (Please open an issue if you feel you need access to more data)
 struct ImGui_ImplDX12_RenderState
 {

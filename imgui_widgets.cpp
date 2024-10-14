@@ -508,8 +508,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     ImGuiItemFlags item_flags = (g.LastItemData.ID == id ? g.LastItemData.InFlags : g.CurrentItemFlags);
     if (flags & ImGuiButtonFlags_AllowOverlap)
         item_flags |= ImGuiItemFlags_AllowOverlap;
-    if (flags & ImGuiButtonFlags_Repeat)
-        item_flags |= ImGuiItemFlags_ButtonRepeat;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
     const bool flatten_hovered_children = (flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredWindow && g.HoveredWindow->RootWindowDockTree == window->RootWindowDockTree;
@@ -561,7 +559,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
 
         // Process initial action
-        if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
+        if (!(flags & ImGuiButtonFlags_NoKeyModsAllowed) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
@@ -1128,7 +1126,7 @@ bool ImGui::ImageButton(const char* str_id, ImTextureID user_texture_id, const I
 bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
 {
     // Default to using texture ID as ID. User can still push string/integer prefixes.
-    PushID((void*)(intptr_t)user_texture_id);
+    PushID((ImTextureID)(intptr_t)user_texture_id);
     if (frame_padding >= 0)
         PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((float)frame_padding, (float)frame_padding));
     bool ret = ImageButton("", user_texture_id, size, uv0, uv1, bg_col, tint_col);
@@ -3695,21 +3693,22 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         // Step buttons
         const ImVec2 backup_frame_padding = style.FramePadding;
         style.FramePadding.x = style.FramePadding.y;
-        ImGuiButtonFlags button_flags = ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups;
         if (flags & ImGuiInputTextFlags_ReadOnly)
             BeginDisabled();
+        PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("-", ImVec2(button_size, button_size), button_flags))
+        if (ButtonEx("-", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '-', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
         }
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("+", ImVec2(button_size, button_size), button_flags))
+        if (ButtonEx("+", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '+', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
         }
+        PopItemFlag();
         if (flags & ImGuiInputTextFlags_ReadOnly)
             EndDisabled();
 
@@ -4468,9 +4467,13 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (!ItemAdd(total_bb, id, &frame_bb, ImGuiItemFlags_Inputable))
                 return false;
     }
-    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+
+    // Ensure mouse cursor is set even after switching to keyboard/gamepad mode. May generalize further? (#6417)
+    bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags | ImGuiItemFlags_NoNavDisableMouseHover);
     if (hovered)
         SetMouseCursor(ImGuiMouseCursor_TextInput);
+    if (hovered && g.NavDisableMouseHover)
+        hovered = false;
 
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
@@ -4572,15 +4575,19 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (g.ActiveId == id)
     {
         // Declare some inputs, the other are registered and polled via Shortcut() routing system.
+        // FIXME: The reason we don't use Shortcut() is we would need a routing flag to specify multiple mods, or to all mods combinaison into individual shortcuts.
+        const ImGuiKey always_owned_keys[] = { ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_Enter, ImGuiKey_KeypadEnter, ImGuiKey_Delete, ImGuiKey_Backspace, ImGuiKey_Home, ImGuiKey_End };
+        for (ImGuiKey key : always_owned_keys)
+            SetKeyOwner(key, id);
         if (user_clicked)
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
         if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
+        {
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-        SetKeyOwner(ImGuiKey_Enter, id);
-        SetKeyOwner(ImGuiKey_KeypadEnter, id);
-        SetKeyOwner(ImGuiKey_Home, id);
-        SetKeyOwner(ImGuiKey_End, id);
+            SetKeyOwner(ImGuiKey_UpArrow, id);
+            SetKeyOwner(ImGuiKey_DownArrow, id);
+        }
         if (is_multiline)
         {
             SetKeyOwner(ImGuiKey_PageUp, id);
@@ -6603,7 +6610,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     else
     {
         if (window != g.HoveredWindow || !is_mouse_x_over_arrow)
-            button_flags |= ImGuiButtonFlags_NoKeyModifiers;
+            button_flags |= ImGuiButtonFlags_NoKeyModsAllowed;
     }
 
     bool hovered, held;
@@ -9800,17 +9807,19 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
 
     PushStyleColor(ImGuiCol_Text, arrow_col);
     PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
     const float backup_repeat_delay = g.IO.KeyRepeatDelay;
     const float backup_repeat_rate = g.IO.KeyRepeatRate;
     g.IO.KeyRepeatDelay = 0.250f;
     g.IO.KeyRepeatRate = 0.200f;
     float x = ImMax(tab_bar->BarRect.Min.x, tab_bar->BarRect.Max.x - scrolling_buttons_width);
     window->DC.CursorPos = ImVec2(x, tab_bar->BarRect.Min.y);
-    if (ArrowButtonEx("##<", ImGuiDir_Left, arrow_button_size, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_Repeat))
+    if (ArrowButtonEx("##<", ImGuiDir_Left, arrow_button_size, ImGuiButtonFlags_PressedOnClick))
         select_dir = -1;
     window->DC.CursorPos = ImVec2(x + arrow_button_size.x, tab_bar->BarRect.Min.y);
-    if (ArrowButtonEx("##>", ImGuiDir_Right, arrow_button_size, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_Repeat))
+    if (ArrowButtonEx("##>", ImGuiDir_Right, arrow_button_size, ImGuiButtonFlags_PressedOnClick))
         select_dir = +1;
+    PopItemFlag();
     PopStyleColor(2);
     g.IO.KeyRepeatRate = backup_repeat_rate;
     g.IO.KeyRepeatDelay = backup_repeat_delay;

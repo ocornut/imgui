@@ -10,6 +10,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 // Missing features:
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
@@ -22,6 +23,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2024-10-09: Expose selected render state in ImGui_ImplSDLRenderer2_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-05-14: *BREAKING CHANGE* ImGui_ImplSDLRenderer3_RenderDrawData() requires SDL_Renderer* passed as parameter.
 //  2023-05-30: Renamed imgui_impl_sdlrenderer.h/.cpp to imgui_impl_sdlrenderer2.h/.cpp to accommodate for upcoming SDL3.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
@@ -142,12 +144,20 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     SDL_RenderGetViewport(renderer, &old.Viewport);
     SDL_RenderGetClipRect(renderer, &old.ClipRect);
 
+    // Setup desired state
+    ImGui_ImplSDLRenderer2_SetupRenderState(renderer);
+
+    // Setup render state structure (for callbacks and custom texture bindings)
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    ImGui_ImplSDLRenderer2_RenderState render_state;
+    render_state.Renderer = renderer;
+    platform_io.Renderer_RenderState = &render_state;
+
 	// Will project scissor/clipping rectangles into framebuffer space
 	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
 	ImVec2 clip_scale = render_scale;
 
     // Render command lists
-    ImGui_ImplSDLRenderer2_SetupRenderState(renderer);
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* draw_list = draw_data->CmdLists[n];
@@ -200,6 +210,7 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
             }
         }
     }
+    platform_io.Renderer_RenderState = NULL;
 
     // Restore modified SDL_Renderer state
     SDL_RenderSetViewport(renderer, &old.Viewport);

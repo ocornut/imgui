@@ -4,16 +4,8 @@
 // Implemented features:
 //  [x] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)platform_io.BackendRendererRenderState'.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [x] Renderer: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
-
-// Important: on 32-bit systems, user texture binding is only supported if your imconfig file has '#define ImTextureID ImU64'.
-// This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
-// To build this on 32-bit systems and support texture changes:
-// - [Solution 1] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'ImTextureID=ImU64' (this is what we do in our .vcxproj files)
-// - [Solution 2] IDE/msbuild: in "Properties/C++/Preprocessor Definitions" add 'IMGUI_USER_CONFIG="my_imgui_config.h"' and inside 'my_imgui_config.h' add '#define ImTextureID ImU64' and as many other options as you like.
-// - [Solution 3] IDE/msbuild: edit imconfig.h and add '#define ImTextureID ImU64' (prefer solution 2 to create your own config file!)
-// - [Solution 4] command-line: add '/D ImTextureID=ImU64' to your cl.exe command-line (this is what we do in our batch files)
 
 // The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
@@ -38,6 +30,7 @@
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-10-07: Vulkan: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: Vulkan: Expose selected render state in ImGui_ImplVulkan_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
+//  2024-10-07: Vulkan: Compiling with '#define ImTextureID=ImU64' is unnecessary now that dear imgui defaults ImTextureID to u64 instead of void*.
 //  2024-04-19: Vulkan: Added convenience support for Volk via IMGUI_IMPL_VULKAN_USE_VOLK define (you can also use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + wrap Volk via ImGui_ImplVulkan_LoadFunctions().)
 //  2024-02-14: *BREAKING CHANGE*: Moved RenderPass parameter from ImGui_ImplVulkan_Init() function to ImGui_ImplVulkan_InitInfo structure. Not required when using dynamic rendering.
 //  2024-02-12: *BREAKING CHANGE*: Dynamic rendering now require filling PipelineRenderingCreateInfo structure.
@@ -627,11 +620,11 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
                 // Bind DescriptorSet with font or user texture
-                VkDescriptorSet desc_set[1] = { (VkDescriptorSet)pcmd->TextureId };
+                VkDescriptorSet desc_set[1] = { (VkDescriptorSet)pcmd->GetTexID() };
                 if (sizeof(ImTextureID) < sizeof(ImU64))
                 {
                     // We don't support texture switches if ImTextureID hasn't been redefined to be 64-bit. Do a flaky check that other textures haven't been used.
-                    IM_ASSERT(pcmd->TextureId == (ImTextureID)bd->FontDescriptorSet);
+                    IM_ASSERT(pcmd->GetTexID() == (ImTextureID)bd->FontDescriptorSet);
                     desc_set[0] = bd->FontDescriptorSet;
                 }
                 vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, desc_set, 0, nullptr);
