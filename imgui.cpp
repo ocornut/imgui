@@ -4445,7 +4445,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 
     if (g.NavDisableMouseHover && !g.NavDisableHighlight && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
-        if (g.LastItemData.ID == g.NavId && g.NavId != 0) // IsItemFocused()
+        if (!IsItemFocused())
             return false;
         if ((g.LastItemData.InFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
             return false;
