@@ -1483,17 +1483,17 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         }
         if (create_pipeline)
         {
-            ImGui_ImplVulkan_MainPipelineCreateInfo info = {};
-            info.RenderPass = v->RenderPass;
-            info.Subpass = v->Subpass;
-            info.MSAASamples = info.MSAASamples;
-            info.pDynamicRendering = p_dynamic_rendering;
-            info.ColorCorrectionMethod = v->ColorCorrectionMethod;
+            ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
+            mp_info.RenderPass = v->RenderPass;
+            mp_info.Subpass = v->Subpass;
+            mp_info.MSAASamples = info->MSAASamples;
+            mp_info.pDynamicRendering = p_dynamic_rendering;
+            mp_info.ColorCorrectionMethod = v->ColorCorrectionMethod;
             if(v->UseStaticColorCorrectionsParams)
             {
-                info.ColorCorrectionParams = &v->ColorCorrectionParams;
+                mp_info.ColorCorrectionParams = &v->ColorCorrectionParams;
             }
-            ImGui_ImplVulkan_ReCreateMainPipeline(info);
+            ImGui_ImplVulkan_ReCreateMainPipeline(mp_info);
         }
     }
 
@@ -1630,7 +1630,7 @@ VkSurfaceFormatKHR ImGui_ImplVulkan_GetViewportOptimalSurfaceFormat(const ImGui_
         {
             candidate_color_space = bd->DesiredViewportsSurfaceFormat.colorSpace;
         }
-        surface_format = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, candidate_formats + first_candidate_format, IM_ARRAYSIZE(candidate_formats) - first_candidate_format, candidate_color_space);
+        surface_format = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, candidate_formats + first_candidate_format, static_cast<int>(IM_ARRAYSIZE(candidate_formats) - first_candidate_format), candidate_color_space);
     }
     return surface_format;
 }
@@ -1648,7 +1648,7 @@ VkPresentModeKHR ImGui_ImplVulkan_GetViewportOptimalPresentMode(const ImGui_Impl
         {
             first_present_mode = 1;
         }
-        present_mode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, present_modes + first_present_mode, IM_ARRAYSIZE(present_modes) - first_present_mode);
+        present_mode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, present_modes + first_present_mode, static_cast<int>(IM_ARRAYSIZE(present_modes) - first_present_mode));
     }
     return present_mode;
 }
