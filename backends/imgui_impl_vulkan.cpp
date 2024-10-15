@@ -111,9 +111,8 @@ void ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(VkDevice device, const V
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count, uint32_t queue_family);
 void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkan_DestroyAllViewportsRenderPasses();
-void ImGui_ImplVulkan_CreateViewportPipeline(ImGuiViewport* viewport);
-VkRenderPass ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(ImGui_ImplVulkan_RenderPassKey const& key);
-void ImGui_ImplVulkan_CreateWindowFramebuffers(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_GetOrCreateViewportsRenderPass(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_CreateWindowFramebuffers(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator);
 
 // Vulkan prototypes for use with custom loaders
 // (see description of IMGUI_IMPL_VULKAN_NO_PROTOTYPES in imgui_impl_vulkan.h
@@ -262,11 +261,9 @@ struct ImGui_ImplVulkan_RenderPassKey
 
     ImGui_ImplVulkan_RenderPassKey() = default;
 
-    ImGui_ImplVulkan_RenderPassKey(ImGuiViewport* viewport)
+    ImGui_ImplVulkan_RenderPassKey(ImGui_ImplVulkanH_Window* wd)
     {
-        ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
-        ImGui_ImplVulkanH_Window* wd = &vd->Window;
-        Clear = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
+        Clear = wd->RenderPassClear;
         Format = wd->SurfaceFormat.format;
     }
 
@@ -1094,6 +1091,7 @@ struct ImGui_ImplVulkan_PipelineCreateInfo
 static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreateInfo const& pci)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplVulkan_Init()?");
     ImGui_ImplVulkan_CreateShaderModules(pci.Device, pci.Allocator);
 
     VkPipelineShaderStageCreateInfo stage[2] = {};
@@ -1732,9 +1730,8 @@ void ImGui_ImplVulkan_RequestSecondaryViewportsChanges(ImGui_ImplVulkan_Secondar
                     if (changed_format)
                     {
                         wd->SurfaceFormat = format;
-                        wd->RenderPass = VK_NULL_HANDLE;
-                        ImGui_ImplVulkan_RenderPassKey key = viewport;
-                        wd->RenderPass = ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(key);
+                        ImGui_ImplVulkan_RenderPassKey key = wd;
+                        ImGui_ImplVulkanH_GetOrCreateViewportsRenderPass(wd, device, v->Allocator);
                     }
 
                     if (recreate_swapchain)
@@ -1742,7 +1739,7 @@ void ImGui_ImplVulkan_RequestSecondaryViewportsChanges(ImGui_ImplVulkan_Secondar
                         if (!synched) {vkDeviceWaitIdle(device); synched = true;}
                         ImGui_ImplVulkanH_CreateWindowSwapChain(v->PhysicalDevice, device, wd, v->Allocator, wd->Width, wd->Height, v->MinImageCount, v->QueueFamily);
                         vd->SwapChainNeedRebuild = false;
-                        ImGui_ImplVulkan_CreateWindowFramebuffers(wd, device, v->Allocator);
+                        ImGui_ImplVulkanH_CreateWindowFramebuffers(wd, device, v->Allocator);
                     }
                 }
 
@@ -1751,44 +1748,55 @@ void ImGui_ImplVulkan_RequestSecondaryViewportsChanges(ImGui_ImplVulkan_Secondar
                 if (recreate_pipeline)
                 {
                     if (!synched) { vkDeviceWaitIdle(device); synched = true; }
-                    ImGui_ImplVulkan_CreateViewportPipeline(viewport);
+                    ImGui_ImplVulkanH_CreateViewportPipeline(wd, device, v->Allocator);
                 }
             }
         }
     }
 }
 
-VkRenderPass ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(ImGui_ImplVulkan_RenderPassKey const& key)
+void ImGui_ImplVulkanH_GetOrCreateViewportsRenderPass(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator)
 {
+    if (wd->UseDynamicRendering)
+    {
+        wd->RenderPass = VK_NULL_HANDLE;
+        return;
+    }
+    if (wd->OwnsRenderPass)
+    {
+        vkDestroyRenderPass(device, wd->RenderPass, allocator);
+        wd->RenderPass = VK_NULL_HANDLE;
+    }
+    ImGui_ImplVulkan_RenderPassKey key = wd;
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    if (v->UseDynamicRendering)
+    VkRenderPass _res = VK_NULL_HANDLE;
+    VkRenderPass * res = &_res;
+    if (bd)
     {
-        return VK_NULL_HANDLE;
-    }
-
-    int found = -1;
-    for (int i = 0; i < bd->CachedRenderPassesForViewports.size(); ++i)
-    {
-        ImGui_ImplVulkan_Data::CachedRenderPass & c = bd->CachedRenderPassesForViewports[i];
-        if (c.Key == key)
+        int found = -1;
+        for (int i = 0; i < bd->CachedRenderPassesForViewports.size(); ++i)
         {
-            found = i;
-            break;
+            ImGui_ImplVulkan_Data::CachedRenderPass & c = bd->CachedRenderPassesForViewports[i];
+            if (c.Key == key)
+            {
+                found = i;
+                break;
+            }
         }
-    }
 
-    if (found == -1)
-    {
-        ImGui_ImplVulkan_Data::CachedRenderPass entry;
-        entry.Key = key;
-        entry.RenderPass = VK_NULL_HANDLE;
-        bd->CachedRenderPassesForViewports.push_back(entry);
-        found = bd->CachedRenderPassesForViewports.size() - 1;
+        if (found == -1)
+        {
+            ImGui_ImplVulkan_Data::CachedRenderPass entry;
+            entry.Key = key;
+            entry.RenderPass = VK_NULL_HANDLE;
+            bd->CachedRenderPassesForViewports.push_back(entry);
+            found = bd->CachedRenderPassesForViewports.size() - 1;
+        }
+        res = &bd->CachedRenderPassesForViewports[found].RenderPass;
     }
-    VkRenderPass & res = bd->CachedRenderPassesForViewports[found].RenderPass;
+    wd->OwnsRenderPass = !bd;
 
-    if(res == VK_NULL_HANDLE)
+    if(*res == VK_NULL_HANDLE)
     {
         VkAttachmentDescription attachment = {};
         attachment.format = key.Format;
@@ -1821,51 +1829,53 @@ VkRenderPass ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(ImGui_ImplVulkan_Re
         info.pSubpasses = &subpass;
         info.dependencyCount = 1;
         info.pDependencies = &dependency;
-        VkResult err = vkCreateRenderPass(v->Device, &info, v->Allocator, &res);
+        VkResult err = vkCreateRenderPass(device, &info, allocator, res);
         check_vk_result(err);
     }
-    return res;
+    wd->RenderPass = *res;
 }
 
-void ImGui_ImplVulkan_CreateViewportPipeline(ImGuiViewport* viewport)
+void ImGui_ImplVulkanH_CreateViewportPipeline(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
-    ImGui_ImplVulkanH_Window* wd = &vd->Window;
-
+    
     VkPipeline & target = wd->Pipeline;
     VkRenderPass & render_pass = wd->RenderPass;
+    VkPipelineCache cache = VK_NULL_HANDLE;
 
     if (target)
     {
-        vkDestroyPipeline(v->Device, target, v->Allocator);
+        vkDestroyPipeline(device, target, allocator);
         target = VK_NULL_HANDLE;
     }
 
-    if (!v->UseDynamicRendering && render_pass == VK_NULL_HANDLE)
+    if (!wd->UseDynamicRendering && render_pass == VK_NULL_HANDLE)
     {
-        ImGui_ImplVulkan_RenderPassKey key = viewport;
-        render_pass = ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(key);
+        ImGui_ImplVulkanH_GetOrCreateViewportsRenderPass(wd, device, allocator);
+    }
+
+    if (bd)
+    {
+        cache = bd->PipelineCacheForViewports;
     }
 
     ImGui_ImplVulkan_PipelineCreateInfo pci = {};
-    pci.Device = v->Device;
-    pci.Allocator = v->Allocator;
-    pci.PipelineCache = bd->PipelineCacheForViewports;
+    pci.Device = device;
+    pci.Allocator = allocator;
+    pci.PipelineCache = cache;
     pci.RenderPass = render_pass;
     pci.Subpass = 0;
     pci.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     pci.pRenderingInfo = nullptr;
-    pci.ColorCorrectionMethod = bd->ViewportsColorCorrectionMethod;
-    if (v->UseStaticColorCorrectionsParams)
+    pci.ColorCorrectionMethod = bd ? bd->ViewportsColorCorrectionMethod : ImGui_ImplVulkan_ColorCorrection_None;
+    if (bd && wd->UseStaticColorCorrectionParams)
     {
         pci.ColorCorrectionParams = &bd->ViewportsColorCorrectionParams;
     }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR rendering_info = {};
-    if (v->UseDynamicRendering)
+    if (wd->UseDynamicRendering)
     {
         rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         rendering_info.pNext = nullptr;
@@ -2044,13 +2054,11 @@ int ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_m
     return 1;
 }
 
-void ImGui_ImplVulkan_CreateWindowFramebuffers(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator)
+void ImGui_ImplVulkanH_CreateWindowFramebuffers(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    if (v->UseDynamicRendering == false)
+    if (!wd->UseDynamicRendering)
     {
-        IM_ASSERT(v->UseDynamicRendering || !!(wd->RenderPass));
+        IM_ASSERT(!!(wd->RenderPass));
         VkImageView attachment[1];
         VkFramebufferCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -2078,8 +2086,6 @@ void ImGui_ImplVulkan_CreateWindowFramebuffers(ImGui_ImplVulkanH_Window* wd, VkD
 // Also destroy old swap chain and in-flight frames data, if any.
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count, uint32_t queue_family)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
     const VkSwapchainKHR old_swapchain = wd->Swapchain;
     wd->Swapchain = VK_NULL_HANDLE;
@@ -2205,11 +2211,17 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
 }
 
 // Create or resize window
-void ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int width, int height, uint32_t min_image_count)
+void ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int width, int height, uint32_t min_image_count, bool create_pipeline)
 {
     IM_ASSERT(g_FunctionsLoaded && "Need to call ImGui_ImplVulkan_LoadFunctions() if IMGUI_IMPL_VULKAN_NO_PROTOTYPES or VK_NO_PROTOTYPES are set!");
     (void)instance;
     ImGui_ImplVulkanH_CreateWindowSwapChain(physical_device, device, wd, allocator, width, height, min_image_count, queue_family);
+    ImGui_ImplVulkanH_GetOrCreateViewportsRenderPass(wd, device, allocator);
+    ImGui_ImplVulkanH_CreateWindowFramebuffers(wd, device, allocator);
+    if (create_pipeline)
+    {
+        ImGui_ImplVulkanH_CreateViewportPipeline(wd, device, allocator);
+    }
 }
 
 void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator)
@@ -2225,6 +2237,11 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
     {
         vkDestroyPipeline(device, wd->Pipeline, allocator);
         wd->Pipeline = VK_NULL_HANDLE;
+    }
+    if (wd->OwnsRenderPass && wd->RenderPass)
+    {
+        vkDestroyRenderPass(device, wd->RenderPass, allocator);
+        wd->RenderPass = nullptr;
     }
     IM_FREE(wd->Frames);
     IM_FREE(wd->FrameSemaphores);
@@ -2288,6 +2305,10 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     VkResult err = (VkResult)platform_io.Platform_CreateVkSurface(viewport, (ImU64)v->Instance, (const void*)v->Allocator, (ImU64*)&wd->Surface);
     check_vk_result(err);
 
+    wd->UseDynamicRendering = v->UseDynamicRendering;
+    wd->RenderPassClear = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
+    wd->UseStaticColorCorrectionParams = v->UseStaticColorCorrectionsParams;
+
     // Check for WSI support
     VkBool32 res;
     vkGetPhysicalDeviceSurfaceSupportKHR(v->PhysicalDevice, v->QueueFamily, wd->Surface, &res);
@@ -2307,9 +2328,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     
     ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
     vd->WindowOwned = true;
-    wd->RenderPass = ImGui_ImplVulkan_GetOrCreateViewportsRenderPass(ImGui_ImplVulkan_RenderPassKey(viewport));
-    ImGui_ImplVulkan_CreateWindowFramebuffers(wd, v->Device, v->Allocator);
-    ImGui_ImplVulkan_CreateViewportPipeline(viewport);
+    
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
@@ -2335,7 +2354,6 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         return;
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &vd->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount);
-    ImGui_ImplVulkan_CreateWindowFramebuffers(&vd->Window, v->Device, v->Allocator);
 }
 
 static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
@@ -2346,12 +2364,9 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
 
-    ImGui_ImplVulkan_RenderPassKey render_pass_key(viewport);
-
     if (vd->SwapChainNeedRebuild)
     {
         ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
-        ImGui_ImplVulkan_CreateWindowFramebuffers(wd, v->Device, v->Allocator);
         vd->SwapChainNeedRebuild = false;
     }
 
@@ -2398,7 +2413,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         }
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        if (v->UseDynamicRendering)
+        if (wd->UseDynamicRendering)
         {
             // Transition swapchain image to a layout suitable for drawing.
             VkImageMemoryBarrier barrier = {};
@@ -2417,7 +2432,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             attachmentInfo.imageView = fd->BackbufferView;
             attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             attachmentInfo.resolveMode = VK_RESOLVE_MODE_NONE;
-            attachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachmentInfo.loadOp = wd->RenderPassClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachmentInfo.clearValue = wd->ClearValue;
 

@@ -196,11 +196,14 @@ struct ImGui_ImplVulkanH_Frame;
 struct ImGui_ImplVulkanH_Window;
 
 // Helpers
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+// To create the pipeline, ImGui_ImplVulkan_Init(...) must have been called before!
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count, bool create_pipeline = true);
 IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator);
 IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
+// Create the pipeline of wd
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateViewportPipeline(ImGui_ImplVulkanH_Window* wd, VkDevice device, const VkAllocationCallbacks* allocator);
 
 // Helper structure to hold the data needed by one rendering frame
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
@@ -232,7 +235,7 @@ struct ImGui_ImplVulkanH_Window
     VkSurfaceKHR        Surface;
     VkSurfaceFormatKHR  SurfaceFormat;
     VkPresentModeKHR    PresentMode;
-    VkRenderPass        RenderPass;             // Not owned by this
+    VkRenderPass        RenderPass;             // Ownedship determined by OwnsRenderPass
     VkPipeline          Pipeline;               // Owned by this
     VkClearValue        ClearValue;
     uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
@@ -243,6 +246,9 @@ struct ImGui_ImplVulkanH_Window
     ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
 
     bool                RenderPassClear;
+    bool                UseDynamicRendering;
+    bool                UseStaticColorCorrectionParams;
+    bool                OwnsRenderPass;
 
     ImGui_ImplVulkanH_Window()
     {

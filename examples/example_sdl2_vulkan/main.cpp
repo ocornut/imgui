@@ -240,6 +240,7 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
+    wd->RenderPassClear = true;
 
     // Check for WSI support
     VkBool32 res;
@@ -266,7 +267,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     IM_ASSERT(g_MinImageCount >= 2);
-    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount, false);
 }
 
 static void CleanupVulkan()
@@ -464,6 +465,8 @@ int main(int, char**)
     init_info.Allocator = g_Allocator;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info);
+
+    ImGui_ImplVulkanH_CreateViewportPipeline(wd, g_Device, g_Allocator);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
