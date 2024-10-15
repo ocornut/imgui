@@ -1388,17 +1388,17 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         }
         if (create_pipeline)
         {
-            ImGui_ImplVulkan_MainPipelineCreateInfo info = {};
-            info.RenderPass = v->RenderPass;
-            info.Subpass = v->Subpass;
-            info.MSAASamples = info.MSAASamples;
-            info.pDynamicRendering = p_dynamic_rendering;
-            info.ColorCorrectionMethod = v->ColorCorrectionMethod;
+            ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
+            mp_info.RenderPass = v->RenderPass;
+            mp_info.Subpass = v->Subpass;
+            mp_info.MSAASamples = info->MSAASamples;
+            mp_info.pDynamicRendering = p_dynamic_rendering;
+            mp_info.ColorCorrectionMethod = v->ColorCorrectionMethod;
             if(v->UseStaticColorCorrectionsParams)
             {
-                info.ColorCorrectionParams = &v->ColorCorrectionParams;
+                mp_info.ColorCorrectionParams = &v->ColorCorrectionParams;
             }
-            ImGui_ImplVulkan_ReCreateMainPipeline(info);
+            ImGui_ImplVulkan_ReCreateMainPipeline(mp_info);
         }
     }
 
