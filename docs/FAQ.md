@@ -405,7 +405,7 @@ DirectX9:
 ```
 ```cpp
 DirectX11:
-- ImTextureID should contain a 'ID3D11ShaderResourceView*' (poiter)
+- ImTextureID should contain a 'ID3D11ShaderResourceView*' (pointer)
 - See ImGui_ImplDX11_RenderDrawData() function in imgui_impl_dx11.cpp
 ```
 ```cpp
