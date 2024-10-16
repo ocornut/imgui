@@ -74,6 +74,7 @@ Other changes:
   window. (#3200)
 - Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
   when e.g activating the item with mouse, then Ctrl+Tabbing back and forth. 
+- Disabled: clicking a disabled item focuses parent window. (#8064) 
 - InvisibleButton, Nav: fixed an issue when InvisibleButton() would be navigable into but
   not display navigation highlight. Properly navigation on it by default. (#8057)
 - InvisibleButton: added ImGuiButtonFlags_EnableNav to enable navigation. (#8057)
