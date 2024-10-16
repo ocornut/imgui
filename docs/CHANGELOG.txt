@@ -73,7 +73,10 @@ Other changes:
 - Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
   window. (#3200)
 - Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
-  when e.g activating the item with mouse, then ctrl+tabbing back and forth. 
+  when e.g activating the item with mouse, then Ctrl+Tabbing back and forth. 
+- InvisibleButton, Nav: fixed an issue when InvisibleButton() would be navigable into but
+  not display navigation highlight. Properly navigation on it by default. (#8057)
+- InvisibleButton: added ImGuiButtonFlags_EnableNav to enable navigation. (#8057)
 - Tooltips: fixed incorrect tooltip positioning when using keyboard/gamepad navigation 
   (1.91.3 regression). (#8036)
 - DrawList: AddCallback() added an optional size parameter allowing to copy and
