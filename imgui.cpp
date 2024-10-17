@@ -4530,7 +4530,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 // (this does not rely on LastItemData it can be called from a ButtonBehavior() call not following an ItemAdd() call)
 // FIXME-LEGACY: the 'ImGuiItemFlags item_flags' parameter was added on 2023-06-28.
 // If you used this in your legacy/custom widgets code:
-// - Commonly: if your ItemHoverable() call comes after an ItemAdd() call: pass 'item_flags = g.LastItemData.InFlags'.
+// - Commonly: if your ItemHoverable() call comes after an ItemAdd() call: pass 'item_flags = g.LastItemData.ItemFlags'.
 // - Rare: otherwise you may pass 'item_flags = 0' (ImGuiItemFlags_None) unless you want to benefit from special behavior handled by ItemHoverable.
 bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flags)
 {
@@ -10847,7 +10847,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         IM_ASSERT(id != window->ID && "Cannot have an empty ID at the root of a window. If you need an empty label, use ## and read the FAQ about how the ID Stack works!");
     }
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
-    //if ((g.LastItemData.InFlags & ImGuiItemFlags_NoNav) == 0)
+    //if ((g.LastItemData.ItemFlags & ImGuiItemFlags_NoNav) == 0)
     //    window->DrawList->AddRect(g.LastItemData.NavRect.Min, g.LastItemData.NavRect.Max, IM_COL32(255,255,0,255)); // [DEBUG]
 #endif
 
@@ -12444,9 +12444,9 @@ static void ImGui::NavApplyItemToResult(ImGuiNavItemData* result)
     result->Window = window;
     result->ID = g.LastItemData.ID;
     result->FocusScopeId = g.CurrentFocusScopeId;
-    result->InFlags = g.LastItemData.ItemFlags;
+    result->ItemFlags = g.LastItemData.ItemFlags;
     result->RectRel = WindowRectAbsToRel(window, g.LastItemData.NavRect);
-    if (result->InFlags & ImGuiItemFlags_HasSelectionUserData)
+    if (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData)
     {
         IM_ASSERT(g.NextItemData.SelectionUserData != ImGuiSelectionUserData_Invalid);
         result->SelectionUserData = g.NextItemData.SelectionUserData; // INTENTIONAL: At this point this field is not cleared in NextItemData. Avoid unnecessary copy to LastItemData.
@@ -12652,7 +12652,7 @@ void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGu
     ImGuiContext& g = *GImGui;
     g.NavMoveScoringItems = false;
     g.LastItemData.ID = tree_node_data->ID;
-    g.LastItemData.ItemFlags = tree_node_data->InFlags & ~ImGuiItemFlags_HasSelectionUserData; // Losing SelectionUserData, recovered next-frame (cheaper).
+    g.LastItemData.ItemFlags = tree_node_data->ItemFlags & ~ImGuiItemFlags_HasSelectionUserData; // Losing SelectionUserData, recovered next-frame (cheaper).
     g.LastItemData.NavRect = tree_node_data->NavRect;
     NavApplyItemToResult(result); // Result this instead of implementing a NavApplyPastTreeNodeToResult()
     NavClearPreferredPosForAxis(ImGuiAxis_Y);
@@ -13039,7 +13039,7 @@ void ImGui::NavInitRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = 0;
         g.NavJustMovedToIsTabbing = false;
-        g.NavJustMovedToHasSelectionData = (result->InFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
+        g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
     }
 
     // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
@@ -13298,7 +13298,7 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
         g.NavJustMovedToIsTabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) != 0;
-        g.NavJustMovedToHasSelectionData = (result->InFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
+        g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
         //IMGUI_DEBUG_LOG_NAV("[nav] NavJustMovedFromFocusScopeId = 0x%08X, NavJustMovedToFocusScopeId = 0x%08X\n", g.NavJustMovedFromFocusScopeId, g.NavJustMovedToFocusScopeId);
     }
 
@@ -13318,7 +13318,7 @@ void ImGui::NavMoveRequestApplyResult()
     }
 
     // Tabbing: Activates Inputable, otherwise only Focus
-    if ((g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) && (result->InFlags & ImGuiItemFlags_Inputable) == 0)
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) && (result->ItemFlags & ImGuiItemFlags_Inputable) == 0)
         g.NavMoveFlags &= ~ImGuiNavMoveFlags_Activate;
 
     // Activate

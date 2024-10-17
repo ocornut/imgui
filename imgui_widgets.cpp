@@ -6457,7 +6457,7 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags)
     ImGuiTreeNodeStackData* tree_node_data = &g.TreeNodeStack.back();
     tree_node_data->ID = g.LastItemData.ID;
     tree_node_data->TreeFlags = flags;
-    tree_node_data->InFlags = g.LastItemData.ItemFlags;
+    tree_node_data->ItemFlags = g.LastItemData.ItemFlags;
     tree_node_data->NavRect = g.LastItemData.NavRect;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
