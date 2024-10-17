@@ -3656,6 +3656,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
 
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
+    IM_ASSERT((flags & ImGuiInputTextFlags_EnterReturnsTrue) == 0); // Not supported by InputScalar(). Please open an issue if you this would be useful to you. Otherwise use IsItemDeactivatedAfterEdit()!
 
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;

@@ -93,6 +93,8 @@ Other changes:
   preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
 - InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
   enabled or not. (#6417)
+- InputScalar: added an assert to clarify that ImGuiInputTextFlags_EnterReturnsTrue is not
+  supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065)
 - imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render 
   OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
   Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
