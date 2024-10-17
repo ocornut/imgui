@@ -3986,7 +3986,6 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     DragSpeedDefaultRatio = 1.0f / 100.0f;
     DisabledAlphaBackup = 0.0f;
     DisabledStackSize = 0;
-    LockMarkEdited = 0;
     TooltipOverrideCount = 0;
     TooltipPreviousWindow = NULL;
 
@@ -4373,10 +4372,10 @@ ImGuiID ImGui::GetHoveredID()
 
 void ImGui::MarkItemEdited(ImGuiID id)
 {
-    // This marking is solely to be able to provide info for IsItemDeactivatedAfterEdit().
+    // This marking is to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
-    if (g.LockMarkEdited > 0)
+    if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
     if (g.ActiveId == id || g.ActiveId == 0)
     {
