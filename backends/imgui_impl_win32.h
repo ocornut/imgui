@@ -33,7 +33,7 @@ IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 // - Call from your application's message handler. Keep calling your message handler unless this function returns TRUE.
 
 #if 0
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, ImGuiContext* imguiCxt);
 #endif
 
 // DPI-related helpers (optional)
