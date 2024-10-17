@@ -1409,6 +1409,7 @@ ImGuiIO::ImGuiIO()
     ConfigNavSwapGamepadButtons = false;
     ConfigNavMoveSetMousePos = false;
     ConfigNavCaptureKeyboard = true;
+    ConfigNavEscapeClearFocusItem = true;
     ConfigNavEscapeClearFocusWindow = false;
     ConfigInputTrickleEventQueue = true;
     ConfigInputTextCursorBlink = true;
@@ -13376,11 +13377,13 @@ static void ImGui::NavUpdateCancelRequest()
     {
         // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
         // FIXME-NAV: This should happen on window appearing.
-        if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup)))// || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
-            g.NavWindow->NavLastIds[0] = 0;
+        if (g.IO.ConfigNavEscapeClearFocusItem || g.IO.ConfigNavEscapeClearFocusWindow)
+            if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup)))// || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
+                g.NavWindow->NavLastIds[0] = 0;
 
         // Clear nav focus
-        g.NavId = 0;
+        if (g.IO.ConfigNavEscapeClearFocusItem || g.IO.ConfigNavEscapeClearFocusWindow)
+            g.NavId = 0;
         if (g.IO.ConfigNavEscapeClearFocusWindow)
             FocusWindow(NULL);
     }

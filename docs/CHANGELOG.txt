@@ -43,8 +43,8 @@ Breaking changes:
 
 - The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
   - This removes the requirement to redefine it for backends which are e.g. storing
-    descriptor sets or other 64-bits structures when building on 32-bits archs.
-    It therefore simplify various building scripts/helpers.
+    descriptor sets or other 64-bits structures when building on 32-bits archs
+    (namely our DX12 and Vulkan backends). It therefore simplify various building scripts/helpers.
   - You may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID'
     when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
     In doubt it is almost always better to do an intermediate intptr_t cast, since it
@@ -67,7 +67,12 @@ Other changes:
   state to draw callbacks. (#6969, #5834, #7468, #3590)
 - IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - Error Handling: turned a few more functions into recoverable errors. (#1651)
-- Nav: added io.ConfigNavEscapeClearFocusWindow to clear focused window on Escape. (#3200)
+- Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
+  how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
+  - Set io.ConfigNavEscapeClearFocusItem = true (default) to clear focused item and highlight.
+  - Set io.ConfigNavEscapeClearFocusItem = false for Escape to not have a specific effect.
+  - Set io.ConfigNavEscapeClearFocusWindow = true to completely unfocus the dear imgui window,
+    is for some reason your app relies on imgui focus to take other decisions.  
 - Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing 
   back into same window later.
 - Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most

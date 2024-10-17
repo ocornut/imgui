@@ -1600,7 +1600,7 @@ struct ImGuiNavItemData
     void Clear()        { Window = NULL; ID = FocusScopeId = 0; ItemFlags = 0; SelectionUserData = -1; DistBox = DistCenter = DistAxial = FLT_MAX; }
 };
 
-// Storage for PushFocusScope()
+// Storage for PushFocusScope(), g.FocusScopeStack[], g.NavFocusRoute[]
 struct ImGuiFocusScopeData
 {
     ImGuiID             ID;
@@ -3223,6 +3223,8 @@ namespace ImGui
     IMGUI_API void          RenderDragDropTargetRect(const ImRect& bb, const ImRect& item_clip_rect);
 
     // Typing-Select API
+    // (provide Windows Explorer style "select items by typing partial name" + "cycle through items by typing same letter" feature)
+    // (this is currently not documented nor used by main library, but should work. See "widgets_typingselect" in imgui_test_suite for usage code. Please let us know if you use this!)
     IMGUI_API ImGuiTypingSelectRequest* GetTypingSelectRequest(ImGuiTypingSelectFlags flags = ImGuiTypingSelectFlags_None);
     IMGUI_API int           TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
     IMGUI_API int           TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
