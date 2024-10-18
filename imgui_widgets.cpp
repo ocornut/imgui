@@ -4129,6 +4129,7 @@ ImGuiInputTextState::ImGuiInputTextState()
 {
     memset(this, 0, sizeof(*this));
     Stb = IM_NEW(ImStbTexteditState);
+    memset(Stb, 0, sizeof(*Stb));
 }
 
 ImGuiInputTextState::~ImGuiInputTextState()
