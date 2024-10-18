@@ -7200,7 +7200,7 @@ int ImGui::TypingSelectFindMatch(ImGuiTypingSelectRequest* req, int items_count,
     else
         idx = TypingSelectFindBestLeadingMatch(req, items_count, get_item_name_func, user_data);
     if (idx != -1)
-        NavRestoreHighlightAfterMove();
+        SetNavCursorVisibleAfterMove();
     return idx;
 }
 
@@ -8883,7 +8883,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         {
             want_open = want_open_nav_init = true;
             NavMoveRequestCancel();
-            NavRestoreHighlightAfterMove();
+            SetNavCursorVisibleAfterMove();
         }
     }
     else

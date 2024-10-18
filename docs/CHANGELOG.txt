@@ -67,6 +67,8 @@ Other changes:
   state to draw callbacks. (#6969, #5834, #7468, #3590)
 - IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - Error Handling: turned a few more functions into recoverable errors. (#1651)
+- Nav: added NavSetCursorVisible(bool visible) to manipulate visibility of keyboard/gamepad
+  navigation cursor. (#1074, #2048, #7237, #8059)
 - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
   how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
   - Set io.ConfigNavEscapeClearFocusItem = true (default) to clear focused item and highlight.

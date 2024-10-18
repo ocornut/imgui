@@ -8558,7 +8558,7 @@ void ImGui::FocusItem()
         return;
     }
 
-    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavHighlight | ImGuiNavMoveFlags_NoSelect;
+    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavCursorVisible | ImGuiNavMoveFlags_NoSelect;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
     SetNavWindow(window);
     NavMoveRequestSubmit(ImGuiDir_None, ImGuiDir_Up, move_flags, scroll_flags);
@@ -8593,7 +8593,7 @@ void ImGui::SetKeyboardFocusHere(int offset)
 
     SetNavWindow(window);
 
-    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_Activate | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavHighlight;
+    ImGuiNavMoveFlags move_flags = ImGuiNavMoveFlags_IsTabbing | ImGuiNavMoveFlags_Activate | ImGuiNavMoveFlags_FocusApi | ImGuiNavMoveFlags_NoSetNavCursorVisible;
     ImGuiScrollFlags scroll_flags = window->Appearing ? ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_AlwaysCenterY : ImGuiScrollFlags_KeepVisibleEdgeX | ImGuiScrollFlags_KeepVisibleEdgeY;
     NavMoveRequestSubmit(ImGuiDir_None, offset < 0 ? ImGuiDir_Up : ImGuiDir_Down, move_flags, scroll_flags); // FIXME-NAV: Once we refactor tabbing, add LegacyApi flag to not activate non-inputable.
     if (offset == -1)
@@ -12209,6 +12209,20 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 // In our terminology those should be interchangeable, yet right now this is super confusing.
 // Those two functions are merely a legacy artifact, so at minimum naming should be clarified.
 
+void ImGui::SetNavCursorVisible(bool visible)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavCursorVisible = visible;
+}
+
+// (was called NavRestoreHighlightAfterMove() before 1.91.4)
+void ImGui::SetNavCursorVisibleAfterMove()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavCursorVisible = true;
+    g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
+}
+
 void ImGui::SetNavWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -12735,13 +12749,6 @@ void ImGui::NavRestoreLayer(ImGuiNavLayer layer)
     }
 }
 
-void ImGui::NavRestoreHighlightAfterMove()
-{
-    ImGuiContext& g = *GImGui;
-    g.NavCursorVisible = true;
-    g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
-}
-
 static inline void ImGui::NavUpdateAnyRequestFlag()
 {
     ImGuiContext& g = *GImGui;
@@ -13050,7 +13057,7 @@ void ImGui::NavInitRequestApplyResult()
     if (result->SelectionUserData != ImGuiSelectionUserData_Invalid)
         g.NavLastValidSelectionUserData = result->SelectionUserData;
     if (g.NavInitRequestFromMove)
-        NavRestoreHighlightAfterMove();
+        SetNavCursorVisibleAfterMove();
 }
 
 // Bias scoring rect ahead of scoring + update preferred pos (if missing) using source position
@@ -13243,9 +13250,9 @@ void ImGui::NavMoveRequestApplyResult()
     if (result == NULL)
     {
         if (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing)
-            g.NavMoveFlags |= ImGuiNavMoveFlags_NoSetNavHighlight;
-        if (g.NavId != 0 && (g.NavMoveFlags & ImGuiNavMoveFlags_NoSetNavHighlight) == 0)
-            NavRestoreHighlightAfterMove();
+            g.NavMoveFlags |= ImGuiNavMoveFlags_NoSetNavCursorVisible;
+        if (g.NavId != 0 && (g.NavMoveFlags & ImGuiNavMoveFlags_NoSetNavCursorVisible) == 0)
+            SetNavCursorVisibleAfterMove();
         NavClearPreferredPosForAxis(axis); // On a failed move, clear preferred pos for this axis.
         IMGUI_DEBUG_LOG_NAV("[nav] NavMoveSubmitted but not led to a result!\n");
         return;
@@ -13330,9 +13337,9 @@ void ImGui::NavMoveRequestApplyResult()
             g.NavNextActivateFlags |= ImGuiActivateFlags_PreferInput | ImGuiActivateFlags_TryToPreserveState | ImGuiActivateFlags_FromTabbing;
     }
 
-    // Enable nav highlight
-    if ((g.NavMoveFlags & ImGuiNavMoveFlags_NoSetNavHighlight) == 0)
-        NavRestoreHighlightAfterMove();
+    // Make nav cursor visible
+    if ((g.NavMoveFlags & ImGuiNavMoveFlags_NoSetNavCursorVisible) == 0)
+        SetNavCursorVisibleAfterMove();
 }
 
 // Process Escape/NavCancel input (to close a popup, get back to parent, clear focus)
@@ -13356,7 +13363,7 @@ static void ImGui::NavUpdateCancelRequest()
     {
         // Leave the "menu" layer
         NavRestoreLayer(ImGuiNavLayer_Main);
-        NavRestoreHighlightAfterMove();
+        SetNavCursorVisibleAfterMove();
     }
     else if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow && !(g.NavWindow->RootWindowForNav->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->RootWindowForNav->ParentWindow)
     {
@@ -13366,7 +13373,7 @@ static void ImGui::NavUpdateCancelRequest()
         IM_ASSERT(child_window->ChildId != 0);
         FocusWindow(parent_window);
         SetNavID(child_window->ChildId, ImGuiNavLayer_Main, 0, WindowRectAbsToRel(parent_window, child_window->Rect()));
-        NavRestoreHighlightAfterMove();
+        SetNavCursorVisibleAfterMove();
     }
     else if (g.OpenPopupStack.Size > 0 && g.OpenPopupStack.back().Window != NULL && !(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
     {
@@ -13732,7 +13739,7 @@ static void ImGui::NavUpdateWindowing()
     if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
     {
         ClearActiveID();
-        NavRestoreHighlightAfterMove();
+        SetNavCursorVisibleAfterMove();
         ClosePopupsOverWindow(apply_focus_window, false);
         FocusWindow(apply_focus_window, ImGuiFocusRequestFlags_RestoreFocusedChild);
         apply_focus_window = g.NavWindow;
@@ -13779,7 +13786,7 @@ static void ImGui::NavUpdateWindowing()
             if (new_nav_layer == ImGuiNavLayer_Menu)
                 g.NavWindow->NavLastIds[new_nav_layer] = 0;
             NavRestoreLayer(new_nav_layer);
-            NavRestoreHighlightAfterMove();
+            SetNavCursorVisibleAfterMove();
         }
     }
 }
