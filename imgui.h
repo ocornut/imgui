@@ -2252,6 +2252,8 @@ struct ImGuiIO
     bool        ConfigNavCaptureKeyboard;       // = true           // Sets io.WantCaptureKeyboard when io.NavActive is set.
     bool        ConfigNavEscapeClearFocusItem;  // = true           // Pressing Escape can clear focused item + navigation id/highlight. Set to false if you want to always keep highlight on.
     bool        ConfigNavEscapeClearFocusWindow;// = false          // Pressing Escape can clear focused window as well (super set of io.ConfigNavEscapeClearFocusItem).
+    bool        ConfigNavCursorVisibleAuto;     // = true           // Using directional navigation key makes the cursor visible. Mouse click hides the cursor.
+    bool        ConfigNavCursorVisibleAlways;   // = false          // Navigation cursor is always visible.
 
     // Miscellaneous options
     // (you can visualize and interact with all options in 'Demo->Configuration')

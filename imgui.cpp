@@ -1406,6 +1406,8 @@ ImGuiIO::ImGuiIO()
     ConfigNavCaptureKeyboard = true;
     ConfigNavEscapeClearFocusItem = true;
     ConfigNavEscapeClearFocusWindow = false;
+    ConfigNavCursorVisibleAuto = true;
+    ConfigNavCursorVisibleAlways = false;
 
     // Miscellaneous options
     MouseDrawCursor = false;
@@ -3916,6 +3918,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     NavHighlightActivatedTimer = 0.0f;
     NavInputSource = ImGuiInputSource_Keyboard;
     NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
+    NavCursorHideFrames = 0;
 
     NavAnyRequest = false;
     NavInitRequest = false;
@@ -4828,7 +4831,8 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     FocusWindow(window);
     SetActiveID(window->MoveId, window);
-    g.NavCursorVisible = false;
+    if (g.IO.ConfigNavCursorVisibleAuto)
+        g.NavCursorVisible = false;
     g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - window->RootWindow->Pos;
     g.ActiveIdNoClearOnFocusLoss = true;
     SetActiveIdUsingAllKeyboardKeys();
@@ -12216,6 +12220,8 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 void ImGui::SetNavCursorVisible(bool visible)
 {
     ImGuiContext& g = *GImGui;
+    if (g.IO.ConfigNavCursorVisibleAlways)
+        visible = true;
     g.NavCursorVisible = visible;
 }
 
@@ -12223,7 +12229,8 @@ void ImGui::SetNavCursorVisible(bool visible)
 void ImGui::SetNavCursorVisibleAfterMove()
 {
     ImGuiContext& g = *GImGui;
-    g.NavCursorVisible = true;
+    if (g.IO.ConfigNavCursorVisibleAuto)
+        g.NavCursorVisible = true;
     g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
 }
 
@@ -12289,7 +12296,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 
     if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
         g.NavHighlightItemUnderNav = true;
-    else
+    else if (g.IO.ConfigNavCursorVisibleAuto)
         g.NavCursorVisible = false;
 
     // Clear preferred scoring position (NavMoveRequestApplyResult() will tend to restore it)
@@ -12904,6 +12911,9 @@ static void ImGui::NavUpdate()
         NavMoveRequestApplyResult();
     g.NavTabbingCounter = 0;
     g.NavMoveSubmitted = g.NavMoveScoringItems = false;
+    if (g.NavCursorHideFrames > 0)
+        if (--g.NavCursorHideFrames == 0)
+            g.NavCursorVisible = true;
 
     // Schedule mouse position update (will be done at the bottom of this function, after 1) processing all move requests and 2) updating scrolling)
     bool set_mouse_pos = false;
@@ -12958,6 +12968,8 @@ static void ImGui::NavUpdate()
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         g.NavCursorVisible = false;
+    else if (g.IO.ConfigNavCursorVisibleAlways && g.NavCursorHideFrames == 0)
+        g.NavCursorVisible = true;
     if (g.NavActivateId != 0)
         IM_ASSERT(g.NavActivateDownId == g.NavActivateId);
 
@@ -13158,7 +13170,8 @@ void ImGui::NavUpdateCreateMoveRequest()
         IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: from move, window \"%s\", layer=%d\n", window ? window->Name : "<NULL>", g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResult.ID = 0;
-        g.NavCursorVisible = true;
+        if (g.IO.ConfigNavCursorVisibleAuto)
+            g.NavCursorVisible = true;
     }
 
     // When using gamepad, we project the reference nav bounding box into window visible area.

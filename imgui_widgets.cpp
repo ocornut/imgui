@@ -619,7 +619,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                     pressed = true;
         }
 
-        if (pressed)
+        if (pressed && g.IO.ConfigNavCursorVisibleAuto)
             g.NavCursorVisible = false;
     }
 
@@ -688,7 +688,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 }
                 ClearActiveID();
             }
-            if (!(flags & ImGuiButtonFlags_NoNavFocus))
+            if (!(flags & ImGuiButtonFlags_NoNavFocus) && g.IO.ConfigNavCursorVisibleAuto)
                 g.NavCursorVisible = false;
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
@@ -7001,7 +7001,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         if (!g.NavHighlightItemUnderNav && g.NavWindow == window && g.NavLayer == window->DC.NavLayerCurrent)
         {
             SetNavID(id, window->DC.NavLayerCurrent, g.CurrentFocusScopeId, WindowRectAbsToRel(window, bb)); // (bb == NavRect)
-            g.NavCursorVisible = false;
+            if (g.IO.ConfigNavCursorVisibleAuto)
+                g.NavCursorVisible = false;
         }
     }
     if (pressed)
@@ -8624,7 +8625,12 @@ void ImGui::EndMenuBar()
             IM_ASSERT(window->DC.NavLayersActiveMaskNext & (1 << layer)); // Sanity check (FIXME: Seems unnecessary)
             FocusWindow(window);
             SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
-            g.NavCursorVisible = false; // Hide nav cursor for the current frame so we don't see the intermediary selection.
+            // FIXME-NAV: How to deal with this when not using g.IO.ConfigNavCursorVisibleAuto?
+            if (g.NavCursorVisible)
+            {
+                g.NavCursorVisible = false; // Hide nav cursor for the current frame so we don't see the intermediary selection. Will be set again
+                g.NavCursorHideFrames = 2;
+            }
             g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
             NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags); // Repeat
         }

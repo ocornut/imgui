@@ -69,20 +69,26 @@ Other changes:
   state to draw callbacks. (#6969, #5834, #7468, #3590)
 - IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - Error Handling: turned a few more functions into recoverable errors. (#1651)
-- Nav: added NavSetCursorVisible(bool visible) to manipulate visibility of keyboard/gamepad
-  navigation cursor. (#1074, #2048, #7237, #8059)
-- Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
-  how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
-  - Set io.ConfigNavEscapeClearFocusItem = true (default) to clear focused item and highlight.
-  - Set io.ConfigNavEscapeClearFocusItem = false for Escape to not have a specific effect.
-  - Set io.ConfigNavEscapeClearFocusWindow = true to completely unfocus the dear imgui window,
-    is for some reason your app relies on imgui focus to take other decisions.  
-- Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing 
-  back into same window later.
-- Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
-  window. (#3200)
-- Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
-  when e.g activating the item with mouse, then Ctrl+Tabbing back and forth. 
+- Nav (Keyboard/Gamepad navigation):
+  - Nav: added io.ConfigNavCursorVisibleAuto and io.ConfigNavCursorVisibleAlways to configure
+    visibility of navigation cursor. (#1074, #2048, #7237, #8059, #3200, #787)
+     - Set io.ConfigNavCursorVisibleAuto = true (default) to enable automatic toggling
+       of cursor visibility (mouse click hide the cursor, arrow keys makes it visible).
+     - Set io.ConfigNavCursorVisibleAlways to keep cursor always visible.
+  - Nav: added NavSetCursorVisible(bool visible) function to manipulate visibility of 
+    navigation cursor (e.g. set default state, or after some actions). (#1074, #2048, #7237, #8059)
+  - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
+    how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
+    - Set io.ConfigNavEscapeClearFocusItem = true (default) to clear focused item and highlight.
+    - Set io.ConfigNavEscapeClearFocusItem = false for Escape to not have a specific effect.
+    - Set io.ConfigNavEscapeClearFocusWindow = true to completely unfocus the dear imgui window,
+      is for some reason your app relies on imgui focus to take other decisions.  
+  - Nav: pressing escape to hide nav highlight doesn't clear location from when Ctrl+Tabbing 
+    back into same window later.
+  - Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
+    window. (#3200)
+  - Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
+    when e.g activating the item with mouse, then Ctrl+Tabbing back and forth. 
 - Disabled: clicking a disabled item focuses parent window. (#8064) 
 - InvisibleButton, Nav: fixed an issue when InvisibleButton() would be navigable into but
   not display navigation highlight. Properly navigation on it by default. (#8057)
