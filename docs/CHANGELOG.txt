@@ -36,18 +36,18 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.4 WIP (In Progress)
+ VERSION 1.91.4 (Released 2024-10-18)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
-- Style: renamed ImGuiCol_NavHighlight to ImGuiCol_NavCursor, for consistency with newly
-  exposed and reworked features. Kept inline redirection enum (will obsolete).
+- Style: renamed ImGuiCol_NavHighlight to ImGuiCol_NavCursor, for consistency with 
+  newly exposed and reworked features. Kept inline redirection enum (will obsolete).
 - The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
   - This removes the requirement to redefine it for backends which are e.g. storing
     descriptor sets or other 64-bits structures when building on 32-bits archs
     (namely our DX12 and Vulkan backends). It therefore simplify various building scripts/helpers.
-  - You may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID'
+  - You may have compile-time warnings if you were casting to 'void*' instead of 'ImTextureID'
     when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
     In doubt it is almost always better to do an intermediate intptr_t cast, since it
     allows casting any pointer/integer type without warning:
@@ -109,7 +109,7 @@ Other changes:
 - InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
   enabled or not. (#6417)
 - InputScalar: added an assert to clarify that ImGuiInputTextFlags_EnterReturnsTrue is not
-  supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065)
+  supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065, #3946)
 - imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render 
   OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
   Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
