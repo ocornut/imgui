@@ -1400,6 +1400,13 @@ ImGuiIO::ImGuiIO()
     FontAllowUserScaling = false;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
+    // Keyboard/Gamepad Navigation options
+    ConfigNavSwapGamepadButtons = false;
+    ConfigNavMoveSetMousePos = false;
+    ConfigNavCaptureKeyboard = true;
+    ConfigNavEscapeClearFocusItem = true;
+    ConfigNavEscapeClearFocusWindow = false;
+
     // Miscellaneous options
     MouseDrawCursor = false;
 #ifdef __APPLE__
@@ -1407,11 +1414,6 @@ ImGuiIO::ImGuiIO()
 #else
     ConfigMacOSXBehaviors = false;
 #endif
-    ConfigNavSwapGamepadButtons = false;
-    ConfigNavMoveSetMousePos = false;
-    ConfigNavCaptureKeyboard = true;
-    ConfigNavEscapeClearFocusItem = true;
-    ConfigNavEscapeClearFocusWindow = false;
     ConfigInputTrickleEventQueue = true;
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;
@@ -3900,8 +3902,13 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     CurrentItemFlags = ImGuiItemFlags_None;
     DebugShowGroupRects = false;
 
+    NavCursorVisible = false;
+    NavHighlightItemUnderNav = false;
+    NavMousePosDirty = false;
+    NavIdIsAlive = false;
+    NavId = 0;
     NavWindow = NULL;
-    NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = 0;
+    NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = 0;
     NavLayer = ImGuiNavLayer_Main;
     NavNextActivateId = 0;
     NavActivateFlags = NavNextActivateFlags = ImGuiActivateFlags_None;
@@ -3909,10 +3916,6 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     NavHighlightActivatedTimer = 0.0f;
     NavInputSource = ImGuiInputSource_Keyboard;
     NavLastValidSelectionUserData = ImGuiSelectionUserData_Invalid;
-    NavIdIsAlive = false;
-    NavMousePosDirty = false;
-    NavCursorVisible = false;
-    NavHighlightItemUnderNav = false;
 
     NavAnyRequest = false;
     NavInitRequest = false;
@@ -5197,7 +5200,7 @@ void ImGui::NewFrame()
     //IM_ASSERT(g.IO.KeyAlt == IsKeyDown(ImGuiKey_LeftAlt) || IsKeyDown(ImGuiKey_RightAlt));
     //IM_ASSERT(g.IO.KeySuper == IsKeyDown(ImGuiKey_LeftSuper) || IsKeyDown(ImGuiKey_RightSuper));
 
-    // Update gamepad/keyboard navigation
+    // Update keyboard/gamepad navigation
     NavUpdate();
 
     // Update mouse input state
@@ -9777,7 +9780,7 @@ static void ImGui::UpdateMouseInputs()
     g.MouseStationaryTimer = mouse_stationary ? (g.MouseStationaryTimer + io.DeltaTime) : 0.0f;
     //IMGUI_DEBUG_LOG("%.4f\n", g.MouseStationaryTimer);
 
-    // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
+    // If mouse moved we re-enable mouse hovering in case it was disabled by keyboard/gamepad. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
     if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
         g.NavHighlightItemUnderNav = false;
 
@@ -9816,7 +9819,7 @@ static void ImGui::UpdateMouseInputs()
         // We provide io.MouseDoubleClicked[] as a legacy service
         io.MouseDoubleClicked[i] = (io.MouseClickedCount[i] == 2);
 
-        // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
+        // Clicking any mouse button reactivate mouse hovering which may have been deactivated by keyboard/gamepad navigation
         if (io.MouseClicked[i])
             g.NavHighlightItemUnderNav = false;
     }
@@ -12310,7 +12313,7 @@ static float inline NavScoreItemDistInterval(float cand_min, float cand_max, flo
     return 0.0f;
 }
 
-// Scoring function for gamepad/keyboard directional navigation. Based on https://gist.github.com/rygorous/6981057
+// Scoring function for keyboard/gamepad directional navigation. Based on https://gist.github.com/rygorous/6981057
 static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
 {
     ImGuiContext& g = *GImGui;
