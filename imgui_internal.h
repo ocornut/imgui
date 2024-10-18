@@ -2144,7 +2144,8 @@ struct ImGuiContext
     ImGuiSelectionUserData  NavLastValidSelectionUserData;      // Last valid data passed to SetNextItemSelectionUser(), or -1. For current window. Not reset when focusing an item that doesn't have selection data.
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRectRel is valid
     bool                    NavMousePosDirty;                   // When set we will update mouse position if io.ConfigNavMoveSetMousePos is set (not enabled by default)
-    bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
+    bool                    NavCursorVisible;                   // Nav focus rectangle is visible? We hide it after a mouse click. We show it after a nav move.
+    //bool                  NavDisableHighlight;                // Before 1.91.4 (2024/10/18) we used g.NavDisableHighlight. g.NavCursorVisible is the new variable name, with opposite value (g.NavDisableHighlight = !g.NavCursorVisible)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
 
     // Navigation: Init & Move Requests
