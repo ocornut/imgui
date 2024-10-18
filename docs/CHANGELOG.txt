@@ -41,6 +41,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Style: renamed ImGuiCol_NavHighlight to ImGuiCol_NavCursor, for consistency with newly
+  exposed and reworked features. Kept inline redirection enum (will obsolete).
 - The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
   - This removes the requirement to redefine it for backends which are e.g. storing
     descriptor sets or other 64-bits structures when building on 32-bits archs
