@@ -3911,7 +3911,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     NavIdIsAlive = false;
     NavMousePosDirty = false;
     NavCursorVisible = false;
-    NavDisableMouseHover = false;
+    NavHighlightItemUnderNav = false;
 
     NavAnyRequest = false;
     NavInitRequest = false;
@@ -4444,7 +4444,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT_USER_ERROR((flags & ~ImGuiHoveredFlags_AllowedMaskForIsItemHovered) == 0, "Invalid flags for IsItemHovered()!");
 
-    if (g.NavDisableMouseHover && g.NavCursorVisible && !(flags & ImGuiHoveredFlags_NoNavOverride))
+    if (g.NavHighlightItemUnderNav && g.NavCursorVisible && !(flags & ImGuiHoveredFlags_NoNavOverride))
     {
         if (!IsItemFocused())
             return false;
@@ -4615,7 +4615,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     }
 #endif
 
-    if (g.NavDisableMouseHover && (item_flags & ImGuiItemFlags_NoNavDisableMouseHover) == 0)
+    if (g.NavHighlightItemUnderNav && (item_flags & ImGuiItemFlags_NoNavDisableMouseHover) == 0)
         return false;
 
     return true;
@@ -6589,7 +6589,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             g.NavWindowingAccumDeltaSize += nav_resize_dir * resize_step;
             g.NavWindowingAccumDeltaSize = ImMax(g.NavWindowingAccumDeltaSize, clamp_rect.Min - window->Pos - window->Size); // We need Pos+Size >= clmap_rect.Min, so Size >= clmap_rect.Min - Pos, so size_delta >= clmap_rect.Min - window->Pos - window->Size
             g.NavWindowingToggleLayer = false;
-            g.NavDisableMouseHover = true;
+            g.NavHighlightItemUnderNav = true;
             resize_grip_col[0] = GetColorU32(ImGuiCol_ResizeGripActive);
             ImVec2 accum_floored = ImTrunc(g.NavWindowingAccumDeltaSize);
             if (accum_floored.x != 0.0f || accum_floored.y != 0.0f)
@@ -7859,7 +7859,7 @@ void ImGui::FocusWindow(ImGuiWindow* window, ImGuiFocusRequestFlags flags)
     if (g.NavWindow != window)
     {
         SetNavWindow(window);
-        if (window && g.NavDisableMouseHover)
+        if (window && g.NavHighlightItemUnderNav)
             g.NavMousePosDirty = true;
         g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
         g.NavLayer = ImGuiNavLayer_Main;
@@ -9778,7 +9778,7 @@ static void ImGui::UpdateMouseInputs()
 
     // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
     if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
-        g.NavDisableMouseHover = false;
+        g.NavHighlightItemUnderNav = false;
 
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
@@ -9817,7 +9817,7 @@ static void ImGui::UpdateMouseInputs()
 
         // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
         if (io.MouseClicked[i])
-            g.NavDisableMouseHover = false;
+            g.NavHighlightItemUnderNav = false;
     }
 }
 
@@ -12189,7 +12189,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 
         ImVec2 tooltip_pos = ref_pos + TOOLTIP_DEFAULT_OFFSET_MOUSE * scale;
         ImRect r_avoid;
-        if (g.NavCursorVisible && g.NavDisableMouseHover && !g.IO.ConfigNavMoveSetMousePos)
+        if (g.NavCursorVisible && g.NavHighlightItemUnderNav && !g.IO.ConfigNavMoveSetMousePos)
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * scale, ref_pos.y + 24 * scale); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
@@ -12270,7 +12270,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
         window->NavRectRel[nav_layer] = WindowRectAbsToRel(window, g.LastItemData.NavRect);
 
     if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
-        g.NavDisableMouseHover = true;
+        g.NavHighlightItemUnderNav = true;
     else
         g.NavCursorVisible = false;
 
@@ -12739,7 +12739,7 @@ void ImGui::NavRestoreHighlightAfterMove()
 {
     ImGuiContext& g = *GImGui;
     g.NavCursorVisible = true;
-    g.NavDisableMouseHover = g.NavMousePosDirty = true;
+    g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
 }
 
 static inline void ImGui::NavUpdateAnyRequestFlag()
@@ -12789,7 +12789,7 @@ static ImGuiInputSource ImGui::NavCalcPreferredRefPosSource()
     const bool activated_shortcut = g.ActiveId != 0 && g.ActiveIdFromShortcut && g.ActiveId == g.LastItemData.ID;
 
     // Testing for !activated_shortcut here could in theory be removed if we decided that activating a remote shortcut altered one of the g.NavDisableXXX flag.
-    if ((!g.NavCursorVisible || !g.NavDisableMouseHover || !window) && !activated_shortcut)
+    if ((!g.NavCursorVisible || !g.NavHighlightItemUnderNav || !window) && !activated_shortcut)
         return ImGuiInputSource_Mouse;
     else
         return ImGuiInputSource_Keyboard; // or Nav in general
@@ -12897,7 +12897,7 @@ static void ImGui::NavUpdate()
     // Schedule mouse position update (will be done at the bottom of this function, after 1) processing all move requests and 2) updating scrolling)
     bool set_mouse_pos = false;
     if (g.NavMousePosDirty && g.NavIdIsAlive)
-        if (g.NavCursorVisible && g.NavDisableMouseHover && g.NavWindow)
+        if (g.NavCursorVisible && g.NavHighlightItemUnderNav && g.NavWindow)
             set_mouse_pos = true;
     g.NavMousePosDirty = false;
     IM_ASSERT(g.NavLayer == ImGuiNavLayer_Main || g.NavLayer == ImGuiNavLayer_Menu);
@@ -13004,7 +13004,7 @@ static void ImGui::NavUpdate()
     if (!nav_keyboard_active && !nav_gamepad_active)
     {
         g.NavCursorVisible = false;
-        g.NavDisableMouseHover = set_mouse_pos = false;
+        g.NavHighlightItemUnderNav = set_mouse_pos = false;
     }
 
     // Update mouse position if requested
@@ -13717,7 +13717,7 @@ static void ImGui::NavUpdateWindowing()
             const float NAV_MOVE_SPEED = 800.0f;
             const float move_step = NAV_MOVE_SPEED * io.DeltaTime * ImMin(io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
             g.NavWindowingAccumDeltaPos += nav_move_dir * move_step;
-            g.NavDisableMouseHover = true;
+            g.NavHighlightItemUnderNav = true;
             ImVec2 accum_floored = ImTrunc(g.NavWindowingAccumDeltaPos);
             if (accum_floored.x != 0.0f || accum_floored.y != 0.0f)
             {
@@ -15823,7 +15823,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
         Text("NavActivateId/DownId/PressedId: %08X/%08X/%08X", g.NavActivateId, g.NavActivateDownId, g.NavActivatePressedId);
         Text("NavActivateFlags: %04X", g.NavActivateFlags);
-        Text("NavCursorVisible: %d, NavDisableMouseHover: %d", g.NavCursorVisible, g.NavDisableMouseHover);
+        Text("NavCursorVisible: %d, NavHighlightItemUnderNav: %d", g.NavCursorVisible, g.NavHighlightItemUnderNav);
         Text("NavFocusScopeId = 0x%08X", g.NavFocusScopeId);
         Text("NavFocusRoute[] = ");
         for (int path_n = g.NavFocusRoute.Size - 1; path_n >= 0; path_n--)
