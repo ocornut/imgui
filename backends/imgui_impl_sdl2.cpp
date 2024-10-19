@@ -389,6 +389,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             if (ImGui_ImplSDL2_GetViewportForWindowID(event->text.windowID) == NULL)
                 return false;
             io.AddInputCharactersUTF8(event->text.text);
+            io.ClearPreEditText();
             return true;
         }
         case SDL_KEYDOWN:
@@ -418,13 +419,37 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
                 bd->MouseLastLeaveFrame = 0;
             }
             if (window_event == SDL_WINDOWEVENT_LEAVE)
+			{
                 bd->MouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
+                ImGui::GetIO().ClearPreEditText();
+			}
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
             else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+			{
                 io.AddFocusEvent(false);
+                ImGui::GetIO().ClearPreEditText();
+			}
             return true;
         }
+        case SDL_TEXTEDITING: 
+		{
+            if(strlen(event->edit.text) > 0)
+                ImGui::GetIO().SetPreEditText(event->edit.text);
+            else
+                io.ClearPreEditText();
+            break;
+        }
+#if defined(SDL_HINT_IME_SUPPORT_EXTENDED_TEXT)
+        case SDL_TEXTEDITING_EXT: 
+		{
+            if( event->editExt.text != nullptr && strlen(event->editExt.text) > 0)
+                ImGui::GetIO().SetPreEditText( event->editExt.text );
+            else
+                ImGui::GetIO().ClearPreEditText();
+            break;
+        }
+#endif
         case SDL_CONTROLLERDEVICEADDED:
         case SDL_CONTROLLERDEVICEREMOVED:
         {

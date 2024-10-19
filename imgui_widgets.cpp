@@ -5252,7 +5252,30 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+			if(GImGui->IO.PreEditText && !is_multiline)
+            {
+                const char *preEditTextEnd = GImGui->IO.PreEditText + strlen(GImGui->IO.PreEditText);
+                ImWchar wcharBuf[255] = { 0 };
+                int wlen = ImTextStrFromUtf8(wcharBuf, 255, GImGui->IO.PreEditText, preEditTextEnd);
+                char tmpBuf[255] = "\0";
+
+                ImVec2 drawPosStart = draw_pos - draw_scroll;
+                size_t tmpBufLen = ImTextStrToUtf8( tmpBuf, 255, text_begin, text_begin + state->Stb.cursor );
+                draw_window->DrawList->AddText(g.Font, g.FontSize, drawPosStart, col, tmpBuf, tmpBuf + tmpBufLen, 0.0f, &clip_rect);
+                drawPosStart.x += InputTextCalcTextSizeW(GImGui, text_begin, text_begin + state->Stb.cursor).x;
+                ImU32 bg_color = GetColorU32( ImGuiCol_TextSelectedBg, 1.f );
+                ImVec2 highlightRectMax = drawPosStart;
+                highlightRectMax += InputTextCalcTextSizeW(GImGui, wcharBuf, wcharBuf + wlen);
+                draw_window->DrawList->AddRectFilled( drawPosStart, highlightRectMax, bg_color );
+                draw_window->DrawList->AddText(g.Font, g.FontSize, drawPosStart, col, GImGui->IO.PreEditText, preEditTextEnd, 0.0f, &clip_rect);
+                if( buf_display_end != NULL && buf_display + tmpBufLen < buf_display_end )
+                {
+                    drawPosStart.x = highlightRectMax.x;
+                    draw_window->DrawList->AddText(g.Font, g.FontSize, drawPosStart, col, buf_display + tmpBufLen, buf_display_end, 0.0f, &clip_rect);
+                }
+            }
+            else
+                draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
         }
 
         // Draw blinking cursor
