@@ -36,16 +36,18 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.4 WIP (In Progress)
+ VERSION 1.91.4 (Released 2024-10-18)
 -----------------------------------------------------------------------
 
 Breaking changes:
 
+- Style: renamed ImGuiCol_NavHighlight to ImGuiCol_NavCursor, for consistency with 
+  newly exposed and reworked features. Kept inline redirection enum (will obsolete).
 - The typedef for ImTextureID now defaults to ImU64 instead of void*. (#1641)
   - This removes the requirement to redefine it for backends which are e.g. storing
-    descriptor sets or other 64-bits structures when building on 32-bits archs.
-    It therefore simplify various building scripts/helpers.
-  - You may have compile-time issues if you were casting to 'void*' instead of 'ImTextureID'
+    descriptor sets or other 64-bits structures when building on 32-bits archs
+    (namely our DX12 and Vulkan backends). It therefore simplify various building scripts/helpers.
+  - You may have compile-time warnings if you were casting to 'void*' instead of 'ImTextureID'
     when passing your types to functions taking ImTextureID values, e.g. ImGui::Image().
     In doubt it is almost always better to do an intermediate intptr_t cast, since it
     allows casting any pointer/integer type without warning:
@@ -53,7 +55,7 @@ Breaking changes:
     - May warn:     ImGui::Image((void*)(intptr_t)MyTextureData, ...);
     - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
   - Note that you can always define ImTextureID to be your own high-level structures
-    (with dedicated constructors) if you like.
+    (with dedicated constructors and extra render parameters) if you like.
 - IO: moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
 - IO: moved ImGuiConfigFlags_NavNoCaptureKeyboard to standalone io.ConfigNavCaptureKeyboard bool 
   (note the inverted value!). (#2517, #2009)
@@ -63,17 +65,33 @@ Breaking changes:
 Other changes:
 
 - IO: added 'void* platform_io.Renderer_RenderState' which is set during the
-  ImGui_ImplXXXX_RenderDrawData() of standard backend to expose selected render
-  state to draw callbacks. (#6969, #5834, #7468, #3590)
-- IO: WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
+  ImGui_ImplXXXX_RenderDrawData() of standard backends to expose selected render
+  states to your draw callbacks. (#6969, #5834, #7468, #3590)
+- IO: io.WantCaptureKeyboard is never set when ImGuiConfigFlags_NoKeyboard is enabled. (#4921)
 - Error Handling: turned a few more functions into recoverable errors. (#1651)
-- Nav: added io.ConfigNavEscapeClearFocusWindow to clear focused window on Escape. (#3200)
-- Nav: pressing escape to hide nav highlight doesn't clear location from when ctrl+tabbing 
-  back into same window later.
-- Nav: fixed Ctrl+Tab so when starting with no focused window it starts from the top-most
-  window. (#3200)
-- Nav: rectangle highlight not rendered for items with ImGuiItemFlags_NoNav. Can be relevant
-  when e.g activating the item with mouse, then ctrl+tabbing back and forth. 
+- Nav (Keyboard/Gamepad navigation):
+  - Nav: added io.ConfigNavCursorVisibleAuto and io.ConfigNavCursorVisibleAlways to configure
+    visibility of navigation cursor. (#1074, #2048, #7237, #8059, #3200, #787)
+     - Set io.ConfigNavCursorVisibleAuto = true (default) to enable automatic toggling
+       of cursor visibility (mouse click hide the cursor, arrow keys makes it visible).
+     - Set io.ConfigNavCursorVisibleAlways to keep cursor always visible.
+  - Nav: added NavSetCursorVisible(bool visible) function to manipulate visibility of 
+    navigation cursor (e.g. set default state, or after some actions). (#1074, #2048, #7237, #8059)
+  - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
+    how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
+    - Set io.ConfigNavEscapeClearFocusItem = true (default) to clear focused item and highlight.
+    - Set io.ConfigNavEscapeClearFocusItem = false for Escape to not have an effect.
+    - Set io.ConfigNavEscapeClearFocusWindow = true to completely unfocus the dear imgui window,
+      is for some reason your app relies on imgui focus to take other decisions.  
+  - Nav: pressing escape to hide the navigation cursor doesn't clear location, so it may be
+    restored when Ctrl+Tabbing back into the same window later.
+  - Nav: fixed Ctrl+Tab initiated with no focused window from skipping the top-most window. (#3200)
+  - Nav: navigation cursor is not rendered for items with `ImGuiItemFlags_NoNav`. Can be relevant 
+    when e.g activating a _NoNav item with mouse, then Ctrl+Tabbing back and forth.
+- Disabled: clicking a disabled item focuses parent window. (#8064) 
+- InvisibleButton, Nav: fixed an issue when InvisibleButton() would be navigable into but
+  not display navigation highlight. Properly navigation on it by default. (#8057)
+- InvisibleButton: added ImGuiButtonFlags_EnableNav to enable navigation. (#8057)
 - Tooltips: fixed incorrect tooltip positioning when using keyboard/gamepad navigation 
   (1.91.3 regression). (#8036)
 - DrawList: AddCallback() added an optional size parameter allowing to copy and
@@ -84,13 +102,22 @@ Other changes:
     We store them in a buffer stored inside the drawlist. ImDrawCmd::UserCallbackData 
     will point inside that buffer so you have to retrieve data from there. Your callback
     may need to use ImDrawCmd::UserCallbackDataSize if you expect dynamically-sized data.
-- Tables: fixed initial auto-sizing issue with synched-instances. (#8045, #7218)
+  - Note that we use a raw type-less copy.
+- Tables: fixed initial auto-sizing issue with synced-instances. (#8045, #7218)
 - InputText: fixed an issue with not declaring ownership of Delete/Backspace/Arrow keys,
-  preventing use of external shortcuts not guarded by an ActiveId check. (#8048) [@geertbleyen]
+  preventing use of external shortcuts that are not guarded by an ActiveId check. (#8048) 
+  [@geertbleyen]
 - InputText: ensure mouse cursor shape is set regardless of whether keyboard mode is 
   enabled or not. (#6417)
+- InputScalar: added an assert to clarify that ImGuiInputTextFlags_EnterReturnsTrue is not
+  supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065, #3946)
+- imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render 
+  OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
+  Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
+  (#7927, #7187, #6591, #6607) [@pthom]
 - Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
-  ImGui_ImplXXXX_RenderState structures during render loop. (#6969, #5834, #7468, #3590)
+  ImGui_ImplXXXX_RenderState structures during render loop user draw callbacks. 
+  (#6969, #5834, #7468, #3590)
 - Backends: DX9, DX10, DX11, DX12, OpenGL, Vulkan, WGPU: Changed default texture sampler
   to Clamp instead of Repeat/Wrap. (#7468, #7511, #5999, #5502, #7230)
 
