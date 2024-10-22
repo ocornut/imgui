@@ -216,6 +216,9 @@ static void ImGui_ImplGlfw_ShutdownMultiViewportSupport();
 
 // Functions
 
+//Prototype to avoid -Werror=missing-declarations warning
+ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode);
+
 // Not static to allow third-party code to use that if they want to (but undocumented)
 ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
 {
