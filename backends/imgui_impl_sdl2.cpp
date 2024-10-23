@@ -114,7 +114,7 @@
 #endif
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 #if SDL_HAS_VULKAN
-extern "C" { extern DECLSPEC void SDLCALL SDL_Vulkan_GetDrawableSize(SDL_Window* window, int* w, int* h); }
+#include <SDL_vulkan.h>
 #endif
 
 // SDL Data
