@@ -43,10 +43,13 @@ Breaking changes:
 
 Other changes:
 
-- Backends: DX12: Unmap() call specify written range. The range is informational and may be used by debug tools.
-- Backends: SDL2: Replace SDL_Vulkan_GetDrawableSize() forward declaration with the actual include. (#8095, #7967, #3190) [@sev-] 
+- Backends: DX12: Unmap() call specify written range. The range is informational and
+  may be used by debug tools.
+- Backends: SDL2: Replace SDL_Vulkan_GetDrawableSize() forward declaration with the 
+  actual include. (#8095, #7967, #3190) [@sev-] 
 - Backends: SDL2, SDL3: SDL_EVENT_MOUSE_WHEEL event doesn't require dividing 
   by 100.0f on Emscripten target. (#4019, #6096, #1463)
+- Examples: Added SDL3+Vulkan example. (#8084, #8085)
 
 -----------------------------------------------------------------------
  VERSION 1.91.4 (Released 2024-10-18)
