@@ -187,6 +187,7 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 // Functions
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode);
 ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
 {
     IM_UNUSED(scancode);

@@ -261,6 +261,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 // Functions
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code);
 ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
 {
     switch (key_code)

@@ -311,6 +311,7 @@ static void ImGui_ImplAllegro5_SetClipboardText(ImGuiContext*, const char* text)
 #endif
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code);
 ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
 {
     switch (key_code)
