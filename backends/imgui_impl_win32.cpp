@@ -1303,16 +1303,18 @@ static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 #endif
 }
 
+namespace ImGui { extern ImGuiIO& GetIOEx(ImGuiContext*); }
+
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     // Allow secondary viewport WndProc to be called regardless of current context
-    ImGuiContext* hwnd_ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
-    ImGuiContext* prev_ctx = ImGui::GetCurrentContext();
-    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
-        ImGui::SetCurrentContext(hwnd_ctx);
+    ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
+    if (ctx == NULL)
+        return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
+    ImGuiIO& io = ImGui::GetIOEx(ctx);
     LRESULT result = 0;
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+    if (ImGui_ImplWin32_WndProcHandlerEx(hWnd, msg, wParam, lParam, io))
         result = true;
     else if (ImGuiViewport* viewport = ImGui_ImplWin32_FindViewportByPlatformHandle(hWnd))
     {
@@ -1343,8 +1345,6 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     }
     if (result == 0)
         result = DefWindowProc(hWnd, msg, wParam, lParam);
-    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
-        ImGui::SetCurrentContext(prev_ctx);
     return result;
 }
 
