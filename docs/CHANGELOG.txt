@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Selectable: selected Selectables use ImGuiCol_Header instead of an arbitrary lerp
+  between _Header and _HeaderHovered which was introduced v1.91 (#8106, #1861)
 - Backends: DX12: Unmap() call specify written range. The range is informational and
   may be used by debug tools.
 - Backends: SDL2: Replace SDL_Vulkan_GetDrawableSize() forward declaration with the 

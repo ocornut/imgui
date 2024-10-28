@@ -10518,7 +10518,7 @@ struct ExampleAssetsBrowser
 
             // Rendering parameters
             const ImU32 icon_type_overlay_colors[3] = { 0, IM_COL32(200, 70, 70, 255), IM_COL32(70, 170, 70, 255) };
-            const ImU32 icon_bg_color = ImGui::GetColorU32(ImGuiCol_MenuBarBg);
+            const ImU32 icon_bg_color = ImGui::GetColorU32(IM_COL32(35, 35, 35, 220));
             const ImVec2 icon_type_overlay_size = ImVec2(4.0f, 4.0f);
             const bool display_label = (LayoutItemSize.x >= ImGui::CalcTextSize("999").x);
 
