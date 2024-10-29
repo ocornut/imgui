@@ -45,6 +45,8 @@ Other changes:
 
 - Selectable: selected Selectables use ImGuiCol_Header instead of an arbitrary lerp
   between _Header and _HeaderHovered which was introduced v1.91 (#8106, #1861)
+- Buttons: using ImGuiItemFlags_ButtonRepeat makes default button behavior use
+  PressedOnClick instead of PressedOnClickRelease when unspecified.
 - Fonts: removed const qualifiers from most font functions.
 - Backends: DX12: Unmap() call specify written range. The range is informational and
   may be used by debug tools.
