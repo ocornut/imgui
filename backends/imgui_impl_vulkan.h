@@ -62,6 +62,12 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+typedef VkPipelineRenderingCreateInfoKHR ImGui_ImplVulkan_PipelineRenderingInfo;
+#else
+typedef void ImGui_ImplVulkan_PipelineRenderingInfo;
+#endif
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
@@ -98,13 +104,22 @@ struct ImGui_ImplVulkan_InitInfo
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
-IMGUI_IMPL_API void             ImGui_ImplVulkan_Shutdown();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_CreateFontsTexture();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_DestroyFontsTexture();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
+IMGUI_IMPL_API bool         ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info); // The main pipeline will be created if possible (RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType is correct))
+#define IMGUI_IMPL_VULKAN_HAS_MAIN_PIPELINE_RE_CREATION 1
+struct ImGui_ImplVulkan_MainPipelineCreateInfo
+{
+    VkRenderPass                    RenderPass = VK_NULL_HANDLE;
+    uint32_t                        Subpass = 0;
+    VkSampleCountFlagBits           MSAASamples = {};
+    const ImGui_ImplVulkan_PipelineRenderingInfo* pDynamicRendering = nullptr;
+};
+IMGUI_IMPL_API void         ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateInfo const& info); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
+IMGUI_IMPL_API void         ImGui_ImplVulkan_Shutdown();
+IMGUI_IMPL_API void         ImGui_ImplVulkan_NewFrame();
+IMGUI_IMPL_API void         ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
+IMGUI_IMPL_API bool         ImGui_ImplVulkan_CreateFontsTexture();
+IMGUI_IMPL_API void         ImGui_ImplVulkan_DestroyFontsTexture();
+IMGUI_IMPL_API void         ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
 // Register a texture (VkDescriptorSet == ImTextureID)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem
