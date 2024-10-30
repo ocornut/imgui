@@ -956,7 +956,11 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    SDL_SetWindowParent(vd->Window, vd->ParentWindow);
+    bool use_parent_window = !!vd->ParentWindow && (viewport->Flags & (ImGuiViewportFlags_TopMost));
+    if (use_parent_window)
+    {
+        SDL_SetWindowParent(vd->Window, vd->ParentWindow);
+    }
     SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
     vd->WindowOwned = true;
     if (use_opengl)
