@@ -177,6 +177,7 @@ typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // F
 typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for g.LastItemData.StatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
+typedef int ImGuiLogFlags;              // -> enum ImGuiLogFlags_           // Flags: for LogBegin() text capturing function
 typedef int ImGuiNavRenderCursorFlags;  // -> enum ImGuiNavRenderCursorFlags_//Flags: for RenderNavCursor()
 typedef int ImGuiNavMoveFlags;          // -> enum ImGuiNavMoveFlags_       // Flags: for navigation requests
 typedef int ImGuiNextItemDataFlags;     // -> enum ImGuiNextItemDataFlags_  // Flags: for SetNextItemXXX() functions
@@ -989,13 +990,16 @@ enum ImGuiLayoutType_
     ImGuiLayoutType_Vertical = 1
 };
 
-enum ImGuiLogType
+// Flags for LogBegin() text capturing function
+enum ImGuiLogFlags_
 {
-    ImGuiLogType_None = 0,
-    ImGuiLogType_TTY,
-    ImGuiLogType_File,
-    ImGuiLogType_Buffer,
-    ImGuiLogType_Clipboard,
+    ImGuiLogFlags_None = 0,
+
+    ImGuiLogFlags_OutputTTY         = 1 << 0,
+    ImGuiLogFlags_OutputFile        = 1 << 1,
+    ImGuiLogFlags_OutputBuffer      = 1 << 2,
+    ImGuiLogFlags_OutputClipboard   = 1 << 3,
+    ImGuiLogFlags_OutputMask_       = ImGuiLogFlags_OutputTTY | ImGuiLogFlags_OutputFile | ImGuiLogFlags_OutputBuffer | ImGuiLogFlags_OutputClipboard,
 };
 
 // X/Y enums are fixed to 0/1 so they may be used to index ImVec2
@@ -2316,7 +2320,7 @@ struct ImGuiContext
 
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
-    ImGuiLogType            LogType;                            // Capture target
+    ImGuiLogFlags           LogFlags;                           // Capture flags/type
     ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     const char*             LogNextPrefix;
@@ -3067,7 +3071,7 @@ namespace ImGui
     IMGUI_API void          EndDisabledOverrideReenable();
 
     // Logging/Capture
-    IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);           // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
+    IMGUI_API void          LogBegin(ImGuiLogFlags flags, int auto_open_depth);         // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
     IMGUI_API void          LogToBuffer(int auto_open_depth = -1);                      // Start logging/capturing to internal buffer
     IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL);
     IMGUI_API void          LogSetNextTextDecoration(const char* prefix, const char* suffix);
