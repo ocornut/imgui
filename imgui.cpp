@@ -4008,6 +4008,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     LogEnabled = false;
     LogFlags = ImGuiLogFlags_None;
+    LogWindow = NULL;
     LogNextPrefix = LogNextSuffix = NULL;
     LogFile = NULL;
     LogLinePosY = FLT_MAX;
@@ -7748,7 +7749,7 @@ void ImGui::End()
     }
 
     // Stop logging
-    if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
+    if (g.LogWindow == window) // FIXME: add more options for scope of logging
         LogFinish();
 
     if (window->DC.IsSetPos)
@@ -14334,6 +14335,7 @@ void ImGui::LogBegin(ImGuiLogFlags flags, int auto_open_depth)
 
     g.LogEnabled = g.ItemUnclipByLog = true;
     g.LogFlags = flags;
+    g.LogWindow = window;
     g.LogNextPrefix = g.LogNextSuffix = NULL;
     g.LogDepthRef = window->DC.TreeDepth;
     g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);

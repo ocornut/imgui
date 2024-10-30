@@ -2321,6 +2321,7 @@ struct ImGuiContext
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
     ImGuiLogFlags           LogFlags;                           // Capture flags/type
+    ImGuiWindow*            LogWindow;
     ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     const char*             LogNextPrefix;
