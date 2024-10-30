@@ -50,6 +50,10 @@ Other changes:
 - Fonts: removed const qualifiers from most font functions.
 - Log/Capture: better decorating of BeginMenu() and TabItem() output.
 - Log/Capture: a non terminated log ends automatically in the window which called it.
+- Log/Capture: added experimental io.ConfigWindowsCopyContentsWithCtrlC option to
+  automatically copy window contents into clipboard using CTRL+C. This is experimental
+  because (1) it currently breaks on nested Begin/End, (2) text output quality varies,
+  and (3) text output comes in submission order rather than spatial order.
 - Backends: DX12: Unmap() call specify written range. The range is informational and
   may be used by debug tools.
 - Backends: SDL2: Replace SDL_Vulkan_GetDrawableSize() forward declaration with the 

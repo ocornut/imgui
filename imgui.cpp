@@ -1422,6 +1422,7 @@ ImGuiIO::ImGuiIO()
     ConfigDragClickToInputText = false;
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
+    ConfigWindowsCopyContentsWithCtrlC = false;
     ConfigScrollbarScrollByPage = true;
     ConfigMemoryCompactTimer = 60.0f;
     ConfigDebugIsDebuggerPresent = false;
@@ -7587,6 +7588,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (want_focus && window == g.NavWindow)
             NavInitWindow(window, false); // <-- this is in the way for us to be able to defer and sort reappearing FocusWindow() calls
 
+        // Pressing CTRL+C copy window content into the clipboard
+        // [EXPERIMENTAL] Breaks on nested Begin/End pairs. We need to work that out and add better logging scope.
+        // [EXPERIMENTAL] Text outputs has many issues.
+        if (g.IO.ConfigWindowsCopyContentsWithCtrlC)
+            if (g.NavWindow && g.NavWindow->RootWindow == window && g.ActiveId == 0 && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C))
+                LogToClipboard(0);
+
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
             RenderWindowTitleBarContents(window, ImRect(title_bar_rect.Min.x + window->WindowBorderSize, title_bar_rect.Min.y, title_bar_rect.Max.x - window->WindowBorderSize, title_bar_rect.Max.y), name, p_open);
@@ -7596,16 +7604,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         if (flags & ImGuiWindowFlags_Tooltip)
             g.TooltipPreviousWindow = window;
-
-        // Pressing CTRL+C while holding on a window copy its content to the clipboard
-        // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
-        // Maybe we can support CTRL+C on every element?
-        /*
-        //if (g.NavWindow == window && g.ActiveId == 0)
-        if (g.ActiveId == window->MoveId)
-            if (g.IO.KeyCtrl && IsKeyPressed(ImGuiKey_C))
-                LogToClipboard();
-        */
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
