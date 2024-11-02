@@ -1,9 +1,9 @@
-@REM Build for Visual Studio compiler. Run your copy of vcvars32.bat or vcvarsall.bat to setup command-line compiler.
+@REM Build for Visual Studio compiler. Run your copy of vcvars64.bat or vcvarsall.bat to setup command-line compiler.
 
 @set OUT_EXE=example_sdl3_opengl3
 @set INCLUDES=/I..\.. /I..\..\backends /I%SDL3_DIR%\include
 @set SOURCES=main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp
-@set LIBS=/LIBPATH:%SDL3_DIR%\lib\x86 SDL3.lib opengl32.lib shell32.lib
+@set LIBS=/LIBPATH:%SDL3_DIR%\lib\x64 SDL3.lib opengl32.lib shell32.lib
 
 @set OUT_DIR=Debug
 mkdir %OUT_DIR%

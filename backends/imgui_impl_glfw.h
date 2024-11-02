@@ -24,15 +24,17 @@
 struct GLFWwindow;
 struct GLFWmonitor;
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForOpenGL(GLFWwindow* window, bool install_callbacks);
 IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks);
 IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForOther(GLFWwindow* window, bool install_callbacks);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplGlfw_NewFrame();
 
-// Emscripten related initialization phase methods
+// Emscripten related initialization phase methods (call after ImGui_ImplGlfw_InitForOpenGL)
 #ifdef __EMSCRIPTEN__
-IMGUI_IMPL_API void     ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector);
+IMGUI_IMPL_API void     ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* canvas_selector);
+//static inline void    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback(const char* canvas_selector) { ImGui_ImplGlfw_InstallEmscriptenCallbacks(nullptr, canvas_selector); } } // Renamed in 1.91.0
 #endif
 
 // GLFW callbacks install
@@ -54,5 +56,8 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double
 IMGUI_IMPL_API void     ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_MonitorCallback(GLFWmonitor* monitor, int event);
+
+// GLFW helpers
+IMGUI_IMPL_API void     ImGui_ImplGlfw_Sleep(int milliseconds);
 
 #endif // #ifndef IMGUI_DISABLE

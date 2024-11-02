@@ -1,7 +1,8 @@
 // dear imgui: Platform Backend for SDL3 (*EXPERIMENTAL*)
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 // (Info: SDL3 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
-// (IMPORTANT: SDL 3.0.0 is NOT YET RELEASED. IT IS POSSIBLE THAT ITS SPECS/API WILL CHANGE BEFORE RELEASE)
+
+// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN AS SDL3 CHANGES.**)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
@@ -9,8 +10,6 @@
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy SDL_SCANCODE_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
-// Missing features:
-//  [ ] Platform: IME SUPPORT IS BROKEN IN SDL3 BECAUSE INPUTS GETS SENT TO BOTH APP AND IME + app needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,6 +21,23 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-10-24: Emscripten: SDL_EVENT_MOUSE_WHEEL event doesn't require dividing by 100.0f on Emscripten.
+//  2024-09-03: Update for SDL3 api changes: SDL_GetGamepads() memory ownership revert. (#7918, #7898, #7807)
+//  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
+//               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
+//               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
+//               - io.PlatformSetImeDataFn  -> platform_io.Platform_SetImeDataFn
+//  2024-08-19: Storing SDL_WindowID inside ImGuiViewport::PlatformHandle instead of SDL_Window*.
+//  2024-08-19: ImGui_ImplSDL3_ProcessEvent() now ignores events intended for other SDL windows. (#7853)
+//  2024-07-22: Update for SDL3 api changes: SDL_GetGamepads() memory ownership change. (#7807)
+//  2024-07-18: Update for SDL3 api changes: SDL_GetClipboardText() memory ownership change. (#7801)
+//  2024-07-15: Update for SDL3 api changes: SDL_GetProperty() change to SDL_GetPointerProperty(). (#7794)
+//  2024-07-02: Update for SDL3 api changes: SDLK_x renames and SDLK_KP_x removals (#7761, #7762).
+//  2024-07-01: Update for SDL3 api changes: SDL_SetTextInputRect() changed to SDL_SetTextInputArea().
+//  2024-06-26: Update for SDL3 api changes: SDL_StartTextInput()/SDL_StopTextInput()/SDL_SetTextInputRect() functions signatures.
+//  2024-06-24: Update for SDL3 api changes: SDL_EVENT_KEY_DOWN/SDL_EVENT_KEY_UP contents.
+//  2024-06-03; Update for SDL3 api changes: SDL_SYSTEM_CURSOR_ renames.
+//  2024-05-15: Update for SDL3 api changes: SDLK_ renames.
 //  2024-04-15: Inputs: Re-enable calling SDL_StartTextInput()/SDL_StopTextInput() as SDL3 no longer enables it by default and should play nicer with IME.
 //  2024-02-13: Inputs: Fixed gamepad support. Handle gamepad disconnection. Added ImGui_ImplSDL3_SetGamepadMode().
 //  2023-11-13: Updated for recent SDL3 API changes.
@@ -60,13 +76,25 @@
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    0
 #endif
 
+// FIXME-LEGACY: remove when SDL 3.1.3 preview is released.
+#ifndef SDLK_APOSTROPHE
+#define SDLK_APOSTROPHE SDLK_QUOTE
+#endif
+#ifndef SDLK_GRAVE
+#define SDLK_GRAVE SDLK_BACKQUOTE
+#endif
+
 // SDL Data
 struct ImGui_ImplSDL3_Data
 {
     SDL_Window*             Window;
+    SDL_WindowID            WindowID;
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
+
+    // IME handling
+    SDL_Window*             ImeWindow;
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -94,22 +122,31 @@ static ImGui_ImplSDL3_Data* ImGui_ImplSDL3_GetBackendData()
 }
 
 // Functions
-static const char* ImGui_ImplSDL3_GetClipboardText(void*)
+static const char* ImGui_ImplSDL3_GetClipboardText(ImGuiContext*)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = SDL_GetClipboardText();
+    const char* sdl_clipboard_text = SDL_GetClipboardText();
+    bd->ClipboardTextData = sdl_clipboard_text ? SDL_strdup(sdl_clipboard_text) : NULL;
     return bd->ClipboardTextData;
 }
 
-static void ImGui_ImplSDL3_SetClipboardText(void*, const char* text)
+static void ImGui_ImplSDL3_SetClipboardText(ImGuiContext*, const char* text)
 {
     SDL_SetClipboardText(text);
 }
 
-static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeData* data)
+static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
 {
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+    SDL_WindowID window_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
+    SDL_Window* window = SDL_GetWindowFromID(window_id);
+    if ((data->WantVisible == false || bd->ImeWindow != window) && bd->ImeWindow != NULL)
+    {
+        SDL_StopTextInput(bd->ImeWindow);
+        bd->ImeWindow = nullptr;
+    }
     if (data->WantVisible)
     {
         SDL_Rect r;
@@ -117,17 +154,38 @@ static void ImGui_ImplSDL3_SetPlatformImeData(ImGuiViewport*, ImGuiPlatformImeDa
         r.y = (int)data->InputPos.y;
         r.w = 1;
         r.h = (int)data->InputLineHeight;
-        SDL_SetTextInputRect(&r);
-        SDL_StartTextInput();
-    }
-    else
-    {
-        SDL_StopTextInput();
+        SDL_SetTextInputArea(window, &r, 0);
+        SDL_StartTextInput(window);
+        bd->ImeWindow = window;
     }
 }
 
-static ImGuiKey ImGui_ImplSDL3_KeycodeToImGuiKey(int keycode)
+// Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scancode scancode);
+ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scancode scancode)
 {
+    // Keypad doesn't have individual key values in SDL3
+    switch (scancode)
+    {
+        case SDL_SCANCODE_KP_0: return ImGuiKey_Keypad0;
+        case SDL_SCANCODE_KP_1: return ImGuiKey_Keypad1;
+        case SDL_SCANCODE_KP_2: return ImGuiKey_Keypad2;
+        case SDL_SCANCODE_KP_3: return ImGuiKey_Keypad3;
+        case SDL_SCANCODE_KP_4: return ImGuiKey_Keypad4;
+        case SDL_SCANCODE_KP_5: return ImGuiKey_Keypad5;
+        case SDL_SCANCODE_KP_6: return ImGuiKey_Keypad6;
+        case SDL_SCANCODE_KP_7: return ImGuiKey_Keypad7;
+        case SDL_SCANCODE_KP_8: return ImGuiKey_Keypad8;
+        case SDL_SCANCODE_KP_9: return ImGuiKey_Keypad9;
+        case SDL_SCANCODE_KP_PERIOD: return ImGuiKey_KeypadDecimal;
+        case SDL_SCANCODE_KP_DIVIDE: return ImGuiKey_KeypadDivide;
+        case SDL_SCANCODE_KP_MULTIPLY: return ImGuiKey_KeypadMultiply;
+        case SDL_SCANCODE_KP_MINUS: return ImGuiKey_KeypadSubtract;
+        case SDL_SCANCODE_KP_PLUS: return ImGuiKey_KeypadAdd;
+        case SDL_SCANCODE_KP_ENTER: return ImGuiKey_KeypadEnter;
+        case SDL_SCANCODE_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        default: break;
+    }
     switch (keycode)
     {
         case SDLK_TAB: return ImGuiKey_Tab;
@@ -145,7 +203,7 @@ static ImGuiKey ImGui_ImplSDL3_KeycodeToImGuiKey(int keycode)
         case SDLK_SPACE: return ImGuiKey_Space;
         case SDLK_RETURN: return ImGuiKey_Enter;
         case SDLK_ESCAPE: return ImGuiKey_Escape;
-        case SDLK_QUOTE: return ImGuiKey_Apostrophe;
+        case SDLK_APOSTROPHE: return ImGuiKey_Apostrophe;
         case SDLK_COMMA: return ImGuiKey_Comma;
         case SDLK_MINUS: return ImGuiKey_Minus;
         case SDLK_PERIOD: return ImGuiKey_Period;
@@ -155,29 +213,12 @@ static ImGuiKey ImGui_ImplSDL3_KeycodeToImGuiKey(int keycode)
         case SDLK_LEFTBRACKET: return ImGuiKey_LeftBracket;
         case SDLK_BACKSLASH: return ImGuiKey_Backslash;
         case SDLK_RIGHTBRACKET: return ImGuiKey_RightBracket;
-        case SDLK_BACKQUOTE: return ImGuiKey_GraveAccent;
+        case SDLK_GRAVE: return ImGuiKey_GraveAccent;
         case SDLK_CAPSLOCK: return ImGuiKey_CapsLock;
         case SDLK_SCROLLLOCK: return ImGuiKey_ScrollLock;
         case SDLK_NUMLOCKCLEAR: return ImGuiKey_NumLock;
         case SDLK_PRINTSCREEN: return ImGuiKey_PrintScreen;
         case SDLK_PAUSE: return ImGuiKey_Pause;
-        case SDLK_KP_0: return ImGuiKey_Keypad0;
-        case SDLK_KP_1: return ImGuiKey_Keypad1;
-        case SDLK_KP_2: return ImGuiKey_Keypad2;
-        case SDLK_KP_3: return ImGuiKey_Keypad3;
-        case SDLK_KP_4: return ImGuiKey_Keypad4;
-        case SDLK_KP_5: return ImGuiKey_Keypad5;
-        case SDLK_KP_6: return ImGuiKey_Keypad6;
-        case SDLK_KP_7: return ImGuiKey_Keypad7;
-        case SDLK_KP_8: return ImGuiKey_Keypad8;
-        case SDLK_KP_9: return ImGuiKey_Keypad9;
-        case SDLK_KP_PERIOD: return ImGuiKey_KeypadDecimal;
-        case SDLK_KP_DIVIDE: return ImGuiKey_KeypadDivide;
-        case SDLK_KP_MULTIPLY: return ImGuiKey_KeypadMultiply;
-        case SDLK_KP_MINUS: return ImGuiKey_KeypadSubtract;
-        case SDLK_KP_PLUS: return ImGuiKey_KeypadAdd;
-        case SDLK_KP_ENTER: return ImGuiKey_KeypadEnter;
-        case SDLK_KP_EQUALS: return ImGuiKey_KeypadEqual;
         case SDLK_LCTRL: return ImGuiKey_LeftCtrl;
         case SDLK_LSHIFT: return ImGuiKey_LeftShift;
         case SDLK_LALT: return ImGuiKey_LeftAlt;
@@ -197,32 +238,32 @@ static ImGuiKey ImGui_ImplSDL3_KeycodeToImGuiKey(int keycode)
         case SDLK_7: return ImGuiKey_7;
         case SDLK_8: return ImGuiKey_8;
         case SDLK_9: return ImGuiKey_9;
-        case SDLK_a: return ImGuiKey_A;
-        case SDLK_b: return ImGuiKey_B;
-        case SDLK_c: return ImGuiKey_C;
-        case SDLK_d: return ImGuiKey_D;
-        case SDLK_e: return ImGuiKey_E;
-        case SDLK_f: return ImGuiKey_F;
-        case SDLK_g: return ImGuiKey_G;
-        case SDLK_h: return ImGuiKey_H;
-        case SDLK_i: return ImGuiKey_I;
-        case SDLK_j: return ImGuiKey_J;
-        case SDLK_k: return ImGuiKey_K;
-        case SDLK_l: return ImGuiKey_L;
-        case SDLK_m: return ImGuiKey_M;
-        case SDLK_n: return ImGuiKey_N;
-        case SDLK_o: return ImGuiKey_O;
-        case SDLK_p: return ImGuiKey_P;
-        case SDLK_q: return ImGuiKey_Q;
-        case SDLK_r: return ImGuiKey_R;
-        case SDLK_s: return ImGuiKey_S;
-        case SDLK_t: return ImGuiKey_T;
-        case SDLK_u: return ImGuiKey_U;
-        case SDLK_v: return ImGuiKey_V;
-        case SDLK_w: return ImGuiKey_W;
-        case SDLK_x: return ImGuiKey_X;
-        case SDLK_y: return ImGuiKey_Y;
-        case SDLK_z: return ImGuiKey_Z;
+        case SDLK_A: return ImGuiKey_A;
+        case SDLK_B: return ImGuiKey_B;
+        case SDLK_C: return ImGuiKey_C;
+        case SDLK_D: return ImGuiKey_D;
+        case SDLK_E: return ImGuiKey_E;
+        case SDLK_F: return ImGuiKey_F;
+        case SDLK_G: return ImGuiKey_G;
+        case SDLK_H: return ImGuiKey_H;
+        case SDLK_I: return ImGuiKey_I;
+        case SDLK_J: return ImGuiKey_J;
+        case SDLK_K: return ImGuiKey_K;
+        case SDLK_L: return ImGuiKey_L;
+        case SDLK_M: return ImGuiKey_M;
+        case SDLK_N: return ImGuiKey_N;
+        case SDLK_O: return ImGuiKey_O;
+        case SDLK_P: return ImGuiKey_P;
+        case SDLK_Q: return ImGuiKey_Q;
+        case SDLK_R: return ImGuiKey_R;
+        case SDLK_S: return ImGuiKey_S;
+        case SDLK_T: return ImGuiKey_T;
+        case SDLK_U: return ImGuiKey_U;
+        case SDLK_V: return ImGuiKey_V;
+        case SDLK_W: return ImGuiKey_W;
+        case SDLK_X: return ImGuiKey_X;
+        case SDLK_Y: return ImGuiKey_Y;
+        case SDLK_Z: return ImGuiKey_Z;
         case SDLK_F1: return ImGuiKey_F1;
         case SDLK_F2: return ImGuiKey_F2;
         case SDLK_F3: return ImGuiKey_F3;
@@ -249,6 +290,7 @@ static ImGuiKey ImGui_ImplSDL3_KeycodeToImGuiKey(int keycode)
         case SDLK_F24: return ImGuiKey_F24;
         case SDLK_AC_BACK: return ImGuiKey_AppBack;
         case SDLK_AC_FORWARD: return ImGuiKey_AppForward;
+        default: break;
     }
     return ImGuiKey_None;
 }
@@ -260,6 +302,13 @@ static void ImGui_ImplSDL3_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Shift, (sdl_key_mods & SDL_KMOD_SHIFT) != 0);
     io.AddKeyEvent(ImGuiMod_Alt, (sdl_key_mods & SDL_KMOD_ALT) != 0);
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & SDL_KMOD_GUI) != 0);
+}
+
+
+static ImGuiViewport* ImGui_ImplSDL3_GetViewportForWindowID(SDL_WindowID window_id)
+{
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : NULL;
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -277,6 +326,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
     {
         case SDL_EVENT_MOUSE_MOTION:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->motion.windowID) == NULL)
+                return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
@@ -284,12 +335,11 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->wheel.windowID) == NULL)
+                return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
             float wheel_x = -event->wheel.x;
             float wheel_y = event->wheel.y;
-    #ifdef __EMSCRIPTEN__
-            wheel_x /= 100.0f;
-    #endif
             io.AddMouseSourceEvent(event->wheel.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMouseWheelEvent(wheel_x, wheel_y);
             return true;
@@ -297,6 +347,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID) == NULL)
+                return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
             if (event->button.button == SDL_BUTTON_RIGHT) { mouse_button = 1; }
@@ -312,20 +364,27 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_TEXT_INPUT:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->text.windowID) == NULL)
+                return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
         {
-            ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
-            ImGuiKey key = ImGui_ImplSDL3_KeycodeToImGuiKey(event->key.keysym.sym);
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == NULL)
+                return false;
+            //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%d: key=%d, scancode=%d, mod=%X\n", (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP", event->key.key, event->key.scancode, event->key.mod);
+            ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
+            ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
             io.AddKeyEvent(key, (event->type == SDL_EVENT_KEY_DOWN));
-            io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
+            io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+                return false;
             bd->MouseWindowID = event->window.windowID;
             bd->MousePendingLeaveFrame = 0;
             return true;
@@ -336,15 +395,19 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         // FIXME: Unconfirmed whether this is still needed with SDL3.
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+                return false;
             bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
             return true;
         }
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
-            io.AddFocusEvent(true);
-            return true;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
-            io.AddFocusEvent(false);
+        {
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+                return false;
+            io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
             return true;
+        }
         case SDL_EVENT_GAMEPAD_ADDED:
         case SDL_EVENT_GAMEPAD_REMOVED:
         {
@@ -357,18 +420,19 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
 
 static void ImGui_ImplSDL3_SetupPlatformHandles(ImGuiViewport* viewport, SDL_Window* window)
 {
-    IM_UNUSED(window);
+    viewport->PlatformHandle = (void*)(intptr_t)SDL_GetWindowID(window);
     viewport->PlatformHandleRaw = nullptr;
-#if defined(__WIN32__) && !defined(__WINRT__)
-    viewport->PlatformHandleRaw = (HWND)SDL_GetProperty(SDL_GetWindowProperties(window), "SDL.window.win32.hwnd", nullptr);
+#if defined(_WIN32) && !defined(__WINRT__)
+    viewport->PlatformHandleRaw = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 #elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
-    viewport->PlatformHandleRaw = (void*)SDL_GetProperty(SDL_GetWindowProperties(window), "SDL.window.cocoa.window", nullptr);
+    viewport->PlatformHandleRaw = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
 #endif
 }
 
 static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void* sdl_gl_context)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
     IM_UNUSED(sdl_gl_context); // Unused in this branch
 
@@ -391,28 +455,29 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Window = window;
+    bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
     bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 
-    io.SetClipboardTextFn = ImGui_ImplSDL3_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplSDL3_GetClipboardText;
-    io.ClipboardUserData = nullptr;
-    io.SetPlatformImeDataFn = ImGui_ImplSDL3_SetPlatformImeData;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_SetClipboardTextFn = ImGui_ImplSDL3_SetClipboardText;
+    platform_io.Platform_GetClipboardTextFn = ImGui_ImplSDL3_GetClipboardText;
+    platform_io.Platform_SetImeDataFn = ImGui_ImplSDL3_PlatformSetImeData;
 
     // Gamepad handling
     bd->GamepadMode = ImGui_ImplSDL3_GamepadMode_AutoFirst;
     bd->WantUpdateGamepadsList = true;
 
     // Load mouse cursors
-    bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    bd->MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-    bd->MouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-    bd->MouseCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-    bd->MouseCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-    bd->MouseCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-    bd->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
-    bd->MouseCursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-    bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
+    bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
+    bd->MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_TEXT);
+    bd->MouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_MOVE);
+    bd->MouseCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NS_RESIZE);
+    bd->MouseCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_EW_RESIZE);
+    bd->MouseCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NESW_RESIZE);
+    bd->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NWSE_RESIZE);
+    bd->MouseCursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER);
+    bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NOT_ALLOWED);
 
     // Set platform dependent data in viewport
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
@@ -498,7 +563,7 @@ static void ImGui_ImplSDL3_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_EVENT_MOUSE_MOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
-    SDL_CaptureMouse((bd->MouseButtonsDown != 0) ? SDL_TRUE : SDL_FALSE);
+    SDL_CaptureMouse(bd->MouseButtonsDown != 0);
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (bd->Window == focused_window);
 #else
@@ -507,7 +572,7 @@ static void ImGui_ImplSDL3_UpdateMouseData()
 #endif
     if (is_app_focused)
     {
-        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when io.ConfigNavMoveSetMousePos is enabled by user)
         if (io.WantSetMousePos)
             SDL_WarpMouseInWindow(bd->Window, io.MousePos.x, io.MousePos.y);
 
@@ -616,8 +681,8 @@ static void ImGui_ImplSDL3_UpdateGamepads()
                 if (bd->GamepadMode == ImGui_ImplSDL3_GamepadMode_AutoFirst)
                     break;
             }
-        SDL_free(sdl_gamepads);
         bd->WantUpdateGamepadsList = false;
+        SDL_free(sdl_gamepads);
     }
 
     // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.

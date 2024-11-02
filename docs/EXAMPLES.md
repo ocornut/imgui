@@ -35,46 +35,13 @@ At shutdown:
   call ImGui::DestroyContext()
 ```
 
-Example (using [backends/imgui_impl_win32.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_win32.cpp) + [backends/imgui_impl_dx11.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)):
+Main resource:
+- Read **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** for detailed examples of how to integrate Dear ImGui in an existing application.
 
-```cpp
-// Create a Dear ImGui context, setup some options
-ImGui::CreateContext();
-ImGuiIO& io = ImGui::GetIO();
-io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-
-// Initialize Platform + Renderer backends (here: using imgui_impl_win32.cpp + imgui_impl_dx11.cpp)
-ImGui_ImplWin32_Init(my_hwnd);
-ImGui_ImplDX11_Init(my_d3d_device, my_d3d_device_context);
-
-// Application main loop
-while (true)
-{
-    // Beginning of frame: update Renderer + Platform backend, start Dear ImGui frame
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-
-    // Any application code here
-    ImGui::Text("Hello, world!");
-
-    // End of frame: render Dear ImGui
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-    // Swap
-    g_pSwapChain->Present(1, 0);
-}
-
-// Shutdown
-ImGui_ImplDX11_Shutdown();
-ImGui_ImplWin32_Shutdown();
-ImGui::DestroyContext();
-```
-
-Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
-Please read the comments and instruction at the top of each file.
-Please read FAQ at https://www.dearimgui.com/faq
+Additional resources:
+- Read FAQ at https://www.dearimgui.com/faq
+- Read 'PROGRAMMER GUIDE' section in imgui.cpp.
+- Read the comments and instruction at the top of each file.
 
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
@@ -126,7 +93,7 @@ state, and might confuse your GPU driver. One star, not recommended.
 GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (modern, programmable pipeline). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders.<BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_glfw_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/) <BR>
@@ -168,7 +135,7 @@ state, and might confuse your GPU driver. One star, not recommended.
 SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders. <BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_sdl2_sdlrenderer2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer2/) <BR>

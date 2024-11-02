@@ -20,6 +20,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
+//               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
+//               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
 //  2022-11-30: Renderer: Restoring using al_draw_indexed_prim() when Allegro version is >= 5.2.5.
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
@@ -62,8 +65,8 @@
 #ifdef _WIN32
 #include <allegro5/allegro_windows.h>
 #endif
-#define ALLEGRO_HAS_CLIPBOARD           (ALLEGRO_VERSION_INT >= ((5 << 24) | (1 << 16) | (12 << 8))) // Clipboard only supported from Allegro 5.1.12
-#define ALLEGRO_HAS_DRAW_INDEXED_PRIM   (ALLEGRO_VERSION_INT >= ((5 << 24) | (2 << 16) | ( 5 << 8))) // DX9 implementation of al_draw_indexed_prim() got fixed in Allegro 5.2.5
+#define ALLEGRO_HAS_CLIPBOARD           ((ALLEGRO_VERSION_INT & ~ALLEGRO_UNSTABLE_BIT) >= ((5 << 24) | (1 << 16) | (12 << 8))) // Clipboard only supported from Allegro 5.1.12
+#define ALLEGRO_HAS_DRAW_INDEXED_PRIM   ((ALLEGRO_VERSION_INT & ~ALLEGRO_UNSTABLE_BIT) >= ((5 << 24) | (2 << 16) | ( 5 << 8))) // DX9 implementation of al_draw_indexed_prim() got fixed in Allegro 5.2.5
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -146,14 +149,14 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawList* draw_list = draw_data->CmdLists[n];
 
         ImVector<ImDrawVertAllegro>& vertices = bd->BufVertices;
 #if ALLEGRO_HAS_DRAW_INDEXED_PRIM
-        vertices.resize(cmd_list->VtxBuffer.Size);
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++)
+        vertices.resize(draw_list->VtxBuffer.Size);
+        for (int i = 0; i < draw_list->VtxBuffer.Size; i++)
         {
-            const ImDrawVert* src_v = &cmd_list->VtxBuffer[i];
+            const ImDrawVert* src_v = &draw_list->VtxBuffer[i];
             ImDrawVertAllegro* dst_v = &vertices[i];
             DRAW_VERT_IMGUI_TO_ALLEGRO(dst_v, src_v);
         }
@@ -163,21 +166,21 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             // FIXME-OPT: Allegro doesn't support 16-bit indices.
             // You can '#define ImDrawIdx int' in imconfig.h to request Dear ImGui to output 32-bit indices.
             // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
-            bd->BufIndices.resize(cmd_list->IdxBuffer.Size);
-            for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
-                bd->BufIndices[i] = (int)cmd_list->IdxBuffer.Data[i];
+            bd->BufIndices.resize(draw_list->IdxBuffer.Size);
+            for (int i = 0; i < draw_list->IdxBuffer.Size; ++i)
+                bd->BufIndices[i] = (int)draw_list->IdxBuffer.Data[i];
             indices = bd->BufIndices.Data;
         }
         else if (sizeof(ImDrawIdx) == 4)
         {
-            indices = (const int*)cmd_list->IdxBuffer.Data;
+            indices = (const int*)draw_list->IdxBuffer.Data;
         }
 #else
         // Allegro's implementation of al_draw_indexed_prim() for DX9 was broken until 5.2.5. Unindex buffers ourselves while converting vertex format.
-        vertices.resize(cmd_list->IdxBuffer.Size);
-        for (int i = 0; i < cmd_list->IdxBuffer.Size; i++)
+        vertices.resize(draw_list->IdxBuffer.Size);
+        for (int i = 0; i < draw_list->IdxBuffer.Size; i++)
         {
-            const ImDrawVert* src_v = &cmd_list->VtxBuffer[cmd_list->IdxBuffer[i]];
+            const ImDrawVert* src_v = &draw_list->VtxBuffer[draw_list->IdxBuffer[i]];
             ImDrawVertAllegro* dst_v = &vertices[i];
             DRAW_VERT_IMGUI_TO_ALLEGRO(dst_v, src_v);
         }
@@ -185,9 +188,9 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 
         // Render command lists
         ImVec2 clip_off = draw_data->DisplayPos;
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+        for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
                 // User callback, registered via ImDrawList::AddCallback()
@@ -195,7 +198,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                     ImGui_ImplAllegro5_SetupRenderState(draw_data);
                 else
-                    pcmd->UserCallback(cmd_list, pcmd);
+                    pcmd->UserCallback(draw_list, pcmd);
             }
             else
             {
@@ -291,7 +294,7 @@ void ImGui_ImplAllegro5_InvalidateDeviceObjects()
 }
 
 #if ALLEGRO_HAS_CLIPBOARD
-static const char* ImGui_ImplAllegro5_GetClipboardText(void*)
+static const char* ImGui_ImplAllegro5_GetClipboardText(ImGuiContext*)
 {
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     if (bd->ClipboardTextData)
@@ -300,14 +303,16 @@ static const char* ImGui_ImplAllegro5_GetClipboardText(void*)
     return bd->ClipboardTextData;
 }
 
-static void ImGui_ImplAllegro5_SetClipboardText(void*, const char* text)
+static void ImGui_ImplAllegro5_SetClipboardText(ImGuiContext*, const char* text)
 {
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     al_set_clipboard_text(bd->Display, text);
 }
 #endif
 
-static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
+// Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code);
+ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
 {
     switch (key_code)
     {
@@ -423,6 +428,7 @@ static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
 bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
     // Setup backend capabilities flags
@@ -446,9 +452,9 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
 
 #if ALLEGRO_HAS_CLIPBOARD
-    io.SetClipboardTextFn = ImGui_ImplAllegro5_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplAllegro5_GetClipboardText;
-    io.ClipboardUserData = nullptr;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_SetClipboardTextFn = ImGui_ImplAllegro5_SetClipboardText;
+    platform_io.Platform_GetClipboardTextFn = ImGui_ImplAllegro5_GetClipboardText;
 #endif
 
     return true;

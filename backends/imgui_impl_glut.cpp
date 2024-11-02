@@ -167,6 +167,7 @@ static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
 bool ImGui_ImplGLUT_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
 
 #ifdef FREEGLUT
     io.BackendPlatformName = "imgui_impl_glut (freeglut)";
