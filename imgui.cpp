@@ -3526,7 +3526,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
         if (!viewport->GetMainRect().Overlaps(ImRect(pos, pos + ImVec2(size.x + 2, size.y + 2) * scale)))
             continue;
         ImDrawList* draw_list = GetForegroundDrawList(viewport);
-        ImTextureID tex_id = font_atlas->TexID;
+        ImTextureID tex_id = font_atlas->FontTextures.front()->TexID;
         draw_list->PushTextureID(tex_id);
         draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale, uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
@@ -14341,7 +14341,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         Checkbox("Tint with Text Color", &cfg->ShowAtlasTintedWithTextColor); // Using text color ensure visibility of core atlas data, but will alter custom colored icons
         ImVec4 tint_col = cfg->ShowAtlasTintedWithTextColor ? GetStyleColorVec4(ImGuiCol_Text) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border_col = GetStyleColorVec4(ImGuiCol_Border);
-        Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
+        Image(atlas->FontTextures.front()->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
         TreePop();
     }
 }
