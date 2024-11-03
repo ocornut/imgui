@@ -3789,9 +3789,9 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
     if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size))
     {
-        float ascender = IM_FLOOR(Ascent * size);
-        pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
-        pos.y = IM_FLOOR(pos.y + DisplayOffset.y);
+        float ascender = IM_TRUNC(Ascent * size);
+        pos.x = IM_TRUNC(pos.x + DisplayOffset.x);
+        pos.y = IM_TRUNC(pos.y + DisplayOffset.y);
 
         ImFontTexture* glyph_texture = glyph->FontTexture;
 
