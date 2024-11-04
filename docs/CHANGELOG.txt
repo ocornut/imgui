@@ -53,6 +53,13 @@ Other changes:
   by 100.0f on Emscripten target. (#4019, #6096, #1463)
 - Examples: Added SDL3+Vulkan example. (#8084, #8085)
 
+Docking+Viewports Branch:
+
+- Docking: fixed using ImGuiDockNodeFlags_KeepAliveOnly with DockSpaceOverViewport():
+  the normally invisible space did erroneously claim mouse hover and could be potentially
+  focused. (#8125) [@kcbanner]
+
+
 -----------------------------------------------------------------------
  VERSION 1.91.4 (Released 2024-10-18)
 -----------------------------------------------------------------------
