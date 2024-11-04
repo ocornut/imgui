@@ -48,6 +48,8 @@ Other changes:
 - Buttons: using ImGuiItemFlags_ButtonRepeat makes default button behavior use
   PressedOnClick instead of PressedOnClickRelease when unspecified.
 - Fonts: removed const qualifiers from most font functions.
+- InputText: fixed a bug (regression in 1.91.2) where modifying text buffer within
+  a callback would sometimes prevents further appending to the buffer.
 - Log/Capture: better decorating of BeginMenu() and TabItem() output.
 - Log/Capture: a non terminated log ends automatically in the window which called it.
 - Log/Capture: added experimental io.ConfigWindowsCopyContentsWithCtrlC option to
