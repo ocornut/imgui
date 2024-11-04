@@ -69,7 +69,7 @@
 
 struct ImGui_ImplOpenGL2_Data
 {
-    GLuint       FontTexture;
+    ImVector<ImTextureID> FontTextures;
 
     ImGui_ImplOpenGL2_Data() { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -113,10 +113,10 @@ void    ImGui_ImplOpenGL2_NewFrame()
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL2_Init()?");
 
-    if (!bd->FontTexture)
+    if (!bd->FontTextures.Size)
         ImGui_ImplOpenGL2_CreateDeviceObjects();
-    if (!bd->FontTexture)
-        ImGui_ImplOpenGL2_CreateFontsTexture();
+
+    ImGui::GetIO().Fonts->CheckOverflow();
 }
 
 static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height)
@@ -168,6 +168,8 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
 // This is in order to be able to run within an OpenGL engine that doesn't do so.
 void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
+    ImGui_ImplOpenGL2_UpdateFontTextures();
+
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
@@ -247,57 +249,94 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, last_tex_env_mode);
 }
 
-bool ImGui_ImplOpenGL2_CreateFontsTexture()
-{
-    // Build texture atlas
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
-
-    // Upload texture to graphics system
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+static ImTextureID CreateOpenGL2Texture(int width, int height, unsigned char* pixels) {
     GLint last_texture;
+    GLuint new_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &bd->FontTexture);
-    glBindTexture(GL_TEXTURE_2D, bd->FontTexture);
+    glGenTextures(1, &new_texture);
+    glBindTexture(GL_TEXTURE_2D, new_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glBindTexture(GL_TEXTURE_2D, last_texture);
+    return (ImTextureID)(intptr_t)new_texture;
+}
+
+static void UpdateOpenGL2Texture(ImTextureID tex, int x, int y, int width, int height, unsigned char* pixels) {
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+
+    glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)tex);
+#ifdef GL_UNPACK_ROW_LENGTH
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+    glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
+}
+
+bool ImGui_ImplOpenGL2_UpdateFontTextures()
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    if (io.Fonts->Fonts.Size == 0) //Load a font if there is none
+        io.Fonts->AddFontDefault();
+
+    ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
+
+    // FIXME-DYNAMICFONT: Add support for resizing textures
+    for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+        ImFontTexture* font_texture_ptr = *font_texture;
+        if (font_texture_ptr->TexID == NULL) {
+            //This OpenGL texture has not yet been created. Create it.
+            ImTextureID new_texture = CreateOpenGL2Texture(font_texture_ptr->TexWidth, font_texture_ptr->TexHeight, font_texture_ptr->TexData.Data);
+            font_texture_ptr->TexID = new_texture;
+            font_texture_ptr->IsDirty = false;
+            bd->FontTextures.push_back(new_texture);
+        }
+
+        if (font_texture_ptr->IsDirty) {
+            //Update whole affected rows
+            int x = 0, y = static_cast<int>(font_texture_ptr->DirtyTopLeft.y);
+            int width = font_texture_ptr->TexWidth, height = static_cast<int>(font_texture_ptr->DirtyBotRight.y) - static_cast<int>(font_texture_ptr->DirtyTopLeft.y) + 1;
+            UpdateOpenGL2Texture(font_texture_ptr->TexID, x, y, width, height, &font_texture_ptr->TexData.Data[y*width * 4]);
+            font_texture_ptr->IsDirty = false;
+        }
+    }
 
     return true;
 }
 
-void ImGui_ImplOpenGL2_DestroyFontsTexture()
+void ImGui_ImplOpenGL2_DestroyFontTextures()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL2_Data* bd = ImGui_ImplOpenGL2_GetBackendData();
-    if (bd->FontTexture)
+
+    if (bd->FontTextures.Size)
     {
-        glDeleteTextures(1, &bd->FontTexture);
-        io.Fonts->SetTexID(0);
-        bd->FontTexture = 0;
+        ImGuiIO& io = ImGui::GetIO();
+        for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
+            ImFontTexture* font_texture_ptr = *font_texture;
+            bd->FontTextures.find_erase(font_texture_ptr->TexID);
+            glDeleteTextures(1, (const GLuint*)(intptr_t*)&font_texture_ptr->TexID);
+            font_texture_ptr->TexID = 0;
+        }
     }
 }
 
-bool    ImGui_ImplOpenGL2_CreateDeviceObjects()
+void    ImGui_ImplOpenGL2_CreateDeviceObjects()
 {
-    return ImGui_ImplOpenGL2_CreateFontsTexture();
+    ImGui_ImplOpenGL2_UpdateFontTextures();
 }
+
 
 void    ImGui_ImplOpenGL2_DestroyDeviceObjects()
 {
-    ImGui_ImplOpenGL2_DestroyFontsTexture();
+    ImGui_ImplOpenGL2_DestroyFontTextures();
 }
 
 //-----------------------------------------------------------------------------

@@ -3640,10 +3640,9 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         ImFont* font = draw_list->_Data->Font;
         const float font_size = draw_list->_Data->FontSize;
-        const float font_scale = draw_list->_Data->FontScale;
+        //const float font_scale = draw_list->_Data->FontScale;
         const char* text_end_ellipsis = NULL;
-        const float ellipsis_width = font->EllipsisWidth * font_scale;
-
+        const float ellipsis_width = font->EllipsisWidth(font_size);
         // We can now claim the space between pos_max.x and ellipsis_max.x
         const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_width) - pos_min.x, 1.0f);
         float text_size_clipped_x = font->CalcTextSizeA(font_size, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
@@ -3664,7 +3663,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
         ImVec2 ellipsis_pos = ImTrunc(ImVec2(pos_min.x + text_size_clipped_x, pos_min.y));
         if (ellipsis_pos.x + ellipsis_width <= ellipsis_max_x)
-            for (int i = 0; i < font->EllipsisCharCount; i++, ellipsis_pos.x += font->EllipsisCharStep * font_scale)
+            for (int i = 0; i < font->EllipsisCharCount; i++, ellipsis_pos.x += font->EllipsisCharStep(font_size))
                 font->RenderChar(draw_list, font_size, ellipsis_pos, GetColorU32(ImGuiCol_Text), font->EllipsisChar);
     }
     else
@@ -3753,7 +3752,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
         if (!viewport->GetMainRect().Overlaps(ImRect(pos, pos + ImVec2(size.x + 2, size.y + 2) * scale)))
             continue;
         ImDrawList* draw_list = GetForegroundDrawList(viewport);
-        ImTextureID tex_id = font_atlas->TexID;
+        ImTextureID tex_id = font_atlas->FontTextures.front()->TexID;
         draw_list->PushTextureID(tex_id);
         draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale, uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
@@ -3844,7 +3843,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     FontAtlasOwnedByContext = shared_font_atlas ? false : true;
     Font = NULL;
     FontSize = FontBaseSize = FontScale = CurrentDpiScale = 0.0f;
-    IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
+    IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)(512, 512);
     Time = 0.0f;
     FrameCount = 0;
     FrameCountEnded = FrameCountRendered = -1;
@@ -4262,7 +4261,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     if (window)
     {
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-        g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
+        g.FontScale = g.DrawListSharedData.FontScale = 1.f;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -4798,7 +4797,7 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     if (viewport->BgFgDrawListsLastFrame[drawlist_no] != g.FrameCount)
     {
         draw_list->_ResetForNewFrame();
-        draw_list->PushTextureID(g.IO.Fonts->TexID);
+        draw_list->PushTextureID(g.IO.Fonts->FontTextures.front()->TexID);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
         viewport->BgFgDrawListsLastFrame[drawlist_no] = g.FrameCount;
     }
@@ -7472,7 +7471,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Setup draw list and outer clipping rectangle
         IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
-        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        window->DrawList->PushTextureID(g.IO.Fonts->FontTextures.front()->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
         // Child windows can render their decoration (bg color, border, scrollbars, etc.) within their parent to save a draw call (since 1.71)
@@ -7945,9 +7944,9 @@ void ImGui::SetCurrentFont(ImFont* font)
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
-    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
+    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->ContainerAtlas->FontSize * g.Font->Scale);
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
-    g.FontScale = g.FontSize / g.Font->FontSize;
+    g.FontScale = 1.f /*g.FontSize / g.Font->FontSize*/;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
     g.DrawListSharedData.TexUvWhitePixel = atlas->TexUvWhitePixel;
@@ -7971,7 +7970,7 @@ void ImGui::PushFont(ImFont* font)
         font = GetDefaultFont();
     g.FontStack.push_back(font);
     SetCurrentFont(font);
-    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    //g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void  ImGui::PopFont()
@@ -7985,7 +7984,7 @@ void  ImGui::PopFont()
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
     SetCurrentFont(font);
-    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    //g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
@@ -8508,7 +8507,7 @@ void ImGui::SetWindowFontScale(float scale)
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
     g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-    g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
+    g.FontScale = g.DrawListSharedData.FontScale = 1.f /*g.FontSize / g.Font->FontSize*/;
 }
 
 void ImGui::PushFocusScope(ImGuiID id)
@@ -10459,7 +10458,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
-    IM_ASSERT(g.IO.Fonts->IsBuilt()                                     && "Font Atlas not built! Make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()");
+    //IM_ASSERT(g.IO.Fonts->IsBuilt()                                     && "Font Atlas not built! Make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()");
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
     IM_ASSERT(g.Style.CircleTessellationMaxError > 0.0f                 && "Invalid style setting!");
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
@@ -15266,7 +15265,7 @@ void ImGui::DebugTextEncoding(const char* str)
             Text("0x%02X", (int)(unsigned char)p[byte_index]);
         }
         TableNextColumn();
-        if (GetFont()->FindGlyphNoFallback((ImWchar)c))
+        if (GetFont()->FindGlyphNoFallback((ImWchar)c, ImGui::GetFontSize()))
             TextUnformatted(p, p + c_utf8_len);
         else
             TextUnformatted((c == IM_UNICODE_CODEPOINT_INVALID) ? "[invalid]" : "[missing]");
@@ -15335,7 +15334,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         Checkbox("Tint with Text Color", &cfg->ShowAtlasTintedWithTextColor); // Using text color ensure visibility of core atlas data, but will alter custom colored icons
         ImVec4 tint_col = cfg->ShowAtlasTintedWithTextColor ? GetStyleColorVec4(ImGuiCol_Text) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border_col = GetStyleColorVec4(ImGuiCol_Border);
-        Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
+        Image(atlas->FontTextures.front()->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint_col, border_col);
         TreePop();
     }
 }
@@ -16140,8 +16139,8 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
 // [DEBUG] Display details for a single font, called by ShowStyleEditor().
 void ImGui::DebugNodeFont(ImFont* font)
 {
-    bool opened = TreeNode(font, "Font: \"%s\"\n%.2f px, %d glyphs, %d file(s)",
-        font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount);
+    bool opened = TreeNode(font, "Font: \"%s\"\n%d glyphs, %d file(s)",
+        font->ConfigDataIndex > -1 ? font->ContainerAtlas->ConfigData[font->ConfigDataIndex].Name : "", font->Glyphs.Size, 1);
     SameLine();
     if (SmallButton("Set as default"))
         GetIO().FontDefault = font;
@@ -16166,20 +16165,21 @@ void ImGui::DebugNodeFont(ImFont* font)
     char c_str[5];
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
-    const int surface_sqrt = (int)ImSqrt((float)font->MetricsTotalSurface);
-    Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-        if (font->ConfigData)
-            if (const ImFontConfig* cfg = &font->ConfigData[config_i])
-                BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
-                    config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH, cfg->GlyphOffset.x, cfg->GlyphOffset.y);
+    //const int surface_sqrt = (int)ImSqrt((float)font->MetricsTotalSurface);
+    //Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
+    //for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
+        if (font->ConfigDataIndex != -1)
+            if (const ImFontConfig* cfg = &font->ContainerAtlas->ConfigData[font->ConfigDataIndex])
+                BulletText("Input: \'%s\', Oversample: (%d,%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
+                    /*config_i,*/ cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH, cfg->GlyphOffset.x, cfg->GlyphOffset.y);
 
     // Display all glyphs of the fonts in separate pages of 256 characters
     if (TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
     {
+        /*
         ImDrawList* draw_list = GetWindowDrawList();
         const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
-        const float cell_size = font->FontSize * 1;
+        const float cell_size = font->ContainerAtlas->FontSize * 1;
         const float cell_spacing = GetStyle().ItemSpacing.y;
         for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
         {
@@ -16194,7 +16194,7 @@ void ImGui::DebugNodeFont(ImFont* font)
 
             int count = 0;
             for (unsigned int n = 0; n < 256; n++)
-                if (font->FindGlyphNoFallback((ImWchar)(base + n)))
+                if (font->FindGlyphNoFallback((ImWchar)(base + n), ImGui::GetFontSize()))
                     count++;
             if (count <= 0)
                 continue;
@@ -16209,7 +16209,7 @@ void ImGui::DebugNodeFont(ImFont* font)
                 // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
                 ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
                 ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
-                const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n));
+                const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n), ImGui::GetFontSize());
                 draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
                 if (!glyph)
                     continue;
@@ -16222,7 +16222,7 @@ void ImGui::DebugNodeFont(ImFont* font)
             }
             Dummy(ImVec2((cell_size + cell_spacing) * 16, (cell_size + cell_spacing) * 16));
             TreePop();
-        }
+        }*/
         TreePop();
     }
     TreePop();
