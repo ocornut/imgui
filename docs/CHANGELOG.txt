@@ -60,7 +60,9 @@ Other changes:
   actual include. (#8095, #7967, #3190) [@sev-] 
 - Backends: SDL2, SDL3: SDL_EVENT_MOUSE_WHEEL event doesn't require dividing 
   by 100.0f on Emscripten target. (#4019, #6096, #1463)
-- Examples: Added SDL3+Vulkan example. (#8084, #8085)
+- Examples: SDL3+Vulkan: Added example. (#8084, #8085)
+- Examples: Android+OpenGL: Using ALooper_pollOnce() instead of ALooper_pollAll()
+  which has been deprecated. (#8013) [@feather179]
 
 -----------------------------------------------------------------------
  VERSION 1.91.4 (Released 2024-10-18)
