@@ -18450,6 +18450,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         for (int tab_n = tabs_unsorted_start; tab_n < tab_bar->Tabs.Size; tab_n++)
         {
             ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+            IM_UNUSED(tab);
             IMGUI_DEBUG_LOG_DOCKING("[docking] - Tab 0x%08X '%s' Order %d\n", tab->ID, TabBarGetTabName(tab_bar, tab), tab->Window ? tab->Window->DockOrder : -1);
         }
         IMGUI_DEBUG_LOG_DOCKING("[docking] SelectedTabId = 0x%08X, NavWindow->TabId = 0x%08X\n", node->SelectedTabId, g.NavWindow ? g.NavWindow->TabId : -1);

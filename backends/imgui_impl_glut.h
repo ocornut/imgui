@@ -9,10 +9,11 @@
 //  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 // Missing features:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
-//  [ ] Platform: Missing horizontal mouse wheel support.
-//  [ ] Platform: Missing mouse cursor shape/visibility support.
-//  [ ] Platform: Missing clipboard support (not supported by Glut).
-//  [ ] Platform: Missing gamepad support.
+//  [ ] Platform: Horizontal mouse wheel support.
+//  [ ] Platform: Mouse cursor shape/visibility support.
+//  [ ] Platform: Clipboard support (not supported by Glut).
+//  [ ] Platform: Gamepad support.
+//  [ ] Renderer: Multi-viewport support (multiple windows).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
