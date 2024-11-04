@@ -3930,7 +3930,7 @@ namespace ImStb
 {
 static int     STB_TEXTEDIT_STRINGLEN(const ImGuiInputTextState* obj)                             { return obj->CurLenA; }
 static char    STB_TEXTEDIT_GETCHAR(const ImGuiInputTextState* obj, int idx)                      { IM_ASSERT(idx <= obj->CurLenA); return obj->TextA[idx]; }
-static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextA.Data + line_start_idx + char_idx, obj->TextA.Data + obj->TextA.Size); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance((ImWchar)c) * g.FontScale; }
+static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextA.Data + line_start_idx + char_idx, obj->TextA.Data + obj->CurLenA); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance((ImWchar)c) * g.FontScale; }
 static char    STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* obj, int line_start_idx)
 {
@@ -3953,7 +3953,7 @@ static int IMSTB_TEXTEDIT_GETNEXTCHARINDEX_IMPL(ImGuiInputTextState* obj, int id
     if (idx >= obj->CurLenA)
         return obj->CurLenA + 1;
     unsigned int c;
-    return idx + ImTextCharFromUtf8(&c, obj->TextA.Data + idx, obj->TextA.Data + obj->TextA.Size);
+    return idx + ImTextCharFromUtf8(&c, obj->TextA.Data + idx, obj->TextA.Data + obj->CurLenA);
 }
 
 static int IMSTB_TEXTEDIT_GETPREVCHARINDEX_IMPL(ImGuiInputTextState* obj, int idx)
@@ -3986,8 +3986,8 @@ static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
 
     const char* curr_p = obj->TextA.Data + idx;
     const char* prev_p = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, curr_p);
-    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, curr_p, obj->TextA.Data + obj->TextA.Size);
-    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, prev_p, obj->TextA.Data + obj->TextA.Size);
+    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, curr_p, obj->TextA.Data + obj->CurLenA);
+    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, prev_p, obj->TextA.Data + obj->CurLenA);
 
     bool prev_white = ImCharIsBlankW(prev_c);
     bool prev_separ = ImCharIsSeparatorW(prev_c);
@@ -4002,8 +4002,8 @@ static int is_word_boundary_from_left(ImGuiInputTextState* obj, int idx)
 
     const char* curr_p = obj->TextA.Data + idx;
     const char* prev_p = ImTextFindPreviousUtf8Codepoint(obj->TextA.Data, curr_p);
-    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, curr_p, obj->TextA.Data + obj->TextA.Size);
-    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, prev_p, obj->TextA.Data + obj->TextA.Size);
+    unsigned int prev_c; ImTextCharFromUtf8(&prev_c, curr_p, obj->TextA.Data + obj->CurLenA);
+    unsigned int curr_c; ImTextCharFromUtf8(&curr_c, prev_p, obj->TextA.Data + obj->CurLenA);
 
     bool prev_white = ImCharIsBlankW(prev_c);
     bool prev_separ = ImCharIsSeparatorW(prev_c);
@@ -5342,8 +5342,8 @@ void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
     Text("ID: 0x%08X, ActiveID: 0x%08X", state->ID, g.ActiveId);
     DebugLocateItemOnHover(state->ID);
     Text("CurLenA: %d, Cursor: %d, Selection: %d..%d", state->CurLenA, stb_state->cursor, stb_state->select_start, stb_state->select_end);
-    Text("TextA.Size: %d, Capacity: %d", state->TextA.Size, state->TextA.Capacity);
     Text("BufCapacityA: %d", state->BufCapacityA);
+    Text("(Internal Buffer: TextA Size: %d, Capacity: %d)", state->TextA.Size, state->TextA.Capacity);
     Text("has_preferred_x: %d (%.2f)", stb_state->has_preferred_x, stb_state->preferred_x);
     Text("undo_point: %d, redo_point: %d, undo_char_point: %d, redo_char_point: %d", undo_state->undo_point, undo_state->redo_point, undo_state->undo_char_point, undo_state->redo_char_point);
     if (BeginChild("undopoints", ImVec2(0.0f, GetTextLineHeight() * 10), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY)) // Visualize undo state
