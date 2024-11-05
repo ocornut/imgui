@@ -1224,9 +1224,11 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 // Error Checking and Debug Tools
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 static void             UpdateDebugToolItemPicker();
 static void             UpdateDebugToolStackQueries();
 static void             UpdateDebugToolFlashStyleColor();
+#endif
 
 // Inputs
 static void             UpdateKeyboardInputs();
@@ -18449,7 +18451,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         IMGUI_DEBUG_LOG_DOCKING("[docking] In node 0x%08X: %d new appearing tabs:%s\n", node->ID, tab_bar->Tabs.Size - tabs_unsorted_start, (tab_bar->Tabs.Size > tabs_unsorted_start + 1) ? " (will sort)" : "");
         for (int tab_n = tabs_unsorted_start; tab_n < tab_bar->Tabs.Size; tab_n++)
         {
-            ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+            ImGuiTabItem* tab = &tab_bar->Tabs[tab_n]; IM_UNUSED(tab);
             IMGUI_DEBUG_LOG_DOCKING("[docking] - Tab 0x%08X '%s' Order %d\n", tab->ID, TabBarGetTabName(tab_bar, tab), tab->Window ? tab->Window->DockOrder : -1);
         }
         IMGUI_DEBUG_LOG_DOCKING("[docking] SelectedTabId = 0x%08X, NavWindow->TabId = 0x%08X\n", node->SelectedTabId, g.NavWindow ? g.NavWindow->TabId : -1);
@@ -20958,6 +20960,7 @@ void ImGui::DebugFlashStyleColor(ImGuiCol idx)
     g.DebugFlashStyleColorBackup = g.Style.Colors[idx];
 }
 
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 void ImGui::UpdateDebugToolFlashStyleColor()
 {
     ImGuiContext& g = *GImGui;
@@ -20968,6 +20971,7 @@ void ImGui::UpdateDebugToolFlashStyleColor()
     if ((g.DebugFlashStyleColorTime -= g.IO.DeltaTime) <= 0.0f)
         DebugFlashStyleColorStop();
 }
+#endif
 
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
 static void MetricsHelpMarker(const char* desc)
@@ -22547,6 +22551,7 @@ void ImGui::DebugStartItemPicker()
 }
 
 // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 void ImGui::UpdateDebugToolItemPicker()
 {
     ImGuiContext& g = *GImGui;
@@ -22579,8 +22584,10 @@ void ImGui::UpdateDebugToolItemPicker()
         TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click %s Button to break in debugger! (remap w/ Ctrl+Shift)", mouse_button_names[g.DebugItemPickerMouseButton]);
     EndTooltip();
 }
+#endif
 
 // [DEBUG] ID Stack Tool: update queries. Called by NewFrame()
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 void ImGui::UpdateDebugToolStackQueries()
 {
     ImGuiContext& g = *GImGui;
@@ -22619,6 +22626,7 @@ void ImGui::UpdateDebugToolStackQueries()
         tool->Results[stack_level].QueryFrameCount++;
     }
 }
+#endif
 
 // [DEBUG] ID Stack tool: hooks called by GetID() family functions
 void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end)
