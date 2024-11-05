@@ -1210,9 +1210,11 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 // Error Checking and Debug Tools
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
 static void             UpdateDebugToolItemPicker();
 static void             UpdateDebugToolStackQueries();
 static void             UpdateDebugToolFlashStyleColor();
+#endif
 
 // Inputs
 static void             UpdateKeyboardInputs();
