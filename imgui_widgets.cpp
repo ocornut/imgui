@@ -1059,13 +1059,13 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
 
 // - Read about ImTextureID here: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // - 'uv0' and 'uv1' are texture coordinates. Read about them from the same link above.
-void ImGui::Image(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+void ImGui::Image(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col, float border_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
-    const float border_size = (border_col.w > 0.0f) ? 1.0f : 0.0f;
+    const float border_size = (border_col.w > 0.0f) ? border_width : 0.0f;
     const ImVec2 padding(border_size, border_size);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
     ItemSize(bb);
