@@ -52,6 +52,8 @@ Breaking changes:
     - read https://github.com/ocornut/imgui/issues/4921
   - If you have trouble updating a very old codebase using legacy backend-specific key codes:
     consider updating to 1.91.4 first, then #define IMGUI_DISABLE_OBSOLETE_KEYIO, then update to latest.
+  - Obsoleted ImGuiKey_COUNT (it is unusually error-prone/misleading since valid keys don't start at 0).
+    Probably use ImGuiKey_NamedKey_BEGIN/ImGuiKey_NamedKey_END?
 
 Other changes:
 
