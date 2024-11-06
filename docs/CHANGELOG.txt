@@ -64,6 +64,8 @@ Other changes:
 - Fonts: removed const qualifiers from most font functions.
 - InputText: fixed a bug (regression in 1.91.2) where modifying text buffer within
   a callback would sometimes prevents further appending to the buffer.
+- Tabs, Style: made ImGuiCol_TabDimmedSelectedOverline alpha 0 (not visible) in default
+  styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
 - Log/Capture: better decorating of BeginMenu() and TabItem() output.
 - Log/Capture: a non terminated log ends automatically in the window which called it.
 - Log/Capture: added experimental io.ConfigWindowsCopyContentsWithCtrlC option to
