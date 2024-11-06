@@ -41,6 +41,18 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Commented out pre-1.87 IO system (equivalent to using IMGUI_DISABLE_OBSOLETE_KEYIO or IMGUI_DISABLE_OBSOLETE_FUNCTIONS before).
+  - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022).
+  - io.NavInputs[] and ImGuiNavInput are removed (obsoleted July 2022).
+  - Pre-1.87 backends are not supported:
+    - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
+    - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
+  - For more reference:
+    - read 1.87 and 1.88 part of this section or read Changelog for 1.87 and 1.88.
+    - read https://github.com/ocornut/imgui/issues/4921
+  - If you have trouble updating a very old codebase using legacy backend-specific key codes:
+    consider updating to 1.91.4 first, then #define IMGUI_DISABLE_OBSOLETE_KEYIO, then update to latest.
+
 Other changes:
 
 - Selectable: selected Selectables use ImGuiCol_Header instead of an arbitrary lerp
