@@ -2676,6 +2676,7 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
     r.Width = (unsigned short)width;
     r.Height = (unsigned short)height;
     r.GlyphID = id;
+    r.GlyphColored = 0; // Set to 1 manually to mark glyph as colored // FIXME: No official API for that (#8133)
     r.GlyphAdvanceX = advance_x;
     r.GlyphOffset = offset;
     r.Font = font;
@@ -3286,6 +3287,8 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
         ImVec2 uv0, uv1;
         atlas->CalcCustomRectUV(r, &uv0, &uv1);
         r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX);
+        if (r->GlyphColored)
+            r->Font->Glyphs.back().Colored = 1;
     }
 
     // Build all fonts lookup tables
