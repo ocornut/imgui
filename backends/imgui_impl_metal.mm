@@ -38,13 +38,6 @@
 #import <time.h>
 #import <Metal/Metal.h>
 
-#if defined(__clang__)
-#if __has_warning("-Wunknown-warning-option")
-#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'
-#endif
-#pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
-#endif
-
 #pragma mark - Support classes
 
 // A wrapper around a MTLBuffer object that knows the last time it was reused
@@ -83,7 +76,7 @@ struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
 
-    ImGui_ImplMetal_Data()      { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplMetal_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplMetal_Data*    ImGui_ImplMetal_GetBackendData()    { return ImGui::GetCurrentContext() ? (ImGui_ImplMetal_Data*)ImGui::GetIO().BackendRendererUserData : nullptr; }

@@ -27,13 +27,6 @@
 #import <GameController/GameController.h>
 #import <time.h>
 
-#if defined(__clang__)
-#if __has_warning("-Wunknown-warning-option")
-#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'
-#endif
-#pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
-#endif
-
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
@@ -94,7 +87,7 @@ struct ImGui_ImplOSX_Data
     id                          Monitor;
     NSWindow*                   Window;
 
-    ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplOSX_Data()        { memset((void*)this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplOSX_Data*      ImGui_ImplOSX_GetBackendData()      { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
