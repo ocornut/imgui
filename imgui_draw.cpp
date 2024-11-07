@@ -4016,7 +4016,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        const float char_width = ImFontGetCharAdvanceX(this, c);
+        const float char_width = ImFontGetCharAdvanceX(this, c) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
