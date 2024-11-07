@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.5 WIP (In Progress)
+ VERSION 1.91.5 (Released 2024-11-07)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.5
 
 Breaking changes:
 
@@ -47,8 +49,8 @@ Breaking changes:
   - Pre-1.87 backends are not supported:
     - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
     - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
-  - For more reference:
-    - read 1.87 and 1.88 part of this section or read Changelog for 1.87 and 1.88.
+  - For more references:
+    - read 1.87 and 1.88 part of API BREAKING CHANGES in imgui.cpp or read Changelog for 1.87 and 1.88.
     - read https://github.com/ocornut/imgui/issues/4921
   - If you have trouble updating a very old codebase using legacy backend-specific key codes:
     consider updating to 1.91.4 first, then #define IMGUI_DISABLE_OBSOLETE_KEYIO, then update to latest.
@@ -66,12 +68,12 @@ Other changes:
   a callback would sometimes prevents further appending to the buffer.
 - Tabs, Style: made ImGuiCol_TabDimmedSelectedOverline alpha 0 (not visible) in default
   styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
-- Log/Capture: better decorating of BeginMenu() and TabItem() output.
-- Log/Capture: a non terminated log ends automatically in the window which called it.
 - Log/Capture: added experimental io.ConfigWindowsCopyContentsWithCtrlC option to
   automatically copy window contents into clipboard using CTRL+C. This is experimental
   because (1) it currently breaks on nested Begin/End, (2) text output quality varies,
   and (3) text output comes in submission order rather than spatial order.
+- Log/Capture: better decorating of BeginMenu() and TabItem() output.
+- Log/Capture: a non terminated log ends automatically in the window which called it.
 - imgui_freetype: Fixed a crash in build font atlas when using merged fonts and the
   first font in a merged set has no loaded glyph. (#8081)
 - Backends: DX12: Unmap() call specify written range. The range is informational and
@@ -87,6 +89,8 @@ Other changes:
 -----------------------------------------------------------------------
  VERSION 1.91.4 (Released 2024-10-18)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.4
 
 Breaking changes:
 
