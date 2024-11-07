@@ -3847,7 +3847,7 @@ const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c)
     return &Glyphs.Data[i];
 }
 
-// Wrapping skips upcoming blanks
+// Trim trailing space and find beginning of next line
 static inline const char* CalcWordWrapNextLineStartA(const char* text, const char* text_end)
 {
     while (text < text_end && ImCharIsBlankA(*text))
@@ -3856,6 +3856,8 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
         text++;
     return text;
 }
+
+#define ImFontGetCharAdvanceX(_FONT, _CH)  ((int)(_CH) < (_FONT)->IndexAdvanceX.Size ? (_FONT)->IndexAdvanceX.Data[_CH] : (_FONT)->FallbackAdvanceX)
 
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
@@ -3909,7 +3911,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX);
+        const float char_width = ImFontGetCharAdvanceX(this, c);
         if (ImCharIsBlankW(c))
         {
             if (inside_word)
@@ -4014,7 +4016,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX) * scale;
+        const float char_width = ImFontGetCharAdvanceX(this, c);
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
@@ -4063,9 +4065,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     if (y > clip_rect.w)
         return;
 
-    const float start_x = x;
     const float scale = size / FontSize;
     const float line_height = FontSize * scale;
+    const float origin_x = x;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
 
     // Fast-forward to first visible line
@@ -4124,11 +4126,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - start_x));
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - origin_x));
 
             if (s >= word_wrap_eol)
             {
-                x = start_x;
+                x = origin_x;
                 y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop
@@ -4149,7 +4151,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             if (c == '\n')
             {
-                x = start_x;
+                x = origin_x;
                 y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop

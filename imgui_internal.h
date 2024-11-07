@@ -260,6 +260,15 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_FLOOR IM_TRUNC
 #endif
 
+// Hint for branch prediction
+#if (defined(__cplusplus) && (__cplusplus >= 202002L)) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#define IM_LIKELY   [[likely]]
+#define IM_UNLIKELY [[unlikely]]
+#else
+#define IM_LIKELY
+#define IM_UNLIKELY
+#endif
+
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
 #define IMGUI_CDECL __cdecl
