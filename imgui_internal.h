@@ -1,4 +1,4 @@
-// dear imgui, v1.91.5 WIP
+// dear imgui, v1.91.5
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -269,6 +269,15 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_STRINGIFY(_X)                IM_STRINGIFY_HELPER(_X)                                 // Preprocessor idiom to stringify e.g. an integer.
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #define IM_FLOOR IM_TRUNC
+#endif
+
+// Hint for branch prediction
+#if (defined(__cplusplus) && (__cplusplus >= 202002L)) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#define IM_LIKELY   [[likely]]
+#define IM_UNLIKELY [[unlikely]]
+#else
+#define IM_LIKELY
+#define IM_UNLIKELY
 #endif
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
