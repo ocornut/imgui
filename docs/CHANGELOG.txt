@@ -36,6 +36,14 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.6 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+-----------------------------------------------------------------------
  VERSION 1.91.5 (Released 2024-11-07)
 -----------------------------------------------------------------------
 
@@ -85,6 +93,7 @@ Other changes:
 - Examples: SDL3+Vulkan: Added example. (#8084, #8085)
 - Examples: Android+OpenGL: Using ALooper_pollOnce() instead of ALooper_pollAll()
   which has been deprecated. (#8013) [@feather179]
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.4 (Released 2024-10-18)
