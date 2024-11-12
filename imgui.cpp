@@ -10542,7 +10542,7 @@ bool    ImGui::ErrorLog(const char* msg)
     // Output to tooltip
     if (g.IO.ConfigErrorRecoveryEnableTooltip)
     {
-        if (BeginErrorTooltip())
+        if (g.WithinFrameScope && BeginErrorTooltip())
         {
             if (g.ErrorCountCurrentFrame < 20)
             {

@@ -43,6 +43,10 @@ Breaking changes:
 
 Other changes:
 
+- Error Handling: fixed cases where recoverable error handling would crash when 
+  processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
+
+
 -----------------------------------------------------------------------
  VERSION 1.91.5 (Released 2024-11-07)
 -----------------------------------------------------------------------
