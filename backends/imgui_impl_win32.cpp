@@ -4,7 +4,7 @@
 // Implemented features:
 //  [X] Platform: Clipboard support (for Win32 this is actually part of core dear imgui)
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen.
-//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy VK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy VK_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-10-28: [Docking] Rely on property stored inside HWND to retrieve context/viewport, should facilitate attempt to use this for parallel contexts. (#8069)
 //  2024-09-16: [Docking] Inputs: fixed an issue where a viewport destroyed while clicking would hog mouse tracking and temporary lead to incorrect update of HoveredWindow. (#7971)
 //  2024-07-08: Inputs: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN. (#7768)
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -142,12 +143,16 @@ static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
 {
     return ImGui::GetCurrentContext() ? (ImGui_ImplWin32_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
+static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData(ImGuiIO& io)
+{
+    return (ImGui_ImplWin32_Data*)io.BackendPlatformUserData;
+}
 
 // Functions
-static void ImGui_ImplWin32_UpdateKeyboardCodePage()
+static void ImGui_ImplWin32_UpdateKeyboardCodePage(ImGuiIO& io)
 {
     // Retrieve keyboard code page, required for handling of non-Unicode Windows.
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     HKL keyboard_layout = ::GetKeyboardLayout(0);
     LCID keyboard_lcid = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
     if (::GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
@@ -179,7 +184,7 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     bd->TicksPerSecond = perf_frequency;
     bd->Time = perf_counter;
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
-    ImGui_ImplWin32_UpdateKeyboardCodePage();
+    ImGui_ImplWin32_UpdateKeyboardCodePage(io);
 
     // Update monitor a first time during init
     ImGui_ImplWin32_UpdateMonitors();
@@ -187,6 +192,8 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->hWnd;
+    ::SetPropA(bd->hWnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
+    ::SetPropA(bd->hWnd, "IMGUI_VIEWPORT", main_viewport);
     ImGui_ImplWin32_InitMultiViewportSupport(platform_has_own_dc);
 
     // Dynamically load XInput library
@@ -230,6 +237,8 @@ void    ImGui_ImplWin32_Shutdown()
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
+    ::SetPropA(bd->hWnd, "IMGUI_CONTEXT", nullptr);
+    ::SetPropA(bd->hWnd, "IMGUI_VIEWPORT", nullptr);
     ImGui_ImplWin32_ShutdownMultiViewportSupport();
 
     // Unload XInput library
@@ -244,13 +253,11 @@ void    ImGui_ImplWin32_Shutdown()
     IM_DELETE(bd);
 }
 
-static bool ImGui_ImplWin32_UpdateMouseCursor()
+static bool ImGui_ImplWin32_UpdateMouseCursor(ImGuiIO& io, ImGuiMouseCursor imgui_cursor)
 {
-    ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return false;
 
-    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
@@ -282,51 +289,56 @@ static bool IsVkDown(int vk)
     return (::GetKeyState(vk) & 0x8000) != 0;
 }
 
-static void ImGui_ImplWin32_AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
+static void ImGui_ImplWin32_AddKeyEvent(ImGuiIO& io, ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
 {
-    ImGuiIO& io = ImGui::GetIO();
     io.AddKeyEvent(key, down);
     io.SetKeyEventNativeData(key, native_keycode, native_scancode); // To support legacy indexing (<1.87 user code)
     IM_UNUSED(native_scancode);
 }
 
-static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
+static void ImGui_ImplWin32_ProcessKeyEventsWorkarounds(ImGuiIO& io)
 {
     // Left & right Shift keys: when both are pressed together, Windows tend to not generate the WM_KEYUP event for the first released one.
     if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !IsVkDown(VK_LSHIFT))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftShift, false, VK_LSHIFT);
+        ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_LeftShift, false, VK_LSHIFT);
     if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !IsVkDown(VK_RSHIFT))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightShift, false, VK_RSHIFT);
+        ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_RightShift, false, VK_RSHIFT);
 
     // Sometimes WM_KEYUP for Win key is not passed down to the app (e.g. for Win+V on some setups, according to GLFW).
     if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) && !IsVkDown(VK_LWIN))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftSuper, false, VK_LWIN);
+        ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_LeftSuper, false, VK_LWIN);
     if (ImGui::IsKeyDown(ImGuiKey_RightSuper) && !IsVkDown(VK_RWIN))
-        ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightSuper, false, VK_RWIN);
+        ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_RightSuper, false, VK_RWIN);
 }
 
-static void ImGui_ImplWin32_UpdateKeyModifiers()
+static void ImGui_ImplWin32_UpdateKeyModifiers(ImGuiIO& io)
 {
-    ImGuiIO& io = ImGui::GetIO();
     io.AddKeyEvent(ImGuiMod_Ctrl, IsVkDown(VK_CONTROL));
     io.AddKeyEvent(ImGuiMod_Shift, IsVkDown(VK_SHIFT));
     io.AddKeyEvent(ImGuiMod_Alt, IsVkDown(VK_MENU));
     io.AddKeyEvent(ImGuiMod_Super, IsVkDown(VK_LWIN) || IsVkDown(VK_RWIN));
 }
 
+static ImGuiViewport* ImGui_ImplWin32_FindViewportByPlatformHandle(HWND hwnd)
+{
+    // We could use ImGui::FindViewportByPlatformHandle() but GetPropA() gets us closer to parallel multi-contexts,
+    // until we can pass an explicit context to FindViewportByPlatformHandle().
+    //return ImGui::FindViewportByPlatformHandle((void*)hwnd);
+    return (ImGuiViewport*)::GetPropA(hwnd, "IMGUI_VIEWPORT");
+}
+
 // This code supports multi-viewports (multiple OS Windows mapped into different Dear ImGui viewports)
 // Because of that, it is a little more complicated than your typical single-viewport binding code!
-static void ImGui_ImplWin32_UpdateMouseData()
+static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
 {
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     IM_ASSERT(bd->hWnd != 0);
 
     POINT mouse_screen_pos;
     bool has_mouse_screen_pos = ::GetCursorPos(&mouse_screen_pos) != 0;
 
     HWND focused_window = ::GetForegroundWindow();
-    const bool is_app_focused = (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd) || ImGui::FindViewportByPlatformHandle((void*)focused_window)));
+    const bool is_app_focused = (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd) || ImGui_ImplWin32_FindViewportByPlatformHandle(focused_window)));
     if (is_app_focused)
     {
         // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when io.ConfigNavMoveSetMousePos is enabled by user)
@@ -364,17 +376,16 @@ static void ImGui_ImplWin32_UpdateMouseData()
     ImGuiID mouse_viewport_id = 0;
     if (has_mouse_screen_pos)
         if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
-            if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
+            if (ImGuiViewport* viewport = ImGui_ImplWin32_FindViewportByPlatformHandle(hovered_hwnd))
                 mouse_viewport_id = viewport->ID;
     io.AddMouseViewportEvent(mouse_viewport_id);
 }
 
 // Gamepad navigation mapping
-static void ImGui_ImplWin32_UpdateGamepads()
+static void ImGui_ImplWin32_UpdateGamepads(ImGuiIO& io)
 {
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     //if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
     //    return;
 
@@ -423,7 +434,9 @@ static void ImGui_ImplWin32_UpdateGamepads()
     MAP_ANALOG(ImGuiKey_GamepadRStickDown,      gamepad.sThumbRY, -XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, -32768);
     #undef MAP_BUTTON
     #undef MAP_ANALOG
-#endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+#else // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+    IM_UNUSED(io);
+#endif
 }
 
 static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, HDC, LPRECT, LPARAM)
@@ -477,25 +490,26 @@ void    ImGui_ImplWin32_NewFrame()
     bd->Time = current_time;
 
     // Update OS mouse position
-    ImGui_ImplWin32_UpdateMouseData();
+    ImGui_ImplWin32_UpdateMouseData(io);
 
     // Process workarounds for known Windows key handling issues
-    ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
+    ImGui_ImplWin32_ProcessKeyEventsWorkarounds(io);
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
     if (bd->LastMouseCursor != mouse_cursor)
     {
         bd->LastMouseCursor = mouse_cursor;
-        ImGui_ImplWin32_UpdateMouseCursor();
+        ImGui_ImplWin32_UpdateMouseCursor(io, mouse_cursor);
     }
 
     // Update game controllers (if enabled and available)
-    ImGui_ImplWin32_UpdateGamepads();
+    ImGui_ImplWin32_UpdateGamepads(io);
 }
 
 // Map VK_xxx to ImGuiKey_xxx.
 // Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam);
 ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
 {
     // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED.
@@ -633,22 +647,10 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
 #define DBT_DEVNODES_CHANGED 0x0007
 #endif
 
-// Win32 message handler (process Win32 mouse/keyboard inputs, etc.)
-// Call from your application's message handler. Keep calling your message handler unless this function returns TRUE.
-// When implementing your own backend, you can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if Dear ImGui wants to use your inputs.
-// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-// Generally you may always pass all inputs to Dear ImGui, and hide them from your application based on those two flags.
-// PS: In this Win32 handler, we use the capture API (GetCapture/SetCapture/ReleaseCapture) to be able to read mouse coordinates when dragging mouse outside of our window bounds.
-// PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
-#if 0
-// Copy this line into your .cpp file to forward declare the function.
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#endif
-
+// Helper to obtain the source of mouse messages.
 // See https://learn.microsoft.com/en-us/windows/win32/tablet/system-events-and-mouse-messages
 // Prefer to call this at the top of the message handler to avoid the possibility of other Win32 calls interfering with this.
-static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
+static ImGuiMouseSource ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo()
 {
     LPARAM extra_info = ::GetMessageExtraInfo();
     if ((extra_info & 0xFFFFFF80) == 0xFF515700)
@@ -658,22 +660,40 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
     return ImGuiMouseSource_Mouse;
 }
 
+// Win32 message handler (process Win32 mouse/keyboard inputs, etc.)
+// Call from your application's message handler. Keep calling your message handler unless this function returns TRUE.
+// When implementing your own backend, you can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if Dear ImGui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+// Generally you may always pass all inputs to Dear ImGui, and hide them from your application based on those two flags.
+// PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
+
+// Copy either line into your .cpp file to forward declare the function:
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);                // Use ImGui::GetCurrentContext()
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, ImGuiIO& io); // Doesn't use ImGui::GetCurrentContext()
+
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     // Most backends don't have silent checks like this one, but we need it because WndProc are called early in CreateWindow().
     // We silently allow both context or just only backend data to be nullptr.
-    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
-    if (bd == nullptr)
+    if (ImGui::GetCurrentContext() == NULL)
         return 0;
-    ImGuiIO& io = ImGui::GetIO();
+    return ImGui_ImplWin32_WndProcHandlerEx(hwnd, msg, wParam, lParam, ImGui::GetIO());
+}
 
+// This version is in theory thread-safe in the sense that no path should access ImGui::GetCurrentContext().
+IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, ImGuiIO& io)
+{
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
+    if (bd == NULL)
+        return 0;
     switch (msg)
     {
     case WM_MOUSEMOVE:
     case WM_NCMOUSEMOVE:
     {
         // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
-        ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
+        ImGuiMouseSource mouse_source = ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo();
         const int area = (msg == WM_MOUSEMOVE) ? 1 : 2;
         bd->MouseHwnd = hwnd;
         if (bd->MouseTrackedArea != area)
@@ -723,14 +743,14 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
     {
-        ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
+        ImGuiMouseSource mouse_source = ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo();
         int button = 0;
         if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) { button = 0; }
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
         if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         if (bd->MouseButtonsDown == 0 && ::GetCapture() == nullptr)
-            ::SetCapture(hwnd);
+            ::SetCapture(hwnd); // Allow us to read mouse coordinates when dragging mouse outside of our window bounds.
         bd->MouseButtonsDown |= 1 << button;
         io.AddMouseSourceEvent(mouse_source);
         io.AddMouseButtonEvent(button, true);
@@ -741,7 +761,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_MBUTTONUP:
     case WM_XBUTTONUP:
     {
-        ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
+        ImGuiMouseSource mouse_source = ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo();
         int button = 0;
         if (msg == WM_LBUTTONUP) { button = 0; }
         if (msg == WM_RBUTTONUP) { button = 1; }
@@ -769,7 +789,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (wParam < 256)
         {
             // Submit modifiers
-            ImGui_ImplWin32_UpdateKeyModifiers();
+            ImGui_ImplWin32_UpdateKeyModifiers(io);
 
             // Obtain virtual key code and convert to ImGuiKey
             const ImGuiKey key = ImGui_ImplWin32_KeyEventToImGuiKey(wParam, lParam);
@@ -778,28 +798,28 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 
             // Special behavior for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit the key down event.
             if (key == ImGuiKey_PrintScreen && !is_key_down)
-                ImGui_ImplWin32_AddKeyEvent(key, true, vk, scancode);
+                ImGui_ImplWin32_AddKeyEvent(io, key, true, vk, scancode);
 
             // Submit key event
             if (key != ImGuiKey_None)
-                ImGui_ImplWin32_AddKeyEvent(key, is_key_down, vk, scancode);
+                ImGui_ImplWin32_AddKeyEvent(io, key, is_key_down, vk, scancode);
 
             // Submit individual left/right modifier events
             if (vk == VK_SHIFT)
             {
                 // Important: Shift keys tend to get stuck when pressed together, missing key-up events are corrected in ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
-                if (IsVkDown(VK_LSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftShift, is_key_down, VK_LSHIFT, scancode); }
-                if (IsVkDown(VK_RSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightShift, is_key_down, VK_RSHIFT, scancode); }
+                if (IsVkDown(VK_LSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_LeftShift, is_key_down, VK_LSHIFT, scancode); }
+                if (IsVkDown(VK_RSHIFT) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_RightShift, is_key_down, VK_RSHIFT, scancode); }
             }
             else if (vk == VK_CONTROL)
             {
-                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
-                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
+                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
+                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
             }
             else if (vk == VK_MENU)
             {
-                if (IsVkDown(VK_LMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftAlt, is_key_down, VK_LMENU, scancode); }
-                if (IsVkDown(VK_RMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightAlt, is_key_down, VK_RMENU, scancode); }
+                if (IsVkDown(VK_LMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_LeftAlt, is_key_down, VK_LMENU, scancode); }
+                if (IsVkDown(VK_RMENU) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(io, ImGuiKey_RightAlt, is_key_down, VK_RMENU, scancode); }
             }
         }
         return 0;
@@ -809,7 +829,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         io.AddFocusEvent(msg == WM_SETFOCUS);
         return 0;
     case WM_INPUTLANGCHANGE:
-        ImGui_ImplWin32_UpdateKeyboardCodePage();
+        ImGui_ImplWin32_UpdateKeyboardCodePage(io);
         return 0;
     case WM_CHAR:
         if (::IsWindowUnicode(hwnd))
@@ -827,7 +847,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
     case WM_SETCURSOR:
         // This is required to restore cursor when transitioning from e.g resize borders to client area.
-        if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
+        if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor(io, bd->LastMouseCursor))
             return 1;
         return 0;
     case WM_DEVICECHANGE:
@@ -1071,6 +1091,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 
     // Secondary viewports store their imgui context
     ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
+    ::SetPropA(vd->Hwnd, "IMGUI_VIEWPORT", viewport);
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
@@ -1282,18 +1303,20 @@ static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 #endif
 }
 
+namespace ImGui { extern ImGuiIO& GetIOEx(ImGuiContext*); }
+
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     // Allow secondary viewport WndProc to be called regardless of current context
-    ImGuiContext* hwnd_ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
-    ImGuiContext* prev_ctx = ImGui::GetCurrentContext();
-    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
-        ImGui::SetCurrentContext(hwnd_ctx);
+    ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
+    if (ctx == NULL)
+        return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
+    ImGuiIO& io = ImGui::GetIOEx(ctx);
     LRESULT result = 0;
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+    if (ImGui_ImplWin32_WndProcHandlerEx(hWnd, msg, wParam, lParam, io))
         result = true;
-    else if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hWnd))
+    else if (ImGuiViewport* viewport = ImGui_ImplWin32_FindViewportByPlatformHandle(hWnd))
     {
         switch (msg)
         {
@@ -1322,8 +1345,6 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     }
     if (result == 0)
         result = DefWindowProc(hWnd, msg, wParam, lParam);
-    if (hwnd_ctx != prev_ctx && hwnd_ctx != NULL)
-        ImGui::SetCurrentContext(prev_ctx);
     return result;
 }
 

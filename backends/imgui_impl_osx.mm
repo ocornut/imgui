@@ -6,7 +6,7 @@
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: Mouse support. Can discriminate Mouse/Pen.
-//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy kVK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy kVK_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: IME support.
@@ -92,7 +92,7 @@ struct ImGui_ImplOSX_Data
     id                          Monitor;
     NSWindow*                   Window;
 
-    ImGui_ImplOSX_Data()        { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplOSX_Data()        { memset((void*)this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplOSX_Data*      ImGui_ImplOSX_GetBackendData()      { return (ImGui_ImplOSX_Data*)ImGui::GetIO().BackendPlatformUserData; }
@@ -291,6 +291,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 // Functions
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code);
 ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
 {
     switch (key_code)

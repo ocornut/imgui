@@ -19,6 +19,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2024-10-23: DirectX12: Unmap() call specify written range. The range is informational and may be used by debug tools.
 //  2024-10-07: DirectX12: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: DirectX12: Expose selected render state in ImGui_ImplDX12_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-10-07: DirectX12: Compiling with '#define ImTextureID=ImU64' is unnecessary now that dear imgui defaults ImTextureID to u64 instead of void*.
@@ -293,9 +294,9 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     }
 
     // Upload vertex/index data into a single contiguous GPU buffer
+    // During Map() we specify a null read range (as per DX12 API, this is informational and for tooling only)
     void* vtx_resource, *idx_resource;
-    D3D12_RANGE range;
-    memset(&range, 0, sizeof(D3D12_RANGE));
+    D3D12_RANGE range = { 0, 0 };
     if (fr->VertexBuffer->Map(0, &range, &vtx_resource) != S_OK)
         return;
     if (fr->IndexBuffer->Map(0, &range, &idx_resource) != S_OK)
@@ -310,7 +311,13 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         vtx_dst += draw_list->VtxBuffer.Size;
         idx_dst += draw_list->IdxBuffer.Size;
     }
+
+    // During Unmap() we specify the written range (as per DX12 API, this is informational and for tooling only)
+    range.End = (SIZE_T)((intptr_t)vtx_dst - (intptr_t)vtx_resource);
+    IM_ASSERT(range.End == draw_data->TotalVtxCount * sizeof(ImDrawVert));
     fr->VertexBuffer->Unmap(0, &range);
+    range.End = (SIZE_T)((intptr_t)idx_dst - (intptr_t)idx_resource);
+    IM_ASSERT(range.End == draw_data->TotalIdxCount * sizeof(ImDrawIdx));
     fr->IndexBuffer->Unmap(0, &range);
 
     // Setup desired DX state

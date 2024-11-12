@@ -84,7 +84,7 @@ struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
 
-    ImGui_ImplMetal_Data()      { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplMetal_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplMetal_Data*    ImGui_ImplMetal_GetBackendData()    { return ImGui::GetCurrentContext() ? (ImGui_ImplMetal_Data*)ImGui::GetIO().BackendRendererUserData : nullptr; }
