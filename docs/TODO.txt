@@ -9,8 +9,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc: add a proper documentation system (maybe relying on automation? #435)
  - doc: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
- - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
-
+ 
  - window: preserve/restore relative focus ordering (persistent or not), and e.g. of multiple reappearing windows (#2304) -> also see docking reference to same #.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
@@ -44,7 +43,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command). (WIP branch)
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
  - drawlist: non-AA strokes have gaps between points (#593, #288), glitch especially on RenderCheckmark() and ColorPicker4().
- - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
+ - drawlist: callback: add an extra void* in ImDrawCallback to expose render state instead of pulling from Renderer_RenderState (would break API).
  - drawlist: AddRect vs AddLine position confusing (#2441)
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
@@ -303,14 +302,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16-bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line? how about CTRL+Tab)
- ! nav: never clear NavId on some setup (e.g. gamepad centric)
- - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
  - nav: Home/End behavior when navigable item is not fully visible at the edge of scrolling? should be backtrack to keep item into view?
  - nav: NavScrollToBringItemIntoView() with item bigger than view should focus top-right? Repro: using Nav in "About Window"
- - nav: wrap around logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
+ - nav: expose wrap around flags/logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
  - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
+ - nav: holding space to repeat a button doesn't show button activated during hold.
  - nav: NavFlattened: init requests don't work properly on flattened siblings.
  - nav: NavFlattened: pageup/pagedown/home/end don't work properly on flattened siblings.
  - nav: NavFlattened: ESC on a flattened child should select something.

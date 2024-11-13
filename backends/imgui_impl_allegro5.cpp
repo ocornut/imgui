@@ -3,7 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Clipboard support (from Allegro 5.1.12)
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 // Missing features:
@@ -150,14 +150,14 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawList* draw_list = draw_data->CmdLists[n];
 
         ImVector<ImDrawVertAllegro>& vertices = bd->BufVertices;
 #if ALLEGRO_HAS_DRAW_INDEXED_PRIM
-        vertices.resize(cmd_list->VtxBuffer.Size);
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++)
+        vertices.resize(draw_list->VtxBuffer.Size);
+        for (int i = 0; i < draw_list->VtxBuffer.Size; i++)
         {
-            const ImDrawVert* src_v = &cmd_list->VtxBuffer[i];
+            const ImDrawVert* src_v = &draw_list->VtxBuffer[i];
             ImDrawVertAllegro* dst_v = &vertices[i];
             DRAW_VERT_IMGUI_TO_ALLEGRO(dst_v, src_v);
         }
@@ -167,21 +167,21 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             // FIXME-OPT: Allegro doesn't support 16-bit indices.
             // You can '#define ImDrawIdx int' in imconfig.h to request Dear ImGui to output 32-bit indices.
             // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
-            bd->BufIndices.resize(cmd_list->IdxBuffer.Size);
-            for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
-                bd->BufIndices[i] = (int)cmd_list->IdxBuffer.Data[i];
+            bd->BufIndices.resize(draw_list->IdxBuffer.Size);
+            for (int i = 0; i < draw_list->IdxBuffer.Size; ++i)
+                bd->BufIndices[i] = (int)draw_list->IdxBuffer.Data[i];
             indices = bd->BufIndices.Data;
         }
         else if (sizeof(ImDrawIdx) == 4)
         {
-            indices = (const int*)cmd_list->IdxBuffer.Data;
+            indices = (const int*)draw_list->IdxBuffer.Data;
         }
 #else
         // Allegro's implementation of al_draw_indexed_prim() for DX9 was broken until 5.2.5. Unindex buffers ourselves while converting vertex format.
-        vertices.resize(cmd_list->IdxBuffer.Size);
-        for (int i = 0; i < cmd_list->IdxBuffer.Size; i++)
+        vertices.resize(draw_list->IdxBuffer.Size);
+        for (int i = 0; i < draw_list->IdxBuffer.Size; i++)
         {
-            const ImDrawVert* src_v = &cmd_list->VtxBuffer[cmd_list->IdxBuffer[i]];
+            const ImDrawVert* src_v = &draw_list->VtxBuffer[draw_list->IdxBuffer[i]];
             ImDrawVertAllegro* dst_v = &vertices[i];
             DRAW_VERT_IMGUI_TO_ALLEGRO(dst_v, src_v);
         }
@@ -189,9 +189,9 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 
         // Render command lists
         ImVec2 clip_off = draw_data->DisplayPos;
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+        for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
                 // User callback, registered via ImDrawList::AddCallback()
@@ -199,7 +199,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                     ImGui_ImplAllegro5_SetupRenderState(draw_data);
                 else
-                    pcmd->UserCallback(cmd_list, pcmd);
+                    pcmd->UserCallback(draw_list, pcmd);
             }
             else
             {
@@ -311,7 +311,9 @@ static void ImGui_ImplAllegro5_SetClipboardText(ImGuiContext*, const char* text)
 }
 #endif
 
-static ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
+// Not static to allow third-party code to use that if they want to (but undocumented)
+ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code);
+ImGuiKey ImGui_ImplAllegro5_KeyCodeToImGuiKey(int key_code)
 {
     switch (key_code)
     {
