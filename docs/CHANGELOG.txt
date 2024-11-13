@@ -76,6 +76,11 @@ Other changes:
   between _Header and _HeaderHovered which was introduced v1.91 (#8106, #1861)
 - Buttons: using ImGuiItemFlags_ButtonRepeat makes default button behavior use
   PressedOnClick instead of PressedOnClickRelease when unspecified.
+  - This is intended to make the +/- buttons of InputInt/InputFloat react on the
+    initial mouse down event.
+  - Note that it may reveal incorrect usage if you were using InputInt/InputFloat
+    without persistent storage by relying solely on e.g. IsItemDeactivatedAfterEdit():
+    this was never supported and didn't work consistantly (see #8149).
 - InputText: fixed a bug (regression in 1.91.2) where modifying text buffer within
   a callback would sometimes prevents further appending to the buffer.
 - Tabs, Style: made ImGuiCol_TabDimmedSelectedOverline alpha 0 (not visible) in default
