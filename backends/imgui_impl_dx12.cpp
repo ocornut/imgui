@@ -50,6 +50,9 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
+// TODO: Pass in configuration parameter in ImGui standard manner.
+bool ImGuiConfigFlags_ConvertSRGBToLinear = false; // TODO: Enable to degamma into linear target as required.
+
 // DirectX data
 struct ImGui_ImplDX12_RenderBuffers;
 struct ImGui_ImplDX12_Data
@@ -606,7 +609,11 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
 
     // Create the pixel shader
     {
-        static const char* pixelShader =
+
+        // ADV_SW_PATCH: Added pixel shader variant that degamma's output for use in non _SRGB linear render targets
+        // that require degamma to be performed in GPU software
+
+        static const char* pixelShader_straight =
             "struct PS_INPUT\
             {\
               float4 pos : SV_POSITION;\
@@ -621,7 +628,27 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
               float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
               return out_col; \
             }";
+        static const char* pixelShader_linear_target =
+            "struct PS_INPUT\
+            {\
+              float4 pos : SV_POSITION;\
+              float4 col : COLOR0;\
+              float2 uv  : TEXCOORD0;\
+            };\
+            SamplerState sampler0 : register(s0);\
+            Texture2D texture0 : register(t0);\
+float3 RemoveSRGBCurve (float3 x)\
+{   return             ( abs (x) < 0.04045f ) ?\
+    sign (x) *       ( abs (x) / 12.92f   ) :\
+    sign (x) * pow ( ( abs (x) + 0.055f   ) / 1.055f, 2.4f ); }\
+            float4 main(PS_INPUT input) : SV_Target\
+            {\
+              float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
+              out_col.rgb = RemoveSRGBCurve(out_col.rgb); \
+              return out_col; \
+            }";
 
+        auto pixelShader = ImGuiConfigFlags_ConvertSRGBToLinear ? pixelShader_linear_target : pixelShader_straight;
         if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShaderBlob, nullptr)))
         {
             vertexShaderBlob->Release();
