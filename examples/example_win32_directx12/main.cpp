@@ -232,7 +232,7 @@ int main(int, char**)
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault(nullptr, (void*)g_pd3dCommandList);
+            ImGui::RenderPlatformWindowsDefault();
         }
 
         // Present
