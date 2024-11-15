@@ -55,8 +55,16 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
-// DirectX data
+// DirectX12 data
 struct ImGui_ImplDX12_RenderBuffers;
+
+struct ImGui_ImplDX12_Texture
+{
+    ID3D12Resource*             pTextureResource;
+    D3D12_CPU_DESCRIPTOR_HANDLE hFontSrvCpuDescHandle;
+    D3D12_GPU_DESCRIPTOR_HANDLE hFontSrvGpuDescHandle;
+};
+
 struct ImGui_ImplDX12_Data
 {
     ImGui_ImplDX12_InitInfo     InitInfo;
@@ -64,9 +72,7 @@ struct ImGui_ImplDX12_Data
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
     DXGI_FORMAT                 RTVFormat;
-    ID3D12Resource*             pFontTextureResource;
-    D3D12_CPU_DESCRIPTOR_HANDLE hFontSrvCpuDescHandle;
-    D3D12_GPU_DESCRIPTOR_HANDLE hFontSrvGpuDescHandle;
+    ImGui_ImplDX12_Texture      FontTexture;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
     UINT                        numFramesInFlight;
 
@@ -316,6 +322,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
     // Upload texture to graphics system
+    ImGui_ImplDX12_Texture* font_tex = &bd->FontTexture;
     {
         D3D12_HEAP_PROPERTIES props;
         memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
@@ -446,13 +453,13 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         srvDesc.Texture2D.MipLevels = desc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, bd->hFontSrvCpuDescHandle);
-        SafeRelease(bd->pFontTextureResource);
-        bd->pFontTextureResource = pTexture;
+        bd->pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, font_tex->hFontSrvCpuDescHandle);
+        SafeRelease(font_tex->pTextureResource);
+        font_tex->pTextureResource = pTexture;
     }
 
     // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)bd->hFontSrvGpuDescHandle.ptr);
+    io.Fonts->SetTexID((ImTextureID)font_tex->hFontSrvGpuDescHandle.ptr);
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
@@ -700,11 +707,12 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(bd->pPipelineState);
 
     // Free SRV descriptor used by texture
+    ImGui_ImplDX12_Texture* font_tex = &bd->FontTexture;
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (bd->InitInfo.SrvDescriptorFreeFn != NULL)
 #endif
-        bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, bd->hFontSrvCpuDescHandle, bd->hFontSrvGpuDescHandle);
-    SafeRelease(bd->pFontTextureResource);
+        bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, font_tex->hFontSrvCpuDescHandle, font_tex->hFontSrvGpuDescHandle);
+    SafeRelease(font_tex->pTextureResource);
     io.Fonts->SetTexID(0); // We copied bd->hFontSrvGpuDescHandle to io.Fonts->TexID so let's clear that as well.
 
     for (UINT i = 0; i < bd->numFramesInFlight; i++)
@@ -738,14 +746,14 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     if (init_info->SrvDescriptorAllocFn != NULL)
     {
         IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
-        init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->hFontSrvCpuDescHandle, &bd->hFontSrvGpuDescHandle);
+        init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->FontTexture.hFontSrvCpuDescHandle, &bd->FontTexture.hFontSrvGpuDescHandle);
     }
     else
     {
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
-        bd->hFontSrvCpuDescHandle = init_info->LegacySingleSrvCpuDescriptor;
-        bd->hFontSrvGpuDescHandle = init_info->LegacySingleSrvGpuDescriptor;
+        bd->FontTexture.hFontSrvCpuDescHandle = init_info->LegacySingleSrvCpuDescriptor;
+        bd->FontTexture.hFontSrvGpuDescHandle = init_info->LegacySingleSrvGpuDescriptor;
 #else
         IM_ASSERT(init_info->SrvDescriptorAllocFn != NULL);
         IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
