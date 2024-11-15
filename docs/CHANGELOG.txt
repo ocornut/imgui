@@ -41,10 +41,20 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: DX12: Changed ImGui_ImplDX12_Init() signature to take a
+  ImGui_ImplDX12_InitInfo struct.
+  - Using the new API, application is now required to pass function pointers
+    to allocate/free SRV Descriptors.
+  - We provide convenience legacy fields to pass a single descriptor,
+    matching the old API, but upcoming features will want multiple.
+  - Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
+
 Other changes:
 
 - Error Handling: fixed cases where recoverable error handling would crash when 
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
+- Examples: Win32+DX12: Using a basic free-list allocator to manage multiple
+  SRV descriptors.
 
 
 -----------------------------------------------------------------------

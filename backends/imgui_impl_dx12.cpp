@@ -19,6 +19,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-11-15: DirectX12: *BREAKING CHANGE* Changed ImGui_ImplDX12_Init() signature to take a ImGui_ImplDX12_InitInfo struct. Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
+//  2024-11-15: DirectX12: *BREAKING CHANGE* User is now required to pass function pointers to allocate/free SRV Descriptors. We provide convenience legacy fields to pass a single descriptor, matching the old API, but upcoming features will want multiple.
 //  2024-10-23: DirectX12: Unmap() call specify written range. The range is informational and may be used by debug tools.
 //  2024-10-07: DirectX12: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: DirectX12: Expose selected render state in ImGui_ImplDX12_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
@@ -57,6 +59,7 @@
 struct ImGui_ImplDX12_RenderBuffers;
 struct ImGui_ImplDX12_Data
 {
+    ImGui_ImplDX12_InitInfo     InitInfo;
     ID3D12Device*               pd3dDevice;
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
@@ -695,8 +698,14 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     ImGuiIO& io = ImGui::GetIO();
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
+
+    // Free SRV descriptor used by texture
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (bd->InitInfo.SrvDescriptorFreeFn != NULL)
+#endif
+        bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, bd->hFontSrvCpuDescHandle, bd->hFontSrvGpuDescHandle);
     SafeRelease(bd->pFontTextureResource);
-    io.Fonts->SetTexID(0); // We copied bd->pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    io.Fonts->SetTexID(0); // We copied bd->hFontSrvGpuDescHandle to io.Fonts->TexID so let's clear that as well.
 
     for (UINT i = 0; i < bd->numFramesInFlight; i++)
     {
@@ -706,8 +715,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     }
 }
 
-bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* cbv_srv_heap,
-                         D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
+bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 {
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
@@ -715,21 +723,39 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 
     // Setup backend capabilities flags
     ImGui_ImplDX12_Data* bd = IM_NEW(ImGui_ImplDX12_Data)();
+
+    bd->InitInfo = *init_info; // Deep copy
+    bd->pd3dDevice = init_info->Device;
+    bd->RTVFormat = init_info->RTVFormat;
+    bd->numFramesInFlight = init_info->NumFramesInFlight;
+    bd->pd3dSrvDescHeap = init_info->SrvDescriptorHeap;
+
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx12";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-    bd->pd3dDevice = device;
-    bd->RTVFormat = rtv_format;
-    bd->hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
-    bd->hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
-    bd->pFrameResources = new ImGui_ImplDX12_RenderBuffers[num_frames_in_flight];
-    bd->numFramesInFlight = num_frames_in_flight;
-    bd->pd3dSrvDescHeap = cbv_srv_heap;
-    bd->frameIndex = UINT_MAX;
+    // Allocate 1 SRV descriptor for the font texture
+    if (init_info->SrvDescriptorAllocFn != NULL)
+    {
+        IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
+        init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->hFontSrvCpuDescHandle, &bd->hFontSrvGpuDescHandle);
+    }
+    else
+    {
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
+        bd->hFontSrvCpuDescHandle = init_info->LegacySingleSrvCpuDescriptor;
+        bd->hFontSrvGpuDescHandle = init_info->LegacySingleSrvGpuDescriptor;
+#else
+        IM_ASSERT(init_info->SrvDescriptorAllocFn != NULL);
+        IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
+#endif
+    }
 
     // Create buffers with a default size (they will later be grown as needed)
-    for (int i = 0; i < num_frames_in_flight; i++)
+    bd->frameIndex = UINT_MAX;
+    bd->pFrameResources = new ImGui_ImplDX12_RenderBuffers[bd->numFramesInFlight];
+    for (int i = 0; i < (int)bd->numFramesInFlight; i++)
     {
         ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[i];
         fr->IndexBuffer = nullptr;
@@ -741,6 +767,22 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     return true;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// Legacy initialization API Obsoleted in 1.91.5
+// font_srv_cpu_desc_handle and font_srv_gpu_desc_handle are handles to a single SRV descriptor to use for the internal font texture, they must be in 'srv_descriptor_heap'
+bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* srv_descriptor_heap, D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
+{
+    ImGui_ImplDX12_InitInfo init_info;
+    init_info.Device = device;
+    init_info.NumFramesInFlight = num_frames_in_flight;
+    init_info.RTVFormat = rtv_format;
+    init_info.SrvDescriptorHeap = srv_descriptor_heap;
+    init_info.LegacySingleSrvCpuDescriptor = font_srv_cpu_desc_handle;
+    init_info.LegacySingleSrvGpuDescriptor = font_srv_gpu_desc_handle;;
+    return ImGui_ImplDX12_Init(&init_info);
+}
+#endif
+
 void ImGui_ImplDX12_Shutdown()
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -750,6 +792,7 @@ void ImGui_ImplDX12_Shutdown()
     // Clean up windows and device objects
     ImGui_ImplDX12_InvalidateDeviceObjects();
     delete[] bd->pFrameResources;
+
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
     io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
