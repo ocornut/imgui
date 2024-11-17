@@ -154,7 +154,7 @@ static void ImGui_ImplSDLGPU3_CreateShaderModules()
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
 
-    SDL_GPUDriver driver = SDL_GetGPUDriver(bd->Device);
+    const char* driver = SDL_GetGPUDeviceDriver(bd->Device);
     if(bd->ShaderModuleVert == nullptr)
     {
         SDL_GPUShaderCreateInfo vert_info{};
@@ -162,7 +162,7 @@ static void ImGui_ImplSDLGPU3_CreateShaderModules()
         vert_info.entrypoint = "main";
         vert_info.num_uniform_buffers = 1;  // UBO set 1 binding 0
 
-        if(driver == SDL_GPU_DRIVER_VULKAN)
+        if(strcmp(driver, "vulkan") == 0)
         {
             vert_info.code_size = sizeof(__glsl_shader_vert_spv);
             vert_info.code = (uint8_t*)__glsl_shader_vert_spv;
@@ -184,7 +184,7 @@ static void ImGui_ImplSDLGPU3_CreateShaderModules()
         frag_info.entrypoint = "main";
         frag_info.num_samplers = 1;  // sTexture set 0 binding 0
 
-        if(driver == SDL_GPU_DRIVER_VULKAN)
+        if(strcmp(driver, "vulkan") == 0)
         {
             frag_info.code_size = sizeof(__glsl_shader_frag_spv);
             frag_info.code = (uint8_t*)__glsl_shader_frag_spv;
