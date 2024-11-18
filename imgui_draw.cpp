@@ -2560,7 +2560,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 // Default font TTF is compressed with stb_compress then base85 encoded (see misc/fonts/binary_to_compressed_c.cpp for encoder)
 static unsigned int stb_decompress_length(const unsigned char* input);
 static unsigned int stb_decompress(unsigned char* output, const unsigned char* input, unsigned int length);
+#ifndef IMGUI_DISABLE_DEFAULT_FONTS
 static const char*  GetDefaultCompressedFontDataTTFBase85();
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONTS
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned char* dst)
 {
@@ -2576,6 +2578,7 @@ static void         Decode85(const unsigned char* src, unsigned char* dst)
 // Load embedded ProggyClean.ttf at size 13, disable oversampling
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
+#ifndef IMGUI_DISABLE_DEFAULT_FONTS
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (!font_cfg_template)
     {
@@ -2593,6 +2596,11 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, glyph_ranges);
     return font;
+#else
+    IM_ASSERT(!"Default font disabled");
+    IM_UNUSED(font_cfg_template);
+    return nullptr;
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONTS
 }
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
@@ -2717,9 +2725,11 @@ bool    ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
 
+#ifndef IMGUI_DISABLE_DEFAULT_FONTS
     // Default font is none are specified
     if (ConfigData.Size == 0)
         AddFontDefault();
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONTS
 
     // Select builder
     // - Note that we do not reassign to atlas->FontBuilderIO, since it is likely to point to static data which
@@ -4578,6 +4588,8 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // Exported using misc/fonts/binary_to_compressed_c.cpp (with compression + base85 string encoding).
 // The purpose of encoding as base85 instead of "0x00,0x01,..." style is only save on _source code_ size.
 //-----------------------------------------------------------------------------
+
+#ifndef IMGUI_DISABLE_DEFAULT_FONTS
 static const char proggy_clean_ttf_compressed_data_base85[11980 + 1] =
     "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"
     "2*>]b(MC;$jPfY.;h^`IWM9<Lh2TlS+f-s$o6Q<BWH`YiU.xfLq$N;$0iR/GX:U(jcW2p/W*q?-qmnUCI;jHSAiFWM.R*kU@C=GH?a9wp8f$e.-4^Qg1)Q-GL(lf(r/7GrRgwV%MS=C#"
@@ -4670,5 +4682,6 @@ static const char* GetDefaultCompressedFontDataTTFBase85()
 {
     return proggy_clean_ttf_compressed_data_base85;
 }
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONTS
 
 #endif // #ifndef IMGUI_DISABLE
