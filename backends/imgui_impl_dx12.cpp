@@ -72,12 +72,14 @@ struct ImGui_ImplDX12_Data
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
     DXGI_FORMAT                 RTVFormat;
-    ImGui_ImplDX12_Texture      FontTexture;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
     UINT                        numFramesInFlight;
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
     UINT                        frameIndex;
+
+    ImGui_ImplDX12_Texture      FontTexture;
+    bool                        LegacySingleDescriptorUsed;
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); frameIndex = UINT_MAX; }
 };
@@ -708,10 +710,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
 
     // Free SRV descriptor used by texture
     ImGui_ImplDX12_Texture* font_tex = &bd->FontTexture;
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    if (bd->InitInfo.SrvDescriptorFreeFn != NULL)
-#endif
-        bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, font_tex->hFontSrvCpuDescHandle, font_tex->hFontSrvGpuDescHandle);
+    bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, font_tex->hFontSrvCpuDescHandle, font_tex->hFontSrvGpuDescHandle);
     SafeRelease(font_tex->pTextureResource);
     io.Fonts->SetTexID(0); // We copied bd->hFontSrvGpuDescHandle to io.Fonts->TexID so let's clear that as well.
 
@@ -731,8 +730,9 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
     // Setup backend capabilities flags
     ImGui_ImplDX12_Data* bd = IM_NEW(ImGui_ImplDX12_Data)();
-
     bd->InitInfo = *init_info; // Deep copy
+    init_info = &bd->InitInfo;
+
     bd->pd3dDevice = init_info->Device;
     bd->RTVFormat = init_info->RTVFormat;
     bd->numFramesInFlight = init_info->NumFramesInFlight;
@@ -742,23 +742,31 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     io.BackendRendererName = "imgui_impl_dx12";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-    // Allocate 1 SRV descriptor for the font texture
-    if (init_info->SrvDescriptorAllocFn != NULL)
-    {
-        IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
-        init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->FontTexture.hFontSrvCpuDescHandle, &bd->FontTexture.hFontSrvGpuDescHandle);
-    }
-    else
-    {
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (init_info->SrvDescriptorAllocFn == NULL)
+    {
+        // Wrap legacy behavior of passing space for a single descriptor
         IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
-        bd->FontTexture.hFontSrvCpuDescHandle = init_info->LegacySingleSrvCpuDescriptor;
-        bd->FontTexture.hFontSrvGpuDescHandle = init_info->LegacySingleSrvGpuDescriptor;
-#else
-        IM_ASSERT(init_info->SrvDescriptorAllocFn != NULL);
-        IM_ASSERT(init_info->SrvDescriptorFreeFn != NULL);
-#endif
+        init_info->SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
+        {
+            ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+            IM_ASSERT(bd->LegacySingleDescriptorUsed == false);
+            *out_cpu_handle = bd->InitInfo.LegacySingleSrvCpuDescriptor;
+            *out_gpu_handle = bd->InitInfo.LegacySingleSrvGpuDescriptor;
+            bd->LegacySingleDescriptorUsed = true;
+        };
+        init_info->SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
+        {
+            ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+            IM_ASSERT(bd->LegacySingleDescriptorUsed == true);
+            bd->LegacySingleDescriptorUsed = false;
+        };
     }
+#endif
+
+    // Allocate 1 SRV descriptor for the font texture
+    IM_ASSERT(init_info->SrvDescriptorAllocFn != NULL && init_info->SrvDescriptorFreeFn != NULL);
+    init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->FontTexture.hFontSrvCpuDescHandle, &bd->FontTexture.hFontSrvGpuDescHandle);
 
     // Create buffers with a default size (they will later be grown as needed)
     bd->frameIndex = UINT_MAX;
