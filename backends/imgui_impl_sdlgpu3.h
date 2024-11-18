@@ -27,7 +27,6 @@
 
 // Initialization data, for ImGui_ImplSDLGPU_Init()
 // - Remember to set ColorTargetFormat to the correct format. If you're rendering to the swapchain, call SDL_GetGPUSwapchainTextureFormat to query the right value
-// [Please zero-clear before use!]
 struct ImGui_ImplSDLGPU_InitInfo
 {
     SDL_GPUDevice*       GpuDevice          = nullptr;
