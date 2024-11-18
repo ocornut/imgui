@@ -371,6 +371,26 @@ struct ImGuiDemoWindowData
 
     // Other data
     ExampleTreeNode* DemoTree = NULL;
+
+    // Destructor (purge all allocated demo data)
+    ~ImGuiDemoWindowData()
+    {
+        if (DemoTree != NULL)
+        {
+            // Assume there are only 3 levels of children hierarchy.
+            for (ExampleTreeNode* node_L1 : DemoTree->Childs)
+            {
+                for (ExampleTreeNode* node_L2 : node_L1->Childs)
+                {
+                    node_L2->Childs.clear_delete(); // delete L3 nodes.
+                }
+                node_L1->Childs.clear_delete(); // delete L2 nodes.
+            }
+            DemoTree->Childs.clear_delete(); // delete L1 nodes.
+            IM_DELETE(DemoTree); // delete L0 node.
+            DemoTree = NULL;
+        }
+    }
 };
 
 // Demonstrate most Dear ImGui features (this is big function!)
