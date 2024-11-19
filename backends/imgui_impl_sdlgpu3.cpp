@@ -219,7 +219,6 @@ void ImGui_ImplSDLGPU_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer
         return;
 
     ImGui_ImplSDLGPU_Data* bd = ImGui_ImplSDLGPU_GetBackendData();
-    ImGui_ImplSDLGPU_InitInfo* v = &bd->GPUInitInfo;
     ImGui_ImplSDLGPU_FrameData* fd = &bd->MainWindowFrameData;
     
     ImGui_ImplSDLGPU_SetupRenderState(draw_data,command_buffer,render_pass,fd,fb_width,fb_height);
