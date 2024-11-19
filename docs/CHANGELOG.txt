@@ -53,6 +53,8 @@ Other changes:
 
 - Error Handling: fixed cases where recoverable error handling would crash when 
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
+- Demo: example tree used by Property Editor & Selection demos properly freed
+  on application closure. (#8158) [@Legulysse]
 - Examples: Win32+DX12: Using a basic free-list allocator to manage multiple
   SRV descriptors.
 
