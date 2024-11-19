@@ -34,7 +34,7 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS += -framework Cocoa -framework IOKit -framework CoreVideo `sdl3-config --libs`
+	LIBS += -framework Cocoa -framework IOKit -framework CoreVideo `pkg-config --libs sdl3`
 	LIBS += -L/usr/local/lib -L/opt/local/lib
 
 	CXXFLAGS += `pkg-config sdl3 --cflags`
