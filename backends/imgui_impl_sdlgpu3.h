@@ -23,20 +23,15 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
-
-typedef enum SDL_GPUTextureFormat SDL_GPUTextureFormat;
-typedef enum SDL_GPUSampleCount SDL_GPUSampleCount;
-struct SDL_GPUDevice;
-struct SDL_GPUCommandBuffer;
-struct SDL_GPURenderPass;
+#include <SDL3/SDL_gpu.h>
 
 // Initialization data, for ImGui_ImplSDLGPU_Init()
 // - Remember to set ColorTargetFormat to the correct format. If you're rendering to the swapchain, call SDL_GetGPUSwapchainTextureFormat to query the right value
 struct ImGui_ImplSDLGPU_InitInfo
 {
-    SDL_GPUDevice*       GpuDevice;
-    SDL_GPUTextureFormat ColorTargetFormat;
-    SDL_GPUSampleCount   MSAASamples;
+    SDL_GPUDevice*       GpuDevice          = nullptr;
+    SDL_GPUTextureFormat ColorTargetFormat  = SDL_GPU_TEXTUREFORMAT_INVALID;
+    SDL_GPUSampleCount   MSAASamples        = SDL_GPU_SAMPLECOUNT_1;
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
