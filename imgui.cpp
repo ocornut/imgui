@@ -2149,6 +2149,7 @@ void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end,
     }
 }
 
+#ifndef IMGUI_ENABLE_SSE4_2
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
 // - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
@@ -2171,6 +2172,7 @@ static const ImU32 GCrc32LookupTable[256] =
     0xA00AE278,0xD70DD2EE,0x4E048354,0x3903B3C2,0xA7672661,0xD06016F7,0x4969474D,0x3E6E77DB,0xAED16A4A,0xD9D65ADC,0x40DF0B66,0x37D83BF0,0xA9BCAE53,0xDEBB9EC5,0x47B2CF7F,0x30B5FFE9,
     0xBDBDF21C,0xCABAC28A,0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
 };
+#endif
 
 // Known size hash
 // It is ok to call ImHashData on a string with known length but the ### operator won't be supported.
@@ -2179,10 +2181,16 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 {
     ImU32 crc = ~seed;
     const unsigned char* data = (const unsigned char*)data_p;
+#ifndef IMGUI_ENABLE_SSE4_2
     const ImU32* crc32_lut = GCrc32LookupTable;
     while (data_size-- != 0)
         crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
     return ~crc;
+#else
+    while (data_size-- != 0)
+        crc = _mm_crc32_u8(crc, *data++);
+    return ~crc;
+#endif
 }
 
 // Zero-terminated string hash, with support for ### to reset back to seed value
@@ -2196,7 +2204,9 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
     seed = ~seed;
     ImU32 crc = seed;
     const unsigned char* data = (const unsigned char*)data_p;
+#ifndef IMGUI_ENABLE_SSE4_2
     const ImU32* crc32_lut = GCrc32LookupTable;
+#endif
     if (data_size != 0)
     {
         while (data_size-- != 0)
@@ -2204,7 +2214,11 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
             unsigned char c = *data++;
             if (c == '#' && data_size >= 2 && data[0] == '#' && data[1] == '#')
                 crc = seed;
+#ifndef IMGUI_ENABLE_SSE4_2
             crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+#else
+            crc = _mm_crc32_u8(crc, c);
+#endif
         }
     }
     else
@@ -2213,7 +2227,11 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
         {
             if (c == '#' && data[0] == '#' && data[1] == '#')
                 crc = seed;
+#ifndef IMGUI_ENABLE_SSE4_2
             crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+#else
+            crc = _mm_crc32_u8(crc, c);
+#endif
         }
     }
     return ~crc;
