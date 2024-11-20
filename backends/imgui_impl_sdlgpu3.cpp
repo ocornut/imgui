@@ -90,13 +90,13 @@ static void CreateOrResizeBuffer(SDL_GPUBuffer** buffer,uint32_t* old_size, uint
     IM_ASSERT(*buffer != nullptr && "Failed to create GPU Buffer, call SDL_GetError() for more information");
 }
 
-static void ImGui_ImplSDLGPU_SetupRenderState(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer,SDL_GPURenderPass * render_pass, ImGui_ImplSDLGPU_FrameData* fd,uint32_t fb_width, uint32_t fb_height)
+static void ImGui_ImplSDLGPU_SetupRenderState(ImDrawData* draw_data,SDL_GPUGraphicsPipeline* pipeline, SDL_GPUCommandBuffer* command_buffer,SDL_GPURenderPass * render_pass, ImGui_ImplSDLGPU_FrameData* fd, uint32_t fb_width, uint32_t fb_height)
 {
     ImGui_ImplSDLGPU_Data* bd = ImGui_ImplSDLGPU_GetBackendData();
     
     // Bind graphics pipeline:
     {
-        SDL_BindGPUGraphicsPipeline(render_pass,bd->Pipeline);
+        SDL_BindGPUGraphicsPipeline(render_pass,pipeline);
     }
    
     // Bind Vertex And Index Buffers:
@@ -210,7 +210,7 @@ void Imgui_ImplSDLGPU_PrepareDrawData(ImDrawData* draw_data,SDL_GPUCommandBuffer
     SDL_ReleaseGPUTransferBuffer(v->GpuDevice, vertex_transferbuffer);
 }
 
-void ImGui_ImplSDLGPU_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer,SDL_GPURenderPass * render_pass)
+void ImGui_ImplSDLGPU_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -220,8 +220,11 @@ void ImGui_ImplSDLGPU_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer
 
     ImGui_ImplSDLGPU_Data* bd = ImGui_ImplSDLGPU_GetBackendData();
     ImGui_ImplSDLGPU_FrameData* fd = &bd->MainWindowFrameData;
-    
-    ImGui_ImplSDLGPU_SetupRenderState(draw_data,command_buffer,render_pass,fd,fb_width,fb_height);
+
+    if (pipeline == nullptr)
+        pipeline = bd->Pipeline;
+
+    ImGui_ImplSDLGPU_SetupRenderState(draw_data,pipeline,command_buffer,render_pass,fd,fb_width,fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
