@@ -28,6 +28,9 @@
 #include "imgui_impl_sdlgpu3.h"
 #include "imgui_impl_sdlgpu3_shaders.h"
 
+// SDL
+#include <SDL3/SDL_gpu.h>
+
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplSDLGPU_RenderDrawData()
 struct ImGui_ImplSDLGPU_FrameData
 {
