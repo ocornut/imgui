@@ -4583,11 +4583,11 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // MIT license (see License.txt in http://www.proggyfonts.net/index.php?menu=download)
 // Download and more information at http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
 //-----------------------------------------------------------------------------
-// File: 'ProggyClean.ttf' (41208 bytes)
-// Exported using "misc/fonts/binary_to_compressed_c.exe ../ProggyClean.ttf proggy_clean_ttf_compressed (with compression, no base85 encoding).
-//-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
+
+// File: 'ProggyClean.ttf' (41208 bytes)
+// Exported using binary_to_compressed_c.exe -u8 "ProggyClean.ttf" proggy_clean_ttf
 static const unsigned int proggy_clean_ttf_compressed_size = 9583;
 static const unsigned char proggy_clean_ttf_compressed_data[9583] =
 {

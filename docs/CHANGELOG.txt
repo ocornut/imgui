@@ -56,6 +56,7 @@ Other changes:
 - Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
 - Misc: added IMGUI_DISABLE_DEFAULT_FONT to strip embedded font from binary. (#8161)
   [@demonese]
+- Tools: binary_to_compressed_c: added -u8/-u32/-base85 export options.
 - Demo: example tree used by Property Editor & Selection demos properly freed
   on application closure. (#8158) [@Legulysse]
 - Examples: Win32+DX12: Using a basic free-list allocator to manage multiple
