@@ -53,6 +53,7 @@ Other changes:
 
 - Error Handling: fixed cases where recoverable error handling would crash when 
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
+- Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
 - Misc: added IMGUI_DISABLE_DEFAULT_FONT to strip embedded font from binary. (#8161)
   [@demonese]
 - Demo: example tree used by Property Editor & Selection demos properly freed

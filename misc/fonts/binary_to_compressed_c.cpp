@@ -113,21 +113,42 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
         }
         fprintf(out, "\";\n\n");
     }
+#if 0
     else
     {
+        // As individual bytes, not subject to endianness issues.
+        fprintf(out, "%sconst unsigned int %s_%ssize = %d;\n", static_str, symbol, compressed_str, (int)compressed_sz);
+        fprintf(out, "%sconst unsigned char %s_%sdata[%d] =\n{", static_str, symbol, compressed_str, (int)compressed_sz);
+        int column = 0;
+        for (int i = 0; i < compressed_sz; i++)
+        {
+            unsigned char d = *(unsigned char*)(compressed + i);
+            if (column == 0)
+                fprintf(out, "\n    ");
+            column += fprintf(out, "%d,", d);
+            if (column >= 180)
+                column = 0;
+        }
+        fprintf(out, "\n};\n\n");
+    }
+#else
+    else
+    {
+        // As integers
         fprintf(out, "%sconst unsigned int %s_%ssize = %d;\n", static_str, symbol, compressed_str, (int)compressed_sz);
         fprintf(out, "%sconst unsigned int %s_%sdata[%d/4] =\n{", static_str, symbol, compressed_str, (int)((compressed_sz + 3) / 4)*4);
         int column = 0;
         for (int i = 0; i < compressed_sz; i += 4)
         {
             unsigned int d = *(unsigned int*)(compressed + i);
-            if ((column++ % 12) == 0)
+            if ((column++ % 14) == 0)
                 fprintf(out, "\n    0x%08x, ", d);
             else
                 fprintf(out, "0x%08x, ", d);
         }
         fprintf(out, "\n};\n\n");
     }
+#endif
 
     // Cleanup
     delete[] data;
