@@ -343,6 +343,28 @@ void ImGui_ImplDX9_Shutdown()
     IM_DELETE(bd);
 }
 
+// Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
+static void ImGui_ImplDX9_CopyTextureRegion(bool tex_use_colors, ImU32* src, int src_pitch, ImU32* dst, int dst_pitch, int w, int h)
+{
+#ifndef IMGUI_USE_BGRA_PACKED_COLOR
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    const bool convert_rgba_to_bgra = (!bd->HasRgbaSupport && tex_use_colors);
+#else
+    const bool convert_rgba_to_bgra = false;
+    IM_UNUSED(tex_use_colors);
+#endif
+    for (int y = 0; y < h; y++)
+    {
+        ImU32* src_p = (ImU32*)((unsigned char*)src + src_pitch * y);
+        ImU32* dst_p = (ImU32*)((unsigned char*)dst + dst_pitch * y);
+        if (convert_rgba_to_bgra)
+            for (int x = w; x > 0; x--, src_p++, dst_p++) // Convert copy
+                *dst_p = IMGUI_COL_TO_DX9_ARGB(*src_p);
+        else
+            memcpy(dst_p, src_p, w * 4); // Raw copy
+    }
+}
+
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     // Build texture atlas
@@ -352,17 +374,6 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
 
-    // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
-#ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!bd->HasRgbaSupport && io.Fonts->TexPixelsUseColors)
-    {
-        ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
-        for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + (size_t)width * height; dst < dst_end; src++, dst++)
-            *dst = IMGUI_COL_TO_DX9_ARGB(*src);
-        pixels = (unsigned char*)dst_start;
-    }
-#endif
-
     // Upload texture to graphics system
     bd->FontTexture = nullptr;
     if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, bd->HasRgbaSupport ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
@@ -370,18 +381,11 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     D3DLOCKED_RECT tex_locked_rect;
     if (bd->FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
         return false;
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
+    ImGui_ImplDX9_CopyTextureRegion(io.Fonts->TexPixelsUseColors, (ImU32*)pixels, width * bytes_per_pixel, (ImU32*)tex_locked_rect.pBits, (int)tex_locked_rect.Pitch, width, height);
     bd->FontTexture->UnlockRect(0);
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)bd->FontTexture);
-
-#ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!bd->HasRgbaSupport && io.Fonts->TexPixelsUseColors)
-        ImGui::MemFree(pixels);
-#endif
-
     return true;
 }
 
