@@ -4856,6 +4856,13 @@ ImGuiPlatformIO& ImGui::GetPlatformIO()
     return GImGui->PlatformIO;
 }
 
+// This variant exists to facilitate backends experimenting with multi-threaded parallel context. (#8069, #6293, #5856)
+ImGuiPlatformIO& ImGui::GetPlatformIOEx(ImGuiContext* ctx)
+{
+    IM_ASSERT(ctx != NULL);
+    return ctx->PlatformIO;
+}
+
 // Pass this to your backend rendering function! Valid after Render() and until the next call to NewFrame()
 ImDrawData* ImGui::GetDrawData()
 {

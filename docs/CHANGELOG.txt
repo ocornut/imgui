@@ -64,6 +64,10 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Backends: Win32: Fixed a crash/regression in 1.91.5 when running two processes
+  with multi-viewports (was using GetProp() to query property which could have
+  belonged to another process). (#8162, #8069) [@sammyfreg, @ocornut]
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.5 (Released 2024-11-07)
