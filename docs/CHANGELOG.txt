@@ -59,6 +59,9 @@ Other changes:
 - Tools: binary_to_compressed_c: added -u8/-u32/-base85 export options.
 - Demo: example tree used by Property Editor & Selection demos properly freed
   on application closure. (#8158) [@Legulysse]
+- Backends: Vulkan: Make user-provided descriptor pool optional. As a convenience,
+  when setting init_info->DescriptorPoolSize then the backend will create and manage
+  one itself. (#8172, #4867) [@zeux]
 - Examples: Win32+DX12: Using a basic free-list allocator to manage multiple
   SRV descriptors.
 
