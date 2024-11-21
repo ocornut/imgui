@@ -169,6 +169,7 @@ namespace
         const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
         const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
         void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = nullptr);
+        FreeTypeFont()          { memset(this, 0, sizeof(*this)); }
         ~FreeTypeFont()         { CloseFont(); }
 
         // [Internals]
