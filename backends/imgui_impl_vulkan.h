@@ -73,7 +73,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkDevice                        Device;
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
-    VkDescriptorPool                DescriptorPool;               // See requirements in note above
+    VkDescriptorPool                DescriptorPool;               // See requirements in note above; ignored if using DescriptorPoolSize
     VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
     uint32_t                        MinImageCount;                // >= 2
     uint32_t                        ImageCount;                   // >= MinImageCount
@@ -89,6 +89,9 @@ struct ImGui_ImplVulkan_InitInfo
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
 #endif
+
+    // (Optional) Set to create internal descriptor pool instead of using DescriptorPool
+    uint32_t                        DescriptorPoolSize;
 
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
