@@ -191,7 +191,7 @@ int main(int, char**)
             target_info.cycle = false;
             SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
             /// Render ImGui
-            ImGui_ImplSDLGPU_RenderDrawData(draw_data, command_buffer, render_pass, pipeline);
+            ImGui_ImplSDLGPU_RenderDrawData(draw_data, command_buffer, render_pass);
             SDL_EndGPURenderPass(render_pass);
         }
         // Submit the command buffer
