@@ -48,6 +48,9 @@ Breaking changes:
   - We provide convenience legacy fields to pass a single descriptor,
     matching the old API, but upcoming features will want multiple.
   - Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
+- Misc: changed CRC32 table to use CRC32c polynomial in order to be compatible
+  with the result of SSE 4.2 instructions. As a result, old .ini data may be
+  partially lost. (#8169, #4933) [@Teselka]
 
 Other changes:
 
