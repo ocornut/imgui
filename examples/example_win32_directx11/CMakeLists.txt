@@ -27,32 +27,26 @@ set(IMGUI_BACKEND_SRC
 list(TRANSFORM IMGUI_SRC PREPEND ${IMGUI_DIR})
 list(TRANSFORM IMGUI_BACKEND_SRC PREPEND ${IMGUI_DIR})
 
-# compiler flags
 set(CFLAGS 
         -Wall 
         -Werror 
         -Wnarrowing
         -O3
         -DNDEBUG)
-# necessary graphics libraries
 set(LDLIBS 
         d3d11 
         d3dcompiler 
         dwmapi)
 
-# add library with the imgui sources
+# build library with the imgui sources
 add_library(imgui_win32_directx11  ${IMGUI_SRC} ${IMGUI_BACKEND_SRC})
-# set compiler flags
 target_compile_options(imgui_win32_directx11  PRIVATE ${CFLAGS})
-# link against necessary graphics libraries
 target_link_libraries(imgui_win32_directx11  PRIVATE ${LDLIBS})
-# include headers from the IMGUI_DIR
 target_include_directories(imgui_win32_directx11  PRIVATE ${IMGUI_DIR})
 
-# finally, build the example main.cpp 
+# finally, build the example main.cpp and link to imgui library created above
 add_executable(imgui_win32_directx11_example main.cpp)
-# link example exe against the imgui library
+target_compile_options(imgui_win32_directx11_example  PRIVATE ${CFLAGS})
 target_link_libraries(imgui_win32_directx11_example PRIVATE imgui_win32_directx11)
-# include headers from the IMGUI_DIR and backends
 target_include_directories(imgui_win32_directx11_example  PRIVATE ${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
