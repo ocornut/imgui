@@ -36,6 +36,9 @@ EMS += -s DISABLE_EXCEPTION_CATCHING=1
 LDFLAGS += -s USE_GLFW=3 -s USE_WEBGPU=1
 LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
 
+# Build as single file (binary text encoded in .html file)
+#LDFLAGS += -sSINGLE_FILE
+
 # Emscripten allows preloading a file or folder to be accessible at runtime.
 # The Makefile for this example project suggests embedding the misc/fonts/ folder into our application, it will then be accessible as "/fonts"
 # See documentation for more details: https://emscripten.org/docs/porting/files/packaging_files.html
