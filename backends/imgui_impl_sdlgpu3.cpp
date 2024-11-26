@@ -394,7 +394,7 @@ static void Imgui_ImplSDLGPU_CreateShaders()
 
     SDL_GPUShaderCreateInfo fragment_shader_info = {};
     fragment_shader_info.entrypoint = "main";
-    fragment_shader_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    fragment_shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     fragment_shader_info.num_samplers = 1;
     fragment_shader_info.num_storage_buffers  = 0;
     fragment_shader_info.num_storage_textures = 0;
