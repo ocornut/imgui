@@ -64,6 +64,9 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking: Added an assert to clarify that ImGuiDockNodeFlags_CentralNode flag
+  (from internals) does not need to be passed to DockSpace(), as it causes general
+  havoc. (#8145)
 - Backends: Win32: Fixed a crash/regression in 1.91.5 when running two processes
   with multi-viewports (was using GetProp() to query property which could have
   belonged to another process). (#8162, #8069) [@sammyfreg, @ocornut]
