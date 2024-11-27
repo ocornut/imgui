@@ -2183,13 +2183,19 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 {
     ImU32 crc = ~seed;
     const unsigned char* data = (const unsigned char*)data_p;
+    const unsigned char *data_end = (const unsigned char*)data_p + data_size;
 #ifndef IMGUI_ENABLE_SSE4_2
     const ImU32* crc32_lut = GCrc32LookupTable;
-    while (data_size-- != 0)
+    while (data < data_end)
         crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
     return ~crc;
 #else
-    while (data_size-- != 0)
+    while (data + 4 <= data_end)
+    {
+        crc = _mm_crc32_u32(crc, *(ImU32*)data);
+        data += 4;
+    }
+    while (data < data_end)
         crc = _mm_crc32_u8(crc, *data++);
     return ~crc;
 #endif
