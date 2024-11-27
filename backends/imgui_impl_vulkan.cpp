@@ -147,6 +147,7 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCreateSwapchainKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyBuffer) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyCommandPool) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyDescriptorPool) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyDescriptorSetLayout) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyFence) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroyFramebuffer) \
