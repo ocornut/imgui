@@ -2,8 +2,9 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as texture identifier. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
+//  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 
 // The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
@@ -61,9 +62,8 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
-// Current version of the backend use 1 descriptor for the font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
-// It is expected that as early as Q1 2025 the backend will use a few more descriptors. Use this value + number of desired calls to ImGui_ImplVulkan_AddTexture().
-#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (1)     // Minimum per atlas
+// Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
+#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
@@ -112,9 +112,10 @@ IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo*
 IMGUI_IMPL_API void             ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_CreateFontsTexture();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_DestroyFontsTexture();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
+
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet == ImTextureID)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem
