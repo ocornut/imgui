@@ -2,10 +2,12 @@
 // (code)
 
 // Get the latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
-// Original code by @vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained since 2019 by @ocornut.
+// Original code by @vuhdo (Aleksei Skriabin) in 2017, with improvements by @mikesart.
+// Maintained since 2019 by @ocornut.
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025/XX/XX: refactored for the new ImFontLoader architecture, and ImGuiBackendFlags_RendererHasTextures support.
 //  2024/10/17: added plutosvg support for SVG Fonts (seems faster/better than lunasvg). Enable by using '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG'. (#7927)
 //  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
 //  2023/08/01: added support for SVG fonts, enable by using '#define IMGUI_ENABLE_FREETYPE_LUNASVG'. (#6591)
@@ -151,10 +153,19 @@ namespace
         bool        IsColored;          // The glyph is colored
     };
 
-    // Font parameters and metrics.
-    struct FontInfo
+    // Stored in ImFontAtlas::FontLoaderData
+    struct ImGui_ImplFreeType_Data
     {
-        uint32_t    PixelHeight;        // Size this font was generated with.
+        FT_Library                  Library;
+        FT_MemoryRec_               MemoryManager;
+
+        ImGui_ImplFreeType_Data() { memset((void*)this, 0, sizeof(*this)); }
+    };
+
+    // Font parameters and metrics.
+    struct ImGui_ImplFreeType_FontInfo
+    {
+        float       PixelHeight;        // Size this font was generated with.
         float       Ascender;           // The pixel extents above the baseline in pixels (typically positive).
         float       Descender;          // The extents below the baseline in pixels (typically negative).
         float       LineSpacing;        // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
@@ -162,40 +173,39 @@ namespace
         float       MaxAdvanceWidth;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
     };
 
-    // FreeType glyph rasterizer.
-    // NB: No ctor/dtor, explicitly call Init()/Shutdown()
-    struct FreeTypeFont
+    // Stored in ImFontConfig::FontLoaderData
+    struct ImGui_ImplFreeType_FontSrcData
     {
-        bool                    InitFont(FT_Library ft_library, ImFontConfig& src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
-        void                    CloseFont();
-        void                    SetPixelHeight(int pixel_height); // Change font pixel size. All following calls to RasterizeGlyph() will use this size
-        const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
-        const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
-        void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = nullptr);
-        FreeTypeFont()          { memset((void*)this, 0, sizeof(*this)); }
-        ~FreeTypeFont()         { CloseFont(); }
+        bool                            InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
+        void                            CloseFont();
+        void                            SetPixelHeight(float pixel_height); // Change font pixel size.
+        const FT_Glyph_Metrics*         LoadGlyph(uint32_t in_codepoint);
+        const FT_Bitmap*                RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
+        void                            BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = nullptr);
+        ImGui_ImplFreeType_FontSrcData()   { memset((void*)this, 0, sizeof(*this)); }
+        ~ImGui_ImplFreeType_FontSrcData()  { CloseFont(); }
 
-        // [Internals]
-        FontInfo        Info;               // Font descriptor of the current font.
-        FT_Face         Face;
-        unsigned int    UserFlags;          // = ImFontConfig::RasterizerFlags
-        FT_Int32        LoadFlags;
-        FT_Render_Mode  RenderMode;
-        float           RasterizationDensity;
-        float           InvRasterizationDensity;
+        // Members
+        ImGui_ImplFreeType_FontInfo     Info;               // Font descriptor of the current font.
+        FT_Face                         FtFace;
+        unsigned int                    UserFlags;          // = ImFontConfig::RasterizerFlags
+        FT_Int32                        LoadFlags;
+        FT_Render_Mode                  RenderMode;
+        float                           RasterizationDensity;
+        float                           InvRasterizationDensity;
     };
 
-    bool FreeTypeFont::InitFont(FT_Library ft_library, ImFontConfig& src, unsigned int extra_font_builder_flags)
+    bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_font_builder_flags)
     {
-        FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src.FontData, (uint32_t)src.FontDataSize, (uint32_t)src.FontNo, &Face);
+        FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (uint32_t)src->FontDataSize, (uint32_t)src->FontNo, &FtFace);
         if (error != 0)
             return false;
-        error = FT_Select_Charmap(Face, FT_ENCODING_UNICODE);
+        error = FT_Select_Charmap(FtFace, FT_ENCODING_UNICODE);
         if (error != 0)
             return false;
 
         // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
-        UserFlags = src.FontBuilderFlags | extra_font_builder_flags;
+        UserFlags = src->FontBuilderFlags | extra_font_builder_flags;
 
         LoadFlags = 0;
         if ((UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) == 0)
@@ -222,40 +232,42 @@ namespace
         if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
             LoadFlags |= FT_LOAD_COLOR;
 
-        RasterizationDensity = src.RasterizerDensity;
+        RasterizationDensity = src->RasterizerDensity;
         InvRasterizationDensity = 1.0f / RasterizationDensity;
 
         memset(&Info, 0, sizeof(Info));
-        SetPixelHeight((uint32_t)src.SizePixels);
+        SetPixelHeight(src->SizePixels);
 
         return true;
     }
 
-    void FreeTypeFont::CloseFont()
+    void ImGui_ImplFreeType_FontSrcData::CloseFont()
     {
-        if (Face)
+        if (FtFace)
         {
-            FT_Done_Face(Face);
-            Face = nullptr;
+            FT_Done_Face(FtFace);
+            FtFace = nullptr;
         }
     }
 
-    void FreeTypeFont::SetPixelHeight(int pixel_height)
+    void ImGui_ImplFreeType_FontSrcData::SetPixelHeight(float pixel_height)
     {
-        // Vuhdo: I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
+        // Vuhdo (2017): "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
         // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
-        // NB: FT_Set_Pixel_Sizes() doesn't seem to get us the same result.
+        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
+        // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
         FT_Size_RequestRec req;
         req.type = (UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
         req.width = 0;
         req.height = (uint32_t)(pixel_height * 64 * RasterizationDensity);
         req.horiResolution = 0;
         req.vertResolution = 0;
-        FT_Request_Size(Face, &req);
+        FT_Request_Size(FtFace, &req);
+        // Note: To handle multiple sizes later, we may need to use FT_New_Size(), FT_Activate_Size()
 
         // Update font info
-        FT_Size_Metrics metrics = Face->size->metrics;
-        Info.PixelHeight = (uint32_t)(pixel_height * InvRasterizationDensity);
+        FT_Size_Metrics metrics = FtFace->size->metrics;
+        Info.PixelHeight = pixel_height * InvRasterizationDensity;
         Info.Ascender = (float)FT_CEIL(metrics.ascender) * InvRasterizationDensity;
         Info.Descender = (float)FT_CEIL(metrics.descender) * InvRasterizationDensity;
         Info.LineSpacing = (float)FT_CEIL(metrics.height) * InvRasterizationDensity;
@@ -263,9 +275,9 @@ namespace
         Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * InvRasterizationDensity;
     }
 
-    const FT_Glyph_Metrics* FreeTypeFont::LoadGlyph(uint32_t codepoint)
+    const FT_Glyph_Metrics* ImGui_ImplFreeType_FontSrcData::LoadGlyph(uint32_t codepoint)
     {
-        uint32_t glyph_index = FT_Get_Char_Index(Face, codepoint);
+        uint32_t glyph_index = FT_Get_Char_Index(FtFace, codepoint);
         if (glyph_index == 0)
             return nullptr;
 
@@ -274,12 +286,12 @@ namespace
         // - https://github.com/ocornut/imgui/issues/4567
         // - https://github.com/ocornut/imgui/issues/4566
         // You can use FreeType 2.10, or the patched version of 2.11.0 in VcPkg, or probably any upcoming FreeType version.
-        FT_Error error = FT_Load_Glyph(Face, glyph_index, LoadFlags);
+        FT_Error error = FT_Load_Glyph(FtFace, glyph_index, LoadFlags);
         if (error)
             return nullptr;
 
         // Need an outline for this to work
-        FT_GlyphSlot slot = Face->glyph;
+        FT_GlyphSlot slot = FtFace->glyph;
 #if defined(IMGUI_ENABLE_FREETYPE_LUNASVG) || defined(IMGUI_ENABLE_FREETYPE_PLUTOSVG)
         IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE || slot->format == FT_GLYPH_FORMAT_BITMAP || slot->format == FT_GLYPH_FORMAT_SVG);
 #else
@@ -304,25 +316,25 @@ namespace
         return &slot->metrics;
     }
 
-    const FT_Bitmap* FreeTypeFont::RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info)
+    const FT_Bitmap* ImGui_ImplFreeType_FontSrcData::RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info)
     {
-        FT_GlyphSlot slot = Face->glyph;
+        FT_GlyphSlot slot = FtFace->glyph;
         FT_Error error = FT_Render_Glyph(slot, RenderMode);
         if (error != 0)
             return nullptr;
 
-        FT_Bitmap* ft_bitmap = &Face->glyph->bitmap;
+        FT_Bitmap* ft_bitmap = &FtFace->glyph->bitmap;
         out_glyph_info->Width = (int)ft_bitmap->width;
         out_glyph_info->Height = (int)ft_bitmap->rows;
-        out_glyph_info->OffsetX = Face->glyph->bitmap_left;
-        out_glyph_info->OffsetY = -Face->glyph->bitmap_top;
+        out_glyph_info->OffsetX = FtFace->glyph->bitmap_left;
+        out_glyph_info->OffsetY = -FtFace->glyph->bitmap_top;
         out_glyph_info->AdvanceX = (float)slot->advance.x / FT_SCALEFACTOR;
         out_glyph_info->IsColored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
 
         return ft_bitmap;
     }
 
-    void FreeTypeFont::BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table)
+    void ImGui_ImplFreeType_FontSrcData::BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch, unsigned char* multiply_table)
     {
         IM_ASSERT(ft_bitmap != nullptr);
         const uint32_t w = ft_bitmap->width;
@@ -397,6 +409,8 @@ namespace
         }
     }
 } // namespace
+
+#if 0
 
 #ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
 #ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
@@ -764,6 +778,7 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
 
     return true;
 }
+#endif
 
 // FreeType memory allocation callbacks
 static void* FreeType_Alloc(FT_Memory /*memory*/, long size)
@@ -799,47 +814,189 @@ static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size
     return block;
 }
 
-static bool ImFontAtlasBuildWithFreeType(ImFontAtlas* atlas)
+bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
 {
+    IM_ASSERT(atlas->FontLoaderData == NULL);
+    ImGui_ImplFreeType_Data* bd = IM_NEW(ImGui_ImplFreeType_Data)();
+
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
-    FT_MemoryRec_ memory_rec = {};
-    memory_rec.user = nullptr;
-    memory_rec.alloc = &FreeType_Alloc;
-    memory_rec.free = &FreeType_Free;
-    memory_rec.realloc = &FreeType_Realloc;
+    bd->MemoryManager.user = nullptr;
+    bd->MemoryManager.alloc = &FreeType_Alloc;
+    bd->MemoryManager.free = &FreeType_Free;
+    bd->MemoryManager.realloc = &FreeType_Realloc;
 
     // https://www.freetype.org/freetype2/docs/reference/ft2-module_management.html#FT_New_Library
-    FT_Library ft_library;
-    FT_Error error = FT_New_Library(&memory_rec, &ft_library);
+    FT_Error error = FT_New_Library(&bd->MemoryManager, &bd->Library);
     if (error != 0)
+    {
+        IM_DELETE(bd);
         return false;
+    }
 
     // If you don't call FT_Add_Default_Modules() the rest of code may work, but FreeType won't use our custom allocator.
-    FT_Add_Default_Modules(ft_library);
+    FT_Add_Default_Modules(bd->Library);
 
 #ifdef IMGUI_ENABLE_FREETYPE_LUNASVG
     // Install svg hooks for FreeType
     // https://freetype.org/freetype2/docs/reference/ft2-properties.html#svg-hooks
     // https://freetype.org/freetype2/docs/reference/ft2-svg_fonts.html#svg_fonts
     SVG_RendererHooks hooks = { ImGuiLunasvgPortInit, ImGuiLunasvgPortFree, ImGuiLunasvgPortRender, ImGuiLunasvgPortPresetSlot };
-    FT_Property_Set(ft_library, "ot-svg", "svg-hooks", &hooks);
+    FT_Property_Set(bd->Library, "ot-svg", "svg-hooks", &hooks);
 #endif // IMGUI_ENABLE_FREETYPE_LUNASVG
 #ifdef IMGUI_ENABLE_FREETYPE_PLUTOSVG
     // With plutosvg, use provided hooks
-    FT_Property_Set(ft_library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks());
+    FT_Property_Set(bd->Library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks());
 #endif // IMGUI_ENABLE_FREETYPE_PLUTOSVG
 
-    bool ret = ImFontAtlasBuildWithFreeTypeEx(ft_library, atlas, atlas->FontBuilderFlags);
-    FT_Done_Library(ft_library);
+    // Store our data
+    atlas->FontLoaderData = (void*)bd;
 
-    return ret;
+    return true;
 }
 
-const ImFontBuilderIO* ImGuiFreeType::GetBuilderForFreeType()
+void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
 {
-    static ImFontBuilderIO io;
-    io.FontBuilder_Build = ImFontAtlasBuildWithFreeType;
-    return &io;
+    ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
+    IM_ASSERT(bd != NULL);
+    FT_Done_Library(bd->Library);
+    IM_DELETE(bd);
+    atlas->FontLoaderData = NULL;
+}
+
+bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
+{
+    ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplFreeType_FontSrcData);
+    IM_ASSERT(src->FontLoaderData == NULL);
+    src->FontLoaderData = bd_font_data;
+
+    if (!bd_font_data->InitFont(bd->Library, src, atlas->FontBuilderFlags))
+        return false;
+
+    if (src->MergeMode == false)
+    {
+        ImFont* font = src->DstFont;
+        font->Ascent = bd_font_data->Info.Ascender;
+        font->Descent = bd_font_data->Info.Descender;
+    }
+    return true;
+}
+
+void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
+{
+    IM_UNUSED(atlas);
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
+    IM_DELETE(bd_font_data);
+    src->FontLoaderData = NULL;
+}
+
+bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
+{
+    // Search for first font which has the glyph
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = NULL;
+    ImFontConfig* src = NULL;
+    uint32_t glyph_index = 0;
+    for (int src_n = 0; src_n < srcs_count; src_n++)
+    {
+        src = &srcs[src_n];
+        bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
+        glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
+        if (glyph_index != 0)
+            break;
+    }
+    if (glyph_index == 0)
+        return false; // Not found
+
+    const FT_Glyph_Metrics* metrics = bd_font_data->LoadGlyph(codepoint);
+    if (metrics == NULL)
+        return false;
+
+    // Render glyph into a bitmap (currently held by FreeType)
+    FT_Face face = bd_font_data->FtFace;
+    FT_GlyphSlot slot = face->glyph;
+    FT_Error error = FT_Render_Glyph(slot, bd_font_data->RenderMode);
+    if (error != 0)
+        return false;
+
+    const FT_Bitmap* ft_bitmap = &slot->bitmap;
+    if (ft_bitmap == nullptr)
+        return false;
+
+    const int w = (int)ft_bitmap->width;
+    const int h = (int)ft_bitmap->rows;
+    const bool is_visible = (w != 0 && h != 0);
+
+    // Prepare glyph
+    ImFontGlyph glyph = {};
+    glyph.Codepoint = codepoint;
+    glyph.AdvanceX = (slot->advance.x / FT_SCALEFACTOR) * bd_font_data->InvRasterizationDensity;
+
+    // Pack and retrieve position inside texture atlas
+    if (is_visible)
+    {
+        ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
+        ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+        font->MetricsTotalSurface += w * h;
+
+        // Render pixels to our temporary buffer
+        atlas->Builder->TempBuffer.resize(w * h * 4);
+        uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
+        bd_font_data->BlitGlyph(ft_bitmap, temp_buffer, w, nullptr);// multiply_enabled ? multiply_table : nullptr);
+
+        float font_off_x = src->GlyphOffset.x;
+        float font_off_y = src->GlyphOffset.y + IM_ROUND(font->Ascent);
+        float recip_h = 1.0f / src->RasterizerDensity;
+        float recip_v = 1.0f / src->RasterizerDensity;
+
+        // Register glyph
+        float glyph_off_x = (float)face->glyph->bitmap_left;
+        float glyph_off_y = (float)-face->glyph->bitmap_top;
+        glyph.X0 = glyph_off_x * recip_h + font_off_x;
+        glyph.Y0 = glyph_off_y * recip_v + font_off_y;
+        glyph.X1 = (glyph_off_x + w) * recip_h + font_off_x;
+        glyph.Y1 = (glyph_off_y + h) * recip_v + font_off_y;
+        glyph.U0 = (r->x) * atlas->TexUvScale.x;
+        glyph.V0 = (r->y) * atlas->TexUvScale.y;
+        glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
+        glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
+        glyph.PackId = pack_id;
+        glyph.Visible = true;
+        glyph.Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
+        font->BuildRegisterGlyph(src, &glyph);
+
+        // Copy to texture, post-process and queue update for backend
+        ImTextureData* tex = atlas->TexData;
+        IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
+        ImFontAtlasTextureBlockConvertAndPostProcess(atlas, font, src, &font->Glyphs.back(),
+            temp_buffer, ImTextureFormat_RGBA32, w * 4, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
+        ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
+    }
+    else
+    {
+        font->BuildRegisterGlyph(src, &glyph);
+    }
+    return true;
+}
+
+bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
+{
+    IM_UNUSED(atlas);
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
+    int glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
+    return glyph_index != 0;
+}
+
+const ImFontLoader* ImGuiFreeType::GetFontLoader()
+{
+    static ImFontLoader loader;
+    loader.Name = "freetype";
+    loader.LoaderInit = ImGui_ImplFreeType_LoaderInit;
+    loader.LoaderShutdown = ImGui_ImplFreeType_LoaderShutdown;
+    loader.FontSrcInit = ImGui_ImplFreeType_FontSrcInit;
+    loader.FontSrcDestroy = ImGui_ImplFreeType_FontSrcDestroy;
+    loader.FontSrcContainsGlyph = ImGui_ImplFreetype_FontSrcContainsGlyph;
+    loader.FontAddGlyph = ImGui_ImplFreeType_FontAddGlyph;
+    return &loader;
 }
 
 void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data)
