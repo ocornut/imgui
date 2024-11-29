@@ -3626,6 +3626,7 @@ struct ImFontAtlas
     IMGUI_API void              Clear();                    // Clear all input and output.
 
     IMGUI_API void              ClearCache();               // Clear cached glyphs
+    IMGUI_API void              BuildInit();
 
     // Build atlas, retrieve pixel data.
     // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
