@@ -3940,10 +3940,9 @@ struct ImFontAtlasBuilder
 {
     stbrp_context_opaque        PackContext;            // Actually 'stbrp_context' but we don't want to define this in the header file.
     ImVector<stbrp_node>        PackNodes;
-    int                         PackPadding;            // Generally 1 to avoid bilinear filtering issues.
     ImVector<ImFontAtlasRect>   Rects;
     ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
-    ImVec2i                     MaxRectSize;            // Largest rectangle to pack (defacto used as a "minimum texture size")
+    ImVec2i                     MaxRectSize;            // Largest rectangle to pack (de-facto used as a "minimum texture size")
     ImVec2i                     MaxRectBounds;          // Bottom-right most used pixels
     bool                        LockDisableResize;      // Disable resizing texture
     bool                        PreloadedAllGlyphsRanges; // Set when missing ImGuiBackendFlags_RendererHasTextures features forces atlas to preload everything.

@@ -3647,8 +3647,9 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     int new_tex_h = (old_tex_h < old_tex_w) ? old_tex_h * 2 : old_tex_h;
 
     // Handle minimum size first (for pathologically large packed rects)
-    new_tex_w = ImMax(new_tex_w, ImUpperPowerOfTwo(builder->MaxRectSize.x + builder->PackPadding));
-    new_tex_h = ImMax(new_tex_h, ImUpperPowerOfTwo(builder->MaxRectSize.y + builder->PackPadding));
+    const int pack_padding = atlas->TexGlyphPadding;
+    new_tex_w = ImMax(new_tex_w, ImUpperPowerOfTwo(builder->MaxRectSize.x + pack_padding));
+    new_tex_h = ImMax(new_tex_h, ImUpperPowerOfTwo(builder->MaxRectSize.y + pack_padding));
 
     ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
 }
@@ -3698,10 +3699,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 
     const bool builder_is_new = (builder == NULL);
     if (builder_is_new)
-    {
         builder = atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
-        builder->PackPadding = 1;
-    }
 
     ImFontAtlasPackInit(atlas);
 
@@ -3743,11 +3741,12 @@ void ImFontAtlasPackInit(ImFontAtlas* atlas)
 
     // FIXME-NEWATLAS-V2: Expose other glyph padding settings for custom alteration (e.g. drop shadows). See #7962
     // FIXME-NEWATLAS-V2: Experiment with number of nodes. 2024-11-05: Seems to be quite fine to reduce this.
-    int pack_node_count = tex->Width - builder->PackPadding;
+    //int pack_padding = atlas->TexGlyphPadding;
+    int pack_node_count = tex->Width;
     //pack_node_count *= atlas->_PackNodesFactor;
     builder->PackNodes.resize(pack_node_count);
     IM_STATIC_ASSERT(sizeof(stbrp_context) <= sizeof(stbrp_context_opaque));
-    stbrp_init_target((stbrp_context*)(void*)&builder->PackContext, tex->Width - builder->PackPadding, tex->Height - builder->PackPadding, builder->PackNodes.Data, builder->PackNodes.Size);
+    stbrp_init_target((stbrp_context*)(void*)&builder->PackContext, tex->Width, tex->Height, builder->PackNodes.Data, builder->PackNodes.Size);
     atlas->_PackedSurface = atlas->_PackedRects = 0;
     builder->MaxRectSize = ImVec2i(0, 0);
     builder->MaxRectBounds = ImVec2i(0, 0);
@@ -3760,6 +3759,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h)
     IM_ASSERT(h > 0 && h <= 0xFFFF);
 
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
+    const int pack_padding = atlas->TexGlyphPadding;
     builder->MaxRectSize.x = ImMax(builder->MaxRectSize.x, w);
     builder->MaxRectSize.y = ImMax(builder->MaxRectSize.y, h);
 
@@ -3769,11 +3769,11 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h)
     {
         // Try packing
         stbrp_rect pack_r = {};
-        pack_r.w = r.w + builder->PackPadding;
-        pack_r.h = r.h + builder->PackPadding;
+        pack_r.w = w + pack_padding;
+        pack_r.h = h + pack_padding;
         stbrp_pack_rects((stbrp_context*)(void*)&builder->PackContext, &pack_r, 1);
-        r.x = (unsigned short)(pack_r.x + builder->PackPadding);
-        r.y = (unsigned short)(pack_r.y + builder->PackPadding);
+        r.x = (unsigned short)pack_r.x;
+        r.y = (unsigned short)pack_r.y;
         if (pack_r.was_packed)
             break;
 
@@ -3790,9 +3790,9 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h)
         ImFontAtlasBuildGrowTexture(atlas);
     }
 
-    builder->MaxRectBounds.x = ImMax(builder->MaxRectBounds.x, r.x + r.w);
-    builder->MaxRectBounds.y = ImMax(builder->MaxRectBounds.y, r.y + r.h);
-    atlas->_PackedSurface += w * h;
+    builder->MaxRectBounds.x = ImMax(builder->MaxRectBounds.x, r.x + r.w + pack_padding);
+    builder->MaxRectBounds.y = ImMax(builder->MaxRectBounds.y, r.y + r.h + pack_padding);
+    atlas->_PackedSurface += (w + pack_padding) * (h + pack_padding);
     atlas->_PackedRects++;
 
     builder->Rects.push_back(r);
@@ -3967,7 +3967,6 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
     if (glyph_index == 0)
         return false; // Not found
 
-    // FIXME-NEWATLAS: Handling of atlas->TexGlyphPadding?
     const float scale_for_layout = bd_font_data->ScaleForLayout;    // ~ (font units to pixels)
     const float scale_for_raster_x = bd_font_data->ScaleForRasterX; // ~ (font units to pixels) * RasterizationDensity * OversampleH
     const float scale_for_raster_y = bd_font_data->ScaleForRasterY; // ~ (font units to pixels) * RasterizationDensity * OversampleV
