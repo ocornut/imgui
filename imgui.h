@@ -3723,6 +3723,7 @@ struct ImFontAtlas
     float                       _PackNodesFactor = 1.0f;
 
     // [Obsolete]
+    //int                              TexDesiredWidth;         // OBSOLETED in 1.91.5 (force texture width before calling Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height)
     //typedef ImFontAtlasCustomRect    CustomRect;              // OBSOLETED in 1.72+
     //typedef ImFontGlyphRangesBuilder GlyphRangesBuilder;      // OBSOLETED in 1.67+
 };
