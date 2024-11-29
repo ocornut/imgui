@@ -3949,7 +3949,8 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
         if (c == '\r')
             continue;
 
-        const float char_width = ((int)c < font->IndexAdvanceX.Size ? font->IndexAdvanceX.Data[c] : font->FallbackAdvanceX) * scale;
+        // FIXME-NEWATLAS-V1: Measure perf, inline etc.
+        const float char_width = font->GetCharAdvance((ImWchar)c) * scale;// ((int)c < font->IndexAdvanceX.Size ? font->IndexAdvanceX.Data[c] : font->FallbackAdvanceX)* scale;
         line_width += char_width;
     }
 
@@ -4287,7 +4288,7 @@ void ImGui::PushPasswordFont()
     out_font->Ascent = in_font->Ascent;
     out_font->Descent = in_font->Descent;
     out_font->ContainerAtlas = in_font->ContainerAtlas;
-    out_font->FallbackGlyph = glyph;
+    out_font->FallbackGlyphIndex = in_font->Glyphs.index_from_ptr(glyph); // FIXME: broken
     out_font->FallbackAdvanceX = glyph->AdvanceX;
     IM_ASSERT(out_font->Glyphs.Size == 0 && out_font->IndexAdvanceX.Size == 0 && out_font->IndexLookup.Size == 0);
     PushFont(out_font);
