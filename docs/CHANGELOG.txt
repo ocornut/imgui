@@ -62,6 +62,8 @@ Other changes:
 - Tools: binary_to_compressed_c: added -u8/-u32/-base85 export options.
 - Demo: example tree used by Property Editor & Selection demos properly freed
   on application closure. (#8158) [@Legulysse]
+- Fonts: fixed AddCustomRect() not being packed with TexGlyphPadding + not accounted
+  for surface area used to determine best-guess texture size. (#8107) [@YarikTH, @ocornut]
 - Misc: use SSE 4.2 crc32 instructions when available. (#8169, #4933) [@Teselka]
 - Backends: Vulkan: Make user-provided descriptor pool optional. As a convenience,
   when setting init_info->DescriptorPoolSize then the backend will create and manage
