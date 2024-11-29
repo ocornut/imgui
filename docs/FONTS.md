@@ -60,7 +60,6 @@ Some solutions:
 - Reduce glyphs ranges by calculating them from source localization data.
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
-- Set `io.Fonts.TexDesiredWidth` to specify a texture width to reduce maximum texture height (see comment in `ImFontAtlas::Build()` function).
 
 Future versions of Dear ImGui should solve this problem.
 
