@@ -3823,7 +3823,7 @@ ImFontGlyph* ImFont::BuildLoadGlyph(ImWchar codepoint)
     {
         // Mark index as not found, so we don't attempt the search twice
         BuildGrowIndex(codepoint + 1);
-        IndexAdvanceX[codepoint] = (float)IM_FONTGLYPH_INDEX_NOT_FOUND;
+        IndexAdvanceX[codepoint] = FallbackAdvanceX;
         IndexLookup[codepoint] = IM_FONTGLYPH_INDEX_NOT_FOUND;
         return NULL;
     }
@@ -4549,11 +4549,10 @@ float ImFont::GetCharAdvance(ImWchar c)
 {
     if (c < (size_t)IndexAdvanceX.Size)
     {
+        // Missing glyphs fitting inside index will have stored FallbackAdvanceX already.
         const float x = IndexAdvanceX.Data[c];
         if (x >= 0.0f)
             return x;
-        if (x == (float)IM_FONTGLYPH_INDEX_NOT_FOUND) // FIXME-NEWATLAS: could bake in index
-            return FallbackAdvanceX;
     }
     const ImFontGlyph* glyph = BuildLoadGlyph(c);
     return glyph ? glyph->AdvanceX : FallbackAdvanceX;
