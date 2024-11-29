@@ -2887,6 +2887,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     IM_ASSERT(font_cfg->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
     IM_ASSERT(font_cfg->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
 
+    // Lazily create builder on the first call to AddFont
+    if (Builder == NULL)
+        BuildInit();
+
     // Create new font
     if (!font_cfg->MergeMode)
         Fonts.push_back(IM_NEW(ImFont));
@@ -2912,9 +2916,19 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Pointers to Sources are otherwise dangling
     ImFontAtlasBuildUpdatePointers(this);
-
-    if (Builder != NULL)
-        ImFontAtlasBuildAddFont(this, &new_font_cfg);
+    if (!ImFontAtlasBuildAddFont(this, &new_font_cfg))
+    {
+        // Rollback (this is a fragile/rarely exercised code-path. TestSuite's "misc_atlas_add_invalid_font" aim to test this)
+        if (new_font_cfg.FontDataOwnedByAtlas)
+            IM_FREE(new_font_cfg.FontData);
+        Sources.pop_back();
+        if (!font_cfg->MergeMode)
+        {
+            IM_DELETE(Fonts.back());
+            Fonts.pop_back();
+        }
+        return NULL;
+    }
 
     // Invalidate texture
     //TexReady = false;
@@ -3105,14 +3119,8 @@ bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor curso
     return true;
 }
 
-bool ImFontAtlas::Build()
+void ImFontAtlas::BuildInit()
 {
-    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-
-    // Default font is none are specified
-    if (Sources.Size == 0)
-        AddFontDefault();
-
     // Select builder
     // - Note that we do not reassign to atlas->FontLoader, since it is likely to point to static data which
     //   may mess with some hot-reloading schemes. If you need to assign to this (for dynamic selection) AND are
@@ -3132,6 +3140,18 @@ bool ImFontAtlas::Build()
     // Create initial texture size
     ImFontAtlasBuildAddTexture(this, 512, 128);
     ImFontAtlasBuildInit(this);
+}
+
+bool ImFontAtlas::Build()
+{
+    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
+
+    if (Builder == NULL)
+        BuildInit();
+
+    // Default font is none are specified
+    if (Sources.Size == 0)
+        AddFontDefault();
 
     // [LEGACY] For backends not supporting RendererHasTextures: preload all glyphs
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(this);
@@ -3384,7 +3404,7 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 
     const ImFontLoader* font_loader = atlas->FontLoader;
     if (!font_loader->FontSrcInit(atlas, src))
-        return false; // FIXME-NEWATLAS: error handling
+        return false;
 
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src);
     return true;
@@ -3887,10 +3907,14 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
 
     // Initialize helper structure for font loading and verify that the TTF/OTF data is correct
     const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)src->FontData, src->FontNo);
-    IM_ASSERT(font_offset >= 0 && "FontData is incorrect, or FontNo cannot be found."); // FIXME-NEWATLAS: error handling
+    if (font_offset < 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "stbtt_GetFontOffsetForIndex(): FontData is incorrect, or FontNo cannot be found.");
+        return false;
+    }
     if (!stbtt_InitFont(&bd_font_data->FontInfo, (unsigned char*)src->FontData, font_offset))
     {
-        IM_ASSERT(0 && "stbtt_InitFont(): failed to parse FontData. It is correct and complete? Check FontDataSize.");
+        IM_ASSERT_USER_ERROR(0, "stbtt_InitFont(): failed to parse FontData. It is correct and complete? Check FontDataSize.");
         return false;
     }
     src->FontLoaderData = bd_font_data;
@@ -3954,6 +3978,7 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
     {
         src = &srcs[src_n];
         bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
+        IM_ASSERT(bd_font_data);
         glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
         if (glyph_index != 0)
             break;
