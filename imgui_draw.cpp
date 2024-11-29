@@ -3585,7 +3585,6 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
 
     // FIXME-NEWATLAS-TESTS: Test calling RepackTexture with size too small to fits existing rects.
 
-#if 1
     // Repack + copy pixels
     // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic.
     ImFontAtlasPackInit(atlas);
@@ -3625,27 +3624,6 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     // Update other cached UV
     ImFontAtlasBuildUpdateLinesTexData(atlas, false);
     ImFontAtlasBuildUpdateBasicTexData(atlas, false);
-
-#else
-    // Copy previous pixels
-    ImFontAtlasTextureCopyBlock(atlas, old_tex, 0, 0, new_tex, 0, 0, ImMin(old_tex->Width, new_tex->Width), ImMin(old_tex->Height, new_tex->Height));
-
-    // Scale UV coordinates
-    // FIXME-NEWATLAS: Probably lossy?
-    ImVec2 uv_scale((float)old_tex->Width / new_tex->Width, (float)old_tex->Height / new_tex->Height);
-    for (ImFont* font : atlas->Fonts)
-        for (ImFontGlyph& glyph : font->Glyphs)
-        {
-            glyph.U0 *= uv_scale.x;
-            glyph.U1 *= uv_scale.x;
-            glyph.V0 *= uv_scale.y;
-            glyph.V1 *= uv_scale.y;
-        }
-    ImVec4 uv_scale4(uv_scale.x, uv_scale.y, uv_scale.x, uv_scale.y);
-    atlas->TexUvWhitePixel *= uv_scale;
-    for (ImVec4& uv : atlas->TexUvLines)
-        uv = uv * uv_scale4;
-#endif
 
     builder->LockDisableResize = false;
     ImFontAtlasUpdateDrawListsSharedData(atlas);
