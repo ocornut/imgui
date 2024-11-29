@@ -166,7 +166,7 @@ namespace
     // NB: No ctor/dtor, explicitly call Init()/Shutdown()
     struct FreeTypeFont
     {
-        bool                    InitFont(FT_Library ft_library, const ImFontConfig& src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
+        bool                    InitFont(FT_Library ft_library, ImFontConfig& src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
         void                    CloseFont();
         void                    SetPixelHeight(int pixel_height); // Change font pixel size. All following calls to RasterizeGlyph() will use this size
         const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
@@ -185,7 +185,7 @@ namespace
         float           InvRasterizationDensity;
     };
 
-    bool FreeTypeFont::InitFont(FT_Library ft_library, const ImFontConfig& src, unsigned int extra_font_builder_flags)
+    bool FreeTypeFont::InitFont(FT_Library ft_library, ImFontConfig& src, unsigned int extra_font_builder_flags)
     {
         FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src.FontData, (uint32_t)src.FontDataSize, (uint32_t)src.FontNo, &Face);
         if (error != 0)
