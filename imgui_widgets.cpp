@@ -3329,7 +3329,8 @@ bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, fl
         format = "%.0f deg";
     float v_deg = (*v_rad) * 360.0f / (2 * IM_PI);
     bool value_changed = SliderFloat(label, &v_deg, v_degrees_min, v_degrees_max, format, flags);
-    *v_rad = v_deg * (2 * IM_PI) / 360.0f;
+    if (value_changed)
+        *v_rad = v_deg * (2 * IM_PI) / 360.0f;
     return value_changed;
 }
 
