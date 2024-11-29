@@ -618,8 +618,8 @@ bool ImFontAtlasBuildWithFreeTypeEx(FT_Library ft_library, ImFontAtlas* atlas, u
             buf_bitmap_current_used_bytes += bitmap_size_in_bytes;
             src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width, multiply_enabled ? multiply_table : nullptr);
 
-            src_tmp.Rects[glyph_i].w = (stbrp_coord)(src_glyph.Info.Width + padding);
-            src_tmp.Rects[glyph_i].h = (stbrp_coord)(src_glyph.Info.Height + padding);
+            src_tmp.Rects[glyph_i].w = (stbrp_coord)(src_glyph.Info.Width + pack_padding);
+            src_tmp.Rects[glyph_i].h = (stbrp_coord)(src_glyph.Info.Height + pack_padding);
             total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
