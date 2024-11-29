@@ -3634,9 +3634,8 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     if (old_tex_h == -1)
         old_tex_h = atlas->TexData->Height;
 
-    // FIXME-NEWATLAS-V1: Handle atlas->TexDesiredWidth from user?
-    // FIXME-NEWATLAS-V1: What to do when reaching limits exposed by backend?
-    // FIXME-NEWATLAS-V1: does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations?
+    // FIXME-NEWATLAS-V2: What to do when reaching limits exposed by backend?
+    // FIXME-NEWATLAS-V2: does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations?
     IM_ASSERT(ImIsPowerOfTwo(old_tex_w) && ImIsPowerOfTwo(old_tex_h));
 
     // Grow texture so it follows roughly a square.
