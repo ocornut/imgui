@@ -37,6 +37,7 @@ Index of this file:
 // [SECTION] Tab bar, Tab item support
 // [SECTION] Table support
 // [SECTION] ImGui internal API
+// [SECTION] ImFontBackendIO
 // [SECTION] ImFontAtlas internal API
 // [SECTION] Test Engine specific hooks (imgui_test_engine)
 
@@ -140,6 +141,9 @@ struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
 // ImDrawList/ImFontAtlas
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
+struct ImFontBackendIO;             // Hooks and storage for a given font backend.
+struct ImFontAtlasRect;             // Packed rectangle (same as ImTextureRect)
+struct ImFontAtlasBuilder;          // Internal storage for incrementally packing and building a ImFontAtlas
 
 // ImGui
 struct ImGuiBoxSelectState;         // Box-selection state (currently used by multi-selection, could potentially be used by others)
@@ -539,6 +543,14 @@ struct ImVec1
     constexpr ImVec1(float _x) : x(_x) { }
 };
 
+// Helper: ImVec2i (2D vector, integer)
+struct ImVec2i
+{
+    int         x, y;
+    constexpr ImVec2i()                             : x(0), y(0) {}
+    constexpr ImVec2i(int _x, int _y)               : x(_x), y(_y) {}
+};
+
 // Helper: ImVec2ih (2D vector, half-size integer, for long-term packed storage)
 struct ImVec2ih
 {
@@ -798,8 +810,9 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 // You may want to create your own instance of you try to ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
 struct IMGUI_API ImDrawListSharedData
 {
-    ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
-    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
+    ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
+    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
+    ImFontAtlas*    FontAtlas;                  // Current font atlas
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
     float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
@@ -809,13 +822,17 @@ struct IMGUI_API ImDrawListSharedData
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImVector<ImVec2> TempBuffer;                // Temporary write buffer
+    ImVector<ImDrawList*> DrawLists;            // All draw lists associated to this ImDrawListSharedData
+    ImGuiContext*   Context;                    // [OPTIONAL] Link to Dear ImGui context. 99% of ImDrawList/ImFontAtlas can function without an ImGui context, but this facilitate handling one legacy edge case.
 
     // Lookup tables
     ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.
     float           ArcFastRadiusCutoff;                        // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
+    bool            RendererHasTextures;        // Copy of (GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures).
 
     ImDrawListSharedData();
+    ~ImDrawListSharedData();
     void SetCircleTessellationMaxError(float max_error);
 };
 
@@ -2278,6 +2295,7 @@ struct ImGuiContext
     float                   FontScale;                          // == FontSize / Font->FontSize
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
+    ImVector<ImTextureData*>Textures;
     double                  Time;
     int                     FrameCount;
     int                     FrameCountEnded;
@@ -3861,6 +3879,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
     IMGUI_API void          DebugNodeFont(ImFont* font);
     IMGUI_API void          DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph);
+    IMGUI_API void          DebugNodeTexture(ImTextureData* tex);
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);
@@ -3895,30 +3914,102 @@ namespace ImGui
 
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImFontAtlas internal API
+// [SECTION] ImFontBackendIO
 //-----------------------------------------------------------------------------
 
+// Hooks and storage for a given font backend.
 // This structure is likely to evolve as we add support for incremental atlas updates.
 // Conceptually this could be in ImGuiPlatformIO, but we are far from ready to make this public.
-struct ImFontBuilderIO
+struct ImFontBackendIO
 {
-    bool    (*FontBuilder_Build)(ImFontAtlas* atlas);
+    const char*     FontBackend_Name;
+    bool            (*FontBackend_BackendInit)(ImFontAtlas* atlas);
+    void            (*FontBackend_BackendShutdown)(ImFontAtlas* atlas);
+    bool            (*FontBackend_FontSrcInit)(ImFontAtlas* atlas, ImFontConfig* src);
+    void            (*FontBackend_FontSrcDestroy)(ImFontAtlas* atlas, ImFontConfig* src);
+    bool            (*FontBackend_FontSrcContainsGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint);
+    bool            (*FontBackend_FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImWchar codepoint);
+
+    ImFontBackendIO() { memset(this, 0, sizeof(*this)); }
 };
 
 // Helper for font builder
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
-IMGUI_API const ImFontBuilderIO* ImFontAtlasGetBuilderForStbTruetype();
+IMGUI_API const ImFontBackendIO* ImFontAtlasGetBackendIOForStbTruetype();
 #endif
-IMGUI_API void      ImFontAtlasUpdateSourcesPointers(ImFontAtlas* atlas);
-IMGUI_API void      ImFontAtlasBuildInit(ImFontAtlas* atlas);
-IMGUI_API void      ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, float ascent, float descent);
-IMGUI_API void      ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque);
-IMGUI_API void      ImFontAtlasBuildFinish(ImFontAtlas* atlas);
-IMGUI_API void      ImFontAtlasBuildRender8bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value);
-IMGUI_API void      ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned int in_marker_pixel_value);
-IMGUI_API void      ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
-IMGUI_API void      ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
-IMGUI_API void      ImFontAtlasBuildGetOversampleFactors(const ImFontConfig* src, int* out_oversample_h, int* out_oversample_v);
+
+//-----------------------------------------------------------------------------
+// [SECTION] ImFontAtlas internal API
+//-----------------------------------------------------------------------------
+
+// Packed rectangle (same as ImTextureRect)
+struct ImFontAtlasRect
+{
+    unsigned short  x, y;
+    unsigned short  w, h;
+};
+typedef int ImFontAtlasRectId;          // <0 when invalid
+
+// Internal storage for incrementally packing and building a ImFontAtlas
+struct stbrp_context_opaque { char data[80]; };
+struct stbrp_node;
+struct ImFontAtlasBuilder
+{
+    stbrp_context_opaque        PackContext;            // Actually 'stbrp_context' but we don't want to define this in the header file.
+    ImVector<stbrp_node>        PackNodes;
+    int                         PackPadding;            // Generally 1 to avoid bilinear filtering issues.
+    ImVector<ImFontAtlasRect>   Rects;
+    ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
+    ImVec2i                     MaxRectSize;            // Largest rectangle to pack (defacto used as a "minimum texture size")
+    ImVec2i                     MaxRectBounds;          // Bottom-right most used pixels
+    bool                        LockDisableResize;      // Disable resizing texture
+    bool                        PreloadedAllGlyphsRanges; // Set when missing ImGuiBackendFlags_RendererHasTextures features forces atlas to preload everything.
+
+    // Custom rectangle identifiers
+    ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
+    ImFontAtlasRectId           PackIdLinesTexData;
+
+    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); }
+};
+
+// FIXME-NEWATLAS: Cleanup
+IMGUI_API void              ImFontAtlasBuildSetupFontBackendIO(ImFontAtlas* atlas, const ImFontBackendIO* font_backend_io);
+IMGUI_API void              ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char);
+
+IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasBuildDestroy(ImFontAtlas* atlas);
+
+IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
+IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
+
+IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
+IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample_h, int* out_oversample_v);
+
+IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
+IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h);
+IMGUI_API ImFontAtlasRect*  ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
+
+IMGUI_API void              ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
+IMGUI_API void              ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
+IMGUI_API void              ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex);
+IMGUI_API void              ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas);
+
+IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas);
+
+IMGUI_API void              ImFontAtlasTextureBlockConvertAndPostProcess(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
+IMGUI_API void              ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
+IMGUI_API void              ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* pixels, ImTextureFormat format, int w, int h, int pitch, float in_multiply_factor);
+IMGUI_API void              ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h);
+IMGUI_API void              ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h);
+
+#ifndef IMGUI_DISABLE_DEBUG_TOOLS
+IMGUI_API void              ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas);
+#endif
 
 IMGUI_API bool      ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 
