@@ -296,6 +296,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_opengl3";
 
+    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
+
     // Query for GL version (e.g. 320 for GL 3.2)
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     // GLES 2
@@ -303,7 +305,6 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     bd->GlProfileIsES2 = true;
 #else
     // Desktop or GLES 3
-    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
     GLint major = 0;
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
