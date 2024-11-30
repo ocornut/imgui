@@ -25,6 +25,7 @@ LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -g -Wall -Wformat
+CXXFLAGS += -DIMGUI_IMPL_OPENGL_DEBUG
 LIBS =
 
 ##---------------------------------------------------------------------
@@ -68,6 +69,14 @@ ifeq ($(OS), Windows_NT)
     CFLAGS = $(CXXFLAGS)
 endif
 
+ifdef EMSCRIPTEN
+	ECHO_MESSAGE = "web"
+    EXE := $(EXE).html
+	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2 # WebGL 1
+# 	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES3 # WebGL 2
+	LIBS = -s USE_SDL=2 -s MAX_WEBGL_VERSION=2
+endif
+
 ##---------------------------------------------------------------------
 ## BUILD RULES
 ##---------------------------------------------------------------------
@@ -88,4 +97,4 @@ $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
-	rm -f $(EXE) $(OBJS)
+	rm -f $(EXE) $(EXE).html $(EXE).wasm $(EXE).js $(OBJS)
