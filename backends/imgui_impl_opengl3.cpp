@@ -299,6 +299,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Query for GL version (e.g. 320 for GL 3.2)
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     // GLES 2
+    const char* gl_version_str = "";
+    IM_UNUSED(gl_version_str); // For IMGUI_IMPL_OPENGL_DEBUG block below.
     bd->GlVersion = 200;
     bd->GlProfileIsES2 = true;
 #else
@@ -336,7 +338,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 #endif
 
 #ifdef IMGUI_IMPL_OPENGL_DEBUG
-    printf("GlVersion = %d, \"%s\"\nGlProfileIsCompat = %d\nGlProfileMask = 0x%X\nGlProfileIsES2 = %d, GlProfileIsES3 = %d\nGL_VENDOR = '%s'\nGL_RENDERER = '%s'\n", bd->GlVersion, gl_version_str, bd->GlProfileIsCompat, bd->GlProfileMask, bd->GlProfileIsES2, bd->GlProfileIsES3, (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER)); // [DEBUG]
+    printf("GlVersion = %d, \"%s\"\nGlProfileIsCompat = %d\nGlProfileMask = 0x%X\nGlProfileIsES2/IsEs3 = %d/%d\nGL_VENDOR = '%s'\nGL_RENDERER = '%s'\n", bd->GlVersion, gl_version_str, bd->GlProfileIsCompat, bd->GlProfileMask, bd->GlProfileIsES2, bd->GlProfileIsES3, (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER)); // [DEBUG]
 #endif
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
