@@ -576,8 +576,12 @@ static void ImGui_ImplSDL3_UpdateMouseData()
         if (io.WantSetMousePos)
             SDL_WarpMouseInWindow(bd->Window, io.MousePos.x, io.MousePos.y);
 
+        SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
+        if (bd->Renderer != nullptr)
+            SDL_GetRenderLogicalPresentation(bd->Renderer, nullptr, nullptr, &mode, nullptr);
+
         // (Optional) Fallback to provide mouse position when focused (SDL_EVENT_MOUSE_MOTION already provides this when hovered or captured)
-        if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0)
+        if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && mode == SDL_LOGICAL_PRESENTATION_DISABLED)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
             float mouse_x_global, mouse_y_global;
@@ -585,6 +589,15 @@ static void ImGui_ImplSDL3_UpdateMouseData()
             SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
             SDL_GetWindowPosition(focused_window, &window_x, &window_y);
             io.AddMousePosEvent(mouse_x_global - window_x, mouse_y_global - window_y);
+        }
+        else if (bd->MouseButtonsDown == 0 && mode != SDL_LOGICAL_PRESENTATION_DISABLED)
+        {
+            // When SDL logical presentation mode is set map window cords to renderer cords
+            float mouse_x, mouse_y;
+            float render_x, render_y;
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            SDL_RenderCoordinatesFromWindow(bd->Renderer, mouse_x, mouse_y, &render_x, &render_y);
+            io.AddMousePosEvent(render_x, render_y);
         }
     }
 }
@@ -728,15 +741,34 @@ void ImGui_ImplSDL3_NewFrame()
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup display size (every frame to accommodate for window resizing)
-    int w, h;
-    int display_w, display_h;
-    SDL_GetWindowSize(bd->Window, &w, &h);
-    if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_MINIMIZED)
-        w = h = 0;
-    SDL_GetWindowSizeInPixels(bd->Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)w, (float)h);
-    if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+    if (bd->Renderer == nullptr) {
+        int w, h;
+        int display_w, display_h;
+        SDL_GetWindowSize(bd->Window, &w, &h);
+        if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_MINIMIZED)
+            w = h = 0;
+        SDL_GetWindowSizeInPixels(bd->Window, &display_w, &display_h);
+        io.DisplaySize = ImVec2((float)w, (float)h);
+        if (w > 0 && h > 0)
+            io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+    }
+    else
+    {
+        // When using sdlrenderer backend, get scale and size directly from renderer
+        int w, h;
+        float scale_w, scale_h;
+        SDL_RendererLogicalPresentation mode;
+        SDL_GetRenderLogicalPresentation(bd->Renderer, &w, &h, &mode, nullptr);
+        if (mode == SDL_LOGICAL_PRESENTATION_DISABLED) // Override with renderer size if disabled
+            SDL_GetRenderOutputSize(bd->Renderer, &w, &h);
+
+        if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_MINIMIZED)
+            w = h = 0;
+        io.DisplaySize = ImVec2(w, h);
+        SDL_GetRenderScale(bd->Renderer, &scale_w, &scale_h);
+        if (w > 0 && h > 0)
+            io.DisplayFramebufferScale = ImVec2(scale_w, scale_h);
+    }
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
