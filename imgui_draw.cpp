@@ -2631,8 +2631,11 @@ void ImFontAtlas::ClearFonts()
     ClearInputData();
     Fonts.clear_delete();
     TexIsBuilt = false;
-    DrawListSharedData->Font = NULL;
-    DrawListSharedData->FontScale = DrawListSharedData->FontSize = 0.0f;
+    if (DrawListSharedData)
+    {
+        DrawListSharedData->Font = NULL;
+        DrawListSharedData->FontScale = DrawListSharedData->FontSize = 0.0f;
+    }
 }
 
 void ImFontAtlas::Clear()
@@ -3158,7 +3161,7 @@ bool ImFontAtlas::Build()
 
     // [LEGACY] For backends not supporting RendererHasTextures: preload all glyphs
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(this);
-    if (DrawListSharedData->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
+    if (DrawListSharedData && DrawListSharedData->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
         ImFontAtlasBuildPreloadAllGlyphRanges(this);
     TexIsBuilt = true;
 
@@ -3496,6 +3499,8 @@ void ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedDat
 void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex)
 {
     ImDrawListSharedData* shared_data = atlas->DrawListSharedData;
+    if (shared_data == NULL)
+        return;
     for (ImDrawList* draw_list : shared_data->DrawLists)
     {
         // Replace in command-buffer
@@ -3515,6 +3520,8 @@ void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex
 void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
     ImDrawListSharedData* shared_data = atlas->DrawListSharedData;
+    if (shared_data == NULL)
+        return;
     shared_data->FontAtlas = atlas;
     shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
     shared_data->TexUvLines = atlas->TexUvLines;
