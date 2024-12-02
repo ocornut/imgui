@@ -56,6 +56,8 @@ Other changes:
 
 - Error Handling: fixed cases where recoverable error handling would crash when 
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
+- Tables: fixed SetNextWindowScroll() value being ignored by BeginTable() during
+  the first frame or when scrolling flags have changed. (#8196)
 - Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
 - Misc: added IMGUI_DISABLE_DEFAULT_FONT to strip embedded font from binary. (#8161)
   [@demonese]
