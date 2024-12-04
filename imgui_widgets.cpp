@@ -3949,9 +3949,7 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
         if (c == '\r')
             continue;
 
-        // FIXME-NEWATLAS-V1: Measure perf, inline etc.
-        const float char_width = font->GetCharAdvance((ImWchar)c) * scale;// ((int)c < font->IndexAdvanceX.Size ? font->IndexAdvanceX.Data[c] : font->FallbackAdvanceX)* scale;
-        line_width += char_width;
+        line_width += font->GetCharAdvance((ImWchar)c) * scale;
     }
 
     if (text_size.x < line_width)

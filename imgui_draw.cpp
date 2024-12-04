@@ -3837,6 +3837,15 @@ ImFontGlyph* ImFont::BuildLoadGlyph(ImWchar codepoint)
     return glyph;
 }
 
+// The point of this indirection is to not be inlined in debug mode in order to not bloat inner loop.b
+IM_MSVC_RUNTIME_CHECKS_OFF
+static float BuildLoadGlyphGetAdvanceOrFallback(ImFont* font, unsigned int codepoint)
+{
+    ImFontGlyph* glyph = font->BuildLoadGlyph((ImWchar)codepoint);
+    return glyph ? glyph->AdvanceX : font->FallbackAdvanceX;
+}
+IM_MSVC_RUNTIME_CHECKS_RESTORE
+
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 void ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas)
 {
@@ -4549,18 +4558,23 @@ bool ImFont::IsGlyphInFont(ImWchar c)
     return false;
 }
 
+// This is manually inlined in CalcTextSizeA() and CalcWordWrapPositionA(), with a non-inline call to BuildLoadGlyphGetAdvanceOrFallback().
+IM_MSVC_RUNTIME_CHECKS_OFF
 float ImFont::GetCharAdvance(ImWchar c)
 {
-    if (c < (size_t)IndexAdvanceX.Size)
+    if ((int)c < IndexAdvanceX.Size)
     {
         // Missing glyphs fitting inside index will have stored FallbackAdvanceX already.
         const float x = IndexAdvanceX.Data[c];
         if (x >= 0.0f)
             return x;
     }
+
+    // Same as BuildLoadGlyphGetAdvanceOrFallback():
     const ImFontGlyph* glyph = BuildLoadGlyph(c);
     return glyph ? glyph->AdvanceX : FallbackAdvanceX;
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Trim trailing space and find beginning of next line
 static inline const char* CalcWordWrapNextLineStartA(const char* text, const char* text_end)
@@ -4571,8 +4585,6 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
         text++;
     return text;
 }
-
-#define ImFontGetCharAdvanceX(_FONT, _CH)  ((int)(_CH) < (_FONT)->IndexAdvanceX.Size ? (_FONT)->IndexAdvanceX.Data[_CH] : (_FONT)->FallbackAdvanceX)
 
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
@@ -4626,9 +4638,11 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        // FIXME-NEWATLAS-V1: Measure perf, inline etc.
-        //const float char_width = ImFontGetCharAdvanceX(this, c);
-        const float char_width = GetCharAdvance((ImWchar)c); // ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX);
+        // Optimized inline version of 'float char_width = GetCharAdvance((ImWchar)c);'
+        float char_width = (c < (unsigned int)IndexAdvanceX.Size) ? IndexAdvanceX.Data[c] : -1.0f;
+        if (char_width < 0.0f)
+            char_width = BuildLoadGlyphGetAdvanceOrFallback(this, c);
+
         if (ImCharIsBlankW(c))
         {
             if (inside_word)
@@ -4733,9 +4747,12 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        // FIXME-NEWATLAS-V1: Measure perf, inline etc.
-        //const float char_width = ImFontGetCharAdvanceX(this, c) * scale;
-        const float char_width = GetCharAdvance((ImWchar)c) /* (int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX)*/ * scale;
+        // Optimized inline version of 'float char_width = GetCharAdvance((ImWchar)c);'
+        float char_width = (c < (unsigned int)IndexAdvanceX.Size) ? IndexAdvanceX.Data[c] : -1.0f;
+        if (char_width < 0.0f)
+            char_width = BuildLoadGlyphGetAdvanceOrFallback(this, c);
+        char_width *= scale;
+
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
