@@ -2581,7 +2581,6 @@ ImFontAtlas::ImFontAtlas()
     TexGlyphPadding = 1;
     TexRef._TexData = NULL;// this;
     TexNextUniqueID = 1;
-    _PackNodesFactor = 1.0f;
     Builder = NULL;
 }
 
@@ -3745,11 +3744,8 @@ void ImFontAtlasPackInit(ImFontAtlas* atlas)
     ImTextureData* tex = atlas->TexData;
     ImFontAtlasBuilder* builder = atlas->Builder;
 
-    // FIXME-NEWATLAS-V2: Expose other glyph padding settings for custom alteration (e.g. drop shadows). See #7962
-    // FIXME-NEWATLAS-V2: Experiment with number of nodes. 2024-11-05: Seems to be quite fine to reduce this.
-    //int pack_padding = atlas->TexGlyphPadding;
+    // In theory we could decide to reduce the number of nodes, e.g. halve them, and waste a little texture space, but it doesn't seem worth it.
     int pack_node_count = tex->Width;
-    //pack_node_count *= atlas->_PackNodesFactor;
     builder->PackNodes.resize(pack_node_count);
     IM_STATIC_ASSERT(sizeof(stbrp_context) <= sizeof(stbrp_context_opaque));
     stbrp_init_target((stbrp_context*)(void*)&builder->PackContext, tex->Width, tex->Height, builder->PackNodes.Data, builder->PackNodes.Size);
@@ -3759,6 +3755,7 @@ void ImFontAtlasPackInit(ImFontAtlas* atlas)
 }
 
 // Important: Calling this may recreate a new texture and therefore change atlas->TexData
+// FIXME-NEWATLAS-V2: Expose other glyph padding settings for custom alteration (e.g. drop shadows). See #7962
 ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h)
 {
     IM_ASSERT(w > 0 && w <= 0xFFFF);
@@ -3860,7 +3857,7 @@ void ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas)
             for (const ImTextureRect& r : tex->Updates)
             {
                 IM_ASSERT(r.x >= 0 && r.y >= 0);
-                IM_ASSERT(r.x + r.w < tex->Width && r.y + r.h < tex->Height);
+                IM_ASSERT(r.x + r.w <= tex->Width && r.y + r.h <= tex->Height); // In theory should subtract PackPadding but it's currently part of atlas and mid-frame change would wreck assert.
                 //IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: update (% 4d..%-4d)->(% 4d..%-4d), texid=0x%" IM_PRIX64 ", backend_data=0x%" IM_PRIX64 "\n", tex->UniqueID, r.x, r.y, r.x + r.w, r.y + r.h, tex->TexID, (ImU64)(intptr_t)tex->BackendUserData);
             }
         }

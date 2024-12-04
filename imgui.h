@@ -3720,7 +3720,6 @@ struct ImFontAtlas
     int                         RefCount;           // Number of contexts using this atlas
     int                         _PackedSurface;     // Number of packed pixels. Used when compacting to heuristically find the ideal texture size.
     int                         _PackedRects;       // Number of packed rectangles.
-    float                       _PackNodesFactor = 1.0f;
 
     // [Obsolete]
     //int                              TexDesiredWidth;         // OBSOLETED in 1.91.5 (force texture width before calling Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height)
