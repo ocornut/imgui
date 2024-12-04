@@ -59,7 +59,7 @@
 //#define IMGUI_INCLUDE_IMGUI_USER_H
 //#define IMGUI_USER_H_FILENAME         "my_folder/my_imgui_user.h"
 
-//---- Pack colors to BGRA8 instead of RGBA8 (to avoid converting from one to another)
+//---- Pack vertex colors as BGRA8 instead of RGBA8 (to avoid converting from one to another). Need dedicated backend support.
 //#define IMGUI_USE_BGRA_PACKED_COLOR
 
 //---- Use 32-bit for ImWchar (default is 16-bit) to support Unicode planes 1-16. (e.g. point beyond 0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...)

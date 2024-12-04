@@ -2715,7 +2715,8 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 #endif
 
 // Helpers macros to generate 32-bit encoded colors
-// User can declare their own format by #defining the 5 _SHIFT/_MASK macros in their imconfig file.
+// - User can declare their own format by #defining the 5 _SHIFT/_MASK macros in their imconfig file.
+// - Any setting other than the default will need custom backend support. The only standard backend that supports anything else than the default is DirectX9.
 #ifndef IM_COL32_R_SHIFT
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
 #define IM_COL32_R_SHIFT    16
