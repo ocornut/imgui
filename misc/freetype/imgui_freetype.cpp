@@ -10,7 +10,7 @@
 //  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
 //  2023/08/01: added support for SVG fonts, enable by using '#define IMGUI_ENABLE_FREETYPE_LUNASVG'. (#6591)
 //  2023/01/04: fixed a packing issue which in some occurrences would prevent large amount of glyphs from being packed correctly.
-//  2021/08/23: fixed crash when FT_Render_Glyph() fails to render a glyph and returns NULL.
+//  2021/08/23: fixed crash when FT_Render_Glyph() fails to render a glyph and returns nullptr.
 //  2021/03/05: added ImGuiFreeTypeBuilderFlags_Bitmap to load bitmap glyphs.
 //  2021/03/02: set 'atlas->TexPixelsUseColors = true' to help some backends with deciding of a preferred texture format.
 //  2021/01/28: added support for color-layered glyphs via ImGuiFreeTypeBuilderFlags_LoadColor (require Freetype 2.10+).

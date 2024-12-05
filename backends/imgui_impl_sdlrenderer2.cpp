@@ -208,7 +208,7 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
             }
         }
     }
-    platform_io.Renderer_RenderState = NULL;
+    platform_io.Renderer_RenderState = nullptr;
 
     // Restore modified SDL_Renderer state
     SDL_RenderSetViewport(renderer, &old.Viewport);
