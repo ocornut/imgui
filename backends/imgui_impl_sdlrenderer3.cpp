@@ -338,7 +338,8 @@ static void ImGui_ImplSDLRenderer3_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplSDLRenderer3_ViewportData* vd = IM_NEW(ImGui_ImplSDLRenderer3_ViewportData)();
     viewport->RendererUserData = vd;
 
-    SDL_Window* window = (SDL_Window*)viewport->PlatformHandle;
+    SDL_WindowID window_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
+    SDL_Window* window = SDL_GetWindowFromID(window_id);
     vd->Renderer = SDL_CreateRenderer(window, nullptr);
     SDL_SetRenderVSync(vd->Renderer, 0);
     IM_ASSERT(vd->Renderer != NULL);
