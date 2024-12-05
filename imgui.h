@@ -3626,7 +3626,6 @@ struct ImFontAtlas
     IMGUI_API void              Clear();                    // Clear all input and output.
 
     IMGUI_API void              ClearCache();               // Clear cached glyphs
-    IMGUI_API void              BuildInit();
 
     // Build atlas, retrieve pixel data.
     // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
@@ -3680,7 +3679,7 @@ struct ImFontAtlas
     // - Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
     IMGUI_API int               AddCustomRectRegular(int width, int height);
     IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
-    ImFontAtlasCustomRect*      GetCustomRectByIndex(int index) { IM_ASSERT(index >= 0); return &CustomRects[index]; }
+    IMGUI_API ImFontAtlasCustomRect* GetCustomRectByIndex(int index);
 
     // [Internal]
     IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
@@ -3705,8 +3704,8 @@ struct ImFontAtlas
     ImVec2                      TexUvScale;         // = (1.0f/TexData->TexWidth, 1.0f/TexData->TexHeight)
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
-    ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
+    //ImVector<ImFontAtlasCustomRect> CustomRects;  // Rectangles for packing custom texture data into the atlas.
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     ImDrawListSharedData*       DrawListSharedData; // In principle this could become an array (e.g. multiple contexts using same atlas)

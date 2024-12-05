@@ -142,6 +142,7 @@ struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
 struct ImFontAtlasRect;             // Packed rectangle (same as ImTextureRect)
+struct ImFontAtlasRectEntry;        // Packed rectangle lookup entry
 struct ImFontAtlasBuilder;          // Internal storage for incrementally packing and building a ImFontAtlas
 
 // ImGui
@@ -3925,13 +3926,23 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
-// Packed rectangle (same as ImTextureRect)
 struct ImFontAtlasRect
 {
     unsigned short  x, y;
     unsigned short  w, h;
 };
 typedef int ImFontAtlasRectId;          // <0 when invalid
+
+// Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)
+// User are returned ImFontAtlasRectId values which are meant to be persistent.
+// We handle this with an indirection. While Rects[] may be in theory shuffled, compacted etc., RectsIndex[] cannot it is keyed by ImFontAtlasRectId.
+// RectsIndex[] is used both as an index into Rects[] and an index into itself. This is basically a free-list. See ImFontAtlasBuildAllocRectIndexEntry() code.
+// Having this also makes it easier to e.g. sort rectangles during repack.
+struct ImFontAtlasRectEntry
+{
+    int             TargetIndex : 31; // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
+    unsigned int    Used : 1;
+};
 
 // Internal storage for incrementally packing and building a ImFontAtlas
 struct stbrp_context_opaque { char data[80]; };
@@ -3941,7 +3952,11 @@ struct ImFontAtlasBuilder
     stbrp_context_opaque        PackContext;            // Actually 'stbrp_context' but we don't want to define this in the header file.
     ImVector<stbrp_node>        PackNodes;
     ImVector<ImFontAtlasRect>   Rects;
+    ImVector<ImFontAtlasRectEntry> RectsIndex;          // ImFontAtlasRectId -> index into Rects[]
     ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
+    int                         RectsIndexFreeListStart;// First unused entry
+    int                         RectsDiscardedCount;
+    int                         RectsDiscardedSurface;
     ImVec2i                     MaxRectSize;            // Largest rectangle to pack (de-facto used as a "minimum texture size")
     ImVec2i                     MaxRectBounds;          // Bottom-right most used pixels
     bool                        LockDisableResize;      // Disable resizing texture
@@ -3951,7 +3966,7 @@ struct ImFontAtlasBuilder
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
     ImFontAtlasRectId           PackIdLinesTexData;
 
-    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); }
+    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); RectsIndexFreeListStart = -1; }
 };
 
 // FIXME-NEWATLAS: Cleanup
@@ -3969,11 +3984,13 @@ IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample_h, int* out_oversample_v);
 
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
-IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h);
+IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);
+IMGUI_API void              ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 IMGUI_API ImFontAtlasRect*  ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 
 IMGUI_API void              ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
