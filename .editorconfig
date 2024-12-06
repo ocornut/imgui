@@ -11,18 +11,21 @@
 # top-most EditorConfig file
 root = true
 
-# Default settings:
-# Use 4 spaces as indentation
+# Default settings
 [*]
 indent_style = space
 indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+# Custom settings for files starting with "imstb_"
 [imstb_*]
+indent_style = space
 indent_size = 3
 trim_trailing_whitespace = false
 
+# Makefile settings
 [Makefile]
 indent_style = tab
 indent_size = 4
+
