@@ -482,6 +482,28 @@ void ImGui_ImplEmscripten_Init() {
       return true;                                                              // the event was consumed
     }
   );
+  emscripten_set_blur_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_BLUR
+      auto &imgui_io{ImGui::GetIO()};
+      imgui_io.AddFocusEvent(false);
+      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus gain
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_focus_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUS
+      auto &imgui_io{ImGui::GetIO()};
+      imgui_io.AddFocusEvent(true);
+      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
+      return true;                                                              // the event was consumed
+    }
+  );
   emscripten_set_focusin_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
