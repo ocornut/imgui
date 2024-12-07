@@ -584,6 +584,21 @@ static void ImGui_ImplSDL3_UpdateMouseData()
             float mouse_x_global, mouse_y_global;
             int window_x, window_y;
             SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
+#if defined(SDL_PLATFORM_MACOS)
+            // On macOS SDL3 no longer renders fullscreen windows into the notch area
+            // on devices with such hardware, but will still report the global mouse state relative
+            // to the entire display.
+            // This results in incorrect mouse location data, as the mouse should be reported
+            // relative to the drawable client area.
+            // To resolve this issue, SDL_GetMouseState() can be used.
+            uint32_t window_flags = SDL_GetWindowFlags(bd->Window);
+            if (window_flags & SDL_WINDOW_FULLSCREEN)
+            {
+              SDL_GetMouseState(&mouse_x_global, &mouse_y_global);
+            }
+#endif
+
+
             SDL_GetWindowPosition(focused_window, &window_x, &window_y);
             io.AddMousePosEvent(mouse_x_global - window_x, mouse_y_global - window_y);
         }
