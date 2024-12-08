@@ -456,6 +456,7 @@ void ImGui_ImplEmscripten_Init() {
       case ImGuiKey_Tab:                                                        // consuming tab prevents the user tabbing to other parts of the browser interface outside the window content
         return imgui_io.WantCaptureKeyboard;                                    // the event was consumed only if imgui wants to capture the keyboard
       case ImGuiKey_Enter:                                                      // consuming enter prevents the word "Enter" appearing in text input via the keypress callback
+      case ImGuiKey_Delete:                                                     // consuming enter prevents the word "Delete" appearing in text input via the keypress callback
         return imgui_io.WantTextInput;                                          // the event was consumed only if we're currently accepting text input
       default:
         return false;                                                           // the event was not consumed
