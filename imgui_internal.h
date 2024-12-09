@@ -67,7 +67,7 @@ Index of this file:
 #endif
 #endif
 // Emscripten has partial SSE 4.2 support where _mm_crc32_u32 is not available. See https://emscripten.org/docs/porting/simd.html#id11 and #8213
-#if defined(IMGUI_ENABLE_SSE4_2) || !defined(__EMSCRIPTEN__)
+#if defined(IMGUI_ENABLE_SSE4_2) && !defined(__EMSCRIPTEN__)
 #define IMGUI_ENABLE_SSE4_2_CRC
 #endif
 
