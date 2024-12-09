@@ -58,6 +58,8 @@ Other changes:
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
 - Tables: fixed SetNextWindowScroll() value being ignored by BeginTable() during
   the first frame or when scrolling flags have changed. (#8196)
+- InputText: reactivating last activated InputText() doesn't restore horizontal scrolling
+  (which was disabled during deactivation anyway).
 - Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
 - Misc: added IMGUI_DISABLE_DEFAULT_FONT to strip embedded font from binary. (#8161)
   [@demonese]
