@@ -58,6 +58,9 @@ Other changes:
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
 - Tables: fixed SetNextWindowScroll() value being ignored by BeginTable() during
   the first frame or when scrolling flags have changed. (#8196)
+- InputText: added ImGuiInputTextFlags_ElideLeft to elide left side and ensure right side
+  of contents is visible when whole text is not fitting (useful for paths/filenames).
+  (#1442, #1440, #4391, #7208, #8216) [@kucoman, @ocornut]
 - InputText: reactivating last activated InputText() doesn't restore horizontal scrolling
   (which was disabled during deactivation anyway).
 - Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
