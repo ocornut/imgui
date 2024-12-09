@@ -30,6 +30,7 @@ struct ImGui_ImplDX12_InitInfo
     ID3D12CommandQueue*         CommandQueue;
     int                         NumFramesInFlight;
     DXGI_FORMAT                 RTVFormat;
+    DXGI_FORMAT                 DSVFormat;
     void*                       UserData;
 
     // Allocating SRV descriptors for textures is up to the application, so we provide callbacks.
