@@ -125,6 +125,14 @@ Index of this file:
 #define IMGUI_ENABLE_STB_TRUETYPE
 #endif
 
+#if (defined(__cplusplus) && (__cplusplus >= 202002L)) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L))
+#define IM_LIKELY   [[likely]]
+#define IM_UNLIKELY [[unlikely]]
+#else
+#define IM_LIKELY
+#define IM_UNLIKELY
+#endif
+
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations
 //-----------------------------------------------------------------------------
@@ -455,6 +463,13 @@ static inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
 #endif
 static inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
 #endif
+#if defined(IMGUI_ENABLE_SSE) && !defined(_DEBUG) // In debug mode 'ImSqrt' run faster than single step Newton-Raphson method
+static inline float  ImRsqrtSSE2Precise(float x) { const float r = _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); return r * (1.5f - x * 0.5f * r * r); } // Converge to more precise solution using single step of Newton-Raphson method, repeating increase precision
+#define ImRsqrtPrecise(x)   ImRsqrtSSE2Precise(x)
+#else
+#define ImRsqrtPrecise(x)   (1.0f / ImSqrt(x))
+#endif
+
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
 // (Exceptionally using templates here but we could also redefine them for those types)
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
@@ -776,6 +791,8 @@ struct IMGUI_API ImDrawListSharedData
     float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
+    float           DefaultMiterLimit;          // Default miter limit
+    float           InitialFringeScale;         // Initial scale to apply to AA fringe
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
@@ -783,7 +800,7 @@ struct IMGUI_API ImDrawListSharedData
     ImVector<ImVec2> TempBuffer;
 
     // [Internal] Lookup tables
-    ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.
+    ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE + 1]; // Sample points on the circle. +1 to so sampling can avoid wrapping around logic
     float           ArcFastRadiusCutoff;                        // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
 
@@ -797,6 +814,33 @@ struct ImDrawDataBuilder
     ImVector<ImDrawList*>   LayerData1;
 
     ImDrawDataBuilder()                     { memset(this, 0, sizeof(*this)); }
+};
+
+struct ImDrawListPolylineArc
+{
+    ImVec2 center;
+    ImVec2 from;
+    ImVec2 to;
+};
+
+struct ImDrawListPolyline
+{
+    const ImVec2* points;
+    const ImVec2* normals;
+    ImDrawListPolylineArc* arcs;
+    const float*  segments_length_sqr;
+    int           point_count;
+    ImU32         color;
+    ImU32         fringe_color;
+    float         thickness;
+    float         fringe_thickness;
+    float         fringe_width;
+    float         miter_limit;
+    ImDrawFlags   join;
+    ImDrawFlags   cap;
+    bool          closed;
+
+    ImDrawListPolyline()                    { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
