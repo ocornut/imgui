@@ -541,8 +541,9 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
         // Copy to texture, post-process and queue update for backend
         ImTextureData* tex = atlas->TexData;
         IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
-        ImFontAtlasTextureBlockConvertAndPostProcess(atlas, font, src, &font->Glyphs.back(),
-            temp_buffer, ImTextureFormat_RGBA32, w * 4, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
+        ImFontAtlasTextureBlockConvert(temp_buffer, ImTextureFormat_RGBA32, w * 4, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
+        ImFontAtlasPostProcessData pp_data = { atlas, font, src, &font->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
+        ImFontAtlasTextureBlockPostProcess(&pp_data);
         ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
     }
     else
