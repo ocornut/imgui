@@ -8,12 +8,12 @@
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen.
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy SDL_SCANCODE_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Basic IME support. App needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
-// Issues:
+// Missing features or Issues:
 //  [ ] Platform: Multi-viewport: Minimized windows seems to break mouse wheel events (at least under Windows).
 //  [ ] Platform: Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
-//  [x] Platform: Basic IME support. App needs to call 'SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");' before SDL_CreateWindow()!.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -362,7 +362,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
     {
         case SDL_MOUSEMOTION:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->motion.windowID) == NULL)
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->motion.windowID) == nullptr)
                 return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -378,7 +378,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_MOUSEWHEEL:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->wheel.windowID) == NULL)
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->wheel.windowID) == nullptr)
                 return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
 #if SDL_VERSION_ATLEAST(2,0,18) // If this fails to compile on Emscripten: update to latest Emscripten!
@@ -398,7 +398,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->button.windowID) == NULL)
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->button.windowID) == nullptr)
                 return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
@@ -415,7 +415,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_TEXTINPUT:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->text.windowID) == NULL)
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->text.windowID) == nullptr)
                 return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
@@ -423,7 +423,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID) == NULL)
+            if (ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID) == nullptr)
                 return false;
             ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
             ImGuiKey key = ImGui_ImplSDL2_KeyEventToImGuiKey(event->key.keysym.sym, event->key.keysym.scancode);

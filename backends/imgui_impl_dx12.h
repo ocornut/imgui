@@ -3,7 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
@@ -30,7 +30,8 @@ struct ImGui_ImplDX12_InitInfo
     ID3D12Device*               Device;
     ID3D12CommandQueue*         CommandQueue;
     int                         NumFramesInFlight;
-    DXGI_FORMAT                 RTVFormat;
+    DXGI_FORMAT                 RTVFormat;          // RenderTarget format.
+    DXGI_FORMAT                 DSVFormat;          // DepthStencilView format.
     void*                       UserData;
 
     // Allocating SRV descriptors for textures is up to the application, so we provide callbacks.

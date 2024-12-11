@@ -5,7 +5,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices (Desktop OpenGL only).
+//  [x] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset) [Desktop OpenGL only!]
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // About WebGL/ES:
@@ -303,15 +303,13 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     io.BackendRendererName = "imgui_impl_opengl3";
 
     // Query for GL version (e.g. 320 for GL 3.2)
+    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     // GLES 2
-    const char* gl_version_str = "";
-    IM_UNUSED(gl_version_str); // For IMGUI_IMPL_OPENGL_DEBUG block below.
     bd->GlVersion = 200;
     bd->GlProfileIsES2 = true;
 #else
     // Desktop or GLES 3
-    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
     GLint major = 0;
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
