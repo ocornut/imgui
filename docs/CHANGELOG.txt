@@ -36,7 +36,7 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.6 WIP (In Progress)
+ VERSION 1.91.6 (Released 2024-12-11)
 -----------------------------------------------------------------------
 
 Breaking changes:
@@ -48,18 +48,18 @@ Breaking changes:
   - We provide convenience legacy fields to pass a single descriptor,
     matching the old API, but upcoming features will want multiple.
   - Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
-- Misc: changed CRC32 table from CRC32-adler to CRC32c polynomial in order to 
+- Misc: changed CRC32 table from CRC32-adler to CRC32c polynomial in order to
   be compatible with the result of SSE 4.2 instructions. (#8169, #4933) [@Teselka]
   - As a result, some .ini data may be partially lost when storing checksums
-    (docking and tables information particularly). 
-  - Because some users have crafted and storing .ini data as a way to workaround 
+    (docking and tables information particularly).
+  - Because some users have crafted and storing .ini data as a way to workaround
     limitations of the docking API, we are providing a '#define IMGUI_USE_LEGACY_CRC32_ADLER'
     compile-time option to keep using old CRC32 tables if you cannot afford invalidating
     old .ini data.
 
 Other changes:
 
-- Error Handling: fixed cases where recoverable error handling would crash when 
+- Error Handling: fixed cases where recoverable error handling would crash when
   processing errors outside of the NewFrame()..EndFrame() scope. (#1651)
 - Tables: fixed SetNextWindowScroll() value being ignored by BeginTable() during
   the first frame or when scrolling flags have changed. (#8196)
@@ -71,13 +71,13 @@ Other changes:
 - Misc: changed embedded ProggyClean encoding to save a bit of binary space (~12kb to 9.5kb).
 - Misc: added IMGUI_DISABLE_DEFAULT_FONT to strip embedded font from binary. (#8161)
   [@demonese]
-- Tools: binary_to_compressed_c: added -u8/-u32/-base85 export options.
 - Demo: example tree used by Property Editor & Selection demos properly freed
   on application closure. (#8158) [@Legulysse]
 - Fonts: fixed AddCustomRect() not being packed with TexGlyphPadding + not accounted
   for surface area used to determine best-guess texture size. (#8107) [@YarikTH, @ocornut]
 - Misc: use SSE 4.2 crc32 instructions when available. (#8169, #4933) [@Teselka]
-- Backends: DirectX12: Let user specifies the DepthStencilView format by setting 
+- Tools: binary_to_compressed_c: added -u8/-u32/-base85 export options.
+- Backends: DirectX12: Let user specifies the DepthStencilView format by setting
   ImGui_ImplDX12_InitInfo::DSVFormat. (#8217) [@bmarques1995]
 - Backends: Vulkan: Make user-provided descriptor pool optional. As a convenience,
   when setting init_info->DescriptorPoolSize then the backend will create and manage
