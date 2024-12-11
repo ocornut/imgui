@@ -2377,7 +2377,7 @@ ImFontConfig::ImFontConfig()
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;
     RasterizerDensity = 1.0f;
-    EllipsisChar = (ImWchar)-1;
+    EllipsisChar = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -2563,9 +2563,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
     // - We may support it better later and remove this rounding.
     new_font_cfg.SizePixels = ImTrunc(new_font_cfg.SizePixels);
-
-    if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
-        new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
     // Pointers to ConfigData and BuilderData are otherwise dangling
     ImFontAtlasUpdateConfigDataPointers(this);
@@ -3635,8 +3632,8 @@ ImFont::ImFont()
 {
     FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
-    FallbackChar = (ImWchar)-1;
-    EllipsisChar = (ImWchar)-1;
+    FallbackChar = 0;
+    EllipsisChar = 0;
     EllipsisWidth = EllipsisCharStep = 0.0f;
     EllipsisCharCount = 0;
     FallbackGlyph = NULL;
@@ -3675,7 +3672,7 @@ static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_cha
     for (int n = 0; n < candidate_chars_count; n++)
         if (font->FindGlyphNoFallback(candidate_chars[n]) != NULL)
             return candidate_chars[n];
-    return (ImWchar)-1;
+    return 0;
 }
 
 void ImFont::BuildLookupTable()
@@ -3742,17 +3739,17 @@ void ImFont::BuildLookupTable()
     // Setup Ellipsis character. It is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
     // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
     // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
-    const ImWchar ellipsis_chars[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
+    const ImWchar ellipsis_chars[] = { ConfigData->EllipsisChar, (ImWchar)0x2026, (ImWchar)0x0085 };
     const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
-    if (EllipsisChar == (ImWchar)-1)
+    if (EllipsisChar == 0)
         EllipsisChar = FindFirstExistingGlyph(this, ellipsis_chars, IM_ARRAYSIZE(ellipsis_chars));
     const ImWchar dot_char = FindFirstExistingGlyph(this, dots_chars, IM_ARRAYSIZE(dots_chars));
-    if (EllipsisChar != (ImWchar)-1)
+    if (EllipsisChar != 0)
     {
         EllipsisCharCount = 1;
         EllipsisWidth = EllipsisCharStep = FindGlyph(EllipsisChar)->X1;
     }
-    else if (dot_char != (ImWchar)-1)
+    else if (dot_char != 0)
     {
         const ImFontGlyph* glyph = FindGlyph(dot_char);
         EllipsisChar = dot_char;
