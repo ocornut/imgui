@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
+  platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.6 (Released 2024-12-11)
