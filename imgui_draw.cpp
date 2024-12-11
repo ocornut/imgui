@@ -2462,8 +2462,8 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::BuildCompactTexture()
 // - ImFontAtlasUpdateTextures()
 //-----------------------------------------------------------------------------
-// - ImFontAtlasTextureBlockConvertAndPostProcess()
 // - ImFontAtlasTextureBlockConvert()
+// - ImFontAtlasTextureBlockPostProcess()
 // - ImFontAtlasTextureBlockPostProcessMultiply()
 // - ImFontAtlasTextureBlockCopy()
 // - ImFontAtlasTextureBlockQueueUpload()
@@ -2737,17 +2737,11 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas)
 
 // Source buffer may be written to (used for in-place mods).
 // Post-process hooks may eventually be added here.
-void ImFontAtlasTextureBlockConvertAndPostProcess(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst, ImTextureFormat dst_fmt, int dst_pitch, int w, int h)
+void ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data)
 {
-    IM_UNUSED(atlas);
-    IM_UNUSED(font);
-    IM_UNUSED(glyph);
-
     // Multiply operator (legacy)
-    if (src->RasterizerMultiply != 1.0f)
-        ImFontAtlasTextureBlockPostProcessMultiply(atlas, font, src, glyph, src_pixels, src_fmt, w, h, src_pitch, src->RasterizerMultiply);
-
-    ImFontAtlasTextureBlockConvert(src_pixels, src_fmt, src_pitch, dst, dst_fmt, dst_pitch, w, h);
+    if (data->FontSrc->RasterizerMultiply != 1.0f)
+        ImFontAtlasTextureBlockPostProcessMultiply(data, data->FontSrc->RasterizerMultiply);
 }
 
 void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h)
@@ -2785,34 +2779,30 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     }
 }
 
-void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* pixels, ImTextureFormat format, int w, int h, int pitch, float in_multiply_factor)
+void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data, float multiply_factor)
 {
-    IM_UNUSED(atlas);
-    IM_UNUSED(font);
-    IM_UNUSED(src);
-    IM_UNUSED(glyph);
-    IM_ASSERT(in_multiply_factor >= 0.0f);
-    IM_ASSERT_PARANOID(w <= pitch);
-    if (format == ImTextureFormat_Alpha8)
+    unsigned char* pixels = data->Pixels;
+    int pitch = data->Pitch;
+    if (data->Format == ImTextureFormat_Alpha8)
     {
-        for (int ny = h; ny > 0; ny--, pixels += pitch)
+        for (int ny = data->Height; ny > 0; ny--, pixels += pitch)
         {
             ImU8* p = (ImU8*)pixels;
-            for (int nx = w; nx > 0; nx--, p++)
+            for (int nx = data->Width; nx > 0; nx--, p++)
             {
-                unsigned int v = ImMin((unsigned int)(*p * in_multiply_factor), (unsigned int)255);
+                unsigned int v = ImMin((unsigned int)(*p * multiply_factor), (unsigned int)255);
                 *p = (unsigned char)v;
             }
         }
     }
-    else if (format == ImTextureFormat_RGBA32)
+    else if (data->Format == ImTextureFormat_RGBA32)
     {
-        for (int ny = h; ny > 0; ny--, pixels += pitch)
+        for (int ny = data->Height; ny > 0; ny--, pixels += pitch)
         {
             ImU32* p = (ImU32*)(void*)pixels;
-            for (int nx = w; nx > 0; nx--, p++)
+            for (int nx = data->Width; nx > 0; nx--, p++)
             {
-                unsigned int a = ImMin((unsigned int)(((*p >> IM_COL32_A_SHIFT) & 0xFF) * in_multiply_factor), (unsigned int)255);
+                unsigned int a = ImMin((unsigned int)(((*p >> IM_COL32_A_SHIFT) & 0xFF) * multiply_factor), (unsigned int)255);
                 *p = IM_COL32((*p >> IM_COL32_R_SHIFT) & 0xFF, (*p >> IM_COL32_G_SHIFT) & 0xFF, (*p >> IM_COL32_B_SHIFT) & 0xFF, a);
             }
         }
@@ -4159,8 +4149,9 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
         // Copy to texture, post-process and queue update for backend
         ImTextureData* tex = atlas->TexData;
         IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
-        ImFontAtlasTextureBlockConvertAndPostProcess(atlas, font, src, &font->Glyphs.back(),
-            bitmap_pixels, ImTextureFormat_Alpha8, w, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
+        ImFontAtlasTextureBlockConvert(bitmap_pixels, ImTextureFormat_Alpha8, w, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
+        ImFontAtlasPostProcessData pp_data = { atlas, font, src, &font->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
+        ImFontAtlasTextureBlockPostProcess(&pp_data);
         ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
     }
     else

@@ -144,6 +144,7 @@ struct ImDrawListSharedData;        // Data shared between all ImDrawList instan
 struct ImFontAtlasRect;             // Packed rectangle (same as ImTextureRect)
 struct ImFontAtlasRectEntry;        // Packed rectangle lookup entry
 struct ImFontAtlasBuilder;          // Internal storage for incrementally packing and building a ImFontAtlas
+struct ImFontAtlasPostProcessData;  // Data available to potential post-process functions
 
 // ImGui
 struct ImGuiBoxSelectState;         // Box-selection state (currently used by multi-selection, could potentially be used by others)
@@ -3944,6 +3945,22 @@ struct ImFontAtlasRectEntry
     unsigned int    Used : 1;
 };
 
+// Data available to potential post-process functions
+struct ImFontAtlasPostProcessData
+{
+    ImFontAtlas*        FontAtlas;
+    ImFont*             Font;
+    ImFontConfig*       FontSrc;
+    ImFontGlyph*        Glyph;
+
+    // Pixel data
+    unsigned char*      Pixels;
+    ImTextureFormat     Format;
+    int                 Pitch;
+    int                 Width;
+    int                 Height;
+};
+
 // Internal storage for incrementally packing and building a ImFontAtlas
 struct stbrp_context_opaque { char data[80]; };
 struct stbrp_node;
@@ -4000,9 +4017,9 @@ IMGUI_API void              ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* at
 
 IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas);
 
-IMGUI_API void              ImFontAtlasTextureBlockConvertAndPostProcess(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
 IMGUI_API void              ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
-IMGUI_API void              ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, ImFontGlyph* glyph, unsigned char* pixels, ImTextureFormat format, int w, int h, int pitch, float in_multiply_factor);
+IMGUI_API void              ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data);
+IMGUI_API void              ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data, float multiply_factor);
 IMGUI_API void              ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h);
 IMGUI_API void              ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h);
 
