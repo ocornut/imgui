@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6 WIP
+// dear imgui, v1.91.6
 // (drawing and font code)
 
 /*
@@ -402,7 +402,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 
 ImDrawList::ImDrawList(ImDrawListSharedData* shared_data)
 {
-    memset(this, 0, sizeof(*this)); 
+    memset(this, 0, sizeof(*this));
     _Data = shared_data;
 }
 
