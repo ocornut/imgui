@@ -21,6 +21,10 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
+#if defined(__ANDROID__)
+#include <SDL3/SDL_main.h>
+#endif
+
 // Main code
 int main(int, char**)
 {
