@@ -3927,6 +3927,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     ActiveIdPreviousFrameIsAlive = false;
     ActiveIdPreviousFrameHasBeenEditedBefore = false;
     ActiveIdPreviousFrameWindow = NULL;
+    memset(&ActiveIdValueOnActivation, 0, sizeof(ActiveIdValueOnActivation));
     LastActiveId = 0;
     LastActiveIdTimer = 0.0f;
 

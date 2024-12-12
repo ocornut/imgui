@@ -2632,6 +2632,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
                 temp_input_is_active = true;
             }
 
+        // Store initial value (not used by main lib but available as a convenience but some mods e.g. to revert)
+        if (make_active)
+            memcpy(&g.ActiveIdValueOnActivation, p_data, DataTypeGetInfo(data_type)->Size);
+
         if (make_active && !temp_input_is_active)
         {
             SetActiveID(id, window);
@@ -3221,6 +3225,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
         if (make_active && temp_input_allowed)
             if ((clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
                 temp_input_is_active = true;
+
+        // Store initial value (not used by main lib but available as a convenience but some mods e.g. to revert)
+        if (make_active)
+            memcpy(&g.ActiveIdValueOnActivation, p_data, DataTypeGetInfo(data_type)->Size);
 
         if (make_active && !temp_input_is_active)
         {
