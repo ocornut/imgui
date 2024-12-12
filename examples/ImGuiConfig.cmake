@@ -1,0 +1,21 @@
+if(NOT DEFINED ImGui_FIND_COMPONENTS)
+    set(ImGui_FIND_COMPONENTS Core)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/ImGuiTargets.cmake")
+
+foreach(COMPONENT ${ImGui_FIND_COMPONENTS})
+    if(NOT ";${ImGui_AVAILABLE_COMPONENTS};" MATCHES ";${COMPONENT};")
+        set(ImGui_FOUND FALSE)
+        set(ImGui_NOT_FOUND_MESSAGE "Unavailable component: ${COMPONENT}.")
+    endif()
+    if(NOT ";${ImGui_SUPPORTED_COMPONENTS};" MATCHES ";${COMPONENT};")
+        set(ImGui_FOUND FALSE)
+        set(ImGui_NOT_FOUND_MESSAGE "Unsupported component: ${COMPONENT}.")
+    endif()
+endforeach()
+
+if(NOT ImGui_FOUND)
+    set(ImGui_NOT_FOUND_MESSAGE "${ImGui_NOT_FOUND_MESSAGE}\nSupported components: ${ImGui_SUPPORTED_COMPONENTS}.")
+    set(ImGui_NOT_FOUND_MESSAGE "${ImGui_NOT_FOUND_MESSAGE}\nAvailable components: ${ImGui_AVAILABLE_COMPONENTS}.")
+endif()
