@@ -1133,7 +1133,7 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    bool                    WantReloadUserBuf;      // force a reload of user buf so it may be modified externally. may be automatic in future version.
     int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
@@ -1159,7 +1159,6 @@ struct IMGUI_API ImGuiInputTextState
     //   strcpy(my_buf, "hello");
     //   if (ImGuiInputTextState* state = ImGui::GetInputTextState(id)) // id may be ImGui::GetItemID() is last item
     //       state->ReloadUserBufAndSelectAll();
-    // THIS CURRENTLY RESETS THE UNDO STACK.
     void        ReloadUserBufAndSelectAll();
     void        ReloadUserBufAndKeepSelection();
     void        ReloadUserBufAndMoveToEnd();
