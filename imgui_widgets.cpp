@@ -4041,16 +4041,12 @@ static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(ImGuiInputTextState* obj, int idx)  
 
 static void STB_TEXTEDIT_DELETECHARS(ImGuiInputTextState* obj, int pos, int n)
 {
+    // Offset remaining text (+ copy zero terminator)
     char* dst = obj->TextA.Data + pos;
-
+    char* src = obj->TextA.Data + pos + n;
+    memmove(dst, src, obj->TextLen - n - pos + 1);
     obj->Edited = true;
     obj->TextLen -= n;
-
-    // Offset remaining text (FIXME-OPT: Use memmove)
-    const char* src = obj->TextA.Data + pos + n;
-    while (char c = *src++)
-        *dst++ = c;
-    *dst = '\0';
 }
 
 static bool STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const char* new_text, int new_text_len)
@@ -4174,17 +4170,16 @@ ImGuiInputTextCallbackData::ImGuiInputTextCallbackData()
     memset(this, 0, sizeof(*this));
 }
 
-// Public API to manipulate UTF-8 text
-// We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
+// Public API to manipulate UTF-8 text from within a callback.
 // FIXME: The existence of this rarely exercised code path is a bit of a nuisance.
+// Historically they existed because STB_TEXTEDIT_INSERTCHARS() etc. worked on our ImWchar
+// buffer, but nowadays they both work on UTF-8 data. Should aim to merge both.
 void ImGuiInputTextCallbackData::DeleteChars(int pos, int bytes_count)
 {
     IM_ASSERT(pos + bytes_count <= BufTextLen);
     char* dst = Buf + pos;
     const char* src = Buf + pos + bytes_count;
-    while (char c = *src++)
-        *dst++ = c;
-    *dst = '\0';
+    memmove(dst, src, BufTextLen - bytes_count - pos + 1);
 
     if (CursorPos >= pos + bytes_count)
         CursorPos -= bytes_count;
@@ -4209,7 +4204,6 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
         if (!is_resizable)
             return;
 
-        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
         ImGuiContext& g = *Ctx;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
@@ -4333,26 +4327,23 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, Im
     return true;
 }
 
-// Find the shortest single replacement we can make to get the new text from the old text.
-// Important: needs to be run before TextW is rewritten with the new characters because calling STB_TEXTEDIT_GETCHAR() at the end.
+// Find the shortest single replacement we can make to get from old_buf to new_buf
+// Note that this doesn't directly alter state->TextA, state->TextLen. They are expected to be made valid separately.
 // FIXME: Ideally we should transition toward (1) making InsertChars()/DeleteChars() update undo-stack (2) discourage (and keep reconcile) or obsolete (and remove reconcile) accessing buffer directly.
-static void InputTextReconcileUndoStateAfterUserCallback(ImGuiInputTextState* state, const char* new_buf_a, int new_length_a)
+static void InputTextReconcileUndoState(ImGuiInputTextState* state, const char* old_buf, int old_length, const char* new_buf, int new_length)
 {
-    const char* old_buf = state->CallbackTextBackup.Data;
-    const int old_length = state->CallbackTextBackup.Size - 1;
-
-    const int shorter_length = ImMin(old_length, new_length_a);
+    const int shorter_length = ImMin(old_length, new_length);
     int first_diff;
     for (first_diff = 0; first_diff < shorter_length; first_diff++)
-        if (old_buf[first_diff] != new_buf_a[first_diff])
+        if (old_buf[first_diff] != new_buf[first_diff])
             break;
-    if (first_diff == old_length && first_diff == new_length_a)
+    if (first_diff == old_length && first_diff == new_length)
         return;
 
     int old_last_diff = old_length   - 1;
-    int new_last_diff = new_length_a - 1;
+    int new_last_diff = new_length - 1;
     for (; old_last_diff >= first_diff && new_last_diff >= first_diff; old_last_diff--, new_last_diff--)
-        if (old_buf[old_last_diff] != new_buf_a[new_last_diff])
+        if (old_buf[old_last_diff] != new_buf[new_last_diff])
             break;
 
     const int insert_len = new_last_diff - first_diff + 1;
@@ -4544,16 +4535,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (flags & ImGuiInputTextFlags_ElideLeft)
             state->Scroll.x += ImMax(0.0f, CalcTextSize(buf).x - frame_size.x + style.FramePadding.x * 2.0f);
 
+        // Recycle existing cursor/selection/undo stack but clamp position
+        // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
         if (recycle_state)
-        {
-            // Recycle existing cursor/selection/undo stack but clamp position
-            // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
             state->CursorClamp();
-        }
         else
-        {
             stb_textedit_initialize_state(state->Stb, !is_multiline);
-        }
 
         if (init_reload_from_user_buf)
         {
@@ -5039,7 +5026,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     {
                         // Callback may update buffer and thus set buf_dirty even in read-only mode.
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
-                        InputTextReconcileUndoStateAfterUserCallback(state, callback_data.Buf, callback_data.BufTextLen); // FIXME: Move the rest of this block inside function and rename to InputTextReconcileStateAfterUserCallback() ?
+                        InputTextReconcileUndoState(state, state->CallbackTextBackup.Data, state->CallbackTextBackup.Size - 1, callback_data.Buf, callback_data.BufTextLen);
                         state->TextLen = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
                         state->CursorAnimReset();
                     }

@@ -1121,6 +1121,7 @@ struct IMGUI_API ImGuiInputTextState
 {
     ImGuiContext*           Ctx;                    // parent UI context (needs to be set explicitly by parent).
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
+    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
     ImGuiID                 ID;                     // widget id owning the text state
     int                     TextLen;                // UTF-8 length of the string in TextA (in bytes)
     ImVector<char>          TextA;                  // main UTF8 buffer. TextA.Size is a buffer size! Should always be >= buf_size passed by user (and of course >= CurLenA + 1).
@@ -1132,9 +1133,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
     bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
-    int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
+    int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
     ImGuiInputTextState();
@@ -1159,6 +1159,7 @@ struct IMGUI_API ImGuiInputTextState
     //   strcpy(my_buf, "hello");
     //   if (ImGuiInputTextState* state = ImGui::GetInputTextState(id)) // id may be ImGui::GetItemID() is last item
     //       state->ReloadUserBufAndSelectAll();
+    // THIS CURRENTLY RESETS THE UNDO STACK.
     void        ReloadUserBufAndSelectAll();
     void        ReloadUserBufAndKeepSelection();
     void        ReloadUserBufAndMoveToEnd();
