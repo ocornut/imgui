@@ -8581,8 +8581,11 @@ void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
     if (focus_scope_id == g.CurrentFocusScopeId)
     {
         // Top of focus stack contains local focus scopes inside current window
-        for (int n = g.FocusScopeStack.Size - 1; n >= 0 && g.FocusScopeStack.Data[n].WindowID == g.CurrentWindow->ID; n--)
-            g.NavFocusRoute.push_back(g.FocusScopeStack.Data[n]);
+        if (g.CurrentWindow != nullptr) // this check prevents a nullptr crash
+        {
+            for (int n = g.FocusScopeStack.Size - 1; n >= 0 && g.FocusScopeStack.Data[n].WindowID == g.CurrentWindow->ID; n--)
+                g.NavFocusRoute.push_back(g.FocusScopeStack.Data[n]);
+        }
     }
     else if (focus_scope_id == g.NavWindow->NavRootFocusScopeId)
         g.NavFocusRoute.push_back({ focus_scope_id, g.NavWindow->ID });
