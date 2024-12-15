@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- InputText: Fixed a bug where character replacements performed from a callback
+  were not applied when pasting from clipbard. (#8229)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)

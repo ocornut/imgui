@@ -4895,25 +4895,27 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 // Filter pasted buffer
                 const int clipboard_len = (int)strlen(clipboard);
-                char* clipboard_filtered = (char*)IM_ALLOC(clipboard_len + 1);
-                int clipboard_filtered_len = 0;
+                ImVector<char> clipboard_filtered;
+                clipboard_filtered.reserve(clipboard_len + 1);
                 for (const char* s = clipboard; *s != 0; )
                 {
                     unsigned int c;
-                    int len = ImTextCharFromUtf8(&c, s, NULL);
-                    s += len;
+                    int in_len = ImTextCharFromUtf8(&c, s, NULL);
+                    s += in_len;
                     if (!InputTextFilterCharacter(&g, &c, flags, callback, callback_user_data, true))
                         continue;
-                    memcpy(clipboard_filtered + clipboard_filtered_len, s - len, len);
-                    clipboard_filtered_len += len;
+                    char c_utf8[5];
+                    ImTextCharToUtf8(c_utf8, c);
+                    int out_len = (int)strlen(c_utf8);
+                    clipboard_filtered.resize(clipboard_filtered.Size + out_len);
+                    memcpy(clipboard_filtered.Data + clipboard_filtered.Size - out_len, c_utf8, out_len);
                 }
-                clipboard_filtered[clipboard_filtered_len] = 0;
-                if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
+                if (clipboard_filtered.Size > 0) // If everything was filtered, ignore the pasting operation
                 {
-                    stb_textedit_paste(state, state->Stb, clipboard_filtered, clipboard_filtered_len);
+                    clipboard_filtered.push_back(0);
+                    stb_textedit_paste(state, state->Stb, clipboard_filtered.Data, clipboard_filtered.Size - 1);
                     state->CursorFollow = true;
                 }
-                MemFree(clipboard_filtered);
             }
         }
 
