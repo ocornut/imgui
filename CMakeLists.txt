@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 3.15)
 project(imgui)
 
 option(IMGUI_IMPL_WIN32 "Enable ImGui Win32 implementation" ON)
-option(IMGUI_IMPL_OPENGL2 "Enable ImGui OpenGL2 implementation" OFF)
-option(IMGUI_IMPL_OPENGL3 "Enable ImGui OpenGL3 implementation" OFF)
-option(IMGUI_IMPL_DX9 "Enable ImGui DirectX9 implementation" OFF)
-option(IMGUI_IMPL_DX10 "Enable ImGui DirectX10 implementation" OFF)
-option(IMGUI_IMPL_DX11 "Enable ImGui DirectX11 implementation" OFF)
-option(IMGUI_IMPL_DX12 "Enable ImGui DirectX12 implementation" OFF)
+option(IMGUI_IMPL_OPENGL2 "Enable ImGui OpenGL2 implementation" ON)
+option(IMGUI_IMPL_OPENGL3 "Enable ImGui OpenGL3 implementation" ON)
+option(IMGUI_IMPL_DX9 "Enable ImGui DirectX9 implementation" ON)
+option(IMGUI_IMPL_DX10 "Enable ImGui DirectX10 implementation" ON)
+option(IMGUI_IMPL_DX11 "Enable ImGui DirectX11 implementation" ON)
+option(IMGUI_IMPL_DX12 "Enable ImGui DirectX12 implementation" ON)
 option(IMGUI_ENABLE_PLAYGROUND "Enable playground subdirectory" OFF)
 
 set(IMGUI_INC_DIR
