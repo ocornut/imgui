@@ -48,6 +48,8 @@ Other changes:
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
+- Nav: Fixed an issue where Alt key would clear current active item on
+  windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
 - Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 
