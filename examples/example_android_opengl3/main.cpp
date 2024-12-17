@@ -68,7 +68,7 @@ void android_main(struct android_app* app)
         struct android_poll_source* out_data;
 
         // Poll all events. If the app is not visible, this loop blocks until g_Initialized == true.
-        while (ALooper_pollAll(g_Initialized ? 0 : -1, nullptr, &out_events, (void**)&out_data) >= 0)
+        while (ALooper_pollOnce(g_Initialized ? 0 : -1, nullptr, &out_events, (void**)&out_data) >= 0)
         {
             // Process one event
             if (out_data != nullptr)
