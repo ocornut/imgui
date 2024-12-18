@@ -195,8 +195,8 @@ Dear ImGui does not introduce significant extra lag for most behaviors,
 e.g. the last value passed to 'io.AddMousePosEvent()' before NewFrame() will result in windows being moved
 to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience should be pleasant.
 
-However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
-path, and will feel smoother than the majority of content rendered via regular graphics API (including,
+However, consider that OS mouse cursors are typically rendered through a very specific hardware-accelerated
+path, which makes them feel smoother than the majority of content rendered via regular graphics API (including,
 but not limited to Dear ImGui windows). Because UI rendering and interaction happens on the same plane
 as the mouse, that disconnect may be jarring to particularly sensitive users.
 You may experiment with enabling the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor
