@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6
+// dear imgui, v1.91.7 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -1132,8 +1132,10 @@ struct IMGUI_API ImGuiInputTextState
 {
     ImGuiContext*           Ctx;                    // parent UI context (needs to be set explicitly by parent).
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
+    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
     ImGuiID                 ID;                     // widget id owning the text state
     int                     TextLen;                // UTF-8 length of the string in TextA (in bytes)
+    const char*             TextSrc;                // == TextA.Data unless read-only, in which case == buf passed to InputText(). Field only set and valid _inside_ the call InputText() call.
     ImVector<char>          TextA;                  // main UTF8 buffer. TextA.Size is a buffer size! Should always be >= buf_size passed by user (and of course >= CurLenA + 1).
     ImVector<char>          TextToRevertTo;         // value to revert to when pressing Escape = backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
@@ -1143,9 +1145,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
-    bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
-    int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
+    bool                    WantReloadUserBuf;      // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
     ImGuiInputTextState();
@@ -2304,6 +2305,7 @@ struct ImGuiContext
     bool                    ActiveIdPreviousFrameIsAlive;
     bool                    ActiveIdPreviousFrameHasBeenEditedBefore;
     ImGuiWindow*            ActiveIdPreviousFrameWindow;
+    ImGuiDataTypeStorage    ActiveIdValueOnActivation;          // Backup of initial value at the time of activation. ONLY SET BY SPECIFIC WIDGETS: DragXXX and SliderXXX.
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 

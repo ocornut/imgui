@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6
+// dear imgui, v1.91.7 WIP
 // (main code and documentation)
 
 // Help:
@@ -3999,6 +3999,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     ActiveIdPreviousFrameIsAlive = false;
     ActiveIdPreviousFrameHasBeenEditedBefore = false;
     ActiveIdPreviousFrameWindow = NULL;
+    memset(&ActiveIdValueOnActivation, 0, sizeof(ActiveIdValueOnActivation));
     LastActiveId = 0;
     LastActiveIdTimer = 0.0f;
 
@@ -4456,7 +4457,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 
         // This could be written in a more general way (e.g associate a hook to ActiveId),
         // but since this is currently quite an exception we'll leave it as is.
-        // One common scenario leading to this is: pressing Key ->NavMoveRequestApplyResult() -> ClearActiveId()
+        // One common scenario leading to this is: pressing Key ->NavMoveRequestApplyResult() -> ClearActiveID()
         if (g.InputTextState.ID == g.ActiveId)
             InputTextDeactivateHook(g.ActiveId);
     }
@@ -7880,9 +7881,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             IM_ASSERT(window->IDStack.Size == 1);
             window->IDStack.Size = 0; // As window->IDStack[0] == window->ID here, make sure TestEngine doesn't erroneously see window as parent of itself.
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
             IMGUI_TEST_ENGINE_ITEM_ADD(window->ID, window->Rect(), NULL);
             IMGUI_TEST_ENGINE_ITEM_INFO(window->ID, window->Name, (g.HoveredWindow == window) ? ImGuiItemStatusFlags_HoveredRect : 0);
             window->IDStack.Size = 1;
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
+
         }
 #endif
 
@@ -8189,7 +8193,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // [Test Engine] Register title bar / tab with MoveId.
 #ifdef IMGUI_ENABLE_TEST_ENGINE
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+        {
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
             IMGUI_TEST_ENGINE_ITEM_ADD(g.LastItemData.ID, g.LastItemData.Rect, &g.LastItemData);
+            window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
+        }
 #endif
     }
     else
@@ -14328,15 +14336,16 @@ static void ImGui::NavUpdateWindowing()
     // Keyboard: Press and Release ALT to toggle menu layer
     const ImGuiKey windowing_toggle_keys[] = { ImGuiKey_LeftAlt, ImGuiKey_RightAlt };
     bool windowing_toggle_layer_start = false;
-    for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
-        if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, 0, ImGuiKeyOwner_NoOwner))
-        {
-            windowing_toggle_layer_start = true;
-            g.NavWindowingToggleLayer = true;
-            g.NavWindowingToggleKey = windowing_toggle_key;
-            g.NavInputSource = ImGuiInputSource_Keyboard;
-            break;
-        }
+    if (g.NavWindow != NULL && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
+            if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, 0, ImGuiKeyOwner_NoOwner))
+            {
+                windowing_toggle_layer_start = true;
+                g.NavWindowingToggleLayer = true;
+                g.NavWindowingToggleKey = windowing_toggle_key;
+                g.NavInputSource = ImGuiInputSource_Keyboard;
+                break;
+            }
     if (g.NavWindowingToggleLayer && g.NavInputSource == ImGuiInputSource_Keyboard)
     {
         // We cancel toggling nav layer when any text has been typed (generally while holding Alt). (See #370)
