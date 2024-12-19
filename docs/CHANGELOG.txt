@@ -49,6 +49,8 @@ Other changes:
   value is being modified. (#8242)
 - InputText: Added sanity check to detect some cases of passing a non
   zero-terminated input buffer.
+- Tables, MultiSelect: Fixed an issue where column width may be mismeasured
+  when calling BeginMultiSelect() while inside a table. (#8250)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
