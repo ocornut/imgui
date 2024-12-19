@@ -4286,9 +4286,12 @@ void ImGui::PushPasswordFont()
     out_font->Ascent = in_font->Ascent;
     out_font->Descent = in_font->Descent;
     out_font->ContainerAtlas = in_font->ContainerAtlas;
-    out_font->FallbackGlyphIndex = in_font->Glyphs.index_from_ptr(glyph); // FIXME: broken
+    out_font->Glyphs.resize(0);
+    out_font->Glyphs.push_back(*glyph);
+    out_font->FallbackGlyphIndex = 0;
     out_font->FallbackAdvanceX = glyph->AdvanceX;
-    IM_ASSERT(out_font->Glyphs.Size == 0 && out_font->IndexAdvanceX.Size == 0 && out_font->IndexLookup.Size == 0);
+    out_font->LockDisableLoading = true;
+    IM_ASSERT(out_font->Glyphs.Size == 1 && out_font->IndexAdvanceX.Size == 0 && out_font->IndexLookup.Size == 0);
     PushFont(out_font);
 }
 
