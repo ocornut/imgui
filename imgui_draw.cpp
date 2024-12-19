@@ -2478,6 +2478,8 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::AddFontFromMemoryTTF()
 // - ImFontAtlas::AddFontFromMemoryCompressedTTF()
 // - ImFontAtlas::AddFontFromMemoryCompressedBase85TTF()
+// - ImFontAtlas::RemoveFont()
+// - ImFontAtlasBuildNotifySetFont()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddCustomRectRegular()
 // - ImFontAtlas::AddCustomRectFontGlyph()
@@ -2595,11 +2597,15 @@ void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     for (ImFontConfig& font_cfg : Sources)
+    {
+        if (FontLoader && FontLoader->FontSrcDestroy != NULL)
+            FontLoader->FontSrcDestroy(this, &font_cfg);
         if (font_cfg.FontData && font_cfg.FontDataOwnedByAtlas)
         {
             IM_FREE(font_cfg.FontData);
             font_cfg.FontData = NULL;
         }
+    }
 
     // When clearing this we lose access to the font name and other information used to build the font.
     for (ImFont* font : Fonts)
@@ -2643,12 +2649,12 @@ void ImFontAtlas::ClearFonts()
 void ImFontAtlas::Clear()
 {
     //IM_DELETE(Builder); // FIXME-NEW-ATLAS: Clarify ClearXXX functions
-    const ImFontLoader* font_loader = FontLoader;
-    ImFontAtlasBuildSetupFontLoader(this, NULL);
+    //const ImFontLoader* font_loader = FontLoader;
+    //ImFontAtlasBuildSetupFontLoader(this, NULL);
     ClearInputData();
     ClearTexData();
     ClearFonts();
-    ImFontAtlasBuildSetupFontLoader(this, font_loader);
+    //ImFontAtlasBuildSetupFontLoader(this, font_loader);
 }
 
 // FIXME-NEWATLAS: Too widespread purpose. Clarify each call site in current WIP demo.
@@ -3042,6 +3048,59 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);
     IM_FREE(compressed_ttf);
     return font;
+}
+
+// We allow old_font == new_font which forces updating all values (e.g. sizes)
+static void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont* new_font)
+{
+    if (ImDrawListSharedData* shared_data = atlas->DrawListSharedData)
+    {
+        if (shared_data->Font == old_font)
+            shared_data->Font = new_font;
+        if (ImGuiContext* ctx = shared_data->Context)
+        {
+            if (ctx->IO.FontDefault == old_font)
+                ctx->IO.FontDefault = new_font;
+            if (ctx->Font == old_font)
+            {
+                ImGuiContext* curr_ctx = ImGui::GetCurrentContext();
+                bool need_bind_ctx = ctx != curr_ctx;
+                if (need_bind_ctx)
+                    ImGui::SetCurrentContext(ctx);
+                ImGui::SetCurrentFont(new_font);
+                if (need_bind_ctx)
+                    ImGui::SetCurrentContext(curr_ctx);
+            }
+        }
+    }
+}
+
+void ImFontAtlas::RemoveFont(ImFont* font)
+{
+    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
+    ImFontAtlasBuildDiscardFontGlyphs(this, font);
+
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = (ImFontConfig*)(void*)&font->Sources[src_n];
+        if (FontLoader && FontLoader->FontSrcDestroy != NULL)
+            FontLoader->FontSrcDestroy(this, src);
+        if (src->FontData != NULL && src->FontDataOwnedByAtlas)
+            IM_FREE(src->FontData);
+    }
+
+    bool removed = Fonts.find_erase(font);
+    IM_ASSERT(removed);
+
+    Sources.erase(font->Sources, font->Sources + font->SourcesCount);
+    ImFontAtlasBuildUpdatePointers(this);
+
+    font->ContainerAtlas = NULL;
+    IM_DELETE(font);
+
+    // Notify external systems
+    ImFont* new_current_font = Fonts.empty() ? NULL : Fonts[0];
+    ImFontAtlasBuildNotifySetFont(this, font, new_current_font);
 }
 
 // FIXME-NEWATLAS-V1: Feature is broken for now.
@@ -3488,13 +3547,19 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
     font->LockSingleSrcConfigIdx = -1;
 }
 
-void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
+void ImFontAtlasBuildDiscardFontGlyphs(ImFontAtlas* atlas, ImFont* font)
 {
     for (ImFontGlyph& glyph : font->Glyphs)
         if (glyph.PackId >= 0)
             ImFontAtlasPackDiscardRect(atlas, glyph.PackId);
     font->BuildClearGlyphs();
+    font->FallbackChar = font->EllipsisChar = 0;
+}
 
+// Discard old glyphs and reload font. Use if changing font size.
+void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
+{
+    ImFontAtlasBuildDiscardFontGlyphs(atlas, font);
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
     {
         ImFontConfig* src = (ImFontConfig*)(void*)&font->Sources[src_n];
@@ -3508,6 +3573,9 @@ void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
 
         ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src); // Technically this is called for each source sub-font, tho 99.9% of the time the first one fills everything.
     }
+
+    // Notify external systems
+    ImFontAtlasBuildNotifySetFont(atlas, font, font);
 }
 
 // Those functions are designed to facilitate changing the underlying structures for ImFontAtlas to store an array of ImDrawListSharedData*
@@ -4026,11 +4094,13 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)src->FontData, src->FontNo);
     if (font_offset < 0)
     {
+        IM_DELETE(bd_font_data);
         IM_ASSERT_USER_ERROR(0, "stbtt_GetFontOffsetForIndex(): FontData is incorrect, or FontNo cannot be found.");
         return false;
     }
     if (!stbtt_InitFont(&bd_font_data->FontInfo, (unsigned char*)src->FontData, font_offset))
     {
+        IM_DELETE(bd_font_data);
         IM_ASSERT_USER_ERROR(0, "stbtt_InitFont(): failed to parse FontData. It is correct and complete? Check FontDataSize.");
         return false;
     }

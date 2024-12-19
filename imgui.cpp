@@ -22258,6 +22258,12 @@ void ImGui::DebugNodeFont(ImFont* font)
     }
     if (SmallButton("Set as default"))
         GetIO().FontDefault = font;
+    if (font->ContainerAtlas->Fonts.Size > 1 && !font->ContainerAtlas->Locked)
+    {
+        SameLine();
+        if (SmallButton("Remove"))
+            font->ContainerAtlas->RemoveFont(font);
+    }
 
     // Display details
     SetNextItemWidth(GetFontSize() * 8);
