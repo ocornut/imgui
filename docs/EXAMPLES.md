@@ -175,7 +175,7 @@ Raw Windows + OpenGL3 + example (modern, programmable pipeline) <BR>
 
 **Building**
 
-Unfortunately nowadays it is still tedious to create and maintain portable build files using external
+Unfortunately, nowadays it is still tedious to create and maintain portable build files using external
 libraries (the kind we're using here to create a window and render 3D triangles) without relying on
 third party software and build systems. For most examples here we choose to provide:
  - Makefiles for Linux/OSX
@@ -191,22 +191,22 @@ If you are interested in using Cmake to build and links examples, see:
 
 **About mouse cursor latency**
 
-Dear ImGui has no particular extra lag for most behaviors,
+Dear ImGui does not introduce significant extra lag for most behaviors,
 e.g. the last value passed to 'io.AddMousePosEvent()' before NewFrame() will result in windows being moved
 to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience should be pleasant.
 
-However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
-path and will feel smoother than the majority of contents rendered via regular graphics API (including,
+However, consider that OS mouse cursors are typically rendered through a very specific hardware-accelerated
+path, which makes them feel smoother than the majority of content rendered via regular graphics API (including,
 but not limited to Dear ImGui windows). Because UI rendering and interaction happens on the same plane
 as the mouse, that disconnect may be jarring to particularly sensitive users.
 You may experiment with enabling the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor
 using the regular graphics API, to help you visualize the difference between a "hardware" cursor and a
 regularly rendered software cursor.
-However, rendering a mouse cursor at 60 FPS will feel sluggish so you likely won't want to enable that at
+However, rendering a mouse cursor at 60 FPS will feel sluggish, so you likely won't want to enable that at
 all times. It might be beneficial for the user experience to switch to a software rendered cursor _only_
 when an interactive drag is in progress.
 
-Note that some setup or GPU drivers are likely to be causing extra display lag depending on their settings.
-If you feel that dragging windows feels laggy and you are not sure what the cause is: try to build a simple
-drawing a flat 2D shape directly under the mouse cursor!
+Note that some setup configurations or GPU drivers may introduce additional display lag depending on their settings.
+If you notice that dragging windows is laggy and you are not sure what the cause is: try drawing a simple
+2D shape directly under the mouse cursor to help identify the issue!
 
