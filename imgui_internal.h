@@ -3998,6 +3998,7 @@ IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w
 IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
 IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
 IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
+IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src);

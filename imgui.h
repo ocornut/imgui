@@ -3620,12 +3620,12 @@ struct ImFontAtlas
     IMGUI_API ImFont*           AddFontFromMemoryCompressedBase85TTF(const char* compressed_font_data_base85, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);              // 'compressed_font_data_base85' still owned by caller. Compress with binary_to_compressed_c.cpp with -base85 parameter.
 
     // FIXME-NEWATLAS: Clarify meaning/purpose
-    IMGUI_API void              ClearInputData();           // Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.
-    IMGUI_API void              ClearFonts();               // Clear input+output font data (same as ClearInputData() + glyphs storage, UV coordinates).
-    IMGUI_API void              ClearTexData();             // Clear output texture data (CPU side). Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              Clear();                    // Clear all input and output.
-
     IMGUI_API void              ClearCache();               // Clear cached glyphs
+    // As we are transitioning toward a new font system, we expect to obsolete those soon:
+    IMGUI_API void              ClearInputData();           // [OBSOLETE] Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.
+    IMGUI_API void              ClearFonts();               // [OBSOLETE] Clear input+output font data (same as ClearInputData() + glyphs storage, UV coordinates).
+    IMGUI_API void              ClearTexData();             // [OBSOLETE] Clear output texture data (CPU side). Saves RAM once the texture has been copied to graphics memory.
 
     // Build atlas, retrieve pixel data.
     // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().

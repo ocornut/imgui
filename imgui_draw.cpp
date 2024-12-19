@@ -2571,8 +2571,9 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
     { ImVec2(109,0),ImVec2(13,15), ImVec2( 6, 7) }, // ImGuiMouseCursor_NotAllowed
 };
 
-#define IM_FONTGLYPH_INDEX_UNUSED        ((ImU16)-1) // 0xFFFF
-#define IM_FONTGLYPH_INDEX_NOT_FOUND     ((ImU16)-2) // 0xFFFE
+#define IM_FONTGLYPH_INDEX_UNUSED           ((ImU16)-1) // 0xFFFF
+#define IM_FONTGLYPH_INDEX_NOT_FOUND        ((ImU16)-2) // 0xFFFE
+#define IM_FONTATLAS_DEFAULT_TEXTURE_SIZE   ImVec2i(512, 128)
 
 ImFontAtlas::ImFontAtlas()
 {
@@ -2602,11 +2603,14 @@ void ImFontAtlas::ClearInputData()
 
     // When clearing this we lose access to the font name and other information used to build the font.
     for (ImFont* font : Fonts)
+    {
         if (font->Sources >= Sources.Data && font->Sources < Sources.Data + Sources.Size)
         {
             font->Sources = NULL;
             font->SourcesCount = 0;
         }
+        font->LockDisableLoading = true;
+    }
     Sources.clear();
     //CustomRects.clear();
     // Important: we leave TexReady untouched
@@ -2618,15 +2622,14 @@ void ImFontAtlas::ClearTexData()
     TexList.clear();
     IM_DELETE(TexData);
     TexData = NULL;
-    //    TexData.Destroy();
-        //IM_ASSERT(0);
-        // Important: we leave TexReady untouched
+    // Important: we leave TexReady untouched
 }
 
 void ImFontAtlas::ClearFonts()
 {
     // FIXME-NEWATLAS: Illegal to remove currently bound font.
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
+    ImFontAtlasBuildDestroy(this);
     ClearInputData();
     Fonts.clear_delete();
     TexIsBuilt = false;
@@ -2639,7 +2642,7 @@ void ImFontAtlas::ClearFonts()
 
 void ImFontAtlas::Clear()
 {
-    //IM_DELETE(Builder); // FIXME-NEW-ATLAS: ClearXXX functions
+    //IM_DELETE(Builder); // FIXME-NEW-ATLAS: Clarify ClearXXX functions
     const ImFontLoader* font_loader = FontLoader;
     ImFontAtlasBuildSetupFontLoader(this, NULL);
     ClearInputData();
@@ -2651,11 +2654,9 @@ void ImFontAtlas::Clear()
 // FIXME-NEWATLAS: Too widespread purpose. Clarify each call site in current WIP demo.
 void ImFontAtlas::ClearCache()
 {
-    int tex_w = (TexData && TexData->Status != ImTextureStatus_WantDestroy) ? TexData->Width : 0;
-    int tex_h = (TexData && TexData->Status != ImTextureStatus_WantDestroy) ? TexData->Height : 0;
+    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
     ImFontAtlasBuildDestroy(this);
-    if (tex_w != 0 && tex_h != 0)
-        ImFontAtlasBuildAddTexture(this, tex_w, tex_h);
+    ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
     ImFontAtlasBuildInit(this);
 }
 
@@ -3142,6 +3143,13 @@ bool ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
 
+    if (TexData && TexData->Format != TexDesiredFormat)
+    {
+        ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
+        ImFontAtlasBuildDestroy(this);
+        ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
+    }
+
     if (Builder == NULL)
         ImFontAtlasBuildInit(this);
 
@@ -3171,7 +3179,10 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
         return;
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
+    // Note that texture size estimate is likely incorrect in this situation, as Freetype backend doesn't use oversampling.
+    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
     ImFontAtlasBuildDestroy(atlas);
+
     if (atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
         atlas->FontLoader->LoaderShutdown(atlas);
@@ -3181,8 +3192,9 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
     atlas->FontLoaderName = font_loader ? font_loader->Name : "NULL";
     if (atlas->FontLoader && atlas->FontLoader->LoaderInit)
         atlas->FontLoader->LoaderInit(atlas);
-    if (atlas->Builder && font_loader != NULL)
-        atlas->ClearCache();
+
+    ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
+    ImFontAtlasBuildInit(atlas);
 }
 
 // Preload all glyph ranges for legacy backends.
@@ -3687,17 +3699,13 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
 }
 
-// You should not need to call this manually!
-// If you think you do, let us know and we can advise about policies auto-compact.
-void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
+// FIXME-NEWATLAS: Expose atlas->TexMinWidth etc.
+ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 {
+    if (atlas->Builder == NULL || atlas->TexData == NULL || atlas->TexData->Status == ImTextureStatus_WantDestroy)
+        return IM_FONTATLAS_DEFAULT_TEXTURE_SIZE;
+
     ImFontAtlasBuilder* builder = atlas->Builder;
-
-    ImTextureData* old_tex = atlas->TexData;
-    int old_tex_w = old_tex->Width;
-    int old_tex_h = old_tex->Height;
-
-    // FIXME-NEWATLAS: Expose atlas->TexMinWidth etc.
     const int min_w = ImMax(builder->MaxRectSize.x, 512);
     const int min_h = builder->MaxRectSize.y;
     const int surface_approx = atlas->_PackedSurface - builder->RectsDiscardedSurface; // Expected surface after repack
@@ -3719,11 +3727,21 @@ void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
             new_tex_h = ImUpperPowerOfTwo(new_tex_h);
         new_tex_w = ImMax(min_w, (int)((surface_approx + new_tex_h - 1) / new_tex_h));
     }
+    return ImVec2i(new_tex_w, new_tex_h);
+}
 
-    if (builder->RectsDiscardedCount == 0 && new_tex_w == old_tex_w && new_tex_h == old_tex_h)
+// You should not need to call this manually!
+// If you think you do, let us know and we can advise about policies auto-compact.
+void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
+{
+    ImFontAtlasBuilder* builder = atlas->Builder;
+    ImTextureData* old_tex = atlas->TexData;
+    ImVec2i old_tex_size = ImVec2i(old_tex->Width, old_tex->Height);
+    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+    if (builder->RectsDiscardedCount == 0 && new_tex_size.x == old_tex_size.x && new_tex_size.y == old_tex_size.y)
         return;
 
-    ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
+    ImFontAtlasBuildRepackTexture(atlas, new_tex_size.x, new_tex_size.y);
 }
 
 // Start packing over current empty texture
@@ -3748,7 +3766,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     }
     // Create initial texture size
     if (atlas->TexData == NULL)
-        ImFontAtlasBuildAddTexture(atlas, 512, 128);
+        ImFontAtlasBuildAddTexture(atlas, IM_FONTATLAS_DEFAULT_TEXTURE_SIZE.x, IM_FONTATLAS_DEFAULT_TEXTURE_SIZE.y);
 
     const bool builder_is_new = (builder == NULL);
     if (builder_is_new)
