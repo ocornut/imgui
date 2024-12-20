@@ -2468,9 +2468,9 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasTextureBlockCopy()
 // - ImFontAtlasTextureBlockQueueUpload()
 //-----------------------------------------------------------------------------
+// - ImFontAtlas::Build() [legacy]
 // - ImFontAtlas::GetTexDataAsAlpha8() [legacy]
 // - ImFontAtlas::GetTexDataAsRGBA32() [legacy]
-// - ImFontAtlas::Build()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddFont()
 // - ImFontAtlas::AddFontDefault()
@@ -2875,6 +2875,12 @@ void ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width,
 {
     GetTexDataAsFormat(this, ImTextureFormat_RGBA32, out_pixels, out_width, out_height, out_bytes_per_pixel);
 }
+
+bool ImFontAtlas::Build()
+{
+    ImFontAtlasBuildMain(this);
+    return true;
+}
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
@@ -3139,31 +3145,28 @@ bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor curso
     return true;
 }
 
-bool ImFontAtlas::Build()
+void ImFontAtlasBuildMain(ImFontAtlas* atlas)
 {
-    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-
-    if (TexData && TexData->Format != TexDesiredFormat)
+    IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
+    if (atlas->TexData && atlas->TexData->Format != atlas->TexDesiredFormat)
     {
-        ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
-        ImFontAtlasBuildDestroy(this);
-        ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
+        ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+        ImFontAtlasBuildDestroy(atlas);
+        ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
     }
 
-    if (Builder == NULL)
-        ImFontAtlasBuildInit(this);
+    if (atlas->Builder == NULL)
+        ImFontAtlasBuildInit(atlas);
 
     // Default font is none are specified
-    if (Sources.Size == 0)
-        AddFontDefault();
+    if (atlas->Sources.Size == 0)
+        atlas->AddFontDefault();
 
-    // [LEGACY] For backends not supporting RendererHasTextures: preload all glyphs
-    ImFontAtlasBuildUpdateRendererHasTexturesFromContext(this);
-    if (DrawListSharedData && DrawListSharedData->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
-        ImFontAtlasBuildPreloadAllGlyphRanges(this);
-    TexIsBuilt = true;
-
-    return true;
+    // [LEGACY] For backends not supporting RendererHasTexUpdates: preload all glyphs
+    ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
+    if (atlas->DrawListSharedData && atlas->DrawListSharedData->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
+        ImFontAtlasBuildPreloadAllGlyphRanges(atlas);
+    atlas->TexIsBuilt = true;
 }
 
 void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample_h, int* out_oversample_v)

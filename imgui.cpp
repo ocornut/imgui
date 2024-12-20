@@ -5400,9 +5400,9 @@ void ImGui::NewFrame()
     // Check that font atlas was built or backend support texture reload in which case we can build now
     ImFontAtlas* atlas = g.IO.Fonts;
     if (!atlas->TexIsBuilt && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
-        atlas->Build();
+        ImFontAtlasBuildMain(atlas);
     else // Legacy backend
-        IM_ASSERT(atlas->TexIsBuilt && "Font Atlas not built! Make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()");
+        IM_ASSERT(atlas->TexIsBuilt && "Backend does not support ImGuiBackendFlags_RendererHasTexUpdates, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
 
     // Check and assert for various common IO and Configuration mistakes
     g.ConfigFlagsLastFrame = g.ConfigFlagsCurrFrame;

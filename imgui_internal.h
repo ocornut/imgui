@@ -3991,6 +3991,7 @@ IMGUI_API void              ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, 
 IMGUI_API void              ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char);
 
+IMGUI_API void              ImFontAtlasBuildMain(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildDestroy(ImFontAtlas* atlas);
 
