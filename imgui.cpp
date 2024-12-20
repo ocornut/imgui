@@ -6731,9 +6731,10 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     ImGuiStyle& style = g.Style;
     ImGuiWindowFlags flags = window->Flags;
 
-    // Ensure that ScrollBar doesn't read last frame's SkipItems
+    // Ensure that Scrollbar() doesn't read last frame's SkipItems
     IM_ASSERT(window->BeginCount == 0);
     window->SkipItems = false;
+    window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
 
     // Draw window + handle manual resize
     // As we highlight the title bar when want_focus is set, multiple reappearing windows will have their title bar highlighted on their reappearing frame.
@@ -6810,6 +6811,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         if (handle_borders_and_resize_grips)
             RenderWindowOuterBorders(window);
     }
+    window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
 }
 
 // Render title text, collapse button, close button
