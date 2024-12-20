@@ -8018,8 +8018,7 @@ void ImGui::PushFont(ImFont* font)
         font = GetDefaultFont();
     g.FontStack.push_back(font);
     SetCurrentFont(font);
-    if (ImGuiWindow* window = g.CurrentWindow)
-        window->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void  ImGui::PopFont()
@@ -8033,8 +8032,7 @@ void  ImGui::PopFont()
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
     SetCurrentFont(font);
-    if (ImGuiWindow* window = g.CurrentWindow)
-        window->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
+    g.CurrentWindow->DrawList->_SetTextureID(font->ContainerAtlas->TexID);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
