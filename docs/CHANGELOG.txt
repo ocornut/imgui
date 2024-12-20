@@ -58,6 +58,8 @@ Other changes:
   yourself based on your own logic. (#8223)
 - Nav: Fixed an issue where Alt key would clear current active item on
   windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
+- Debug Tools: Debug Log: hovering 0xXXXXXXXX values in log is allowed even
+  if a popup is blocking mouse access to the debug log window. (#5855)
 - Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 

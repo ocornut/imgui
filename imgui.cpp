@@ -16501,7 +16501,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
 void ImGui::DebugTextUnformattedWithLocateItem(const char* line_begin, const char* line_end)
 {
     TextUnformatted(line_begin, line_end);
-    if (!IsItemHovered())
+    if (!IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         return;
     ImGuiContext& g = *GImGui;
     ImRect text_rect = g.LastItemData.Rect;
