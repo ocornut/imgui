@@ -14788,6 +14788,7 @@ void ImGui::LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
 //-----------------------------------------------------------------------------
 // - GetMainViewport()
 // - SetWindowViewport() [Internal]
+// - ScaleWindowsInViewport() [Internal]
 // - UpdateViewportsNewFrame() [Internal]
 // (this section is more complete in the 'docking' branch)
 //-----------------------------------------------------------------------------
@@ -14801,6 +14802,24 @@ ImGuiViewport* ImGui::GetMainViewport()
 void ImGui::SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     window->Viewport = viewport;
+}
+
+static void ScaleWindow(ImGuiWindow* window, float scale)
+{
+    ImVec2 origin = window->Viewport->Pos;
+    window->Pos = ImFloor((window->Pos - origin) * scale + origin);
+    window->Size = ImTrunc(window->Size * scale);
+    window->SizeFull = ImTrunc(window->SizeFull * scale);
+    window->ContentSize = ImTrunc(window->ContentSize * scale);
+}
+
+// Scale all windows (position, size). Use when e.g. changing DPI. (This is a lossy operation!)
+void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
+{
+    ImGuiContext& g = *GImGui;
+    for (ImGuiWindow* window : g.Windows)
+        if (window->Viewport == viewport)
+            ScaleWindow(window, scale);
 }
 
 // Update viewports and monitor infos
