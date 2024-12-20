@@ -43,15 +43,23 @@ Breaking changes:
 
 Other changes:
 
+- Error Handling: Fixed bugs recovering from within a table that created
+  a child window, and from nested child windows. (#1651)
 - InputText: Fixed a bug where character replacements performed from a callback
   were not applied when pasting from clipbard. (#8229)
 - InputText: Fixed issue when activating a ReadOnly field when the underlying
   value is being modified. (#8242)
+- InputText: Added sanity check to detect some cases of passing a non
+  zero-terminated input buffer.
+- Tables, MultiSelect: Fixed an issue where column width may be mismeasured
+  when calling BeginMultiSelect() while inside a table. (#8250)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
 - Nav: Fixed an issue where Alt key would clear current active item on
   windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
+- Debug Tools: Debug Log: hovering 0xXXXXXXXX values in log is allowed even
+  if a popup is blocking mouse access to the debug log window. (#5855)
 - Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 
