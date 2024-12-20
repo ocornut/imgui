@@ -2045,9 +2045,9 @@ struct ImGuiContext
     int                     FrameCount;
     int                     FrameCountEnded;
     int                     FrameCountRendered;
+    ImGuiID                 WithinEndChildID;                   // Set within EndChild()
     bool                    WithinFrameScope;                   // Set by NewFrame(), cleared by EndFrame()
     bool                    WithinFrameScopeWithImplicitWindow; // Set by NewFrame(), cleared by EndFrame() when the implicit debug window has been pushed
-    bool                    WithinEndChild;                     // Set within EndChild()
     bool                    GcCompactAll;                       // Request full GC
     bool                    TestEngineHookItems;                // Will call test engine hooks: ImGuiTestEngineHook_ItemAdd(), ImGuiTestEngineHook_ItemInfo(), ImGuiTestEngineHook_Log()
     void*                   TestEngine;                         // Test engine user data

@@ -3884,7 +3884,8 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     Time = 0.0f;
     FrameCount = 0;
     FrameCountEnded = FrameCountRendered = -1;
-    WithinFrameScope = WithinFrameScopeWithImplicitWindow = WithinEndChild = false;
+    WithinEndChildID = 0;
+    WithinFrameScope = WithinFrameScopeWithImplicitWindow = false;
     GcCompactAll = false;
     TestEngineHookItems = false;
     TestEngine = NULL;
@@ -6106,10 +6107,10 @@ void ImGui::EndChild()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* child_window = g.CurrentWindow;
 
-    IM_ASSERT(g.WithinEndChild == false);
+    const ImGuiID backup_within_end_child_id = g.WithinEndChildID;
     IM_ASSERT(child_window->Flags & ImGuiWindowFlags_ChildWindow);   // Mismatched BeginChild()/EndChild() calls
 
-    g.WithinEndChild = true;
+    g.WithinEndChildID = child_window->ID;
     ImVec2 child_size = child_window->Size;
     End();
     if (child_window->BeginCount == 1)
@@ -6141,7 +6142,7 @@ void ImGui::EndChild()
         if (g.HoveredWindow == child_window)
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
     }
-    g.WithinEndChild = false;
+    g.WithinEndChildID = backup_within_end_child_id;
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 }
 
@@ -7773,7 +7774,7 @@ void ImGui::End()
 
     // Error checking: verify that user doesn't directly call End() on a child window.
     if (window->Flags & ImGuiWindowFlags_ChildWindow)
-        IM_ASSERT_USER_ERROR(g.WithinEndChild, "Must call EndChild() and not End()!");
+        IM_ASSERT_USER_ERROR(g.WithinEndChildID == window->ID, "Must call EndChild() and not End()!");
 
     // Close anything that is open
     if (window->DC.CurrentColumns)
@@ -10485,8 +10486,16 @@ void ImGui::ErrorRecoveryTryToRecoverState(const ImGuiErrorRecoveryState* state_
         ImGuiWindow* window = g.CurrentWindow;
         if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
-            IM_ASSERT_USER_ERROR(0, "Missing EndChild()");
-            EndChild();
+            if (g.CurrentTable != NULL && g.CurrentTable->InnerWindow == g.CurrentWindow)
+            {
+                IM_ASSERT_USER_ERROR(0, "Missing EndTable()");
+                EndTable();
+            }
+            else
+            {
+                IM_ASSERT_USER_ERROR(0, "Missing EndChild()");
+                EndChild();
+            }
         }
         else
         {
@@ -11921,11 +11930,11 @@ void ImGui::EndPopup()
         NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY);
 
     // Child-popups don't need to be laid out
-    IM_ASSERT(g.WithinEndChild == false);
+    const ImGuiID backup_within_end_child_id = g.WithinEndChildID;
     if (window->Flags & ImGuiWindowFlags_ChildWindow)
-        g.WithinEndChild = true;
+        g.WithinEndChildID = window->ID;
     End();
-    g.WithinEndChild = false;
+    g.WithinEndChildID = backup_within_end_child_id;
 }
 
 // Helper to open a popup if mouse button is released over the item
