@@ -4900,8 +4900,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 const int ib = state->HasSelection() ? ImMin(state->Stb->select_start, state->Stb->select_end) : 0;
                 const int ie = state->HasSelection() ? ImMax(state->Stb->select_start, state->Stb->select_end) : state->TextLen;
                 g.TempBuffer.reserve(ie - ib + 1);
-                memcpy(g.TempBuffer.Data, state->TextSrc, ie - ib);
-                g.TempBuffer.Data[ie] = 0;
+                memcpy(g.TempBuffer.Data, state->TextSrc + ib, ie - ib);
+                g.TempBuffer.Data[ie - ib] = 0;
                 SetClipboardText(g.TempBuffer.Data);
             }
             if (is_cut)
