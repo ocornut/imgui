@@ -98,6 +98,7 @@ struct ImGui_ImplAllegro5_Data
 
     ImVector<ImDrawVertAllegro> BufVertices;
     ImVector<int>               BufIndices;
+    ImGuiMouseCursor            CursorCache;
 
     ImGui_ImplAllegro5_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -568,7 +569,19 @@ static void ImGui_ImplAllegro5_UpdateMouseCursor()
 
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+
+    if (io.MouseDrawCursor) {
+        // Hide OS mouse cursor if imgui is drawing it
+        imgui_cursor = ImGuiMouseCursor_None;
+    }
+
+    if (bd->CursorCache == imgui_cursor) {
+        return;
+    }
+
+    bd->CursorCache = imgui_cursor;
+
+    if (imgui_cursor == ImGuiMouseCursor_None)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         al_set_mouse_cursor(bd->Display, bd->MouseCursorInvisible);
